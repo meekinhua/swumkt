@@ -460,8 +460,8 @@ const CustomerJourneyTool = () => {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3">
                     <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2">
                       <Map className="w-5 h-5 md:w-6 md:h-6 text-[#00A9CE]" />
-                      <span className="hidden sm:inline">Journey Map Result</span>
-                      <span className="sm:hidden">Result</span>
+                      <span className="hidden sm:inline">{t('customerJourney.resultTitle')}</span>
+                      <span className="sm:hidden">{t('customerJourney.resultTitleShort')}</span>
                     </h2>
                     {result && (
                       <div className="flex items-center gap-1 md:gap-2 flex-wrap">
@@ -486,7 +486,7 @@ const CustomerJourneyTool = () => {
                           variant="outline"
                           size="sm"
                           className="border-2 border-gray-300 p-2"
-                          title="Reset zoom"
+                          title={t('customerJourney.resetZoom')}
                         >
                           <Maximize className="w-4 h-4" />
                         </Button>
@@ -495,7 +495,7 @@ const CustomerJourneyTool = () => {
                           variant="outline"
                           size="sm"
                           className="border-2 border-[#00A9CE] text-[#00A9CE] p-2"
-                          title="Fullscreen"
+                          title={t('customerJourney.fullscreen')}
                         >
                           {isFullscreen ? '✕' : '⛶'}
                         </Button>
@@ -506,7 +506,7 @@ const CustomerJourneyTool = () => {
                           className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
                         >
                           <Download className="w-3 h-3 md:w-4 md:h-4 md:mr-2" />
-                          <span className="hidden md:inline">Download</span>
+                          <span className="hidden md:inline">{t('customerJourney.download')}</span>
                         </Button>
                       </div>
                     )}
@@ -515,12 +515,12 @@ const CustomerJourneyTool = () => {
                   {!result ? (
                     <div className="flex flex-col items-center justify-center h-64 md:h-96 text-gray-400">
                       <Map className="w-16 h-16 md:w-24 md:h-24 mb-4 opacity-20" />
-                      <p className="text-base md:text-lg font-semibold text-center px-4">No journey map generated yet</p>
-                      <p className="text-xs md:text-sm text-center px-4">Enter research data and click generate</p>
+                      <p className="text-base md:text-lg font-semibold text-center px-4">{t('customerJourney.noResult')}</p>
+                      <p className="text-xs md:text-sm text-center px-4">{t('customerJourney.noResultHelp')}</p>
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {/* Mermaid Diagram - Interactive (แสดงก่อน) */}
+                      {/* Mermaid Diagram - Interactive */}
                       <div 
                         ref={fullscreenRef}
                         className="bg-white rounded-lg border-2 border-gray-200"
@@ -535,7 +535,7 @@ const CustomerJourneyTool = () => {
                           onMouseLeave={handleMouseUp}
                         >
                           <div className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
-                            💡 Drag to pan, Scroll to zoom
+                            {t('customerJourney.dragToPan')}
                           </div>
                           <div 
                             ref={mermaidRef} 
@@ -550,9 +550,9 @@ const CustomerJourneyTool = () => {
                         </div>
                       </div>
 
-                      {/* Analysis Summary (แสดงหลัง) */}
+                      {/* Analysis Summary */}
                       <div className="p-4 bg-gradient-to-br from-[#00A9CE]/10 to-[#33BCDA]/10 rounded-lg border border-[#00A9CE]/20">
-                        <h3 className="text-lg font-black text-gray-900 mb-2">Analysis Summary</h3>
+                        <h3 className="text-lg font-black text-gray-900 mb-2">{t('customerJourney.analysisSummary')}</h3>
                         <p className="text-gray-700 leading-relaxed whitespace-pre-wrap font-medium">
                           {result.analysis_summary}
                         </p>
