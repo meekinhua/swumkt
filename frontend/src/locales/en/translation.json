@@ -163,5 +163,38 @@
     "close": "Close",
     "yes": "Yes",
     "no": "No"
+  },
+  "marketResearch": {
+    "title": "Market Research Tools",
+    "subtitle": "Complete toolkit for market research and analysis to make accurate decisions",
+    "getStarted": "Get Started",
+    "comingSoon": "Coming Soon",
+    "infoTitle": "Professional Tools for Marketers",
+    "infoDescription": "These tools are designed to help marketers, researchers, and students conduct market research efficiently with easy-to-use interfaces and comprehensive features.",
+    "infoNote": "All tools are currently under development and will be available soon",
+    "surveyBuilder": {
+      "title": "Survey Builder",
+      "description": "Create and manage online surveys, collect data from target audience",
+      "feature1": "Create surveys with easy-to-use Form Builder",
+      "feature2": "Support multiple question types (Multiple Choice, Rating, Open-ended)",
+      "feature3": "Share links and collect responses in Real-time",
+      "feature4": "Analyze results with Charts and basic statistics"
+    },
+    "conjointAnalysis": {
+      "title": "Conjoint Analysis",
+      "description": "Analyze preferences and value of product attributes",
+      "feature1": "Create scenarios to compare products",
+      "feature2": "Calculate Utility values for each attribute",
+      "feature3": "Determine Importance of each factor",
+      "feature4": "Display results as Charts and easy-to-understand Insights"
+    },
+    "customerJourney": {
+      "title": "Customer Journey Map",
+      "description": "Create customer journey maps to understand behavior and pain points",
+      "feature1": "Create customer Touchpoints and Stages",
+      "feature2": "Identify Pain Points and improvement opportunities",
+      "feature3": "Visualize with Timeline and Flowchart",
+      "feature4": "Share and collaborate as a team"
+    }
   }
 }
