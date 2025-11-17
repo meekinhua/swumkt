@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { UserPlus, ArrowLeft, Mail, Lock, User, Sparkles, GraduationCap, Hash } from 'lucide-react';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
