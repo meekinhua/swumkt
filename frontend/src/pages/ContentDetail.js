@@ -16,12 +16,16 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 const ContentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { user, token } = useAuth();
   const [content, setContent] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState(null);
+  const [translating, setTranslating] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState('');
 
   useEffect(() => {
     fetchContent();
