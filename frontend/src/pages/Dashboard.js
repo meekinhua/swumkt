@@ -168,7 +168,7 @@ const Dashboard = () => {
                   <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-700 mb-4 font-semibold">{t('content.noContent')}</p>
                   <Button onClick={() => navigate('/content/create')} className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold">
-                    สร้างเนื้อหาแรกของคุณ
+                    {t('content.createFirst')}
                   </Button>
                 </div>
               ) : (
