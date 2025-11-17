@@ -226,13 +226,13 @@ const Dashboard = () => {
                   <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
                     <UsersIcon className="w-8 h-8" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-700">Alumni Zone</h3>
+                  <h3 className="text-xl font-bold text-gray-700">{t('features.alumniZone.title')}</h3>
                 </div>
                 <p className="text-gray-600 mb-4 font-medium">
-                  เครือข่ายศิษย์เก่า เชื่อมต่อ แบ่งปัน และสร้างความสัมพันธ์
+                  {t('features.alumniZone.description')}
                 </p>
                 <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
-                  กำลังพัฒนา
+                  {t('features.inDevelopment')}
                 </span>
               </Card>
 
