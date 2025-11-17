@@ -164,7 +164,7 @@ const CustomerJourneyTool = () => {
 
   const handleGenerate = async () => {
     if (!rawData.trim()) {
-      toast.error(t('common.error') + ': Please enter research data');
+      toast.error(t('common.error') + ': ' + t('customerJourney.dataHelp'));
       return;
     }
 
@@ -174,7 +174,10 @@ const CustomerJourneyTool = () => {
         `${API}/generate-journey-map`,
         {
           raw_data: rawData,
-          research_context: researchContext || null
+          research_context: researchContext || null,
+          target_language: outputLanguage,
+          journey_type: journeyType,
+          journey_style: journeyStyle
         },
         {
           headers: { Authorization: `Bearer ${token}` }
