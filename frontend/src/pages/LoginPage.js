@@ -119,7 +119,7 @@ const LoginPage = () => {
               ) : (
                 <span className="flex items-center gap-2">
                   <LogIn className="w-5 h-5" />
-                  เข้าสู่ระบบ
+                  {t('auth.loginButton')}
                 </span>
               )}
             </Button>
