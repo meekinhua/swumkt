@@ -195,6 +195,38 @@
       "feature2": "Identify Pain Points and improvement opportunities",
       "feature3": "Visualize with Timeline and Flowchart",
       "feature4": "Share and collaborate as a team"
+    },
+    "segmentation": {
+      "title": "Market Segmentation",
+      "description": "Segment markets by characteristics, behavior, and needs",
+      "feature1": "Segment by Demographics, Psychographics, Behavior",
+      "feature2": "Analyze size and potential of each segment",
+      "feature3": "Create Personas for each target group",
+      "feature4": "Visualize with Charts and Segmentation Matrix"
+    },
+    "customerBehavior": {
+      "title": "Customer Behavior Analysis",
+      "description": "Analyze customer purchasing and usage behavior",
+      "feature1": "Track purchasing behavior and Conversion Path",
+      "feature2": "Analyze RFM (Recency, Frequency, Monetary)",
+      "feature3": "Identify Patterns and Trends in behavior",
+      "feature4": "Predict future behavior with Predictive Analytics"
+    },
+    "customerPerception": {
+      "title": "Customer Perception Analysis",
+      "description": "Analyze customer perception and attitudes toward brand",
+      "feature1": "Measure Brand Awareness and Brand Image",
+      "feature2": "Analyze Customer Satisfaction and NPS",
+      "feature3": "Sentiment Analysis from reviews and social media",
+      "feature4": "Compare with competitors using Perceptual Mapping"
+    },
+    "competitorAnalysis": {
+      "title": "Competitor Analysis",
+      "description": "Analyze competitors and market positioning",
+      "feature1": "Identify key competitors and perform SWOT analysis",
+      "feature2": "Compare products, prices, and strategies",
+      "feature3": "Analyze Market Share and Positioning",
+      "feature4": "Monitor competitor movements and trends"
     }
   }
 }
