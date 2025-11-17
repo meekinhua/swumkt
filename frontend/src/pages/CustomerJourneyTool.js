@@ -52,7 +52,7 @@ const CustomerJourneyTool = () => {
     
     const styleText = journeyStyle === 'linear'
       ? (i18n.language === 'th' ? 'แบบ linear' : 'Linear sequential flow')
-      : (i18n.language === 'th' ? 'c[[ ืนืสรืำฟพ รูปแบบซับซ้อน มีหลายเส้นทางและจุดตัดสินใจ' : 'Nonlinear with multiple paths and decision points');
+      : (i18n.language === 'th' ? 'แบบ nonlinear รูปแบบซับซ้อน มีหลายเส้นทางและจุดตัดสินใจ' : 'Nonlinear with multiple paths and decision points');
     
     const contextText = `${typeText}. ${styleText}.`;
     setResearchContext(contextText);
