@@ -8,45 +8,46 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const features = [
     {
       icon: <TrendingUp className="w-8 h-8" />,
-      title: 'Market Research Tools',
-      description: 'เครื่องมือวิจัยตลาด รวมถึง Survey Builder, Conjoint Analysis และการวิเคราะห์ข้อมูล',
-      status: 'เร็วๆ นี้',
+      title: t('features.marketResearch.title'),
+      description: t('features.marketResearch.description'),
+      status: t('features.marketResearch.status'),
       gradient: 'from-[#005A73] via-[#007B9A] to-[#00A9CE]'
     },
     {
       icon: <Users className="w-8 h-8" />,
-      title: 'Alumni Zone',
-      description: 'เครือข่ายศิษย์เก่า เชื่อมต่อ แบ่งปัน และสร้างความสัมพันธ์ระหว่างศิษย์เก่า ศิษย์ปัจจุบัน',
-      status: 'เร็วๆ นี้',
+      title: t('features.alumni.title'),
+      description: t('features.alumni.description'),
+      status: t('features.alumni.status'),
       gradient: 'from-[#007B9A] via-[#00A9CE] to-[#33BCDA]'
     },
     {
       icon: <BookOpen className="w-8 h-8" />,
-      title: 'Knowledge Hub',
-      description: 'เนื้อหาความรู้ ผลวิจัย ผลสำรวจ และบทความทางการตลาด ที่ผู้ใช้สามารถร่วมกันสร้างสรรค์',
-      status: 'พร้อมใช้งาน',
+      title: t('features.knowledge.title'),
+      description: t('features.knowledge.description'),
+      status: t('features.knowledge.status'),
       gradient: 'from-[#00A9CE] via-[#33BCDA] to-[#00A9CE]',
       active: true
     },
     {
       icon: <Award className="w-8 h-8" />,
-      title: 'Student Services',
-      description: 'บริการสำหรับนิสิตปัจจุบัน รวมถึงแหล่งข้อมูลการเรียนรู้และโอกาสพัฒนาทักษะ',
-      status: 'เร็วๆ นี้',
+      title: t('features.students.title'),
+      description: t('features.students.description'),
+      status: t('features.students.status'),
       gradient: 'from-[#C62E38] via-[#E63946] to-[#F25C66]'
     }
   ];
 
   const stats = [
-    { value: '1000+', label: 'ศิษย์เก่า', icon: <Users className="w-6 h-6" /> },
-    { value: '50+', label: 'งานวิจัย', icon: <Target className="w-6 h-6" /> },
-    { value: '100+', label: 'บทความ', icon: <BookOpen className="w-6 h-6" /> },
-    { value: '24/7', label: 'เข้าถึงได้', icon: <Sparkles className="w-6 h-6" /> }
+    { value: '1000+', label: t('stats.alumni'), icon: <Users className="w-6 h-6" /> },
+    { value: '50+', label: t('stats.research'), icon: <Target className="w-6 h-6" /> },
+    { value: '100+', label: t('stats.articles'), icon: <BookOpen className="w-6 h-6" /> },
+    { value: '24/7', label: t('stats.access'), icon: <Sparkles className="w-6 h-6" /> }
   ];
 
   return (
