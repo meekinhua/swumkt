@@ -130,16 +130,16 @@ const LandingPage = () => {
           <div className="text-center fade-in-up">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#00A9CE]/15 to-[#33BCDA]/15 rounded-full border-2 border-[#00A9CE]/30 mb-6 shadow-lg">
               <Sparkles className="w-5 h-5 text-[#005A73]" />
-              <span className="text-sm font-bold text-[#005A73]">Marketing Innovation Platform</span>
+              <span className="text-sm font-bold text-[#005A73]">{t('landing.badge')}</span>
             </div>
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-gray-900 mb-6 leading-tight" data-testid="hero-title">
-              <span className="gradient-text">SWUMKT Portal</span>
+              <span className="gradient-text">{t('landing.title')}</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-800 mb-4 max-w-3xl mx-auto font-bold">
-              แพลตฟอร์มสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ
+              {t('landing.subtitle')}
             </p>
             <p className="text-base sm:text-lg text-gray-700 mb-10 max-w-2xl mx-auto font-medium">
-              ศูนย์รวมเครื่องมือวิจัยตลาด เครือข่ายศิษย์เก่า และแหล่งความรู้ทางการตลาด
+              {t('landing.description')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
@@ -148,7 +148,7 @@ const LandingPage = () => {
                 data-testid="hero-get-started-btn"
                 className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white px-10 py-7 text-lg rounded-2xl shadow-2xl group font-bold"
               >
-                เริ่มต้นใช้งาน
+                {t('landing.getStarted')}
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button
@@ -158,7 +158,7 @@ const LandingPage = () => {
                 data-testid="hero-browse-content-btn"
                 className="px-10 py-7 text-lg rounded-2xl border-3 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10 shadow-xl font-bold"
               >
-                เรียกดูเนื้อหา
+                {t('landing.browseContent')}
               </Button>
             </div>
           </div>
