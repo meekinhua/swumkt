@@ -11,6 +11,7 @@ import ContentDetail from '@/pages/ContentDetail';
 import ContentEditor from '@/pages/ContentEditor';
 import ProfilePage from '@/pages/ProfilePage';
 import MarketResearch from '@/pages/MarketResearch';
+import CustomerJourneyTool from '@/pages/CustomerJourneyTool';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
