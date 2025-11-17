@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 import { API } from '@/App';
@@ -8,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Eye, User, ArrowLeft } from 'lucide-react';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const ContentBrowse = () => {
   const navigate = useNavigate();
