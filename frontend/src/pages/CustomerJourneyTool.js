@@ -13,7 +13,6 @@ import { ArrowLeft, User, LogOut, FileText, Map, Sparkles, Download, RefreshCw, 
 import { toast } from 'sonner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import mermaid from 'mermaid';
-import panzoom from 'panzoom';
 
 const CustomerJourneyTool = () => {
   const navigate = useNavigate();
@@ -23,8 +22,12 @@ const CustomerJourneyTool = () => {
   const [researchContext, setResearchContext] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const mermaidRef = useRef(null);
-  const panzoomInstance = useRef(null);
+  const containerRef = useRef(null);
 
   useEffect(() => {
     // Initialize Mermaid
@@ -43,30 +46,29 @@ const CustomerJourneyTool = () => {
     }
   }, [result]);
 
+  useEffect(() => {
+    // Handle mouse wheel zoom
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setZoom(prev => Math.max(0.3, Math.min(3, prev + delta)));
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const renderMermaid = async () => {
     if (mermaidRef.current && result?.mermaid_code) {
       try {
-        // Destroy previous panzoom instance
-        if (panzoomInstance.current) {
-          panzoomInstance.current.dispose();
-          panzoomInstance.current = null;
-        }
-        
         mermaidRef.current.innerHTML = '';
         const { svg } = await mermaid.render('mermaid-diagram', result.mermaid_code);
         mermaidRef.current.innerHTML = svg;
-        
-        // Initialize panzoom on the SVG element
-        const svgElement = mermaidRef.current.querySelector('svg');
-        if (svgElement) {
-          panzoomInstance.current = panzoom(svgElement, {
-            maxZoom: 3,
-            minZoom: 0.3,
-            bounds: true,
-            boundsPadding: 0.1,
-            zoomDoubleClickSpeed: 1,
-          });
-        }
       } catch (error) {
         console.error('Mermaid render error:', error);
         mermaidRef.current.innerHTML = `<div class="text-red-600 p-4">Error rendering diagram: ${error.message}</div>`;
@@ -74,23 +76,35 @@ const CustomerJourneyTool = () => {
     }
   };
 
-  const handleZoomIn = () => {
-    if (panzoomInstance.current) {
-      panzoomInstance.current.zoomIn();
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      setPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
     }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(3, prev + 0.2));
   };
 
   const handleZoomOut = () => {
-    if (panzoomInstance.current) {
-      panzoomInstance.current.zoomOut();
-    }
+    setZoom(prev => Math.max(0.3, prev - 0.2));
   };
 
   const handleResetZoom = () => {
-    if (panzoomInstance.current) {
-      panzoomInstance.current.moveTo(0, 0);
-      panzoomInstance.current.zoomAbs(0, 0, 1);
-    }
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
   };
 
   const handleGenerate = async () => {
