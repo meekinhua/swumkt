@@ -283,14 +283,40 @@ const CustomerJourneyTool = () => {
                       Journey Map Result
                     </h2>
                     {result && (
-                      <Button
-                        onClick={handleDownloadSVG}
-                        variant="outline"
-                        className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download SVG
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={handleZoomIn}
+                          variant="outline"
+                          size="sm"
+                          className="border-2 border-gray-300"
+                        >
+                          <ZoomIn className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={handleZoomOut}
+                          variant="outline"
+                          size="sm"
+                          className="border-2 border-gray-300"
+                        >
+                          <ZoomOut className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={handleResetZoom}
+                          variant="outline"
+                          size="sm"
+                          className="border-2 border-gray-300"
+                        >
+                          <Maximize className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={handleDownloadSVG}
+                          variant="outline"
+                          className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
                     )}
                   </div>
 
