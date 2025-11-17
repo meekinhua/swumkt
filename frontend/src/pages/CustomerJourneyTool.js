@@ -336,9 +336,16 @@ const CustomerJourneyTool = () => {
                         </p>
                       </div>
 
-                      {/* Mermaid Diagram */}
-                      <div className="p-4 bg-white rounded-lg border-2 border-gray-200 overflow-x-auto">
-                        <div ref={mermaidRef} className="flex justify-center"></div>
+                      {/* Mermaid Diagram - Interactive */}
+                      <div className="p-4 bg-white rounded-lg border-2 border-gray-200 relative" style={{ minHeight: '500px' }}>
+                        <div className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
+                          💡 Drag to pan, scroll to zoom
+                        </div>
+                        <div 
+                          ref={mermaidRef} 
+                          className="w-full h-full flex justify-center items-center overflow-hidden"
+                          style={{ cursor: 'grab', minHeight: '500px' }}
+                        ></div>
                       </div>
                     </div>
                   )}
