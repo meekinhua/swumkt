@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "features": "ฟีเจอร์",
+    "about": "เกี่ยวกับ",
+    "content": "เนื้อหา",
+    "login": "เข้าสู่ระบบ",
+    "register": "ลงทะเบียน",
+    "dashboard": "แดชบอร์ด",
+    "profile": "โปรไฟล์",
+    "logout": "ออกจากระบบ"
+  },
+  "landing": {
+    "badge": "Marketing Innovation Platform",
+    "title": "SWUMKT Portal",
+    "subtitle": "แพลตฟอร์มสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ",
+    "description": "ศูนย์รวมเครื่องมือวิจัยตลาด เครือข่ายศิษย์เก่า และแหล่งความรู้ทางการตลาด",
+    "getStarted": "เริ่มต้นใช้งาน",
+    "browseContent": "เรียกดูเนื้อหา",
+    "ctaTitle": "พร้อมเริ่มต้นแล้วหรือยัง?",
+    "ctaDescription": "เข้าร่วมชุมชน SWUMKT วันนี้ และเข้าถึงเครื่องมือและทรัพยากรที่จะช่วยพัฒนาทักษะทางการตลาดของคุณ",
+    "ctaButton": "ลงทะเบียนฟรี",
+    "footerText": "สาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ",
+    "footerCopyright": "© 2025 SWUMKT Portal. All rights reserved."
+  },
+  "stats": {
+    "alumni": "ศิษย์เก่า",
+    "research": "งานวิจัย",
+    "articles": "บทความ",
+    "access": "เข้าถึงได้"
+  },
+  "features": {
+    "title": "ฟีเจอร์หลัก",
+    "subtitle": "ระบบและบริการที่ออกแบบมาเพื่อนักการตลาดและนิสิต",
+    "marketResearch": {
+      "title": "Market Research Tools",
+      "description": "เครื่องมือวิจัยตลาด รวมถึง Survey Builder, Conjoint Analysis และการวิเคราะห์ข้อมูล",
+      "status": "เร็วๆ นี้"
+    },
+    "alumni": {
+      "title": "Alumni Zone",
+      "description": "เครือข่ายศิษย์เก่า เชื่อมต่อ แบ่งปัน และสร้างความสัมพันธ์ระหว่างศิษย์เก่า ศิษย์ปัจจุบัน",
+      "status": "เร็วๆ นี้"
+    },
+    "knowledge": {
+      "title": "Knowledge Hub",
+      "description": "เนื้อหาความรู้ ผลวิจัย ผลสำรวจ และบทความทางการตลาด ที่ผู้ใช้สามารถร่วมกันสร้างสรรค์",
+      "status": "พร้อมใช้งาน"
+    },
+    "students": {
+      "title": "Student Services",
+      "description": "บริการสำหรับนิสิตปัจจุบัน รวมถึงแหล่งข้อมูลการเรียนรู้และโอกาสพัฒนาทักษะ",
+      "status": "เร็วๆ นี้"
+    }
+  },
+  "auth": {
+    "loginTitle": "เข้าสู่ระบบ",
+    "loginSubtitle": "ยินดีต้อนรับกลับสู่ SWUMKT Portal",
+    "registerTitle": "ลงทะเบียน",
+    "registerSubtitle": "สร้างบัญชีของคุณเพื่อเริ่มต้นใช้งาน",
+    "email": "อีเมล",
+    "password": "รหัสผ่าน",
+    "name": "ชื่อ-นามสกุล",
+    "loginButton": "เข้าสู่ระบบ",
+    "registerButton": "ลงทะเบียน",
+    "noAccount": "ยังไม่มีบัญชี?",
+    "hasAccount": "มีบัญชีแล้ว?",
+    "backToHome": "กลับสู่หน้าหลัก"
+  },
+  "dashboard": {
+    "welcome": "ยินดีต้อนรับ",
+    "title": "แดชบอร์ด",
+    "recentContent": "เนื้อหาล่าสุด",
+    "myContent": "เนื้อหาของฉัน",
+    "createNew": "สร้างเนื้อหาใหม่",
+    "browseAll": "ดูเนื้อหาทั้งหมด",
+    "noContent": "ยังไม่มีเนื้อหา",
+    "quickActions": "การดำเนินการด่วน"
+  },
+  "content": {
+    "browse": "เรียกดูเนื้อหา",
+    "search": "ค้นหาเนื้อหา...",
+    "filter": "กรอง",
+    "allContent": "เนื้อหาทั้งหมด",
+    "myContent": "เนื้อหาของฉัน",
+    "create": "สร้างเนื้อหาใหม่",
+    "edit": "แก้ไข",
+    "delete": "ลบ",
+    "view": "ดู",
+    "noResults": "ไม่พบเนื้อหา",
+    "loading": "กำลังโหลด...",
+    "title": "หัวข้อ",
+    "body": "เนื้อหา",
+    "author": "ผู้เขียน",
+    "createdAt": "สร้างเมื่อ",
+    "updatedAt": "แก้ไขล่าสุด",
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "back": "กลับ",
+    "translate": "แปลภาษา",
+    "translating": "กำลังแปล...",
+    "originalText": "ข้อความต้นฉบับ",
+    "translatedText": "ข้อความที่แปลแล้ว"
+  },
+  "profile": {
+    "title": "โปรไฟล์ของฉัน",
+    "editProfile": "แก้ไขโปรไฟล์",
+    "email": "อีเมล",
+    "name": "ชื่อ",
+    "memberSince": "สมาชิกตั้งแต่",
+    "settings": "การตั้งค่า",
+    "language": "ภาษา",
+    "theme": "ธีม"
+  },
+  "common": {
+    "loading": "กำลังโหลด...",
+    "error": "เกิดข้อผิดพลาด",
+    "success": "สำเร็จ",
+    "confirm": "ยืนยัน",
+    "cancel": "ยกเลิก",
+    "save": "บันทึก",
+    "delete": "ลบ",
+    "edit": "แก้ไข",
+    "close": "ปิด",
+    "yes": "ใช่",
+    "no": "ไม่"
+  }
+}

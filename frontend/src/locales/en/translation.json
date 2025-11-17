@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "features": "Features",
+    "about": "About",
+    "content": "Content",
+    "login": "Login",
+    "register": "Register",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "landing": {
+    "badge": "Marketing Innovation Platform",
+    "title": "SWUMKT Portal",
+    "subtitle": "Srinakharinwirot University Marketing Department Platform",
+    "description": "Hub for market research tools, alumni network, and marketing knowledge",
+    "getStarted": "Get Started",
+    "browseContent": "Browse Content",
+    "ctaTitle": "Ready to Get Started?",
+    "ctaDescription": "Join the SWUMKT community today and access tools and resources that will help develop your marketing skills",
+    "ctaButton": "Register Free",
+    "footerText": "Marketing Department, Srinakharinwirot University",
+    "footerCopyright": "© 2025 SWUMKT Portal. All rights reserved."
+  },
+  "stats": {
+    "alumni": "Alumni",
+    "research": "Research",
+    "articles": "Articles",
+    "access": "Access"
+  },
+  "features": {
+    "title": "Core Features",
+    "subtitle": "Systems and services designed for marketers and students",
+    "marketResearch": {
+      "title": "Market Research Tools",
+      "description": "Market research tools including Survey Builder, Conjoint Analysis, and data analytics",
+      "status": "Coming Soon"
+    },
+    "alumni": {
+      "title": "Alumni Zone",
+      "description": "Alumni network to connect, share, and build relationships between alumni and current students",
+      "status": "Coming Soon"
+    },
+    "knowledge": {
+      "title": "Knowledge Hub",
+      "description": "Knowledge content, research results, surveys, and marketing articles that users can collaboratively create",
+      "status": "Available"
+    },
+    "students": {
+      "title": "Student Services",
+      "description": "Services for current students including learning resources and skill development opportunities",
+      "status": "Coming Soon"
+    }
+  },
+  "auth": {
+    "loginTitle": "Login",
+    "loginSubtitle": "Welcome back to SWUMKT Portal",
+    "registerTitle": "Register",
+    "registerSubtitle": "Create your account to get started",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full Name",
+    "loginButton": "Login",
+    "registerButton": "Register",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "backToHome": "Back to Home"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "title": "Dashboard",
+    "recentContent": "Recent Content",
+    "myContent": "My Content",
+    "createNew": "Create New Content",
+    "browseAll": "Browse All Content",
+    "noContent": "No content yet",
+    "quickActions": "Quick Actions"
+  },
+  "content": {
+    "browse": "Browse Content",
+    "search": "Search content...",
+    "filter": "Filter",
+    "allContent": "All Content",
+    "myContent": "My Content",
+    "create": "Create New Content",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "noResults": "No content found",
+    "loading": "Loading...",
+    "title": "Title",
+    "body": "Content",
+    "author": "Author",
+    "createdAt": "Created",
+    "updatedAt": "Last Updated",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "translate": "Translate",
+    "translating": "Translating...",
+    "originalText": "Original Text",
+    "translatedText": "Translated Text"
+  },
+  "profile": {
+    "title": "My Profile",
+    "editProfile": "Edit Profile",
+    "email": "Email",
+    "name": "Name",
+    "memberSince": "Member Since",
+    "settings": "Settings",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  }
+}
