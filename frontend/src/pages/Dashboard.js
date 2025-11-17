@@ -50,10 +50,10 @@ const Dashboard = () => {
 
   const getRoleLabel = (role) => {
     const labels = {
-      admin: 'ผู้ดูแลระบบ',
-      alumni: 'ศิษย์เก่า',
-      current_student: 'นิสิตปัจจุบัน',
-      public_user: 'ผู้ใช้ทั่วไป'
+      admin: t('auth.roles.admin'),
+      alumni: t('auth.roles.alumni'),
+      current_student: t('auth.roles.currentStudent'),
+      public_user: t('auth.roles.publicUser')
     };
     return labels[role] || role;
   };
