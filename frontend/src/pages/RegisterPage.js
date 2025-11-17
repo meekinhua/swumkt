@@ -203,12 +203,12 @@ const RegisterPage = () => {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  กำลังสร้างบัญชี...
+                  {t('auth.creating')}
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <UserPlus className="w-5 h-5" />
-                  ลงทะเบียน
+                  {t('auth.registerButton')}
                 </span>
               )}
             </Button>
