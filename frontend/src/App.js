@@ -46,6 +46,14 @@ function App() {
             <Route path="/content/:id" element={<ContentDetail />} />
             <Route path="/market-research" element={<MarketResearch />} />
             <Route
+              path="/market-research/customer-journey"
+              element={
+                <ProtectedRoute>
+                  <CustomerJourneyTool />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
