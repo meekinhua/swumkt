@@ -155,7 +155,7 @@ const Dashboard = () => {
                 <h2 className="text-2xl font-black text-gray-900">{t('content.myContent')}</h2>
                 <Button onClick={() => navigate('/content/create')} data-testid="create-content-btn" className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl">
                   <Plus className="w-4 h-4 mr-2" />
-                  สร้างเนื้อหาใหม่
+                  {t('content.createNew')}
                 </Button>
               </div>
 
