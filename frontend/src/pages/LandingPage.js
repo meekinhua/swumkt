@@ -287,10 +287,10 @@ const LandingPage = () => {
             />
           </div>
           <p className="text-gray-300 mb-2 font-medium">
-            สาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ
+            {t('landing.footerText')}
           </p>
           <p className="text-sm text-gray-500">
-            © 2025 SWUMKT Portal. All rights reserved.
+            {t('landing.footerCopyright')}
           </p>
         </div>
       </footer>
