@@ -208,28 +208,34 @@ const CustomerJourneyTool = () => {
               />
             </div>
             
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/market-research')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
+            <div className="flex items-center gap-2 md:gap-4">
+              <Button variant="ghost" onClick={() => navigate('/market-research')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 hidden sm:flex">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 {t('content.back')}
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
+              <Button variant="ghost" onClick={() => navigate('/market-research')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 sm:hidden p-2">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 hidden md:flex">
                 {t('nav.dashboard')}
               </Button>
               {user?.role === 'admin' && (
-                <Button variant="ghost" onClick={() => navigate('/admin/settings')} className="text-gray-800 font-semibold hover:text-[#E63946] hover:bg-[#E63946]/10">
+                <Button variant="ghost" onClick={() => navigate('/admin/settings')} className="text-gray-800 font-semibold hover:text-[#E63946] hover:bg-[#E63946]/10 hidden lg:flex">
                   <Settings className="w-4 h-4 mr-2" />
                   Admin
                 </Button>
               )}
-              <Button variant="ghost" onClick={() => navigate('/profile')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
+              <Button variant="ghost" onClick={() => navigate('/profile')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 hidden md:flex">
                 <User className="w-4 h-4 mr-2" />
                 {t('nav.profile')}
               </Button>
               <LanguageSwitcher />
-              <Button variant="outline" onClick={handleLogout} className="border-2 border-[#E63946] text-[#E63946] hover:bg-[#E63946] hover:text-white font-bold">
+              <Button variant="outline" onClick={handleLogout} className="border-2 border-[#E63946] text-[#E63946] hover:bg-[#E63946] hover:text-white font-bold hidden sm:flex">
                 <LogOut className="w-4 h-4 mr-2" />
                 {t('nav.logout')}
+              </Button>
+              <Button variant="outline" onClick={handleLogout} className="border-2 border-[#E63946] text-[#E63946] hover:bg-[#E63946] hover:text-white font-bold sm:hidden p-2">
+                <LogOut className="w-4 h-4" />
               </Button>
             </div>
           </div>
