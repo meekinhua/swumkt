@@ -245,6 +245,7 @@ const MarketResearch = () => {
                 {/* Action Button */}
                 <Button 
                   disabled={tool.comingSoon}
+                  onClick={() => tool.path && navigate(tool.path)}
                   className={`w-full ${tool.comingSoon ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : `bg-gradient-to-r ${tool.gradient} hover:opacity-90`} text-white font-bold shadow-xl`}
                 >
                   {tool.comingSoon ? t('marketResearch.comingSoon') : t('marketResearch.getStarted')}
