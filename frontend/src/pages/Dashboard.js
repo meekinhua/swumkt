@@ -44,7 +44,7 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     logout();
-    toast.success('ออกจากระบบสำเร็จ');
+    toast.success(t('common.success'));
     navigate('/');
   };
 
