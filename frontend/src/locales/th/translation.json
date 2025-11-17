@@ -195,6 +195,38 @@
       "feature2": "ระบุ Pain Points และโอกาสในการปรับปรุง",
       "feature3": "Visualize ด้วย Timeline และ Flowchart",
       "feature4": "แชร์และทำงานร่วมกันเป็นทีม"
+    },
+    "segmentation": {
+      "title": "Market Segmentation",
+      "description": "แบ่งกลุ่มตลาดตามลักษณะ พฤติกรรม และความต้องการ",
+      "feature1": "แบ่งกลุ่มตาม Demographics, Psychographics, Behavior",
+      "feature2": "วิเคราะห์ขนาดและศักยภาพของแต่ละกลุ่ม",
+      "feature3": "สร้าง Persona สำหรับแต่ละกลุ่มเป้าหมาย",
+      "feature4": "แสดงผลด้วย Charts และ Segmentation Matrix"
+    },
+    "customerBehavior": {
+      "title": "Customer Behavior Analysis",
+      "description": "วิเคราะห์พฤติกรรมการซื้อและการใช้งานของลูกค้า",
+      "feature1": "ติดตามพฤติกรรมการซื้อและ Conversion Path",
+      "feature2": "วิเคราะห์ RFM (Recency, Frequency, Monetary)",
+      "feature3": "ระบุ Patterns และ Trends ในพฤติกรรม",
+      "feature4": "ทำนายพฤติกรรมในอนาคตด้วย Predictive Analytics"
+    },
+    "customerPerception": {
+      "title": "Customer Perception Analysis",
+      "description": "วิเคราะห์การรับรู้และทัศนคติของลูกค้าต่อแบรนด์",
+      "feature1": "วัด Brand Awareness และ Brand Image",
+      "feature2": "วิเคราะห์ Customer Satisfaction และ NPS",
+      "feature3": "Sentiment Analysis จากรีวิวและโซเชียลมีเดีย",
+      "feature4": "เปรียบเทียบกับคู่แข่งด้วย Perceptual Mapping"
+    },
+    "competitorAnalysis": {
+      "title": "Competitor Analysis",
+      "description": "วิเคราะห์คู่แข่งและตำแหน่งในตลาด",
+      "feature1": "ระบุคู่แข่งหลักและวิเคราะห์ SWOT",
+      "feature2": "เปรียบเทียบผลิตภัณฑ์ ราคา และกลยุทธ์",
+      "feature3": "วิเคราะห์ Market Share และ Positioning",
+      "feature4": "ติดตามการเคลื่อนไหวและแนวโน้มของคู่แข่ง"
     }
   }
 }
