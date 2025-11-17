@@ -31,6 +31,8 @@
   "features": {
     "title": "ฟีเจอร์หลัก",
     "subtitle": "ระบบและบริการที่ออกแบบมาเพื่อนักการตลาดและนิสิต",
+    "other": "ฟีเจอร์อื่นๆ",
+    "inDevelopment": "กำลังพัฒนา",
     "marketResearch": {
       "title": "Market Research Tools",
       "description": "เครื่องมือวิจัยตลาด รวมถึง Survey Builder, Conjoint Analysis และการวิเคราะห์ข้อมูล",
@@ -41,6 +43,10 @@
       "description": "เครือข่ายศิษย์เก่า เชื่อมต่อ แบ่งปัน และสร้างความสัมพันธ์ระหว่างศิษย์เก่า ศิษย์ปัจจุบัน",
       "status": "เร็วๆ นี้"
     },
+    "alumniZone": {
+      "title": "Alumni Zone",
+      "description": "เครือข่ายศิษย์เก่า เชื่อมต่อ แบ่งปัน และสร้างความสัมพันธ์"
+    },
     "knowledge": {
       "title": "Knowledge Hub",
       "description": "เนื้อหาความรู้ ผลวิจัย ผลสำรวจ และบทความทางการตลาด ที่ผู้ใช้สามารถร่วมกันสร้างสรรค์",
@@ -50,6 +56,14 @@
       "title": "Student Services",
       "description": "บริการสำหรับนิสิตปัจจุบัน รวมถึงแหล่งข้อมูลการเรียนรู้และโอกาสพัฒนาทักษะ",
       "status": "เร็วๆ นี้"
+    },
+    "integrations": {
+      "title": "External Integrations",
+      "description": "เชื่อมต่อ LINE Notify, Email, SMS สำหรับแจ้งเตือน"
+    },
+    "analytics": {
+      "title": "Advanced Analytics",
+      "description": "วิเคราะห์ข้อมูลและสถิติขั้นสูงสำหรับเนื้อหา"
     }
   },
   "auth": {
