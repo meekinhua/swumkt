@@ -51,7 +51,7 @@ const CustomerJourneyTool = () => {
       : (i18n.language === 'th' ? 'แบบ B' : 'Type B');
     
     const styleText = journeyStyle === 'linear'
-      ? (i18n.language === 'th' ? 'รูปแบบเป็นลำดับ เดินทางตามขั้นตอน' : 'Linear sequential flow')
+      ? (i18n.language === 'th' ? 'แบบ linear' : 'Linear sequential flow')
       : (i18n.language === 'th' ? 'รูปแบบซับซ้อน มีหลายเส้นทางและจุดตัดสินใจ' : 'Nonlinear with multiple paths and decision points');
     
     const contextText = `${typeText}. ${styleText}.`;
