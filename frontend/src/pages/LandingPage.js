@@ -77,12 +77,30 @@ const LandingPage = () => {
               <a href="#stats" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.about')}</a>
               <a href="/content" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.content')}</a>
               <LanguageSwitcher />
-              <Button variant="ghost" onClick={() => navigate('/login')} data-testid="nav-login-btn" className="hover:bg-[#00A9CE]/10 hover:text-[#00A9CE] text-gray-800 font-semibold">
-                {t('nav.login')}
-              </Button>
-              <Button onClick={() => navigate('/register')} data-testid="nav-register-btn" className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl">
-                {t('nav.register')}
-              </Button>
+              {user ? (
+                <>
+                  <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="nav-dashboard-btn" className="hover:bg-[#00A9CE]/10 hover:text-[#00A9CE] text-gray-800 font-semibold">
+                    {t('nav.dashboard')}
+                  </Button>
+                  <Button variant="ghost" onClick={() => navigate('/profile')} data-testid="nav-profile-btn" className="hover:bg-[#00A9CE]/10 hover:text-[#00A9CE] text-gray-800 font-semibold">
+                    <User className="w-4 h-4 mr-2" />
+                    {t('nav.profile')}
+                  </Button>
+                  <Button variant="outline" onClick={handleLogout} data-testid="nav-logout-btn" className="border-2 border-[#E63946] text-[#E63946] hover:bg-[#E63946] hover:text-white font-bold">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {t('nav.logout')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" onClick={() => navigate('/login')} data-testid="nav-login-btn" className="hover:bg-[#00A9CE]/10 hover:text-[#00A9CE] text-gray-800 font-semibold">
+                    {t('nav.login')}
+                  </Button>
+                  <Button onClick={() => navigate('/register')} data-testid="nav-register-btn" className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl">
+                    {t('nav.register')}
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
