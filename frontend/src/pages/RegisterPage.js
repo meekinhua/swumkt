@@ -50,39 +50,39 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen geometric-bg flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #F5F7FA 0%, #E5E9F0 100%)' }}>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       <div className="w-full max-w-md">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
           data-testid="back-to-home-btn"
-          className="mb-6 text-gray-600 hover:text-[#00A9CE] hover:bg-[#00A9CE]/5"
+          className="mb-6 text-gray-800 hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 font-semibold"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> กลับหน้าแรก
         </Button>
 
-        <Card className="p-8 glass-effect shadow-2xl border-2 border-[#00A9CE]/10 scale-in">
+        <Card className="p-8 bg-white/98 shadow-2xl border-2 border-[#00A9CE]/20 scale-in">
           <div className="text-center mb-8">
             <div className="relative inline-block mb-6">
               <img 
-                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ts3olfuf_MKTSWU%20Logo%20Concept%20V2%20-%20Edited.png"
+                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png"
                 alt="SWUMKT Logo"
                 className="h-20 w-auto mx-auto"
               />
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00A9CE]/10 to-[#33BCDA]/10 rounded-full border border-[#00A9CE]/20 mb-4">
-              <Sparkles className="w-4 h-4 text-[#00A9CE]" />
-              <span className="text-sm font-medium text-[#007B9A]">Join Us Today</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00A9CE]/15 to-[#33BCDA]/15 rounded-full border-2 border-[#00A9CE]/25 mb-4">
+              <Sparkles className="w-4 h-4 text-[#005A73]" />
+              <span className="text-sm font-bold text-[#005A73]">Join Us Today</span>
             </div>
-            <h1 className="text-4xl font-bold mb-2" data-testid="register-title">
+            <h1 className="text-4xl font-black mb-2" data-testid="register-title">
               <span className="gradient-text">ลงทะเบียน</span>
             </h1>
-            <p className="text-gray-600">สร้างบัญชีใหม่เพื่อเข้าใช้ SWUMKT Portal</p>
+            <p className="text-gray-700 font-semibold">สร้างบัญชีใหม่เพื่อเข้าใช้ SWUMKT Portal</p>
           </div>
 
           <form onSubmit={handleSubmit} data-testid="register-form" className="space-y-5">
             <div>
-              <Label htmlFor="full_name" className="text-gray-700 font-medium mb-2 flex items-center gap-2">
+              <Label htmlFor="full_name" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                 <User className="w-4 h-4 text-[#00A9CE]" />
                 ชื่อ-นามสกุล
               </Label>
@@ -94,12 +94,12 @@ const RegisterPage = () => {
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 required
-                className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE]"
+                className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
               />
             </div>
 
             <div>
-              <Label htmlFor="email" className="text-gray-700 font-medium mb-2 flex items-center gap-2">
+              <Label htmlFor="email" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#00A9CE]" />
                 อีเมล
               </Label>
@@ -111,12 +111,12 @@ const RegisterPage = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE]"
+                className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
               />
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-gray-700 font-medium mb-2 flex items-center gap-2">
+              <Label htmlFor="password" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                 <Lock className="w-4 h-4 text-[#00A9CE]" />
                 รหัสผ่าน
               </Label>
@@ -129,17 +129,17 @@ const RegisterPage = () => {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 minLength={6}
-                className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE]"
+                className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
               />
             </div>
 
             <div>
-              <Label htmlFor="role" className="text-gray-700 font-medium mb-2">ประเภทผู้ใช้</Label>
+              <Label htmlFor="role" className="text-gray-800 font-bold mb-2">ประเภทผู้ใช้</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
               >
-                <SelectTrigger className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE]" data-testid="register-role-select">
+                <SelectTrigger className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium" data-testid="register-role-select">
                   <SelectValue placeholder="เลือกประเภท" />
                 </SelectTrigger>
                 <SelectContent>
@@ -151,9 +151,9 @@ const RegisterPage = () => {
             </div>
 
             {(formData.role === 'current_student' || formData.role === 'alumni') && (
-              <div className="space-y-5 p-4 bg-[#00A9CE]/5 rounded-xl border border-[#00A9CE]/20">
+              <div className="space-y-5 p-4 bg-[#00A9CE]/8 rounded-xl border-2 border-[#00A9CE]/20">
                 <div>
-                  <Label htmlFor="student_id" className="text-gray-700 font-medium mb-2 flex items-center gap-2">
+                  <Label htmlFor="student_id" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                     <Hash className="w-4 h-4 text-[#00A9CE]" />
                     รหัสนิสิต (ถ้ามี)
                   </Label>
@@ -164,13 +164,13 @@ const RegisterPage = () => {
                     placeholder="6512345678"
                     value={formData.student_id}
                     onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                    className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE]"
+                    className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium bg-white"
                   />
                 </div>
 
                 {formData.role === 'alumni' && (
                   <div>
-                    <Label htmlFor="graduation_year" className="text-gray-700 font-medium mb-2 flex items-center gap-2">
+                    <Label htmlFor="graduation_year" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-[#00A9CE]" />
                       ปีที่สำเร็จการศึกษา
                     </Label>
@@ -181,7 +181,7 @@ const RegisterPage = () => {
                       placeholder="2565"
                       value={formData.graduation_year}
                       onChange={(e) => setFormData({ ...formData, graduation_year: e.target.value })}
-                      className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE]"
+                      className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium bg-white"
                     />
                   </div>
                 )}
@@ -191,7 +191,7 @@ const RegisterPage = () => {
             <Button
               type="submit"
               data-testid="register-submit-btn"
-              className="w-full h-12 bg-gradient-to-r from-[#007B9A] to-[#00A9CE] hover:from-[#006080] hover:to-[#008FB5] text-white font-semibold shadow-lg"
+              className="w-full h-12 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl"
               disabled={loading}
             >
               {loading ? (
@@ -211,15 +211,15 @@ const RegisterPage = () => {
           <div className="mt-8 text-center">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <div className="w-full border-t-2 border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">หรือ</span>
+                <span className="px-4 bg-white text-gray-600 font-semibold">หรือ</span>
               </div>
             </div>
-            <p className="mt-4 text-sm text-gray-600">
+            <p className="mt-4 text-sm text-gray-700 font-semibold">
               มีบัญชีอยู่แล้ว?{' '}
-              <Link to="/login" className="text-[#00A9CE] hover:text-[#007B9A] font-semibold transition-colors" data-testid="goto-login-link">
+              <Link to="/login" className="text-[#00A9CE] hover:text-[#005A73] font-bold transition-colors" data-testid="goto-login-link">
                 เข้าสู่ระบบ
               </Link>
             </p>
