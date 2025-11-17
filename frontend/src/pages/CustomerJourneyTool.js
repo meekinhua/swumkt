@@ -109,6 +109,44 @@ const CustomerJourneyTool = () => {
     setPan({ x: 0, y: 0 });
   };
 
+  const handleFullscreen = () => {
+    if (!isFullscreen) {
+      if (fullscreenRef.current.requestFullscreen) {
+        fullscreenRef.current.requestFullscreen();
+      } else if (fullscreenRef.current.webkitRequestFullscreen) {
+        fullscreenRef.current.webkitRequestFullscreen();
+      } else if (fullscreenRef.current.msRequestFullscreen) {
+        fullscreenRef.current.msRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   const handleGenerate = async () => {
     if (!rawData.trim()) {
       toast.error(t('common.error') + ': Please enter research data');
