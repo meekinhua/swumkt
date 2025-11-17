@@ -83,7 +83,11 @@
     "createNew": "สร้างเนื้อหาใหม่",
     "browseAll": "ดูเนื้อหาทั้งหมด",
     "noContent": "ยังไม่มีเนื้อหา",
-    "quickActions": "การดำเนินการด่วน"
+    "quickActions": "การดำเนินการด่วน",
+    "totalViews": "ยอดเข้าชมทั้งหมด",
+    "status": "สถานะ",
+    "features": "ฟีเจอร์อื่นๆ",
+    "comingSoon": "กำลังพัฒนา"
   },
   "content": {
     "browse": "เรียกดูเนื้อหา",
