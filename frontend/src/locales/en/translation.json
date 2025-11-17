@@ -83,7 +83,11 @@
     "createNew": "Create New Content",
     "browseAll": "Browse All Content",
     "noContent": "No content yet",
-    "quickActions": "Quick Actions"
+    "quickActions": "Quick Actions",
+    "totalViews": "Total Views",
+    "status": "Status",
+    "features": "Other Features",
+    "comingSoon": "Coming Soon"
   },
   "content": {
     "browse": "Browse Content",
