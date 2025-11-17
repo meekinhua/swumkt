@@ -283,13 +283,13 @@ const CustomerJourneyTool = () => {
           <Tabs defaultValue="qualitative" className="w-full">
             <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-2 bg-white/98 border-2 border-gray-300 mb-8">
               <TabsTrigger value="qualitative" className="font-bold text-xs sm:text-sm">
-                <span className="hidden sm:inline">Phase 1: Qualitative Analysis</span>
-                <span className="sm:hidden">Qualitative</span>
+                <span className="hidden sm:inline">{t('customerJourney.phase1')}</span>
+                <span className="sm:hidden">{t('customerJourney.phase1Short')}</span>
               </TabsTrigger>
               <TabsTrigger value="quantitative" className="font-bold text-xs sm:text-sm" disabled>
                 <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Phase 2: Quantitative Validation</span>
-                <span className="sm:hidden">Quantitative</span>
+                <span className="hidden sm:inline">{t('customerJourney.phase2')}</span>
+                <span className="sm:hidden">{t('customerJourney.phase2Short')}</span>
               </TabsTrigger>
             </TabsList>
 
