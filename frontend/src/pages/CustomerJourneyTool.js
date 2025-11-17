@@ -44,6 +44,20 @@ const CustomerJourneyTool = () => {
     });
   }, []);
 
+  // Auto-update Additional Context based on journey type and style
+  useEffect(() => {
+    const typeText = journeyType === 'A' 
+      ? (i18n.language === 'th' ? 'การเดินทางแบบง่าย เน้นขั้นตอนหลักๆ' : 'Simple journey focusing on main stages')
+      : (i18n.language === 'th' ? 'การเดินทางแบบละเอียด แสดงรายละเอียดครบถ้วน' : 'Detailed journey with comprehensive information');
+    
+    const styleText = journeyStyle === 'linear'
+      ? (i18n.language === 'th' ? 'รูปแบบเป็นลำดับ เดินทางตามขั้นตอน' : 'Linear sequential flow')
+      : (i18n.language === 'th' ? 'รูปแบบซับซ้อน มีหลายเส้นทางและจุดตัดสินใจ' : 'Nonlinear with multiple paths and decision points');
+    
+    const contextText = `${typeText}. ${styleText}.`;
+    setResearchContext(contextText);
+  }, [journeyType, journeyStyle, i18n.language]);
+
   useEffect(() => {
     // Render mermaid diagram when result changes
     if (result && result.mermaid_code && mermaidRef.current) {
