@@ -43,6 +43,7 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/content" element={<ContentBrowse />} />
             <Route path="/content/:id" element={<ContentDetail />} />
+            <Route path="/market-research" element={<MarketResearch />} />
             <Route
               path="/dashboard"
               element={
