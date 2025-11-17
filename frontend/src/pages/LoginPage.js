@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { LogIn, ArrowLeft } from 'lucide-react';
+import { LogIn, ArrowLeft, Mail, Lock, Sparkles } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -34,84 +34,105 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen geometric-bg flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #F5F7FA 0%, #E5E9F0 100%)' }}>
       <div className="w-full max-w-md">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
           data-testid="back-to-home-btn"
-          className="mb-4"
+          className="mb-6 text-gray-600 hover:text-[#00A9CE] hover:bg-[#00A9CE]/5"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> กลับหน้าแรก
         </Button>
 
-        <Card className="p-8 shadow-xl border-0 glass-effect">
+        <Card className="p-8 glass-effect shadow-2xl border-2 border-[#00A9CE]/10 scale-in">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
-              S
+            <div className="relative inline-block mb-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#007B9A] to-[#33BCDA] rounded-3xl blur-xl opacity-50"></div>
+              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-[#007B9A] to-[#33BCDA] flex items-center justify-center text-white font-bold text-3xl shadow-xl">
+                S
+              </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="login-title">
-              เข้าสู่ระบบ
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00A9CE]/10 to-[#33BCDA]/10 rounded-full border border-[#00A9CE]/20 mb-4">
+              <Sparkles className="w-4 h-4 text-[#00A9CE]" />
+              <span className="text-sm font-medium text-[#007B9A]">Welcome Back</span>
+            </div>
+            <h1 className="text-4xl font-bold mb-2" data-testid="login-title">
+              <span className="gradient-text">เข้าสู่ระบบ</span>
             </h1>
             <p className="text-gray-600">ยินดีต้อนรับกลับสู่ SWUMKT Portal</p>
           </div>
 
-          <form onSubmit={handleSubmit} data-testid="login-form">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email">อีเมล</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  data-testid="login-email-input"
-                  placeholder="your.email@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="password">รหัสผ่าน</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  data-testid="login-password-input"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  className="mt-1"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                data-testid="login-submit-btn"
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    กำลังเข้าสู่ระบบ...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <LogIn className="w-4 h-4" />
-                    เข้าสู่ระบบ
-                  </span>
-                )}
-              </Button>
+          <form onSubmit={handleSubmit} data-testid="login-form" className="space-y-6">
+            <div>
+              <Label htmlFor="email" className="text-gray-700 font-medium mb-2 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-[#00A9CE]" />
+                อีเมล
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                data-testid="login-email-input"
+                placeholder="your.email@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+                className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE] focus:ring-[#00A9CE]/20"
+              />
             </div>
+
+            <div>
+              <Label htmlFor="password" className="text-gray-700 font-medium mb-2 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#00A9CE]" />
+                รหัสผ่าน
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                data-testid="login-password-input"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+                className="mt-1 h-12 border-gray-300 focus:border-[#00A9CE] focus:ring-[#00A9CE]/20"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              data-testid="login-submit-btn"
+              className="w-full h-12 bg-gradient-to-r from-[#007B9A] to-[#00A9CE] hover:from-[#006080] hover:to-[#008FB5] text-white font-semibold shadow-lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  กำลังเข้าสู่ระบบ...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <LogIn className="w-5 h-5" />
+                  เข้าสู่ระบบ
+                </span>
+              )}
+            </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
-            ยังไม่มีบัญชี?{' '}
-            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium" data-testid="goto-register-link">
-              ลงทะเบียนที่นี่
-            </Link>
+          <div className="mt-8 text-center">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">หรือ</span>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-gray-600">
+              ยังไม่มีบัญชี?{' '}
+              <Link to="/register" className="text-[#00A9CE] hover:text-[#007B9A] font-semibold transition-colors" data-testid="goto-register-link">
+                ลงทะเบียนที่นี่
+              </Link>
+            </p>
           </div>
         </Card>
       </div>
