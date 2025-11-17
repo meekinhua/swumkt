@@ -16,10 +16,13 @@ import mermaid from 'mermaid';
 
 const CustomerJourneyTool = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, token, logout } = useAuth();
   const [rawData, setRawData] = useState('');
   const [researchContext, setResearchContext] = useState('');
+  const [outputLanguage, setOutputLanguage] = useState('en');
+  const [journeyType, setJourneyType] = useState('B');
+  const [journeyStyle, setJourneyStyle] = useState('nonlinear');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [zoom, setZoom] = useState(1);
