@@ -494,6 +494,108 @@ class AdminPromptSettings(BaseModel):
     updated_by: str
     updated_at: str
 
+# Admin: Get Journey Map Prompt Settings
+@api_router.get("/admin/journey-map-prompt")
+async def get_journey_map_prompt(current_user: User = Depends(get_current_user)):
+    """Get current journey map prompt settings (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        settings = await db.admin_settings.find_one({"setting_type": "journey_map_prompt"})
+        if not settings:
+            # Return default prompt if not set
+            return {
+                "journey_map_prompt": get_default_journey_map_prompt(),
+                "updated_by": "system",
+                "updated_at": None
+            }
+        return settings
+    except Exception as e:
+        logging.error(f"Error fetching prompt settings: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch settings")
+
+# Admin: Update Journey Map Prompt Settings
+@api_router.put("/admin/journey-map-prompt")
+async def update_journey_map_prompt(
+    settings: AdminPromptSettings,
+    current_user: User = Depends(get_current_user)
+):
+    """Update journey map prompt settings (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        from datetime import datetime, timezone
+        
+        settings_dict = {
+            "setting_type": "journey_map_prompt",
+            "journey_map_prompt": settings.journey_map_prompt,
+            "updated_by": current_user.email,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.admin_settings.update_one(
+            {"setting_type": "journey_map_prompt"},
+            {"$set": settings_dict},
+            upsert=True
+        )
+        
+        return {"message": "Prompt settings updated successfully", "settings": settings_dict}
+    except Exception as e:
+        logging.error(f"Error updating prompt settings: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update settings")
+
+def get_default_journey_map_prompt():
+    """Get default journey map prompt"""
+    return """You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
+
+Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
+
+Guidelines:
+1. Identify key stages in the customer journey (e.g., Awareness, Consideration, Purchase, Post-Purchase, Loyalty)
+2. For each stage, identify:
+   - Touchpoints (where customer interacts with brand)
+   - Customer Actions
+   - Pain Points (frustrations, challenges)
+   - Emotions (feelings at each stage)
+   - Opportunities for improvement
+
+3. Output Format:
+   - First, provide a brief analysis summary (2-3 paragraphs)
+   - Then, generate Mermaid code for a flowchart-style journey map
+   - Use clear node labels and connections
+   - Include pain points and opportunities as annotations
+
+4. Mermaid Syntax Guidelines:
+   - Use graph TD or graph LR for direction
+   - Use meaningful node IDs
+   - Use descriptive labels
+   - Include colors for different types of nodes (stages, touchpoints, pain points)
+
+Example Mermaid structure:
+```mermaid
+graph TD
+    A[Awareness Stage] -->|Search Online| B[Website Visit]
+    B -->|Browse Products| C[Product Comparison]
+    C -->|Pain Point: Confusing Navigation| D[Consideration Stage]
+    D -->|Add to Cart| E[Purchase Stage]
+    
+    style A fill:#00A9CE,stroke:#005A73,stroke-width:3px,color:#fff
+    style D fill:#E63946,stroke:#C62E38,stroke-width:2px,color:#fff
+    style E fill:#28a745,stroke:#1e7e34,stroke-width:2px,color:#fff
+```
+
+Respond in this exact format:
+ANALYSIS:
+[Your analysis summary]
+
+MERMAID:
+```mermaid
+[Your mermaid code]
+```
+"""
+
 # Customer Journey Map endpoint
 @api_router.post("/generate-journey-map", response_model=JourneyMapResponse)
 async def generate_journey_map(request: JourneyMapRequest, current_user: User = Depends(get_current_user)):
@@ -506,8 +608,12 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
         if not api_key:
             raise HTTPException(status_code=500, detail="Journey Map service not configured")
         
-        # System prompt for generating journey map
-        system_prompt = """You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
+        # Get custom prompt from database or use default
+        settings = await db.admin_settings.find_one({"setting_type": "journey_map_prompt"})
+        if settings and settings.get("journey_map_prompt"):
+            system_prompt = settings["journey_map_prompt"]
+        else:
+            system_prompt = get_default_journey_map_prompt()
 
 Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
 
