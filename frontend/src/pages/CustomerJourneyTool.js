@@ -300,37 +300,134 @@ const CustomerJourneyTool = () => {
                 <Card className="p-4 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
                   <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 md:mb-6 flex items-center gap-2">
                     <FileText className="w-5 h-5 md:w-6 md:h-6 text-[#00A9CE]" />
-                    <span className="hidden sm:inline">Research Data Input</span>
-                    <span className="sm:hidden">Input</span>
+                    <span className="hidden sm:inline">{t('customerJourney.inputTitle')}</span>
+                    <span className="sm:hidden">{t('customerJourney.inputTitleShort')}</span>
                   </h2>
                   
                   <div className="space-y-6">
                     <div>
                       <Label htmlFor="rawData" className="text-gray-800 font-bold mb-2">
-                        Qualitative Research Data *
+                        {t('customerJourney.dataLabel')}
                       </Label>
                       <p className="text-sm text-gray-600 mb-2 font-medium">
-                        Paste your research data: interviews, observations, customer reviews, feedback, etc.
+                        {t('customerJourney.dataHelp')}
                       </p>
                       <Textarea
                         id="rawData"
                         value={rawData}
                         onChange={(e) => setRawData(e.target.value)}
-                        placeholder="Example:&#10;&#10;Interview with Customer A:&#10;'I first discovered the product through social media ads. The website was confusing to navigate...'&#10;&#10;Customer Review:&#10;'Great product but checkout process was frustrating...'&#10;&#10;Observation Notes:&#10;'Users spend average 3 minutes on homepage before leaving...'"
-                        rows={12}
+                        placeholder={t('customerJourney.dataPlaceholder')}
+                        rows={8}
                         className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
                       />
                     </div>
 
+                    {/* Output Language Selection */}
+                    <div>
+                      <Label className="text-gray-800 font-bold mb-2 block">
+                        {t('customerJourney.outputLanguageLabel')}
+                      </Label>
+                      <p className="text-sm text-gray-600 mb-2 font-medium">
+                        {t('customerJourney.outputLanguageHelp')}
+                      </p>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="outputLanguage"
+                            value="th"
+                            checked={outputLanguage === 'th'}
+                            onChange={(e) => setOutputLanguage(e.target.value)}
+                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                          />
+                          <span className="text-gray-700 font-medium">{t('customerJourney.outputLanguageThai')}</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="outputLanguage"
+                            value="en"
+                            checked={outputLanguage === 'en'}
+                            onChange={(e) => setOutputLanguage(e.target.value)}
+                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                          />
+                          <span className="text-gray-700 font-medium">{t('customerJourney.outputLanguageEnglish')}</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Journey Type Selection */}
+                    <div>
+                      <Label className="text-gray-800 font-bold mb-2 block">
+                        {t('customerJourney.journeyTypeLabel')}
+                      </Label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="journeyType"
+                            value="A"
+                            checked={journeyType === 'A'}
+                            onChange={(e) => setJourneyType(e.target.value)}
+                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                          />
+                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyTypeA')}</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="journeyType"
+                            value="B"
+                            checked={journeyType === 'B'}
+                            onChange={(e) => setJourneyType(e.target.value)}
+                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                          />
+                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyTypeB')}</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Journey Style Selection */}
+                    <div>
+                      <Label className="text-gray-800 font-bold mb-2 block">
+                        {t('customerJourney.journeyStyleLabel')}
+                      </Label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="journeyStyle"
+                            value="linear"
+                            checked={journeyStyle === 'linear'}
+                            onChange={(e) => setJourneyStyle(e.target.value)}
+                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                          />
+                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyStyleLinear')}</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="journeyStyle"
+                            value="nonlinear"
+                            checked={journeyStyle === 'nonlinear'}
+                            onChange={(e) => setJourneyStyle(e.target.value)}
+                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                          />
+                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyStyleNonlinear')}</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Additional Context */}
                     <div>
                       <Label htmlFor="context" className="text-gray-800 font-bold mb-2">
-                        Additional Context (Optional)
+                        {t('customerJourney.contextLabel')}
                       </Label>
                       <Textarea
                         id="context"
                         value={researchContext}
                         onChange={(e) => setResearchContext(e.target.value)}
-                        placeholder="E.g., Industry: E-commerce, Target Audience: Young adults, Research Method: In-depth interviews"
+                        placeholder={t('customerJourney.contextPlaceholder')}
                         rows={3}
                         className="border-2 border-gray-300 focus:border-[#00A9CE]"
                       />
