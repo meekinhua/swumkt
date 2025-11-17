@@ -56,28 +56,29 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation Bar */}
-      <nav className="bg-white border-b border-gray-200 shadow-sm">
+      <nav className="bg-white/98 backdrop-blur-xl border-b border-gray-300/50 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-                S
-              </div>
-              <span className="text-xl font-bold text-gray-900">SWUMKT</span>
+              <img 
+                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png"
+                alt="SWUMKT Logo"
+                className="h-16 w-auto"
+              />
             </div>
             
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/content')} data-testid="nav-browse-content-btn">
+              <Button variant="ghost" onClick={() => navigate('/content')} data-testid="nav-browse-content-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
                 <FileText className="w-4 h-4 mr-2" />
                 เรียกดูเนื้อหา
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/profile')} data-testid="nav-profile-btn">
+              <Button variant="ghost" onClick={() => navigate('/profile')} data-testid="nav-profile-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
                 <User className="w-4 h-4 mr-2" />
                 โปรไฟล์
               </Button>
-              <Button variant="outline" onClick={handleLogout} data-testid="logout-btn">
+              <Button variant="outline" onClick={handleLogout} data-testid="logout-btn" className="border-2 border-[#E63946] text-[#E63946] hover:bg-[#E63946] hover:text-white font-bold">
                 <LogOut className="w-4 h-4 mr-2" />
                 ออกจากระบบ
               </Button>
@@ -89,49 +90,49 @@ const Dashboard = () => {
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2" data-testid="dashboard-title">
-            ยินดีต้อนรับ, {user?.full_name}
+        <div className="mb-8 fade-in-up">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2" data-testid="dashboard-title">
+            ยินดีต้อนรับ, <span className="gradient-text">{user?.full_name}</span>
           </h1>
-          <p className="text-gray-600">
-            บทบาท: <span className="font-medium text-blue-600">{getRoleLabel(user?.role)}</span>
+          <p className="text-lg text-gray-700 font-semibold">
+            บทบาท: <span className="px-3 py-1 bg-gradient-to-r from-[#00A9CE]/15 to-[#33BCDA]/15 rounded-full border border-[#00A9CE]/25 text-[#005A73] font-bold">{getRoleLabel(user?.role)}</span>
           </p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6 border-2 border-blue-100 hover:shadow-lg transition-shadow" data-testid="stat-card-contents">
+          <Card className="p-6 bg-white/98 border-2 border-[#00A9CE]/20 hover:shadow-xl transition-shadow scale-in" data-testid="stat-card-contents">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-blue-100 text-blue-600">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-[#00A9CE]/15 to-[#33BCDA]/15 text-[#005A73] border border-[#00A9CE]/20">
                 <FileText className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">เนื้อหาของฉัน</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalContent}</p>
+                <p className="text-sm text-gray-700 font-bold">เนื้อหาของฉัน</p>
+                <p className="text-3xl font-black gradient-text">{stats.totalContent}</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 border-2 border-green-100 hover:shadow-lg transition-shadow" data-testid="stat-card-views">
+          <Card className="p-6 bg-white/98 border-2 border-green-200 hover:shadow-xl transition-shadow scale-in" data-testid="stat-card-views" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-green-100 text-green-600">
+              <div className="p-3 rounded-xl bg-green-100 text-green-700 border border-green-200">
                 <TrendingUp className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">ยอดเข้าชมทั้งหมด</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalViews}</p>
+                <p className="text-sm text-gray-700 font-bold">ยอดเข้าชมทั้งหมด</p>
+                <p className="text-3xl font-black text-green-700">{stats.totalViews}</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 border-2 border-purple-100 hover:shadow-lg transition-shadow" data-testid="stat-card-role">
+          <Card className="p-6 bg-white/98 border-2 border-purple-200 hover:shadow-xl transition-shadow scale-in" data-testid="stat-card-role" style={{ animationDelay: '0.2s' }}>
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-purple-100 text-purple-600">
+              <div className="p-3 rounded-xl bg-purple-100 text-purple-700 border border-purple-200">
                 <UsersIcon className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">สถานะ</p>
-                <p className="text-xl font-bold text-gray-900">{getRoleLabel(user?.role)}</p>
+                <p className="text-sm text-gray-700 font-bold">สถานะ</p>
+                <p className="text-xl font-black text-purple-700">{getRoleLabel(user?.role)}</p>
               </div>
             </div>
           </Card>
@@ -139,16 +140,16 @@ const Dashboard = () => {
 
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="content" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="content" data-testid="tab-content">เนื้อหาของฉัน</TabsTrigger>
-            <TabsTrigger value="features" data-testid="tab-features">ฟีเจอร์อื่นๆ</TabsTrigger>
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-white/98 border-2 border-gray-300">
+            <TabsTrigger value="content" data-testid="tab-content" className="font-bold">เนื้อหาของฉัน</TabsTrigger>
+            <TabsTrigger value="features" data-testid="tab-features" className="font-bold">ฟีเจอร์อื่นๆ</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="mt-6" data-testid="content-tab-panel">
-            <Card className="p-6">
+            <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-lg">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">เนื้อหาของฉัน</h2>
-                <Button onClick={() => navigate('/content/create')} data-testid="create-content-btn" className="bg-blue-600 hover:bg-blue-700">
+                <h2 className="text-2xl font-black text-gray-900">เนื้อหาของฉัน</h2>
+                <Button onClick={() => navigate('/content/create')} data-testid="create-content-btn" className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl">
                   <Plus className="w-4 h-4 mr-2" />
                   สร้างเนื้อหาใหม่
                 </Button>
@@ -156,13 +157,13 @@ const Dashboard = () => {
 
               {loading ? (
                 <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#00A9CE] mx-auto"></div>
                 </div>
               ) : myContents.length === 0 ? (
                 <div className="text-center py-12">
-                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">คุณยังไม่มีเนื้อหา</p>
-                  <Button onClick={() => navigate('/content/create')} className="bg-blue-600 hover:bg-blue-700">
+                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-700 mb-4 font-semibold">คุณยังไม่มีเนื้อหา</p>
+                  <Button onClick={() => navigate('/content/create')} className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold">
                     สร้างเนื้อหาแรกของคุณ
                   </Button>
                 </div>
@@ -171,21 +172,21 @@ const Dashboard = () => {
                   {myContents.map((content, index) => (
                     <Card
                       key={content.id}
-                      className="p-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
+                      className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-2 border-gray-300 hover:border-[#00A9CE] bg-white"
                       onClick={() => navigate(`/content/${content.id}`)}
                       data-testid={`my-content-item-${index}`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">{content.title}</h3>
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                          <h3 className="text-lg font-bold text-gray-900 mb-1">{content.title}</h3>
+                          <p className="text-sm text-gray-700 mb-2 line-clamp-2 font-medium">
                             {content.content.substring(0, 150)}...
                           </p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span>ประเภท: {content.content_type}</span>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 font-semibold">
+                            <span className="badge-success px-2 py-1 rounded-full">ประเภท: {content.content_type}</span>
                             <span>ยอดเข้าชม: {content.views || 0}</span>
                             <span className={`px-2 py-1 rounded-full ${
-                              content.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                              content.status === 'published' ? 'badge-success' : 'badge-warning'
                             }`}>
                               {content.status === 'published' ? 'เผยแพร่แล้ว' : 'แบบร่าง'}
                             </span>
@@ -201,62 +202,62 @@ const Dashboard = () => {
 
           <TabsContent value="features" className="mt-6" data-testid="features-tab-panel">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="p-6 border-2 border-gray-200 opacity-60">
+              <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gray-100 text-gray-400">
+                  <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
                     <TrendingUp className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-700">Market Research Tools</h3>
                 </div>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600 mb-4 font-medium">
                   เครื่องมือวิจัยตลาดสำหรับ Survey, Conjoint Analysis, Data Visualization
                 </p>
-                <span className="text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
                   กำลังพัฒนา
                 </span>
               </Card>
 
-              <Card className="p-6 border-2 border-gray-200 opacity-60">
+              <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gray-100 text-gray-400">
+                  <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
                     <UsersIcon className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-700">Alumni Zone</h3>
                 </div>
-                <p className="text-gray-600 mb-4">
-                  เครือข่ายศิษย์เก่า เชื่อมต่อ และสร้างความสัมพันธ์
+                <p className="text-gray-600 mb-4 font-medium">
+                  เครือข่ายศิษย์เก่า เชื่อมต่อ แบ่งปัน และสร้างความสัมพันธ์
                 </p>
-                <span className="text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
                   กำลังพัฒนา
                 </span>
               </Card>
 
-              <Card className="p-6 border-2 border-gray-200 opacity-60">
+              <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gray-100 text-gray-400">
+                  <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
                     <Settings className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-700">External Integrations</h3>
                 </div>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600 mb-4 font-medium">
                   เชื่อมต่อ LINE Notify, Email, SMS สำหรับแจ้งเตือน
                 </p>
-                <span className="text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
                   กำลังพัฒนา
                 </span>
               </Card>
 
-              <Card className="p-6 border-2 border-gray-200 opacity-60">
+              <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gray-100 text-gray-400">
+                  <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
                     <FileText className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-700">Advanced Analytics</h3>
                 </div>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600 mb-4 font-medium">
                   วิเคราะห์ข้อมูลและสถิติขั้นสูงสำหรับเนื้อหา
                 </p>
-                <span className="text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
                   กำลังพัฒนา
                 </span>
               </Card>
