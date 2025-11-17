@@ -224,6 +224,10 @@ async def login(credentials: UserLogin):
     if not verify_password(credentials.password, user['password']):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    # Remove MongoDB _id field if it exists
+    if '_id' in user:
+        del user['_id']
+    
     # Create token
     token = create_access_token(user['id'], user['email'], user['role'])
     
