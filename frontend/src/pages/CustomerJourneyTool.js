@@ -47,7 +47,7 @@ const CustomerJourneyTool = () => {
   // Auto-update Additional Context based on journey type and style
   useEffect(() => {
     const typeText = journeyType === 'A' 
-      ? (i18n.language === 'th' ? 'แบบ A' : 'Simple journey focusing on main stages')
+      ? (i18n.language === 'th' ? 'แบบ A' : 'Type A')
       : (i18n.language === 'th' ? 'การเดินทางแบบละเอียด แสดงรายละเอียดครบถ้วน' : 'Detailed journey with comprehensive information');
     
     const styleText = journeyStyle === 'linear'
