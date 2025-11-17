@@ -81,6 +81,28 @@ const ContentDetail = () => {
     }
   };
 
+  const handleTranslate = async () => {
+    if (!targetLanguage) {
+      toast.error(t('common.error'));
+      return;
+    }
+
+    setTranslating(true);
+    try {
+      const response = await axios.post(`${API}/translate`, {
+        text: content.content,
+        target_language: targetLanguage
+      });
+      setTranslatedContent(response.data.translated_text);
+      toast.success(t('common.success'));
+    } catch (error) {
+      console.error('Translation error:', error);
+      toast.error(t('common.error'));
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const canEdit = user && content && (content.created_by === user.id || user.role === 'admin');
 
   const getTypeLabel = (type) => {
