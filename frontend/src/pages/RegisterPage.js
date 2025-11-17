@@ -140,18 +140,18 @@ const RegisterPage = () => {
             </div>
 
             <div>
-              <Label htmlFor="role" className="text-gray-800 font-bold mb-2">ประเภทผู้ใช้</Label>
+              <Label htmlFor="role" className="text-gray-800 font-bold mb-2">{t('auth.userType')}</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
               >
                 <SelectTrigger className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium" data-testid="register-role-select">
-                  <SelectValue placeholder="เลือกประเภท" />
+                  <SelectValue placeholder={t('auth.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="public_user" data-testid="role-public">ผู้สนใจทั่วไป</SelectItem>
-                  <SelectItem value="current_student" data-testid="role-student">นิสิตปัจจุบัน</SelectItem>
-                  <SelectItem value="alumni" data-testid="role-alumni">ศิษย์เก่า</SelectItem>
+                  <SelectItem value="public_user" data-testid="role-public">{t('auth.publicUser')}</SelectItem>
+                  <SelectItem value="current_student" data-testid="role-student">{t('auth.currentStudent')}</SelectItem>
+                  <SelectItem value="alumni" data-testid="role-alumni">{t('auth.alumni')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
