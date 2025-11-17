@@ -210,10 +210,55 @@ const ContentDetail = () => {
 
           {/* Content Body */}
           <div className="prose max-w-none mb-6" data-testid="content-body">
+            <div className="flex items-center justify-between mb-4 p-4 bg-[#00A9CE]/5 rounded-lg border border-[#00A9CE]/20">
+              <h3 className="text-lg font-black text-gray-900">{t('content.originalText')}</h3>
+              <div className="flex items-center gap-3">
+                <Select value={targetLanguage} onValueChange={setTargetLanguage}>
+                  <SelectTrigger className="w-40 border-2 border-[#00A9CE]">
+                    <SelectValue placeholder={t('content.translate')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="th">ไทย</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="zh">中文</SelectItem>
+                    <SelectItem value="ja">日本語</SelectItem>
+                    <SelectItem value="ko">한국어</SelectItem>
+                    <SelectItem value="my">မြန်မာ</SelectItem>
+                    <SelectItem value="lo">ລາວ</SelectItem>
+                    <SelectItem value="vi">Tiếng Việt</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleTranslate}
+                  disabled={!targetLanguage || translating}
+                  className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold"
+                >
+                  {translating ? (
+                    <>{t('content.translating')}</>
+                  ) : (
+                    <>
+                      <Languages className="w-4 h-4 mr-2" />
+                      {t('content.translate')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            
             <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-lg font-medium">
               {content.content}
             </p>
           </div>
+
+          {/* Translated Content */}
+          {translatedContent && (
+            <div className="prose max-w-none mb-6 p-6 bg-gradient-to-br from-[#00A9CE]/10 to-[#33BCDA]/10 rounded-lg border-2 border-[#00A9CE]/30">
+              <h3 className="text-lg font-black text-[#005A73] mb-4">{t('content.translatedText')}</h3>
+              <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-lg font-medium">
+                {translatedContent}
+              </p>
+            </div>
+          )}
 
           {/* Tags */}
           {content.tags && content.tags.length > 0 && (
