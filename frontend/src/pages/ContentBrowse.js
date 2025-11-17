@@ -198,12 +198,12 @@ const ContentBrowse = () => {
                 <div className="flex items-center justify-between text-sm text-gray-600 font-semibold">
                   <div className="flex items-center gap-1">
                     <Eye className="w-4 h-4 text-[#00A9CE]" />
-                    <span>{content.views || 0} ครั้ง</span>
+                    <span>{content.views || 0} {t('stats.access')}</span>
                   </div>
                   {content.contributors && content.contributors.length > 0 && (
                     <div className="flex items-center gap-1">
                       <User className="w-4 h-4 text-[#00A9CE]" />
-                      <span>{content.contributors.length} คน</span>
+                      <span>{content.contributors.length}</span>
                     </div>
                   )}
                 </div>
