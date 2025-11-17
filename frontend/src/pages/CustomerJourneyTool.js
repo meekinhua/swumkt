@@ -9,10 +9,11 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, User, LogOut, FileText, Map, Sparkles, Download, RefreshCw, BarChart, Lock } from 'lucide-react';
+import { ArrowLeft, User, LogOut, FileText, Map, Sparkles, Download, RefreshCw, BarChart, Lock, Settings, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { toast } from 'sonner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import mermaid from 'mermaid';
+import panzoom from 'panzoom';
 
 const CustomerJourneyTool = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const CustomerJourneyTool = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const mermaidRef = useRef(null);
+  const panzoomInstance = useRef(null);
 
   useEffect(() => {
     // Initialize Mermaid
@@ -44,13 +46,50 @@ const CustomerJourneyTool = () => {
   const renderMermaid = async () => {
     if (mermaidRef.current && result?.mermaid_code) {
       try {
+        // Destroy previous panzoom instance
+        if (panzoomInstance.current) {
+          panzoomInstance.current.dispose();
+          panzoomInstance.current = null;
+        }
+        
         mermaidRef.current.innerHTML = '';
         const { svg } = await mermaid.render('mermaid-diagram', result.mermaid_code);
         mermaidRef.current.innerHTML = svg;
+        
+        // Initialize panzoom on the SVG element
+        const svgElement = mermaidRef.current.querySelector('svg');
+        if (svgElement) {
+          panzoomInstance.current = panzoom(svgElement, {
+            maxZoom: 3,
+            minZoom: 0.3,
+            bounds: true,
+            boundsPadding: 0.1,
+            zoomDoubleClickSpeed: 1,
+          });
+        }
       } catch (error) {
         console.error('Mermaid render error:', error);
         mermaidRef.current.innerHTML = `<div class="text-red-600 p-4">Error rendering diagram: ${error.message}</div>`;
       }
+    }
+  };
+
+  const handleZoomIn = () => {
+    if (panzoomInstance.current) {
+      panzoomInstance.current.zoomIn();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (panzoomInstance.current) {
+      panzoomInstance.current.zoomOut();
+    }
+  };
+
+  const handleResetZoom = () => {
+    if (panzoomInstance.current) {
+      panzoomInstance.current.moveTo(0, 0);
+      panzoomInstance.current.zoomAbs(0, 0, 1);
     }
   };
 
