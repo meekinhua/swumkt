@@ -13,6 +13,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const ContentBrowse = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(true);
