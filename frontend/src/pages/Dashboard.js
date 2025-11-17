@@ -152,7 +152,7 @@ const Dashboard = () => {
           <TabsContent value="content" className="mt-6" data-testid="content-tab-panel">
             <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-lg">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-black text-gray-900">เนื้อหาของฉัน</h2>
+                <h2 className="text-2xl font-black text-gray-900">{t('content.myContent')}</h2>
                 <Button onClick={() => navigate('/content/create')} data-testid="create-content-btn" className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl">
                   <Plus className="w-4 h-4 mr-2" />
                   สร้างเนื้อหาใหม่
