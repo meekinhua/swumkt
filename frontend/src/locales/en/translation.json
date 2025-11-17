@@ -64,7 +64,16 @@
     "registerButton": "Register",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
-    "backToHome": "Back to Home"
+    "backToHome": "Back to Home",
+    "or": "or",
+    "userType": "User Type",
+    "selectType": "Select Type",
+    "publicUser": "Public User",
+    "currentStudent": "Current Student",
+    "alumni": "Alumni",
+    "studentId": "Student ID (Optional)",
+    "graduationYear": "Graduation Year",
+    "creating": "Creating account..."
   },
   "dashboard": {
     "welcome": "Welcome",
