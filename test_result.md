@@ -107,39 +107,48 @@ user_problem_statement: "เพิ่มฟีเจอร์การเลื�
 backend:
   - task: "อัปเดต JourneyMapRequest model เพื่อรับ target_language, journey_type, journey_style"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "เพิ่ม fields: target_language (default: en), journey_type (default: B), journey_style (default: nonlinear) ใน JourneyMapRequest model"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: JourneyMapRequest model successfully accepts target_language, journey_type, journey_style parameters. All API calls with these parameters return 200 OK and generate proper journey maps."
   
   - task: "อัปเดต generate_journey_map endpoint ให้ใช้ target_language ใน prompt"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "แก้ไข user prompt ให้ส่ง language instruction, type description, และ style description ไปยัง LLM เพื่อให้ AI สร้าง output ในภาษาที่เลือก"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Multi-language output working perfectly. Thai output contains Thai characters, English output contains proper English text. Journey type (A/B) and style (linear/nonlinear) parameters are properly processed and influence the AI output."
   
   - task: "แก้ไข login endpoint เพื่อลบ MongoDB _id ออก"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "เพิ่มการลบ _id field ออกจาก user object ก่อน serialize เพื่อแก้ไข ObjectId serialization error"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Login endpoint working correctly. Successfully logged in with test@test.com/test123 and received valid JWT token. No ObjectId serialization errors encountered."
 
 frontend:
   - task: "เพิ่ม translation keys สำหรับ CustomerJourneyTool"
