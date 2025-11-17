@@ -405,7 +405,7 @@ const CustomerJourneyTool = () => {
                           onMouseLeave={handleMouseUp}
                         >
                           <div className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
-                            💡 Drag to pan, Ctrl+Scroll to zoom
+                            💡 Drag to pan, Scroll to zoom
                           </div>
                           <div 
                             ref={mermaidRef} 
