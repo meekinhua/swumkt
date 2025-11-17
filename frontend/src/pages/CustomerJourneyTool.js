@@ -48,7 +48,7 @@ const CustomerJourneyTool = () => {
   useEffect(() => {
     const typeText = journeyType === 'A' 
       ? (i18n.language === 'th' ? 'แบบ A' : 'Type A')
-      : (i18n.language === 'th' ? 'การเดินทางแบบละเอียด แสดงรายละเอียดครบถ้วน' : 'Detailed journey with comprehensive information');
+      : (i18n.language === 'th' ? 'แบบ B' : 'Type B');
     
     const styleText = journeyStyle === 'linear'
       ? (i18n.language === 'th' ? 'รูปแบบเป็นลำดับ เดินทางตามขั้นตอน' : 'Linear sequential flow')
