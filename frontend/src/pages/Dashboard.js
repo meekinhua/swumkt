@@ -192,7 +192,7 @@ const Dashboard = () => {
                             <span className={`px-2 py-1 rounded-full ${
                               content.status === 'published' ? 'badge-success' : 'badge-warning'
                             }`}>
-                              {content.status === 'published' ? 'เผยแพร่แล้ว' : 'แบบร่าง'}
+                              {content.status === 'published' ? t('content.published') : t('content.draft')}
                             </span>
                           </div>
                         </div>
