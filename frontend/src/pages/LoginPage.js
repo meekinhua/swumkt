@@ -137,7 +137,7 @@ const LoginPage = () => {
             <p className="mt-4 text-sm text-gray-700 font-semibold">
               {t('auth.noAccount')}{' '}
               <Link to="/register" className="text-[#00A9CE] hover:text-[#005A73] font-bold transition-colors" data-testid="goto-register-link">
-                ลงทะเบียนที่นี่
+                {t('auth.registerButton')}
               </Link>
             </p>
           </div>
