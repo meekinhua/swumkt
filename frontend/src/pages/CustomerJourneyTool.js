@@ -164,6 +164,12 @@ const CustomerJourneyTool = () => {
               <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
                 {t('nav.dashboard')}
               </Button>
+              {user?.role === 'admin' && (
+                <Button variant="ghost" onClick={() => navigate('/admin/settings')} className="text-gray-800 font-semibold hover:text-[#E63946] hover:bg-[#E63946]/10">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              )}
               <Button variant="ghost" onClick={() => navigate('/profile')} className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
                 <User className="w-4 h-4 mr-2" />
                 {t('nav.profile')}
