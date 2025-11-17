@@ -418,6 +418,69 @@ async def add_contributor(
     
     return {"message": "Contributor added successfully"}
 
+# Translation Models
+class TranslationRequest(BaseModel):
+    text: str
+    target_language: str = Field(..., description="Target language code (e.g., 'en', 'th', 'zh', 'ja', 'ko', 'my', 'lo', 'vi')")
+    source_language: Optional[str] = Field(None, description="Source language code (auto-detect if not provided)")
+
+class TranslationResponse(BaseModel):
+    translated_text: str
+    source_language: str
+    target_language: str
+
+# Translation endpoint
+@api_router.post("/translate", response_model=TranslationResponse)
+async def translate_text(request: TranslationRequest):
+    """Translate text using Emergent LLM (GPT-5)"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        # Language mapping
+        language_names = {
+            'th': 'Thai',
+            'en': 'English',
+            'zh': 'Chinese',
+            'ja': 'Japanese',
+            'ko': 'Korean',
+            'my': 'Burmese',
+            'lo': 'Lao',
+            'vi': 'Vietnamese'
+        }
+        
+        target_lang_name = language_names.get(request.target_language, request.target_language)
+        source_lang_name = language_names.get(request.source_language, 'auto-detected') if request.source_language else 'auto-detected'
+        
+        # Get API key
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Translation service not configured")
+        
+        # Create LLM chat
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"translation-{uuid.uuid4()}",
+            system_message=f"You are a professional translator. Translate the given text to {target_lang_name}. Only return the translated text without any explanations or additional comments."
+        ).with_model("openai", "gpt-4o-mini")
+        
+        # Create translation prompt
+        user_message = UserMessage(
+            text=f"Translate this text to {target_lang_name}:\n\n{request.text}"
+        )
+        
+        # Get translation
+        translated_text = await chat.send_message(user_message)
+        
+        return TranslationResponse(
+            translated_text=translated_text.strip(),
+            source_language=request.source_language or 'auto',
+            target_language=request.target_language
+        )
+        
+    except Exception as e:
+        logging.error(f"Translation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
