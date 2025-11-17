@@ -72,23 +72,24 @@ const ContentBrowse = () => {
               {user ? (
                 <>
                   <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="nav-dashboard-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
-                    Dashboard
+                    {t('nav.dashboard')}
                   </Button>
                   <Button variant="ghost" onClick={() => navigate('/profile')} data-testid="nav-profile-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
                     <User className="w-4 h-4 mr-2" />
-                    โปรไฟล์
+                    {t('nav.profile')}
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="ghost" onClick={() => navigate('/login')} data-testid="nav-login-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
-                    เข้าสู่ระบบ
+                    {t('nav.login')}
                   </Button>
                   <Button onClick={() => navigate('/register')} data-testid="nav-register-btn" className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl">
-                    ลงทะเบียน
+                    {t('nav.register')}
                   </Button>
                 </>
               )}
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
