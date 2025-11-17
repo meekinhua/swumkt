@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, User, LogOut, FileText, BarChart3, Users, Map, ClipboardList, TrendingUp, Sparkles, Lock } from 'lucide-react';
+import { ArrowLeft, User, LogOut, FileText, BarChart3, Users, Map, ClipboardList, TrendingUp, Sparkles, Lock, Eye, Target } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const MarketResearch = () => {
