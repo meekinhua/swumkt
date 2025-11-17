@@ -339,19 +339,20 @@ const CustomerJourneyTool = () => {
                 </Card>
 
                 {/* Result Section */}
-                <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                      <Map className="w-6 h-6 text-[#00A9CE]" />
-                      Journey Map Result
+                <Card className="p-4 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3">
+                    <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2">
+                      <Map className="w-5 h-5 md:w-6 md:h-6 text-[#00A9CE]" />
+                      <span className="hidden sm:inline">Journey Map Result</span>
+                      <span className="sm:hidden">Result</span>
                     </h2>
                     {result && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                         <Button
                           onClick={handleZoomIn}
                           variant="outline"
                           size="sm"
-                          className="border-2 border-gray-300"
+                          className="border-2 border-gray-300 p-2"
                         >
                           <ZoomIn className="w-4 h-4" />
                         </Button>
@@ -359,7 +360,7 @@ const CustomerJourneyTool = () => {
                           onClick={handleZoomOut}
                           variant="outline"
                           size="sm"
-                          className="border-2 border-gray-300"
+                          className="border-2 border-gray-300 p-2"
                         >
                           <ZoomOut className="w-4 h-4" />
                         </Button>
@@ -367,7 +368,7 @@ const CustomerJourneyTool = () => {
                           onClick={handleResetZoom}
                           variant="outline"
                           size="sm"
-                          className="border-2 border-gray-300"
+                          className="border-2 border-gray-300 p-2"
                           title="Reset zoom"
                         >
                           <Maximize className="w-4 h-4" />
@@ -376,7 +377,7 @@ const CustomerJourneyTool = () => {
                           onClick={handleFullscreen}
                           variant="outline"
                           size="sm"
-                          className="border-2 border-[#00A9CE] text-[#00A9CE]"
+                          className="border-2 border-[#00A9CE] text-[#00A9CE] p-2"
                           title="Fullscreen"
                         >
                           {isFullscreen ? '✕' : '⛶'}
@@ -384,10 +385,11 @@ const CustomerJourneyTool = () => {
                         <Button
                           onClick={handleDownloadSVG}
                           variant="outline"
+                          size="sm"
                           className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
+                          <Download className="w-3 h-3 md:w-4 md:h-4 md:mr-2" />
+                          <span className="hidden md:inline">Download</span>
                         </Button>
                       </div>
                     )}
