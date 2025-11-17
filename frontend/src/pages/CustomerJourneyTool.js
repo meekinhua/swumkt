@@ -396,10 +396,10 @@ const CustomerJourneyTool = () => {
                   </div>
 
                   {!result ? (
-                    <div className="flex flex-col items-center justify-center h-96 text-gray-400">
-                      <Map className="w-24 h-24 mb-4 opacity-20" />
-                      <p className="text-lg font-semibold">No journey map generated yet</p>
-                      <p className="text-sm">Enter research data and click generate</p>
+                    <div className="flex flex-col items-center justify-center h-64 md:h-96 text-gray-400">
+                      <Map className="w-16 h-16 md:w-24 md:h-24 mb-4 opacity-20" />
+                      <p className="text-base md:text-lg font-semibold text-center px-4">No journey map generated yet</p>
+                      <p className="text-xs md:text-sm text-center px-4">Enter research data and click generate</p>
                     </div>
                   ) : (
                     <div className="space-y-6">
