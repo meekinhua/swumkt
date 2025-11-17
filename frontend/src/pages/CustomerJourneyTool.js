@@ -273,10 +273,10 @@ const CustomerJourneyTool = () => {
             </div>
             
             <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4">
-              <span className="gradient-text">Customer Journey Map Tool</span>
+              <span className="gradient-text">{t('customerJourney.title')}</span>
             </h1>
             <p className="text-lg text-gray-700 max-w-3xl mx-auto font-semibold">
-              Transform qualitative research into visual customer journey maps using AI
+              {t('customerJourney.subtitle')}
             </p>
           </div>
 
