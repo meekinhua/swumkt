@@ -135,7 +135,7 @@ const Dashboard = () => {
                 <UsersIcon className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm text-gray-700 font-bold">สถานะ</p>
+                <p className="text-sm text-gray-700 font-bold">{t('dashboard.status')}</p>
                 <p className="text-xl font-black text-purple-700">{getRoleLabel(user?.role)}</p>
               </div>
             </div>
