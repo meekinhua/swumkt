@@ -111,7 +111,7 @@ const Dashboard = () => {
                 <FileText className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm text-gray-700 font-bold">เนื้อหาของฉัน</p>
+                <p className="text-sm text-gray-700 font-bold">{t('content.myContent')}</p>
                 <p className="text-3xl font-black gradient-text">{stats.totalContent}</p>
               </div>
             </div>
