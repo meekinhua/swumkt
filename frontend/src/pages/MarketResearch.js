@@ -58,7 +58,8 @@ const MarketResearch = () => {
         t('marketResearch.customerJourney.feature4')
       ],
       gradient: 'from-[#00A9CE] via-[#33BCDA] to-[#00A9CE]',
-      comingSoon: true
+      comingSoon: false,
+      path: '/market-research/customer-journey'
     },
     {
       id: 'segmentation',
