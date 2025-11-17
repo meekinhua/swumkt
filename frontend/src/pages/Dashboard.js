@@ -96,10 +96,10 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8 fade-in-up">
           <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2" data-testid="dashboard-title">
-            ยินดีต้อนรับ, <span className="gradient-text">{user?.full_name}</span>
+            {t('dashboard.welcome')}, <span className="gradient-text">{user?.full_name}</span>
           </h1>
           <p className="text-lg text-gray-700 font-semibold">
-            บทบาท: <span className="px-3 py-1 bg-gradient-to-r from-[#00A9CE]/15 to-[#33BCDA]/15 rounded-full border border-[#00A9CE]/25 text-[#005A73] font-bold">{getRoleLabel(user?.role)}</span>
+            {t('auth.userType')}: <span className="px-3 py-1 bg-gradient-to-r from-[#00A9CE]/15 to-[#33BCDA]/15 rounded-full border border-[#00A9CE]/25 text-[#005A73] font-bold">{getRoleLabel(user?.role)}</span>
           </p>
         </div>
 
