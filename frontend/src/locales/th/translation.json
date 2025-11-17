@@ -163,5 +163,38 @@
     "close": "ปิด",
     "yes": "ใช่",
     "no": "ไม่"
+  },
+  "marketResearch": {
+    "title": "เครื่องมือวิจัยตลาด",
+    "subtitle": "ชุดเครื่องมือครบวงจรสำหรับการวิจัยและวิเคราะห์ตลาด เพื่อการตัดสินใจที่แม่นยำ",
+    "getStarted": "เริ่มใช้งาน",
+    "comingSoon": "เร็วๆ นี้",
+    "infoTitle": "เครื่องมือมืออาชีพสำหรับนักการตลาด",
+    "infoDescription": "เครื่องมือเหล่านี้ออกแบบมาเพื่อช่วยให้นักการตลาด นักวิจัย และนิสิตสามารถทำการวิจัยตลาดได้อย่างมีประสิทธิภาพ ด้วยอินเทอร์เฟซที่ใช้งานง่ายและฟีเจอร์ที่ครบครัน",
+    "infoNote": "เครื่องมือทั้งหมดกำลังอยู่ระหว่างการพัฒนา จะเปิดให้ใช้งานในเร็วๆ นี้",
+    "surveyBuilder": {
+      "title": "Survey Builder",
+      "description": "สร้างและจัดการแบบสำรวจออนไลน์ รวบรวมข้อมูลจากกลุ่มเป้าหมาย",
+      "feature1": "สร้างแบบสำรวจด้วย Form Builder ที่ใช้งานง่าย",
+      "feature2": "รองรับคำถามหลายประเภท (Multiple Choice, Rating, Open-ended)",
+      "feature3": "แชร์ลิงก์และเก็บคำตอบแบบ Real-time",
+      "feature4": "วิเคราะห์ผลด้วย Charts และสถิติพื้นฐาน"
+    },
+    "conjointAnalysis": {
+      "title": "Conjoint Analysis",
+      "description": "วิเคราะห์ความชอบและมูลค่าของคุณลักษณะผลิตภัณฑ์",
+      "feature1": "สร้าง Scenarios เปรียบเทียบผลิตภัณฑ์",
+      "feature2": "วิเคราะห์ค่า Utility ของแต่ละคุณลักษณะ",
+      "feature3": "คำนวณความสำคัญ (Importance) ของแต่ละปัจจัย",
+      "feature4": "แสดงผลเป็น Charts และ Insights ที่เข้าใจง่าย"
+    },
+    "customerJourney": {
+      "title": "Customer Journey Map",
+      "description": "สร้างแผนที่การเดินทางของลูกค้า เพื่อเข้าใจพฤติกรรมและ Pain Points",
+      "feature1": "สร้าง Touchpoints และ Stages ของลูกค้า",
+      "feature2": "ระบุ Pain Points และโอกาสในการปรับปรุง",
+      "feature3": "Visualize ด้วย Timeline และ Flowchart",
+      "feature4": "แชร์และทำงานร่วมกันเป็นทีม"
+    }
   }
 }
