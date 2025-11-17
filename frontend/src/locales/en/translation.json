@@ -73,7 +73,13 @@
     "alumni": "Alumni",
     "studentId": "Student ID (Optional)",
     "graduationYear": "Graduation Year",
-    "creating": "Creating account..."
+    "creating": "Creating account...",
+    "roles": {
+      "admin": "Administrator",
+      "alumni": "Alumni",
+      "currentStudent": "Current Student",
+      "publicUser": "Public User"
+    }
   },
   "dashboard": {
     "welcome": "Welcome",
