@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 import { API } from '@/App';
@@ -7,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar } from '@/components/ui/avatar';
-import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages } from 'lucide-react';
 import { toast } from 'sonner';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const ContentDetail = () => {
   const { id } = useParams();
