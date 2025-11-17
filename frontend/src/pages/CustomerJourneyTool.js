@@ -570,17 +570,17 @@ const CustomerJourneyTool = () => {
                   <Lock className="w-20 h-20 text-[#E63946]" />
                 </div>
                 <h2 className="text-3xl font-black text-gray-900 mb-4">
-                  Quantitative Validation - Coming Soon
+                  {t('customerJourney.phase2Title')}
                 </h2>
                 <p className="text-lg text-gray-700 max-w-2xl mx-auto font-semibold mb-6">
-                  This feature will allow you to validate your journey map with quantitative surveys and add statistical data to your customer journey.
+                  {t('customerJourney.phase2Description')}
                 </p>
                 <div className="flex items-center justify-center gap-4 text-gray-600 font-semibold">
                   <BarChart className="w-5 h-5" />
-                  <span>Survey Creation & Data Collection</span>
+                  <span>{t('customerJourney.phase2Feature1')}</span>
                   <span>•</span>
                   <BarChart className="w-5 h-5" />
-                  <span>Statistical Analysis</span>
+                  <span>{t('customerJourney.phase2Feature2')}</span>
                 </div>
               </Card>
             </TabsContent>
