@@ -124,12 +124,30 @@ const LandingPage = () => {
               <div className="pt-2">
                 <LanguageSwitcher />
               </div>
-              <Button variant="ghost" onClick={() => navigate('/login')} className="w-full justify-start text-white hover:bg-white/10 font-semibold">
-                {t('nav.login')}
-              </Button>
-              <Button onClick={() => navigate('/register')} className="w-full bg-white text-[#007B9A] hover:bg-gray-100 font-bold">
-                {t('nav.register')}
-              </Button>
+              {user ? (
+                <>
+                  <Button variant="ghost" onClick={() => navigate('/dashboard')} className="w-full justify-start text-white hover:bg-white/10 font-semibold">
+                    {t('nav.dashboard')}
+                  </Button>
+                  <Button variant="ghost" onClick={() => navigate('/profile')} className="w-full justify-start text-white hover:bg-white/10 font-semibold">
+                    <User className="w-4 h-4 mr-2" />
+                    {t('nav.profile')}
+                  </Button>
+                  <Button variant="outline" onClick={handleLogout} className="w-full border-2 border-white text-white hover:bg-white hover:text-[#007B9A] font-bold">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {t('nav.logout')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" onClick={() => navigate('/login')} className="w-full justify-start text-white hover:bg-white/10 font-semibold">
+                    {t('nav.login')}
+                  </Button>
+                  <Button onClick={() => navigate('/register')} className="w-full bg-white text-[#007B9A] hover:bg-gray-100 font-bold">
+                    {t('nav.register')}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}
