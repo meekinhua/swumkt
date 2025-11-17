@@ -269,7 +269,7 @@ const CustomerJourneyTool = () => {
           <div className="mb-12 text-center fade-in-up">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#00A9CE]/15 to-[#33BCDA]/15 rounded-full border-2 border-[#00A9CE]/30 mb-6 shadow-lg">
               <Map className="w-5 h-5 text-[#005A73]" />
-              <span className="text-sm font-bold text-[#005A73]">AI-Powered Journey Mapping</span>
+              <span className="text-sm font-bold text-[#005A73]">{t('customerJourney.badge')}</span>
             </div>
             
             <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4">
