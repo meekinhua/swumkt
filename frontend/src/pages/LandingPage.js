@@ -203,10 +203,10 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-16 fade-in-up">
             <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4" data-testid="features-title">
-              <span className="gradient-text">ฟีเจอร์หลัก</span>
+              <span className="gradient-text">{t('features.title')}</span>
             </h2>
             <p className="text-lg text-gray-700 max-w-2xl mx-auto font-semibold">
-              ระบบและบริการที่ออกแบบมาเพื่อนักการตลาดและนิสิต
+              {t('features.subtitle')}
             </p>
           </div>
 
