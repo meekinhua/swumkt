@@ -74,7 +74,7 @@ const LoginPage = () => {
             <div>
               <Label htmlFor="email" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#00A9CE]" />
-                อีเมล
+                {t('auth.email')}
               </Label>
               <Input
                 id="email"
