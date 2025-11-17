@@ -75,15 +75,16 @@ const Dashboard = () => {
             <div className="flex items-center gap-4">
               <Button variant="ghost" onClick={() => navigate('/content')} data-testid="nav-browse-content-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
                 <FileText className="w-4 h-4 mr-2" />
-                เรียกดูเนื้อหา
+                {t('content.browse')}
               </Button>
               <Button variant="ghost" onClick={() => navigate('/profile')} data-testid="nav-profile-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
                 <User className="w-4 h-4 mr-2" />
-                โปรไฟล์
+                {t('nav.profile')}
               </Button>
+              <LanguageSwitcher />
               <Button variant="outline" onClick={handleLogout} data-testid="logout-btn" className="border-2 border-[#E63946] text-[#E63946] hover:bg-[#E63946] hover:text-white font-bold">
                 <LogOut className="w-4 h-4 mr-2" />
-                ออกจากระบบ
+                {t('nav.logout')}
               </Button>
             </div>
           </div>
