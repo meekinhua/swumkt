@@ -480,6 +480,137 @@ async def translate_text(request: TranslationRequest):
         logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
 
+# Customer Journey Map Models
+class JourneyMapRequest(BaseModel):
+    raw_data: str = Field(..., description="Raw qualitative research data (interviews, observations, reviews)")
+    research_context: Optional[str] = Field(None, description="Additional context about the research")
+
+class JourneyMapResponse(BaseModel):
+    mermaid_code: str
+    analysis_summary: str
+
+# Customer Journey Map endpoint
+@api_router.post("/generate-journey-map", response_model=JourneyMapResponse)
+async def generate_journey_map(request: JourneyMapRequest, current_user: User = Depends(get_current_user)):
+    """Generate Customer Journey Map using Emergent LLM"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        # Get API key
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Journey Map service not configured")
+        
+        # System prompt for generating journey map
+        system_prompt = """You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
+
+Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
+
+Guidelines:
+1. Identify key stages in the customer journey (e.g., Awareness, Consideration, Purchase, Post-Purchase, Loyalty)
+2. For each stage, identify:
+   - Touchpoints (where customer interacts with brand)
+   - Customer Actions
+   - Pain Points (frustrations, challenges)
+   - Emotions (feelings at each stage)
+   - Opportunities for improvement
+
+3. Output Format:
+   - First, provide a brief analysis summary (2-3 paragraphs)
+   - Then, generate Mermaid code for a flowchart-style journey map
+   - Use clear node labels and connections
+   - Include pain points and opportunities as annotations
+
+4. Mermaid Syntax Guidelines:
+   - Use graph TD or graph LR for direction
+   - Use meaningful node IDs
+   - Use descriptive labels
+   - Include colors for different types of nodes (stages, touchpoints, pain points)
+
+Example Mermaid structure:
+```mermaid
+graph TD
+    A[Awareness Stage] -->|Search Online| B[Website Visit]
+    B -->|Browse Products| C[Product Comparison]
+    C -->|Pain Point: Confusing Navigation| D[Consideration Stage]
+    D -->|Add to Cart| E[Purchase Stage]
+    
+    style A fill:#00A9CE,stroke:#005A73,stroke-width:3px,color:#fff
+    style D fill:#E63946,stroke:#C62E38,stroke-width:2px,color:#fff
+    style E fill:#28a745,stroke:#1e7e34,stroke-width:2px,color:#fff
+```
+
+Respond in this exact format:
+ANALYSIS:
+[Your analysis summary]
+
+MERMAID:
+```mermaid
+[Your mermaid code]
+```
+"""
+        
+        # Create LLM chat
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"journey-map-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("openai", "gpt-4o")
+        
+        # Create user prompt
+        user_prompt = f"""Please analyze the following qualitative research data and create a Customer Journey Map:
+
+Research Data:
+{request.raw_data}
+
+{f"Additional Context: {request.research_context}" if request.research_context else ""}
+
+Please provide:
+1. Analysis summary of the customer journey
+2. Mermaid diagram code for visualization
+"""
+        
+        user_message = UserMessage(text=user_prompt)
+        
+        # Get response from LLM
+        response_text = await chat.send_message(user_message)
+        
+        # Parse response
+        analysis_summary = ""
+        mermaid_code = ""
+        
+        if "ANALYSIS:" in response_text and "MERMAID:" in response_text:
+            parts = response_text.split("MERMAID:")
+            analysis_part = parts[0].replace("ANALYSIS:", "").strip()
+            mermaid_part = parts[1].strip()
+            
+            # Extract mermaid code
+            if "```mermaid" in mermaid_part:
+                mermaid_code = mermaid_part.split("```mermaid")[1].split("```")[0].strip()
+            elif "```" in mermaid_part:
+                mermaid_code = mermaid_part.split("```")[1].split("```")[0].strip()
+            else:
+                mermaid_code = mermaid_part.strip()
+            
+            analysis_summary = analysis_part
+        else:
+            # Fallback: try to extract any mermaid code
+            if "```mermaid" in response_text:
+                mermaid_code = response_text.split("```mermaid")[1].split("```")[0].strip()
+                analysis_summary = response_text.split("```mermaid")[0].strip()
+            else:
+                analysis_summary = response_text
+                mermaid_code = "graph TD\n    A[Start] --> B[Process Data]\n    B --> C[End]"
+        
+        return JourneyMapResponse(
+            mermaid_code=mermaid_code,
+            analysis_summary=analysis_summary
+        )
+        
+    except Exception as e:
+        logging.error(f"Journey Map generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate journey map: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
