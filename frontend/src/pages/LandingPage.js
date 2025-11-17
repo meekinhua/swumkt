@@ -257,10 +257,10 @@ const LandingPage = () => {
                 <Network className="w-12 h-12" />
               </div>
               <h2 className="text-4xl sm:text-5xl font-black mb-6" data-testid="cta-title">
-                พร้อมเริ่มต้นแล้วหรือยัง?
+                {t('landing.ctaTitle')}
               </h2>
               <p className="text-xl mb-10 text-white/95 max-w-2xl mx-auto font-semibold">
-                เข้าร่วมชุมชน SWUMKT วันนี้ และเข้าถึงเครื่องมือและทรัพยากรที่จะช่วยพัฒนาทักษะทางการตลาดของคุณ
+                {t('landing.ctaDescription')}
               </p>
               <Button
                 size="lg"
@@ -268,7 +268,7 @@ const LandingPage = () => {
                 data-testid="cta-register-btn"
                 className="bg-white text-[#005A73] hover:bg-gray-100 px-10 py-7 text-lg rounded-2xl shadow-2xl font-black"
               >
-                ลงทะเบียนฟรี
+                {t('landing.ctaButton')}
               </Button>
             </div>
           </Card>
