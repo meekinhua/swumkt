@@ -93,14 +93,17 @@ const LandingPage = () => {
         {mobileMenuOpen && (
           <div className="md:hidden bg-gradient-to-br from-[#005A73] to-[#007B9A] border-t border-white/10" data-testid="mobile-menu">
             <div className="px-4 py-6 space-y-4">
-              <a href="#features" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">Features</a>
-              <a href="#stats" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">About</a>
-              <a href="/content" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">Content</a>
+              <a href="#features" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.features')}</a>
+              <a href="#stats" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.about')}</a>
+              <a href="/content" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.content')}</a>
+              <div className="pt-2">
+                <LanguageSwitcher />
+              </div>
               <Button variant="ghost" onClick={() => navigate('/login')} className="w-full justify-start text-white hover:bg-white/10 font-semibold">
-                เข้าสู่ระบบ
+                {t('nav.login')}
               </Button>
               <Button onClick={() => navigate('/register')} className="w-full bg-white text-[#007B9A] hover:bg-gray-100 font-bold">
-                ลงทะเบียน
+                {t('nav.register')}
               </Button>
             </div>
           </div>
