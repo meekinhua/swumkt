@@ -625,6 +625,15 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
             system_message=system_prompt
         ).with_model("openai", "gpt-4o")
         
+        # Determine language instruction
+        language_name = "Thai" if request.target_language == "th" else "English"
+        
+        # Determine journey type description
+        type_desc = "simple and straightforward" if request.journey_type == "A" else "detailed and comprehensive"
+        
+        # Determine journey style description
+        style_desc = "linear sequential path" if request.journey_style == "linear" else "nonlinear with multiple paths and decision points"
+        
         # Create user prompt
         user_prompt = f"""Please analyze the following qualitative research data and create a Customer Journey Map:
 
@@ -633,9 +642,16 @@ Research Data:
 
 {f"Additional Context: {request.research_context}" if request.research_context else ""}
 
+Journey Requirements:
+- Type: {request.journey_type} ({type_desc})
+- Style: {request.journey_style} ({style_desc})
+- Output Language: {language_name}
+
 Please provide:
-1. Analysis summary of the customer journey
-2. Mermaid diagram code for visualization
+1. Analysis summary of the customer journey in {language_name}
+2. Mermaid diagram code for visualization with labels in {language_name}
+
+IMPORTANT: All text in both the analysis summary and the mermaid diagram must be written in {language_name}.
 """
         
         user_message = UserMessage(text=user_prompt)
