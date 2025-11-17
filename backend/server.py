@@ -449,7 +449,6 @@ async def translate_text(request: TranslationRequest):
         }
         
         target_lang_name = language_names.get(request.target_language, request.target_language)
-        source_lang_name = language_names.get(request.source_language, 'auto-detected') if request.source_language else 'auto-detected'
         
         # Get API key
         api_key = os.environ.get('EMERGENT_LLM_KEY')
