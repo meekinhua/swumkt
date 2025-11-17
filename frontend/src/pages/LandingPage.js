@@ -54,12 +54,11 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#007B9A] to-[#33BCDA] rounded-2xl blur-lg opacity-50"></div>
-                <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#007B9A] to-[#33BCDA] flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  S
-                </div>
-              </div>
+              <img 
+                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ts3olfuf_MKTSWU%20Logo%20Concept%20V2%20-%20Edited.png"
+                alt="SWUMKT Logo"
+                className="h-14 w-auto"
+              />
               <div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-[#007B9A] to-[#00A9CE] bg-clip-text text-transparent">SWUMKT</span>
                 <p className="text-xs text-gray-500 font-medium">Marketing Excellence</p>
@@ -108,9 +107,20 @@ const LandingPage = () => {
         )}
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
-        <div className="max-w-7xl mx-auto">
+      {/* Hero Section with Textured Background */}
+      <section className="pt-32 pb-20 px-4 relative overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: 'url(https://customer-assets.emergentagent.com/job_swu-market/artifacts/id4m16kr_Textured%20Background%20Concept.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        ></div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center fade-in-up">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00A9CE]/10 to-[#33BCDA]/10 rounded-full border border-[#00A9CE]/20 mb-6">
               <Sparkles className="w-4 h-4 text-[#00A9CE]" />
@@ -172,9 +182,20 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 px-4">
-        <div className="max-w-7xl mx-auto">
+      {/* Features Section with Digital Interaction Background */}
+      <section id="features" className="py-20 px-4 relative overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 opacity-3"
+          style={{
+            backgroundImage: 'url(https://customer-assets.emergentagent.com/job_swu-market/artifacts/gm5ryae3_Seamless%20Digital%20Interaction%20Abstraction.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        ></div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-16 fade-in-up">
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4" data-testid="features-title">
               <span className="gradient-text">ฟีเจอร์หลัก</span>
@@ -254,9 +275,11 @@ const LandingPage = () => {
         <div className="absolute inset-0 geometric-bg opacity-5"></div>
         <div className="max-w-7xl mx-auto text-center relative z-10">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#007B9A] to-[#33BCDA] flex items-center justify-center text-white font-bold text-lg shadow-lg">
-              S
-            </div>
+            <img 
+              src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ts3olfuf_MKTSWU%20Logo%20Concept%20V2%20-%20Edited.png"
+              alt="SWUMKT Logo"
+              className="h-10 w-auto"
+            />
             <span className="text-2xl font-bold">SWUMKT</span>
           </div>
           <p className="text-gray-400 mb-2">
