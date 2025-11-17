@@ -64,7 +64,16 @@
     "registerButton": "ลงทะเบียน",
     "noAccount": "ยังไม่มีบัญชี?",
     "hasAccount": "มีบัญชีแล้ว?",
-    "backToHome": "กลับสู่หน้าหลัก"
+    "backToHome": "กลับสู่หน้าหลัก",
+    "or": "หรือ",
+    "userType": "ประเภทผู้ใช้",
+    "selectType": "เลือกประเภท",
+    "publicUser": "ผู้สนใจทั่วไป",
+    "currentStudent": "นิสิตปัจจุบัน",
+    "alumni": "ศิษย์เก่า",
+    "studentId": "รหัสนิสิต (ถ้ามี)",
+    "graduationYear": "ปีที่สำเร็จการศึกษา",
+    "creating": "กำลังสร้างบัญชี..."
   },
   "dashboard": {
     "welcome": "ยินดีต้อนรับ",
