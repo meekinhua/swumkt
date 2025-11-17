@@ -484,6 +484,9 @@ async def translate_text(request: TranslationRequest):
 class JourneyMapRequest(BaseModel):
     raw_data: str = Field(..., description="Raw qualitative research data (interviews, observations, reviews)")
     research_context: Optional[str] = Field(None, description="Additional context about the research")
+    target_language: Optional[str] = Field("en", description="Target language for output (th or en)")
+    journey_type: Optional[str] = Field("B", description="Journey type: A (simple) or B (detailed)")
+    journey_style: Optional[str] = Field("nonlinear", description="Journey style: linear or nonlinear")
 
 class JourneyMapResponse(BaseModel):
     mermaid_code: str
