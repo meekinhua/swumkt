@@ -319,17 +319,19 @@ const CustomerJourneyTool = () => {
                     <Button
                       onClick={handleGenerate}
                       disabled={loading || !rawData.trim()}
-                      className="w-full h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-lg"
+                      className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
                     >
                       {loading ? (
                         <>
-                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                          Generating Journey Map...
+                          <RefreshCw className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
+                          <span className="hidden sm:inline">Generating Journey Map...</span>
+                          <span className="sm:hidden">Generating...</span>
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-5 h-5 mr-2" />
-                          Generate Journey Map
+                          <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                          <span className="hidden sm:inline">Generate Journey Map</span>
+                          <span className="sm:hidden">Generate</span>
                         </>
                       )}
                     </Button>
