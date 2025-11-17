@@ -359,8 +359,18 @@ const CustomerJourneyTool = () => {
                           variant="outline"
                           size="sm"
                           className="border-2 border-gray-300"
+                          title="Reset zoom"
                         >
                           <Maximize className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={handleFullscreen}
+                          variant="outline"
+                          size="sm"
+                          className="border-2 border-[#00A9CE] text-[#00A9CE]"
+                          title="Fullscreen"
+                        >
+                          {isFullscreen ? '✕' : '⛶'}
                         </Button>
                         <Button
                           onClick={handleDownloadSVG}
