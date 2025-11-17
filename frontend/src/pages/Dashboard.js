@@ -211,13 +211,13 @@ const Dashboard = () => {
                   <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
                     <TrendingUp className="w-8 h-8" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-700">Market Research Tools</h3>
+                  <h3 className="text-xl font-bold text-gray-700">{t('features.marketResearch.title')}</h3>
                 </div>
                 <p className="text-gray-600 mb-4 font-medium">
-                  เครื่องมือวิจัยตลาดสำหรับ Survey, Conjoint Analysis, Data Visualization
+                  {t('features.marketResearch.description')}
                 </p>
                 <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
-                  กำลังพัฒนา
+                  {t('features.inDevelopment')}
                 </span>
               </Card>
 
