@@ -26,8 +26,10 @@ const CustomerJourneyTool = () => {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const mermaidRef = useRef(null);
   const containerRef = useRef(null);
+  const fullscreenRef = useRef(null);
 
   useEffect(() => {
     // Initialize Mermaid
