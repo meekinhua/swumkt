@@ -351,14 +351,27 @@ const CustomerJourneyTool = () => {
                       </div>
 
                       {/* Mermaid Diagram - Interactive */}
-                      <div className="p-4 bg-white rounded-lg border-2 border-gray-200 relative" style={{ minHeight: '500px' }}>
+                      <div 
+                        ref={containerRef}
+                        className="p-4 bg-white rounded-lg border-2 border-gray-200 relative overflow-hidden" 
+                        style={{ minHeight: '500px' }}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                      >
                         <div className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
-                          💡 Drag to pan, scroll to zoom
+                          💡 Drag to pan, Ctrl+Scroll to zoom
                         </div>
                         <div 
                           ref={mermaidRef} 
-                          className="w-full h-full flex justify-center items-center overflow-hidden"
-                          style={{ cursor: 'grab', minHeight: '500px' }}
+                          className="w-full h-full flex justify-center items-center"
+                          style={{ 
+                            cursor: isDragging ? 'grabbing' : 'grab', 
+                            minHeight: '500px',
+                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                            transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+                          }}
                         ></div>
                       </div>
                     </div>
