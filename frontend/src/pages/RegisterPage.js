@@ -220,13 +220,13 @@ const RegisterPage = () => {
                 <div className="w-full border-t-2 border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-600 font-semibold">หรือ</span>
+                <span className="px-4 bg-white text-gray-600 font-semibold">{t('auth.or')}</span>
               </div>
             </div>
             <p className="mt-4 text-sm text-gray-700 font-semibold">
-              มีบัญชีอยู่แล้ว?{' '}
+              {t('auth.hasAccount')}{' '}
               <Link to="/login" className="text-[#00A9CE] hover:text-[#005A73] font-bold transition-colors" data-testid="goto-login-link">
-                เข้าสู่ระบบ
+                {t('auth.loginButton')}
               </Link>
             </p>
           </div>
