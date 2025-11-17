@@ -187,8 +187,8 @@ const Dashboard = () => {
                             {content.content.substring(0, 150)}...
                           </p>
                           <div className="flex items-center gap-4 text-xs text-gray-600 font-semibold">
-                            <span className="badge-success px-2 py-1 rounded-full">ประเภท: {content.content_type}</span>
-                            <span>ยอดเข้าชม: {content.views || 0}</span>
+                            <span className="badge-success px-2 py-1 rounded-full">{t('content.type')}: {content.content_type}</span>
+                            <span>{t('content.views')}: {content.views || 0}</span>
                             <span className={`px-2 py-1 rounded-full ${
                               content.status === 'published' ? 'badge-success' : 'badge-warning'
                             }`}>
