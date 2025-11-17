@@ -91,7 +91,7 @@ const LoginPage = () => {
             <div>
               <Label htmlFor="password" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                 <Lock className="w-4 h-4 text-[#00A9CE]" />
-                รหัสผ่าน
+                {t('auth.password')}
               </Label>
               <Input
                 id="password"
