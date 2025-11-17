@@ -277,10 +277,11 @@ const CustomerJourneyTool = () => {
             <TabsContent value="qualitative">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
                 {/* Input Section */}
-                <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
-                  <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                    <FileText className="w-6 h-6 text-[#00A9CE]" />
-                    Research Data Input
+                <Card className="p-4 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
+                  <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 md:mb-6 flex items-center gap-2">
+                    <FileText className="w-5 h-5 md:w-6 md:h-6 text-[#00A9CE]" />
+                    <span className="hidden sm:inline">Research Data Input</span>
+                    <span className="sm:hidden">Input</span>
                   </h2>
                   
                   <div className="space-y-6">
