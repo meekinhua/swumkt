@@ -39,14 +39,17 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       <div className="w-full max-w-md">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          data-testid="back-to-home-btn"
-          className="mb-6 text-gray-800 hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" /> กลับหน้าแรก
-        </Button>
+        <div className="flex justify-between items-center mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            data-testid="back-to-home-btn"
+            className="text-gray-800 hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 font-semibold"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" /> {t('auth.backToHome')}
+          </Button>
+          <LanguageSwitcher />
+        </div>
 
         <Card className="p-8 bg-white/98 shadow-2xl border-2 border-[#00A9CE]/20 scale-in">
           <div className="text-center mb-8">
@@ -62,9 +65,9 @@ const LoginPage = () => {
               <span className="text-sm font-bold text-[#005A73]">Welcome Back</span>
             </div>
             <h1 className="text-4xl font-black mb-2" data-testid="login-title">
-              <span className="gradient-text">เข้าสู่ระบบ</span>
+              <span className="gradient-text">{t('auth.loginTitle')}</span>
             </h1>
-            <p className="text-gray-700 font-semibold">ยินดีต้อนรับกลับสู่ SWUMKT Portal</p>
+            <p className="text-gray-700 font-semibold">{t('auth.loginSubtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} data-testid="login-form" className="space-y-6">
