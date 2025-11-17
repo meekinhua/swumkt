@@ -144,7 +144,7 @@ const ContentBrowse = () => {
           </div>
         ) : filteredContents.length === 0 ? (
           <Card className="p-12 text-center bg-white/98 border-2 border-gray-300 shadow-lg">
-            <p className="text-gray-700 text-lg font-semibold">ไม่พบเนื้อหาที่ตรงกับการค้นหา</p>
+            <p className="text-gray-700 text-lg font-semibold">{t('content.noResults')}</p>
           </Card>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
