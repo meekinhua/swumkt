@@ -123,7 +123,7 @@ const Dashboard = () => {
                 <TrendingUp className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm text-gray-700 font-bold">ยอดเข้าชมทั้งหมด</p>
+                <p className="text-sm text-gray-700 font-bold">{t('dashboard.totalViews')}</p>
                 <p className="text-3xl font-black text-green-700">{stats.totalViews}</p>
               </div>
             </div>
