@@ -161,7 +161,7 @@ const RegisterPage = () => {
                 <div>
                   <Label htmlFor="student_id" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                     <Hash className="w-4 h-4 text-[#00A9CE]" />
-                    รหัสนิสิต (ถ้ามี)
+                    {t('auth.studentId')}
                   </Label>
                   <Input
                     id="student_id"
@@ -178,7 +178,7 @@ const RegisterPage = () => {
                   <div>
                     <Label htmlFor="graduation_year" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-[#00A9CE]" />
-                      ปีที่สำเร็จการศึกษา
+                      {t('auth.graduationYear')}
                     </Label>
                     <Input
                       id="graduation_year"
