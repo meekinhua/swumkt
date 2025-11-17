@@ -39,7 +39,6 @@ const ContentEditor = () => {
       const response = await axios.get(`${API}/content/${id}`);
       const content = response.data;
       
-      // Check if user can edit
       if (content.created_by !== user.id && user.role !== 'admin') {
         toast.error('คุณไม่มีสิทธิ์แก้ไขเนื้อหานี้');
         navigate('/dashboard');
@@ -89,13 +88,11 @@ const ContentEditor = () => {
       if (!submitData.featured_image) delete submitData.featured_image;
 
       if (id) {
-        // Update existing content
         await axios.put(`${API}/content/${id}`, submitData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('บันทึกเนื้อหาสำเร็จ');
       } else {
-        // Create new content
         const response = await axios.post(`${API}/content`, submitData, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -114,19 +111,20 @@ const ContentEditor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200 shadow-sm">
+      <nav className="bg-white/98 backdrop-blur-xl border-b border-gray-300/50 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-                S
-              </div>
-              <span className="text-xl font-bold text-gray-900">SWUMKT</span>
+              <img 
+                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png"
+                alt="SWUMKT Logo"
+                className="h-16 w-auto"
+              />
             </div>
             
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
               <ArrowLeft className="w-4 h-4 mr-2" />
               กลับ Dashboard
             </Button>
@@ -136,16 +134,16 @@ const ContentEditor = () => {
 
       {/* Editor */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8" data-testid="editor-title">
-            {id ? 'แก้ไขเนื้อหา' : 'สร้างเนื้อหาใหม่'}
+        <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up">
+          <h1 className="text-4xl font-black text-gray-900 mb-8" data-testid="editor-title">
+            {id ? <span className="gradient-text">แก้ไขเนื้อหา</span> : <span className="gradient-text">สร้างเนื้อหาใหม่</span>}
           </h1>
 
           <form onSubmit={handleSubmit} data-testid="content-editor-form">
             <div className="space-y-6">
               {/* Title */}
               <div>
-                <Label htmlFor="title">หัวข้อ *</Label>
+                <Label htmlFor="title" className="text-gray-800 font-bold mb-2">หัวข้อ *</Label>
                 <Input
                   id="title"
                   data-testid="title-input"
@@ -153,18 +151,18 @@ const ContentEditor = () => {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="ใส่หัวข้อเนื้อหา..."
                   required
-                  className="mt-1"
+                  className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
                 />
               </div>
 
               {/* Content Type */}
               <div>
-                <Label htmlFor="content_type">ประเภทเนื้อหา *</Label>
+                <Label htmlFor="content_type" className="text-gray-800 font-bold mb-2">ประเภทเนื้อหา *</Label>
                 <Select
                   value={formData.content_type}
                   onValueChange={(value) => setFormData({ ...formData, content_type: value })}
                 >
-                  <SelectTrigger className="mt-1" data-testid="content-type-select">
+                  <SelectTrigger className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium" data-testid="content-type-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -178,20 +176,20 @@ const ContentEditor = () => {
 
               {/* Category */}
               <div>
-                <Label htmlFor="category">หมวดหมู่</Label>
+                <Label htmlFor="category" className="text-gray-800 font-bold mb-2">หมวดหมู่</Label>
                 <Input
                   id="category"
                   data-testid="category-input"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   placeholder="เช่น การตลาดดิจิทัล, พฤติกรรมผู้บริโภค..."
-                  className="mt-1"
+                  className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
                 />
               </div>
 
               {/* Content */}
               <div>
-                <Label htmlFor="content">เนื้อหา *</Label>
+                <Label htmlFor="content" className="text-gray-800 font-bold mb-2">เนื้อหา *</Label>
                 <Textarea
                   id="content"
                   data-testid="content-textarea"
@@ -200,27 +198,27 @@ const ContentEditor = () => {
                   placeholder="เขียนเนื้อหาของคุณที่นี่..."
                   required
                   rows={12}
-                  className="mt-1"
+                  className="mt-1 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
                 />
               </div>
 
               {/* Featured Image URL */}
               <div>
-                <Label htmlFor="featured_image">ลิงก์รูปภาพ</Label>
+                <Label htmlFor="featured_image" className="text-gray-800 font-bold mb-2">ลิงก์รูปภาพ</Label>
                 <Input
                   id="featured_image"
                   data-testid="featured-image-input"
                   value={formData.featured_image}
                   onChange={(e) => setFormData({ ...formData, featured_image: e.target.value })}
                   placeholder="https://example.com/image.jpg"
-                  className="mt-1"
+                  className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
                 />
                 {formData.featured_image && (
                   <div className="mt-2">
                     <img
                       src={formData.featured_image}
                       alt="Preview"
-                      className="w-full max-h-64 object-cover rounded-lg"
+                      className="w-full max-h-64 object-cover rounded-lg border-2 border-gray-300"
                       onError={(e) => {
                         e.target.style.display = 'none';
                       }}
@@ -231,7 +229,7 @@ const ContentEditor = () => {
 
               {/* Tags */}
               <div>
-                <Label htmlFor="tags">แท็ก</Label>
+                <Label htmlFor="tags" className="text-gray-800 font-bold mb-2">แท็ก</Label>
                 <div className="flex gap-2 mt-1">
                   <Input
                     id="tags"
@@ -245,12 +243,14 @@ const ContentEditor = () => {
                       }
                     }}
                     placeholder="เพิ่มแท็ก..."
+                    className="h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
                   />
                   <Button
                     type="button"
                     data-testid="add-tag-btn"
                     onClick={handleAddTag}
                     variant="outline"
+                    className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10 font-bold"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -261,14 +261,14 @@ const ContentEditor = () => {
                       <span
                         key={idx}
                         data-testid={`tag-${idx}`}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#00A9CE]/10 text-[#005A73] rounded-full text-sm font-bold border border-[#00A9CE]/20"
                       >
                         #{tag}
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
                           data-testid={`remove-tag-${idx}`}
-                          className="hover:text-blue-900"
+                          className="hover:text-[#E63946]"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -280,12 +280,12 @@ const ContentEditor = () => {
 
               {/* Status */}
               <div>
-                <Label htmlFor="status">สถานะ *</Label>
+                <Label htmlFor="status" className="text-gray-800 font-bold mb-2">สถานะ *</Label>
                 <Select
                   value={formData.status}
                   onValueChange={(value) => setFormData({ ...formData, status: value })}
                 >
-                  <SelectTrigger className="mt-1" data-testid="status-select">
+                  <SelectTrigger className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium" data-testid="status-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -302,7 +302,7 @@ const ContentEditor = () => {
                   type="submit"
                   data-testid="save-content-btn"
                   disabled={loading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl h-12"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
@@ -322,6 +322,7 @@ const ContentEditor = () => {
                   data-testid="cancel-btn"
                   onClick={() => navigate('/dashboard')}
                   disabled={loading}
+                  className="border-2 border-gray-400 text-gray-700 hover:bg-gray-100 font-bold"
                 >
                   ยกเลิก
                 </Button>
