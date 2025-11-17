@@ -59,6 +59,62 @@ const MarketResearch = () => {
       ],
       gradient: 'from-[#00A9CE] via-[#33BCDA] to-[#00A9CE]',
       comingSoon: true
+    },
+    {
+      id: 'segmentation',
+      icon: <Users className="w-16 h-16" />,
+      title: t('marketResearch.segmentation.title'),
+      description: t('marketResearch.segmentation.description'),
+      features: [
+        t('marketResearch.segmentation.feature1'),
+        t('marketResearch.segmentation.feature2'),
+        t('marketResearch.segmentation.feature3'),
+        t('marketResearch.segmentation.feature4')
+      ],
+      gradient: 'from-[#33BCDA] via-[#00A9CE] to-[#007B9A]',
+      comingSoon: true
+    },
+    {
+      id: 'customer-behavior',
+      icon: <BarChart3 className="w-16 h-16" />,
+      title: t('marketResearch.customerBehavior.title'),
+      description: t('marketResearch.customerBehavior.description'),
+      features: [
+        t('marketResearch.customerBehavior.feature1'),
+        t('marketResearch.customerBehavior.feature2'),
+        t('marketResearch.customerBehavior.feature3'),
+        t('marketResearch.customerBehavior.feature4')
+      ],
+      gradient: 'from-[#007B9A] via-[#005A73] to-[#00A9CE]',
+      comingSoon: true
+    },
+    {
+      id: 'customer-perception',
+      icon: <Eye className="w-16 h-16" />,
+      title: t('marketResearch.customerPerception.title'),
+      description: t('marketResearch.customerPerception.description'),
+      features: [
+        t('marketResearch.customerPerception.feature1'),
+        t('marketResearch.customerPerception.feature2'),
+        t('marketResearch.customerPerception.feature3'),
+        t('marketResearch.customerPerception.feature4')
+      ],
+      gradient: 'from-[#005A73] via-[#33BCDA] to-[#00A9CE]',
+      comingSoon: true
+    },
+    {
+      id: 'competitor-analysis',
+      icon: <Target className="w-16 h-16" />,
+      title: t('marketResearch.competitorAnalysis.title'),
+      description: t('marketResearch.competitorAnalysis.description'),
+      features: [
+        t('marketResearch.competitorAnalysis.feature1'),
+        t('marketResearch.competitorAnalysis.feature2'),
+        t('marketResearch.competitorAnalysis.feature3'),
+        t('marketResearch.competitorAnalysis.feature4')
+      ],
+      gradient: 'from-[#C62E38] via-[#E63946] to-[#F25C66]',
+      comingSoon: true
     }
   ];
 
