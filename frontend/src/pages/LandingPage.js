@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { BookOpen, Users, TrendingUp, Award, ArrowRight, Menu, X, Sparkles, Target, Network } from 'lucide-react';
+import { BookOpen, Users, TrendingUp, Award, ArrowRight, Menu, X, Sparkles, Target, Network, User, LogOut } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   const features = [
     {
