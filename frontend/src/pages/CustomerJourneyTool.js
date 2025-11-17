@@ -54,11 +54,9 @@ const CustomerJourneyTool = () => {
     if (!container) return;
 
     const handleWheel = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        setZoom(prev => Math.max(0.3, Math.min(3, prev + delta)));
-      }
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(prev => Math.max(0.3, Math.min(3, prev + delta)));
     };
 
     container.addEventListener('wheel', handleWheel, { passive: false });
