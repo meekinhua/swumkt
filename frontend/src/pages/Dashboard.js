@@ -145,8 +145,8 @@ const Dashboard = () => {
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="content" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2 bg-white/98 border-2 border-gray-300">
-            <TabsTrigger value="content" data-testid="tab-content" className="font-bold">เนื้อหาของฉัน</TabsTrigger>
-            <TabsTrigger value="features" data-testid="tab-features" className="font-bold">ฟีเจอร์อื่นๆ</TabsTrigger>
+            <TabsTrigger value="content" data-testid="tab-content" className="font-bold">{t('content.myContent')}</TabsTrigger>
+            <TabsTrigger value="features" data-testid="tab-features" className="font-bold">{t('features.other')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="mt-6" data-testid="content-tab-panel">
