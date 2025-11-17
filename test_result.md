@@ -101,3 +101,124 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "เพิ่มฟีเจอร์การเลือกภาษาผลลัพธ์ (ไทย/อังกฤษ) และตัวเลือก Journey Type (A/B) และ Journey Style (Linear/Nonlinear) ให้กับ Customer Journey Map Tool พร้อมทั้งทำให้ AI output เป็นภาษาที่ผู้ใช้เลือก"
+
+backend:
+  - task: "อัปเดต JourneyMapRequest model เพื่อรับ target_language, journey_type, journey_style"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "เพิ่ม fields: target_language (default: en), journey_type (default: B), journey_style (default: nonlinear) ใน JourneyMapRequest model"
+  
+  - task: "อัปเดต generate_journey_map endpoint ให้ใช้ target_language ใน prompt"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "แก้ไข user prompt ให้ส่ง language instruction, type description, และ style description ไปยัง LLM เพื่อให้ AI สร้าง output ในภาษาที่เลือก"
+  
+  - task: "แก้ไข login endpoint เพื่อลบ MongoDB _id ออก"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "เพิ่มการลบ _id field ออกจาก user object ก่อน serialize เพื่อแก้ไข ObjectId serialization error"
+
+frontend:
+  - task: "เพิ่ม translation keys สำหรับ CustomerJourneyTool"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/locales/en/translation.json, /app/frontend/src/locales/th/translation.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "เพิ่ม translation keys ครบถ้วนสำหรับ UI elements, labels, และ help text ของ CustomerJourneyTool"
+  
+  - task: "เพิ่ม state และ UI สำหรับเลือก output language"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/CustomerJourneyTool.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "เพิ่ม state: outputLanguage (default: en), journeyType (default: B), journeyStyle (default: nonlinear) และ radio buttons สำหรับเลือก"
+  
+  - task: "เพิ่ม auto-update Additional Context ตาม journey type และ style"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/CustomerJourneyTool.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "เพิ่ม useEffect ที่อัปเดต researchContext อัตโนมัติเมื่อ journeyType, journeyStyle, หรือ i18n.language เปลี่ยน"
+  
+  - task: "แปล UI elements ทั้งหมดด้วย useTranslation"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/CustomerJourneyTool.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "แทนที่ hard-coded text ทั้งหมดด้วย t() function จาก i18next สำหรับรองรับภาษาไทยและอังกฤษ"
+  
+  - task: "ส่ง target_language, journey_type, journey_style ไปยัง API"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/CustomerJourneyTool.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "อัปเดต handleGenerate function ให้ส่งพารามิเตอร์เพิ่มเติมไปยัง /api/generate-journey-map"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "ทดสอบ login และการเข้าถึง Customer Journey Tool"
+    - "ทดสอบการแสดงผล UI ในภาษาไทยและอังกฤษ"
+    - "ทดสอบการเลือก output language, journey type, และ journey style"
+    - "ทดสอบการ auto-update Additional Context"
+    - "ทดสอบการสร้าง journey map ด้วย AI ในภาษาไทยและอังกฤษ"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "ได้เพิ่มฟีเจอร์การเลือกภาษาผลลัพธ์ (ไทย/อังกฤษ), Journey Type (A/B), และ Journey Style (Linear/Nonlinear) ให้กับ Customer Journey Map Tool แล้ว รวมถึงการแปลภาษา UI ทั้งหมด Backend ได้รับการอัปเดตให้ส่ง language instruction ไปยัง LLM และแก้ไข ObjectId serialization error แล้ว กรุณาทดสอบทั้ง backend และ frontend อย่างละเอียด โดยเฉพาะการทำงานของ multi-language output และ auto-update context"
