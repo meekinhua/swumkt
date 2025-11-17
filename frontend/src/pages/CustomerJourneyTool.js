@@ -392,37 +392,42 @@ const CustomerJourneyTool = () => {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {/* Analysis Summary */}
+                      {/* Mermaid Diagram - Interactive (แสดงก่อน) */}
+                      <div 
+                        ref={fullscreenRef}
+                        className="bg-white rounded-lg border-2 border-gray-200"
+                      >
+                        <div 
+                          ref={containerRef}
+                          className="p-4 relative overflow-hidden" 
+                          style={{ minHeight: '500px' }}
+                          onMouseDown={handleMouseDown}
+                          onMouseMove={handleMouseMove}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseUp}
+                        >
+                          <div className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
+                            💡 Drag to pan, Ctrl+Scroll to zoom
+                          </div>
+                          <div 
+                            ref={mermaidRef} 
+                            className="w-full h-full flex justify-center items-center"
+                            style={{ 
+                              cursor: isDragging ? 'grabbing' : 'grab', 
+                              minHeight: '500px',
+                              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                              transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Analysis Summary (แสดงหลัง) */}
                       <div className="p-4 bg-gradient-to-br from-[#00A9CE]/10 to-[#33BCDA]/10 rounded-lg border border-[#00A9CE]/20">
                         <h3 className="text-lg font-black text-gray-900 mb-2">Analysis Summary</h3>
                         <p className="text-gray-700 leading-relaxed whitespace-pre-wrap font-medium">
                           {result.analysis_summary}
                         </p>
-                      </div>
-
-                      {/* Mermaid Diagram - Interactive */}
-                      <div 
-                        ref={containerRef}
-                        className="p-4 bg-white rounded-lg border-2 border-gray-200 relative overflow-hidden" 
-                        style={{ minHeight: '500px' }}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                      >
-                        <div className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
-                          💡 Drag to pan, Ctrl+Scroll to zoom
-                        </div>
-                        <div 
-                          ref={mermaidRef} 
-                          className="w-full h-full flex justify-center items-center"
-                          style={{ 
-                            cursor: isDragging ? 'grabbing' : 'grab', 
-                            minHeight: '500px',
-                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                            transition: isDragging ? 'none' : 'transform 0.2s ease-out'
-                          }}
-                        ></div>
                       </div>
                     </div>
                   )}
