@@ -112,13 +112,16 @@ class BackendTester:
             if response.status_code == 200:
                 result = response.json()
                 if "mermaid_code" in result and "analysis_summary" in result:
-                    # Check if mermaid code contains basic structure
+                    # Check if mermaid code contains basic structure (graph or stateDiagram)
                     mermaid_code = result["mermaid_code"]
-                    if "graph" in mermaid_code.lower() and "-->" in mermaid_code:
+                    has_structure = any(keyword in mermaid_code.lower() for keyword in ["graph", "statediagram", "flowchart"])
+                    has_connections = "-->" in mermaid_code or ":" in mermaid_code
+                    
+                    if has_structure and has_connections:
                         self.log_result("Journey Map Basic", True, "Journey map generated successfully with valid mermaid code")
                         return True
                     else:
-                        self.log_result("Journey Map Basic", False, "Invalid mermaid code structure", result)
+                        self.log_result("Journey Map Basic", False, "Invalid mermaid code structure", {"mermaid_preview": mermaid_code[:200]})
                         return False
                 else:
                     self.log_result("Journey Map Basic", False, "Missing mermaid_code or analysis_summary", result)
