@@ -55,14 +55,17 @@ const RegisterPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       <div className="w-full max-w-md">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          data-testid="back-to-home-btn"
-          className="mb-6 text-gray-800 hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" /> กลับหน้าแรก
-        </Button>
+        <div className="flex justify-between items-center mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            data-testid="back-to-home-btn"
+            className="text-gray-800 hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 font-semibold"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" /> {t('auth.backToHome')}
+          </Button>
+          <LanguageSwitcher />
+        </div>
 
         <Card className="p-8 bg-white/98 shadow-2xl border-2 border-[#00A9CE]/20 scale-in">
           <div className="text-center mb-8">
@@ -78,22 +81,22 @@ const RegisterPage = () => {
               <span className="text-sm font-bold text-[#005A73]">Join Us Today</span>
             </div>
             <h1 className="text-4xl font-black mb-2" data-testid="register-title">
-              <span className="gradient-text">ลงทะเบียน</span>
+              <span className="gradient-text">{t('auth.registerTitle')}</span>
             </h1>
-            <p className="text-gray-700 font-semibold">สร้างบัญชีใหม่เพื่อเข้าใช้ SWUMKT Portal</p>
+            <p className="text-gray-700 font-semibold">{t('auth.registerSubtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} data-testid="register-form" className="space-y-5">
             <div>
               <Label htmlFor="full_name" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
                 <User className="w-4 h-4 text-[#00A9CE]" />
-                ชื่อ-นามสกุล
+                {t('auth.name')}
               </Label>
               <Input
                 id="full_name"
                 type="text"
                 data-testid="register-fullname-input"
-                placeholder="ชื่อและนามสกุลของคุณ"
+                placeholder={t('auth.name')}
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 required
