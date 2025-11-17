@@ -489,6 +489,11 @@ class JourneyMapResponse(BaseModel):
     mermaid_code: str
     analysis_summary: str
 
+class AdminPromptSettings(BaseModel):
+    journey_map_prompt: str = Field(..., description="Custom system prompt for journey map generation")
+    updated_by: str
+    updated_at: str
+
 # Customer Journey Map endpoint
 @api_router.post("/generate-journey-map", response_model=JourneyMapResponse)
 async def generate_journey_map(request: JourneyMapRequest, current_user: User = Depends(get_current_user)):
