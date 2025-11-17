@@ -66,14 +66,15 @@ const LandingPage = () => {
             
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">Features</a>
-              <a href="#stats" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">About</a>
-              <a href="/content" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">Content</a>
+              <a href="#features" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.features')}</a>
+              <a href="#stats" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.about')}</a>
+              <a href="/content" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.content')}</a>
+              <LanguageSwitcher />
               <Button variant="ghost" onClick={() => navigate('/login')} data-testid="nav-login-btn" className="hover:bg-[#00A9CE]/10 hover:text-[#00A9CE] text-gray-800 font-semibold">
-                เข้าสู่ระบบ
+                {t('nav.login')}
               </Button>
               <Button onClick={() => navigate('/register')} data-testid="nav-register-btn" className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl">
-                ลงทะเบียน
+                {t('nav.register')}
               </Button>
             </div>
 
