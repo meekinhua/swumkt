@@ -13,6 +13,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,11 +42,11 @@ const RegisterPage = () => {
       }
 
       await register(data);
-      toast.success('ลงทะเบียนสำเร็จ!');
+      toast.success(t('common.success'));
       navigate('/dashboard');
     } catch (error) {
       console.error('Register error:', error);
-      toast.error(error.response?.data?.detail || 'ลงทะเบียนไม่สำเร็จ');
+      toast.error(error.response?.data?.detail || t('common.error'));
     } finally {
       setLoading(false);
     }
