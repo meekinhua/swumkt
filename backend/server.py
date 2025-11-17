@@ -614,52 +614,6 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
             system_prompt = settings["journey_map_prompt"]
         else:
             system_prompt = get_default_journey_map_prompt()
-
-Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
-
-Guidelines:
-1. Identify key stages in the customer journey (e.g., Awareness, Consideration, Purchase, Post-Purchase, Loyalty)
-2. For each stage, identify:
-   - Touchpoints (where customer interacts with brand)
-   - Customer Actions
-   - Pain Points (frustrations, challenges)
-   - Emotions (feelings at each stage)
-   - Opportunities for improvement
-
-3. Output Format:
-   - First, provide a brief analysis summary (2-3 paragraphs)
-   - Then, generate Mermaid code for a flowchart-style journey map
-   - Use clear node labels and connections
-   - Include pain points and opportunities as annotations
-
-4. Mermaid Syntax Guidelines:
-   - Use graph TD or graph LR for direction
-   - Use meaningful node IDs
-   - Use descriptive labels
-   - Include colors for different types of nodes (stages, touchpoints, pain points)
-
-Example Mermaid structure:
-```mermaid
-graph TD
-    A[Awareness Stage] -->|Search Online| B[Website Visit]
-    B -->|Browse Products| C[Product Comparison]
-    C -->|Pain Point: Confusing Navigation| D[Consideration Stage]
-    D -->|Add to Cart| E[Purchase Stage]
-    
-    style A fill:#00A9CE,stroke:#005A73,stroke-width:3px,color:#fff
-    style D fill:#E63946,stroke:#C62E38,stroke-width:2px,color:#fff
-    style E fill:#28a745,stroke:#1e7e34,stroke-width:2px,color:#fff
-```
-
-Respond in this exact format:
-ANALYSIS:
-[Your analysis summary]
-
-MERMAID:
-```mermaid
-[Your mermaid code]
-```
-"""
         
         # Create LLM chat
         chat = LlmChat(
