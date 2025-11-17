@@ -441,14 +441,14 @@ const CustomerJourneyTool = () => {
                       {loading ? (
                         <>
                           <RefreshCw className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
-                          <span className="hidden sm:inline">Generating Journey Map...</span>
-                          <span className="sm:hidden">Generating...</span>
+                          <span className="hidden sm:inline">{t('customerJourney.generating')}</span>
+                          <span className="sm:hidden">{t('customerJourney.generatingShort')}</span>
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                          <span className="hidden sm:inline">Generate Journey Map</span>
-                          <span className="sm:hidden">Generate</span>
+                          <span className="hidden sm:inline">{t('customerJourney.generate')}</span>
+                          <span className="sm:hidden">{t('customerJourney.generateShort')}</span>
                         </>
                       )}
                     </Button>
