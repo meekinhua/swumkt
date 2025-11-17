@@ -104,12 +104,12 @@ const ContentBrowse = () => {
             onClick={() => navigate('/')}
             className="mb-4 text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" /> กลับหน้าแรก
+            <ArrowLeft className="w-4 h-4 mr-2" /> {t('auth.backToHome')}
           </Button>
           <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4" data-testid="browse-title">
-            <span className="gradient-text">คลังความรู้</span>
+            <span className="gradient-text">{t('content.browse')}</span>
           </h1>
-          <p className="text-lg text-gray-700 font-semibold">เรียกดูผลวิจัย ผลสำรวจ และบทความจากชุมชน SWUMKT</p>
+          <p className="text-lg text-gray-700 font-semibold">{t('landing.description')}</p>
         </div>
 
         {/* Search and Filter */}
