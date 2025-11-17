@@ -48,10 +48,11 @@ const LoginPage = () => {
         <Card className="p-8 glass-effect shadow-2xl border-2 border-[#00A9CE]/10 scale-in">
           <div className="text-center mb-8">
             <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#007B9A] to-[#33BCDA] rounded-3xl blur-xl opacity-50"></div>
-              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-[#007B9A] to-[#33BCDA] flex items-center justify-center text-white font-bold text-3xl shadow-xl">
-                S
-              </div>
+              <img 
+                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ts3olfuf_MKTSWU%20Logo%20Concept%20V2%20-%20Edited.png"
+                alt="SWUMKT Logo"
+                className="h-20 w-auto mx-auto"
+              />
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00A9CE]/10 to-[#33BCDA]/10 rounded-full border border-[#00A9CE]/20 mb-4">
               <Sparkles className="w-4 h-4 text-[#00A9CE]" />
