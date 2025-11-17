@@ -13,6 +13,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, logout, token } = useAuth();
   const [myContents, setMyContents] = useState([]);
   const [stats, setStats] = useState({ totalViews: 0, totalContent: 0 });
