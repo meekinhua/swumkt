@@ -31,6 +31,8 @@
   "features": {
     "title": "Core Features",
     "subtitle": "Systems and services designed for marketers and students",
+    "other": "Other Features",
+    "inDevelopment": "In Development",
     "marketResearch": {
       "title": "Market Research Tools",
       "description": "Market research tools including Survey Builder, Conjoint Analysis, and data analytics",
@@ -41,6 +43,10 @@
       "description": "Alumni network to connect, share, and build relationships between alumni and current students",
       "status": "Coming Soon"
     },
+    "alumniZone": {
+      "title": "Alumni Zone",
+      "description": "Alumni network to connect, share, and build relationships"
+    },
     "knowledge": {
       "title": "Knowledge Hub",
       "description": "Knowledge content, research results, surveys, and marketing articles that users can collaboratively create",
@@ -50,6 +56,14 @@
       "title": "Student Services",
       "description": "Services for current students including learning resources and skill development opportunities",
       "status": "Coming Soon"
+    },
+    "integrations": {
+      "title": "External Integrations",
+      "description": "Connect LINE Notify, Email, SMS for notifications"
+    },
+    "analytics": {
+      "title": "Advanced Analytics",
+      "description": "Advanced data analysis and statistics for content"
     }
   },
   "auth": {
@@ -102,10 +116,13 @@
     "allContent": "All Content",
     "myContent": "My Content",
     "create": "Create New Content",
+    "createNew": "Create New Content",
+    "createFirst": "Create Your First Content",
     "edit": "Edit",
     "delete": "Delete",
     "view": "View",
     "noResults": "No content found",
+    "noContent": "No content yet",
     "loading": "Loading...",
     "title": "Title",
     "body": "Content",
@@ -118,7 +135,11 @@
     "translate": "Translate",
     "translating": "Translating...",
     "originalText": "Original Text",
-    "translatedText": "Translated Text"
+    "translatedText": "Translated Text",
+    "type": "Type",
+    "views": "Views",
+    "published": "Published",
+    "draft": "Draft"
   },
   "profile": {
     "title": "My Profile",
