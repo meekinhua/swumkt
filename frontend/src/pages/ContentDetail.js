@@ -139,10 +139,13 @@ const ContentDetail = () => {
               />
             </div>
             
-            <Button variant="ghost" onClick={() => navigate('/content')} data-testid="back-to-browse-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              กลับไปยังคลังความรู้
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" onClick={() => navigate('/content')} data-testid="back-to-browse-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t('content.back')}
+              </Button>
+              <LanguageSwitcher />
+            </div>
           </div>
         </div>
       </nav>
