@@ -277,13 +277,37 @@ def decode_token(token: str) -> dict:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+async def get_current_user_from_session(session_token: str):
+    """Get user from session token"""
+    session = await db.user_sessions.find_one({"session_token": session_token})
+    if not session:
+        return None
+    
+    # Check if session expired
+    if session['expires_at'] < datetime.now(timezone.utc):
+        await db.user_sessions.delete_one({"session_token": session_token})
+        return None
+    
+    user = await db.users.find_one({"id": session['user_id']}, {"_id": 0})
+    if not user:
+        return None
+    
+    return User(**user)
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
+    
+    # Try session token first (for Google OAuth)
+    user = await get_current_user_from_session(token)
+    if user:
+        return user
+    
+    # Fallback to JWT
     payload = decode_token(token)
-    user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
-    if not user:
+    user_doc = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+    if not user_doc:
         raise HTTPException(status_code=401, detail="User not found")
-    return User(**user)
+    return User(**user_doc)
 
 async def get_admin_user(current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.ADMIN:
