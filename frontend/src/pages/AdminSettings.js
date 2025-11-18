@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, User, LogOut, Settings, Save, RefreshCw, Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Navigation from '@/components/Navigation';
 
 const AdminSettings = () => {
   const navigate = useNavigate();
