@@ -168,11 +168,11 @@ backend:
   
   - task: "Phase 1A: User rating และ trust user promotion"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -180,6 +180,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: สร้าง POST /api/admin/promote-trust-user (admin promote manually), GET /api/admin/users (list users with filtering) - rating update logic จะทำตอน user complete survey"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: User rating and trust user promotion system working perfectly. GET /api/user/rating returns correct default values for new users (total_surveys_completed: 0, quality_score: 0.0, trust_score: 0.0, last_updated timestamp). Admin functionality tested with admin@test.com login successful. POST /api/admin/promote-trust-user successfully promotes regular users to trust user type with proper promotion metadata (date, method: manual, promoted_by admin_id). GET /api/admin/users?user_type=trust correctly filters and returns only trust users (1 user found). Admin access control working - requires admin role for promotion endpoints."
   
   - task: "อัปเดต generate_journey_map endpoint ให้ใช้ target_language ใน prompt"
     implemented: true
