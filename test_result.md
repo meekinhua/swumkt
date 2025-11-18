@@ -356,9 +356,6 @@ frontend:
 
 test_plan:
   current_focus:
-    - "Phase 1A Backend: ทดสอบ Google OAuth session flow"
-    - "Phase 1A Backend: ทดสอบ Demographics CRUD operations"
-    - "Phase 1A Backend: ทดสอบ User rating system"
     - "Phase 1A Frontend: ทดสอบ Google Login button และ redirect flow"
     - "Phase 1A Frontend: ทดสอบ Profile page - User Type Badge, Rating display"
     - "Phase 1A Frontend: ทดสอบ Demographics form - create/update/display"
