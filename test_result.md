@@ -150,11 +150,11 @@ backend:
   
   - task: "Phase 1A: Demographics management endpoints"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -162,6 +162,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: สร้าง GET /api/user/demographics (ดึง profile), PUT /api/user/demographics (update profile), GET /api/user/rating (ดู rating/stats) - auto-fill logic จะทำใน survey response phase ต่อไป"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Demographics management endpoints working perfectly. GET /api/user/demographics returns empty profile initially with all expected fields (birth_sex, gender_identity, date_of_birth, education, occupation, income_type, income_value, marital_status, province, region). PUT /api/user/demographics successfully updates all demographics fields with test data (male, bachelor, student, 15001-20000 income range, single, กรุงเทพฯ, central region). GET after PUT returns correctly updated demographics profile. All field validation and data persistence working correctly."
   
   - task: "Phase 1A: User rating และ trust user promotion"
     implemented: true
