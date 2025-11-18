@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Eye, User, ArrowLeft } from 'lucide-react';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Navigation from '@/components/Navigation';
 
 const ContentBrowse = () => {
   const navigate = useNavigate();
