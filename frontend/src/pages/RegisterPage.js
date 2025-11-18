@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { UserPlus, ArrowLeft, Mail, Lock, User, Sparkles, GraduationCap, Hash } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import GoogleLoginButton from '@/components/GoogleLoginButton';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
