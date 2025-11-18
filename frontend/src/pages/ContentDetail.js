@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import MermaidViewer from '@/components/MermaidViewer';
 
 const ContentDetail = () => {
   const { id } = useParams();
