@@ -112,20 +112,53 @@ Phase 1A: Authentication & User System
 - Trust User Badge/Rewards placeholder"
 
 backend:
-  - task: "อัปเดต JourneyMapRequest model เพื่อรับ target_language, journey_type, journey_style"
-    implemented: true
-    working: true
+  - task: "Phase 1A: อัปเดต User model เพื่อรองรับ user_type, demographics_profile, user_rating"
+    implemented: false
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "เพิ่ม fields: target_language (default: en), journey_type (default: B), journey_style (default: nonlinear) ใน JourneyMapRequest model"
-      - working: true
-        agent: "testing"
-        comment: "✅ TESTED: JourneyMapRequest model successfully accepts target_language, journey_type, journey_style parameters. All API calls with these parameters return 200 OK and generate proper journey maps."
+        comment: "เริ่มพัฒนา Survey Builder Phase 1A - ขยาย User model ให้รองรับ user_type (regular/trust/admin), demographics_profile (เพศเกิด, เพศสภาพ, วันเกิด, ฯลฯ), และ user_rating system"
+  
+  - task: "Phase 1A: Google OAuth Integration - session management"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "ใช้ Emergent Auth playbook - สร้าง endpoints สำหรับ Google OAuth callback, session validation, และ session storage พร้อม httpOnly cookies"
+  
+  - task: "Phase 1A: Demographics management endpoints"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "สร้าง endpoints สำหรับ GET/PUT demographics profile และ auto-fill logic สำหรับ survey responses"
+  
+  - task: "Phase 1A: User rating และ trust user promotion"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "สร้าง rating system (total_surveys, quality_score, trust_score) และ endpoints สำหรับ admin promote user to trust user (manual) + automatic promotion logic placeholder"
   
   - task: "อัปเดต generate_journey_map endpoint ให้ใช้ target_language ใน prompt"
     implemented: true
