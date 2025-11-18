@@ -393,6 +393,45 @@ class SurveyResponseCreate(BaseModel):
     demographics: Optional[DemographicsProfile] = None
     answers: List[Answer]
 
+# ============ QUESTION LIBRARY MODELS ============
+class QuestionTemplate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    category: str  # demographics, satisfaction, behavior, etc.
+    question: Question
+    tags: List[str] = []
+    created_by: str
+    is_public: bool = False
+    usage_count: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class QuestionTemplateCreate(BaseModel):
+    category: str
+    question: Question
+    tags: List[str] = []
+    is_public: bool = False
+
+class SurveyTemplate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    survey_type: SurveyType
+    sections: List[SurveySection]
+    created_by: str
+    is_public: bool = False
+    usage_count: int = 0
+    tags: List[str] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SurveyTemplateCreate(BaseModel):
+    name: str
+    description: str
+    survey_type: SurveyType
+    sections: List[SurveySection]
+    is_public: bool = False
+    tags: List[str] = []
+
 # ============ HELPER FUNCTIONS ============
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
