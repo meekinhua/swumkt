@@ -720,7 +720,7 @@ const CustomerJourneyTool = () => {
         }}
         loading={sharing}
       />
-    </div>
+    </>
   );
 };
 
