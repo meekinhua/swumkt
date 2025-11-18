@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, X, User, LogOut, FileText, TrendingUp, Settings, ArrowLeft, BarChart } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
-const Navigation = ({ showContentButton = true, showMarketResearchButton = false, showProfileButton = true, showAdminButton = false }) => {
+const Navigation = ({ showContentButton = true, showMarketResearchButton = false, showProfileButton = true, showAdminButton = false, showBackButton = false, backButtonPath = '/market-research', showDashboardButton = false }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, logout } = useAuth();
