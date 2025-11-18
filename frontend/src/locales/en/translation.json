@@ -295,5 +295,59 @@
       "share": "Share Content",
       "cancel": "Cancel"
     }
+  },
+  "userType": {
+    "regular": "Regular User",
+    "trust": "Trust User",
+    "admin": "Administrator"
+  },
+  "demographics": {
+    "birthSex": "Birth Sex",
+    "genderIdentity": "Gender Identity",
+    "dateOfBirth": "Date of Birth",
+    "education": "Highest Education",
+    "occupation": "Occupation",
+    "income": "Monthly Income",
+    "maritalStatus": "Marital Status",
+    "province": "Province",
+    "region": "Region",
+    "select": "Select",
+    "male": "Male",
+    "female": "Female",
+    "lgbtq": "LGBTQ+",
+    "other": "Other",
+    "preferNotToSay": "Prefer not to say",
+    "yearsOld": "years old",
+    "belowHighschool": "Below High School",
+    "highschool": "High School/Vocational",
+    "bachelor": "Bachelor's Degree",
+    "master": "Master's Degree",
+    "phd": "PhD",
+    "student": "Student",
+    "government": "Government Employee",
+    "privateCompany": "Private Company Employee",
+    "businessOwner": "Business Owner",
+    "freelance": "Freelance",
+    "unemployed": "Unemployed",
+    "retired": "Retired",
+    "selectRange": "Select Range",
+    "enterAmount": "Enter Amount",
+    "incomePlaceholder": "Enter approximate income (Baht)",
+    "single": "Single",
+    "married": "Married",
+    "divorced": "Divorced",
+    "widowed": "Widowed",
+    "provincePlaceholder": "Enter province",
+    "north": "North",
+    "northeast": "Northeast",
+    "central": "Central",
+    "south": "South",
+    "income": {
+      "below10k": "Below 10,000 Baht",
+      "above150k": "Above 150,000 Baht"
+    }
+  },
+  "auth": {
+    "continueWithGoogle": "Continue with Google"
   }
 }
