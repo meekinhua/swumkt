@@ -663,32 +663,72 @@ class BackendTester:
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print(f"🚀 Starting Backend Tests for Customer Journey Map Tool")
+        print(f"🚀 Starting Backend Tests for Survey Builder - Phase 1A Authentication & User System")
         print(f"Backend URL: {self.base_url}")
-        print("=" * 60)
+        print("=" * 80)
         
-        # Test sequence
-        tests = [
-            ("Register User", self.test_register_user),
+        # Initialize admin token
+        self.admin_token = None
+        
+        # Test sequence - Phase 1A Survey Builder Tests
+        phase1a_tests = [
+            ("Google OAuth New User", self.test_google_oauth_session_new_user),
+            ("Google OAuth Existing User", self.test_google_oauth_session_existing_user),
+            ("Google OAuth Invalid Session", self.test_google_oauth_invalid_session),
             ("Login User", self.test_login_user),
+            ("Demographics GET Empty", self.test_demographics_get_empty),
+            ("Demographics PUT Update", self.test_demographics_put_update),
+            ("Demographics GET Filled", self.test_demographics_get_filled),
+            ("User Rating GET", self.test_user_rating_get),
+            ("Logout", self.test_logout),
+            ("Admin Login", self.test_admin_login),
+            ("Admin Promote Trust User", self.test_admin_promote_trust_user),
+            ("Admin List Trust Users", self.test_admin_list_trust_users),
+        ]
+        
+        # Original Journey Map tests (for regression)
+        journey_tests = [
+            ("Register User", self.test_register_user),
+            ("Login User (Journey)", self.test_login_user),
             ("Journey Map Basic", self.test_journey_map_basic),
             ("Journey Map Thai", self.test_journey_map_thai),
             ("Journey Map English", self.test_journey_map_english),
             ("Journey Map With Context", self.test_journey_map_with_context),
         ]
         
-        passed = 0
-        total = len(tests)
+        print("🔐 PHASE 1A: Authentication & User System Tests")
+        print("-" * 50)
         
-        for test_name, test_func in tests:
+        passed = 0
+        total = len(phase1a_tests)
+        
+        for test_name, test_func in phase1a_tests:
             try:
                 if test_func():
                     passed += 1
             except Exception as e:
                 self.log_result(test_name, False, f"Unexpected error: {str(e)}")
         
-        print("=" * 60)
-        print(f"📊 Test Results: {passed}/{total} tests passed")
+        print("\n🗺️  REGRESSION: Journey Map Tests")
+        print("-" * 50)
+        
+        journey_passed = 0
+        journey_total = len(journey_tests)
+        
+        for test_name, test_func in journey_tests:
+            try:
+                if test_func():
+                    journey_passed += 1
+            except Exception as e:
+                self.log_result(test_name, False, f"Unexpected error: {str(e)}")
+        
+        total_passed = passed + journey_passed
+        total_tests = total + journey_total
+        
+        print("=" * 80)
+        print(f"📊 Phase 1A Test Results: {passed}/{total} tests passed")
+        print(f"📊 Journey Map Test Results: {journey_passed}/{journey_total} tests passed")
+        print(f"📊 Overall Test Results: {total_passed}/{total_tests} tests passed")
         
         # Show failed tests
         failed_tests = [r for r in self.test_results if not r["success"]]
@@ -697,7 +737,7 @@ class BackendTester:
             for test in failed_tests:
                 print(f"   - {test['test']}: {test['message']}")
         
-        return passed, total, self.test_results
+        return total_passed, total_tests, self.test_results
 
 if __name__ == "__main__":
     tester = BackendTester()
