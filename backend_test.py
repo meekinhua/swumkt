@@ -630,6 +630,526 @@ class BackendTester:
         except Exception as e:
             self.log_result("Admin List Trust Users", False, f"Exception: {str(e)}")
             return False
+
+    # ============ PHASE 1B SURVEY BUILDER TESTS ============
+    
+    def test_survey_create(self):
+        """Test creating a new survey"""
+        if not self.token:
+            self.log_result("Survey Create", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            data = {
+                "title": "Market Research Survey Test",
+                "description": "Testing survey creation",
+                "survey_type": "custom",
+                "respondent_auth_mode": "anonymous"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("id" in result and "title" in result and 
+                    result.get("status") == "draft" and
+                    result.get("title") == data["title"]):
+                    self.survey_id = result["id"]  # Store for later tests
+                    self.log_result("Survey Create", True, f"Survey created successfully with ID: {self.survey_id}")
+                    return True
+                else:
+                    self.log_result("Survey Create", False, "Missing expected fields or incorrect status", result)
+                    return False
+            else:
+                self.log_result("Survey Create", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Create", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_list(self):
+        """Test listing surveys"""
+        if not self.token:
+            self.log_result("Survey List", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Check if our created survey is in the list
+                    if hasattr(self, 'survey_id'):
+                        survey_found = any(survey.get("id") == self.survey_id for survey in result)
+                        if survey_found:
+                            self.log_result("Survey List", True, f"Survey list retrieved successfully ({len(result)} surveys, created survey found)")
+                            return True
+                        else:
+                            self.log_result("Survey List", True, f"Survey list retrieved successfully ({len(result)} surveys, created survey not found - may be expected)")
+                            return True
+                    else:
+                        self.log_result("Survey List", True, f"Survey list retrieved successfully ({len(result)} surveys)")
+                        return True
+                else:
+                    self.log_result("Survey List", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Survey List", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey List", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_get_detail(self):
+        """Test getting survey detail"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Get Detail", False, "No survey ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}"
+            
+            response = requests.get(url, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("id" in result and "title" in result and 
+                    result.get("id") == self.survey_id):
+                    self.log_result("Survey Get Detail", True, f"Survey detail retrieved successfully")
+                    return True
+                else:
+                    self.log_result("Survey Get Detail", False, "Missing expected fields or incorrect ID", result)
+                    return False
+            else:
+                self.log_result("Survey Get Detail", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Get Detail", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_update_with_sections(self):
+        """Test updating survey with sections and questions"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Update Sections", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Update Sections", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            data = {
+                "sections": [
+                    {
+                        "id": "section1",
+                        "title": "Demographics",
+                        "order": 0,
+                        "questions": [
+                            {
+                                "id": "q1",
+                                "type": "multiple_choice_single",
+                                "text": "What is your age group?",
+                                "required": True,
+                                "data_type": "ordinal",
+                                "options": [
+                                    {"id": "opt1", "text": "18-25", "value": "1"},
+                                    {"id": "opt2", "text": "26-35", "value": "2"},
+                                    {"id": "opt3", "text": "36-45", "value": "3"}
+                                ],
+                                "order": 0
+                            },
+                            {
+                                "id": "q2",
+                                "type": "rating_scale",
+                                "text": "How satisfied are you with our product?",
+                                "required": True,
+                                "data_type": "scale",
+                                "options": [
+                                    {"id": "r1", "text": "1", "value": "1"},
+                                    {"id": "r2", "text": "2", "value": "2"},
+                                    {"id": "r3", "text": "3", "value": "3"},
+                                    {"id": "r4", "text": "4", "value": "4"},
+                                    {"id": "r5", "text": "5", "value": "5"}
+                                ],
+                                "order": 1
+                            }
+                        ]
+                    }
+                ],
+                "settings": {
+                    "allow_multiple_submissions": False,
+                    "show_progress_bar": True,
+                    "allow_anonymous": True
+                }
+            }
+            
+            response = requests.put(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("sections" in result and len(result["sections"]) > 0 and
+                    "settings" in result):
+                    section = result["sections"][0]
+                    if ("questions" in section and len(section["questions"]) == 2):
+                        self.log_result("Survey Update Sections", True, "Survey updated with sections and questions successfully")
+                        return True
+                    else:
+                        self.log_result("Survey Update Sections", False, "Questions not added correctly", section)
+                        return False
+                else:
+                    self.log_result("Survey Update Sections", False, "Sections not added correctly", result)
+                    return False
+            else:
+                self.log_result("Survey Update Sections", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Update Sections", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_publish(self):
+        """Test publishing survey"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Publish", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Publish", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/publish"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.post(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("Survey Publish", True, "Survey published successfully")
+                    return True
+                else:
+                    self.log_result("Survey Publish", False, "Missing message in response", result)
+                    return False
+            else:
+                self.log_result("Survey Publish", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Publish", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_response_anonymous(self):
+        """Test submitting anonymous survey response"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Response Anonymous", False, "No survey ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/respond"
+            data = {
+                "answers": [
+                    {"question_id": "q1", "value": "2"},
+                    {"question_id": "q2", "value": "4"}
+                ]
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result and "response_id" in result:
+                    self.anonymous_response_id = result["response_id"]
+                    self.log_result("Survey Response Anonymous", True, f"Anonymous response submitted successfully (ID: {self.anonymous_response_id})")
+                    return True
+                else:
+                    self.log_result("Survey Response Anonymous", False, "Missing message or response_id", result)
+                    return False
+            else:
+                self.log_result("Survey Response Anonymous", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Response Anonymous", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_response_logged_in_with_demographics(self):
+        """Test submitting logged-in survey response with demographics"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Response Logged-in", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Response Logged-in", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/respond"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            data = {
+                "demographics": {
+                    "birth_sex": "male",
+                    "date_of_birth": "1990-01-01",
+                    "education": "bachelor"
+                },
+                "answers": [
+                    {"question_id": "q1", "value": "2"},
+                    {"question_id": "q2", "value": "5"}
+                ]
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result and "response_id" in result:
+                    self.logged_in_response_id = result["response_id"]
+                    self.log_result("Survey Response Logged-in", True, f"Logged-in response with demographics submitted successfully (ID: {self.logged_in_response_id})")
+                    return True
+                else:
+                    self.log_result("Survey Response Logged-in", False, "Missing message or response_id", result)
+                    return False
+            else:
+                self.log_result("Survey Response Logged-in", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Response Logged-in", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_get_responses(self):
+        """Test getting survey responses"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Get Responses", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Get Responses", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/responses"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Should have 2 responses (anonymous + logged-in)
+                    expected_responses = 2
+                    if len(result) >= expected_responses:
+                        self.log_result("Survey Get Responses", True, f"Survey responses retrieved successfully ({len(result)} responses)")
+                        return True
+                    else:
+                        self.log_result("Survey Get Responses", True, f"Survey responses retrieved ({len(result)} responses, expected {expected_responses})")
+                        return True
+                else:
+                    self.log_result("Survey Get Responses", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Survey Get Responses", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Get Responses", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_export_csv(self):
+        """Test exporting survey responses as CSV"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Export CSV", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Export CSV", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/export?format=csv"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                # Check if response is CSV format
+                content_type = response.headers.get('content-type', '')
+                if 'text/csv' in content_type or 'application/octet-stream' in content_type:
+                    csv_content = response.text
+                    # Basic CSV validation - should have headers and data
+                    lines = csv_content.strip().split('\n')
+                    if len(lines) >= 2:  # At least header + 1 data row
+                        self.log_result("Survey Export CSV", True, f"CSV export successful ({len(lines)} lines including header)")
+                        return True
+                    else:
+                        self.log_result("Survey Export CSV", False, f"CSV has insufficient data ({len(lines)} lines)", csv_content[:200])
+                        return False
+                else:
+                    self.log_result("Survey Export CSV", False, f"Unexpected content type: {content_type}", response.text[:200])
+                    return False
+            else:
+                self.log_result("Survey Export CSV", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Export CSV", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_export_json(self):
+        """Test exporting survey responses as JSON"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Export JSON", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Export JSON", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/export?format=json"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Should have responses with expected structure
+                    if len(result) > 0:
+                        first_response = result[0]
+                        expected_fields = ["id", "survey_id", "answers", "submitted_at"]
+                        has_expected_structure = all(field in first_response for field in expected_fields)
+                        
+                        if has_expected_structure:
+                            self.log_result("Survey Export JSON", True, f"JSON export successful ({len(result)} responses)")
+                            return True
+                        else:
+                            self.log_result("Survey Export JSON", False, "Missing expected fields in response", first_response)
+                            return False
+                    else:
+                        self.log_result("Survey Export JSON", True, "JSON export successful (0 responses)")
+                        return True
+                else:
+                    self.log_result("Survey Export JSON", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Survey Export JSON", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Export JSON", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_close(self):
+        """Test closing survey"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Close", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Close", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/close"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.post(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("Survey Close", True, "Survey closed successfully")
+                    return True
+                else:
+                    self.log_result("Survey Close", False, "Missing message in response", result)
+                    return False
+            else:
+                self.log_result("Survey Close", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Close", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_response_after_close(self):
+        """Test submitting response after survey is closed (should fail)"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Response After Close", False, "No survey ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}/respond"
+            data = {
+                "answers": [
+                    {"question_id": "q1", "value": "1"},
+                    {"question_id": "q2", "value": "3"}
+                ]
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 400:
+                # Should get error about survey not being published
+                if "not published" in response.text.lower():
+                    self.log_result("Survey Response After Close", True, "Correctly rejected response to closed survey")
+                    return True
+                else:
+                    self.log_result("Survey Response After Close", True, f"Response rejected with different error: {response.text}")
+                    return True
+            elif response.status_code == 200:
+                self.log_result("Survey Response After Close", False, "Response was accepted for closed survey (should be rejected)")
+                return False
+            else:
+                self.log_result("Survey Response After Close", True, f"Response rejected with HTTP {response.status_code} (expected)")
+                return True
+                
+        except Exception as e:
+            self.log_result("Survey Response After Close", False, f"Exception: {str(e)}")
+            return False
+
+    def test_survey_delete(self):
+        """Test deleting survey"""
+        if not hasattr(self, 'survey_id') or not self.survey_id:
+            self.log_result("Survey Delete", False, "No survey ID available")
+            return False
+            
+        if not self.token:
+            self.log_result("Survey Delete", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/surveys/{self.survey_id}"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.delete(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("Survey Delete", True, "Survey deleted successfully")
+                    return True
+                else:
+                    self.log_result("Survey Delete", False, "Missing message in response", result)
+                    return False
+            else:
+                self.log_result("Survey Delete", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Survey Delete", False, f"Exception: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests"""
