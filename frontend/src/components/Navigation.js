@@ -116,7 +116,7 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-gray-800 hover:text-[#00A9CE] transition-colors"
+            className="lg:hidden p-2 text-gray-800 hover:text-[#00A9CE] transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
