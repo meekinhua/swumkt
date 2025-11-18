@@ -1097,6 +1097,199 @@ async def export_survey_responses(
         headers={"Content-Disposition": f"attachment; filename=survey_{survey_id}_responses.csv"}
     )
 
+# ============ QUESTION LIBRARY ROUTES ============
+@api_router.post("/question-templates", response_model=QuestionTemplate)
+async def create_question_template(
+    template_data: QuestionTemplateCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a question template for reuse"""
+    template = QuestionTemplate(
+        **template_data.model_dump(),
+        created_by=current_user.id
+    )
+    
+    template_dict = template.model_dump()
+    template_dict['created_at'] = template_dict['created_at'].isoformat()
+    
+    await db.question_templates.insert_one(template_dict)
+    return template
+
+@api_router.get("/question-templates", response_model=List[QuestionTemplate])
+async def list_question_templates(
+    category: Optional[str] = None,
+    tag: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """List question templates - user can see own templates or public templates"""
+    query = {
+        "$or": [
+            {"created_by": current_user.id},
+            {"is_public": True}
+        ]
+    }
+    
+    if category:
+        query["category"] = category
+    if tag:
+        query["tags"] = tag
+    
+    templates = await db.question_templates.find(query, {"_id": 0}).to_list(100)
+    
+    for template in templates:
+        if isinstance(template.get('created_at'), str):
+            template['created_at'] = datetime.fromisoformat(template['created_at'])
+    
+    return templates
+
+@api_router.delete("/question-templates/{template_id}")
+async def delete_question_template(
+    template_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete question template"""
+    template = await db.question_templates.find_one({"id": template_id})
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    if template['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.question_templates.delete_one({"id": template_id})
+    return {"message": "Template deleted successfully"}
+
+@api_router.post("/question-templates/{template_id}/use")
+async def increment_template_usage(
+    template_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Increment usage count when template is used"""
+    await db.question_templates.update_one(
+        {"id": template_id},
+        {"$inc": {"usage_count": 1}}
+    )
+    return {"message": "Usage counted"}
+
+# ============ SURVEY TEMPLATES ============
+@api_router.post("/survey-templates", response_model=SurveyTemplate)
+async def create_survey_template(
+    template_data: SurveyTemplateCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a survey template"""
+    template = SurveyTemplate(
+        **template_data.model_dump(),
+        created_by=current_user.id
+    )
+    
+    template_dict = template.model_dump()
+    template_dict['created_at'] = template_dict['created_at'].isoformat()
+    
+    await db.survey_templates.insert_one(template_dict)
+    return template
+
+@api_router.get("/survey-templates", response_model=List[SurveyTemplate])
+async def list_survey_templates(
+    survey_type: Optional[SurveyType] = None,
+    tag: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """List survey templates"""
+    query = {
+        "$or": [
+            {"created_by": current_user.id},
+            {"is_public": True}
+        ]
+    }
+    
+    if survey_type:
+        query["survey_type"] = survey_type
+    if tag:
+        query["tags"] = tag
+    
+    templates = await db.survey_templates.find(query, {"_id": 0}).to_list(100)
+    
+    for template in templates:
+        if isinstance(template.get('created_at'), str):
+            template['created_at'] = datetime.fromisoformat(template['created_at'])
+    
+    return templates
+
+@api_router.get("/survey-templates/{template_id}", response_model=SurveyTemplate)
+async def get_survey_template(
+    template_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get survey template by ID"""
+    template = await db.survey_templates.find_one({"id": template_id}, {"_id": 0})
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    if isinstance(template.get('created_at'), str):
+        template['created_at'] = datetime.fromisoformat(template['created_at'])
+    
+    return SurveyTemplate(**template)
+
+@api_router.delete("/survey-templates/{template_id}")
+async def delete_survey_template(
+    template_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete survey template"""
+    template = await db.survey_templates.find_one({"id": template_id})
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    if template['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.survey_templates.delete_one({"id": template_id})
+    return {"message": "Template deleted successfully"}
+
+@api_router.post("/survey-templates/{template_id}/use")
+async def increment_survey_template_usage(
+    template_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Increment usage count when template is used"""
+    await db.survey_templates.update_one(
+        {"id": template_id},
+        {"$inc": {"usage_count": 1}}
+    )
+    return {"message": "Usage counted"}
+
+@api_router.post("/surveys/from-template/{template_id}", response_model=Survey)
+async def create_survey_from_template(
+    template_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new survey from a template"""
+    template = await db.survey_templates.find_one({"id": template_id})
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Increment usage count
+    await db.survey_templates.update_one(
+        {"id": template_id},
+        {"$inc": {"usage_count": 1}}
+    )
+    
+    # Create survey from template
+    survey = Survey(
+        title=f"{template['name']} (Copy)",
+        description=template.get('description', ''),
+        survey_type=template['survey_type'],
+        sections=template['sections'],
+        created_by=current_user.id
+    )
+    
+    survey_dict = survey.model_dump()
+    survey_dict['created_at'] = survey_dict['created_at'].isoformat()
+    survey_dict['updated_at'] = survey_dict['updated_at'].isoformat()
+    
+    await db.surveys.insert_one(survey_dict)
+    return survey
+
 # ============ CONTENT ROUTES ============
 @api_router.post("/content", response_model=Content)
 async def create_content(
