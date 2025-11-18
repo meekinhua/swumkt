@@ -9,9 +9,10 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, User, LogOut, FileText, Map, Sparkles, Download, RefreshCw, BarChart, Lock, Settings, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ArrowLeft, User, LogOut, FileText, Map, Sparkles, Download, RefreshCw, BarChart, Lock, Settings, ZoomIn, ZoomOut, Maximize, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import ShareJourneyMapModal from '@/components/ShareJourneyMapModal';
 import mermaid from 'mermaid';
 
 const CustomerJourneyTool = () => {
