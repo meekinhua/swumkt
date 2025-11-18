@@ -118,8 +118,8 @@ const LandingPage = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-gradient-to-br from-[#005A73] to-[#007B9A] border-t border-white/10" data-testid="mobile-menu">
-            <div className="px-4 py-6 space-y-4">
+          <div className="xl:hidden bg-gradient-to-br from-[#005A73] to-[#007B9A] border-t border-white/10" data-testid="mobile-menu">
+            <div className="px-4 py-6 space-y-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
               <a href="#features" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.features')}</a>
               <a href="#stats" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.about')}</a>
               <button onClick={() => navigate('/market-research')} className="block text-white hover:text-[#33BCDA] font-semibold transition-colors w-full text-left">{t('nav.marketResearch')}</button>
