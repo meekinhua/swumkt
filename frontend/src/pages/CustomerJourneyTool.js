@@ -134,6 +134,16 @@ const CustomerJourneyTool = () => {
   };
 
   const handleFullscreen = () => {
+    // If standalone PWA, use modal instead
+    if (isStandalone) {
+      setIsExpandedModal(!isExpandedModal);
+      if (!isExpandedModal) {
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      }
+      return;
+    }
+    
     const elem = fullscreenRef.current;
     
     // Check if already in fullscreen
