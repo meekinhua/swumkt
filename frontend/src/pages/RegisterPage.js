@@ -215,8 +215,8 @@ const RegisterPage = () => {
             </Button>
           </form>
 
-          <div className="mt-8 text-center">
-            <div className="relative">
+          <div className="mt-6">
+            <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t-2 border-gray-300"></div>
               </div>
@@ -224,7 +224,15 @@ const RegisterPage = () => {
                 <span className="px-4 bg-white text-gray-600 font-semibold">{t('auth.or')}</span>
               </div>
             </div>
-            <p className="mt-4 text-sm text-gray-700 font-semibold">
+            
+            <GoogleLoginButton 
+              redirectUrl={`${window.location.origin}/dashboard`}
+              className="mb-4"
+            />
+          </div>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-700 font-semibold">
               {t('auth.hasAccount')}{' '}
               <Link to="/login" className="text-[#00A9CE] hover:text-[#005A73] font-bold transition-colors" data-testid="goto-login-link">
                 {t('auth.loginButton')}
