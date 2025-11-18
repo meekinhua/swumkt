@@ -496,6 +496,22 @@ class JourneyMapResponse(BaseModel):
     mermaid_code: str
     analysis_summary: str
 
+class JourneyMapContentCreate(BaseModel):
+    title: str = Field(..., description="Content title")
+    research_type: str = Field(..., description="Research type: qualitative or quantitative")
+    sample_size: Optional[str] = Field(None, description="Sample size")
+    data_source: str = Field(..., description="Data source")
+    collection_method: str = Field(..., description="Collection method")
+    research_date: str = Field(..., description="Research date")
+    additional_notes: Optional[str] = Field(None, description="Additional notes")
+    mermaid_code: str = Field(..., description="Mermaid diagram code")
+    analysis_summary: str = Field(..., description="Analysis summary")
+    raw_data: str = Field(..., description="Original raw data")
+    research_context: Optional[str] = Field(None, description="Research context")
+    journey_type: str = Field(..., description="Journey type")
+    journey_style: str = Field(..., description="Journey style")
+    output_language: str = Field(..., description="Output language")
+
 class AdminPromptSettings(BaseModel):
     journey_map_prompt: str = Field(..., description="Custom system prompt for journey map generation")
     updated_by: str
