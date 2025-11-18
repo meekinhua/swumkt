@@ -64,10 +64,46 @@ export const AuthProvider = ({ children }) => {
     return newUser;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
+  const processGoogleSession = async (sessionId) => {
+    setProcessingSession(true);
+    setLoading(true);
+    
+    try {
+      const response = await axios.post(`${API}/auth/google/session`, {
+        session_id: sessionId
+      });
+      
+      const { session_token, user: userData } = response.data;
+      localStorage.setItem('token', session_token);
+      setToken(session_token);
+      setUser(userData);
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (error) {
+      console.error('Failed to process Google session:', error);
+      alert('Google login failed. Please try again.');
+    } finally {
+      setProcessingSession(false);
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      // Call backend to delete session
+      if (token) {
+        await axios.post(`${API}/auth/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+    }
   };
 
   const updateProfile = async (profileData) => {
@@ -78,8 +114,43 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const updateDemographics = async (demographicsData) => {
+    const response = await axios.put(`${API}/user/demographics`, demographicsData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    // Refresh user data
+    await fetchUser();
+    return response.data;
+  };
+
+  const getDemographics = async () => {
+    const response = await axios.get(`${API}/user/demographics`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  };
+
+  const getUserRating = async () => {
+    const response = await axios.get(`${API}/user/rating`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, token, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      token, 
+      login, 
+      register, 
+      logout, 
+      updateProfile,
+      updateDemographics,
+      getDemographics,
+      getUserRating,
+      processingSession
+    }}>
       {children}
     </AuthContext.Provider>
   );
