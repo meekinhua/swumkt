@@ -255,37 +255,59 @@ const LandingPage = () => {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            {features.map((feature, index) => (
-              <Card
-                key={index}
-                className={`p-8 bg-white/98 border-2 ${
-                  feature.active ? 'border-[#00A9CE]' : 'border-gray-300'
-                } hover:border-[#00A9CE] card-hover slide-in-right group shadow-lg`}
-                style={{ animationDelay: `${index * 0.15}s` }}
-                data-testid={`feature-card-${index}`}
-              >
-                <div className="flex items-start gap-6">
-                  <div className={`p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} text-white shadow-xl group-hover:scale-110 transition-transform border-2 border-white/20`}>
-                    {feature.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-2xl font-black text-gray-900">{feature.title}</h3>
-                      {feature.active ? (
-                        <span className="badge-success text-xs px-3 py-1.5 rounded-full">
-                          {feature.status}
-                        </span>
-                      ) : (
-                        <span className="badge-warning text-xs px-3 py-1.5 rounded-full">
-                          {feature.status}
-                        </span>
+            {features.map((feature, index) => {
+              // Determine the link for each feature
+              let featureLink = null;
+              if (index === 0) featureLink = '/market-research'; // Market Research Tools
+              if (index === 2) featureLink = '/content'; // Knowledge Hub
+
+              return (
+                <Card
+                  key={index}
+                  onClick={() => featureLink && navigate(featureLink)}
+                  className={`p-8 bg-white/98 border-2 ${
+                    feature.active ? 'border-[#00A9CE]' : 'border-gray-300'
+                  } hover:border-[#00A9CE] card-hover slide-in-right group shadow-lg ${
+                    featureLink ? 'cursor-pointer' : ''
+                  }`}
+                  style={{ animationDelay: `${index * 0.15}s` }}
+                  data-testid={`feature-card-${index}`}
+                >
+                  <div className="flex items-start gap-6">
+                    <div className={`p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} text-white shadow-xl group-hover:scale-110 transition-transform border-2 border-white/20`}>
+                      {feature.icon}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-2xl font-black text-gray-900">{feature.title}</h3>
+                        {feature.active ? (
+                          <span className="badge-success text-xs px-3 py-1.5 rounded-full">
+                            {feature.status}
+                          </span>
+                        ) : (
+                          <span className="badge-warning text-xs px-3 py-1.5 rounded-full">
+                            {feature.status}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-700 leading-relaxed font-medium mb-4">{feature.description}</p>
+                      {featureLink && (
+                        <Button
+                          variant="ghost"
+                          className="text-[#00A9CE] hover:text-[#005A73] font-bold p-0 h-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(featureLink);
+                          }}
+                        >
+                          {t('landing.exploreNow')} <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
                       )}
                     </div>
-                    <p className="text-gray-700 leading-relaxed font-medium">{feature.description}</p>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
