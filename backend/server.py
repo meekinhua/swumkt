@@ -315,6 +315,84 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
     return current_user
 
 # ============ AUTH ROUTES ============
+
+# Google OAuth Session Endpoint
+@api_router.post("/auth/google/session")
+async def process_google_session(session_id: str = Field(..., description="Session ID from Emergent Auth")):
+    """Process Google OAuth session_id and create user session"""
+    import httpx
+    
+    try:
+        # Call Emergent Auth API to get session data
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": session_id},
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail="Invalid session ID")
+            
+            session_data = response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get session data: {str(e)}")
+    
+    # Check if user exists
+    existing_user = await db.users.find_one({"email": session_data["email"]})
+    
+    if existing_user:
+        # User exists - don't update existing data
+        user = User(**existing_user)
+    else:
+        # Create new user
+        user = User(
+            email=session_data["email"],
+            full_name=session_data["name"],
+            role=UserRole.PUBLIC_USER,
+            user_type=UserType.REGULAR,
+            auth_method="google",
+            avatar_url=session_data.get("picture")
+        )
+        
+        user_dict = user.model_dump()
+        user_dict['created_at'] = user_dict['created_at'].isoformat()
+        user_dict['updated_at'] = user_dict['updated_at'].isoformat()
+        user_dict['user_rating'] = {
+            'total_surveys_completed': 0,
+            'quality_score': 0.0,
+            'trust_score': 0.0,
+            'last_updated': datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.users.insert_one(user_dict)
+    
+    # Create session in database
+    session_token = session_data["session_token"]
+    user_session = UserSession(
+        user_id=user.id,
+        session_token=session_token,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7)
+    )
+    
+    session_dict = user_session.model_dump()
+    session_dict['expires_at'] = session_dict['expires_at'].isoformat()
+    session_dict['created_at'] = session_dict['created_at'].isoformat()
+    
+    await db.user_sessions.insert_one(session_dict)
+    
+    return {
+        "session_token": session_token,
+        "user": UserProfile(**user.model_dump())
+    }
+
+@api_router.post("/auth/logout")
+async def logout(current_user: User = Depends(get_current_user)):
+    """Logout user and delete session"""
+    # Delete all sessions for this user
+    await db.user_sessions.delete_many({"user_id": current_user.id})
+    return {"message": "Logged out successfully"}
+
 @api_router.post("/auth/register", response_model=AuthResponse)
 async def register(user_data: UserRegister):
     # Check if user exists
