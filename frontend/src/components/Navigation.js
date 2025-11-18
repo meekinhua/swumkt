@@ -32,7 +32,7 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
           </div>
           
           {/* Desktop Menu */}
-          <div className="hidden lg:flex items-center gap-4">
+          <div className="hidden xl:flex items-center gap-4">
             {showBackButton && (
               <Button 
                 variant="ghost" 
