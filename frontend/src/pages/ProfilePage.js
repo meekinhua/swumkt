@@ -67,6 +67,17 @@ const ProfilePage = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSaveDemographics = async (demographicsData) => {
+    try {
+      await updateDemographics(demographicsData);
+      await loadDemographicsAndRating();
+      setEditingDemographics(false);
+      toast.success('Demographics updated successfully!');
+    } catch (error) {
+      toast.error('Failed to update demographics');
+    }
+  };
+
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
@@ -83,13 +94,59 @@ const ProfilePage = () => {
           Back to Dashboard
         </Button>
 
-        <Card className="p-8 bg-white/98 shadow-xl border-2 border-gray-300">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 bg-gradient-to-br from-[#005A73] to-[#00A9CE] rounded-full">
-              <User className="w-8 h-8 text-white" />
+        {/* User Type & Rating Card */}
+        <Card className="p-6 bg-white/98 shadow-xl border-2 border-gray-300 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-gradient-to-br from-[#005A73] to-[#00A9CE] rounded-full">
+                <User className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-gray-900">{user?.full_name}</h1>
+                <p className="text-gray-600 text-sm">{user?.email}</p>
+              </div>
             </div>
+            <div className="flex flex-col items-end gap-2">
+              <UserTypeBadge userType={user?.user_type} size="lg" />
+              {user?.auth_method === 'google' && (
+                <span className="text-xs text-gray-500 font-medium">Signed in with Google</span>
+              )}
+            </div>
+          </div>
+
+          {/* Rating Stats */}
+          {rating && (
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-semibold text-gray-700">Surveys Completed</span>
+                </div>
+                <p className="text-2xl font-black text-blue-600">{rating.total_surveys_completed}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <Award className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-semibold text-gray-700">Quality Score</span>
+                </div>
+                <p className="text-2xl font-black text-green-600">{rating.quality_score.toFixed(1)}</p>
+              </div>
+              <div className="bg-amber-50 p-4 rounded-lg border-2 border-amber-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <Award className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-semibold text-gray-700">Trust Score</span>
+                </div>
+                <p className="text-2xl font-black text-amber-600">{rating.trust_score.toFixed(1)}</p>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Profile Info Card */}
+        <Card className="p-8 bg-white/98 shadow-xl border-2 border-gray-300 mb-6">
+          <div className="flex items-center gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-black text-gray-900">Your Profile</h1>
+              <h2 className="text-2xl font-black text-gray-900">Profile Information</h2>
               <p className="text-gray-600 font-medium">Update your personal information</p>
             </div>
           </div>
