@@ -354,14 +354,26 @@ const SurveyBuilderPage = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Surveys
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Saving...' : 'Save Survey'}
-          </Button>
+          <div className="flex gap-2">
+            {surveyId && (
+              <Button
+                variant="outline"
+                onClick={handleSaveAsTemplate}
+                className="border-2 border-gray-300"
+              >
+                <BookMarked className="w-4 h-4 mr-2" />
+                Save as Template
+              </Button>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? 'Saving...' : 'Save Survey'}
+            </Button>
+          </div>
         </div>
 
         {/* Basic Info */}
