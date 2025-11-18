@@ -217,6 +217,45 @@ const CustomerJourneyTool = () => {
     }
   };
 
+  const handleShareAsContent = async (formData) => {
+    setSharing(true);
+    try {
+      const response = await axios.post(
+        `${API}/journey-map/share-content`,
+        {
+          title: formData.title,
+          research_type: formData.researchType,
+          sample_size: formData.sampleSize,
+          data_source: formData.dataSource,
+          collection_method: formData.collectionMethod,
+          research_date: formData.researchDate,
+          additional_notes: formData.additionalNotes,
+          mermaid_code: result.mermaid_code,
+          analysis_summary: result.analysis_summary,
+          raw_data: rawData,
+          research_context: researchContext,
+          journey_type: journeyType,
+          journey_style: journeyStyle,
+          output_language: outputLanguage
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      toast.success(t('common.success') + ': Content shared successfully!');
+      setShowShareModal(false);
+      
+      // Navigate to content page
+      navigate('/content');
+    } catch (error) {
+      console.error('Share content error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to share content');
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
