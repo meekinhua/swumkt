@@ -137,6 +137,26 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
       {mobileMenuOpen && (
         <div className="md:hidden bg-gradient-to-br from-[#005A73] to-[#007B9A] border-t border-white/10">
           <div className="px-4 py-6 space-y-3">
+            {showBackButton && (
+              <Button 
+                variant="ghost" 
+                onClick={() => { navigate(backButtonPath); setMobileMenuOpen(false); }} 
+                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t('content.back')}
+              </Button>
+            )}
+            {showDashboardButton && (
+              <Button 
+                variant="ghost" 
+                onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }} 
+                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
+              >
+                <BarChart className="w-4 h-4 mr-2" />
+                {t('nav.dashboard')}
+              </Button>
+            )}
             {showMarketResearchButton && (
               <Button 
                 variant="ghost" 
