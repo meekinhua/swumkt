@@ -402,10 +402,10 @@ backend:
 
 test_plan:
   current_focus:
-    - "Phase 1B Backend: ทดสอบ Survey CRUD operations"
-    - "Phase 1B Backend: ทดสอบ Survey publish/close"
-    - "Phase 1B Backend: ทดสอบ Survey response submission"
-    - "Phase 1B Backend: ทดสอบ Survey export (CSV/JSON)"
+    - "Phase 1B Frontend: Survey Builder UI Components"
+    - "Phase 1B Frontend: Survey Creation/Management Interface"
+    - "Phase 1B Frontend: Survey Response Interface"
+    - "Phase 1B Frontend: Survey Analytics/Export Interface"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
