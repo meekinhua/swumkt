@@ -318,7 +318,7 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 
 # Google OAuth Session Endpoint
 @api_router.post("/auth/google/session")
-async def process_google_session(x_session_id: str = Field(..., alias="X-Session-ID")):
+async def process_google_session(x_session_id: str = Header(..., alias="X-Session-ID")):
     """Process Google OAuth session_id and create user session"""
     import httpx
     
