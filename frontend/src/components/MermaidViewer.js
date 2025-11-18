@@ -51,6 +51,24 @@ const MermaidViewer = ({ code }) => {
     }
   }, [code]);
 
+  // Render mermaid in modal when expanded
+  useEffect(() => {
+    if (isExpandedModal && code && mermaidModalRef.current) {
+      const renderModalDiagram = async () => {
+        try {
+          mermaidModalRef.current.innerHTML = '';
+          const id = `mermaid-modal-${Date.now()}`;
+          const { svg } = await mermaid.render(id, code);
+          mermaidModalRef.current.innerHTML = svg;
+        } catch (error) {
+          console.error('Mermaid modal rendering error:', error);
+          mermaidModalRef.current.innerHTML = '<p class="text-red-500">Error rendering diagram</p>';
+        }
+      };
+      renderModalDiagram();
+    }
+  }, [isExpandedModal, code]);
+
   const handleWheel = (e) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
