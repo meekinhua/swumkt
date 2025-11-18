@@ -95,6 +95,44 @@ class ContentStatus(str, Enum):
     PUBLISHED = "published"
     ARCHIVED = "archived"
 
+class SurveyStatus(str, Enum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    CLOSED = "closed"
+
+class SurveyType(str, Enum):
+    MARKET_SEGMENTATION = "market_segmentation"
+    PERCEPTION = "perception"
+    COMPETITOR = "competitor"
+    BEHAVIOR = "behavior"
+    CONJOINT = "conjoint"
+    CUSTOM = "custom"
+
+class RespondentAuthMode(str, Enum):
+    ANONYMOUS = "anonymous"
+    EMAIL = "email"
+    LOGIN = "login"
+
+class QuestionType(str, Enum):
+    MULTIPLE_CHOICE_SINGLE = "multiple_choice_single"
+    MULTIPLE_CHOICE_MULTIPLE = "multiple_choice_multiple"
+    RATING_SCALE = "rating_scale"
+    OPEN_ENDED = "open_ended"
+    MATRIX = "matrix"
+    RANKING = "ranking"
+    AIDED = "aided"
+    UNAIDED = "unaided"
+
+class DataType(str, Enum):
+    NOMINAL = "nominal"
+    ORDINAL = "ordinal"
+    SCALE = "scale"
+
+class CodingSchemeType(str, Enum):
+    ORDINAL = "ordinal"
+    DUMMY = "dummy"
+    EFFECT = "effect"
+
 # ============ AUTH MODELS ============
 class UserRegister(BaseModel):
     email: EmailStr
