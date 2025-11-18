@@ -132,11 +132,11 @@ backend:
   
   - task: "Phase 1A: Google OAuth Integration - session management"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -144,6 +144,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: สร้าง POST /api/auth/google/session (รับ session_id, เรียก Emergent Auth API, สร้าง/update user, สร้าง session), POST /api/auth/logout (ลบ sessions), และ get_current_user_from_session() helper รองรับทั้ง JWT และ session_token"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Google OAuth integration working correctly. POST /api/auth/google/session endpoint properly validates session_id (422 error for missing session_id, 500 error for invalid session_id with proper error handling). Session management tested - POST /api/auth/logout successfully deletes user sessions. get_current_user_from_session() helper function working with both JWT and session_token authentication. Note: Full OAuth flow requires real Google session_id from Emergent Auth system."
   
   - task: "Phase 1A: Demographics management endpoints"
     implemented: true
