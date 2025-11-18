@@ -158,6 +158,87 @@ const SurveyBuilderPage = () => {
     }));
   };
 
+  const openQuestionLibrary = (sectionId) => {
+    setCurrentSectionForLibrary(sectionId);
+    setShowQuestionLibrary(true);
+  };
+
+  const handleAddQuestionFromLibrary = (question) => {
+    if (!currentSectionForLibrary) return;
+    
+    // Give new IDs to avoid conflicts
+    const newQuestion = {
+      ...question,
+      id: `q_${Date.now()}`,
+      options: question.options?.map((opt, idx) => ({
+        ...opt,
+        id: `opt_${Date.now()}_${idx}`
+      })) || []
+    };
+
+    setSurveyData(prev => ({
+      ...prev,
+      sections: prev.sections.map(section =>
+        section.id === currentSectionForLibrary
+          ? { ...section, questions: [...section.questions, newQuestion] }
+          : section
+      )
+    }));
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!surveyId) {
+      toast.error('Please save the survey first');
+      return;
+    }
+
+    const templateName = window.prompt('Enter template name:', surveyData.title + ' Template');
+    if (!templateName) return;
+
+    try {
+      await axios.post(`${API}/api/survey-templates`, {
+        name: templateName,
+        description: surveyData.description,
+        survey_type: surveyData.survey_type,
+        sections: surveyData.sections,
+        is_public: false,
+        tags: []
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Survey saved as template!');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      toast.error('Failed to save as template');
+    }
+  };
+
+  const handleSaveQuestionAsTemplate = async (sectionId, questionId) => {
+    const question = surveyData.sections
+      .find(s => s.id === sectionId)?.questions
+      .find(q => q.id === questionId);
+    
+    if (!question) return;
+
+    const category = window.prompt('Enter category:', 'custom');
+    if (!category) return;
+
+    try {
+      await axios.post(`${API}/api/question-templates`, {
+        category,
+        question,
+        tags: [],
+        is_public: false
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Question saved to library!');
+    } catch (error) {
+      console.error('Failed to save question:', error);
+      toast.error('Failed to save question');
+    }
+  };
+
   const updateQuestion = (sectionId, questionId, field, value) => {
     setSurveyData(prev => ({
       ...prev,
