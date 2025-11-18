@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { LogIn, ArrowLeft, Mail, Lock, Sparkles } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import GoogleLoginButton from '@/components/GoogleLoginButton';
 
 const LoginPage = () => {
   const navigate = useNavigate();
