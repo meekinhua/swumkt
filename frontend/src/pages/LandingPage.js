@@ -75,7 +75,8 @@ const LandingPage = () => {
             <div className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.features')}</a>
               <a href="#stats" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.about')}</a>
-              <a href="/content" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.content')}</a>
+              <button onClick={() => navigate('/market-research')} className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.marketResearch')}</button>
+              <button onClick={() => navigate('/content')} className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.content')}</button>
               <LanguageSwitcher />
               {user ? (
                 <>
