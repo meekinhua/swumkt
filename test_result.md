@@ -354,11 +354,49 @@ frontend:
         agent: "main"
         comment: "✅ IMPLEMENTED: เพิ่ม translation keys ครบทั้ง TH และ EN สำหรับ userType, demographics fields, และ auth.continueWithGoogle"
 
+backend:
+  - task: "Phase 1B: Survey Models และ Enums"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: เพิ่ม Enums (SurveyStatus, SurveyType, RespondentAuthMode, QuestionType, DataType, CodingSchemeType), Models (Survey, SurveySection, Question, SurveyResponse, Answer, CodingScheme, QuestionOption, DemographicsConfig, SurveySettings)"
+  
+  - task: "Phase 1B: Survey CRUD Endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: POST /api/surveys (create), GET /api/surveys (list), GET /api/surveys/{id} (detail), PUT /api/surveys/{id} (update), DELETE /api/surveys/{id} (delete), POST /api/surveys/{id}/publish, POST /api/surveys/{id}/close"
+  
+  - task: "Phase 1B: Survey Response Endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: POST /api/surveys/{id}/respond (public endpoint, รองรับ anonymous + logged-in, auto-fill demographics, update user rating), GET /api/surveys/{id}/responses (get all responses), GET /api/surveys/{id}/export (CSV/JSON export พร้อม demographics และ answers)"
+
 test_plan:
   current_focus:
-    - "Phase 1A Frontend: ทดสอบ Google Login button และ redirect flow"
-    - "Phase 1A Frontend: ทดสอบ Profile page - User Type Badge, Rating display"
-    - "Phase 1A Frontend: ทดสอบ Demographics form - create/update/display"
+    - "Phase 1B Backend: ทดสอบ Survey CRUD operations"
+    - "Phase 1B Backend: ทดสอบ Survey publish/close"
+    - "Phase 1B Backend: ทดสอบ Survey response submission"
+    - "Phase 1B Backend: ทดสอบ Survey export (CSV/JSON)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
