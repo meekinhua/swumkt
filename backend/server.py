@@ -169,6 +169,37 @@ class AuthResponse(BaseModel):
     token_type: str = "bearer"
     user: UserProfile
 
+class UserSession(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    session_token: str
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SessionDataResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    picture: str
+    session_token: str
+
+class DemographicsUpdate(BaseModel):
+    birth_sex: Optional[BirthSex] = None
+    gender_identity: Optional[GenderIdentity] = None
+    date_of_birth: Optional[str] = None
+    education: Optional[EducationLevel] = None
+    occupation: Optional[Occupation] = None
+    income_type: Optional[IncomeType] = None
+    income_value: Optional[str] = None
+    marital_status: Optional[MaritalStatus] = None
+    province: Optional[str] = None
+    region: Optional[str] = None
+
+class PromoteTrustUserRequest(BaseModel):
+    user_id: str
+    reason: Optional[str] = None
+
 # ============ CONTENT MODELS ============
 class ContentContributor(BaseModel):
     user_id: str
