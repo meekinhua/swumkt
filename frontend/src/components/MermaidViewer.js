@@ -15,6 +15,12 @@ const MermaidViewer = ({ code }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isExpandedModal, setIsExpandedModal] = useState(false);
+  
+  // Detect if running as standalone PWA (iOS home screen app)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                       window.navigator.standalone || 
+                       document.referrer.includes('android-app://');
 
   useEffect(() => {
     // Initialize Mermaid
