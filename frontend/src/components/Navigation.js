@@ -32,25 +32,16 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
           </div>
           
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-4">
             {showBackButton && (
-              <>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate(backButtonPath)} 
-                  className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 hidden sm:flex"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  {t('content.back')}
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate(backButtonPath)} 
-                  className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 sm:hidden p-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-              </>
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate(backButtonPath)} 
+                className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t('content.back')}
+              </Button>
             )}
             {showDashboardButton && (
               <Button 
