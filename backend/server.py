@@ -869,11 +869,33 @@ async def close_survey(
     
     return {"message": "Survey closed successfully"}
 
+async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+    """Get current user if authenticated, None if not"""
+    if not credentials:
+        return None
+    
+    try:
+        token = credentials.credentials
+        
+        # Try session token first (for Google OAuth)
+        user = await get_current_user_from_session(token)
+        if user:
+            return user
+        
+        # Fallback to JWT
+        payload = decode_token(token)
+        user_doc = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+        if not user_doc:
+            return None
+        return User(**user_doc)
+    except:
+        return None
+
 @api_router.post("/surveys/{survey_id}/respond")
 async def submit_survey_response(
     survey_id: str,
     response_data: SurveyResponseCreate,
-    current_user: Optional[User] = None
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Submit survey response - public endpoint"""
     survey = await db.surveys.find_one({"id": survey_id})
