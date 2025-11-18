@@ -128,22 +128,37 @@ const CustomerJourneyTool = () => {
   };
 
   const handleFullscreen = () => {
-    if (!isFullscreen) {
-      if (fullscreenRef.current.requestFullscreen) {
-        fullscreenRef.current.requestFullscreen();
-      } else if (fullscreenRef.current.webkitRequestFullscreen) {
-        fullscreenRef.current.webkitRequestFullscreen();
-      } else if (fullscreenRef.current.msRequestFullscreen) {
-        fullscreenRef.current.msRequestFullscreen();
+    const elem = fullscreenRef.current;
+    
+    // Check if already in fullscreen
+    const isCurrentlyFullscreen = 
+      document.fullscreenElement || 
+      document.webkitFullscreenElement || 
+      document.mozFullScreenElement || 
+      document.msFullscreenElement;
+
+    if (!isCurrentlyFullscreen && elem) {
+      // Enter fullscreen with vendor prefixes
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen(); // Safari
+      } else if (elem.mozRequestFullScreen) {
+        elem.mozRequestFullScreen(); // Firefox
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen(); // IE/Edge
       }
       setIsFullscreen(true);
     } else {
+      // Exit fullscreen with vendor prefixes
       if (document.exitFullscreen) {
         document.exitFullscreen();
       } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
+        document.webkitExitFullscreen(); // Safari
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen(); // Firefox
       } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
+        document.msExitFullscreen(); // IE/Edge
       }
       setIsFullscreen(false);
     }
