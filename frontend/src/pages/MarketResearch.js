@@ -12,11 +12,6 @@ const MarketResearch = () => {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
   const tools = [
     {
       id: 'survey-builder',
