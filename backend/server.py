@@ -695,6 +695,347 @@ async def list_users(
     users = await db.users.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     return [UserProfile(**User(**u).model_dump()) for u in users]
 
+# ============ SURVEY ROUTES ============
+@api_router.post("/surveys", response_model=Survey)
+async def create_survey(
+    survey_data: SurveyCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new survey"""
+    survey = Survey(
+        **survey_data.model_dump(),
+        created_by=current_user.id
+    )
+    
+    survey_dict = survey.model_dump()
+    survey_dict['created_at'] = survey_dict['created_at'].isoformat()
+    survey_dict['updated_at'] = survey_dict['updated_at'].isoformat()
+    
+    await db.surveys.insert_one(survey_dict)
+    return survey
+
+@api_router.get("/surveys", response_model=List[Survey])
+async def list_surveys(
+    status: Optional[SurveyStatus] = None,
+    survey_type: Optional[SurveyType] = None,
+    created_by: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: User = Depends(get_current_user)
+):
+    """List surveys - user can see own surveys or published surveys"""
+    query = {}
+    
+    # Users can see their own surveys or published surveys
+    if current_user.role != UserRole.ADMIN:
+        query["$or"] = [
+            {"created_by": current_user.id},
+            {"status": SurveyStatus.PUBLISHED}
+        ]
+    
+    if status:
+        query["status"] = status
+    if survey_type:
+        query["survey_type"] = survey_type
+    if created_by:
+        query["created_by"] = created_by
+    
+    surveys = await db.surveys.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for survey in surveys:
+        if isinstance(survey.get('created_at'), str):
+            survey['created_at'] = datetime.fromisoformat(survey['created_at'])
+        if isinstance(survey.get('updated_at'), str):
+            survey['updated_at'] = datetime.fromisoformat(survey['updated_at'])
+        if survey.get('published_at') and isinstance(survey['published_at'], str):
+            survey['published_at'] = datetime.fromisoformat(survey['published_at'])
+        if survey.get('closed_at') and isinstance(survey['closed_at'], str):
+            survey['closed_at'] = datetime.fromisoformat(survey['closed_at'])
+    
+    return surveys
+
+@api_router.get("/surveys/{survey_id}", response_model=Survey)
+async def get_survey(survey_id: str):
+    """Get survey by ID - public endpoint for taking surveys"""
+    survey = await db.surveys.find_one({"id": survey_id}, {"_id": 0})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if isinstance(survey.get('created_at'), str):
+        survey['created_at'] = datetime.fromisoformat(survey['created_at'])
+    if isinstance(survey.get('updated_at'), str):
+        survey['updated_at'] = datetime.fromisoformat(survey['updated_at'])
+    if survey.get('published_at') and isinstance(survey['published_at'], str):
+        survey['published_at'] = datetime.fromisoformat(survey['published_at'])
+    if survey.get('closed_at') and isinstance(survey['closed_at'], str):
+        survey['closed_at'] = datetime.fromisoformat(survey['closed_at'])
+    
+    return Survey(**survey)
+
+@api_router.put("/surveys/{survey_id}", response_model=Survey)
+async def update_survey(
+    survey_id: str,
+    update_data: SurveyUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update survey - only creator or admin"""
+    survey = await db.surveys.find_one({"id": survey_id})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if survey['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    update_dict = {k: v for k, v in update_data.model_dump(exclude_none=True).items()}
+    update_dict['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.surveys.update_one({"id": survey_id}, {"$set": update_dict})
+    
+    updated_survey = await db.surveys.find_one({"id": survey_id}, {"_id": 0})
+    if isinstance(updated_survey.get('created_at'), str):
+        updated_survey['created_at'] = datetime.fromisoformat(updated_survey['created_at'])
+    if isinstance(updated_survey.get('updated_at'), str):
+        updated_survey['updated_at'] = datetime.fromisoformat(updated_survey['updated_at'])
+    
+    return Survey(**updated_survey)
+
+@api_router.delete("/surveys/{survey_id}")
+async def delete_survey(
+    survey_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete survey - only creator or admin"""
+    survey = await db.surveys.find_one({"id": survey_id})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if survey['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.surveys.delete_one({"id": survey_id})
+    await db.survey_responses.delete_many({"survey_id": survey_id})
+    
+    return {"message": "Survey deleted successfully"}
+
+@api_router.post("/surveys/{survey_id}/publish")
+async def publish_survey(
+    survey_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Publish survey - only creator or admin"""
+    survey = await db.surveys.find_one({"id": survey_id})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if survey['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.surveys.update_one(
+        {"id": survey_id},
+        {
+            "$set": {
+                "status": SurveyStatus.PUBLISHED,
+                "published_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {"message": "Survey published successfully"}
+
+@api_router.post("/surveys/{survey_id}/close")
+async def close_survey(
+    survey_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Close survey - only creator or admin"""
+    survey = await db.surveys.find_one({"id": survey_id})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if survey['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.surveys.update_one(
+        {"id": survey_id},
+        {
+            "$set": {
+                "status": SurveyStatus.CLOSED,
+                "closed_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {"message": "Survey closed successfully"}
+
+@api_router.post("/surveys/{survey_id}/respond")
+async def submit_survey_response(
+    survey_id: str,
+    response_data: SurveyResponseCreate,
+    current_user: Optional[User] = None
+):
+    """Submit survey response - public endpoint"""
+    survey = await db.surveys.find_one({"id": survey_id})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if survey['status'] != SurveyStatus.PUBLISHED:
+        raise HTTPException(status_code=400, detail="Survey is not published")
+    
+    # Determine respondent info
+    respondent_id = None
+    respondent_type = UserType.REGULAR
+    demographics_snapshot = None
+    
+    if current_user:
+        respondent_id = current_user.id
+        respondent_type = current_user.user_type
+        # Get demographics from user profile if auto_fill
+        if survey.get('demographics_config', {}).get('auto_fill'):
+            demographics_snapshot = current_user.demographics_profile
+    
+    # Override with provided demographics if any
+    if response_data.demographics:
+        demographics_snapshot = response_data.demographics
+    
+    response = SurveyResponse(
+        survey_id=survey_id,
+        respondent_id=respondent_id,
+        respondent_type=respondent_type,
+        respondent_email=response_data.respondent_email,
+        demographics_snapshot=demographics_snapshot,
+        answers=response_data.answers
+    )
+    
+    response_dict = response.model_dump()
+    response_dict['submitted_at'] = response_dict['submitted_at'].isoformat()
+    
+    await db.survey_responses.insert_one(response_dict)
+    
+    # Update user rating if logged in
+    if respondent_id:
+        await db.users.update_one(
+            {"id": respondent_id},
+            {
+                "$inc": {"user_rating.total_surveys_completed": 1},
+                "$set": {"user_rating.last_updated": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+    
+    return {"message": "Response submitted successfully", "response_id": response.id}
+
+@api_router.get("/surveys/{survey_id}/responses")
+async def get_survey_responses(
+    survey_id: str,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user)
+):
+    """Get survey responses - only creator or admin"""
+    survey = await db.surveys.find_one({"id": survey_id})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if survey['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    responses = await db.survey_responses.find(
+        {"survey_id": survey_id},
+        {"_id": 0}
+    ).skip(skip).limit(limit).to_list(limit)
+    
+    return responses
+
+@api_router.get("/surveys/{survey_id}/export")
+async def export_survey_responses(
+    survey_id: str,
+    format: str = "csv",  # csv or json
+    current_user: User = Depends(get_current_user)
+):
+    """Export survey responses - only creator or admin"""
+    survey = await db.surveys.find_one({"id": survey_id})
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    
+    if survey['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    responses = await db.survey_responses.find(
+        {"survey_id": survey_id},
+        {"_id": 0}
+    ).to_list(None)
+    
+    if format == "json":
+        return responses
+    
+    # CSV export
+    import csv
+    from io import StringIO
+    from fastapi.responses import StreamingResponse
+    
+    output = StringIO()
+    if responses:
+        # Get all question IDs from survey
+        questions = []
+        for section in survey.get('sections', []):
+            questions.extend(section.get('questions', []))
+        
+        # CSV headers
+        headers = ['response_id', 'submitted_at', 'respondent_type', 'respondent_email']
+        
+        # Add demographics headers if collected
+        if survey.get('demographics_config', {}).get('collect'):
+            headers.extend(['birth_sex', 'gender_identity', 'date_of_birth', 'education', 
+                          'occupation', 'income_value', 'marital_status', 'province', 'region'])
+        
+        # Add question headers
+        for q in questions:
+            headers.append(f"Q{q['id'][:8]}_{q['text'][:30]}")
+        
+        writer = csv.DictWriter(output, fieldnames=headers)
+        writer.writeheader()
+        
+        for response in responses:
+            row = {
+                'response_id': response['id'],
+                'submitted_at': response['submitted_at'],
+                'respondent_type': response.get('respondent_type', 'regular'),
+                'respondent_email': response.get('respondent_email', '')
+            }
+            
+            # Add demographics
+            demo = response.get('demographics_snapshot', {})
+            if demo:
+                row.update({
+                    'birth_sex': demo.get('birth_sex', ''),
+                    'gender_identity': demo.get('gender_identity', ''),
+                    'date_of_birth': demo.get('date_of_birth', ''),
+                    'education': demo.get('education', ''),
+                    'occupation': demo.get('occupation', ''),
+                    'income_value': demo.get('income_value', ''),
+                    'marital_status': demo.get('marital_status', ''),
+                    'province': demo.get('province', ''),
+                    'region': demo.get('region', '')
+                })
+            
+            # Add answers
+            for answer in response.get('answers', []):
+                q_id = answer['question_id']
+                header = next((h for h in headers if h.startswith(f"Q{q_id[:8]}")), None)
+                if header:
+                    value = answer.get('value') or answer.get('text') or ','.join(answer.get('values', []))
+                    row[header] = value
+            
+            writer.writerow(row)
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=survey_{survey_id}_responses.csv"}
+    )
+
 # ============ CONTENT ROUTES ============
 @api_router.post("/content", response_model=Content)
 async def create_content(
