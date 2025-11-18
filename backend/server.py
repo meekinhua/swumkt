@@ -291,6 +291,108 @@ class CommentCreate(BaseModel):
     content_id: str
     comment_text: str
 
+# ============ SURVEY MODELS ============
+class CodingScheme(BaseModel):
+    type: CodingSchemeType
+    mapping: Optional[dict] = None  # e.g., {"option1": 1, "option2": 2}
+
+class QuestionOption(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    text: str
+    value: Optional[str] = None
+
+class QuestionValidation(BaseModel):
+    min_value: Optional[int] = None
+    max_value: Optional[int] = None
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+    regex: Optional[str] = None
+
+class Question(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: QuestionType
+    text: str
+    description: Optional[str] = None
+    required: bool = True
+    data_type: Optional[DataType] = None
+    coding_scheme: Optional[CodingScheme] = None
+    options: List[QuestionOption] = []
+    validation: Optional[QuestionValidation] = None
+    order: int = 0
+
+class SurveySection(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: Optional[str] = None
+    questions: List[Question] = []
+    order: int = 0
+
+class DemographicsConfig(BaseModel):
+    collect: bool = True
+    auto_fill: bool = True
+    fields: List[str] = []  # List of field names to collect
+
+class SurveySettings(BaseModel):
+    allow_multiple_submissions: bool = False
+    show_progress_bar: bool = True
+    randomize_questions: bool = False
+    randomize_options: bool = False
+    allow_anonymous: bool = True
+
+class Survey(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: Optional[str] = None
+    survey_type: SurveyType = SurveyType.CUSTOM
+    respondent_auth_mode: RespondentAuthMode = RespondentAuthMode.ANONYMOUS
+    demographics_config: DemographicsConfig = Field(default_factory=DemographicsConfig)
+    sections: List[SurveySection] = []
+    settings: SurveySettings = Field(default_factory=SurveySettings)
+    status: SurveyStatus = SurveyStatus.DRAFT
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    published_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+
+class SurveyCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    survey_type: SurveyType = SurveyType.CUSTOM
+    respondent_auth_mode: RespondentAuthMode = RespondentAuthMode.ANONYMOUS
+
+class SurveyUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    survey_type: Optional[SurveyType] = None
+    respondent_auth_mode: Optional[RespondentAuthMode] = None
+    demographics_config: Optional[DemographicsConfig] = None
+    sections: Optional[List[SurveySection]] = None
+    settings: Optional[SurveySettings] = None
+
+class Answer(BaseModel):
+    question_id: str
+    value: Optional[str] = None  # For single answers
+    values: Optional[List[str]] = None  # For multiple choice multiple
+    text: Optional[str] = None  # For open-ended
+
+class SurveyResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    survey_id: str
+    respondent_id: Optional[str] = None  # None for anonymous
+    respondent_type: UserType = UserType.REGULAR
+    respondent_email: Optional[str] = None  # For email-based
+    demographics_snapshot: Optional[DemographicsProfile] = None
+    answers: List[Answer] = []
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SurveyResponseCreate(BaseModel):
+    respondent_email: Optional[str] = None
+    demographics: Optional[DemographicsProfile] = None
+    answers: List[Answer]
+
 # ============ HELPER FUNCTIONS ============
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
