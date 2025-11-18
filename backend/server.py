@@ -41,6 +41,49 @@ class UserRole(str, Enum):
     CURRENT_STUDENT = "current_student"
     PUBLIC_USER = "public_user"
 
+class UserType(str, Enum):
+    REGULAR = "regular"
+    TRUST = "trust"
+    ADMIN = "admin"
+
+class BirthSex(str, Enum):
+    MALE = "male"
+    FEMALE = "female"
+
+class GenderIdentity(str, Enum):
+    MALE = "male"
+    FEMALE = "female"
+    LGBTQ_PLUS = "lgbtq+"
+    OTHER = "other"
+    PREFER_NOT_TO_SAY = "prefer_not_to_say"
+
+class EducationLevel(str, Enum):
+    BELOW_HIGHSCHOOL = "below_highschool"
+    HIGHSCHOOL_VOCATIONAL = "highschool_vocational"
+    BACHELOR = "bachelor"
+    MASTER = "master"
+    PHD = "phd"
+
+class Occupation(str, Enum):
+    STUDENT = "student"
+    GOVERNMENT = "government"
+    PRIVATE_COMPANY = "private_company"
+    BUSINESS_OWNER = "business_owner"
+    FREELANCE = "freelance"
+    UNEMPLOYED = "unemployed"
+    RETIRED = "retired"
+    OTHER = "other"
+
+class MaritalStatus(str, Enum):
+    SINGLE = "single"
+    MARRIED = "married"
+    DIVORCED = "divorced"
+    WIDOWED = "widowed"
+
+class IncomeType(str, Enum):
+    RANGE = "range"
+    FREETEXT = "freetext"
+
 class ContentType(str, Enum):
     RESEARCH = "research"
     SURVEY = "survey"
