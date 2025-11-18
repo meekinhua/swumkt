@@ -2,7 +2,8 @@
   "nav": {
     "features": "Features",
     "about": "About",
-    "content": "Content",
+    "marketResearch": "Market Research",
+    "content": "Knowledge Hub",
     "login": "Login",
     "register": "Register",
     "dashboard": "Dashboard",
@@ -16,6 +17,7 @@
     "description": "Hub for market research tools, alumni network, and marketing knowledge",
     "getStarted": "Get Started",
     "browseContent": "Browse Content",
+    "exploreNow": "Explore Now",
     "ctaTitle": "Ready to Get Started?",
     "ctaDescription": "Join the SWUMKT community today and access tools and resources that will help develop your marketing skills",
     "ctaButton": "Register Free",
