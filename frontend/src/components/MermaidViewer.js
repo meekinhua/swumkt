@@ -7,7 +7,9 @@ import mermaid from 'mermaid';
 const MermaidViewer = ({ code }) => {
   const { t } = useTranslation();
   const mermaidRef = useRef(null);
+  const mermaidModalRef = useRef(null);
   const containerRef = useRef(null);
+  const containerModalRef = useRef(null);
   const fullscreenRef = useRef(null);
   
   const [zoom, setZoom] = useState(1);
