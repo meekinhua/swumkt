@@ -728,7 +728,7 @@ async def share_journey_map_as_content(
 ):
     """Share journey map as research content"""
     try:
-        # Create content body with all research details and journey map
+        # Create content body with research details and journey map output ONLY (no input data)
         content_body = f"""## เทคนิคการวิจัย
 Customer Journey Map
 
@@ -748,20 +748,9 @@ Customer Journey Map
 
 ## สรุปการวิเคราะห์
 {data.analysis_summary}
-
-## Customer Journey Diagram
-```mermaid
-{data.mermaid_code}
-```
-
-## ข้อมูลการวิจัยดิบ
-{data.raw_data}
 """
         
-        # Add optional sections
-        if data.research_context:
-            content_body += f"\n\n## บริบทการวิจัย\n{data.research_context}"
-        
+        # Add optional notes section
         if data.additional_notes:
             content_body += f"\n\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}"
         
