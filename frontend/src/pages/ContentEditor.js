@@ -116,27 +116,14 @@ const ContentEditor = () => {
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
-      <nav className="bg-white/98 backdrop-blur-xl border-b border-gray-300/50 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-              <img 
-                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png"
-                alt="SWUMKT Logo"
-                className="h-16 w-auto"
-              />
-            </div>
-            
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              กลับ Dashboard
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <Navigation showMarketResearchButton={true} showContentButton={true} showProfileButton={true} />
 
       {/* Editor */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn" className="mb-4 text-gray-800 hover:text-[#00A9CE]">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          กลับ Dashboard
+        </Button>
         <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up">
           <h1 className="text-4xl font-black text-gray-900 mb-8" data-testid="editor-title">
             {id ? <span className="gradient-text">แก้ไขเนื้อหา</span> : <span className="gradient-text">สร้างเนื้อหาใหม่</span>}
