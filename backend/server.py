@@ -720,6 +720,91 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
         logging.error(f"Journey Map generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate journey map: {str(e)}")
 
+# Journey Map: Share as Content
+@api_router.post("/journey-map/share-content")
+async def share_journey_map_as_content(
+    data: JourneyMapContentCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Share journey map as research content"""
+    try:
+        # Create content body with all research details and journey map
+        content_body = f"""## เทคนิคการวิจัย
+Customer Journey Map
+
+## ประเภทการวิจัย
+{data.research_type}
+
+## รายละเอียดการวิจัย
+- **ขนาดกลุ่มตัวอย่าง:** {data.sample_size or 'N/A'}
+- **แหล่งข้อมูล:** {data.data_source}
+- **วิธีการเก็บข้อมูล:** {data.collection_method}
+- **วันที่ทำการวิจัย:** {data.research_date}
+
+## Journey Map Configuration
+- **ประเภท:** {data.journey_type}
+- **รูปแบบ:** {data.journey_style}
+- **ภาษา:** {data.output_language}
+
+## สรุปการวิเคราะห์
+{data.analysis_summary}
+
+## Customer Journey Diagram
+```mermaid
+{data.mermaid_code}
+```
+
+## ข้อมูลการวิจัยดิบ
+{data.raw_data}
+
+{f"## บริบทการวิจัย\n{data.research_context}" if data.research_context else ""}
+
+{f"## หมายเหตุเพิ่มเติม\n{data.additional_notes}" if data.additional_notes else ""}
+"""
+        
+        # Create content document
+        content_dict = {
+            "id": str(uuid.uuid4()),
+            "title": data.title,
+            "content": content_body,
+            "content_type": "research",
+            "category": "Customer Journey Map",
+            "tags": ["customer-journey", "journey-map", data.research_type.lower(), data.journey_type.lower()],
+            "status": "published",
+            "contributors": [{
+                "user_id": current_user.id,
+                "user_name": current_user.full_name,
+                "role": "author"
+            }],
+            "created_by": current_user.id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "views": 0,
+            # Store metadata for journey map
+            "journey_map_metadata": {
+                "research_type": data.research_type,
+                "sample_size": data.sample_size,
+                "data_source": data.data_source,
+                "collection_method": data.collection_method,
+                "research_date": data.research_date,
+                "journey_type": data.journey_type,
+                "journey_style": data.journey_style,
+                "output_language": data.output_language,
+                "mermaid_code": data.mermaid_code
+            }
+        }
+        
+        await db.contents.insert_one(content_dict)
+        
+        return {
+            "message": "Journey map shared as content successfully",
+            "content_id": content_dict["id"]
+        }
+        
+    except Exception as e:
+        logging.error(f"Error sharing journey map as content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
