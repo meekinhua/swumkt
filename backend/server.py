@@ -108,16 +108,44 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class DemographicsProfile(BaseModel):
+    birth_sex: Optional[BirthSex] = None
+    gender_identity: Optional[GenderIdentity] = None
+    date_of_birth: Optional[str] = None  # YYYY-MM-DD format
+    education: Optional[EducationLevel] = None
+    occupation: Optional[Occupation] = None
+    income_type: Optional[IncomeType] = None
+    income_value: Optional[str] = None  # Can be range or freetext
+    marital_status: Optional[MaritalStatus] = None
+    province: Optional[str] = None
+    region: Optional[str] = None  # north, northeast, central, south
+
+class UserRating(BaseModel):
+    total_surveys_completed: int = 0
+    quality_score: float = 0.0  # 0-100
+    trust_score: float = 0.0  # 0-100
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TrustPromotion(BaseModel):
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    method: str  # "manual" or "automatic"
+    promoted_by: Optional[str] = None  # user_id or "system"
+
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: EmailStr
     full_name: str
     role: UserRole
+    user_type: UserType = UserType.REGULAR
+    auth_method: str = "email"  # "email" or "google"
     student_id: Optional[str] = None
     graduation_year: Optional[int] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    demographics_profile: Optional[DemographicsProfile] = None
+    user_rating: UserRating = Field(default_factory=UserRating)
+    promoted_to_trust: Optional[TrustPromotion] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -126,10 +154,15 @@ class UserProfile(BaseModel):
     email: EmailStr
     full_name: str
     role: UserRole
+    user_type: UserType
+    auth_method: str
     student_id: Optional[str] = None
     graduation_year: Optional[int] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    demographics_profile: Optional[DemographicsProfile] = None
+    user_rating: Optional[UserRating] = None
+    promoted_to_trust: Optional[TrustPromotion] = None
 
 class AuthResponse(BaseModel):
     access_token: str
