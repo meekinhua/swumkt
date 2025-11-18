@@ -127,13 +127,23 @@ const SurveyListPage = () => {
             <h1 className="text-4xl font-black text-gray-900 mb-2">Survey Management</h1>
             <p className="text-gray-600 font-medium">Create, manage, and analyze your surveys</p>
           </div>
-          <Button
-            onClick={() => navigate('/surveys/create')}
-            className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create Survey
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowTemplateModal(true)}
+              variant="outline"
+              className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 text-blue-700 font-bold"
+            >
+              <BookTemplate className="w-5 h-5 mr-2" />
+              Use Template
+            </Button>
+            <Button
+              onClick={() => navigate('/surveys/create')}
+              className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Survey
+            </Button>
+          </div>
         </div>
 
         {/* Filter Tabs */}
