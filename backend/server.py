@@ -131,6 +131,7 @@ class Content(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     views: int = 0
+    journey_map_metadata: Optional[dict] = None
 
 class Comment(BaseModel):
     model_config = ConfigDict(extra="ignore")
