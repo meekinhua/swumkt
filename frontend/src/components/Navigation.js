@@ -178,6 +178,16 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
                 {t('nav.content')}
               </Button>
             )}
+            {user && (
+              <Button 
+                variant="ghost" 
+                onClick={() => { navigate('/surveys'); setMobileMenuOpen(false); }} 
+                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Surveys
+              </Button>
+            )}
             {showProfileButton && user && (
               <Button 
                 variant="ghost" 
