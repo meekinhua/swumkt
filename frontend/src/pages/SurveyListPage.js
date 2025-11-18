@@ -291,8 +291,9 @@ const SurveyListPage = () => {
             ))}
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
