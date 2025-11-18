@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Navigation from '@/components/Navigation';
-import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Library, BookMarked } from 'lucide-react';
 import { toast } from 'sonner';
+import QuestionLibraryModal from '@/components/QuestionLibraryModal';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://customer-path-tool.preview.emergentagent.com';
 
