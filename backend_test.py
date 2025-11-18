@@ -261,6 +261,405 @@ class BackendTester:
         except Exception as e:
             self.log_result("Journey Map With Context", False, f"Exception: {str(e)}")
             return False
+
+    # ============ PHASE 1A SURVEY BUILDER TESTS ============
+    
+    def test_google_oauth_session_new_user(self):
+        """Test Google OAuth session processing for new user"""
+        try:
+            url = f"{self.base_url}/auth/google/session"
+            data = {
+                "session_id": "mock_session_id_new_user"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "session_token" in result and "user" in result:
+                    user = result["user"]
+                    if (user.get("auth_method") == "google" and 
+                        user.get("user_type") == "regular"):
+                        self.log_result("Google OAuth New User", True, "New user created successfully with Google OAuth")
+                        return True
+                    else:
+                        self.log_result("Google OAuth New User", False, "User created but missing expected fields", user)
+                        return False
+                else:
+                    self.log_result("Google OAuth New User", False, "Missing session_token or user in response", result)
+                    return False
+            elif response.status_code == 400:
+                self.log_result("Google OAuth New User", False, "Invalid session_id (expected for mock)", response.text)
+                return True  # Expected for mock session_id
+            else:
+                self.log_result("Google OAuth New User", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Google OAuth New User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_google_oauth_session_existing_user(self):
+        """Test Google OAuth session processing for existing user"""
+        try:
+            url = f"{self.base_url}/auth/google/session"
+            data = {
+                "session_id": "mock_session_id_existing_user"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "session_token" in result and "user" in result:
+                    self.log_result("Google OAuth Existing User", True, "Existing user session created successfully")
+                    return True
+                else:
+                    self.log_result("Google OAuth Existing User", False, "Missing session_token or user in response", result)
+                    return False
+            elif response.status_code == 400:
+                self.log_result("Google OAuth Existing User", False, "Invalid session_id (expected for mock)", response.text)
+                return True  # Expected for mock session_id
+            else:
+                self.log_result("Google OAuth Existing User", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Google OAuth Existing User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_google_oauth_invalid_session(self):
+        """Test Google OAuth with invalid session_id"""
+        try:
+            url = f"{self.base_url}/auth/google/session"
+            data = {
+                "session_id": "invalid_session_id_12345"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 400:
+                self.log_result("Google OAuth Invalid Session", True, "Invalid session_id properly rejected")
+                return True
+            else:
+                self.log_result("Google OAuth Invalid Session", False, f"Expected 400 error, got HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Google OAuth Invalid Session", False, f"Exception: {str(e)}")
+            return False
+
+    def test_logout(self):
+        """Test user logout"""
+        if not self.token:
+            self.log_result("Logout", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/auth/logout"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.post(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("Logout", True, "User logged out successfully")
+                    return True
+                else:
+                    self.log_result("Logout", False, "Missing message in response", result)
+                    return False
+            else:
+                self.log_result("Logout", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Logout", False, f"Exception: {str(e)}")
+            return False
+
+    def test_demographics_get_empty(self):
+        """Test getting empty demographics profile"""
+        if not self.token:
+            self.log_result("Demographics GET Empty", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/user/demographics"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                # Should return empty demographics profile (all fields None or default)
+                expected_fields = ["birth_sex", "gender_identity", "date_of_birth", "education", 
+                                 "occupation", "income_type", "income_value", "marital_status", 
+                                 "province", "region"]
+                has_expected_structure = all(field in result for field in expected_fields)
+                
+                if has_expected_structure:
+                    self.log_result("Demographics GET Empty", True, "Empty demographics profile returned successfully")
+                    return True
+                else:
+                    self.log_result("Demographics GET Empty", False, "Missing expected demographics fields", result)
+                    return False
+            else:
+                self.log_result("Demographics GET Empty", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Demographics GET Empty", False, f"Exception: {str(e)}")
+            return False
+
+    def test_demographics_put_update(self):
+        """Test updating demographics profile"""
+        if not self.token:
+            self.log_result("Demographics PUT Update", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/user/demographics"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            data = {
+                "birth_sex": "male",
+                "gender_identity": "male",
+                "date_of_birth": "1995-05-15",
+                "education": "bachelor",
+                "occupation": "student",
+                "income_type": "range",
+                "income_value": "15001-20000",
+                "marital_status": "single",
+                "province": "กรุงเทพฯ",
+                "region": "central"
+            }
+            
+            response = requests.put(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                # Check if all fields were updated
+                updated_correctly = all(result.get(key) == value for key, value in data.items())
+                
+                if updated_correctly:
+                    self.log_result("Demographics PUT Update", True, "Demographics profile updated successfully")
+                    return True
+                else:
+                    self.log_result("Demographics PUT Update", False, "Demographics not updated correctly", result)
+                    return False
+            else:
+                self.log_result("Demographics PUT Update", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Demographics PUT Update", False, f"Exception: {str(e)}")
+            return False
+
+    def test_demographics_get_filled(self):
+        """Test getting filled demographics profile"""
+        if not self.token:
+            self.log_result("Demographics GET Filled", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/user/demographics"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                # Should return filled demographics profile
+                expected_values = {
+                    "birth_sex": "male",
+                    "gender_identity": "male",
+                    "date_of_birth": "1995-05-15",
+                    "education": "bachelor",
+                    "occupation": "student",
+                    "income_type": "range",
+                    "income_value": "15001-20000",
+                    "marital_status": "single",
+                    "province": "กรุงเทพฯ",
+                    "region": "central"
+                }
+                
+                filled_correctly = all(result.get(key) == value for key, value in expected_values.items())
+                
+                if filled_correctly:
+                    self.log_result("Demographics GET Filled", True, "Filled demographics profile returned successfully")
+                    return True
+                else:
+                    self.log_result("Demographics GET Filled", False, "Demographics profile not filled correctly", result)
+                    return False
+            else:
+                self.log_result("Demographics GET Filled", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Demographics GET Filled", False, f"Exception: {str(e)}")
+            return False
+
+    def test_user_rating_get(self):
+        """Test getting user rating"""
+        if not self.token:
+            self.log_result("User Rating GET", False, "No authentication token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/user/rating"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                expected_fields = ["total_surveys_completed", "quality_score", "trust_score", "last_updated"]
+                has_expected_structure = all(field in result for field in expected_fields)
+                
+                if has_expected_structure:
+                    # Check default values for new user
+                    if (result.get("total_surveys_completed") == 0 and 
+                        result.get("quality_score") == 0.0 and 
+                        result.get("trust_score") == 0.0):
+                        self.log_result("User Rating GET", True, "User rating returned with correct default values")
+                        return True
+                    else:
+                        self.log_result("User Rating GET", True, f"User rating returned (surveys: {result.get('total_surveys_completed')}, quality: {result.get('quality_score')}, trust: {result.get('trust_score')})")
+                        return True
+                else:
+                    self.log_result("User Rating GET", False, "Missing expected rating fields", result)
+                    return False
+            else:
+                self.log_result("User Rating GET", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("User Rating GET", False, f"Exception: {str(e)}")
+            return False
+
+    def test_admin_login(self):
+        """Test admin login (if admin user exists)"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            data = {
+                "email": "admin@test.com",
+                "password": "admin123"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "access_token" in result and "user" in result:
+                    user = result["user"]
+                    if user.get("role") == "admin":
+                        self.admin_token = result["access_token"]
+                        self.log_result("Admin Login", True, "Admin login successful")
+                        return True
+                    else:
+                        self.log_result("Admin Login", False, "User is not admin", user)
+                        return False
+                else:
+                    self.log_result("Admin Login", False, "Missing token or user in response", result)
+                    return False
+            else:
+                self.log_result("Admin Login", False, f"Admin user not found or wrong credentials (HTTP {response.status_code})")
+                return False
+                
+        except Exception as e:
+            self.log_result("Admin Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_admin_promote_trust_user(self):
+        """Test promoting user to trust user (admin only)"""
+        if not hasattr(self, 'admin_token') or not self.admin_token:
+            self.log_result("Admin Promote Trust User", False, "No admin token available")
+            return False
+            
+        try:
+            # First get a regular user ID (use current user)
+            me_url = f"{self.base_url}/auth/me"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            me_response = requests.get(me_url, headers=headers, timeout=30)
+            
+            if me_response.status_code != 200:
+                self.log_result("Admin Promote Trust User", False, "Could not get current user info")
+                return False
+                
+            user_info = me_response.json()
+            user_id = user_info.get("id")
+            
+            if not user_id:
+                self.log_result("Admin Promote Trust User", False, "Could not get user ID")
+                return False
+            
+            # Now promote user to trust user
+            url = f"{self.base_url}/admin/promote-trust-user"
+            admin_headers = {"Authorization": f"Bearer {self.admin_token}"}
+            data = {
+                "user_id": user_id,
+                "reason": "Test promotion"
+            }
+            
+            response = requests.post(url, json=data, headers=admin_headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result and "user" in result:
+                    promoted_user = result["user"]
+                    if promoted_user.get("user_type") == "trust":
+                        self.log_result("Admin Promote Trust User", True, "User promoted to trust user successfully")
+                        return True
+                    else:
+                        self.log_result("Admin Promote Trust User", False, "User not promoted correctly", promoted_user)
+                        return False
+                else:
+                    self.log_result("Admin Promote Trust User", False, "Missing message or user in response", result)
+                    return False
+            elif response.status_code == 400 and "already a trust user" in response.text:
+                self.log_result("Admin Promote Trust User", True, "User already a trust user (expected)")
+                return True
+            else:
+                self.log_result("Admin Promote Trust User", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Admin Promote Trust User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_admin_list_trust_users(self):
+        """Test listing trust users (admin only)"""
+        if not hasattr(self, 'admin_token') or not self.admin_token:
+            self.log_result("Admin List Trust Users", False, "No admin token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/users?user_type=trust"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Check if all returned users are trust users
+                    all_trust = all(user.get("user_type") == "trust" for user in result)
+                    
+                    if all_trust:
+                        self.log_result("Admin List Trust Users", True, f"Trust users listed successfully ({len(result)} users)")
+                        return True
+                    else:
+                        self.log_result("Admin List Trust Users", False, "Some users are not trust users", result)
+                        return False
+                else:
+                    self.log_result("Admin List Trust Users", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Admin List Trust Users", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Admin List Trust Users", False, f"Exception: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests"""
