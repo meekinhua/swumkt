@@ -357,39 +357,48 @@ frontend:
 backend:
   - task: "Phase 1B: Survey Models และ Enums"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: เพิ่ม Enums (SurveyStatus, SurveyType, RespondentAuthMode, QuestionType, DataType, CodingSchemeType), Models (Survey, SurveySection, Question, SurveyResponse, Answer, CodingScheme, QuestionOption, DemographicsConfig, SurveySettings)"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: All survey models and enums working perfectly. Survey creation, status management (draft/published/closed), question types (multiple_choice_single, rating_scale), data types (ordinal, scale), and response models all functioning correctly. Models properly handle survey sections, questions with options, demographics integration, and response validation."
   
   - task: "Phase 1B: Survey CRUD Endpoints"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: POST /api/surveys (create), GET /api/surveys (list), GET /api/surveys/{id} (detail), PUT /api/surveys/{id} (update), DELETE /api/surveys/{id} (delete), POST /api/surveys/{id}/publish, POST /api/surveys/{id}/close"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: All survey CRUD operations working perfectly. POST /api/surveys creates surveys with correct default status (draft). GET /api/surveys lists surveys with proper filtering (users see own + published surveys). GET /api/surveys/{id} retrieves survey details correctly. PUT /api/surveys/{id} successfully updates surveys with sections and questions. POST /api/surveys/{id}/publish changes status to published. POST /api/surveys/{id}/close changes status to closed. DELETE /api/surveys/{id} removes survey and all responses. Authorization working correctly (creator/admin access)."
   
   - task: "Phase 1B: Survey Response Endpoints"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: POST /api/surveys/{id}/respond (public endpoint, รองรับ anonymous + logged-in, auto-fill demographics, update user rating), GET /api/surveys/{id}/responses (get all responses), GET /api/surveys/{id}/export (CSV/JSON export พร้อม demographics และ answers)"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: All survey response endpoints working perfectly. POST /api/surveys/{id}/respond successfully handles both anonymous and authenticated responses. Anonymous responses work without authentication. Authenticated responses properly capture user demographics and update user rating (total_surveys_completed incremented). GET /api/surveys/{id}/responses returns all responses with proper authorization. Export endpoints working: CSV format includes headers and data rows, JSON format returns structured response array. Response validation prevents submissions to closed surveys. Fixed: Added get_current_user_optional dependency for proper anonymous access support."
 
 test_plan:
   current_focus:
