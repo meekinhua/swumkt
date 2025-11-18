@@ -572,14 +572,24 @@ const SurveyBuilderPage = () => {
                   </div>
                 ))}
 
-                <Button
-                  variant="outline"
-                  onClick={() => addQuestion(section.id)}
-                  className="w-full border-2 border-dashed border-gray-300 hover:border-[#00A9CE] hover:bg-[#00A9CE]/5"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Question
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => addQuestion(section.id)}
+                    className="flex-1 border-2 border-dashed border-gray-300 hover:border-[#00A9CE] hover:bg-[#00A9CE]/5"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Question
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => openQuestionLibrary(section.id)}
+                    className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 text-blue-700"
+                  >
+                    <Library className="w-4 h-4 mr-2" />
+                    From Library
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
