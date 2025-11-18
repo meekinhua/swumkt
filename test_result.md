@@ -228,6 +228,36 @@ test_plan:
   test_all: true
   test_priority: "high_first"
 
+  - task: "แก้ไข mouse-wheel zoom ใน CustomerJourneyTool expanded view"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/CustomerJourneyTool.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User reported: Mouse wheel scroll ไม่สามารถ zoom diagram ใน expanded modal view ได้"
+      - working: "NA"
+        agent: "main"
+        comment: "แก้ไขโดยเพิ่ม onWheel={handleWheel} prop ให้กับ div ที่ wrap diagram ใน expanded modal เพื่อให้ wheel event ทำงานได้"
+  
+  - task: "แก้ไข white screen issue ใน MermaidViewer expanded view"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/MermaidViewer.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User reported: เมื่อกด expand ใน Content View diagram แสดงชั่วขณะแล้วมี white screen บังอยู่"
+      - working: "NA"
+        agent: "main"
+        comment: "แก้ไขโดยสร้าง separate ref (mermaidModalRef) และ useEffect สำหรับ render Mermaid diagram ใน modal แยกจาก inline view เพื่อป้องกัน ref conflict"
+
 agent_communication:
   - agent: "main"
     message: "ได้เพิ่มฟีเจอร์การเลือกภาษาผลลัพธ์ (ไทย/อังกฤษ), Journey Type (A/B), และ Journey Style (Linear/Nonlinear) ให้กับ Customer Journey Map Tool แล้ว รวมถึงการแปลภาษา UI ทั้งหมด Backend ได้รับการอัปเดตให้ส่ง language instruction ไปยัง LLM และแก้ไข ObjectId serialization error แล้ว กรุณาทดสอบทั้ง backend และ frontend อย่างละเอียด โดยเฉพาะการทำงานของ multi-language output และ auto-update context"
@@ -237,3 +267,5 @@ agent_communication:
     message: "✅ แก้ไข Admin Settings error (ObjectId serialization) และเพิ่มฟีเจอร์ Share Journey Map as Content สำเร็จ! ฟีเจอร์ใหม่: 1) ปุ่ม Share as Content ในหน้า Result 2) Share Modal ที่ auto-fill ข้อมูลจากผลลัพธ์ (title, research type, sample size, data source, collection method, research date) 3) Backend endpoint /api/journey-map/share-content ที่บันทึกเป็น research content พร้อม metadata 4) Content ที่สร้างจะรวม: เทคนิค (Customer Journey Map), ประเภทการวิจัย, รายละเอียดการวิจัย, Mermaid diagram, และข้อมูลดิบ 5) ผู้ใช้สามารถแก้ไขข้อมูลทั้งหมดก่อน share"
   - agent: "main"
     message: "✅ แก้ไข SyntaxError (f-string backslash) และปรับปรุง Content แสดงเฉพาะ OUTPUT! การเปลี่ยนแปลง: 1) Backend: ลบ raw_data (input) ออกจาก content body แล้ว - เก็บเฉพาะ research details + output (mermaid + summary) 2) สร้าง MermaidViewer component แบบ interactive (zoom/pan/fullscreen) เหมือนหน้าผลลัพธ์ 3) อัปเดต ContentDetail.js ให้แสดง MermaidViewer อัตโนมัติเมื่อมี journey_map_metadata 4) แก้ไข login issue และ backend startup errors"
+  - agent: "main"
+    message: "🔧 User รายงานบั๊ก 2 อันใน expanded view modal: 1) Mouse wheel scroll ไม่สามารถ zoom ใน CustomerJourneyTool expanded view 2) White screen ปรากฏใน MermaidViewer (Content View) expanded mode. ได้แก้ไขทั้ง 2 issues แล้ว - CustomerJourneyTool: เพิ่ม onWheel handler, MermaidViewer: ใช้ separate ref และ useEffect สำหรับ modal rendering. กรุณาทดสอบ expanded view functionality ทั้ง 2 components โดยเฉพาะ zoom/pan/fullscreen features"
