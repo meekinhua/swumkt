@@ -267,9 +267,31 @@
     "resetZoom": "Reset zoom",
     "fullscreen": "Fullscreen",
     "download": "Download",
+    "shareAsContent": "Share as Content",
     "phase2Title": "Quantitative Validation - Coming Soon",
     "phase2Description": "This feature will allow you to validate your journey map with quantitative surveys and add statistical data to your customer journey.",
     "phase2Feature1": "Survey Creation & Data Collection",
-    "phase2Feature2": "Statistical Analysis"
+    "phase2Feature2": "Statistical Analysis",
+    "shareModal": {
+      "title": "Share Journey Map as Research Content",
+      "description": "Fill in the research details to share this journey map with others",
+      "contentTitle": "Content Title *",
+      "contentTitlePlaceholder": "E.g., E-commerce Customer Journey Analysis",
+      "researchType": "Research Type *",
+      "qualitative": "Qualitative",
+      "quantitative": "Quantitative",
+      "sampleSize": "Sample Size",
+      "sampleSizePlaceholder": "E.g., 50 participants",
+      "dataSource": "Data Source *",
+      "dataSourcePlaceholder": "E.g., Customer interviews, Online surveys, Social media reviews",
+      "collectionMethod": "Collection Method *",
+      "collectionMethodPlaceholder": "E.g., In-depth interviews, Focus groups, Online questionnaire",
+      "researchDate": "Research Date *",
+      "additionalNotes": "Additional Notes",
+      "additionalNotesPlaceholder": "Any additional information about the research",
+      "sharing": "Sharing...",
+      "share": "Share Content",
+      "cancel": "Cancel"
+    }
   }
 }
