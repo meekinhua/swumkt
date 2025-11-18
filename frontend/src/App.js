@@ -13,6 +13,9 @@ import ProfilePage from '@/pages/ProfilePage';
 import MarketResearch from '@/pages/MarketResearch';
 import CustomerJourneyTool from '@/pages/CustomerJourneyTool';
 import AdminSettings from '@/pages/AdminSettings';
+import SurveyListPage from '@/pages/SurveyListPage';
+import SurveyBuilderPage from '@/pages/SurveyBuilderPage';
+import SurveyTakingPage from '@/pages/SurveyTakingPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
