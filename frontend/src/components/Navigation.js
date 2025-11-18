@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogOut, FileText, TrendingUp, Settings } from 'lucide-react';
+import { Menu, X, User, LogOut, FileText, TrendingUp, Settings, ArrowLeft, BarChart } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const Navigation = ({ showContentButton = true, showMarketResearchButton = false, showProfileButton = true, showAdminButton = false }) => {
