@@ -295,5 +295,59 @@
       "share": "แชร์เนื้อหา",
       "cancel": "ยกเลิก"
     }
+  },
+  "userType": {
+    "regular": "ผู้ใช้ทั่วไป",
+    "trust": "ผู้ใช้ที่เชื่อถือได้",
+    "admin": "ผู้ดูแลระบบ"
+  },
+  "demographics": {
+    "birthSex": "เพศเกิด",
+    "genderIdentity": "เพศสภาพ",
+    "dateOfBirth": "วันเกิด",
+    "education": "การศึกษาสูงสุด",
+    "occupation": "อาชีพ",
+    "income": "รายได้ต่อเดือน",
+    "maritalStatus": "สถานภาพ",
+    "province": "จังหวัด",
+    "region": "ภูมิภาค",
+    "select": "เลือก",
+    "male": "ชาย",
+    "female": "หญิง",
+    "lgbtq": "LGBTQ+",
+    "other": "อื่นๆ",
+    "preferNotToSay": "ไม่ระบุ",
+    "yearsOld": "ปี",
+    "belowHighschool": "ต่ำกว่า ม.6",
+    "highschool": "ม.6/ปวช./ปวส.",
+    "bachelor": "ปริญญาตรี",
+    "master": "ปริญญาโท",
+    "phd": "ปริญญาเอก",
+    "student": "นักเรียน/นักศึกษา",
+    "government": "ข้าราชการ",
+    "privateCompany": "พนักงานบริษัทเอกชน",
+    "businessOwner": "ธุรกิจส่วนตัว",
+    "freelance": "Freelance",
+    "unemployed": "ว่างงาน",
+    "retired": "เกษียณ",
+    "selectRange": "เลือกช่วง",
+    "enterAmount": "กรอกจำนวน",
+    "incomePlaceholder": "กรอกรายได้โดยประมาณ (บาท)",
+    "single": "โสด",
+    "married": "สมรส",
+    "divorced": "หย่า",
+    "widowed": "หม้าย",
+    "provincePlaceholder": "กรอกจังหวัด",
+    "north": "ภาคเหนือ",
+    "northeast": "ภาคตะวันออกเฉียงเหนือ",
+    "central": "ภาคกลาง",
+    "south": "ภาคใต้",
+    "income": {
+      "below10k": "ต่ำกว่า 10,000 บาท",
+      "above150k": "มากกว่า 150,000 บาท"
+    }
+  },
+  "auth": {
+    "continueWithGoogle": "ดำเนินการต่อด้วย Google"
   }
 }
