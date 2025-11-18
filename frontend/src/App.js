@@ -108,6 +108,14 @@ function App() {
             />
             <Route path="/surveys/:surveyId/take" element={<SurveyTakingPage />} />
             <Route
+              path="/surveys/:surveyId/responses"
+              element={
+                <ProtectedRoute>
+                  <SurveyResponsesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/content/edit/:id"
               element={
                 <ProtectedRoute>
