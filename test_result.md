@@ -400,12 +400,73 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: All survey response endpoints working perfectly. POST /api/surveys/{id}/respond successfully handles both anonymous and authenticated responses. Anonymous responses work without authentication. Authenticated responses properly capture user demographics and update user rating (total_surveys_completed incremented). GET /api/surveys/{id}/responses returns all responses with proper authorization. Export endpoints working: CSV format includes headers and data rows, JSON format returns structured response array. Response validation prevents submissions to closed surveys. Fixed: Added get_current_user_optional dependency for proper anonymous access support."
 
+frontend:
+  - task: "Phase 1B: Survey List Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/SurveyListPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Survey list with filter tabs (all/draft/published/closed), status badges, actions (Edit/Publish/Close/Delete/View), empty state, responsive card grid"
+  
+  - task: "Phase 1B: Survey Builder Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/SurveyBuilderPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Survey creation/edit interface with basic info, section management, question builder (4 types), options management, data type classification, drag handles"
+  
+  - task: "Phase 1B: Survey Taking Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/SurveyTakingPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Public survey taking with multi-step wizard, progress bar, demographics integration, all question types, answer validation, anonymous + authenticated modes, success screen"
+  
+  - task: "Phase 1B: Survey Responses Dashboard"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/SurveyResponsesPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Response analytics with stats cards (total/anonymous/regular/trust), question analytics (bar charts with percentages), open-ended responses display, individual responses list, CSV/JSON export buttons"
+  
+  - task: "Phase 1B: Navigation & Routes Integration"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Navigation.js, App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: เพิ่ม Surveys menu ใน navigation (desktop + mobile), อัปเดต Market Research page (Survey Builder card พร้อมใช้งาน), เพิ่ม routes ทั้งหมด (/surveys, /surveys/create, /surveys/:id/edit, /surveys/:id/take, /surveys/:id/responses)"
+
 test_plan:
   current_focus:
-    - "Phase 1B Frontend: Survey Builder UI Components"
-    - "Phase 1B Frontend: Survey Creation/Management Interface"
-    - "Phase 1B Frontend: Survey Response Interface"
-    - "Phase 1B Frontend: Survey Analytics/Export Interface"
+    - "Phase 1B E2E Testing: ทดสอบ full survey workflow (create → publish → take → view responses)"
+    - "Phase 1B Frontend: ทดสอบ Survey Builder UI"
+    - "Phase 1B Frontend: ทดสอบ Survey Taking flow"
+    - "Phase 1B Frontend: ทดสอบ Response Dashboard & Export"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
