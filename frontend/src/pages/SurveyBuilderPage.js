@@ -22,6 +22,8 @@ const SurveyBuilderPage = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showQuestionLibrary, setShowQuestionLibrary] = useState(false);
+  const [currentSectionForLibrary, setCurrentSectionForLibrary] = useState(null);
 
   const [surveyData, setSurveyData] = useState({
     title: '',
