@@ -60,36 +60,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
-      {/* Navigation Bar */}
-      <nav className="bg-white/98 backdrop-blur-xl border-b border-gray-300/50 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-              <img 
-                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png"
-                alt="SWUMKT Logo"
-                className="h-16 w-auto"
-              />
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/content')} data-testid="nav-browse-content-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
-                <FileText className="w-4 h-4 mr-2" />
-                {t('content.browse')}
-              </Button>
-              <Button variant="ghost" onClick={() => navigate('/profile')} data-testid="nav-profile-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
-                <User className="w-4 h-4 mr-2" />
-                {t('nav.profile')}
-              </Button>
-              <LanguageSwitcher />
-              <Button variant="outline" onClick={handleLogout} data-testid="logout-btn" className="border-2 border-[#E63946] text-[#E63946] hover:bg-[#E63946] hover:text-white font-bold">
-                <LogOut className="w-4 h-4 mr-2" />
-                {t('nav.logout')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Navigation */}
+      <Navigation showMarketResearchButton={true} showContentButton={true} showProfileButton={true} />
 
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
