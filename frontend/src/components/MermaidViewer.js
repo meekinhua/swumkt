@@ -172,7 +172,102 @@ const MermaidViewer = ({ code }) => {
   }
 
   return (
-    <div className="my-6">
+    <>
+      {/* Expanded Modal for PWA (iOS standalone) */}
+      {isExpandedModal && isStandalone && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-white"
+          style={{ 
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Header with controls */}
+          <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
+            <h3 className="text-lg font-black text-gray-900">Customer Journey Diagram</h3>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleZoomIn}
+                variant="outline"
+                size="sm"
+                className="border-2 border-gray-300 p-2"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={handleZoomOut}
+                variant="outline"
+                size="sm"
+                className="border-2 border-gray-300 p-2"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={handleResetZoom}
+                variant="outline"
+                size="sm"
+                className="border-2 border-gray-300 p-2"
+              >
+                <Maximize className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => setIsExpandedModal(false)}
+                variant="outline"
+                size="sm"
+                className="border-2 border-[#E63946] text-[#E63946] p-2"
+              >
+                ✕
+              </Button>
+            </div>
+          </div>
+
+          {/* Diagram container */}
+          <div 
+            ref={containerRef}
+            className="absolute inset-0 pt-20 overflow-hidden bg-white"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={(e) => {
+              const touch = e.touches[0];
+              setIsDragging(true);
+              setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+            }}
+            onTouchMove={(e) => {
+              if (isDragging && e.touches[0]) {
+                const touch = e.touches[0];
+                setPan({
+                  x: touch.clientX - dragStart.x,
+                  y: touch.clientY - dragStart.y
+                });
+              }
+            }}
+            onTouchEnd={() => setIsDragging(false)}
+          >
+            <div className="absolute top-24 left-4 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
+              💡 ลากเพื่อเลื่อน, Pinch เพื่อซูม
+            </div>
+            <div 
+              ref={mermaidRef} 
+              className="w-full h-full flex justify-center items-center"
+              style={{ 
+                cursor: isDragging ? 'grabbing' : 'grab',
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+              }}
+            ></div>
+          </div>
+        </div>
+      )}
+
+      <div className="my-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-black text-gray-900">Customer Journey Diagram</h3>
         <div className="flex items-center gap-2">
