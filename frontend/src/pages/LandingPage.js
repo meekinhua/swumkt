@@ -73,7 +73,7 @@ const LandingPage = () => {
             </div>
             
             {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden xl:flex items-center gap-6">
               <a href="#features" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.features')}</a>
               <a href="#stats" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.about')}</a>
               <button onClick={() => navigate('/market-research')} className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.marketResearch')}</button>
