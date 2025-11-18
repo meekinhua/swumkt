@@ -113,7 +113,7 @@ Phase 1A: Authentication & User System
 
 backend:
   - task: "Phase 1A: อัปเดต User model เพื่อรองรับ user_type, demographics_profile, user_rating"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
@@ -123,9 +123,12 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "เริ่มพัฒนา Survey Builder Phase 1A - ขยาย User model ให้รองรับ user_type (regular/trust/admin), demographics_profile (เพศเกิด, เพศสภาพ, วันเกิด, ฯลฯ), และ user_rating system"
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: เพิ่ม Enums (UserType, BirthSex, GenderIdentity, Education, Occupation, MaritalStatus, IncomeType), Models (DemographicsProfile, UserRating, TrustPromotion, UserSession), และขยาย User model ให้รองรับ fields ใหม่ทั้งหมด"
   
   - task: "Phase 1A: Google OAuth Integration - session management"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
@@ -135,9 +138,12 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "ใช้ Emergent Auth playbook - สร้าง endpoints สำหรับ Google OAuth callback, session validation, และ session storage พร้อม httpOnly cookies"
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: สร้าง POST /api/auth/google/session (รับ session_id, เรียก Emergent Auth API, สร้าง/update user, สร้าง session), POST /api/auth/logout (ลบ sessions), และ get_current_user_from_session() helper รองรับทั้ง JWT และ session_token"
   
   - task: "Phase 1A: Demographics management endpoints"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
@@ -147,9 +153,12 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "สร้าง endpoints สำหรับ GET/PUT demographics profile และ auto-fill logic สำหรับ survey responses"
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: สร้าง GET /api/user/demographics (ดึง profile), PUT /api/user/demographics (update profile), GET /api/user/rating (ดู rating/stats) - auto-fill logic จะทำใน survey response phase ต่อไป"
   
   - task: "Phase 1A: User rating และ trust user promotion"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
@@ -159,6 +168,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "สร้าง rating system (total_surveys, quality_score, trust_score) และ endpoints สำหรับ admin promote user to trust user (manual) + automatic promotion logic placeholder"
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: สร้าง POST /api/admin/promote-trust-user (admin promote manually), GET /api/admin/users (list users with filtering) - rating update logic จะทำตอน user complete survey"
   
   - task: "อัปเดต generate_journey_map endpoint ให้ใช้ target_language ใน prompt"
     implemented: true
