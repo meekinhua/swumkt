@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -6,14 +6,19 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, User } from 'lucide-react';
+import { ArrowLeft, Save, User, TrendingUp, Award, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
+import UserTypeBadge from '@/components/UserTypeBadge';
+import DemographicsForm from '@/components/DemographicsForm';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, getDemographics, updateDemographics, getUserRating } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [demographics, setDemographics] = useState(null);
+  const [rating, setRating] = useState(null);
+  const [editingDemographics, setEditingDemographics] = useState(false);
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     bio: user?.bio || '',
@@ -21,6 +26,23 @@ const ProfilePage = () => {
     student_id: user?.student_id || '',
     graduation_year: user?.graduation_year || ''
   });
+
+  useEffect(() => {
+    loadDemographicsAndRating();
+  }, []);
+
+  const loadDemographicsAndRating = async () => {
+    try {
+      const [demo, rat] = await Promise.all([
+        getDemographics(),
+        getUserRating()
+      ]);
+      setDemographics(demo);
+      setRating(rat);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
