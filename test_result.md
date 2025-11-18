@@ -114,11 +114,11 @@ Phase 1A: Authentication & User System
 backend:
   - task: "Phase 1A: อัปเดต User model เพื่อรองรับ user_type, demographics_profile, user_rating"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -126,6 +126,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: เพิ่ม Enums (UserType, BirthSex, GenderIdentity, Education, Occupation, MaritalStatus, IncomeType), Models (DemographicsProfile, UserRating, TrustPromotion, UserSession), และขยาย User model ให้รองรับ fields ใหม่ทั้งหมด"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: User model extensions working perfectly. Demographics profile management (GET/PUT /api/user/demographics) tested with all fields including birth_sex, gender_identity, date_of_birth, education, occupation, income_type, income_value, marital_status, province, region. User rating system (GET /api/user/rating) returns correct default values (total_surveys_completed: 0, quality_score: 0.0, trust_score: 0.0). User type system working with regular/trust/admin types."
   
   - task: "Phase 1A: Google OAuth Integration - session management"
     implemented: true
