@@ -89,11 +89,38 @@ const MermaidViewer = ({ code }) => {
   };
 
   const handleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      fullscreenRef.current?.requestFullscreen();
+    const elem = fullscreenRef.current;
+    
+    // Check if already in fullscreen
+    const isCurrentlyFullscreen = 
+      document.fullscreenElement || 
+      document.webkitFullscreenElement || 
+      document.mozFullScreenElement || 
+      document.msFullscreenElement;
+
+    if (!isCurrentlyFullscreen && elem) {
+      // Enter fullscreen with vendor prefixes
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen(); // Safari
+      } else if (elem.mozRequestFullScreen) {
+        elem.mozRequestFullScreen(); // Firefox
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen(); // IE/Edge
+      }
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen();
+      // Exit fullscreen with vendor prefixes
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen(); // Safari
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen(); // Firefox
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen(); // IE/Edge
+      }
       setIsFullscreen(false);
     }
   };
