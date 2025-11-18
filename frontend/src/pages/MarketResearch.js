@@ -16,16 +16,17 @@ const MarketResearch = () => {
     {
       id: 'survey-builder',
       icon: <ClipboardList className="w-16 h-16" />,
-      title: t('marketResearch.surveyBuilder.title'),
-      description: t('marketResearch.surveyBuilder.description'),
+      title: 'Survey Builder',
+      description: 'Create comprehensive surveys for market research, customer feedback, and data collection with advanced features',
       features: [
-        t('marketResearch.surveyBuilder.feature1'),
-        t('marketResearch.surveyBuilder.feature2'),
-        t('marketResearch.surveyBuilder.feature3'),
-        t('marketResearch.surveyBuilder.feature4')
+        'Multiple question types (Multiple Choice, Rating, Open-ended)',
+        'Demographics collection with auto-fill',
+        'Anonymous and authenticated responses',
+        'Real-time analytics and CSV export'
       ],
       gradient: 'from-[#005A73] via-[#007B9A] to-[#00A9CE]',
-      comingSoon: true
+      comingSoon: false,
+      path: '/surveys'
     },
     {
       id: 'conjoint-analysis',
