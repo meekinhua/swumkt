@@ -623,8 +623,9 @@ const SurveyBuilderPage = () => {
           <Plus className="w-5 h-5 mr-2" />
           Add Section
         </Button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
