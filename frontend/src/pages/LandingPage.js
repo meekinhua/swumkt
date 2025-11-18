@@ -107,7 +107,7 @@ const LandingPage = () => {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 text-gray-800 hover:text-[#00A9CE] transition-colors"
+              className="xl:hidden p-2 text-gray-800 hover:text-[#00A9CE] transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="mobile-menu-btn"
             >
