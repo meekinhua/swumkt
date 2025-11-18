@@ -82,6 +82,31 @@ function App() {
               }
             />
             <Route
+              path="/surveys"
+              element={
+                <ProtectedRoute>
+                  <SurveyListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/surveys/create"
+              element={
+                <ProtectedRoute>
+                  <SurveyBuilderPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/surveys/:surveyId/edit"
+              element={
+                <ProtectedRoute>
+                  <SurveyBuilderPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/surveys/:surveyId/take" element={<SurveyTakingPage />} />
+            <Route
               path="/content/edit/:id"
               element={
                 <ProtectedRoute>
