@@ -102,7 +102,14 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "เพิ่มฟีเจอร์การเลือกภาษาผลลัพธ์ (ไทย/อังกฤษ) และตัวเลือก Journey Type (A/B) และ Journey Style (Linear/Nonlinear) ให้กับ Customer Journey Map Tool พร้อมทั้งทำให้ AI output เป็นภาษาที่ผู้ใช้เลือก"
+user_problem_statement: "พัฒนา Survey Builder System แบบ comprehensive พร้อม user type system (Anonymous, Regular, Trust User), Google OAuth integration, demographics profile management, และ question templates สำหรับการวิเคราะห์ทางการตลาดแบบต่างๆ
+
+Phase 1A: Authentication & User System
+- Google OAuth Integration
+- User Type System (Regular/Trust User)  
+- Demographics Profile Management
+- User Rating System
+- Trust User Badge/Rewards placeholder"
 
 backend:
   - task: "อัปเดต JourneyMapRequest model เพื่อรับ target_language, journey_type, journey_style"
