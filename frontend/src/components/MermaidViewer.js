@@ -249,12 +249,17 @@ const MermaidViewer = ({ code }) => {
 
           {/* Diagram container */}
           <div 
-            ref={containerRef}
+            ref={containerModalRef}
             className="absolute inset-0 pt-20 overflow-hidden bg-white"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onWheel={(e) => {
+              e.preventDefault();
+              const delta = e.deltaY > 0 ? -0.1 : 0.1;
+              setZoom(prev => Math.max(0.3, Math.min(3, prev + delta)));
+            }}
             onTouchStart={(e) => {
               const touch = e.touches[0];
               setIsDragging(true);
@@ -272,10 +277,10 @@ const MermaidViewer = ({ code }) => {
             onTouchEnd={() => setIsDragging(false)}
           >
             <div className="absolute top-24 left-4 text-xs text-gray-500 font-semibold z-10 bg-white/90 px-2 py-1 rounded">
-              💡 ลากเพื่อเลื่อน, Pinch เพื่อซูม
+              💡 ลากเพื่อเลื่อน, Scroll เพื่อซูม
             </div>
             <div 
-              ref={mermaidRef} 
+              ref={mermaidModalRef} 
               className="w-full h-full flex justify-center items-center"
               style={{ 
                 cursor: isDragging ? 'grabbing' : 'grab',
