@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, User, LogOut, FileText, Map, Sparkles, Download, RefreshCw, BarChart, Lock, Settings, ZoomIn, ZoomOut, Maximize, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Navigation from '@/components/Navigation';
 import ShareJourneyMapModal from '@/components/ShareJourneyMapModal';
 import mermaid from 'mermaid';
 
