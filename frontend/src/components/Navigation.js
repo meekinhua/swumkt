@@ -126,7 +126,7 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-gradient-to-br from-[#005A73] to-[#007B9A] border-t border-white/10">
+        <div className="xl:hidden bg-gradient-to-br from-[#005A73] to-[#007B9A] border-t border-white/10">
           <div className="px-4 py-6 space-y-3 max-h-[calc(100vh-5rem)] overflow-y-auto">
             {showBackButton && (
               <Button 
