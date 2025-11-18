@@ -11,7 +11,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages } from 'lucide-react';
 import { toast } from 'sonner';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Navigation from '@/components/Navigation';
 import MermaidViewer from '@/components/MermaidViewer';
 
 const ContentDetail = () => {
