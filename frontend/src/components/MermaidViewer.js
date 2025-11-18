@@ -268,7 +268,7 @@ const MermaidViewer = ({ code }) => {
       )}
 
       <div className="my-6">
-      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-black text-gray-900">Customer Journey Diagram</h3>
         <div className="flex items-center gap-2">
           <Button
