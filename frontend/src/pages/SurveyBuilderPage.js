@@ -477,14 +477,25 @@ const SurveyBuilderPage = () => {
                   <div key={question.id} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
                     <div className="flex items-start justify-between mb-3">
                       <span className="text-sm font-semibold text-gray-600">Question {qIndex + 1}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteQuestion(section.id, question.id)}
-                        className="text-red-600 hover:bg-red-50 h-6 w-6 p-0"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleSaveQuestionAsTemplate(section.id, question.id)}
+                          className="text-blue-600 hover:bg-blue-50 h-6 px-2"
+                          title="Save to library"
+                        >
+                          <BookMarked className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteQuestion(section.id, question.id)}
+                          className="text-red-600 hover:bg-red-50 h-6 w-6 p-0"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
