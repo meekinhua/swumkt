@@ -133,6 +133,10 @@ const ContentDetail = () => {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Button variant="ghost" onClick={() => navigate('/content')} data-testid="back-to-browse-btn" className="mb-4 text-gray-800 hover:text-[#00A9CE]">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          {t('content.back')}
+        </Button>
         <Card className="p-8 mb-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up" data-testid="content-detail-card">
           {/* Header */}
           <div className="mb-6">
