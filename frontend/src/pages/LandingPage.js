@@ -24,7 +24,8 @@ const LandingPage = () => {
       title: t('features.marketResearch.title'),
       description: t('features.marketResearch.description'),
       status: t('features.marketResearch.status'),
-      gradient: 'from-[#005A73] via-[#007B9A] to-[#00A9CE]'
+      gradient: 'from-[#005A73] via-[#007B9A] to-[#00A9CE]',
+      active: true
     },
     {
       icon: <Users className="w-8 h-8" />,
