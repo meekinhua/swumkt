@@ -269,15 +269,89 @@ metadata:
   test_sequence: 1
   run_ui: false
 
+frontend:
+  - task: "Phase 1A: Google Login Button Integration"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/LoginPage.js, RegisterPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: เพิ่ม GoogleLoginButton component ในหน้า Login และ Register พร้อม redirect URL ไปที่ dashboard"
+  
+  - task: "Phase 1A: อัปเดต AuthContext รองรับ Google OAuth"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/context/AuthContext.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: เพิ่ม processGoogleSession(), updateDemographics(), getDemographics(), getUserRating() functions, auto-detect session_id in URL fragment และ process ก่อน redirect"
+  
+  - task: "Phase 1A: Profile Page - User Type Badge & Rating"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/ProfilePage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: แสดง UserTypeBadge, rating stats (surveys completed, quality score, trust score), auth method indicator"
+  
+  - task: "Phase 1A: Profile Page - Demographics Section"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/ProfilePage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Demographics section พร้อม edit mode, แสดงข้อมูลแบบ card grid, ใช้ DemographicsForm component สำหรับ edit"
+  
+  - task: "Phase 1A: Components - GoogleLoginButton, UserTypeBadge, DemographicsForm"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: สร้าง 3 components ใหม่ - GoogleLoginButton (พร้อม Google logo), UserTypeBadge (3 types พร้อม icons), DemographicsForm (ครบทุก fields, auto-calculate age, income type choice)"
+  
+  - task: "Phase 1A: Translation keys สำหรับ demographics และ user types"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/locales/"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: เพิ่ม translation keys ครบทั้ง TH และ EN สำหรับ userType, demographics fields, และ auth.continueWithGoogle"
+
 test_plan:
   current_focus:
-    - "ทดสอบ login และการเข้าถึง Customer Journey Tool"
-    - "ทดสอบการแสดงผล UI ในภาษาไทยและอังกฤษ"
-    - "ทดสอบการเลือก output language, journey type, และ journey style"
-    - "ทดสอบการ auto-update Additional Context"
-    - "ทดสอบการสร้าง journey map ด้วย AI ในภาษาไทยและอังกฤษ"
+    - "Phase 1A Backend: ทดสอบ Google OAuth session flow"
+    - "Phase 1A Backend: ทดสอบ Demographics CRUD operations"
+    - "Phase 1A Backend: ทดสอบ User rating system"
+    - "Phase 1A Frontend: ทดสอบ Google Login button และ redirect flow"
+    - "Phase 1A Frontend: ทดสอบ Profile page - User Type Badge, Rating display"
+    - "Phase 1A Frontend: ทดสอบ Demographics form - create/update/display"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
   - task: "แก้ไข mouse-wheel zoom ใน CustomerJourneyTool expanded view"
