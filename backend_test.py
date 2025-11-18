@@ -1153,18 +1153,39 @@ class BackendTester:
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print(f"🚀 Starting Backend Tests for Survey Builder - Phase 1A Authentication & User System")
+        print(f"🚀 Starting Backend Tests for Survey Builder - Phase 1B Core Survey Builder")
         print(f"Backend URL: {self.base_url}")
         print("=" * 80)
         
-        # Initialize admin token
+        # Initialize tokens and IDs
         self.admin_token = None
+        self.survey_id = None
+        self.anonymous_response_id = None
+        self.logged_in_response_id = None
         
-        # Test sequence - Phase 1A Survey Builder Tests
+        # Test sequence - Phase 1B Survey Builder Tests (Main Focus)
+        phase1b_tests = [
+            ("Login User", self.test_login_user),
+            ("Survey Create", self.test_survey_create),
+            ("Survey List", self.test_survey_list),
+            ("Survey Get Detail", self.test_survey_get_detail),
+            ("Survey Update Sections", self.test_survey_update_with_sections),
+            ("Survey Publish", self.test_survey_publish),
+            ("Survey Response Anonymous", self.test_survey_response_anonymous),
+            ("Survey Response Logged-in", self.test_survey_response_logged_in_with_demographics),
+            ("Survey Get Responses", self.test_survey_get_responses),
+            ("Survey Export CSV", self.test_survey_export_csv),
+            ("Survey Export JSON", self.test_survey_export_json),
+            ("Survey Close", self.test_survey_close),
+            ("Survey Response After Close", self.test_survey_response_after_close),
+            ("Survey Delete", self.test_survey_delete),
+        ]
+        
+        # Phase 1A tests (for regression)
         phase1a_tests = [
             ("Google OAuth Endpoint", self.test_google_oauth_endpoint_structure),
             ("Google OAuth Validation", self.test_google_oauth_request_validation),
-            ("Login User", self.test_login_user),
+            ("Login User (Phase 1A)", self.test_login_user),
             ("Demographics GET Empty", self.test_demographics_get_empty),
             ("Demographics PUT Update", self.test_demographics_put_update),
             ("Demographics GET Filled", self.test_demographics_get_filled),
@@ -1185,16 +1206,29 @@ class BackendTester:
             ("Journey Map With Context", self.test_journey_map_with_context),
         ]
         
-        print("🔐 PHASE 1A: Authentication & User System Tests")
+        print("📋 PHASE 1B: Core Survey Builder Backend APIs")
         print("-" * 50)
         
-        passed = 0
-        total = len(phase1a_tests)
+        phase1b_passed = 0
+        phase1b_total = len(phase1b_tests)
+        
+        for test_name, test_func in phase1b_tests:
+            try:
+                if test_func():
+                    phase1b_passed += 1
+            except Exception as e:
+                self.log_result(test_name, False, f"Unexpected error: {str(e)}")
+        
+        print("\n🔐 REGRESSION: Phase 1A Authentication & User System")
+        print("-" * 50)
+        
+        phase1a_passed = 0
+        phase1a_total = len(phase1a_tests)
         
         for test_name, test_func in phase1a_tests:
             try:
                 if test_func():
-                    passed += 1
+                    phase1a_passed += 1
             except Exception as e:
                 self.log_result(test_name, False, f"Unexpected error: {str(e)}")
         
@@ -1211,12 +1245,13 @@ class BackendTester:
             except Exception as e:
                 self.log_result(test_name, False, f"Unexpected error: {str(e)}")
         
-        total_passed = passed + journey_passed
-        total_tests = total + journey_total
+        total_passed = phase1b_passed + phase1a_passed + journey_passed
+        total_tests = phase1b_total + phase1a_total + journey_total
         
         print("=" * 80)
-        print(f"📊 Phase 1A Test Results: {passed}/{total} tests passed")
-        print(f"📊 Journey Map Test Results: {journey_passed}/{journey_total} tests passed")
+        print(f"📊 Phase 1B Survey Builder Results: {phase1b_passed}/{phase1b_total} tests passed")
+        print(f"📊 Phase 1A Authentication Results: {phase1a_passed}/{phase1a_total} tests passed")
+        print(f"📊 Journey Map Results: {journey_passed}/{journey_total} tests passed")
         print(f"📊 Overall Test Results: {total_passed}/{total_tests} tests passed")
         
         # Show failed tests
