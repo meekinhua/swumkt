@@ -267,9 +267,31 @@
     "resetZoom": "รีเซ็ตซูม",
     "fullscreen": "เต็มจอ",
     "download": "ดาวน์โหลด",
+    "shareAsContent": "แชร์เป็นเนื้อหา",
     "phase2Title": "การตรวจสอบเชิงปริมาณ - เร็วๆ นี้",
     "phase2Description": "ฟีเจอร์นี้จะช่วยให้คุณตรวจสอบแผนที่การเดินทางด้วยแบบสำรวจเชิงปริมาณและเพิ่มข้อมูลทางสถิติ",
     "phase2Feature1": "สร้างแบบสำรวจและเก็บข้อมูล",
-    "phase2Feature2": "การวิเคราะห์ทางสถิติ"
+    "phase2Feature2": "การวิเคราะห์ทางสถิติ",
+    "shareModal": {
+      "title": "แชร์แผนที่การเดินทางเป็นเนื้อหาวิจัย",
+      "description": "กรอกรายละเอียดการวิจัยเพื่อแชร์แผนที่การเดินทางนี้กับผู้อื่น",
+      "contentTitle": "หัวข้อเนื้อหา *",
+      "contentTitlePlaceholder": "เช่น การวิเคราะห์การเดินทางลูกค้าอีคอมเมิร์ซ",
+      "researchType": "ประเภทการวิจัย *",
+      "qualitative": "เชิงคุณภาพ",
+      "quantitative": "เชิงปริมาณ",
+      "sampleSize": "ขนาดกลุ่มตัวอย่าง",
+      "sampleSizePlaceholder": "เช่น 50 คน",
+      "dataSource": "แหล่งข้อมูล *",
+      "dataSourcePlaceholder": "เช่น การสัมภาษณ์ลูกค้า, แบบสำรวจออนไลน์, รีวิวโซเชียลมีเดีย",
+      "collectionMethod": "วิธีการเก็บข้อมูล *",
+      "collectionMethodPlaceholder": "เช่น สัมภาษณ์เชิงลึก, Focus Group, แบบสอบถามออนไลน์",
+      "researchDate": "วันที่ทำการวิจัย *",
+      "additionalNotes": "หมายเหตุเพิ่มเติม",
+      "additionalNotesPlaceholder": "ข้อมูลเพิ่มเติมเกี่ยวกับการวิจัย",
+      "sharing": "กำลังแชร์...",
+      "share": "แชร์เนื้อหา",
+      "cancel": "ยกเลิก"
+    }
   }
 }
