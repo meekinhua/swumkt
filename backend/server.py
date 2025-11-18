@@ -477,6 +477,81 @@ async def update_profile(
     updated_user = await db.users.find_one({"id": current_user.id}, {"_id": 0})
     return UserProfile(**User(**updated_user).model_dump())
 
+# ============ DEMOGRAPHICS ROUTES ============
+@api_router.get("/user/demographics", response_model=DemographicsProfile)
+async def get_demographics(current_user: User = Depends(get_current_user)):
+    """Get user's demographics profile"""
+    if current_user.demographics_profile:
+        return current_user.demographics_profile
+    return DemographicsProfile()
+
+@api_router.put("/user/demographics", response_model=DemographicsProfile)
+async def update_demographics(
+    demographics: DemographicsUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update user's demographics profile"""
+    demographics_dict = {
+        f"demographics_profile.{k}": v 
+        for k, v in demographics.model_dump(exclude_none=True).items()
+    }
+    demographics_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.update_one({"id": current_user.id}, {"$set": demographics_dict})
+    
+    updated_user = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    user_obj = User(**updated_user)
+    return user_obj.demographics_profile or DemographicsProfile()
+
+@api_router.get("/user/rating", response_model=UserRating)
+async def get_user_rating(current_user: User = Depends(get_current_user)):
+    """Get user's rating and statistics"""
+    return current_user.user_rating
+
+# ============ ADMIN - TRUST USER MANAGEMENT ============
+@api_router.post("/admin/promote-trust-user")
+async def promote_trust_user(
+    request: PromoteTrustUserRequest,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Promote user to trust user (Admin only)"""
+    user = await db.users.find_one({"id": request.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get('user_type') == UserType.TRUST:
+        raise HTTPException(status_code=400, detail="User is already a trust user")
+    
+    promotion_data = {
+        "user_type": UserType.TRUST,
+        "promoted_to_trust": {
+            "date": datetime.now(timezone.utc).isoformat(),
+            "method": "manual",
+            "promoted_by": admin_user.id
+        },
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.update_one({"id": request.user_id}, {"$set": promotion_data})
+    
+    updated_user = await db.users.find_one({"id": request.user_id}, {"_id": 0})
+    return {"message": "User promoted to trust user", "user": UserProfile(**User(**updated_user).model_dump())}
+
+@api_router.get("/admin/users", response_model=List[UserProfile])
+async def list_users(
+    user_type: Optional[UserType] = None,
+    skip: int = 0,
+    limit: int = 50,
+    admin_user: User = Depends(get_admin_user)
+):
+    """List all users with optional filtering (Admin only)"""
+    query = {}
+    if user_type:
+        query["user_type"] = user_type
+    
+    users = await db.users.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    return [UserProfile(**User(**u).model_dump()) for u in users]
+
 # ============ CONTENT ROUTES ============
 @api_router.post("/content", response_model=Content)
 async def create_content(
