@@ -756,11 +756,16 @@ Customer Journey Map
 
 ## ข้อมูลการวิจัยดิบ
 {data.raw_data}
-
-{f"## บริบทการวิจัย\n{data.research_context}" if data.research_context else ""}
-
-{f"## หมายเหตุเพิ่มเติม\n{data.additional_notes}" if data.additional_notes else ""}
 """
+        
+        # Add optional sections
+        if data.research_context:
+            content_body += f"\n\n## บริบทการวิจัย\n{data.research_context}"
+        
+        if data.additional_notes:
+            content_body += f"\n\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}"
+        
+        # Now content_body is complete
         
         # Create content document
         content_dict = {
