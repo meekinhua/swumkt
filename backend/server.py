@@ -517,6 +517,11 @@ async def get_journey_map_prompt(current_user: User = Depends(get_current_user))
                 "updated_by": "system",
                 "updated_at": None
             }
+        
+        # Remove MongoDB _id field if it exists
+        if '_id' in settings:
+            del settings['_id']
+        
         return settings
     except Exception as e:
         logging.error(f"Error fetching prompt settings: {str(e)}")
