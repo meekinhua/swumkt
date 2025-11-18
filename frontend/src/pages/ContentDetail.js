@@ -129,27 +129,7 @@ const ContentDetail = () => {
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
-      <nav className="bg-white/98 backdrop-blur-xl border-b border-gray-300/50 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-              <img 
-                src="https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png"
-                alt="SWUMKT Logo"
-                className="h-16 w-auto"
-              />
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/content')} data-testid="back-to-browse-btn" className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                {t('content.back')}
-              </Button>
-              <LanguageSwitcher />
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navigation showMarketResearchButton={true} showContentButton={true} showProfileButton={true} />
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
