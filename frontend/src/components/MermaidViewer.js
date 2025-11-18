@@ -95,6 +95,17 @@ const MermaidViewer = ({ code }) => {
   };
 
   const handleFullscreen = () => {
+    // If standalone PWA (iOS), use modal instead
+    if (isStandalone) {
+      setIsExpandedModal(!isExpandedModal);
+      if (!isExpandedModal) {
+        // Reset zoom and pan when opening modal
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      }
+      return;
+    }
+    
     const elem = fullscreenRef.current;
     
     // Check if already in fullscreen
