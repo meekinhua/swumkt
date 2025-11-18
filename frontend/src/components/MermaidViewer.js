@@ -336,7 +336,7 @@ const MermaidViewer = ({ code }) => {
           ></div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
