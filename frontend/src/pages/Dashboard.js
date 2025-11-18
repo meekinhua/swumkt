@@ -42,12 +42,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    toast.success(t('common.success'));
-    navigate('/');
-  };
-
   const getRoleLabel = (role) => {
     const labels = {
       admin: t('auth.roles.admin'),
