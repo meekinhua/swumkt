@@ -317,8 +317,11 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 # ============ AUTH ROUTES ============
 
 # Google OAuth Session Endpoint
+class GoogleSessionRequest(BaseModel):
+    session_id: str
+
 @api_router.post("/auth/google/session")
-async def process_google_session(x_session_id: str = Header(..., alias="X-Session-ID")):
+async def process_google_session(request: GoogleSessionRequest):
     """Process Google OAuth session_id and create user session"""
     import httpx
     
@@ -327,7 +330,7 @@ async def process_google_session(x_session_id: str = Header(..., alias="X-Sessio
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": session_id},
+                headers={"X-Session-ID": request.session_id},
                 timeout=10.0
             )
             
