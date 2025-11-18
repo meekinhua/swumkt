@@ -127,10 +127,27 @@ const MermaidViewer = ({ code }) => {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFullscreen = !!(
+        document.fullscreenElement || 
+        document.webkitFullscreenElement || 
+        document.mozFullScreenElement || 
+        document.msFullscreenElement
+      );
+      setIsFullscreen(isFullscreen);
     };
+    
+    // Add event listeners for all vendor prefixes
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
   }, []);
 
   if (!code) {
