@@ -301,9 +301,9 @@ const MermaidViewer = ({ code }) => {
             variant="outline"
             size="sm"
             className="border-2 border-[#00A9CE] text-[#00A9CE] p-2"
-            title="Fullscreen"
+            title={isStandalone ? 'Expand' : 'Fullscreen'}
           >
-            {isFullscreen ? '✕' : '⛶'}
+            {isStandalone ? (isExpandedModal ? '✕' : '⛶') : (isFullscreen ? '✕' : '⛶')}
           </Button>
         </div>
       </div>
