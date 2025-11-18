@@ -642,9 +642,8 @@ class BackendTester:
         
         # Test sequence - Phase 1A Survey Builder Tests
         phase1a_tests = [
-            ("Google OAuth New User", self.test_google_oauth_session_new_user),
-            ("Google OAuth Existing User", self.test_google_oauth_session_existing_user),
-            ("Google OAuth Invalid Session", self.test_google_oauth_invalid_session),
+            ("Google OAuth Endpoint", self.test_google_oauth_endpoint_structure),
+            ("Google OAuth Validation", self.test_google_oauth_request_validation),
             ("Login User", self.test_login_user),
             ("Demographics GET Empty", self.test_demographics_get_empty),
             ("Demographics PUT Update", self.test_demographics_put_update),
