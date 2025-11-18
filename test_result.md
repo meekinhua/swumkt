@@ -230,11 +230,11 @@ test_plan:
 
   - task: "แก้ไข mouse-wheel zoom ใน CustomerJourneyTool expanded view"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/CustomerJourneyTool.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -242,14 +242,17 @@ test_plan:
       - working: "NA"
         agent: "main"
         comment: "แก้ไขโดยเพิ่ม onWheel={handleWheel} prop ให้กับ div ที่ wrap diagram ใน expanded modal เพื่อให้ wheel event ทำงานได้"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: CustomerJourneyTool successfully generates journey maps with 14 SVG elements. The onWheel handler is properly implemented in the expanded modal (lines 340-344 in CustomerJourneyTool.js). Mouse wheel zoom functionality is working correctly in expanded view. Code shows proper event handling with preventDefault() and zoom bounds (0.3 to 3). Pan/drag functionality also working properly."
   
   - task: "แก้ไข white screen issue ใน MermaidViewer expanded view"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/components/MermaidViewer.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -257,6 +260,9 @@ test_plan:
       - working: "NA"
         agent: "main"
         comment: "แก้ไขโดยสร้าง separate ref (mermaidModalRef) และ useEffect สำหรับ render Mermaid diagram ใน modal แยกจาก inline view เพื่อป้องกัน ref conflict"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: MermaidViewer successfully displays journey map diagrams with 14 SVG elements in content detail pages. The separate mermaidModalRef and useEffect (lines 55-70) properly handle modal rendering. Expand button (⛶) is found and clickable. The white screen issue has been resolved - diagrams render correctly in expanded modal view. Mouse wheel zoom and pan functionality working properly in expanded view."
 
 agent_communication:
   - agent: "main"
