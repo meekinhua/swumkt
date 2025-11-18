@@ -705,21 +705,22 @@ const CustomerJourneyTool = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
+        </div>
 
-      {/* Share Modal */}
-      <ShareJourneyMapModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        onShare={handleShareAsContent}
-        journeyMapData={{
-          analysis_summary: result?.analysis_summary,
-          mermaid_code: result?.mermaid_code,
-          rawData: rawData,
-          researchContext: researchContext
-        }}
-        loading={sharing}
-      />
+        {/* Share Modal */}
+        <ShareJourneyMapModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          onShare={handleShareAsContent}
+          journeyMapData={{
+            analysis_summary: result?.analysis_summary,
+            mermaid_code: result?.mermaid_code,
+            rawData: rawData,
+            researchContext: researchContext
+          }}
+          loading={sharing}
+        />
+      </div>
     </>
   );
 };
