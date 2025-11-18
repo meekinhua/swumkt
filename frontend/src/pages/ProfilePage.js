@@ -232,6 +232,92 @@ const ProfilePage = () => {
             </Button>
           </form>
         </Card>
+
+        {/* Demographics Card */}
+        <Card className="p-8 bg-white/98 shadow-xl border-2 border-gray-300">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900">Demographics Information</h2>
+              <p className="text-gray-600 font-medium">This information helps improve survey accuracy</p>
+            </div>
+            {!editingDemographics && demographics && Object.keys(demographics).some(k => demographics[k]) && (
+              <Button
+                variant="outline"
+                onClick={() => setEditingDemographics(true)}
+                className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            )}
+          </div>
+
+          {editingDemographics || !demographics || !Object.keys(demographics).some(k => demographics[k]) ? (
+            <DemographicsForm
+              initialData={demographics || {}}
+              onSave={handleSaveDemographics}
+              onCancel={() => setEditingDemographics(false)}
+              allowIncomeTypeChoice={true}
+            />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {demographics.birth_sex && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Birth Sex</p>
+                  <p className="text-lg font-black text-gray-900 capitalize">{demographics.birth_sex}</p>
+                </div>
+              )}
+              {demographics.gender_identity && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Gender Identity</p>
+                  <p className="text-lg font-black text-gray-900 capitalize">{demographics.gender_identity.replace('_', ' ')}</p>
+                </div>
+              )}
+              {demographics.date_of_birth && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Date of Birth</p>
+                  <p className="text-lg font-black text-gray-900">{demographics.date_of_birth}</p>
+                </div>
+              )}
+              {demographics.education && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Education</p>
+                  <p className="text-lg font-black text-gray-900 capitalize">{demographics.education.replace('_', ' ')}</p>
+                </div>
+              )}
+              {demographics.occupation && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Occupation</p>
+                  <p className="text-lg font-black text-gray-900 capitalize">{demographics.occupation.replace('_', ' ')}</p>
+                </div>
+              )}
+              {demographics.income_value && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Income</p>
+                  <p className="text-lg font-black text-gray-900">{demographics.income_value}</p>
+                </div>
+              )}
+              {demographics.marital_status && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Marital Status</p>
+                  <p className="text-lg font-black text-gray-900 capitalize">{demographics.marital_status}</p>
+                </div>
+              )}
+              {demographics.province && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Province</p>
+                  <p className="text-lg font-black text-gray-900">{demographics.province}</p>
+                </div>
+              )}
+              {demographics.region && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-semibold">Region</p>
+                  <p className="text-lg font-black text-gray-900 capitalize">{demographics.region}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
