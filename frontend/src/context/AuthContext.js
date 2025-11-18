@@ -16,9 +16,16 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [processingSession, setProcessingSession] = useState(false);
 
   useEffect(() => {
-    if (token) {
+    // Check for session_id in URL fragment (from Google OAuth)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const sessionId = hashParams.get('session_id');
+    
+    if (sessionId && !processingSession) {
+      processGoogleSession(sessionId);
+    } else if (token) {
       fetchUser();
     } else {
       setLoading(false);
