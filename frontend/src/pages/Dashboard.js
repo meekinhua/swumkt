@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LogOut, User, FileText, TrendingUp, Users as UsersIcon, Settings, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Navigation from '@/components/Navigation';
 
 const Dashboard = () => {
   const navigate = useNavigate();
