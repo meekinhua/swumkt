@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, User, LogOut, FileText, BarChart3, Users, Map, ClipboardList, TrendingUp, Sparkles, Lock, Eye, Target } from 'lucide-react';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Navigation from '@/components/Navigation';
 
 const MarketResearch = () => {
   const navigate = useNavigate();
