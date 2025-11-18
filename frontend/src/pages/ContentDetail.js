@@ -209,6 +209,11 @@ const ContentDetail = () => {
             </div>
           )}
 
+          {/* Journey Map Viewer - Show if this is a journey map content */}
+          {content.journey_map_metadata && content.journey_map_metadata.mermaid_code && (
+            <MermaidViewer code={content.journey_map_metadata.mermaid_code} />
+          )}
+
           {/* Content Body */}
           <div className="prose max-w-none mb-6" data-testid="content-body">
             <div className="flex items-center justify-between mb-4 p-4 bg-[#00A9CE]/5 rounded-lg border border-[#00A9CE]/20">
