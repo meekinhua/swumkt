@@ -36,6 +36,11 @@ const CustomerJourneyTool = () => {
   const mermaidRef = useRef(null);
   const containerRef = useRef(null);
   const fullscreenRef = useRef(null);
+  
+  // Detect if running as standalone PWA
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                       window.navigator.standalone || 
+                       document.referrer.includes('android-app://');
 
   useEffect(() => {
     // Initialize Mermaid
