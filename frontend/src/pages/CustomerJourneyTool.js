@@ -337,6 +337,11 @@ const CustomerJourneyTool = () => {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onWheel={(e) => {
+              e.preventDefault();
+              const delta = e.deltaY > 0 ? -0.1 : 0.1;
+              setZoom(prev => Math.max(0.3, Math.min(3, prev + delta)));
+            }}
             onTouchStart={(e) => {
               const touch = e.touches[0];
               setIsDragging(true);
