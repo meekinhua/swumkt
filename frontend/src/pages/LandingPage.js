@@ -121,7 +121,8 @@ const LandingPage = () => {
             <div className="px-4 py-6 space-y-4">
               <a href="#features" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.features')}</a>
               <a href="#stats" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.about')}</a>
-              <a href="/content" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.content')}</a>
+              <button onClick={() => navigate('/market-research')} className="block text-white hover:text-[#33BCDA] font-semibold transition-colors w-full text-left">{t('nav.marketResearch')}</button>
+              <button onClick={() => navigate('/content')} className="block text-white hover:text-[#33BCDA] font-semibold transition-colors w-full text-left">{t('nav.content')}</button>
               <div className="pt-2">
                 <LanguageSwitcher />
               </div>
