@@ -38,6 +38,16 @@ const AdminSettings = () => {
   const [imagePromptMetadata, setImagePromptMetadata] = useState(null);
   const [savingImagePrompt, setSavingImagePrompt] = useState(false);
   
+  // Perception Analysis Prompt
+  const [perceptionPrompt, setPerceptionPrompt] = useState('');
+  const [perceptionMetadata, setPerceptionMetadata] = useState(null);
+  const [savingPerception, setSavingPerception] = useState(false);
+  
+  // Perception Question Prompt
+  const [perceptionQuestionPrompt, setPerceptionQuestionPrompt] = useState('');
+  const [perceptionQuestionMetadata, setPerceptionQuestionMetadata] = useState(null);
+  const [savingPerceptionQuestion, setSavingPerceptionQuestion] = useState(false);
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
