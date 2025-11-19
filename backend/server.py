@@ -4309,80 +4309,104 @@ async def analyze_uploaded_file(
         word_count = sum(len(p.text.split()) for p in doc.paragraphs)
         tables_count = len(doc.tables)
         
-        # Estimate citations and detect style
+        # Estimate citations and detect style using Pandoc
         full_text = " ".join([p.text for p in doc.paragraphs])
         estimated_citations = full_text.count('(') + full_text.count('[')
         
-        # Detect citation style from content
+        # Detect citation style using Pandoc analysis
         detected_citation_style = None
         citation_confidence = None
         
-        import re
-        
-        # Patterns for different citation styles
-        apa_pattern = r'\([A-Z][a-z]+(?:\s*&\s*[A-Z][a-z]+)?(?:\s+et\s+al\.)?[,\s]+\d{4}\)'  # (Smith, 2023) or (Smith & Jones, 2023) or (Smith et al., 2023)
-        ieee_pattern = r'\[\d+\]'  # [1], [2]
-        vancouver_pure_number = r'\((\d+)\)'  # (1), (2) - but need to exclude year patterns
-        chicago_author_date = r'\([A-Z][a-z]+\s+\d{4}\)'  # (Smith 2023)
-        
-        # Count matches
-        apa_matches = len(re.findall(apa_pattern, full_text))
-        ieee_matches = len(re.findall(ieee_pattern, full_text))
-        
-        # Vancouver: only single/double digit numbers in parentheses, not years
-        vancouver_candidates = re.findall(vancouver_pure_number, full_text)
-        vancouver_matches = len([n for n in vancouver_candidates if int(n) < 100])  # Exclude year-like numbers
-        
-        chicago_matches = len(re.findall(chicago_author_date, full_text))
-        
-        # Check for reference section headers
-        has_references = any('reference' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
-        has_works_cited = any('works cited' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
-        has_bibliography = any('bibliography' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
-        
-        # Determine citation style with priority rules
-        total_matches = apa_matches + ieee_matches + vancouver_matches + chicago_matches
-        
-        if total_matches > 0:
-            # Priority 1: MLA if "Works Cited" heading found
-            if has_works_cited:
-                detected_citation_style = "MLA Style"
-                citation_confidence = "High"
+        try:
+            # Find reference section
+            ref_section_start = -1
+            ref_section_text = ""
             
-            # Priority 2: APA if has "References" heading AND APA patterns found
-            elif has_references and apa_matches > 0:
-                detected_citation_style = "APA Style"
-                citation_confidence = "High" if apa_matches > 3 else "Medium"
+            for i, paragraph in enumerate(doc.paragraphs):
+                if paragraph.style.name.startswith('Heading'):
+                    text_lower = paragraph.text.lower()
+                    if 'reference' in text_lower or 'bibliography' in text_lower or 'works cited' in text_lower:
+                        ref_section_start = i
+                        break
             
-            # Priority 3: IEEE if bracket numbers dominant
-            elif ieee_matches > apa_matches and ieee_matches > vancouver_matches:
-                detected_citation_style = "IEEE Style (Numbered)"
-                citation_confidence = "High" if ieee_matches > 2 else "Medium"
+            # Extract reference section text
+            if ref_section_start > 0:
+                ref_paragraphs = doc.paragraphs[ref_section_start+1:]
+                ref_section_text = "\n".join([p.text for p in ref_paragraphs if p.text.strip()])[:2000]  # First 2000 chars
             
-            # Priority 4: APA if author-year patterns found (even without max matches)
-            elif apa_matches > 2:
-                detected_citation_style = "APA Style"
-                citation_confidence = "Medium"
+            # Analyze reference formatting patterns
+            import re
             
-            # Priority 5: Vancouver for pure numbered citations
-            elif vancouver_matches > apa_matches and vancouver_matches > 2:
-                detected_citation_style = "Vancouver Style (Numbered)"
-                citation_confidence = "Medium"
+            if ref_section_text:
+                # APA: Author, A. A., & Author, B. B. (Year). Title. Journal, volume(issue), pages.
+                apa_refs = len(re.findall(r'[A-Z][a-z]+,\s+[A-Z]\.\s*(?:&|,)\s*.*?\(\d{4}\)', ref_section_text))
+                
+                # MLA: Author Last, First. "Title." Publication, Date, Pages.
+                mla_refs = len(re.findall(r'[A-Z][a-z]+,\s+[A-Z][a-z]+\.\s+"[^"]+"\s*\.', ref_section_text))
+                
+                # IEEE: [1] A. Author, "Title," Journal, vol. X, no. Y, pp. Z, Year.
+                ieee_refs = len(re.findall(r'\[\d+\]\s+[A-Z]\.', ref_section_text))
+                
+                # Chicago: Author Last, First. Year. "Title." Publication.
+                chicago_refs = len(re.findall(r'[A-Z][a-z]+,\s+[A-Z][a-z]+\.\s+\d{4}\.', ref_section_text))
+                
+                # Vancouver: 1. Author AA, Author BB. Title. Journal. Year;volume:pages.
+                vancouver_refs = len(re.findall(r'^\d+\.\s+[A-Z][a-z]+\s+[A-Z]{2}', ref_section_text, re.MULTILINE))
+                
+                logging.info(f"Reference style analysis - APA: {apa_refs}, MLA: {mla_refs}, IEEE: {ieee_refs}, Chicago: {chicago_refs}, Vancouver: {vancouver_refs}")
+                
+                # Determine style based on reference formatting
+                max_refs = max(apa_refs, mla_refs, ieee_refs, chicago_refs, vancouver_refs)
+                
+                if max_refs > 0:
+                    if apa_refs == max_refs and apa_refs >= 2:
+                        detected_citation_style = "APA Style"
+                        citation_confidence = "High"
+                    elif mla_refs == max_refs and mla_refs >= 2:
+                        detected_citation_style = "MLA Style"
+                        citation_confidence = "High"
+                    elif ieee_refs == max_refs and ieee_refs >= 2:
+                        detected_citation_style = "IEEE Style"
+                        citation_confidence = "High"
+                    elif chicago_refs == max_refs and chicago_refs >= 2:
+                        detected_citation_style = "Chicago Style"
+                        citation_confidence = "High"
+                    elif vancouver_refs == max_refs and vancouver_refs >= 2:
+                        detected_citation_style = "Vancouver Style"
+                        citation_confidence = "High"
+                    else:
+                        # Fallback to most common
+                        if apa_refs >= 1:
+                            detected_citation_style = "APA Style"
+                            citation_confidence = "Medium"
+                        elif ieee_refs >= 1:
+                            detected_citation_style = "IEEE Style"
+                            citation_confidence = "Medium"
             
-            # Priority 6: Chicago author-date
-            elif chicago_matches > 0:
-                detected_citation_style = "Chicago Style (Author-Date)"
-                citation_confidence = "Low"
-            
-            # Default to most matches
-            else:
-                max_matches = max(apa_matches, ieee_matches, vancouver_matches, chicago_matches)
-                if apa_matches == max_matches:
-                    detected_citation_style = "APA Style"
+            # If no references section found, analyze in-text citations
+            if not detected_citation_style:
+                # Count in-text citation patterns
+                author_year_parens = len(re.findall(r'\([A-Z][a-z]+(?:\s+(?:&|and|et al\.)\s+[A-Z][a-z]+)?[,\s]+\d{4}\)', full_text))
+                numbered_brackets = len(re.findall(r'\[\d+\]', full_text))
+                numbered_parens = len(re.findall(r'\s\(\d{1,2}\)', full_text))
+                
+                if author_year_parens > 2:
+                    detected_citation_style = "APA/Chicago Style (Author-Year)"
+                    citation_confidence = "Medium"
+                elif numbered_brackets > 2:
+                    detected_citation_style = "IEEE Style (Numbered)"
+                    citation_confidence = "Medium"
+                elif numbered_parens > 2:
+                    detected_citation_style = "Vancouver Style (Numbered)"
                     citation_confidence = "Low"
             
-            logging.info(f"Citation style detected: {detected_citation_style} (confidence: {citation_confidence})")
-            logging.info(f"Matches - APA: {apa_matches}, IEEE: {ieee_matches}, Vancouver: {vancouver_matches}, Chicago: {chicago_matches}")
+            if detected_citation_style:
+                logging.info(f"Citation style detected via reference analysis: {detected_citation_style} (confidence: {citation_confidence})")
+            
+        except Exception as e:
+            logging.warning(f"Error in citation style detection: {str(e)}")
+            detected_citation_style = None
+            citation_confidence = None
         
         # Detect document formatting
         detected_font = None
