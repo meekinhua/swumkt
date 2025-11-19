@@ -1324,7 +1324,7 @@ async def ai_generate_survey(
 **Task:** Create a survey in {lang_instruction} language
 
 **Topic:** {request.description}
-**Survey Type:** {request.survey_type}
+**Survey Type:** {request.survey_type.value if hasattr(request.survey_type, 'value') else request.survey_type}
 **Target Number of Questions:** {request.num_questions}
 
 **Requirements:**
@@ -1332,6 +1332,7 @@ async def ai_generate_survey(
 - Use diverse question types
 - Write all text in {lang_instruction}
 - Return ONLY valid YAML (no markdown, no explanations)
+- IMPORTANT: Use simple strings for 'type', not enum names (e.g., 'perception' not 'SurveyType.PERCEPTION')
 
 **SDL Format Example:**
 ```yaml
