@@ -127,6 +127,28 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSaveImageModel = async () => {
+    setSavingImageModel(true);
+    try {
+      await axios.post(
+        `${API}/admin/behavior-image-model`,
+        {
+          image_model: imageModel
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      toast.success(`Image model updated to ${imageModel.toUpperCase()} successfully`);
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving image model:', error);
+      toast.error('Failed to save image model setting');
+    } finally {
+      setSavingImageModel(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
