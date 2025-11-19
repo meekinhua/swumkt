@@ -4311,6 +4311,59 @@ async def analyze_uploaded_file(
         full_text = " ".join([p.text for p in doc.paragraphs])
         estimated_citations = full_text.count('(') + full_text.count('[')
         
+        # Detect document formatting
+        detected_font = None
+        detected_font_size = None
+        detected_line_spacing = None
+        detected_margins = None
+        detected_styles = []
+        
+        try:
+            # Get Normal style to detect default font
+            normal_style = doc.styles['Normal']
+            if normal_style.font.name:
+                detected_font = normal_style.font.name
+            if normal_style.font.size:
+                detected_font_size = normal_style.font.size.pt
+            
+            # Try to detect line spacing from Normal style
+            if normal_style.paragraph_format.line_spacing_rule:
+                from docx.enum.text import WD_LINE_SPACING
+                rule = normal_style.paragraph_format.line_spacing_rule
+                if rule == WD_LINE_SPACING.SINGLE:
+                    detected_line_spacing = "Single (1.0)"
+                elif rule == WD_LINE_SPACING.ONE_POINT_FIVE:
+                    detected_line_spacing = "1.5"
+                elif rule == WD_LINE_SPACING.DOUBLE:
+                    detected_line_spacing = "Double (2.0)"
+                else:
+                    detected_line_spacing = f"Custom ({normal_style.paragraph_format.line_spacing})"
+            
+            # Detect margins from first section
+            if doc.sections:
+                section = doc.sections[0]
+                margins = []
+                if section.top_margin:
+                    margins.append(f"Top: {round(section.top_margin.inches, 2)}\"")
+                if section.bottom_margin:
+                    margins.append(f"Bottom: {round(section.bottom_margin.inches, 2)}\"")
+                if section.left_margin:
+                    margins.append(f"Left: {round(section.left_margin.inches, 2)}\"")
+                if section.right_margin:
+                    margins.append(f"Right: {round(section.right_margin.inches, 2)}\"")
+                if margins:
+                    detected_margins = ", ".join(margins)
+            
+            # Collect unique styles used in document
+            styles_used = set()
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    styles_used.add(paragraph.style.name)
+            detected_styles = sorted(list(styles_used))[:10]  # Top 10 styles
+            
+        except Exception as e:
+            logging.warning(f"Error detecting document formatting: {str(e)}")
+        
         # Cleanup
         os.unlink(temp_path)
         
