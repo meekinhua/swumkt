@@ -570,6 +570,98 @@ const AdminSettings = () => {
                   </div>
                 </div>
               </TabsContent>
+
+              {/* Perception Analysis Prompt Tab */}
+              <TabsContent value="perception">
+                <div className="space-y-6">
+                  {/* Perception Analysis Prompt */}
+                  <div>
+                    <Label htmlFor="perception-prompt" className="text-lg font-bold text-gray-900 mb-3 block">
+                      Customer Perception Analysis Prompt
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      Configure the AI prompt for analyzing customer perceptions and attitudes. Leave empty to use default prompt.
+                    </p>
+                    <Textarea
+                      id="perception-prompt"
+                      value={perceptionPrompt}
+                      onChange={(e) => setPerceptionPrompt(e.target.value)}
+                      className="min-h-[200px] font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="Enter custom perception analysis prompt or leave empty for default..."
+                    />
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      💡 The prompt should guide the AI to analyze perceptions, attitudes, and provide key findings & recommendations
+                    </p>
+                  </div>
+
+                  {/* Perception Question Generator Prompt */}
+                  <div>
+                    <Label htmlFor="perception-question-prompt" className="text-lg font-bold text-gray-900 mb-3 block">
+                      Interview Question Generator Prompt
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      Configure the AI prompt for generating interview questions. Leave empty to use default prompt.
+                    </p>
+                    <Textarea
+                      id="perception-question-prompt"
+                      value={perceptionQuestionPrompt}
+                      onChange={(e) => setPerceptionQuestionPrompt(e.target.value)}
+                      className="min-h-[200px] font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="Enter custom question generation prompt or leave empty for default..."
+                    />
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      💡 The prompt should guide the AI to generate relevant, open-ended interview questions
+                    </p>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={handleSavePerceptionPrompt}
+                      disabled={savingPerception}
+                      className="flex-1 h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-lg"
+                    >
+                      {savingPerception ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                          Saving Analysis Prompt...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Save Analysis Prompt
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      onClick={handleSavePerceptionQuestionPrompt}
+                      disabled={savingPerceptionQuestion}
+                      className="flex-1 h-14 bg-gradient-to-r from-[#007B9A] via-[#00A9CE] to-[#33BCDA] hover:from-[#006685] hover:to-[#00A9CE] text-white font-bold shadow-xl text-lg"
+                    >
+                      {savingPerceptionQuestion ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                          Saving Question Prompt...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Save Question Prompt
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => navigate('/market-research/customer-perception')}
+                      variant="outline"
+                      className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
+                    >
+                      Test in Perception Tool
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
           </Card>
 
