@@ -2926,14 +2926,21 @@ async def extract_formatting_specs_from_guidelines(guidelines: str):
 
 Extract ONLY formatting information in JSON format. Be precise and return valid JSON.
 
-Required fields (return "default" if not specified):
-- font_name: string (e.g., "Times New Roman", "Arial")
-- font_size: number (e.g., 12, 11)
-- line_spacing: number (1.0, 1.5, 2.0)
-- margin_inches: number (e.g., 1.0, 2.5)
-- heading_bold: boolean
-- heading_size: number (e.g., 14)
-- reference_hanging_indent: number in inches (e.g., 0.5)
+IMPORTANT RULES:
+1. If Times New Roman is mentioned → use "Times New Roman"
+2. If no font specified → use "Times New Roman" (academic standard)
+3. Never suggest Cambria, Calibri, or other non-academic fonts
+4. Line spacing: use exact numbers (1.0, 1.5, 2.0)
+5. Margins: use decimal inches (1.0, 1.5, 2.54)
+
+Required fields:
+- font_name: string (default: "Times New Roman")
+- font_size: number (default: 12)
+- line_spacing: number (default: 2.0 for double spacing)
+- margin_inches: number (default: 1.0)
+- heading_bold: boolean (default: true)
+- heading_size: number (default: 14)
+- reference_hanging_indent: number in inches (default: 0.5)
 
 Return ONLY valid JSON, no explanation."""
 
