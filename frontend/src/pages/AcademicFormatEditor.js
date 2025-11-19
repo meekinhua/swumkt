@@ -339,7 +339,8 @@ const AcademicFormatEditor = () => {
 
           {/* Text Input & Output */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Original Text */}
+            {/* Original Text - Show only in text mode */}
+            {inputMode === 'text' && (
             <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-orange-600" />
@@ -352,6 +353,7 @@ const AcademicFormatEditor = () => {
                 placeholder="วางข้อความที่ต้องการแก้ไขที่นี่..."
               />
             </Card>
+            )}
 
             {/* Formatted Text */}
             <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
