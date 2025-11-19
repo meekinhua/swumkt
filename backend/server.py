@@ -3506,7 +3506,7 @@ Please suggest suitable academic journals for this research."""
             api_key=api_key,
             session_id=f"journal-finder-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4")
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
         
         msg = UserMessage(text=user_prompt)
         response_text = await chat.send_message(msg)
