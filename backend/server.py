@@ -4072,11 +4072,14 @@ If you're not certain about specific details, indicate that with "Note: Please v
             format_style = 'Vancouver'
         
         # Extract formatting specs and generate template
+        extracted_specs = None
         try:
             logging.info(f"Extracting formatting specs for {request.journal_name}")
             specs = await extract_formatting_specs_from_guidelines(response_text)
             
             if specs:
+                extracted_specs = specs  # Save for response
+                
                 # Generate template filename (safe name)
                 safe_name = re.sub(r'[^\w\s-]', '', request.journal_name.lower()).replace(' ', '_')
                 template_path = ROOT_DIR / 'templates' / 'custom' / f'{safe_name}_template.docx'
@@ -4084,6 +4087,7 @@ If you're not certain about specific details, indicate that with "Note: Please v
                 # Generate template
                 if generate_template_from_specs(specs, str(template_path)):
                     logging.info(f"Template generated for {request.journal_name}: {template_path}")
+                    logging.info(f"Extracted specs: {specs}")
                 else:
                     logging.warning(f"Failed to generate template for {request.journal_name}")
         except Exception as e:
@@ -4092,7 +4096,8 @@ If you're not certain about specific details, indicate that with "Note: Please v
         return FetchGuidelinesResponse(
             journal_name=request.journal_name,
             guidelines=response_text,
-            format_style=format_style
+            format_style=format_style,
+            formatting_specs=extracted_specs
         )
         
     except Exception as e:
