@@ -1304,10 +1304,11 @@ async def ai_generate_survey(
     request: AIGenerateSurveyRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Generate a survey using AI based on description"""
+    """Generate a survey using AI based on description using Survey Definition Language (SDL)"""
     import json
     import re
     import httpx
+    from survey_dsl import SurveyDSLParser, SurveyDSLValidator
     
     try:
         # Get Emergent LLM key
@@ -1318,14 +1319,76 @@ async def ai_generate_survey(
         # Determine language instructions
         lang_instruction = "English" if request.target_language == "en" else "Thai (ไทย)"
         
-        # Build prompt with simpler structure
-        prompt = f"""Create a survey in {lang_instruction} language.
+        # Build prompt using SDL format
+        prompt = f"""You are a professional survey designer. Create a survey using the Survey Definition Language (SDL) YAML format.
 
-Topic: {request.description}
-Type: {request.survey_type}
-Questions needed: {request.num_questions}
+**Task:** Create a survey in {lang_instruction} language
 
-Create 2-3 sections with diverse question types. Return valid JSON only:
+**Topic:** {request.description}
+**Survey Type:** {request.survey_type}
+**Target Number of Questions:** {request.num_questions}
+
+**Requirements:**
+- Create 2-3 well-organized sections
+- Use diverse question types
+- Write all text in {lang_instruction}
+- Return ONLY valid YAML (no markdown, no explanations)
+
+**SDL Format Example:**
+```yaml
+survey: "Survey Title in {lang_instruction}"
+type: {request.survey_type}
+description: "Brief description in {lang_instruction}"
+
+demographics:
+  collect: true
+  auto_fill: true
+  fields:
+    - birth_sex
+    - age_group
+    - education
+
+sections:
+  - name: "Section Name in {lang_instruction}"
+    description: "Section description"
+    questions:
+      - text: "Question in {lang_instruction}?"
+        type: multiple_choice_single
+        required: yes
+        data_type: nominal
+        options:
+          - "Option 1"
+          - "Option 2"
+          - "Option 3"
+      
+      - text: "Rate this..."
+        type: rating_scale
+        scale: "1-5"
+        labels:
+          "1": "Very Poor"
+          "5": "Excellent"
+        required: yes
+        data_type: scale
+      
+      - text: "Your thoughts?"
+        type: open_ended
+        required: no
+        data_type: nominal
+```
+
+**Available Question Types:**
+- multiple_choice_single: Single selection from options
+- multiple_choice_multiple: Multiple selections allowed
+- rating_scale: Numeric scale (use scale: "1-5" or "1-10")
+- likert_scale: Use likert: agreement-5 or satisfaction-5
+- open_ended: Free text response
+
+**Data Types:**
+- nominal: Categories without order
+- ordinal: Ordered categories
+- scale: Numeric scale with intervals
+
+**Now create the survey. Return ONLY the YAML, no markdown blocks, no explanations:**
 
 {{
   "title": "Survey Title in {lang_instruction}",
