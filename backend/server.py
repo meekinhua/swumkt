@@ -2386,25 +2386,20 @@ async def generate_behavior_image(
             settings = await db.admin_settings.find_one({"setting_type": "behavior_image_model"})
             selected_model = settings.get("image_model", "openai") if settings else "openai"
         
-        # Create image prompt based on analysis
-        style_instructions = {
-            "infographic": "Create a clean, modern infographic-style illustration",
-            "diagram": "Create a clear diagram with arrows and labels",
-            "conceptual": "Create a conceptual illustration representing the ideas"
-        }
+        # Get custom image prompt from database or use default
+        prompt_settings = await db.admin_settings.find_one({"setting_type": "behavior_image_prompt"})
+        if prompt_settings and prompt_settings.get("behavior_image_prompt"):
+            base_image_prompt = prompt_settings["behavior_image_prompt"]
+        else:
+            base_image_prompt = get_default_behavior_image_prompt()
         
-        style = style_instructions.get(request.image_style, style_instructions["infographic"])
-        
-        # Build image generation prompt
-        image_prompt = f"""{style} that visualizes the following customer behavior analysis:
+        # Build image generation prompt with analysis context
+        image_prompt = f"""{base_image_prompt}
 
+Analysis Summary to Visualize:
 {request.analysis_text[:500]}...
 
-Style: Professional, clean, business-appropriate
-Colors: Use a modern color palette
-Include: Visual representations of key behavioral patterns and insights
-Language for labels: {request.target_language}
-Format: Horizontal layout, suitable for presentation
+Target Language for Labels: {request.target_language}
 """
         
         # Generate image based on selected model
