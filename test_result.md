@@ -214,6 +214,21 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Login endpoint working correctly. Successfully logged in with test@test.com/test123 and received valid JWT token. No ObjectId serialization errors encountered."
 
+  - task: "Journal Finder API - POST /api/journal-finder"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing new Journal Finder API endpoint with various test cases as requested"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Journal Finder API fully functional! All 6 test cases passed: 1) Marketing Research (Thai) - Successfully found 5-10 journals with ABDC/AJG ratings where available, proper response structure with journals array, explanation, and disclaimer. 2) Management Research (English) - Generated relevant journals with Impact Factor/Quartile info marked as AI-estimated, SCImago URLs provided. 3) Minimal Input - Handled topic and abstract only (empty keywords) successfully. 4) Invalid Input - Properly validated missing required fields with appropriate error responses. 5) Response Time - All requests completed under 60 seconds (typically 10-30 seconds). 6) Authentication - Admin credentials (admin@swu.ac.th/admin123) working correctly. Journal database integration working with ABDC and AJG 2024 data files. Claude Sonnet model providing accurate journal suggestions with proper parsing and database matching."
+
 frontend:
   - task: "Customer Perception Analysis Tool - Full E2E Testing"
     implemented: true
