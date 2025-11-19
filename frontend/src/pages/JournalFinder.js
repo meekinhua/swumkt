@@ -116,8 +116,8 @@ const JournalFinder = () => {
                   หัวข้อวิจัย *
                 </Label>
                 <Input
-                  value={formData.researchTitle}
-                  onChange={(e) => setFormData({...formData, researchTitle: e.target.value})}
+                  value={formData.topic}
+                  onChange={(e) => setFormData({...formData, topic: e.target.value})}
                   className="mt-2 h-12 border-2 border-gray-300 focus:border-purple-500"
                   placeholder="ใส่หัวข้องานวิจัยของคุณ"
                 />
