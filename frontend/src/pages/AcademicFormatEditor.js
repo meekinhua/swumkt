@@ -72,6 +72,12 @@ const AcademicFormatEditor = () => {
     try {
       setFormatting(true);
       setResult(null);
+      
+      // Estimate number of sections (rough estimate based on text length)
+      const wordCount = formData.originalText.split(/\s+/).length;
+      const estimatedSections = Math.max(3, Math.ceil(wordCount / 3000));
+      setEstimatedSections(estimatedSections);
+      setFormattingProgress(`กำลังเตรียมการ... (คาดว่าจะแบ่งเป็น ~${estimatedSections} ส่วน)`);
 
       const response = await axios.post(
         `${API}/api/format-editor/format`,
@@ -83,14 +89,17 @@ const AcademicFormatEditor = () => {
           target_language: 'th'
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 300000  // 5 minutes timeout
         }
       );
 
       setResult(response.data);
-      toast.success('แก้ไข Format สำเร็จ!');
+      setFormattingProgress('');
+      toast.success(`แก้ไข Format สำเร็จ! (${response.data.sections_processed?.length || 0} ส่วน)`);
     } catch (error) {
       console.error('Format error:', error);
+      setFormattingProgress('');
       toast.error(error.response?.data?.detail || 'ไม่สามารถแก้ไข Format ได้');
     } finally {
       setFormatting(false);
