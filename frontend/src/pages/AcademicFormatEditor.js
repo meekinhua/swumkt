@@ -409,6 +409,45 @@ const AcademicFormatEditor = () => {
                 </div>
               </div>
             )}
+            
+            {/* Formatting Specs Display */}
+            {formattingSpecs && (
+              <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-lg">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                  พารามิเตอร์การจัดรูปแบบที่ตรวจพบ
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-md">
+                    <span className="text-xs font-semibold text-purple-700 min-w-[100px]">📝 Font:</span>
+                    <span className="text-sm font-medium text-gray-800">{formattingSpecs.font_name || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-md">
+                    <span className="text-xs font-semibold text-purple-700 min-w-[100px]">📏 Font Size:</span>
+                    <span className="text-sm font-medium text-gray-800">{formattingSpecs.font_size || 'N/A'}pt</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-md">
+                    <span className="text-xs font-semibold text-purple-700 min-w-[100px]">📐 Line Spacing:</span>
+                    <span className="text-sm font-medium text-gray-800">{formattingSpecs.line_spacing || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-md">
+                    <span className="text-xs font-semibold text-purple-700 min-w-[100px]">📄 Margins:</span>
+                    <span className="text-sm font-medium text-gray-800">{formattingSpecs.margin_inches || 'N/A'} inches</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-md">
+                    <span className="text-xs font-semibold text-purple-700 min-w-[100px]">🔤 Heading Bold:</span>
+                    <span className="text-sm font-medium text-gray-800">{formattingSpecs.heading_bold ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-md">
+                    <span className="text-xs font-semibold text-purple-700 min-w-[100px]">📊 Heading Size:</span>
+                    <span className="text-sm font-medium text-gray-800">{formattingSpecs.heading_size || 'N/A'}pt</span>
+                  </div>
+                </div>
+                <p className="text-xs text-purple-700 mt-3 font-medium">
+                  💡 พารามิเตอร์เหล่านี้จะถูกนำไปใช้ในการจัดรูปแบบเอกสารของคุณ
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* Text Input & Output */}
