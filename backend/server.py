@@ -4173,8 +4173,8 @@ async def format_academic_text(
                 temp_output_path = temp_output.name
                 temp_output.close()
                 
-                # Format with Pandoc
-                success = format_document_with_pandoc(temp_input.name, temp_output_path, csl_file)
+                # Format with Pandoc (with custom template if available)
+                success = format_document_with_pandoc(temp_input.name, temp_output_path, csl_file, template_file)
                 
                 if not success:
                     raise HTTPException(status_code=500, detail="Pandoc formatting failed")
