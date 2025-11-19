@@ -2823,6 +2823,7 @@ class FetchGuidelinesResponse(BaseModel):
     journal_name: str
     guidelines: str
     format_style: Optional[str] = None
+    formatting_specs: Optional[dict] = None  # Extracted specs from guidelines
 
 class FormatEditorRequest(BaseModel):
     original_text: Optional[str] = None
