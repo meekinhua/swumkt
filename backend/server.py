@@ -2843,10 +2843,13 @@ class SectionProgress(BaseModel):
     changes: List[FormatChange] = []
 
 class FormatEditorResponse(BaseModel):
-    formatted_text: str
+    formatted_text: Optional[str] = None
+    formatted_file_base64: Optional[str] = None  # Base64 encoded .docx
+    formatted_file_name: Optional[str] = None
     changes: List[FormatChange]
     summary: str
     sections_processed: List[str] = []
+    method_used: str = "pandoc"  # "pandoc" or "llm"
 
 # ============ Format Editor Helper Functions ============
 async def get_format_editor_model():
