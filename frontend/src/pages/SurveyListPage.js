@@ -21,6 +21,7 @@ const SurveyListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, draft, published, closed
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showAIGeneratorModal, setShowAIGeneratorModal] = useState(false);
 
   useEffect(() => {
     loadSurveys();
