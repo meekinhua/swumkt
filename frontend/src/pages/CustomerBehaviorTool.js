@@ -372,13 +372,20 @@ const CustomerBehaviorTool = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
                       🎨 Generated Illustration
                     </h3>
-                    <div className="rounded-lg overflow-hidden border-2 border-gray-200">
+                    <div 
+                      className="rounded-lg overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#00A9CE] transition-all"
+                      onClick={() => setShowFullscreenImage(true)}
+                      title="Click to view fullscreen"
+                    >
                       <img
                         src={imageUrl}
                         alt="Behavior Analysis Illustration"
-                        className="w-full h-auto"
+                        className="w-full h-auto hover:opacity-90 transition-opacity"
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-2 text-center font-medium">
+                      💡 Click image to view in fullscreen
+                    </p>
                   </div>
                 )}
               </div>
