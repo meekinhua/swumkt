@@ -4297,6 +4297,29 @@ async def format_academic_text(
                     temp_input.write(file_data)
                     temp_input_path = temp_input.name
                 
+                # Analyze input file before formatting
+                logging.info(f"Analyzing input file: {request.file_name}")
+                input_doc = Document(temp_input_path)
+                
+                # Detect document structure
+                total_paragraphs = len([p for p in input_doc.paragraphs if p.text.strip()])
+                headings_count = len([p for p in input_doc.paragraphs if p.style.name.startswith('Heading')])
+                h1_count = len([p for p in input_doc.paragraphs if p.style.name == 'Heading 1'])
+                h2_count = len([p for p in input_doc.paragraphs if p.style.name == 'Heading 2'])
+                h3_count = len([p for p in input_doc.paragraphs if p.style.name == 'Heading 3'])
+                
+                # Word count
+                word_count = sum(len(p.text.split()) for p in input_doc.paragraphs)
+                
+                # Tables
+                tables_count = len(input_doc.tables)
+                
+                # Try to detect citations (simple heuristic)
+                full_text = " ".join([p.text for p in input_doc.paragraphs])
+                citations_detected = full_text.count('(') + full_text.count('[')  # Rough estimate
+                
+                logging.info(f"Input file analysis: {word_count} words, {headings_count} headings, {tables_count} tables")
+                
                 # Create temp output file
                 temp_output = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
                 temp_output_path = temp_output.name
