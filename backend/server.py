@@ -3123,6 +3123,7 @@ async def test_image_generation(
         elif request.model == "gemini":
             # Use Gemini Imagen
             from emergentintegrations.llm.gemeni.image_generation import GeminiImageGeneration
+            import base64
             
             api_key = os.environ.get('EMERGENT_LLM_KEY')
             if not api_key:
@@ -3134,13 +3135,20 @@ async def test_image_generation(
                 number_of_images=1
             )
             if images and len(images) > 0:
-                image_url = images[0]
+                # Convert bytes to base64 data URL
+                image_bytes = images[0]
+                if isinstance(image_bytes, bytes):
+                    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+                    image_url = f"data:image/png;base64,{image_b64}"
+                else:
+                    image_url = image_bytes
             else:
                 raise HTTPException(status_code=500, detail="No image generated")
             
         elif request.model == "openai":
             # Use OpenAI DALL-E
             from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+            import base64
             
             api_key = os.environ.get('EMERGENT_LLM_KEY')
             if not api_key:
@@ -3153,7 +3161,13 @@ async def test_image_generation(
                 number_of_images=1
             )
             if images and len(images) > 0:
-                image_url = images[0]
+                # Convert bytes to base64 data URL
+                image_bytes = images[0]
+                if isinstance(image_bytes, bytes):
+                    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+                    image_url = f"data:image/png;base64,{image_b64}"
+                else:
+                    image_url = image_bytes
             else:
                 raise HTTPException(status_code=500, detail="No image generated")
             
