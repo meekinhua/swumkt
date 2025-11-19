@@ -4437,7 +4437,9 @@ async def analyze_uploaded_file(
             detected_font_size=detected_font_size,
             detected_line_spacing=detected_line_spacing,
             detected_margins=detected_margins,
-            detected_styles=detected_styles
+            detected_styles=detected_styles,
+            detected_citation_style=detected_citation_style,
+            citation_confidence=citation_confidence
         )
         
     except Exception as e:
