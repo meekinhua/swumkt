@@ -17,10 +17,18 @@ const JournalFinder = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
 
+  const [activeTab, setActiveTab] = useState('ai'); // 'ai' or 'browse'
+  
   const [formData, setFormData] = useState({
     topic: '',
     abstract: '',
     keywords: ''
+  });
+
+  const [browseData, setBrowseData] = useState({
+    searchQuery: '',
+    abdcRating: '',
+    ajgRating: ''
   });
 
   const [searching, setSearching] = useState(false);
