@@ -165,6 +165,61 @@ const AcademicFormatEditor = () => {
 
         {/* Input Section */}
         <div className="grid grid-cols-1 gap-6 mb-6">
+          {/* File Upload Card */}
+          <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-300 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              อัปโหลดไฟล์ Word (.docx)
+            </h3>
+            <div className="flex items-center gap-4">
+              <input
+                type="file"
+                accept=".docx"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="flex-1 cursor-pointer"
+              >
+                <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition-all">
+                  {uploadedFileName ? (
+                    <div className="flex items-center justify-center gap-2 text-blue-700">
+                      <CheckCircle className="w-6 h-6" />
+                      <span className="font-semibold">{uploadedFileName}</span>
+                    </div>
+                  ) : (
+                    <div className="text-gray-600">
+                      <FileText className="w-12 h-12 mx-auto mb-2 text-blue-400" />
+                      <p className="font-semibold">คลิกเพื่ออัปโหลดไฟล์ .docx</p>
+                      <p className="text-xs mt-1">หรือลากไฟล์มาวางที่นี่</p>
+                    </div>
+                  )}
+                </div>
+              </label>
+              {uploadedFileName && (
+                <Button
+                  onClick={() => {setUploadedFile(null); setUploadedFileName('');}}
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  ลบไฟล์
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-blue-600 mt-3 font-medium">
+              💡 แนะนำ: อัปโหลดไฟล์ .docx จะได้ผลลัพธ์ที่แม่นยำที่สุด (Pandoc จะประมวลผล format, citations, และ references อัตโนมัติ)
+            </p>
+          </Card>
+
+          {/* OR Divider */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 border-t-2 border-gray-300"></div>
+            <span className="text-gray-500 font-bold">หรือ</span>
+            <div className="flex-1 border-t-2 border-gray-300"></div>
+          </div>
+
           {/* Journal & Style Selection */}
           <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
