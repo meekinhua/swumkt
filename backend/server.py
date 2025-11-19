@@ -3498,6 +3498,135 @@ Please verify Impact Factor, Quartile, and Scopus indexing from **SCImago Journa
         logging.error(f"Journal Finder error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to find journals: {str(e)}")
 
+@api_router.post("/journal-finder/browse", response_model=JournalFinderResponse)
+async def browse_journals(
+    request: JournalBrowseRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Browse journals from ABDC and AJG databases with filters"""
+    try:
+        # Load databases
+        abdc_db = load_abdc_database()
+        ajg_db = load_ajg_database()
+        
+        # Combine all journals
+        all_journals = {}
+        
+        # Add ABDC journals
+        for key, journal in abdc_db.items():
+            all_journals[key] = {
+                'journal_name': journal['title'],
+                'publisher': journal['publisher'],
+                'issn': journal['issn'] or journal['issn_online'],
+                'website': journal['website'],
+                'abdc_rating': journal['rating'],
+                'ajg_rating': None
+            }
+        
+        # Merge with AJG data
+        for key, journal in ajg_db.items():
+            if key in all_journals:
+                all_journals[key]['ajg_rating'] = journal['rating']
+            else:
+                all_journals[key] = {
+                    'journal_name': journal['title'],
+                    'publisher': None,
+                    'issn': None,
+                    'website': None,
+                    'abdc_rating': None,
+                    'ajg_rating': journal['rating']
+                }
+        
+        # Apply filters
+        filtered_journals = []
+        for key, journal in all_journals.items():
+            # Filter by ABDC rating
+            if request.abdc_rating and journal['abdc_rating'] != request.abdc_rating:
+                continue
+            
+            # Filter by AJG rating
+            if request.ajg_rating and journal['ajg_rating'] != request.ajg_rating:
+                continue
+            
+            # Filter by search query (case-insensitive)
+            if request.search_query:
+                query_lower = request.search_query.lower()
+                if query_lower not in journal['journal_name'].lower():
+                    if not journal['publisher'] or query_lower not in journal['publisher'].lower():
+                        continue
+            
+            filtered_journals.append(journal)
+        
+        # Sort by journal name
+        filtered_journals.sort(key=lambda x: x['journal_name'])
+        
+        # Apply limit
+        filtered_journals = filtered_journals[:request.limit]
+        
+        # Build results
+        results = []
+        for journal in filtered_journals:
+            result = JournalResult(
+                journal_name=journal['journal_name'],
+                publisher=journal['publisher'],
+                issn=journal['issn'],
+                website=journal['website'],
+                abdc_rating=journal['abdc_rating'],
+                ajg_rating=journal['ajg_rating'],
+                impact_factor=None,
+                quartile=None,
+                scopus_indexed=None,
+                is_official_data=True,
+                scimago_url=f"https://www.scimagojr.com/journalsearch.php?q={journal['journal_name'].replace(' ', '+')}&tip=sid"
+            )
+            results.append(result)
+        
+        # Build explanation
+        filter_info = []
+        if request.abdc_rating:
+            filter_info.append(f"ABDC: {request.abdc_rating}")
+        if request.ajg_rating:
+            filter_info.append(f"AJG: {request.ajg_rating}")
+        if request.search_query:
+            filter_info.append(f"ค้นหา: {request.search_query}")
+        
+        if request.target_language == 'th':
+            if filter_info:
+                explanation = f"พบ {len(results)} วารสารที่ตรงกับเงื่อนไข: {', '.join(filter_info)}"
+            else:
+                explanation = f"แสดงวารสารทั้งหมด {len(results)} รายการจากฐานข้อมูล ABDC และ AJG"
+            
+            disclaimer = """
+✅ **ข้อมูลจากฐานข้อมูลอย่างเป็นทางการ:**
+- ABDC Rating (A*, A, B, C)
+- AJG 2024 Rating (4*, 3, 2, 1)
+
+📝 **หมายเหตุ:** ข้อมูล Impact Factor, Quartile และ Scopus ไม่แสดงในโหมด Browse เนื่องจากเป็นข้อมูลที่ต้องตรวจสอบจากแหล่งอย่างเป็นทางการ คุณสามารถคลิกลิงก์ SCImago เพื่อดูข้อมูลเพิ่มเติม
+"""
+        else:
+            if filter_info:
+                explanation = f"Found {len(results)} journals matching: {', '.join(filter_info)}"
+            else:
+                explanation = f"Displaying all {len(results)} journals from ABDC and AJG databases"
+            
+            disclaimer = """
+✅ **Data from Official Databases:**
+- ABDC Rating (A*, A, B, C)
+- AJG 2024 Rating (4*, 3, 2, 1)
+
+📝 **Note:** Impact Factor, Quartile, and Scopus data are not shown in Browse mode as they require verification from official sources. Click the SCImago link for more details.
+"""
+        
+        return JournalFinderResponse(
+            journals=results,
+            explanation=explanation,
+            disclaimer=disclaimer
+        )
+        
+    except Exception as e:
+        logging.error(f"Journal Browse error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to browse journals: {str(e)}")
+
 # ============ PLACEHOLDER ROUTES FOR FUTURE FEATURES ============
 @api_router.get("/market-research/projects")
 async def get_market_research_projects(current_user: User = Depends(get_current_user)):
