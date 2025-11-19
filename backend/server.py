@@ -2866,6 +2866,7 @@ def get_csl_file_path(format_style: str):
         "Vancouver": "vancouver.csl",
         "Nature": "nature.csl",
         "Elsevier-Harvard": "elsevier-harvard.csl",
+        "Emerald": "emerald.csl",
         "AMA": "american-medical-association.csl",
         "Turabian": "turabian.csl",
         "ACS": "acs.csl",
