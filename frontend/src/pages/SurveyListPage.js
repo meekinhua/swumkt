@@ -6,9 +6,10 @@ import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Navigation from '@/components/Navigation';
-import { Plus, FileText, Eye, Edit, Trash2, Send, Lock, CheckCircle, XCircle, BookTemplate } from 'lucide-react';
+import { Plus, FileText, Eye, Edit, Trash2, Send, Lock, CheckCircle, XCircle, BookTemplate, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import SurveyTemplateModal from '@/components/SurveyTemplateModal';
+import AISurveyGeneratorModal from '@/components/AISurveyGeneratorModal';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://customer-path-tool.preview.emergentagent.com';
 
