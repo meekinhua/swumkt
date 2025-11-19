@@ -2364,6 +2364,55 @@ async def update_perception_question_prompt(
         logging.error(f"Error updating perception question prompt: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
 
+# Format Editor Model Setting
+@api_router.get("/admin/format-editor-model")
+async def get_format_editor_model(current_user: User = Depends(get_current_user)):
+    """Get format editor LLM model setting"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        settings = await db.admin_settings.find_one({"setting_type": "format_editor_model"}, {"_id": 0})
+        if settings:
+            return {
+                "model": settings.get("model", "claude-sonnet-4"),
+                "updated_by": settings.get("updated_by"),
+                "updated_at": settings.get("updated_at")
+            }
+        return {"model": "claude-sonnet-4"}
+    except Exception as e:
+        logging.error(f"Error fetching format editor model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch model setting: {str(e)}")
+
+@api_router.post("/admin/format-editor-model")
+async def update_format_editor_model(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update format editor LLM model setting"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        model = request.get("model", "claude-sonnet-4")
+        
+        await db.admin_settings.update_one(
+            {"setting_type": "format_editor_model"},
+            {
+                "$set": {
+                    "model": model,
+                    "updated_by": current_user.email,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        
+        return {"message": "Format editor model updated successfully", "model": model}
+    except Exception as e:
+        logging.error(f"Error updating format editor model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update model: {str(e)}")
+
 # Generate Behavior Analysis (Text only)
 @api_router.post("/generate-behavior-analysis", response_model=BehaviorAnalysisResponse)
 async def generate_behavior_analysis(
