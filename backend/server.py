@@ -1303,7 +1303,8 @@ async def ai_generate_survey(
     current_user: User = Depends(get_current_user)
 ):
     """Generate a survey using AI based on description"""
-    from emergentintegrations import LLMClient
+    import json
+    import re
     
     try:
         # Get Emergent LLM key
@@ -1311,78 +1312,114 @@ async def ai_generate_survey(
         if not llm_key:
             raise HTTPException(status_code=500, detail="LLM key not configured")
         
+        from emergentintegrations import LLMClient
         client = LLMClient(llm_key)
         
-        # Build prompt
-        prompt = f"""You are a professional survey designer. Create a comprehensive survey based on the following:
+        # Determine language instructions
+        lang_instruction = "English" if request.target_language == "en" else "Thai (ไทย)"
+        
+        # Build prompt with simpler structure
+        prompt = f"""Create a survey in {lang_instruction} language.
 
-Description: {request.description}
-Survey Type: {request.survey_type}
-Number of Questions: {request.num_questions}
-Target Language: {request.target_language}
+Topic: {request.description}
+Type: {request.survey_type}
+Questions needed: {request.num_questions}
 
-Generate a survey with 2-3 sections, each containing relevant questions. Include:
-- Multiple choice questions (single and multiple select)
-- Rating scale questions (1-5 or 1-10)
-- Open-ended questions for detailed feedback
+Create 2-3 sections with diverse question types. Return valid JSON only:
 
-Return ONLY valid JSON in this exact format (no markdown, no extra text):
 {{
-  "title": "Survey Title",
-  "description": "Survey description",
+  "title": "Survey Title in {lang_instruction}",
+  "description": "Brief description",
   "sections": [
     {{
-      "id": "sec_1",
-      "title": "Section Title",
+      "id": "section_1",
+      "title": "Section 1 Title",
       "description": "Section description",
       "order": 0,
       "questions": [
         {{
-          "id": "q_1",
+          "id": "q1",
           "type": "multiple_choice_single",
-          "text": "Question text?",
+          "text": "Question in {lang_instruction}?",
           "required": true,
           "data_type": "nominal",
           "options": [
-            {{"id": "opt_1", "text": "Option 1", "value": "1"}},
-            {{"id": "opt_2", "text": "Option 2", "value": "2"}}
+            {{"id": "opt1", "text": "Option 1", "value": "1"}},
+            {{"id": "opt2", "text": "Option 2", "value": "2"}}
           ],
           "order": 0
+        }},
+        {{
+          "id": "q2",
+          "type": "rating_scale",
+          "text": "Rate this (1-5)?",
+          "required": true,
+          "data_type": "scale",
+          "options": [
+            {{"id": "r1", "text": "1", "value": "1"}},
+            {{"id": "r2", "text": "2", "value": "2"}},
+            {{"id": "r3", "text": "3", "value": "3"}},
+            {{"id": "r4", "text": "4", "value": "4"}},
+            {{"id": "r5", "text": "5", "value": "5"}}
+          ],
+          "order": 1
+        }},
+        {{
+          "id": "q3",
+          "type": "open_ended",
+          "text": "Your thoughts?",
+          "required": false,
+          "data_type": "nominal",
+          "options": [],
+          "order": 2
         }}
       ]
     }}
   ]
 }}
 
-Important:
-- Use {request.target_language} language for all text
-- Include 8-12 questions total across sections
-- Mix question types appropriately
-- Use proper data_type: "nominal", "ordinal", or "scale"
-- Generate unique IDs for all elements
-"""
+Types: multiple_choice_single, multiple_choice_multiple, rating_scale, open_ended
+Data types: nominal, ordinal, scale
+Return JSON only, no markdown."""
         
-        # Call LLM
+        # Call LLM with timeout
         response = client.call_llm(
             prompt=prompt,
-            model="openai/gpt-4o",
+            model="openai/gpt-4o-mini",
             temperature=0.7,
-            max_tokens=3000
+            max_tokens=4000
         )
         
-        # Parse JSON
-        import json
-        import re
-        
-        # Try to extract JSON from response
+        # Clean response
         response_text = response.strip()
         
-        # Remove markdown code blocks if present
-        if response_text.startswith('```'):
-            response_text = re.sub(r'^```(?:json)?\n', '', response_text)
-            response_text = re.sub(r'\n```$', '', response_text)
+        # Remove markdown code blocks
+        response_text = re.sub(r'^```(?:json)?\s*', '', response_text, flags=re.MULTILINE)
+        response_text = re.sub(r'\s*```$', '', response_text, flags=re.MULTILINE)
+        response_text = response_text.strip()
         
-        survey_data = json.loads(response_text)
+        # Try to find JSON in response
+        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        if json_match:
+            response_text = json_match.group(0)
+        
+        # Parse JSON
+        try:
+            survey_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            # Log the problematic response
+            print(f"Failed to parse JSON: {response_text[:500]}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"AI returned invalid JSON. Please try again or use templates instead."
+            )
+        
+        # Validate required fields
+        if 'title' not in survey_data or 'sections' not in survey_data:
+            raise HTTPException(
+                status_code=500,
+                detail="AI response missing required fields. Please try again."
+            )
         
         # Create survey
         survey = Survey(
@@ -1400,10 +1437,17 @@ Important:
         await db.surveys.insert_one(survey_dict)
         return survey
         
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse AI response: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
+        # Log full error for debugging
+        print(f"AI generation error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"AI generation failed. Please try using templates instead. Error: {str(e)[:100]}"
+        )
 
 # ============ CONTENT ROUTES ============
 @api_router.post("/content", response_model=Content)
