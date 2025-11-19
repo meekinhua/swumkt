@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, User, LogOut, Settings, Save, RefreshCw, Shield, Map, BarChart3 } from 'lucide-react';
+import { ArrowLeft, User, LogOut, Settings, Save, RefreshCw, Shield, Map, BarChart3, Upload, Loader2, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 
