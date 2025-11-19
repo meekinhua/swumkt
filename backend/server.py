@@ -1380,13 +1380,33 @@ Types: multiple_choice_single, multiple_choice_multiple, rating_scale, open_ende
 Data types: nominal, ordinal, scale
 Return JSON only, no markdown."""
         
-        # Call LLM with timeout
-        response = client.call_llm(
-            prompt=prompt,
-            model="openai/gpt-4o-mini",
-            temperature=0.7,
-            max_tokens=4000
-        )
+        # Call OpenAI API directly through Emergent proxy
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {llm_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": "You are a professional survey designer. Return only valid JSON."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 4000
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"AI API error: {response.status_code}"
+                )
+            
+            result = response.json()
+            response_text = result['choices'][0]['message']['content']
         
         # Clean response
         response_text = response.strip()
