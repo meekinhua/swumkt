@@ -2862,7 +2862,14 @@ def get_csl_file_path(format_style: str):
         "MLA": "mla.csl",
         "Chicago": "chicago.csl",
         "Harvard": "harvard.csl",
-        "IEEE": "ieee.csl"
+        "IEEE": "ieee.csl",
+        "Vancouver": "vancouver.csl",
+        "Nature": "nature.csl",
+        "Elsevier-Harvard": "elsevier-harvard.csl",
+        "AMA": "american-medical-association.csl",
+        "Turabian": "turabian.csl",
+        "ACS": "acs.csl",
+        "Springer": "springer.csl"
     }
     csl_file = style_map.get(format_style, "apa.csl")
     csl_path = ROOT_DIR / 'csl_styles' / csl_file
