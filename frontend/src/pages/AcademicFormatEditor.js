@@ -449,6 +449,22 @@ const AcademicFormatEditor = () => {
                   </div>
                 </div>
                 
+                {/* Citation Style Section - CRITICAL FOR PANDOC */}
+                <div className="mb-4 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-orange-300 rounded-lg">
+                  <h4 className="text-sm font-bold text-orange-800 mb-2 flex items-center gap-2">
+                    📖 Citation Style (สำคัญที่สุดสำหรับ Pandoc)
+                  </h4>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-md border border-orange-200">
+                    <span className="text-sm font-bold text-orange-700">Style:</span>
+                    <span className="text-lg font-bold text-gray-900 bg-orange-100 px-4 py-1 rounded-md">
+                      {formattingSpecs.citation_style || 'N/A'}
+                    </span>
+                    {formattingSpecs.citation_format_notes && (
+                      <span className="text-xs text-gray-600 italic">({formattingSpecs.citation_format_notes})</span>
+                    )}
+                  </div>
+                </div>
+                
                 {/* Margins Section */}
                 <div className="mb-4">
                   <h4 className="text-sm font-bold text-purple-800 mb-2">📄 Margins (inches)</h4>
