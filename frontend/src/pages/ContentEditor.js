@@ -27,9 +27,11 @@ const ContentEditor = () => {
     category: '',
     tags: [],
     featured_image: '',
-    status: 'draft'
+    status: 'draft',
+    attachments: []
   });
   const [tagInput, setTagInput] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (id) {
