@@ -365,7 +365,9 @@ const AcademicFormatEditor = () => {
                 <div className="flex flex-col items-center justify-center h-[500px] text-gray-400">
                   <FileText className="w-20 h-20 mb-4 opacity-30" />
                   <p className="text-lg font-medium">ผลลัพธ์จะแสดงที่นี่</p>
-                  <p className="text-sm">ใส่ข้อความและคลิก "แก้ไข Format"</p>
+                  <p className="text-sm">
+                    {inputMode === 'file' ? 'อัปโหลดไฟล์และคลิก "แก้ไข Format"' : 'ใส่ข้อความและคลิก "แก้ไข Format"'}
+                  </p>
                 </div>
               )}
 
