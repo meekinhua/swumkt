@@ -4340,32 +4340,46 @@ async def analyze_uploaded_file(
         has_works_cited = any('works cited' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
         has_bibliography = any('bibliography' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
         
-        # Determine citation style
+        # Determine citation style with priority rules
         total_matches = apa_matches + ieee_matches + vancouver_matches + chicago_matches
         
         if total_matches > 0:
-            max_matches = max(apa_matches, ieee_matches, vancouver_matches, chicago_matches)
-            
-            if apa_matches == max_matches and apa_matches > 0:
-                detected_citation_style = "APA Style"
-                if has_references:
-                    citation_confidence = "High"
-                else:
-                    citation_confidence = "Medium"
-            elif ieee_matches == max_matches and ieee_matches > 0:
-                detected_citation_style = "IEEE Style (Numbered)"
-                citation_confidence = "High" if ieee_matches > 2 else "Medium"
-            elif vancouver_matches == max_matches and vancouver_matches > 0:
-                detected_citation_style = "Vancouver Style (Numbered)"
-                citation_confidence = "Medium"
-            elif chicago_matches == max_matches and chicago_matches > 0:
-                detected_citation_style = "Chicago Style (Author-Date)"
-                citation_confidence = "Medium"
-            
-            # Additional check for MLA
+            # Priority 1: MLA if "Works Cited" heading found
             if has_works_cited:
                 detected_citation_style = "MLA Style"
                 citation_confidence = "High"
+            
+            # Priority 2: APA if has "References" heading AND APA patterns found
+            elif has_references and apa_matches > 0:
+                detected_citation_style = "APA Style"
+                citation_confidence = "High" if apa_matches > 3 else "Medium"
+            
+            # Priority 3: IEEE if bracket numbers dominant
+            elif ieee_matches > apa_matches and ieee_matches > vancouver_matches:
+                detected_citation_style = "IEEE Style (Numbered)"
+                citation_confidence = "High" if ieee_matches > 2 else "Medium"
+            
+            # Priority 4: APA if author-year patterns found (even without max matches)
+            elif apa_matches > 2:
+                detected_citation_style = "APA Style"
+                citation_confidence = "Medium"
+            
+            # Priority 5: Vancouver for pure numbered citations
+            elif vancouver_matches > apa_matches and vancouver_matches > 2:
+                detected_citation_style = "Vancouver Style (Numbered)"
+                citation_confidence = "Medium"
+            
+            # Priority 6: Chicago author-date
+            elif chicago_matches > 0:
+                detected_citation_style = "Chicago Style (Author-Date)"
+                citation_confidence = "Low"
+            
+            # Default to most matches
+            else:
+                max_matches = max(apa_matches, ieee_matches, vancouver_matches, chicago_matches)
+                if apa_matches == max_matches:
+                    detected_citation_style = "APA Style"
+                    citation_confidence = "Low"
             
             logging.info(f"Citation style detected: {detected_citation_style} (confidence: {citation_confidence})")
             logging.info(f"Matches - APA: {apa_matches}, IEEE: {ieee_matches}, Vancouver: {vancouver_matches}, Chicago: {chicago_matches}")
