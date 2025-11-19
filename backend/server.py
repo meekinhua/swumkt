@@ -2029,10 +2029,6 @@ class BehaviorContentCreate(BaseModel):
     image_url: Optional[str] = Field(None, description="Generated image URL if any")
     image_base64: Optional[str] = Field(None, description="Base64 encoded image for attachment")
 
-def get_default_behavior_prompt():
-    """Get default customer behavior analysis prompt"""
-    return """You are an expert consumer behavior analyst and market researcher.
-
 def get_default_behavior_image_prompt():
     """Get default behavior analysis image generation prompt"""
     return """Create a professional business illustration that visualizes customer behavior analysis.
