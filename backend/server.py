@@ -2941,7 +2941,10 @@ async def generate_perception_illustration(
 ):
     """Generate illustration for customer perception analysis"""
     try:
-        from emergentintegrations import OpenAIImageGeneration, GeminiImageGeneration
+        # Get API key
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Image generation service not configured")
         
         # Get admin settings
         settings = await db.admin_settings.find_one({}) or {}
@@ -2960,16 +2963,43 @@ async def generate_perception_illustration(
         # Generate image
         image_url = None
         
-        try:
-            if image_model == "gemini":
-                gemini = GeminiImageGeneration()
-                image_url = gemini.generate(prompt)
-        except Exception as gemini_error:
-            logging.warning(f"Gemini image generation failed: {str(gemini_error)}, falling back to OpenAI")
+        if image_model == "nanobanana":
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"perception-image-{uuid.uuid4()}",
+                system_message="You are an AI image generator"
+            ).with_model("gemini", "gemini-2.5-flash-image-preview").with_params(modalities=["image", "text"])
+            
+            msg = UserMessage(text=prompt)
+            text, images = await chat.send_message_multimodal_response(msg)
+            
+            if images and len(images) > 0:
+                image_data = images[0]['data']
+                mime_type = images[0]['mime_type']
+                image_url = f"data:{mime_type};base64,{image_data}"
+        else:
+            # OpenAI fallback
+            from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+            import base64
+            
+            openai = OpenAIImageGeneration(api_key=api_key)
+            raw_images = await openai.generate_images(
+                prompt=prompt,
+                model="gpt-image-1",
+                number_of_images=1
+            )
+            if raw_images and len(raw_images) > 0:
+                image_bytes = raw_images[0]
+                if isinstance(image_bytes, bytes):
+                    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+                    image_url = f"data:image/png;base64,{image_b64}"
+                else:
+                    image_url = image_bytes
         
         if not image_url:
-            openai = OpenAIImageGeneration()
-            image_url = openai.generate(prompt)
+            raise HTTPException(status_code=500, detail="No image generated")
         
         return {"image_url": image_url}
         
