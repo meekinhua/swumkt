@@ -110,7 +110,7 @@ const AcademicFormatEditor = () => {
 
       const requestData = {
         format_style: formData.formatStyle,
-        journal_name: formData.journalName || null,
+        journal_name: styleSelectionMode === 'auto' ? formData.journalName : null,
         target_language: 'th'
       };
 
