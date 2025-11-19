@@ -1991,6 +1991,372 @@ Customer Journey Map
         logging.error(f"Error sharing journey map as content: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
 
+# ============ CUSTOMER BEHAVIOR ANALYSIS ============
+class BehaviorAnalysisRequest(BaseModel):
+    raw_data: str = Field(..., description="Raw qualitative research data (interviews, observations, behavioral data)")
+    research_context: Optional[str] = Field(None, description="Additional context about the research")
+    target_language: Optional[str] = Field("en", description="Target language for output (th or en)")
+
+class BehaviorAnalysisResponse(BaseModel):
+    analysis_text: str
+    key_findings: List[str] = []
+    recommendations: List[str] = []
+
+class BehaviorImageRequest(BaseModel):
+    analysis_text: str = Field(..., description="Analysis text to generate illustration for")
+    image_style: Optional[str] = Field("infographic", description="Style: infographic, diagram, conceptual")
+    target_language: Optional[str] = Field("en", description="Language for image labels")
+
+class BehaviorImageResponse(BaseModel):
+    image_url: str
+    image_prompt: str
+
+class BehaviorContentCreate(BaseModel):
+    title: str = Field(..., description="Content title")
+    research_type: str = Field(..., description="Research type: qualitative or quantitative")
+    sample_size: Optional[str] = Field(None, description="Sample size")
+    data_source: str = Field(..., description="Data source")
+    collection_method: str = Field(..., description="Collection method")
+    research_date: str = Field(..., description="Research date")
+    additional_notes: Optional[str] = Field(None, description="Additional notes")
+    analysis_text: str = Field(..., description="Analysis text")
+    key_findings: List[str] = Field(default_factory=list, description="Key findings")
+    recommendations: List[str] = Field(default_factory=list, description="Recommendations")
+    raw_data: str = Field(..., description="Original raw data")
+    research_context: Optional[str] = Field(None, description="Research context")
+    output_language: str = Field(..., description="Output language")
+    image_url: Optional[str] = Field(None, description="Generated image URL if any")
+
+def get_default_behavior_prompt():
+    """Get default customer behavior analysis prompt"""
+    return """You are an expert consumer behavior analyst and market researcher.
+
+Your task is to analyze qualitative research data about customer behavior and provide insights.
+
+Guidelines:
+1. Identify key behavioral patterns:
+   - Purchase behaviors
+   - Usage patterns
+   - Decision-making processes
+   - Motivations and drivers
+   - Barriers and obstacles
+
+2. Analyze customer segments if applicable:
+   - Different behavior groups
+   - Characteristics of each segment
+   - Behavioral differences
+
+3. Identify psychological factors:
+   - Emotional triggers
+   - Cognitive biases
+   - Social influences
+   - Cultural factors
+
+4. Provide actionable insights:
+   - What behaviors to encourage
+   - What barriers to remove
+   - How to influence positive behaviors
+
+5. Output Structure:
+   - Main Analysis (comprehensive text analysis)
+   - Key Findings (3-5 bullet points)
+   - Recommendations (3-5 actionable items)
+
+Respond in this exact format:
+ANALYSIS:
+[Your comprehensive analysis text]
+
+KEY_FINDINGS:
+- [Finding 1]
+- [Finding 2]
+- [Finding 3]
+
+RECOMMENDATIONS:
+- [Recommendation 1]
+- [Recommendation 2]
+- [Recommendation 3]
+"""
+
+# Admin: Get/Set Behavior Analysis Prompt
+@api_router.get("/admin/behavior-prompt")
+async def get_behavior_prompt(current_user: User = Depends(get_current_user)):
+    """Get current behavior analysis prompt settings (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        settings = await db.admin_settings.find_one({"setting_type": "behavior_prompt"})
+        if not settings:
+            return {
+                "behavior_prompt": get_default_behavior_prompt(),
+                "updated_by": "system",
+                "updated_at": None
+            }
+        
+        if '_id' in settings:
+            del settings['_id']
+        
+        return settings
+        
+    except Exception as e:
+        logging.error(f"Error fetching behavior prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch prompt: {str(e)}")
+
+@api_router.post("/admin/behavior-prompt")
+async def update_behavior_prompt(
+    prompt_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update behavior analysis prompt (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        settings_doc = {
+            "setting_type": "behavior_prompt",
+            "behavior_prompt": prompt_data.get("behavior_prompt"),
+            "updated_by": current_user.id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.admin_settings.update_one(
+            {"setting_type": "behavior_prompt"},
+            {"$set": settings_doc},
+            upsert=True
+        )
+        
+        return {"message": "Behavior prompt updated successfully"}
+        
+    except Exception as e:
+        logging.error(f"Error updating behavior prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
+
+# Generate Behavior Analysis (Text only)
+@api_router.post("/generate-behavior-analysis", response_model=BehaviorAnalysisResponse)
+async def generate_behavior_analysis(
+    request: BehaviorAnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate Customer Behavior Analysis using Emergent LLM"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        # Get API key
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Behavior Analysis service not configured")
+        
+        # Get custom prompt from database or use default
+        settings = await db.admin_settings.find_one({"setting_type": "behavior_prompt"})
+        if settings and settings.get("behavior_prompt"):
+            system_prompt = settings["behavior_prompt"]
+        else:
+            system_prompt = get_default_behavior_prompt()
+        
+        # Create LLM chat
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"behavior-analysis-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("openai", "gpt-4o")
+        
+        # Determine language
+        language_name = "Thai" if request.target_language == "th" else "English"
+        
+        # Create user prompt
+        user_prompt = f"""Please analyze the following customer behavior research data:
+
+Research Data:
+{request.raw_data}
+
+{f"Additional Context: {request.research_context}" if request.research_context else ""}
+
+Output Language: {language_name}
+
+Please provide a comprehensive analysis with key findings and actionable recommendations in {language_name}.
+"""
+        
+        user_message = UserMessage(text=user_prompt)
+        
+        # Get response from LLM
+        response_text = await chat.send_message(user_message)
+        
+        # Parse response
+        analysis_text = ""
+        key_findings = []
+        recommendations = []
+        
+        # Try to parse structured format
+        if "ANALYSIS:" in response_text:
+            parts = response_text.split("KEY_FINDINGS:")
+            analysis_text = parts[0].replace("ANALYSIS:", "").strip()
+            
+            if len(parts) > 1:
+                findings_part = parts[1].split("RECOMMENDATIONS:")[0].strip()
+                # Extract bullet points
+                for line in findings_part.split('\n'):
+                    line = line.strip()
+                    if line and (line.startswith('-') or line.startswith('•') or line.startswith('*')):
+                        key_findings.append(line.lstrip('-•* ').strip())
+                
+                if "RECOMMENDATIONS:" in parts[1]:
+                    recs_part = parts[1].split("RECOMMENDATIONS:")[1].strip()
+                    for line in recs_part.split('\n'):
+                        line = line.strip()
+                        if line and (line.startswith('-') or line.startswith('•') or line.startswith('*')):
+                            recommendations.append(line.lstrip('-•* ').strip())
+        else:
+            # Fallback: use entire response as analysis
+            analysis_text = response_text.strip()
+        
+        return BehaviorAnalysisResponse(
+            analysis_text=analysis_text,
+            key_findings=key_findings,
+            recommendations=recommendations
+        )
+        
+    except Exception as e:
+        logging.error(f"Behavior Analysis generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate behavior analysis: {str(e)}")
+
+# Generate Illustration for Behavior Analysis
+@api_router.post("/generate-behavior-image", response_model=BehaviorImageResponse)
+async def generate_behavior_image(
+    request: BehaviorImageRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate illustration/diagram for behavior analysis using AI Image Generation"""
+    try:
+        from emergentintegrations.image import ImageGenerator
+        
+        # Get API key
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Image generation service not configured")
+        
+        # Create image prompt based on analysis
+        style_instructions = {
+            "infographic": "Create a clean, modern infographic-style illustration",
+            "diagram": "Create a clear diagram with arrows and labels",
+            "conceptual": "Create a conceptual illustration representing the ideas"
+        }
+        
+        style = style_instructions.get(request.image_style, style_instructions["infographic"])
+        
+        # Build image generation prompt
+        image_prompt = f"""{style} that visualizes the following customer behavior analysis:
+
+{request.analysis_text[:500]}...
+
+Style: Professional, clean, business-appropriate
+Colors: Use a modern color palette
+Include: Visual representations of key behavioral patterns and insights
+Language for labels: {request.target_language}
+Format: Horizontal layout, suitable for presentation
+"""
+        
+        # Generate image using OpenAI DALL-E
+        image_gen = ImageGenerator(api_key=api_key)
+        result = await image_gen.generate_image(
+            prompt=image_prompt,
+            provider="openai",
+            model="gpt-image-1",
+            size="1024x1024",
+            quality="standard"
+        )
+        
+        return BehaviorImageResponse(
+            image_url=result["url"],
+            image_prompt=image_prompt
+        )
+        
+    except Exception as e:
+        logging.error(f"Image generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
+
+# Share Behavior Analysis as Content
+@api_router.post("/behavior-analysis/share-content")
+async def share_behavior_as_content(
+    data: BehaviorContentCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Share behavior analysis as research content"""
+    try:
+        # Create content body
+        content_body = f"""## เทคนิคการวิจัย
+Customer Behavior Analysis
+
+## ประเภทการวิจัย
+{data.research_type}
+
+## รายละเอียดการวิจัย
+- **ขนาดกลุ่มตัวอย่าง:** {data.sample_size or 'N/A'}
+- **แหล่งข้อมูล:** {data.data_source}
+- **วิธีการเก็บข้อมูล:** {data.collection_method}
+- **วันที่ทำการวิจัย:** {data.research_date}
+
+## การวิเคราะห์พฤติกรรม
+{data.analysis_text}
+"""
+        
+        # Add key findings if available
+        if data.key_findings:
+            content_body += "\n\n## ประเด็นสำคัญ\n"
+            for finding in data.key_findings:
+                content_body += f"- {finding}\n"
+        
+        # Add recommendations if available
+        if data.recommendations:
+            content_body += "\n\n## ข้อเสนอแนะ\n"
+            for rec in data.recommendations:
+                content_body += f"- {rec}\n"
+        
+        # Add optional notes
+        if data.additional_notes:
+            content_body += f"\n\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}"
+        
+        # Create content document
+        content_dict = {
+            "id": str(uuid.uuid4()),
+            "title": data.title,
+            "content": content_body,
+            "content_type": "research",
+            "category": "Customer Behavior Analysis",
+            "tags": ["customer-behavior", "behavior-analysis", data.research_type.lower()],
+            "status": "published",
+            "contributors": [{
+                "user_id": current_user.id,
+                "user_name": current_user.full_name,
+                "role": "author"
+            }],
+            "created_by": current_user.id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "views": 0,
+            "behavior_metadata": {
+                "research_type": data.research_type,
+                "sample_size": data.sample_size,
+                "data_source": data.data_source,
+                "collection_method": data.collection_method,
+                "research_date": data.research_date,
+                "output_language": data.output_language,
+                "image_url": data.image_url,
+                "key_findings": data.key_findings,
+                "recommendations": data.recommendations
+            }
+        }
+        
+        await db.contents.insert_one(content_dict)
+        
+        return {
+            "message": "Behavior analysis shared as content successfully",
+            "content_id": content_dict["id"]
+        }
+        
+    except Exception as e:
+        logging.error(f"Error sharing behavior analysis as content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
