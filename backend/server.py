@@ -2852,6 +2852,75 @@ class FormatEditorResponse(BaseModel):
     method_used: str = "pandoc"  # "pandoc" or "llm"
 
 # ============ Format Editor Helper Functions ============
+def get_csl_file_path(format_style: str):
+    """Get CSL file path for citation style"""
+    style_map = {
+        "APA": "apa.csl",
+        "MLA": "mla.csl",
+        "Chicago": "chicago.csl",
+        "Harvard": "harvard.csl",
+        "IEEE": "ieee.csl"
+    }
+    csl_file = style_map.get(format_style, "apa.csl")
+    csl_path = ROOT_DIR / 'csl_styles' / csl_file
+    return str(csl_path)
+
+async def detect_citation_style_from_journal(journal_name: str):
+    """Use LLM to detect citation style from journal name"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            return "APA"  # Default fallback
+        
+        system_prompt = """You are a citation style expert. Given a journal name, identify which citation style it uses.
+
+Return ONLY ONE WORD from: APA, MLA, Chicago, Harvard, IEEE
+
+No explanation, just the style name."""
+
+        user_prompt = f"Journal name: {journal_name}\n\nWhat citation style does this journal use?"
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"style-detect-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        
+        msg = UserMessage(text=user_prompt)
+        response = await chat.send_message(msg)
+        
+        # Clean response
+        style = response.strip().upper()
+        if style in ["APA", "MLA", "CHICAGO", "HARVARD", "IEEE"]:
+            return style.title() if style != "APA" and style != "MLA" and style != "IEEE" else style
+        
+        return "APA"  # Default
+        
+    except Exception as e:
+        logging.error(f"Error detecting citation style: {str(e)}")
+        return "APA"
+
+def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str):
+    """Format document using Pandoc with CSL"""
+    try:
+        # Convert with citation processing
+        pypandoc.convert_file(
+            input_file,
+            'docx',
+            outputfile=output_file,
+            extra_args=[
+                '--citeproc',  # Enable citation processing
+                f'--csl={csl_file}',  # Citation style
+                '--standalone'
+            ]
+        )
+        return True
+    except Exception as e:
+        logging.error(f"Pandoc conversion error: {str(e)}")
+        return False
+
 async def get_format_editor_model():
     """Get configured LLM model for format editor from admin settings"""
     try:
