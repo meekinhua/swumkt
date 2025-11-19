@@ -174,146 +174,202 @@ const CustomerBehaviorTool = () => {
           </p>
         </div>
 
-        {/* Step 1: Input Data */}
-        <Card className="p-6 sm:p-8 bg-white/98 border-2 border-gray-300 mb-6">
-          <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-6">Research Data Input</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold">
-                Research Data (Interviews, Observations, Behavioral Data) *
-              </Label>
-              <Textarea
-                value={rawData}
-                onChange={(e) => setRawData(e.target.value)}
-                className="mt-2 min-h-[200px] border-2 border-gray-300 focus:border-[#00A9CE]"
-                placeholder="Paste your qualitative research data here..."
-              />
-            </div>
-
-            <div>
-              <Label className="text-gray-700 font-semibold">
-                Research Context (Optional)
-              </Label>
-              <Textarea
-                value={researchContext}
-                onChange={(e) => setResearchContext(e.target.value)}
-                className="mt-2 min-h-[100px] border-2 border-gray-300 focus:border-[#00A9CE]"
-                placeholder="Additional context about the research..."
-              />
-            </div>
-
-            <div>
-              <Label className="text-gray-700 font-semibold">Output Language</Label>
-              <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                <SelectTrigger className="mt-2 border-2 border-gray-300">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="th">ไทย (Thai)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              onClick={handleGenerateAnalysis}
-              disabled={generatingAnalysis || !rawData.trim()}
-              className="w-full bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold"
-            >
-              {generatingAnalysis ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Generate Analysis
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
-
-        {/* Step 2: Analysis Result */}
-        {analysisResult && (
-          <Card className="p-6 sm:p-8 bg-white/98 border-2 border-gray-300 mb-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl sm:text-2xl font-black text-gray-900">Analysis Result</h2>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleGenerateImage}
-                  disabled={generatingImage}
-                  variant="outline"
-                  className="border-2 border-blue-300"
-                >
-                  {generatingImage ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-4 h-4 mr-2" />
-                      Generate Illustration
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={() => setShowSaveForm(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save as Content
-                </Button>
-              </div>
-            </div>
-
-            <div className="prose max-w-none">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Comprehensive Analysis</h3>
-              <div className="text-gray-700 whitespace-pre-wrap mb-6">
-                {analysisResult.analysis_text}
+        {/* Two-Panel Layout: Input (Left) & Results (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
+          {/* Left Panel: Input Section */}
+          <Card className="p-4 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
+            <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 md:mb-6 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-[#00A9CE]" />
+              Research Data Input
+            </h2>
+            
+            <div className="space-y-6">
+              <div>
+                <Label className="text-gray-800 font-bold mb-2">
+                  Research Data (Interviews, Observations, Behavioral Data) *
+                </Label>
+                <p className="text-sm text-gray-600 mb-2 font-medium">
+                  Paste your qualitative research data about customer behavior
+                </p>
+                <Textarea
+                  value={rawData}
+                  onChange={(e) => setRawData(e.target.value)}
+                  className="mt-2 min-h-[200px] font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                  placeholder="Paste your qualitative research data here..."
+                />
               </div>
 
-              {analysisResult.key_findings && analysisResult.key_findings.length > 0 && (
-                <>
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">Key Findings</h3>
-                  <ul className="list-disc list-inside space-y-2 mb-6">
-                    {analysisResult.key_findings.map((finding, idx) => (
-                      <li key={idx} className="text-gray-700">{finding}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
+              <div>
+                <Label className="text-gray-800 font-bold mb-2">
+                  Research Context (Optional)
+                </Label>
+                <Textarea
+                  value={researchContext}
+                  onChange={(e) => setResearchContext(e.target.value)}
+                  className="mt-2 min-h-[100px] border-2 border-gray-300 focus:border-[#00A9CE]"
+                  placeholder="Additional context about the research..."
+                />
+              </div>
 
-              {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
-                <>
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">Recommendations</h3>
-                  <ul className="list-disc list-inside space-y-2">
-                    {analysisResult.recommendations.map((rec, idx) => (
-                      <li key={idx} className="text-gray-700">{rec}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
+              <div>
+                <Label className="text-gray-800 font-bold mb-2 block">Output Language</Label>
+                <p className="text-sm text-gray-600 mb-2 font-medium">
+                  Choose the language for analysis output
+                </p>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="outputLanguage"
+                      value="th"
+                      checked={targetLanguage === 'th'}
+                      onChange={(e) => setTargetLanguage(e.target.value)}
+                      className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                    />
+                    <span className="text-gray-700 font-medium">ไทย (Thai)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="outputLanguage"
+                      value="en"
+                      checked={targetLanguage === 'en'}
+                      onChange={(e) => setTargetLanguage(e.target.value)}
+                      className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                    />
+                    <span className="text-gray-700 font-medium">English</span>
+                  </label>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleGenerateAnalysis}
+                disabled={generatingAnalysis || !rawData.trim()}
+                className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
+              >
+                {generatingAnalysis ? (
+                  <>
+                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
+                    <span className="hidden sm:inline">Analyzing Behavior...</span>
+                    <span className="sm:hidden">Analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                    <span className="hidden sm:inline">Generate Analysis</span>
+                    <span className="sm:hidden">Generate</span>
+                  </>
+                )}
+              </Button>
             </div>
           </Card>
-        )}
 
-        {/* Step 3: Generated Image */}
-        {imageUrl && (
-          <Card className="p-6 sm:p-8 bg-white/98 border-2 border-gray-300 mb-6">
-            <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-6">Generated Illustration</h2>
-            <div className="flex justify-center">
-              <img
-                src={imageUrl}
-                alt="Behavior Analysis Illustration"
-                className="max-w-full h-auto rounded-lg shadow-lg"
-              />
+          {/* Right Panel: Results Section */}
+          <Card className="p-4 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3">
+              <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2">
+                <Save className="w-5 h-5 md:w-6 md:h-6 text-[#00A9CE]" />
+                <span className="hidden sm:inline">Analysis Results</span>
+                <span className="sm:hidden">Results</span>
+              </h2>
+              {analysisResult && (
+                <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                  <Button
+                    onClick={handleGenerateImage}
+                    disabled={generatingImage}
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-blue-300 text-blue-700 p-2"
+                  >
+                    {generatingImage ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => setShowSaveForm(true)}
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-green-300 text-green-700 p-2"
+                  >
+                    <Save className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {!analysisResult ? (
+              <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
+                <Sparkles className="w-16 h-16 mb-4 opacity-30" />
+                <p className="text-lg font-medium">Analysis will appear here</p>
+                <p className="text-sm">Fill in the research data and click Generate</p>
+              </div>
+            ) : (
+              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+                {/* Analysis Text */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    📊 Comprehensive Analysis
+                  </h3>
+                  <div className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    {analysisResult.analysis_text}
+                  </div>
+                </div>
+
+                {/* Key Findings */}
+                {analysisResult.key_findings && analysisResult.key_findings.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                      🔍 Key Findings
+                    </h3>
+                    <ul className="space-y-2">
+                      {analysisResult.key_findings.map((finding, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-gray-700 text-sm">
+                          <span className="text-[#00A9CE] font-bold">•</span>
+                          <span>{finding}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                      💡 Recommendations
+                    </h3>
+                    <ul className="space-y-2">
+                      {analysisResult.recommendations.map((rec, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-gray-700 text-sm">
+                          <span className="text-green-600 font-bold">→</span>
+                          <span>{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Generated Image */}
+                {imageUrl && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                      🎨 Generated Illustration
+                    </h3>
+                    <div className="rounded-lg overflow-hidden border-2 border-gray-200">
+                      <img
+                        src={imageUrl}
+                        alt="Behavior Analysis Illustration"
+                        className="w-full h-auto"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
-        )}
+        </div>
 
         {/* Save Form Modal */}
         {showSaveForm && (
