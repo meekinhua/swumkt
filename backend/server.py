@@ -2975,7 +2975,13 @@ def generate_template_from_specs(specs: dict, output_path: str):
         # Apply Normal style (body text)
         style = doc.styles['Normal']
         font = style.font
-        font.name = specs.get('font_name', 'Times New Roman')
+        
+        # Force Times New Roman for academic standards (override LLM suggestions)
+        font_name = specs.get('font_name', 'Times New Roman')
+        if font_name in ['Cambria', 'Calibri', 'Arial']:
+            font_name = 'Times New Roman'  # Override common wrong fonts
+        
+        font.name = font_name
         font.size = Pt(specs.get('font_size', 12))
         
         # Paragraph formatting
