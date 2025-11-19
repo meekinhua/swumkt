@@ -3025,26 +3025,37 @@ Extract ALL formatting specifications as comprehensive JSON."""
         return None
 
 def generate_template_from_specs(specs: dict, output_path: str):
-    """Generate .docx template from formatting specifications"""
+    """Generate comprehensive .docx template from formatting specifications"""
     try:
         doc = Document()
         
-        # Apply Normal style (body text)
-        style = doc.styles['Normal']
-        font = style.font
+        # ============ BODY TEXT STYLE (Normal) ============
+        normal_style = doc.styles['Normal']
+        normal_font = normal_style.font
         
-        # Force Times New Roman for academic standards (override LLM suggestions)
+        # Font settings
         font_name = specs.get('font_name', 'Times New Roman')
         if font_name in ['Cambria', 'Calibri', 'Arial']:
-            font_name = 'Times New Roman'  # Override common wrong fonts
+            font_name = 'Times New Roman'  # Academic standard
         
-        font.name = font_name
-        font.size = Pt(specs.get('font_size', 12))
+        normal_font.name = font_name
+        normal_font.size = Pt(specs.get('font_size', 12))
+        
+        # Try to set font color if specified
+        font_color = specs.get('font_color', '#000000')
+        if font_color and font_color != '#000000':
+            try:
+                color_hex = font_color.lstrip('#')
+                r, g, b = tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
+                normal_font.color.rgb = RGBColor(r, g, b)
+            except:
+                pass
         
         # Paragraph formatting
-        para_format = style.paragraph_format
-        line_spacing_value = specs.get('line_spacing', 2.0)
+        para_format = normal_style.paragraph_format
         
+        # Line spacing
+        line_spacing_value = specs.get('line_spacing', 2.0)
         if line_spacing_value == 1.0:
             para_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
         elif line_spacing_value == 1.5:
@@ -3054,32 +3065,114 @@ def generate_template_from_specs(specs: dict, output_path: str):
         else:
             para_format.line_spacing = line_spacing_value
         
-        # Margins
-        margin_inches = specs.get('margin_inches', 1.0)
+        # Paragraph spacing
+        para_format.space_before = Pt(specs.get('paragraph_spacing_before', 0))
+        para_format.space_after = Pt(specs.get('paragraph_spacing_after', 0))
+        
+        # First line indent
+        first_line = specs.get('first_line_indent', 0.5)
+        if first_line > 0:
+            para_format.first_line_indent = Inches(first_line)
+        
+        # Text alignment
+        alignment_map = {
+            'left': WD_ALIGN_PARAGRAPH.LEFT,
+            'center': WD_ALIGN_PARAGRAPH.CENTER,
+            'right': WD_ALIGN_PARAGRAPH.RIGHT,
+            'justify': WD_ALIGN_PARAGRAPH.JUSTIFY
+        }
+        alignment = specs.get('text_alignment', 'left')
+        if alignment in alignment_map:
+            para_format.alignment = alignment_map[alignment]
+        
+        # ============ MARGINS ============
         sections = doc.sections
         for section in sections:
-            section.top_margin = Inches(margin_inches)
-            section.bottom_margin = Inches(margin_inches)
-            section.left_margin = Inches(margin_inches)
-            section.right_margin = Inches(margin_inches)
+            section.top_margin = Inches(specs.get('margin_top', 1.0))
+            section.bottom_margin = Inches(specs.get('margin_bottom', 1.0))
+            section.left_margin = Inches(specs.get('margin_left', 1.0))
+            section.right_margin = Inches(specs.get('margin_right', 1.0))
+            
+            # Page size and orientation
+            page_size = specs.get('page_size', 'Letter')
+            if page_size == 'A4':
+                section.page_width = Inches(8.27)
+                section.page_height = Inches(11.69)
+            else:  # Letter
+                section.page_width = Inches(8.5)
+                section.page_height = Inches(11)
         
-        # Heading 1 style
-        heading_style = doc.styles['Heading 1']
-        heading_font = heading_style.font
-        heading_font.name = specs.get('font_name', 'Times New Roman')
-        heading_font.size = Pt(specs.get('heading_size', 14))
-        heading_font.bold = specs.get('heading_bold', True)
+        # ============ HEADING 1 STYLE ============
+        heading1_style = doc.styles['Heading 1']
+        h1_font = heading1_style.font
+        h1_font.name = specs.get('heading_font_name', font_name)
+        h1_font.size = Pt(specs.get('heading_font_size', 14))
+        h1_font.bold = specs.get('heading_bold', True)
+        h1_font.italic = specs.get('heading_italic', False)
+        h1_font.underline = specs.get('heading_underline', False)
+        h1_font.all_caps = specs.get('heading_all_caps', False)
         
-        # Add dummy content to make styles work
-        doc.add_paragraph("Sample text")
+        h1_para = heading1_style.paragraph_format
+        h1_para.space_before = Pt(specs.get('heading_spacing_before', 12))
+        h1_para.space_after = Pt(specs.get('heading_spacing_after', 6))
+        
+        h1_alignment = specs.get('heading_alignment', 'center')
+        if h1_alignment in alignment_map:
+            h1_para.alignment = alignment_map[h1_alignment]
+        
+        # ============ HEADING 2 STYLE ============
+        heading2_style = doc.styles['Heading 2']
+        h2_font = heading2_style.font
+        h2_font.name = specs.get('heading_font_name', font_name)
+        h2_font.size = Pt(specs.get('subheading_font_size', 12))
+        h2_font.bold = specs.get('subheading_bold', True)
+        h2_font.italic = specs.get('subheading_italic', False)
+        
+        h2_para = heading2_style.paragraph_format
+        h2_alignment = specs.get('subheading_alignment', 'left')
+        if h2_alignment in alignment_map:
+            h2_para.alignment = alignment_map[h2_alignment]
+        
+        # ============ BLOCK QUOTE STYLE ============
+        try:
+            quote_style = doc.styles['Quote']
+            quote_para = quote_style.paragraph_format
+            quote_para.left_indent = Inches(specs.get('block_quote_indent_left', 0.5))
+            quote_para.right_indent = Inches(specs.get('block_quote_indent_right', 0.5))
+            
+            quote_font = quote_style.font
+            quote_font.size = Pt(specs.get('block_quote_font_size', 12))
+        except:
+            pass  # Quote style might not exist
+        
+        # ============ CAPTION STYLE ============
+        try:
+            caption_style = doc.styles['Caption']
+            cap_font = caption_style.font
+            cap_font.size = Pt(specs.get('caption_font_size', 10))
+            cap_font.italic = specs.get('caption_italic', True)
+            
+            cap_para = caption_style.paragraph_format
+            cap_alignment = specs.get('caption_alignment', 'left')
+            if cap_alignment in alignment_map:
+                cap_para.alignment = alignment_map[cap_alignment]
+        except:
+            pass
+        
+        # Add dummy content to activate styles
+        doc.add_paragraph("Sample body text")
+        doc.add_heading("Sample Heading 1", level=1)
+        doc.add_heading("Sample Heading 2", level=2)
         
         # Save template
         doc.save(output_path)
-        logging.info(f"Template generated: {output_path}")
+        logging.info(f"Comprehensive template generated with {len(specs)} parameters: {output_path}")
         return True
         
     except Exception as e:
         logging.error(f"Error generating template: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str, template_file: str = None):
