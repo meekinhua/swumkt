@@ -739,6 +739,303 @@ const AdminSettings = () => {
                   </div>
                 </div>
               </TabsContent>
+
+              {/* Image Generation Tab */}
+              <TabsContent value="image">
+                <div className="space-y-6">
+                  {/* Model Selection */}
+                  <div>
+                    <Label className="text-lg font-bold text-gray-900 mb-3 block">
+                      Image Generation Model
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      Select the AI model for generating images. This setting applies to all tools (Journey Map, Behavior, Perception).
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      {/* OpenAI Option */}
+                      <div
+                        onClick={() => setImageModel('openai')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          imageModel === 'openai'
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-300 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="imageModel"
+                            value="openai"
+                            checked={imageModel === 'openai'}
+                            onChange={(e) => setImageModel(e.target.value)}
+                            className="mt-1"
+                          />
+                          <div>
+                            <h4 className="font-bold text-gray-900">OpenAI DALL-E</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Model: gpt-image-1
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              High-quality photorealistic images
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Gemini Imagen Option */}
+                      <div
+                        onClick={() => setImageModel('gemini')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          imageModel === 'gemini'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-300 hover:border-green-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="imageModel"
+                            value="gemini"
+                            checked={imageModel === 'gemini'}
+                            onChange={(e) => setImageModel(e.target.value)}
+                            className="mt-1"
+                          />
+                          <div>
+                            <h4 className="font-bold text-gray-900">Gemini Imagen</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Model: imagen-3.0
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Google's image generation
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Nano Banana Option */}
+                      <div
+                        onClick={() => setImageModel('nanobanana')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          imageModel === 'nanobanana'
+                            ? 'border-yellow-500 bg-yellow-50'
+                            : 'border-gray-300 hover:border-yellow-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="imageModel"
+                            value="nanobanana"
+                            checked={imageModel === 'nanobanana'}
+                            onChange={(e) => setImageModel(e.target.value)}
+                            className="mt-1"
+                          />
+                          <div>
+                            <h4 className="font-bold text-gray-900">🍌 Nano Banana</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Model: Gemini 2.5 Flash
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Fast, supports image editing
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleSaveImageModel}
+                      disabled={savingImageModel}
+                      className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold"
+                    >
+                      {savingImageModel ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Model Selection
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Image Prompt */}
+                  <div>
+                    <Label className="text-lg font-bold text-gray-900 mb-3 block">
+                      Image Generation Prompt (Optional)
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      Customize the prompt template for image generation. Leave empty for default.
+                    </p>
+                    <Textarea
+                      value={imagePrompt}
+                      onChange={(e) => setImagePrompt(e.target.value)}
+                      className="min-h-[100px] font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="Enter custom image generation prompt template..."
+                    />
+                    <Button
+                      onClick={handleSaveImagePrompt}
+                      disabled={savingImagePrompt}
+                      className="mt-4 bg-gradient-to-r from-[#007B9A] via-[#00A9CE] to-[#33BCDA] hover:from-[#006685] hover:to-[#00A9CE] text-white font-bold"
+                    >
+                      {savingImagePrompt ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Image Prompt
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Image Generation Playground */}
+                  <div className="border-t-2 border-gray-200 pt-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-yellow-500" />
+                      Test Image Generation
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Try out image generation with the selected model. Current model: <strong>{imageModel === 'nanobanana' ? '🍌 Nano Banana' : imageModel === 'gemini' ? 'Gemini Imagen' : 'OpenAI DALL-E'}</strong>
+                    </p>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Left: Text to Image */}
+                      <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
+                        <h4 className="font-bold text-gray-900 mb-4">📝 Text to Image</h4>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-gray-700 font-semibold mb-2">Image Prompt</Label>
+                            <Textarea
+                              value={testPrompt}
+                              onChange={(e) => setTestPrompt(e.target.value)}
+                              className="min-h-[100px] border-2 border-gray-300"
+                              placeholder="e.g., A minimalist icon of a banana with modern design"
+                            />
+                          </div>
+
+                          <Button
+                            onClick={() => handleTestImageGeneration('generate')}
+                            disabled={generatingTest || !testPrompt.trim()}
+                            className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold"
+                          >
+                            {generatingTest ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                Generate Image
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </Card>
+
+                      {/* Right: Image + Text to Image */}
+                      <Card className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200">
+                        <h4 className="font-bold text-gray-900 mb-4">🖼️ Image + Text to Image</h4>
+                        {imageModel !== 'nanobanana' && (
+                          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg text-sm text-yellow-800">
+                            ⚠️ Image editing only works with Nano Banana model
+                          </div>
+                        )}
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-gray-700 font-semibold mb-2">Base Image</Label>
+                            {!testImagePreview ? (
+                              <label className="cursor-pointer">
+                                <div className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-yellow-400 hover:bg-yellow-50 transition-colors">
+                                  <Upload className="w-5 h-5 text-gray-500" />
+                                  <span className="text-gray-600 font-medium">Upload Image</span>
+                                </div>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleImageUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                            ) : (
+                              <div className="relative">
+                                <img
+                                  src={testImagePreview}
+                                  alt="Base"
+                                  className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
+                                />
+                                <button
+                                  onClick={clearTestImage}
+                                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <Label className="text-gray-700 font-semibold mb-2">Edit Prompt</Label>
+                            <Textarea
+                              value={testPrompt}
+                              onChange={(e) => setTestPrompt(e.target.value)}
+                              className="min-h-[80px] border-2 border-gray-300"
+                              placeholder="e.g., Make it cartoon style with bright colors"
+                            />
+                          </div>
+
+                          <Button
+                            onClick={() => handleTestImageGeneration('edit')}
+                            disabled={generatingTest || !testPrompt.trim() || !testImage || imageModel !== 'nanobanana'}
+                            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold"
+                          >
+                            {generatingTest ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                Edit Image
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Generated Image Result */}
+                    {generatedTestImage && (
+                      <Card className="mt-6 p-6 bg-white border-2 border-green-300">
+                        <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Generated Image
+                        </h4>
+                        <div className="rounded-lg overflow-hidden border-2 border-gray-300">
+                          <img
+                            src={generatedTestImage}
+                            alt="Generated"
+                            className="w-full h-auto"
+                          />
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
           </Card>
 
