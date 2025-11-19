@@ -73,16 +73,6 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
                 {t('nav.content')}
               </Button>
             )}
-            {user && (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/surveys')} 
-                className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Surveys
-              </Button>
-            )}
             {showProfileButton && user && (
               <Button 
                 variant="ghost" 
