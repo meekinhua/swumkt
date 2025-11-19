@@ -2242,31 +2242,30 @@ async def update_behavior_image_prompt(
         logging.error(f"Error updating behavior image prompt: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
 
-@api_router.post("/admin/behavior-image-model")
-async def update_behavior_image_model(
+@api_router.post("/admin/image-model")
+async def update_image_model(
     model_data: dict,
     current_user: User = Depends(get_current_user)
 ):
-    """Update behavior image model setting (admin only)"""
+    """Update image generation model setting (admin only) - applies to all tools"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     try:
-        image_model = model_data.get("image_model", "openai")
+        image_model = model_data.get("image_model", "nanobanana")
         
         # Validate model
-        if image_model not in ["openai", "gemini"]:
-            raise HTTPException(status_code=400, detail="Invalid image model. Must be 'openai' or 'gemini'")
+        if image_model not in ["openai", "nanobanana"]:
+            raise HTTPException(status_code=400, detail="Invalid image model. Must be 'openai' or 'nanobanana'")
         
         settings_doc = {
-            "setting_type": "behavior_image_model",
-            "image_model": image_model,
+            "image_generation_model": image_model,
             "updated_by": current_user.id,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         
         await db.admin_settings.update_one(
-            {"setting_type": "behavior_image_model"},
+            {},
             {"$set": settings_doc},
             upsert=True
         )
