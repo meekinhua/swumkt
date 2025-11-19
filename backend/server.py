@@ -2586,6 +2586,371 @@ async def compress_image(
         logging.error(f"Image compression error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to compress image: {str(e)}")
 
+# ============ CUSTOMER PERCEPTION ANALYSIS ROUTES ============
+class PerceptionQuestionRequest(BaseModel):
+    topic: str
+    perspective: Optional[str] = None
+    target_language: str = "th"
+
+class PerceptionQuestionResponse(BaseModel):
+    questions: List[str]
+
+class PerceptionAnalysisRequest(BaseModel):
+    interview_data: str
+    analysis_context: Optional[str] = None
+    target_language: str = "th"
+
+class PerceptionAnalysisResponse(BaseModel):
+    analysis_text: str
+    key_findings: List[str]
+    recommendations: List[str]
+
+class PerceptionContentCreate(BaseModel):
+    title: str
+    research_type: str
+    sample_size: Optional[str] = None
+    data_source: str
+    collection_method: str
+    research_date: str
+    additional_notes: Optional[str] = None
+    analysis_text: str
+    key_findings: List[str] = Field(default_factory=list)
+    recommendations: List[str] = Field(default_factory=list)
+    interview_data: str
+    analysis_context: Optional[str] = None
+    output_language: str
+    image_url: Optional[str] = None
+    image_base64: Optional[str] = None
+
+def get_default_perception_prompt():
+    """Get default customer perception analysis prompt"""
+    return """You are an expert in customer perception analysis and qualitative research.
+
+Your task is to analyze interview data about customer perceptions, attitudes, and opinions.
+
+Guidelines:
+1. Identify key perception patterns:
+   - Brand perceptions
+   - Product/service perceptions
+   - Value propositions
+   - Emotional responses
+   - Cognitive associations
+
+2. Analyze customer attitudes:
+   - Positive and negative attitudes
+   - Attitude strength and conviction
+   - Barriers to adoption
+   - Motivators and drivers
+
+3. Understanding customer mindset:
+   - Mental models
+   - Expectations vs reality
+   - Past experiences influence
+   - Future intentions
+
+4. Provide actionable insights:
+   - Perception gaps to address
+   - Communication opportunities
+   - Brand positioning recommendations
+   - Experience improvements
+
+5. Output Structure:
+   - Main Analysis (comprehensive perception analysis)
+   - Key Findings (3-5 bullet points)
+   - Recommendations (3-5 actionable items)
+
+Respond in this exact format:
+ANALYSIS:
+[Your comprehensive perception analysis text]
+
+KEY_FINDINGS:
+- [Finding 1]
+- [Finding 2]
+- [Finding 3]
+
+RECOMMENDATIONS:
+- [Recommendation 1]
+- [Recommendation 2]
+- [Recommendation 3]"""
+
+def get_default_perception_question_prompt():
+    """Get default customer perception question generation prompt"""
+    return """You are an expert qualitative researcher specializing in customer perception studies.
+
+Your task is to generate interview questions for understanding customer perceptions and attitudes.
+
+Guidelines:
+1. Create open-ended questions that elicit detailed responses
+2. Use probing questions to understand underlying thoughts
+3. Focus on perceptions, not just behaviors
+4. Include questions about:
+   - Initial impressions
+   - Detailed perceptions of specific aspects
+   - Emotional responses
+   - Comparisons (if relevant)
+   - Future expectations
+   
+5. Structure questions from general to specific
+6. Avoid leading questions
+7. Generate 8-12 questions
+
+Output only the questions as a numbered list, nothing else."""
+
+@api_router.post("/perception/generate-questions", response_model=PerceptionQuestionResponse)
+async def generate_perception_questions(
+    request: PerceptionQuestionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate interview questions for customer perception research"""
+    try:
+        from emergentintegrations import LlmChat
+        
+        # Get admin settings or use default
+        settings = await db.admin_settings.find_one({}) or {}
+        system_prompt = settings.get("perception_question_prompt", get_default_perception_question_prompt())
+        
+        # Build user prompt
+        user_prompt = f"""Research Topic: {request.topic}"""
+        
+        if request.perspective:
+            user_prompt += f"\n\nResearch Perspective/Focus Areas:\n{request.perspective}"
+        
+        user_prompt += f"\n\nGenerate interview questions in {request.target_language} language."
+        
+        # Call LLM
+        llm = LlmChat(system_prompt)
+        response = llm.chat(user_prompt)
+        
+        # Parse questions from response
+        lines = [line.strip() for line in response.split('\n') if line.strip()]
+        questions = []
+        
+        for line in lines:
+            # Remove numbering and extract question
+            if any(line.startswith(f"{i}.") or line.startswith(f"{i})") for i in range(1, 50)):
+                question = line.split('.', 1)[-1].split(')', 1)[-1].strip()
+                if question:
+                    questions.append(question)
+            elif line and not line.endswith(':'):
+                questions.append(line)
+        
+        return PerceptionQuestionResponse(questions=questions[:12])
+        
+    except Exception as e:
+        logging.error(f"Error generating perception questions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
+
+@api_router.post("/perception/generate-analysis", response_model=PerceptionAnalysisResponse)
+async def generate_perception_analysis(
+    request: PerceptionAnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate customer perception analysis from interview data"""
+    try:
+        from emergentintegrations import LlmChat
+        
+        # Get admin settings or use default
+        settings = await db.admin_settings.find_one({}) or {}
+        system_prompt = settings.get("perception_prompt", get_default_perception_prompt())
+        
+        # Build user prompt
+        user_prompt = f"""Interview Data:
+{request.interview_data}"""
+        
+        if request.analysis_context:
+            user_prompt += f"\n\nAdditional Context:\n{request.analysis_context}"
+        
+        user_prompt += f"\n\nProvide analysis in {request.target_language} language."
+        
+        # Call LLM
+        llm = LlmChat(system_prompt)
+        response = llm.chat(user_prompt)
+        
+        # Parse response
+        analysis_text = ""
+        key_findings = []
+        recommendations = []
+        
+        current_section = None
+        
+        for line in response.split('\n'):
+            line = line.strip()
+            
+            if line.startswith('ANALYSIS:'):
+                current_section = 'analysis'
+                continue
+            elif line.startswith('KEY_FINDINGS:'):
+                current_section = 'findings'
+                continue
+            elif line.startswith('RECOMMENDATIONS:'):
+                current_section = 'recommendations'
+                continue
+            
+            if line:
+                if current_section == 'analysis':
+                    analysis_text += line + '\n'
+                elif current_section == 'findings' and line.startswith('-'):
+                    key_findings.append(line[1:].strip())
+                elif current_section == 'recommendations' and line.startswith('-'):
+                    recommendations.append(line[1:].strip())
+        
+        if not analysis_text:
+            analysis_text = response
+        
+        return PerceptionAnalysisResponse(
+            analysis_text=analysis_text.strip(),
+            key_findings=key_findings,
+            recommendations=recommendations
+        )
+        
+    except Exception as e:
+        logging.error(f"Error generating perception analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate analysis: {str(e)}")
+
+@api_router.post("/perception/generate-illustration")
+async def generate_perception_illustration(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate illustration for customer perception analysis"""
+    try:
+        from emergentintegrations import OpenAIImageGeneration, GeminiImageGeneration
+        
+        # Get admin settings
+        settings = await db.admin_settings.find_one({}) or {}
+        image_model = settings.get("image_generation_model", "openai")
+        image_prompt_template = settings.get("image_generation_prompt", "")
+        
+        # Build image generation prompt
+        analysis_text = request.get("analysis_text", "")
+        target_language = request.get("target_language", "en")
+        
+        if image_prompt_template:
+            prompt = f"{image_prompt_template}\n\nAnalysis Context: {analysis_text[:500]}"
+        else:
+            prompt = f"Create a professional business illustration for customer perception analysis. Style: clean, modern infographic showing customer perceptions, attitudes, and opinions. Based on: {analysis_text[:300]}"
+        
+        # Generate image
+        image_url = None
+        
+        try:
+            if image_model == "gemini":
+                gemini = GeminiImageGeneration()
+                image_url = gemini.generate(prompt)
+        except Exception as gemini_error:
+            logging.warning(f"Gemini image generation failed: {str(gemini_error)}, falling back to OpenAI")
+        
+        if not image_url:
+            openai = OpenAIImageGeneration()
+            image_url = openai.generate(prompt)
+        
+        return {"image_url": image_url}
+        
+    except Exception as e:
+        logging.error(f"Error generating perception illustration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
+
+@api_router.post("/perception/save-as-content")
+async def save_perception_as_content(
+    data: PerceptionContentCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Save customer perception analysis as content"""
+    try:
+        # Create content body
+        content_body = f"""## เทคนิคการวิจัย
+Customer Perception Analysis
+
+## ประเภทการวิจัย
+{data.research_type}
+
+## รายละเอียดการวิจัย
+- **ขนาดกลุ่มตัวอย่าง:** {data.sample_size or 'N/A'}
+- **แหล่งข้อมูล:** {data.data_source}
+- **วิธีการเก็บข้อมูล:** {data.collection_method}
+- **วันที่ทำการวิจัย:** {data.research_date}
+
+## การวิเคราะห์การรับรู้
+{data.analysis_text}
+"""
+        
+        # Add key findings
+        if data.key_findings:
+            content_body += "\n\n## ประเด็นสำคัญ\n"
+            for finding in data.key_findings:
+                content_body += f"- {finding}\n"
+        
+        # Add recommendations
+        if data.recommendations:
+            content_body += "\n\n## ข้อเสนอแนะ\n"
+            for rec in data.recommendations:
+                content_body += f"- {rec}\n"
+        
+        # Add optional notes
+        if data.additional_notes:
+            content_body += f"\n\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}"
+        
+        # Handle image attachment
+        attachments = []
+        if data.image_base64:
+            from image_utils import compress_base64_image, get_image_size_kb
+            
+            # Compress image
+            compressed_image = compress_base64_image(data.image_base64, max_size_kb=500)
+            image_size = get_image_size_kb(compressed_image)
+            
+            attachments.append({
+                "id": str(uuid.uuid4()),
+                "filename": "perception_analysis_illustration.jpg",
+                "file_type": "image/jpeg",
+                "file_size_kb": round(image_size, 2),
+                "file_data": compressed_image,
+                "uploaded_at": datetime.now(timezone.utc).isoformat()
+            })
+        
+        # Create content document
+        content_dict = {
+            "id": str(uuid.uuid4()),
+            "title": data.title,
+            "content": content_body,
+            "content_type": "research",
+            "category": "Customer Perception Analysis",
+            "tags": ["customer-perception", "perception-analysis", data.research_type.lower()],
+            "status": "published",
+            "contributors": [{
+                "user_id": current_user.id,
+                "user_name": current_user.full_name,
+                "role": "author"
+            }],
+            "created_by": current_user.id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "views": 0,
+            "attachments": attachments,
+            "perception_metadata": {
+                "research_type": data.research_type,
+                "sample_size": data.sample_size,
+                "data_source": data.data_source,
+                "collection_method": data.collection_method,
+                "research_date": data.research_date,
+                "output_language": data.output_language,
+                "image_url": data.image_url,
+                "key_findings": data.key_findings,
+                "recommendations": data.recommendations
+            }
+        }
+        
+        await db.contents.insert_one(content_dict)
+        
+        return {
+            "message": "Perception analysis shared as content successfully",
+            "content_id": content_dict["id"]
+        }
+        
+    except Exception as e:
+        logging.error(f"Error sharing perception analysis as content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
