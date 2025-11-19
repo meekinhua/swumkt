@@ -208,6 +208,125 @@ const MarketResearch = () => {
                 </Button>
               </Card>
             ))}
+            </div>
+          </div>
+
+          {/* Academic Marketing Tools Section */}
+          <div className="mb-16">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-1 w-12 bg-gradient-to-r from-[#6B46C1] to-[#9333EA] rounded-full"></div>
+              <h2 className="text-2xl font-black text-gray-900">Academic Marketing Tools</h2>
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">สำหรับนักวิชาการ</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Journal Finder Tool */}
+              <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden">
+                {/* Coming Soon Badge */}
+                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-[#E63946] to-[#F25C66] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  กำลังพัฒนา
+                </div>
+                
+                {/* Icon */}
+                <div className="inline-block p-5 rounded-2xl bg-gradient-to-br from-[#6B46C1] via-[#7C3AED] to-[#9333EA] text-white mb-6 shadow-lg">
+                  <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                
+                {/* Title */}
+                <h3 className="text-2xl font-black text-gray-900 mb-3">
+                  Journal Finder
+                </h3>
+                
+                {/* Description */}
+                <p className="text-gray-700 mb-4 font-medium leading-relaxed">
+                  ค้นหาวารสารวิชาการที่เหมาะสมสำหรับการตีพิมพ์งานวิจัยของคุณด้วย AI
+                </p>
+                
+                {/* Features */}
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">Input: หัวข้อวิจัย, Abstract, Keywords</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">แสดง Impact Factor, Quartile (Q1-Q4)</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">ข้อมูล Scopus/ISI, ABDC, AJG indexed</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">AI-powered matching ด้วย Claude</p>
+                  </div>
+                </div>
+                
+                {/* Action Button */}
+                <Button 
+                  disabled
+                  className="w-full bg-gray-300 text-gray-500 cursor-not-allowed font-bold"
+                >
+                  กำลังพัฒนา
+                </Button>
+              </Card>
+
+              {/* Academic Format Editor Tool */}
+              <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden">
+                {/* Coming Soon Badge */}
+                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-[#E63946] to-[#F25C66] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  กำลังพัฒนา
+                </div>
+                
+                {/* Icon */}
+                <div className="inline-block p-5 rounded-2xl bg-gradient-to-br from-[#7C3AED] via-[#8B5CF6] to-[#A78BFA] text-white mb-6 shadow-lg">
+                  <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                
+                {/* Title */}
+                <h3 className="text-2xl font-black text-gray-900 mb-3">
+                  Academic Format Editor
+                </h3>
+                
+                {/* Description */}
+                <p className="text-gray-700 mb-4 font-medium leading-relaxed">
+                  แก้ไขและจัดรูปแบบงานวิจัยให้ตรงตามมาตรฐานวารสารอัตโนมัติด้วย AI
+                </p>
+                
+                {/* Features */}
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">รองรับ APA, MLA, Chicago, Harvard, IEEE</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">แก้ Citations, References, Headings</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">จัด Tables, Figures, Formatting</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700 font-medium">Copy-paste Author Guidelines และแก้ไขอัตโนมัติ</p>
+                  </div>
+                </div>
+                
+                {/* Action Button */}
+                <Button 
+                  disabled
+                  className="w-full bg-gray-300 text-gray-500 cursor-not-allowed font-bold"
+                >
+                  กำลังพัฒนา
+                </Button>
+              </Card>
+            </div>
           </div>
 
           {/* Info Section */}
