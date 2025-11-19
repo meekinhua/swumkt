@@ -348,6 +348,70 @@ const ContentEditor = () => {
                 )}
               </div>
 
+              {/* File Attachments */}
+              <div>
+                <Label className="text-gray-800 font-bold mb-2">ไฟล์แนบ</Label>
+                <div className="mt-2">
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#00A9CE] hover:bg-[#00A9CE]/5 transition-colors">
+                      {uploadingFile ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-[#00A9CE] border-t-transparent rounded-full animate-spin"></div>
+                          <span className="text-gray-600 font-medium">กำลังอัปโหลด...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5 text-gray-500" />
+                          <span className="text-gray-600 font-medium">คลิกเพื่ออัปโหลดไฟล์</span>
+                          <span className="text-gray-400 text-sm">(สูงสุด 5MB)</span>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      onChange={handleFileUpload}
+                      disabled={uploadingFile}
+                      className="hidden"
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                    />
+                  </label>
+
+                  {formData.attachments.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm text-gray-600 font-medium">ไฟล์ที่แนบ:</p>
+                      {formData.attachments.map((attachment) => (
+                        <div
+                          key={attachment.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <div className="flex items-center gap-3">
+                            {attachment.file_type.startsWith('image/') ? (
+                              <ImageIcon className="w-5 h-5 text-blue-500" />
+                            ) : (
+                              <Upload className="w-5 h-5 text-gray-500" />
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{attachment.filename}</p>
+                              <p className="text-xs text-gray-500">{attachment.file_size_kb} KB</p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveAttachment(attachment.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Status */}
               <div>
                 <Label htmlFor="status" className="text-gray-800 font-bold mb-2">สถานะ *</Label>
