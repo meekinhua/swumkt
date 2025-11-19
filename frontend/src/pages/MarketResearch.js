@@ -276,11 +276,14 @@ const MarketResearch = () => {
               </Card>
 
               {/* Academic Format Editor Tool */}
-              <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden">
-                {/* Coming Soon Badge */}
-                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-[#E63946] to-[#F25C66] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  กำลังพัฒนา
+              <Card 
+                onClick={() => navigate('/market-research/academic-format-editor')}
+                className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden"
+              >
+                {/* Active Badge */}
+                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-[#00A9CE] to-[#00BCD4] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  พร้อมใช้งาน
                 </div>
                 
                 {/* Icon */}
@@ -316,16 +319,15 @@ const MarketResearch = () => {
                   </div>
                   <div className="flex items-start gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
-                    <p className="text-sm text-gray-700 font-medium">Copy-paste Author Guidelines และแก้ไขอัตโนมัติ</p>
+                    <p className="text-sm text-gray-700 font-medium">AI หา Author Guidelines จากชื่อวารสาร</p>
                   </div>
                 </div>
                 
                 {/* Action Button */}
                 <Button 
-                  disabled
-                  className="w-full bg-gray-300 text-gray-500 cursor-not-allowed font-bold"
+                  className="w-full bg-gradient-to-r from-[#7C3AED] via-[#8B5CF6] to-[#A78BFA] hover:from-[#6B35D1] hover:to-[#9380E6] text-white font-bold"
                 >
-                  กำลังพัฒนา
+                  เริ่มใช้งาน
                 </Button>
               </Card>
             </div>
