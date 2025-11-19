@@ -279,6 +279,7 @@ class Content(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     views: int = 0
     journey_map_metadata: Optional[dict] = None
+    attachments: Optional[List[dict]] = Field(default_factory=list, description="File attachments")
 
 class Comment(BaseModel):
     model_config = ConfigDict(extra="ignore")
