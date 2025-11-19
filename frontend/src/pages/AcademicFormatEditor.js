@@ -349,9 +349,10 @@ const AcademicFormatEditor = () => {
                   disabled={
                     formatting || 
                     (inputMode === 'file' && !uploadedFile) ||
-                    (inputMode === 'text' && !formData.originalText.trim())
+                    (inputMode === 'text' && !formData.originalText.trim()) ||
+                    (styleSelectionMode === 'auto' && !formData.journalName.trim())
                   }
-                  className="w-full h-12 bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold shadow-xl"
+                  className="w-full h-14 bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold shadow-xl text-lg"
                 >
                   {formatting ? (
                     <>
