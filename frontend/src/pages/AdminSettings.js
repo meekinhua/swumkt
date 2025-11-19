@@ -28,6 +28,11 @@ const AdminSettings = () => {
   const [behaviorMetadata, setBehaviorMetadata] = useState(null);
   const [savingBehavior, setSavingBehavior] = useState(false);
   
+  // Behavior Image Model
+  const [imageModel, setImageModel] = useState('openai');
+  const [imageModelMetadata, setImageModelMetadata] = useState(null);
+  const [savingImageModel, setSavingImageModel] = useState(false);
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
