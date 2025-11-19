@@ -4084,6 +4084,15 @@ async def format_academic_text(
         if not os.path.exists(csl_file):
             raise HTTPException(status_code=500, detail=f"CSL file not found for {format_style}")
         
+        # Check for custom template (journal-specific)
+        template_file = None
+        if request.journal_name:
+            safe_name = re.sub(r'[^\w\s-]', '', request.journal_name.lower()).replace(' ', '_')
+            custom_template = ROOT_DIR / 'templates' / 'custom' / f'{safe_name}_template.docx'
+            if os.path.exists(custom_template):
+                template_file = str(custom_template)
+                logging.info(f"Using custom template for {request.journal_name}: {template_file}")
+        
         # Handle file input (.docx)
         if request.file_base64:
             try:
