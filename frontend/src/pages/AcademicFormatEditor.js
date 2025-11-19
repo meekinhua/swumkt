@@ -258,9 +258,24 @@ const AcademicFormatEditor = () => {
               >
                 <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition-all">
                   {uploadedFileName ? (
-                    <div className="flex items-center justify-center gap-2 text-blue-700">
-                      <CheckCircle className="w-6 h-6" />
-                      <span className="font-semibold">{uploadedFileName}</span>
+                    <div>
+                      <div className="flex items-center justify-center gap-2 text-blue-700 mb-3">
+                        <CheckCircle className="w-6 h-6" />
+                        <span className="font-semibold">{uploadedFileName}</span>
+                      </div>
+                      {uploadedFileInfo && (
+                        <div className="bg-blue-50 rounded-lg p-4 text-left">
+                          <p className="text-xs font-bold text-blue-800 mb-2">📊 ข้อมูลไฟล์:</p>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                            <div>📝 <span className="font-semibold">{uploadedFileInfo.word_count.toLocaleString()}</span> คำ</div>
+                            <div>📄 <span className="font-semibold">{uploadedFileInfo.paragraphs}</span> paragraphs</div>
+                            <div>🔤 <span className="font-semibold">{uploadedFileInfo.headings_count}</span> headings (H1:{uploadedFileInfo.h1_count}, H2:{uploadedFileInfo.h2_count}, H3:{uploadedFileInfo.h3_count})</div>
+                            <div>📊 <span className="font-semibold">{uploadedFileInfo.tables_count}</span> tables</div>
+                            <div>📚 ~<span className="font-semibold">{uploadedFileInfo.estimated_citations}</span> citations</div>
+                            <div>💾 <span className="font-semibold">{uploadedFileInfo.file_size_kb}</span> KB</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-gray-600">
