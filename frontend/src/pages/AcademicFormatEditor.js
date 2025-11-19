@@ -355,8 +355,8 @@ const AcademicFormatEditor = () => {
             </Card>
             )}
 
-            {/* Formatted Text */}
-            <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
+            {/* Formatted Text - Full width in file mode, half width in text mode */}
+            <Card className={`p-6 bg-white/98 border-2 border-gray-300 shadow-xl ${inputMode === 'file' ? 'lg:col-span-2' : ''}`}>
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 ข้อความที่แก้ไขแล้ว
