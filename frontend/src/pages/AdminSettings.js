@@ -175,7 +175,7 @@ const AdminSettings = () => {
     setSavingImageModel(true);
     try {
       await axios.post(
-        `${API}/admin/behavior-image-model`,
+        `${API}/admin/image-model`,
         {
           image_model: imageModel
         },
@@ -183,7 +183,8 @@ const AdminSettings = () => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      toast.success(`Image model updated to ${imageModel.toUpperCase()} successfully`);
+      const modelName = imageModel === 'nanobanana' ? 'Nano Banana' : 'OpenAI';
+      toast.success(`Image model updated to ${modelName} successfully`);
       fetchAllSettings();
     } catch (error) {
       console.error('Error saving image model:', error);
