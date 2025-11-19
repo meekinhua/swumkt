@@ -132,33 +132,36 @@ const SurveyListPage = () => {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-black text-gray-900 mb-2">Survey Management</h1>
-            <p className="text-gray-600 font-medium">Create, manage, and analyze your surveys</p>
+        <div className="mb-8">
+          <div className="mb-4">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 mb-2">Survey Management</h1>
+            <p className="text-sm sm:text-base text-gray-600 font-medium">Create, manage, and analyze your surveys</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => setShowAIGeneratorModal(true)}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-xl"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-xl text-sm sm:text-base flex-1 sm:flex-none"
             >
-              <Sparkles className="w-5 h-5 mr-2" />
-              AI Generate
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span className="hidden sm:inline">AI Generate</span>
+              <span className="sm:hidden">AI</span>
             </Button>
             <Button
               onClick={() => setShowTemplateModal(true)}
               variant="outline"
-              className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 text-blue-700 font-bold"
+              className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 text-blue-700 font-bold text-sm sm:text-base flex-1 sm:flex-none"
             >
-              <BookTemplate className="w-5 h-5 mr-2" />
-              Use Template
+              <BookTemplate className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span className="hidden sm:inline">Use Template</span>
+              <span className="sm:hidden">Template</span>
             </Button>
             <Button
               onClick={() => navigate('/surveys/create')}
-              className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl"
+              className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-sm sm:text-base flex-1 sm:flex-none"
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Create Survey
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span className="hidden sm:inline">Create Survey</span>
+              <span className="sm:hidden">Create</span>
             </Button>
           </div>
         </div>
