@@ -4309,9 +4309,62 @@ async def analyze_uploaded_file(
         word_count = sum(len(p.text.split()) for p in doc.paragraphs)
         tables_count = len(doc.tables)
         
-        # Estimate citations
+        # Estimate citations and detect style
         full_text = " ".join([p.text for p in doc.paragraphs])
         estimated_citations = full_text.count('(') + full_text.count('[')
+        
+        # Detect citation style from content
+        detected_citation_style = None
+        citation_confidence = None
+        
+        import re
+        
+        # Patterns for different citation styles
+        apa_pattern = r'\([A-Z][a-z]+(?:,?\s*&?\s*[A-Z][a-z]+)*,?\s*\d{4}\)'  # (Smith, 2023) or (Smith & Jones, 2023)
+        ieee_pattern = r'\[\d+\]'  # [1], [2]
+        vancouver_pattern = r'\(\d+\)'  # (1), (2)
+        chicago_author_date = r'\([A-Z][a-z]+\s+\d{4}\)'  # (Smith 2023)
+        
+        # Count matches
+        apa_matches = len(re.findall(apa_pattern, full_text))
+        ieee_matches = len(re.findall(ieee_pattern, full_text))
+        vancouver_matches = len(re.findall(vancouver_pattern, full_text))
+        chicago_matches = len(re.findall(chicago_author_date, full_text))
+        
+        # Check for reference section headers
+        has_references = any('reference' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
+        has_works_cited = any('works cited' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
+        has_bibliography = any('bibliography' in p.text.lower() for p in doc.paragraphs if p.style.name.startswith('Heading'))
+        
+        # Determine citation style
+        total_matches = apa_matches + ieee_matches + vancouver_matches + chicago_matches
+        
+        if total_matches > 0:
+            max_matches = max(apa_matches, ieee_matches, vancouver_matches, chicago_matches)
+            
+            if apa_matches == max_matches and apa_matches > 0:
+                detected_citation_style = "APA Style"
+                if has_references:
+                    citation_confidence = "High"
+                else:
+                    citation_confidence = "Medium"
+            elif ieee_matches == max_matches and ieee_matches > 0:
+                detected_citation_style = "IEEE Style (Numbered)"
+                citation_confidence = "High" if ieee_matches > 2 else "Medium"
+            elif vancouver_matches == max_matches and vancouver_matches > 0:
+                detected_citation_style = "Vancouver Style (Numbered)"
+                citation_confidence = "Medium"
+            elif chicago_matches == max_matches and chicago_matches > 0:
+                detected_citation_style = "Chicago Style (Author-Date)"
+                citation_confidence = "Medium"
+            
+            # Additional check for MLA
+            if has_works_cited:
+                detected_citation_style = "MLA Style"
+                citation_confidence = "High"
+            
+            logging.info(f"Citation style detected: {detected_citation_style} (confidence: {citation_confidence})")
+            logging.info(f"Matches - APA: {apa_matches}, IEEE: {ieee_matches}, Vancouver: {vancouver_matches}, Chicago: {chicago_matches}")
         
         # Detect document formatting
         detected_font = None
