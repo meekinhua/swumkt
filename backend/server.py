@@ -4320,15 +4320,19 @@ async def analyze_uploaded_file(
         import re
         
         # Patterns for different citation styles
-        apa_pattern = r'\([A-Z][a-z]+(?:,?\s*&?\s*[A-Z][a-z]+)*,?\s*\d{4}\)'  # (Smith, 2023) or (Smith & Jones, 2023)
+        apa_pattern = r'\([A-Z][a-z]+(?:\s*&\s*[A-Z][a-z]+)?(?:\s+et\s+al\.)?[,\s]+\d{4}\)'  # (Smith, 2023) or (Smith & Jones, 2023) or (Smith et al., 2023)
         ieee_pattern = r'\[\d+\]'  # [1], [2]
-        vancouver_pattern = r'\(\d+\)'  # (1), (2)
+        vancouver_pure_number = r'\((\d+)\)'  # (1), (2) - but need to exclude year patterns
         chicago_author_date = r'\([A-Z][a-z]+\s+\d{4}\)'  # (Smith 2023)
         
         # Count matches
         apa_matches = len(re.findall(apa_pattern, full_text))
         ieee_matches = len(re.findall(ieee_pattern, full_text))
-        vancouver_matches = len(re.findall(vancouver_pattern, full_text))
+        
+        # Vancouver: only single/double digit numbers in parentheses, not years
+        vancouver_candidates = re.findall(vancouver_pure_number, full_text)
+        vancouver_matches = len([n for n in vancouver_candidates if int(n) < 100])  # Exclude year-like numbers
+        
         chicago_matches = len(re.findall(chicago_author_date, full_text))
         
         # Check for reference section headers
