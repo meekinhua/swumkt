@@ -202,30 +202,94 @@ const AdminSettings = () => {
                     <Button
                       onClick={handleSaveJourney}
                       disabled={savingJourney || !journeyPrompt.trim()}
-                  className="flex-1 h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-lg"
-                >
-                  {saving ? (
-                    <>
-                      <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5 mr-2" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-                
-                <Button
-                  onClick={() => navigate('/market-research/customer-journey')}
-                  variant="outline"
-                  className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
-                >
-                  Test in Journey Tool
-                </Button>
-              </div>
-            </div>
+                      className="flex-1 h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-lg"
+                    >
+                      {savingJourney ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => navigate('/market-research/customer-journey')}
+                      variant="outline"
+                      className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
+                    >
+                      Test in Journey Tool
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Behavior Analysis Prompt Tab */}
+              <TabsContent value="behavior">
+                {behaviorMetadata && behaviorMetadata.updated_at && (
+                  <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm text-gray-700 font-semibold">
+                      <strong>Last Updated:</strong> {new Date(behaviorMetadata.updated_at).toLocaleString()} by {behaviorMetadata.updated_by}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-6">
+                  <div>
+                    <Label htmlFor="behavior-prompt" className="text-gray-800 font-bold mb-2 text-lg">
+                      System Prompt for Behavior Analysis
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      This prompt will be used by the AI to analyze customer behavior patterns from qualitative research data.
+                      Include guidelines for identifying behavioral patterns, motivations, and actionable recommendations.
+                    </p>
+                    <Textarea
+                      id="behavior-prompt"
+                      value={behaviorPrompt}
+                      onChange={(e) => setBehaviorPrompt(e.target.value)}
+                      rows={20}
+                      className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="Enter the system prompt for behavior analysis..."
+                    />
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      💡 Tip: Include instructions for identifying purchase behaviors, usage patterns, decision-making processes, and psychological factors.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={handleSaveBehavior}
+                      disabled={savingBehavior || !behaviorPrompt.trim()}
+                      className="flex-1 h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-lg"
+                    >
+                      {savingBehavior ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => navigate('/market-research/customer-behavior')}
+                      variant="outline"
+                      className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE] hover:text-white font-bold"
+                    >
+                      Test in Behavior Tool
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </Card>
 
           {/* Info Card */}
