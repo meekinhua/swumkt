@@ -2830,10 +2830,17 @@ class FormatChange(BaseModel):
     formatted: str
     reason: str
 
+class SectionProgress(BaseModel):
+    section_name: str
+    status: str  # processing, completed, error
+    formatted_text: Optional[str] = None
+    changes: List[FormatChange] = []
+
 class FormatEditorResponse(BaseModel):
     formatted_text: str
     changes: List[FormatChange]
     summary: str
+    sections_processed: List[str] = []
 
 # ============ Journal Database Loaders ============
 def load_abdc_database():
