@@ -1,90 +1,165 @@
-<analysis>
-The user's primary language is Thai. The next agent must respond in Thai.
+<analysis>**original_problem_statement:**
+The user's goal is to build a suite of marketing and academic research tools. The project started with a Content Attachment feature and has since expanded to include several new, complex tools:
 
-The trajectory details the implementation of a multi-language system and the creation of a new Market Research Tools section for the SWUMKT web application.
+1.  **Customer Perception Analysis:** A new tool with two qualitative sub-tools: an Interview Question Generator and an Interview Analysis tool. The basic structure exists but the core logic is not implemented.
+2.  **Academic Marketing Tools:** A new suite of tools.
+    *   **Journal Finder (Completed):** An LLM-powered tool that takes a topic/abstract to suggest academic journals, and also allows browsing/filtering a database of journals (ABDC, AJG).
+    *   **Academic Format Corrector (Completed):** A tool to reformat academic papers. It uses an LLM to analyze a journal's author guidelines (font, spacing, margins, citation style) and dynamically creates a  template. It then uses the  library to apply this template and a corresponding CSL file to format an uploaded  or pasted text.
+3.  **UI/UX Refinements:** Ongoing improvements based on user feedback, such as clarifying workflows and adding more options to dropdowns.
+4.  **Dashboard Fix:** A pending bug fix for a card on the main dashboard showing an incorrect coming soon status.
 
-The process began with a user request to add multi-language support. The AI engineer successfully integrated  and , focusing on Thai and English translations for core pages like Landing, Login, and Register. This involved creating a  component, translation files, and refactoring components to use the  hook. A bug where the login state was lost upon returning to the landing page was identified and fixed by correctly using an  to render conditional navigation.
+**User's preferred language**: Thai
 
-Subsequently, the user requested a Market Research Tools section. A placeholder UI was created for seven different tools. Development then focused on building the Customer Journey Map tool. A backend endpoint was created using  to call an LLM, which processes raw user text input and generates a Mermaid.js diagram. The frontend was built to display this diagram interactively.
+**what currently exists?**
+The application is a functional market research PWA.
+-   The Journal Finder tool is complete. It features two tabs: an AI Search that uses Claude to recommend journals based on user input, and a Browse Database tab that allows users to search and filter journals from pre-loaded ABDC and AJG lists. The results display is consistent across both tabs.
+-   The Academic Format Corrector tool is complete. It uses a sophisticated hybrid approach:
+    -   An LLM fetches a journal's author guidelines and extracts key formatting specs (font, size, spacing, citation style).
+    -   A Python script dynamically generates a  reference template based on these specs.
+    -   The  library handles the core document conversion, applying the generated template and the correct citation style (from a library of CSL files).
+    -   The UI supports both  file uploads and direct text input, with a refined workflow to guide the user.
+-   Admin settings have been expanded to support the new tools.
+-   The initial Content Attachment feature, image generation admin page, and LLM migration to Claude Sonnet 4 are all stable and complete from the previous session.
 
-Several iterative refinements followed based on user feedback:
-- An admin page was created to manage the LLM prompt.
-- A bug-inducing  library was replaced with a custom CSS solution for diagram interaction (pan, zoom).
-- Features like a fullscreen button and responsive design for mobile were added.
-- A critical backend  that broke authentication was located and fixed.
+**Last working item**:
+-   **Last item agent was working:** The agent was implementing a user request to make the Academic Format Editor more transparent. The goal is to display the specific formatting parameters (e.g., Font: Times New Roman, Size: 12pt, Style: Emerald) that the LLM extracts from the journal's guidelines, so the user can see what rules are being applied.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Frontend screenshot tool
+-   **User Testing Done:** N
 
-The most recent task involves making the AI-generated journey map output respect the user's selected language and translating the tool's interface.
-</analysis>
+**All Pending/In progress Issue list**:
+-   **Issue 1: Display Extracted Guideline Parameters (P0)**
+    -   **Description:** The user wants to see the specific formatting parameters (font, size, spacing, citation style, etc.) that the LLM extracts from the author guidelines before the final document formatting is applied. This adds transparency to the Academic Format Corrector tool.
+    -   **Attempted fixes:** The agent has already modified the backend. The  endpoint now returns the extracted specs, and the response model has been updated.
+    -   **Next debug checklist:**
+        1.  Modify .
+        2.  In the  function, store the new  from the API response in a state variable.
+        3.  Render these specs in a new UI component (e.g., a summary card or list) that appears after the guidelines have been successfully fetched.
+    -   **Why fix this issue and what will be achieved with the fix?** This will improve user trust and provide valuable feedback on what formatting rules the system is about to apply, allowing the user to verify the AI's understanding.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
 
-<product_requirements>
-The project is to build SWUMKT, a comprehensive web portal for the Srinakharinwirot University (SWU) Marketing department. The application is a Progressive Web App (PWA) with a React frontend and a FastAPI backend.
+-   **Issue 2: Incorrect Dashboard Card Status (P1)**
+    -   **Description:** From the previous fork: The Market Research card on the Dashboard page incorrectly shows a coming soon or developing status. This was misunderstood by the previous agent.
+    -   **Attempted fixes:** None.
+    -   **Next debug checklist:**
+        1.  Examine .
+        2.  Locate the  component for Market Research Tools.
+        3.  Update its properties (e.g., , , ) to reflect that it is an active feature linking to .
+    -   **Why fix this issue and what will be achieved with the fix?** To correct the UI and provide users with accurate information and access from the dashboard.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend (screenshot tool)
+    -   **Blocked on other issue:** None
 
-**Core Features Implemented & In-Progress:**
-1.  **Authentication:** A JWT-based system for user login and registration is functional. An auth bug causing session loss was fixed. User roles exist, with an 'admin' role set for .
-2.  **Internationalization (i18n):** The app supports multi-language functionality, currently implemented for Thai and English across primary pages (Landing, Login, Register, Dashboard, Content). A language switcher component is present site-wide.
-3.  **Market Research Tools:** A new section has been created. It currently features placeholder UIs for seven tools.
-    - **Customer Journey Map Tool:** This is the first functional tool. It allows users to input qualitative data, which is processed by a backend LLM to generate an interactive (zoom/pan/fullscreen) Mermaid.js journey map diagram and a text summary.
-    - **Admin Settings:** A dedicated page allows administrators to customize the system prompt used by the Journey Map LLM.
+**In progress Task List**:
+-   **Task 1: Complete UI for Displaying Extracted Parameters (P0)**
+    -   **Where to resume:** . Implement the frontend component to display the  received from the backend.
+    -   **What will be achieved with this?** This will complete the user's latest request for the Academic Format Editor, making it fully functional and transparent.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on something:** None
 
-**Pending Features:**
-- Full implementation of the other six market research tools.
-- A feature to translate user-generated dynamic content (e.g., research articles).
-</product_requirements>
+**Upcoming and Future Tasks**
+-   **P1: Implement Customer Perception Analysis - Phase 1 (Qualitative):** Build the core functionality for the two sub-tools (Interview Question Generator, Interview Analysis) in  and connect them to the existing backend APIs.
+-   **P2: Implement Customer Behavior Analysis - Phase 2 (Quantitative):** Build the functionality for the disabled Quantitative tab.
+-   **P3: Implement Customer Perception Analysis - Phase 2 (Quantitative):** Build the functionality for the disabled Quantitative tab.
+-   **P4: Survey Analytics & Dashboard:** Implement visualization and analysis for the Survey Builder.
+-   **P5: Export Functionality:** Implement exporting for survey results.
 
-<key_technical_concepts>
-- **Frameworks**: React (Frontend), FastAPI (Backend).
-- **Internationalization**:  and  for UI translation.
-- **AI/LLM**:  library for backend LLM calls to generate Mermaid code.
-- **Diagramming & Interaction**:  for rendering diagrams. Custom CSS  and  with JavaScript event listeners for interactive pan, zoom, and fullscreen functionality.
-- **Database**: MongoDB for storing user data and application settings (like the admin-defined LLM prompt).
-- **Styling**: Tailwind CSS for responsive design and UI components.
-</key_technical_concepts>
+**Completed work in this session**
+-   **Feature: Journal Finder Tool:**
+    -   Created a backend API () that uses Claude to suggest journals.
+    -   Created a second backend API () to search and filter local journal data (, ).
+    -   Built a complete frontend UI in  with two tabs for AI Search and Browse Database.
+    -   User tested and confirmed it is working as expected.
+-   **Feature: Academic Format Corrector Tool:**
+    -   Iteratively developed the tool, pivoting from a pure-LLM approach to a more robust hybrid  model.
+    -   Implemented an API () that uses an LLM to find a journal's author guidelines and extract formatting specs (font, size, spacing, margins, citation style).
+    -   Implemented a Python script to dynamically generate a  reference template based on the extracted specs.
+    -   Implemented the main formatting API () that uses  to apply the generated template and the correct CSL file for citations.
+    -   Built a comprehensive frontend UI () that supports file uploads () and text input, with a refined UX for selecting formatting modes.
+    -   Expanded the supported citation styles by downloading more CSL files and updating the backend/frontend.
+    -   Fixed bugs related to incorrect style detection and template generation.
+-   **Enhancement: Admin Settings:** Added a new tab in Admin Settings to select the LLM model for the Format Editor's guideline analysis.
+-   **Refactoring:** Removed significant duplicated code in  related to the Journal Finder.
 
-<code_architecture>
-The application uses a monorepo structure with distinct  and  directories.
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Incorrect Dashboard Card for Market Research**
+    -   **Debug checklist:** See All Pending/In progress Issue list.
+    -   **Why to solve this issue and what will be achieved with this?** The dashboard is the main entry point and should accurately reflect the status of available tools.
+    -   **Should Test frontend/backend/both after fix:** Frontend
+    -   **Is recurring issue?** N
+
+**Known issue recurrence from previous fork**
+-   None.
+
+**Code Architecture**
 
 
+**Key Technical Concepts**
+-   **Frameworks:** React, FastAPI
+-   **Database:** MongoDB
+-   **AI/LLM (Text):**  with  is used for analysis and generation tasks.
+-   **Document Formatting:** A hybrid approach using an LLM for guideline analysis and  (with  and ) for document conversion. CSL files are used for citation styling, and dynamically generated  files serve as reference templates for fonts, spacing, and margins.
+-   **File Handling:** The backend handles  and  for journal data, and  for document formatting (both input and output).
 
-- ****
-    - **Importance**: The single source of all API logic.
-    - **Summary of Changes**: Heavily modified to include new endpoints:  for dynamic content translation,  for CRUD operations on the LLM prompt, and  to process user data via an LLM and return Mermaid code. A critical  related to an unterminated string was fixed to restore authentication functionality.
+**key DB schema**
+-   **AdminSettings:**
+    -   : New key to store the selected LLM for the Academic Format Editor's guideline analysis.
 
-- ****
-    - **Importance**: Initializes and configures the  internationalization framework, defining supported languages and backend settings.
-    - **Summary of Changes**: Created from scratch to enable multi-language support.
+**changes in tech stack**
+-   New Python libraries installed and used: , , , .
 
-- ****
-    - **Importance**: These files store the key-value pairs for all static UI text in English and Thai.
-    - **Summary of Changes**: Created and continuously updated to add translations for the Landing, Login, Register, Dashboard, and Market Research pages.
+**All files**
+*   **/app/backend/server.py**: Heavily modified. Added multiple APIs for Journal Finder and Academic Format Editor. Includes logic for reading data files, running Pandoc, generating docx templates, and interacting with the LLM.
+*   **/app/frontend/src/pages/JournalFinder.js**: New file, created from scratch. Implements the full UI with tabs for AI search and database browsing.
+*   **/app/frontend/src/pages/AcademicFormatEditor.js**: New file, created from scratch. Implements a complex UI for file/text input and managing the formatting process.
+*   **/app/frontend/src/pages/AdminSettings.js**: Modified to add a new Format Editor tab for selecting the LLM model.
+*   **/app/frontend/src/App.js**: Modified to add routes for  and .
+*   **/app/frontend/src/pages/MarketResearch.js**: Modified to activate the cards for the two new academic tools.
+*   New data/template directories created under .
 
-- ****
-    - **Importance**: The main UI for the first functional market research tool. It handles user input, API calls to the journey map generator, and renders the interactive Mermaid diagram.
-    - **Summary of Changes**: Created from scratch. It initially used the  library, which was removed due to bugs (). It now uses a custom implementation with CSS transforms for pan/zoom and the Fullscreen API. It has been refactored to add a fullscreen button, swap UI element positions, and is currently being updated for mobile responsiveness and i18n.
+**key api endpoints**
+-   : New endpoint for AI-powered journal search.
+-   : New endpoint for browsing/filtering journal database.
+-   : New endpoint to find guidelines and generate a formatting template.
+-   : New endpoint that uses Pandoc to format a document.
+-   : New endpoints to manage the Format Editor's LLM setting.
 
-- ****
-    - **Importance**: A new protected route for administrators to manage application settings.
-    - **Summary of Changes**: Created to allow admins to view and update the system prompt for the Customer Journey Map tool via API calls to the backend.
+**Critical Info for New Agent**
+-   **User's Language is Thai:** All communication must be in Thai.
+-   **Hybrid Formatting Model:** The Academic Format Corrector's architecture is critical. The LLM is **only** for analyzing guidelines and generating a template.  does the actual document formatting. Do not try to use the LLM for the final conversion as it is less reliable and was a rejected approach.
+-   **Iterative User Feedback:** The user is highly engaged and provides specific feedback. Be prepared to make small, iterative changes to UX/UI and functionality.
+-   **Dashboard Bug:** An old, unresolved bug from the previous session is the incorrect status of the Market Research card on the dashboard. This should be addressed.
 
-- ****
-    - **Importance**: The main entry point for visitors.
-    - **Summary of Changes**: Fixed to use the  hook, enabling it to display conditional navigation links (e.g., Dashboard/Profile for logged-in users vs. Login/Register for guests), resolving a major UX bug.
-</code_architecture>
+**documents created in this job**
+-   None.
 
-<pending_tasks>
-- Complete the internationalization (translation) of the  and  components.
-- Implement the functionality for the remaining six placeholder market research tools.
-- Implement Phase 2: Quantitative Validation for the Customer Journey Map tool.
-- Implement caching for dynamic content translations to reduce redundant API calls.
-</pending_tasks>
+**Last 5 User Messages and any pending user messages**
+1.  **User:** Asked to use the LLM to create a  template for font/spacing based on journal guidelines. **Status: Completed**.
+2.  **User:** Reported that the UI for choosing a format style was confusing. **Status: Completed** (Agent redesigned the UI with clear radio buttons).
+3.  **User:** Asked to add all supported citation styles to the dropdown. **Status: Completed**.
+4.  **User:** Reported that the formatting output was incorrect (wrong citation style, font, etc.) for a specific journal. **Status: Completed** (Agent debugged the CSL detection, template generation, and LLM prompts).
+5.  **User:** Asked the tool to report which parameters (font, size, style) it detected from the guidelines for transparency. **Status: In Progress**.
 
-<current_work>
-The work immediately preceding this summary was focused on responding to two user requests for the **** page:
-1.  **Translate the static UI:** Make all interface elements on the page (labels, buttons, placeholders) support the Thai/English language switching.
-2.  **Localize AI Output:** Ensure the AI-generated output (both the Mermaid diagram content and the text summary) is in the same language that the user has selected for the UI.
+**Project Health Check:**
+-   **Working:** Journal Finder, Academic Format Editor (core logic), Admin Settings, Content Management.
+-   **In Progress:** The UI for the Academic Format Editor is being updated to display the formatting parameters extracted by the LLM.
+-   **Broken:** The Market Research card on the  page may still be displaying an incorrect status.
 
-The last action performed by the previous engineer was starting on the first request. Specifically, the engineer was editing the translation files ( and ) to add the necessary key-value pairs for the static UI elements on the  page. The next step would be to apply these keys within the component itself. The second request, to localize the AI output, has not yet been started.
-</current_work>
+**Testing status**
+-   **Testing agent used after significant changes:** YES, backend testing agent was used once for the Journal Finder.
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** None.
+-   **Known regressions:** None.
 
-<optional_next_step>
-Modify the backend endpoint  to accept a  parameter, then update the frontend  to pass the current language from  when calling the API.
-</optional_next_step>
+**Credentials to test flow:**
+-   **Email:** 
+-   **Password:** 
+
+**What agent forgot to execute**
+-   The agent from the *previous* fork failed to fix the Market Research tool card on the  page. This task has been carried over and remains unaddressed.</analysis>
