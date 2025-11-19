@@ -615,7 +615,43 @@ const AdminSettings = () => {
                       Select the AI model for generating images. This setting applies to all tools (Journey Map, Behavior, Perception).
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      {/* Nano Banana Option - DEFAULT */}
+                      <div
+                        onClick={() => setImageModel('nanobanana')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          imageModel === 'nanobanana'
+                            ? 'border-yellow-500 bg-yellow-50'
+                            : 'border-gray-300 hover:border-yellow-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="imageModel"
+                            value="nanobanana"
+                            checked={imageModel === 'nanobanana'}
+                            onChange={(e) => setImageModel(e.target.value)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-bold text-gray-900">🍌 Nano Banana</h4>
+                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">แนะนำ</span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Model: Gemini 2.5 Flash Image Preview
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              ✨ รองรับ Text-to-Image และ Image Editing
+                            </p>
+                            <p className="text-xs text-green-600 mt-1 font-medium">
+                              ⚡ รวดเร็ว • 🎨 คุณภาพสูง • 🔧 แก้ไขรูปได้
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* OpenAI Option */}
                       <div
                         onClick={() => setImageModel('openai')}
@@ -640,67 +676,10 @@ const AdminSettings = () => {
                               Model: gpt-image-1
                             </p>
                             <p className="text-xs text-gray-500 mt-2">
-                              High-quality photorealistic images
+                              🎨 High-quality photorealistic images
                             </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Gemini Imagen Option */}
-                      <div
-                        onClick={() => setImageModel('gemini')}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          imageModel === 'gemini'
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-gray-300 hover:border-green-300'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="radio"
-                            name="imageModel"
-                            value="gemini"
-                            checked={imageModel === 'gemini'}
-                            onChange={(e) => setImageModel(e.target.value)}
-                            className="mt-1"
-                          />
-                          <div>
-                            <h4 className="font-bold text-gray-900">Gemini Imagen</h4>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Model: imagen-3.0
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Google's image generation
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Nano Banana Option */}
-                      <div
-                        onClick={() => setImageModel('nanobanana')}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          imageModel === 'nanobanana'
-                            ? 'border-yellow-500 bg-yellow-50'
-                            : 'border-gray-300 hover:border-yellow-300'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="radio"
-                            name="imageModel"
-                            value="nanobanana"
-                            checked={imageModel === 'nanobanana'}
-                            onChange={(e) => setImageModel(e.target.value)}
-                            className="mt-1"
-                          />
-                          <div>
-                            <h4 className="font-bold text-gray-900">🍌 Nano Banana</h4>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Model: Gemini 2.5 Flash
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Fast, supports image editing
+                            <p className="text-xs text-gray-600 mt-1">
+                              ⚠️ Text-to-Image เท่านั้น (ไม่รองรับ Image Editing)
                             </p>
                           </div>
                         </div>
