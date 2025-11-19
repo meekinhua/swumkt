@@ -23,6 +23,7 @@ const AcademicFormatEditor = () => {
     formatStyle: 'APA'
   });
 
+  const [inputMode, setInputMode] = useState('file'); // 'file' or 'text'
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [guidelines, setGuidelines] = useState('');
