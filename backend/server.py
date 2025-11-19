@@ -4348,12 +4348,20 @@ async def format_academic_text(
                 # Build detailed changes list
                 changes_list = []
                 
+                # Input file analysis
+                changes_list.append(FormatChange(
+                    section="📊 Input File Analysis",
+                    original=f"ไฟล์ต้นฉบับ: {request.file_name or 'document.docx'}",
+                    formatted=f"{word_count} คำ, {headings_count} headings (H1:{h1_count}, H2:{h2_count}, H3:{h3_count}), {tables_count} tables",
+                    reason=f"วิเคราะห์โครงสร้างเอกสาร: {total_paragraphs} paragraphs, ~{citations_detected} potential citations detected"
+                ))
+                
                 # Citation style change
                 changes_list.append(FormatChange(
                     section="📚 Citations & References",
                     original="ไม่มีรูปแบบ citation ที่กำหนด",
                     formatted=f"{format_style} citation style",
-                    reason=f"จัดรูปแบบ citations และ references ตาม {format_style} style โดยใช้ CSL file"
+                    reason=f"จัดรูปแบบ citations และ references ตาม {format_style} style โดยใช้ CSL file (Pandoc citeproc)"
                 ))
                 
                 # Template changes (if custom template used)
@@ -4367,10 +4375,10 @@ async def format_academic_text(
                 
                 # Pandoc processing
                 changes_list.append(FormatChange(
-                    section="🔧 Document Structure",
-                    original="รูปแบบ plain text/markdown",
-                    formatted="Microsoft Word .docx format",
-                    reason="แปลงเป็น .docx พร้อมรักษา structure, headings, และ formatting elements"
+                    section="🔧 Document Processing",
+                    original="ไฟล์ .docx ต้นฉบับ",
+                    formatted="ไฟล์ .docx ที่จัดรูปแบบแล้ว",
+                    reason=f"ประมวลผลด้วย Pandoc: รักษา structure ({headings_count} headings, {tables_count} tables), จัดรูปแบบ citations, ใช้ template"
                 ))
                 
                 summary = f"✅ เอกสารถูกแก้ไขด้วย Pandoc และ {format_style} citation style\n"
