@@ -4256,6 +4256,73 @@ If you're not certain about specific details, indicate that with "Note: Please v
         logging.error(f"Fetch Guidelines error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch guidelines: {str(e)}")
 
+class FileAnalysisResponse(BaseModel):
+    file_name: str
+    word_count: int
+    paragraphs: int
+    headings_count: int
+    h1_count: int
+    h2_count: int
+    h3_count: int
+    tables_count: int
+    estimated_citations: int
+    file_size_kb: float
+
+@api_router.post("/format-editor/analyze-file", response_model=FileAnalysisResponse)
+async def analyze_uploaded_file(
+    file_base64: str = Body(...),
+    file_name: str = Body(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Analyze uploaded .docx file and return structure information"""
+    try:
+        import base64
+        from docx import Document
+        
+        # Decode file
+        file_data = base64.b64decode(file_base64)
+        file_size_kb = len(file_data) / 1024
+        
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_file:
+            temp_file.write(file_data)
+            temp_path = temp_file.name
+        
+        # Analyze with python-docx
+        doc = Document(temp_path)
+        
+        total_paragraphs = len([p for p in doc.paragraphs if p.text.strip()])
+        headings_count = len([p for p in doc.paragraphs if p.style.name.startswith('Heading')])
+        h1_count = len([p for p in doc.paragraphs if p.style.name == 'Heading 1'])
+        h2_count = len([p for p in doc.paragraphs if p.style.name == 'Heading 2'])
+        h3_count = len([p for p in doc.paragraphs if p.style.name == 'Heading 3'])
+        word_count = sum(len(p.text.split()) for p in doc.paragraphs)
+        tables_count = len(doc.tables)
+        
+        # Estimate citations
+        full_text = " ".join([p.text for p in doc.paragraphs])
+        estimated_citations = full_text.count('(') + full_text.count('[')
+        
+        # Cleanup
+        os.unlink(temp_path)
+        
+        return FileAnalysisResponse(
+            file_name=file_name,
+            word_count=word_count,
+            paragraphs=total_paragraphs,
+            headings_count=headings_count,
+            h1_count=h1_count,
+            h2_count=h2_count,
+            h3_count=h3_count,
+            tables_count=tables_count,
+            estimated_citations=estimated_citations,
+            file_size_kb=round(file_size_kb, 2)
+        )
+        
+    except Exception as e:
+        logging.error(f"File analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze file: {str(e)}")
+
 @api_router.post("/format-editor/format", response_model=FormatEditorResponse)
 async def format_academic_text(
     request: FormatEditorRequest,
