@@ -384,6 +384,34 @@ const CustomerBehaviorTool = () => {
             )}
           </Card>
         </div>
+          </TabsContent>
+
+          {/* Phase 2: Quantitative (Coming Soon) */}
+          <TabsContent value="quantitative">
+            <Card className="p-8 md:p-12 bg-white/98 border-2 border-gray-300 shadow-xl">
+              <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <Lock className="w-20 h-20 text-gray-300 mb-6" />
+                <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-4">
+                  Phase 2: การวิเคราะห์เชิงปริมาณ
+                </h2>
+                <p className="text-gray-600 text-base md:text-lg max-w-2xl mb-6">
+                  ฟีเจอร์นี้อยู่ระหว่างการพัฒนา จะเปิดให้ใช้งานในเร็วๆ นี้
+                </p>
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 max-w-xl">
+                  <h3 className="font-bold text-gray-900 mb-3">คุณสมบัติที่กำลังจะมา:</h3>
+                  <ul className="text-left text-gray-700 space-y-2">
+                    <li>• อัพโหลดไฟล์ CSV สำหรับการวิเคราะห์</li>
+                    <li>• สถิติเชิงพรรณนา (Mean, Median, Frequency)</li>
+                    <li>• การแบ่งกลุ่มลูกค้า (Segmentation)</li>
+                    <li>• การวิเคราะห์ความสัมพันธ์ (Correlation)</li>
+                    <li>• กราฟและแผนภูมิแบบ Interactive</li>
+                    <li>• Export ผลลัพธ์เป็น PDF/Excel</li>
+                  </ul>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Save Form Modal */}
         {showSaveForm && (
