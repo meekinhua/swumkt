@@ -2541,9 +2541,12 @@ Target Language for Labels: {request.target_language}
         if not images or len(images) == 0:
             raise HTTPException(status_code=500, detail="No image was generated")
         
-        # Convert image bytes to base64 data URL
-        image_base64 = base64.b64encode(images[0]).decode('utf-8')
-        image_data_url = f"data:image/png;base64,{image_base64}"
+        # images[0] is already a data URL for nanobanana, or needs conversion for openai
+        image_data_url = images[0]
+        if not image_data_url.startswith('data:'):
+            # OpenAI returns bytes, convert to data URL
+            image_base64 = base64.b64encode(images[0]).decode('utf-8')
+            image_data_url = f"data:image/png;base64,{image_base64}"
         
         # Compress image to reduce file size
         from image_utils import compress_base64_image, get_image_size_kb
