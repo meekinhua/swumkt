@@ -17,6 +17,7 @@ const AcademicFormatEditor = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
 
+  const [styleSelectionMode, setStyleSelectionMode] = useState('manual'); // 'auto' or 'manual'
   const [formData, setFormData] = useState({
     originalText: '',
     journalName: '',
