@@ -3062,6 +3062,84 @@ Customer Perception Analysis
         logging.error(f"Error sharing perception analysis as content: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
 
+# ============ IMAGE GENERATION PLAYGROUND ============
+class ImagePlaygroundRequest(BaseModel):
+    prompt: str
+    model: str  # 'openai', 'gemini', 'nanobanana'
+    base_image: Optional[str] = None  # base64 image for image editing
+
+@api_router.post("/admin/test-image-generation")
+async def test_image_generation(
+    request: ImagePlaygroundRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Test image generation in admin playground"""
+    try:
+        if current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        image_url = None
+        
+        if request.model == "nanobanana":
+            # Use Nano Banana (Gemini 2.5 Flash Image Preview)
+            from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+            import base64
+            
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            if not api_key:
+                raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+            
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"image-playground-{uuid.uuid4()}",
+                system_message="You are an AI image generator"
+            ).with_model("gemini", "gemini-2.5-flash-image-preview").with_params(modalities=["image", "text"])
+            
+            if request.base_image:
+                # Image editing mode
+                msg = UserMessage(
+                    text=request.prompt,
+                    file_contents=[ImageContent(request.base_image)]
+                )
+            else:
+                # Image generation mode
+                msg = UserMessage(text=request.prompt)
+            
+            text, images = await chat.send_message_multimodal_response(msg)
+            
+            if images and len(images) > 0:
+                # Return as base64 data URL
+                image_data = images[0]['data']
+                mime_type = images[0]['mime_type']
+                image_url = f"data:{mime_type};base64,{image_data}"
+            else:
+                raise HTTPException(status_code=500, detail="No image generated")
+                
+        elif request.model == "gemini":
+            # Use Gemini Imagen
+            from emergentintegrations import GeminiImageGeneration
+            
+            gemini = GeminiImageGeneration()
+            image_url = gemini.generate(request.prompt)
+            
+        elif request.model == "openai":
+            # Use OpenAI DALL-E
+            from emergentintegrations import OpenAIImageGeneration
+            
+            openai = OpenAIImageGeneration()
+            image_url = openai.generate(request.prompt)
+            
+        else:
+            raise HTTPException(status_code=400, detail="Invalid model specified")
+        
+        return {"image_url": image_url, "model_used": request.model}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error testing image generation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
