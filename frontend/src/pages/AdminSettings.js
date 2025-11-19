@@ -88,11 +88,11 @@ const AdminSettings = () => {
         updated_at: behaviorResponse.data.updated_at
       });
 
-      // Fetch Behavior Image Model
-      const imageModelResponse = await axios.get(`${API}/admin/behavior-image-model`, {
+      // Fetch Image Generation Model
+      const imageModelResponse = await axios.get(`${API}/admin/image-model`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setImageModel(imageModelResponse.data.image_model);
+      setImageModel(imageModelResponse.data.image_model || 'nanobanana');
       setImageModelMetadata({
         updated_by: imageModelResponse.data.updated_by,
         updated_at: imageModelResponse.data.updated_at
