@@ -382,6 +382,7 @@ const ContentEditor = () => {
                     <input
                       id="file-upload"
                       type="file"
+                      multiple
                       onChange={handleFileUpload}
                       disabled={uploadingFile}
                       className="hidden"
