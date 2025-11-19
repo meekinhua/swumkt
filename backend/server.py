@@ -4035,6 +4035,24 @@ If you're not certain about specific details, indicate that with "Note: Please v
         elif 'ieee' in response_lower:
             format_style = 'IEEE'
         
+        # Extract formatting specs and generate template
+        try:
+            logging.info(f"Extracting formatting specs for {request.journal_name}")
+            specs = await extract_formatting_specs_from_guidelines(response_text)
+            
+            if specs:
+                # Generate template filename (safe name)
+                safe_name = re.sub(r'[^\w\s-]', '', request.journal_name.lower()).replace(' ', '_')
+                template_path = ROOT_DIR / 'templates' / 'custom' / f'{safe_name}_template.docx'
+                
+                # Generate template
+                if generate_template_from_specs(specs, str(template_path)):
+                    logging.info(f"Template generated for {request.journal_name}: {template_path}")
+                else:
+                    logging.warning(f"Failed to generate template for {request.journal_name}")
+        except Exception as e:
+            logging.error(f"Error in template generation: {str(e)}")
+        
         return FetchGuidelinesResponse(
             journal_name=request.journal_name,
             guidelines=response_text,
