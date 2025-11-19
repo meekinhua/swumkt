@@ -2726,6 +2726,31 @@ class PerceptionContentCreate(BaseModel):
     image_url: Optional[str] = None
     image_base64: Optional[str] = None
 
+# ============ Journal Finder Models ============
+class JournalFinderRequest(BaseModel):
+    topic: str
+    abstract: str
+    keywords: str
+    target_language: str = "th"
+
+class JournalResult(BaseModel):
+    journal_name: str
+    publisher: Optional[str] = None
+    issn: Optional[str] = None
+    website: Optional[str] = None
+    abdc_rating: Optional[str] = None
+    ajg_rating: Optional[str] = None
+    impact_factor: Optional[str] = None
+    quartile: Optional[str] = None
+    scopus_indexed: Optional[str] = None
+    is_official_data: bool = True  # True for ABDC/AJG, False for estimated
+    scimago_url: Optional[str] = None
+
+class JournalFinderResponse(BaseModel):
+    journals: List[JournalResult]
+    explanation: str
+    disclaimer: str
+
 def get_default_perception_prompt():
     """Get default customer perception analysis prompt"""
     return """You are an expert in customer perception analysis and qualitative research.
