@@ -85,6 +85,82 @@ const ContentEditor = () => {
     });
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('ไฟล์ใหญ่เกินไป (สูงสุด 5MB)');
+      return;
+    }
+
+    try {
+      setUploadingFile(true);
+
+      // Read file as base64
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const base64String = event.target.result;
+          
+          // If it's an image, compress it
+          let fileData = base64String;
+          if (file.type.startsWith('image/')) {
+            // Send to backend for compression
+            const response = await axios.post(
+              `${API}/api/compress-image`,
+              { image_base64: base64String },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            fileData = response.data.compressed_image;
+          }
+
+          // Create attachment object
+          const attachment = {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            filename: file.name,
+            file_type: file.type,
+            file_size_kb: Math.round((file.size / 1024) * 100) / 100,
+            file_data: fileData,
+            uploaded_at: new Date().toISOString()
+          };
+
+          setFormData({
+            ...formData,
+            attachments: [...formData.attachments, attachment]
+          });
+
+          toast.success('อัปโหลดไฟล์สำเร็จ');
+        } catch (error) {
+          console.error('Compression error:', error);
+          toast.error('ไม่สามารถประมวลผลไฟล์ได้');
+        } finally {
+          setUploadingFile(false);
+        }
+      };
+
+      reader.onerror = () => {
+        toast.error('ไม่สามารถอ่านไฟล์ได้');
+        setUploadingFile(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error('เกิดข้อผิดพลาดในการอัปโหลดไฟล์');
+      setUploadingFile(false);
+    }
+  };
+
+  const handleRemoveAttachment = (attachmentId) => {
+    setFormData({
+      ...formData,
+      attachments: formData.attachments.filter(att => att.id !== attachmentId)
+    });
+    toast.success('ลบไฟล์แนบสำเร็จ');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
