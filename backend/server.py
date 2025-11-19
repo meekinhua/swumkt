@@ -2279,6 +2279,91 @@ async def update_behavior_image_model(
         logging.error(f"Error updating image model: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update setting: {str(e)}")
 
+# ============ ADMIN SETTINGS - PERCEPTION PROMPTS ============
+@api_router.get("/admin/perception-prompt")
+async def get_perception_prompt(current_user: User = Depends(get_current_user)):
+    """Get customer perception analysis prompt"""
+    try:
+        if current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        settings = await db.admin_settings.find_one({}, {"_id": 0})
+        return {"prompt": settings.get("perception_prompt", "") if settings else ""}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error getting perception prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/perception-prompt")
+async def update_perception_prompt(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update customer perception analysis prompt"""
+    try:
+        if current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        prompt = request.get("prompt", "").strip()
+        
+        settings_doc = {"perception_prompt": prompt}
+        await db.admin_settings.update_one(
+            {},
+            {"$set": settings_doc},
+            upsert=True
+        )
+        
+        return {"message": "Perception prompt updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating perception prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
+
+@api_router.get("/admin/perception-question-prompt")
+async def get_perception_question_prompt(current_user: User = Depends(get_current_user)):
+    """Get customer perception question generation prompt"""
+    try:
+        if current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        settings = await db.admin_settings.find_one({}, {"_id": 0})
+        return {"prompt": settings.get("perception_question_prompt", "") if settings else ""}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error getting perception question prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/perception-question-prompt")
+async def update_perception_question_prompt(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update customer perception question generation prompt"""
+    try:
+        if current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        prompt = request.get("prompt", "").strip()
+        
+        settings_doc = {"perception_question_prompt": prompt}
+        await db.admin_settings.update_one(
+            {},
+            {"$set": settings_doc},
+            upsert=True
+        )
+        
+        return {"message": "Perception question prompt updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating perception question prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
+
 # Generate Behavior Analysis (Text only)
 @api_router.post("/generate-behavior-analysis", response_model=BehaviorAnalysisResponse)
 async def generate_behavior_analysis(
