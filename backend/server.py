@@ -4277,6 +4277,8 @@ class FileAnalysisResponse(BaseModel):
     detected_line_spacing: Optional[str] = None
     detected_margins: Optional[str] = None
     detected_styles: List[str] = []
+    detected_citation_style: Optional[str] = None
+    citation_confidence: Optional[str] = None
 
 @api_router.post("/format-editor/analyze-file", response_model=FileAnalysisResponse)
 async def analyze_uploaded_file(
