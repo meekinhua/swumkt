@@ -58,7 +58,24 @@ const AcademicFormatEditor = () => {
       if (response.data.format_style) {
         setFormData({...formData, formatStyle: response.data.format_style});
       }
-      toast.success('ดึง Author Guidelines สำเร็จ!');
+      
+      // Show formatting specs if available
+      if (response.data.formatting_specs) {
+        const specs = response.data.formatting_specs;
+        const specsMessage = `
+📊 Detected Formatting Parameters:
+• Font: ${specs.font_name || 'N/A'}
+• Font Size: ${specs.font_size || 'N/A'}pt
+• Line Spacing: ${specs.line_spacing || 'N/A'}
+• Margins: ${specs.margin_inches || 'N/A'} inches
+• Heading Bold: ${specs.heading_bold ? 'Yes' : 'No'}
+• Heading Size: ${specs.heading_size || 'N/A'}pt
+        `;
+        console.log(specsMessage);
+        toast.success('ดึง Author Guidelines สำเร็จ! (ดู console สำหรับ parameters)', { duration: 5000 });
+      } else {
+        toast.success('ดึง Author Guidelines สำเร็จ!');
+      }
     } catch (error) {
       console.error('Fetch guidelines error:', error);
       toast.error(error.response?.data?.detail || 'ไม่สามารถดึง Author Guidelines ได้');
