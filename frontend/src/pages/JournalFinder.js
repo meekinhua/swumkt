@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Sparkles, Loader2, Search, BookOpen, TrendingUp, Award, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://survey-analyzer-8.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://acadtools.preview.emergentagent.com';
 
 const JournalFinder = () => {
   const navigate = useNavigate();
