@@ -124,6 +124,20 @@ const AdminSettings = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPerceptionQuestionPrompt(perceptionQuestionResponse.data.prompt || '');
+
+      // Fetch Format Editor Model
+      try {
+        const formatModelResponse = await axios.get(`${API}/admin/format-editor-model`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setFormatEditorModel(formatModelResponse.data.model || 'claude-sonnet-4');
+        setFormatEditorModelMetadata({
+          updated_by: formatModelResponse.data.updated_by,
+          updated_at: formatModelResponse.data.updated_at
+        });
+      } catch (err) {
+        console.log('Format editor model not set, using default');
+      }
     } catch (error) {
       console.error('Error fetching settings:', error);
       toast.error('Failed to load settings');
