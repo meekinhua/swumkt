@@ -1388,8 +1388,8 @@ sections:
 - ordinal: Ordered categories
 - scale: Numeric scale with intervals
 
-**Now create the survey. Return ONLY the YAML, no markdown blocks, no explanations:**
-
+**Now create the survey. Return ONLY the YAML, no markdown blocks, no explanations:**"""
+        
         # Call OpenAI API through Emergent proxy
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
