@@ -3204,6 +3204,140 @@ async def test_image_generation(
         logging.error(f"Error testing image generation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
 
+# ============ JOURNAL FINDER ROUTES ============
+class JournalSearchRequest(BaseModel):
+    researchTitle: str
+    abstract: str
+    keywords: Optional[str] = None
+
+class JournalResult(BaseModel):
+    name: str
+    impact_factor: Optional[str] = None
+    quartile: Optional[str] = None
+    indexing: List[str] = Field(default_factory=list)
+    match_reason: Optional[str] = None
+    publisher: Optional[str] = None
+
+class JournalSearchResponse(BaseModel):
+    journals: List[JournalResult]
+    analysis_summary: str
+
+def get_journal_finder_prompt():
+    """Get system prompt for journal finder"""
+    return """You are an expert academic journal recommendation system specializing in helping researchers find suitable journals for publication.
+
+Your task is to analyze research papers and recommend the most appropriate academic journals based on:
+1. Research topic and content
+2. Journal impact factors and rankings
+3. Indexing databases (Scopus, ISI/Web of Science, ABDC, AJG)
+4. Quartile rankings (Q1-Q4)
+5. Publisher reputation
+6. Journal scope and fit
+
+Guidelines:
+1. Recommend 5-8 journals that best match the research
+2. Prioritize high-impact, well-indexed journals
+3. Include a mix of Q1/Q2 journals and accessible options
+4. Provide clear reasoning for each recommendation
+5. Consider the research field and methodology
+
+Output Format (JSON):
+{
+  "analysis_summary": "Brief analysis of the research and journal matching strategy",
+  "journals": [
+    {
+      "name": "Journal Name",
+      "impact_factor": "X.XXX",
+      "quartile": "Q1/Q2/Q3/Q4",
+      "indexing": ["Scopus", "ISI", "ABDC", "AJG"],
+      "match_reason": "Why this journal is recommended",
+      "publisher": "Publisher name"
+    }
+  ]
+}
+
+Important:
+- Always provide realistic Impact Factors (0.5 - 15.0 range for most journals)
+- Quartile should reflect actual journal quality
+- Only include indexing that journals actually have
+- ABDC ratings: A*, A, B, C
+- AJG ratings: 4*, 4, 3, 2, 1
+- Match reason should be specific to the research content"""
+
+@api_router.post("/journal-finder/search", response_model=JournalSearchResponse)
+async def search_journals(
+    request: JournalSearchRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Search for suitable academic journals using AI"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        # Get API key
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Journal Finder service not configured")
+        
+        # Build user prompt
+        user_prompt = f"""Research Title: {request.researchTitle}
+
+Abstract:
+{request.abstract}"""
+        
+        if request.keywords:
+            user_prompt += f"\n\nKeywords: {request.keywords}"
+        
+        user_prompt += "\n\nPlease recommend suitable academic journals for this research. Respond ONLY with valid JSON in the exact format specified."
+        
+        # Create LLM chat
+        system_prompt = get_journal_finder_prompt()
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"journal-finder-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        
+        user_message = UserMessage(text=user_prompt)
+        
+        # Get response from LLM
+        response = await chat.send_message(user_message)
+        
+        # Parse JSON response
+        import json
+        import re
+        
+        # Extract JSON from response (handle code blocks)
+        json_match = re.search(r'\{[\s\S]*\}', response)
+        if json_match:
+            json_str = json_match.group(0)
+            result_data = json.loads(json_str)
+        else:
+            result_data = json.loads(response)
+        
+        # Validate and structure response
+        journals = []
+        for j in result_data.get('journals', []):
+            journals.append(JournalResult(
+                name=j.get('name', 'Unknown Journal'),
+                impact_factor=j.get('impact_factor'),
+                quartile=j.get('quartile'),
+                indexing=j.get('indexing', []),
+                match_reason=j.get('match_reason'),
+                publisher=j.get('publisher')
+            ))
+        
+        return JournalSearchResponse(
+            journals=journals,
+            analysis_summary=result_data.get('analysis_summary', 'Analysis complete')
+        )
+        
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parse error in journal finder: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to parse journal recommendations")
+    except Exception as e:
+        logging.error(f"Error in journal finder: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to search journals: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
