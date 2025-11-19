@@ -2822,7 +2822,9 @@ class FetchGuidelinesResponse(BaseModel):
     format_style: Optional[str] = None
 
 class FormatEditorRequest(BaseModel):
-    original_text: str
+    original_text: Optional[str] = None
+    file_base64: Optional[str] = None  # Base64 encoded .docx file
+    file_name: Optional[str] = None
     journal_name: Optional[str] = None
     guidelines: Optional[str] = None
     format_style: str = "APA"  # APA, MLA, Chicago, Harvard, IEEE
