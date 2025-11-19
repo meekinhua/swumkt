@@ -370,6 +370,9 @@ const AdminSettings = () => {
                             <p className="text-xs text-gray-500 mt-2">
                               Fast generation with artistic style variations
                             </p>
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                              <strong className="text-yellow-800">⚠️ Note:</strong> Gemini may require additional setup. System will auto-fallback to OpenAI if unavailable.
+                            </div>
                           </div>
                         </div>
                       </div>
