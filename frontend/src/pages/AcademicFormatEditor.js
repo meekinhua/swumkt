@@ -27,6 +27,8 @@ const AcademicFormatEditor = () => {
   const [fetchingGuidelines, setFetchingGuidelines] = useState(false);
   const [formatting, setFormatting] = useState(false);
   const [result, setResult] = useState(null);
+  const [formattingProgress, setFormattingProgress] = useState('');
+  const [estimatedSections, setEstimatedSections] = useState(0);
 
   const handleFetchGuidelines = async () => {
     if (!formData.journalName.trim()) {
