@@ -277,66 +277,86 @@ const ContentDetail = () => {
             </div>
           )}
 
-          {/* Attachments */}
-          {content.attachments && content.attachments.length > 0 && (
-            <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
-              <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Paperclip className="w-5 h-5 text-[#00A9CE]" />
-                ไฟล์แนบ ({content.attachments.length})
-              </h3>
-              <div className="space-y-3">
-                {content.attachments.map((attachment, idx) => (
-                  <div key={attachment.id || idx} className="bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors">
-                    {attachment.file_type && attachment.file_type.startsWith('image/') ? (
-                      <div className="space-y-3">
+          {/* Attachments - Show only non-image files or additional images (not the first one) */}
+          {(() => {
+            if (!content.attachments || content.attachments.length === 0) return null;
+            
+            const imageAttachments = content.attachments.filter(
+              att => att.file_type && att.file_type.startsWith('image/')
+            );
+            const nonImageAttachments = content.attachments.filter(
+              att => !att.file_type || !att.file_type.startsWith('image/')
+            );
+            
+            // If there's no featured_image, skip the first image (it's shown as cover)
+            const imagesToShow = !content.featured_image && imageAttachments.length > 0
+              ? imageAttachments.slice(1)
+              : imageAttachments;
+            
+            const attachmentsToShow = [...imagesToShow, ...nonImageAttachments];
+            
+            if (attachmentsToShow.length === 0) return null;
+            
+            return (
+              <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
+                <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                  <Paperclip className="w-5 h-5 text-[#00A9CE]" />
+                  ไฟล์แนบเพิ่มเติม ({attachmentsToShow.length})
+                </h3>
+                <div className="space-y-3">
+                  {attachmentsToShow.map((attachment, idx) => (
+                    <div key={attachment.id || idx} className="bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors">
+                      {attachment.file_type && attachment.file_type.startsWith('image/') ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <ImageIcon className="w-5 h-5 text-blue-500" />
+                              <div>
+                                <p className="text-sm font-bold text-gray-900">{attachment.filename}</p>
+                                <p className="text-xs text-gray-500">{attachment.file_size_kb} KB</p>
+                              </div>
+                            </div>
+                          </div>
+                          {attachment.file_data && (
+                            <div className="rounded-lg overflow-hidden border-2 border-gray-200">
+                              <img
+                                src={attachment.file_data}
+                                alt={attachment.filename}
+                                className="w-full h-auto max-h-96 object-contain bg-gray-50"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <ImageIcon className="w-5 h-5 text-blue-500" />
+                            <Paperclip className="w-5 h-5 text-gray-500" />
                             <div>
                               <p className="text-sm font-bold text-gray-900">{attachment.filename}</p>
                               <p className="text-xs text-gray-500">{attachment.file_size_kb} KB</p>
                             </div>
                           </div>
+                          {attachment.file_data && (
+                            <a
+                              href={attachment.file_data}
+                              download={attachment.filename}
+                              className="flex items-center gap-2 px-4 py-2 bg-[#00A9CE] hover:bg-[#008FB5] text-white rounded-lg font-bold transition-colors"
+                            >
+                              <Download className="w-4 h-4" />
+                              ดาวน์โหลด
+                            </a>
+                          )}
                         </div>
-                        {attachment.file_data && (
-                          <div className="rounded-lg overflow-hidden border-2 border-gray-200">
-                            <img
-                              src={attachment.file_data}
-                              alt={attachment.filename}
-                              className="w-full h-auto max-h-96 object-contain bg-gray-50"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Paperclip className="w-5 h-5 text-gray-500" />
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">{attachment.filename}</p>
-                            <p className="text-xs text-gray-500">{attachment.file_size_kb} KB</p>
-                          </div>
-                        </div>
-                        {attachment.file_data && (
-                          <a
-                            href={attachment.file_data}
-                            download={attachment.filename}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#00A9CE] hover:bg-[#008FB5] text-white rounded-lg font-bold transition-colors"
-                          >
-                            <Download className="w-4 h-4" />
-                            ดาวน์โหลด
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Tags */}
           {content.tags && content.tags.length > 0 && (
