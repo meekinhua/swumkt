@@ -4383,6 +4383,7 @@ async def format_academic_text(
                 
                 summary = f"✅ เอกสารถูกแก้ไขด้วย Pandoc และ {format_style} citation style\n"
                 summary += f"📄 ไฟล์: {request.file_name or 'document.docx'}\n"
+                summary += f"📊 วิเคราะห์เอกสาร: {word_count:,} คำ, {headings_count} headings, {tables_count} tables\n"
                 if template_file:
                     summary += f"🎨 ใช้ Custom Template: {request.journal_name} (AI-generated จาก author guidelines)\n"
                 summary += f"⚡ เวลาประมวลผล: ~2-5 วินาที (Pandoc library-based)"
