@@ -3097,9 +3097,14 @@ async def test_image_generation(
             
             if request.base_image:
                 # Image editing mode
+                # Remove data URL prefix if present (data:image/xxx;base64,)
+                base_image_data = request.base_image
+                if base_image_data.startswith('data:'):
+                    base_image_data = base_image_data.split(',', 1)[1]
+                
                 msg = UserMessage(
                     text=request.prompt,
-                    file_contents=[ImageContent(request.base_image)]
+                    file_contents=[ImageContent(base_image_data)]
                 )
             else:
                 # Image generation mode
