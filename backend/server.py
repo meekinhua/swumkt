@@ -2468,9 +2468,9 @@ async def generate_behavior_image(
         # Get image model preference from admin settings or use request override
         selected_model = request.image_model
         if not selected_model:
-            # Check admin settings
-            settings = await db.admin_settings.find_one({"setting_type": "behavior_image_model"})
-            selected_model = settings.get("image_model", "openai") if settings else "openai"
+            # Check admin settings (shared across all tools)
+            settings = await db.admin_settings.find_one({}, {"_id": 0})
+            selected_model = settings.get("image_generation_model", "nanobanana") if settings else "nanobanana"
         
         # Get custom image prompt from database or use default
         prompt_settings = await db.admin_settings.find_one({"setting_type": "behavior_image_prompt"})
