@@ -1305,15 +1305,13 @@ async def ai_generate_survey(
     """Generate a survey using AI based on description"""
     import json
     import re
+    import httpx
     
     try:
         # Get Emergent LLM key
         llm_key = os.environ.get('EMERGENT_LLM_KEY')
         if not llm_key:
             raise HTTPException(status_code=500, detail="LLM key not configured")
-        
-        from emergentintegrations import LLMClient
-        client = LLMClient(llm_key)
         
         # Determine language instructions
         lang_instruction = "English" if request.target_language == "en" else "Thai (ไทย)"
