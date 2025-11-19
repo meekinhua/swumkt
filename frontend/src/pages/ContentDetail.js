@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages } from 'lucide-react';
+import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages, Paperclip, Download, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import MermaidViewer from '@/components/MermaidViewer';
