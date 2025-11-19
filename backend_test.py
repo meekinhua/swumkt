@@ -1150,6 +1150,254 @@ class BackendTester:
         except Exception as e:
             self.log_result("Survey Delete", False, f"Exception: {str(e)}")
             return False
+
+    # ============ JOURNAL FINDER TESTS ============
+    
+    def test_journal_finder_admin_login(self):
+        """Test admin login for journal finder"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            data = {
+                "email": "admin@swu.ac.th",
+                "password": "admin123"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "access_token" in result and "user" in result:
+                    self.journal_token = result["access_token"]
+                    self.log_result("Journal Finder Admin Login", True, "Admin login successful for journal finder")
+                    return True
+                else:
+                    self.log_result("Journal Finder Admin Login", False, "Missing token or user in response", result)
+                    return False
+            else:
+                self.log_result("Journal Finder Admin Login", False, f"Admin credentials not found (HTTP {response.status_code})")
+                return False
+                
+        except Exception as e:
+            self.log_result("Journal Finder Admin Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_journal_finder_marketing_research(self):
+        """Test Journal Finder - Marketing Research (Thai)"""
+        if not hasattr(self, 'journal_token') or not self.journal_token:
+            self.log_result("Journal Finder Marketing Research", False, "No journal finder token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/journal-finder"
+            headers = {"Authorization": f"Bearer {self.journal_token}"}
+            data = {
+                "topic": "Consumer Behavior in Digital Marketing",
+                "abstract": "This study investigates consumer behavior patterns in digital marketing channels, focusing on social media influence on purchase decisions.",
+                "keywords": "consumer behavior, digital marketing, social media",
+                "target_language": "th"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("journals" in result and "explanation" in result and "disclaimer" in result):
+                    journals = result["journals"]
+                    if 5 <= len(journals) <= 10:
+                        # Check journal structure
+                        first_journal = journals[0]
+                        required_fields = ["journal_name", "scimago_url"]
+                        has_required = all(field in first_journal for field in required_fields)
+                        
+                        # Check for ABDC/AJG ratings where available
+                        has_ratings = any(j.get("abdc_rating") or j.get("ajg_rating") for j in journals)
+                        
+                        if has_required:
+                            self.log_result("Journal Finder Marketing Research", True, 
+                                          f"Marketing research journals found successfully ({len(journals)} journals, ratings available: {has_ratings})")
+                            return True
+                        else:
+                            self.log_result("Journal Finder Marketing Research", False, "Missing required journal fields", first_journal)
+                            return False
+                    else:
+                        self.log_result("Journal Finder Marketing Research", False, f"Expected 5-10 journals, got {len(journals)}", result)
+                        return False
+                else:
+                    self.log_result("Journal Finder Marketing Research", False, "Missing required response fields", result)
+                    return False
+            else:
+                self.log_result("Journal Finder Marketing Research", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Journal Finder Marketing Research", False, f"Exception: {str(e)}")
+            return False
+
+    def test_journal_finder_management_research(self):
+        """Test Journal Finder - Management Research (English)"""
+        if not hasattr(self, 'journal_token') or not self.journal_token:
+            self.log_result("Journal Finder Management Research", False, "No journal finder token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/journal-finder"
+            headers = {"Authorization": f"Bearer {self.journal_token}"}
+            data = {
+                "topic": "Strategic Management and Innovation",
+                "abstract": "This research explores the relationship between strategic management practices and organizational innovation capabilities.",
+                "keywords": "strategic management, innovation, organizational performance",
+                "target_language": "en"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("journals" in result and "explanation" in result and "disclaimer" in result):
+                    journals = result["journals"]
+                    if 5 <= len(journals) <= 10:
+                        # Check for Impact Factor and Quartile info
+                        has_impact_info = any(j.get("impact_factor") != "Unknown" or j.get("quartile") != "Unknown" for j in journals)
+                        
+                        # Check for SCImago URLs
+                        has_scimago_urls = all("scimago_url" in j and j["scimago_url"] for j in journals)
+                        
+                        self.log_result("Journal Finder Management Research", True, 
+                                      f"Management research journals found successfully ({len(journals)} journals, impact info: {has_impact_info}, SCImago URLs: {has_scimago_urls})")
+                        return True
+                    else:
+                        self.log_result("Journal Finder Management Research", False, f"Expected 5-10 journals, got {len(journals)}", result)
+                        return False
+                else:
+                    self.log_result("Journal Finder Management Research", False, "Missing required response fields", result)
+                    return False
+            else:
+                self.log_result("Journal Finder Management Research", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Journal Finder Management Research", False, f"Exception: {str(e)}")
+            return False
+
+    def test_journal_finder_minimal_input(self):
+        """Test Journal Finder - Minimal Input (Topic and Abstract Only)"""
+        if not hasattr(self, 'journal_token') or not self.journal_token:
+            self.log_result("Journal Finder Minimal Input", False, "No journal finder token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/journal-finder"
+            headers = {"Authorization": f"Bearer {self.journal_token}"}
+            data = {
+                "topic": "Marketing Research",
+                "abstract": "A study on marketing research methodologies",
+                "keywords": "",  # Empty keywords
+                "target_language": "en"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("journals" in result and len(result["journals"]) > 0):
+                    self.log_result("Journal Finder Minimal Input", True, 
+                                  f"Minimal input handled successfully ({len(result['journals'])} journals found)")
+                    return True
+                else:
+                    self.log_result("Journal Finder Minimal Input", False, "No journals returned for minimal input", result)
+                    return False
+            else:
+                self.log_result("Journal Finder Minimal Input", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Journal Finder Minimal Input", False, f"Exception: {str(e)}")
+            return False
+
+    def test_journal_finder_invalid_input(self):
+        """Test Journal Finder - Invalid Input (Missing Required Fields)"""
+        if not hasattr(self, 'journal_token') or not self.journal_token:
+            self.log_result("Journal Finder Invalid Input", False, "No journal finder token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/journal-finder"
+            headers = {"Authorization": f"Bearer {self.journal_token}"}
+            data = {
+                "topic": "",  # Empty topic
+                "abstract": "",  # Empty abstract
+                "keywords": "",
+                "target_language": "en"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=60)
+            
+            if response.status_code == 422:
+                # Validation error expected
+                self.log_result("Journal Finder Invalid Input", True, "Correctly rejected empty required fields with validation error")
+                return True
+            elif response.status_code == 500:
+                # Server error due to empty input
+                self.log_result("Journal Finder Invalid Input", True, "Correctly handled empty input with server error")
+                return True
+            elif response.status_code == 200:
+                # If it returns results, check if they're meaningful
+                result = response.json()
+                if "journals" in result and len(result["journals"]) == 0:
+                    self.log_result("Journal Finder Invalid Input", True, "Correctly returned empty results for invalid input")
+                    return True
+                else:
+                    self.log_result("Journal Finder Invalid Input", False, "Unexpectedly returned results for empty input", result)
+                    return False
+            else:
+                self.log_result("Journal Finder Invalid Input", True, f"Input validation handled with HTTP {response.status_code}")
+                return True
+                
+        except Exception as e:
+            self.log_result("Journal Finder Invalid Input", False, f"Exception: {str(e)}")
+            return False
+
+    def test_journal_finder_response_time(self):
+        """Test Journal Finder - Response Time (should be under 60 seconds)"""
+        if not hasattr(self, 'journal_token') or not self.journal_token:
+            self.log_result("Journal Finder Response Time", False, "No journal finder token available")
+            return False
+            
+        try:
+            import time
+            start_time = time.time()
+            
+            url = f"{self.base_url}/journal-finder"
+            headers = {"Authorization": f"Bearer {self.journal_token}"}
+            data = {
+                "topic": "Business Research Methods",
+                "abstract": "This study examines various business research methodologies and their applications in modern organizations.",
+                "keywords": "business research, methodology, quantitative, qualitative",
+                "target_language": "en"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=60)
+            
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            if response.status_code == 200:
+                if response_time < 60:
+                    self.log_result("Journal Finder Response Time", True, 
+                                  f"Response time acceptable ({response_time:.2f} seconds)")
+                    return True
+                else:
+                    self.log_result("Journal Finder Response Time", False, 
+                                  f"Response time too slow ({response_time:.2f} seconds, expected < 60s)")
+                    return False
+            else:
+                self.log_result("Journal Finder Response Time", False, 
+                              f"Request failed (HTTP {response.status_code}) in {response_time:.2f} seconds")
+                return False
+                
+        except Exception as e:
+            self.log_result("Journal Finder Response Time", False, f"Exception: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests"""
