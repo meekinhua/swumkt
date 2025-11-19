@@ -275,10 +275,20 @@ const AcademicFormatEditor = () => {
                             <div>💾 <span className="font-semibold">{uploadedFileInfo.file_size_kb}</span> KB</div>
                           </div>
                           
-                          {(uploadedFileInfo.detected_font || uploadedFileInfo.detected_font_size || uploadedFileInfo.detected_line_spacing || uploadedFileInfo.detected_margins) && (
+                          {(uploadedFileInfo.detected_font || uploadedFileInfo.detected_font_size || uploadedFileInfo.detected_line_spacing || uploadedFileInfo.detected_margins || uploadedFileInfo.detected_citation_style) && (
                             <div className="border-t border-blue-200 pt-3 mt-3">
                               <p className="text-xs font-bold text-purple-800 mb-2">🎨 รูปแบบที่ตรวจพบ (จาก Pandoc):</p>
                               <div className="grid grid-cols-1 gap-1 text-xs text-gray-700">
+                                {uploadedFileInfo.detected_citation_style && (
+                                  <div className="bg-orange-50 p-2 rounded border border-orange-200 mb-1">
+                                    📖 <span className="font-bold text-orange-800">Citation Style: {uploadedFileInfo.detected_citation_style}</span>
+                                    {uploadedFileInfo.citation_confidence && (
+                                      <span className="ml-2 text-xs text-orange-600">
+                                        (Confidence: {uploadedFileInfo.citation_confidence})
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                                 {uploadedFileInfo.detected_font && (
                                   <div>📝 Font: <span className="font-semibold">{uploadedFileInfo.detected_font}</span> {uploadedFileInfo.detected_font_size && `(${uploadedFileInfo.detected_font_size}pt)`}</div>
                                 )}
