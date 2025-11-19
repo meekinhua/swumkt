@@ -4227,6 +4227,11 @@ If you're not certain about specific details, indicate that with "Note: Please v
             if specs:
                 extracted_specs = specs  # Save for response
                 
+                # Use citation_style from extracted specs if available (more accurate than simple detection)
+                if 'citation_style' in specs and specs['citation_style']:
+                    format_style = specs['citation_style']
+                    logging.info(f"Using citation_style from extracted specs: {format_style}")
+                
                 # Generate template filename (safe name)
                 safe_name = re.sub(r'[^\w\s-]', '', request.journal_name.lower()).replace(' ', '_')
                 template_path = ROOT_DIR / 'templates' / 'custom' / f'{safe_name}_template.docx'
@@ -4234,7 +4239,7 @@ If you're not certain about specific details, indicate that with "Note: Please v
                 # Generate template
                 if generate_template_from_specs(specs, str(template_path)):
                     logging.info(f"Template generated for {request.journal_name}: {template_path}")
-                    logging.info(f"Extracted specs: {specs}")
+                    logging.info(f"Extracted {len(specs)} parameters including citation_style: {specs.get('citation_style', 'N/A')}")
                 else:
                     logging.warning(f"Failed to generate template for {request.journal_name}")
         except Exception as e:
