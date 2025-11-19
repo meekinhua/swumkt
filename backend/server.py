@@ -2758,6 +2758,34 @@ class JournalBrowseRequest(BaseModel):
     limit: int = 100
     target_language: str = "th"
 
+# ============ Academic Format Editor Models ============
+class FetchGuidelinesRequest(BaseModel):
+    journal_name: str
+    target_language: str = "th"
+
+class FetchGuidelinesResponse(BaseModel):
+    journal_name: str
+    guidelines: str
+    format_style: Optional[str] = None
+
+class FormatEditorRequest(BaseModel):
+    original_text: str
+    journal_name: Optional[str] = None
+    guidelines: Optional[str] = None
+    format_style: str = "APA"  # APA, MLA, Chicago, Harvard, IEEE
+    target_language: str = "th"
+
+class FormatChange(BaseModel):
+    section: str
+    original: str
+    formatted: str
+    reason: str
+
+class FormatEditorResponse(BaseModel):
+    formatted_text: str
+    changes: List[FormatChange]
+    summary: str
+
 # ============ Journal Database Loaders ============
 def load_abdc_database():
     """Load ABDC journal database from CSV"""
