@@ -2929,7 +2929,7 @@ async def generate_perception_illustration(
         
         # Get admin settings
         settings = await db.admin_settings.find_one({}) or {}
-        image_model = settings.get("image_generation_model", "openai")
+        image_model = settings.get("image_generation_model", "nanobanana")
         image_prompt_template = settings.get("image_generation_prompt", "")
         
         # Build image generation prompt
