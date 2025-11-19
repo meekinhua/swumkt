@@ -2228,13 +2228,19 @@ async def generate_behavior_image(
 ):
     """Generate illustration/diagram for behavior analysis using AI Image Generation"""
     try:
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
         import base64
         
         # Get API key
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="Image generation service not configured")
+        
+        # Get image model preference from admin settings or use request override
+        selected_model = request.image_model
+        if not selected_model:
+            # Check admin settings
+            settings = await db.admin_settings.find_one({"setting_type": "behavior_image_model"})
+            selected_model = settings.get("image_model", "openai") if settings else "openai"
         
         # Create image prompt based on analysis
         style_instructions = {
@@ -2257,13 +2263,26 @@ Language for labels: {request.target_language}
 Format: Horizontal layout, suitable for presentation
 """
         
-        # Generate image using emergentintegrations
-        image_gen = OpenAIImageGeneration(api_key=api_key)
-        images = await image_gen.generate_images(
-            prompt=image_prompt,
-            model="gpt-image-1",
-            number_of_images=1
-        )
+        # Generate image based on selected model
+        images = []
+        if selected_model == "gemini":
+            from emergentintegrations.llm.gemeni.image_generation import GeminiImageGeneration
+            
+            image_gen = GeminiImageGeneration(api_key=api_key)
+            images = await image_gen.generate_images(
+                prompt=image_prompt,
+                model="imagen-3.0-generate-002",
+                number_of_images=1
+            )
+        else:  # default to openai
+            from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+            
+            image_gen = OpenAIImageGeneration(api_key=api_key)
+            images = await image_gen.generate_images(
+                prompt=image_prompt,
+                model="gpt-image-1",
+                number_of_images=1
+            )
         
         if not images or len(images) == 0:
             raise HTTPException(status_code=500, detail="No image was generated")
