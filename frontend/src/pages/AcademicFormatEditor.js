@@ -77,7 +77,7 @@ const AcademicFormatEditor = () => {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -87,11 +87,34 @@ const AcademicFormatEditor = () => {
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const base64 = event.target.result.split(',')[1];
       setUploadedFile(base64);
       setUploadedFileName(file.name);
-      toast.success(`อัปโหลด ${file.name} สำเร็จ`);
+      toast.success(`อัปโหลด ${file.name} สำเร็จ - กำลังวิเคราะห์...`, { duration: 2000 });
+      
+      // Analyze file
+      try {
+        const response = await axios.post(
+          `${process.env.REACT_APP_BACKEND_URL}/api/format-editor/analyze-file`,
+          {
+            file_base64: base64,
+            file_name: file.name
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        setUploadedFileInfo(response.data);
+        toast.success('วิเคราะห์ไฟล์สำเร็จ!', { duration: 2000 });
+      } catch (error) {
+        console.error('File analysis error:', error);
+        toast.error('ไม่สามารถวิเคราะห์ไฟล์ได้ แต่ยังสามารถใช้งานต่อได้');
+      }
     };
     reader.readAsDataURL(file);
   };
