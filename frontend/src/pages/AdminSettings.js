@@ -100,6 +100,18 @@ const AdminSettings = () => {
         updated_by: imagePromptResponse.data.updated_by,
         updated_at: imagePromptResponse.data.updated_at
       });
+
+      // Fetch Perception Analysis prompt
+      const perceptionResponse = await axios.get(`${API}/admin/perception-prompt`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPerceptionPrompt(perceptionResponse.data.prompt || '');
+
+      // Fetch Perception Question prompt
+      const perceptionQuestionResponse = await axios.get(`${API}/admin/perception-question-prompt`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPerceptionQuestionPrompt(perceptionQuestionResponse.data.prompt || '');
     } catch (error) {
       console.error('Error fetching settings:', error);
       toast.error('Failed to load settings');
