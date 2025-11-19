@@ -8,7 +8,7 @@ import Navigation from '@/components/Navigation';
 import { ArrowLeft, Download, Users, BarChart3, PieChart, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://formsphere.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://survey-analyzer-8.preview.emergentagent.com';
 
 const SurveyResponsesPage = () => {
   const { surveyId } = useParams();
