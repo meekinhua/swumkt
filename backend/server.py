@@ -2934,8 +2934,13 @@ EXTRACTION RULES:
 4. Text alignment: "left", "center", "right", or "justify"
 5. Page size: "Letter" (8.5x11) or "A4" (8.27x11.69)
 6. Orientation: "portrait" or "landscape"
+7. Citation styles: "APA", "MLA", "Chicago", "Harvard", "IEEE", "Vancouver", "Nature", "Elsevier-Harvard", "Emerald", "AMA", "Turabian", "ACS", "Springer"
 
 COMPREHENSIVE FIELDS TO EXTRACT:
+
+**CRITICAL - Citation Style:**
+- citation_style: string (REQUIRED - one of: "APA", "MLA", "Chicago", "Harvard", "IEEE", "Vancouver", "Nature", "Elsevier-Harvard", "Emerald", "AMA", "Turabian", "ACS", "Springer")
+- citation_format_notes: string (any special citation requirements)
 
 **Body Text:**
 - font_name: string (default: "Times New Roman")
