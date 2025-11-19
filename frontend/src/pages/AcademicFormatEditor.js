@@ -169,9 +169,36 @@ const AcademicFormatEditor = () => {
           </p>
         </div>
 
+        {/* Mode Selection Tabs */}
+        <div className="mb-6 flex gap-2 border-b-2 border-gray-200">
+          <button
+            onClick={() => {setInputMode('file'); setResult(null);}}
+            className={`px-6 py-3 font-bold transition-all ${
+              inputMode === 'file'
+                ? 'border-b-4 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-500'
+            }`}
+          >
+            <FileText className="w-4 h-4 inline mr-2" />
+            อัปโหลดไฟล์ .docx
+          </button>
+          <button
+            onClick={() => {setInputMode('text'); setResult(null);}}
+            className={`px-6 py-3 font-bold transition-all ${
+              inputMode === 'text'
+                ? 'border-b-4 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-500'
+            }`}
+          >
+            <FileText className="w-4 h-4 inline mr-2" />
+            ใส่ข้อความ
+          </button>
+        </div>
+
         {/* Input Section */}
         <div className="grid grid-cols-1 gap-6 mb-6">
-          {/* File Upload Card */}
+          {/* File Upload Card - Show only in file mode */}
+          {inputMode === 'file' && (
           <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-300 shadow-xl">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-600" />
