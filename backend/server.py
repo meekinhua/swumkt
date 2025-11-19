@@ -2006,6 +2006,7 @@ class BehaviorImageRequest(BaseModel):
     analysis_text: str = Field(..., description="Analysis text to generate illustration for")
     image_style: Optional[str] = Field("infographic", description="Style: infographic, diagram, conceptual")
     target_language: Optional[str] = Field("en", description="Language for image labels")
+    image_model: Optional[str] = Field(None, description="Image generation model: openai or gemini")
 
 class BehaviorImageResponse(BaseModel):
     image_url: str
