@@ -220,11 +220,14 @@ const MarketResearch = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Journal Finder Tool */}
-              <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden">
-                {/* Coming Soon Badge */}
-                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-[#E63946] to-[#F25C66] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  กำลังพัฒนา
+              <Card 
+                onClick={() => navigate('/market-research/journal-finder')}
+                className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden"
+              >
+                {/* Active Badge */}
+                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-[#00A9CE] to-[#00BCD4] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  พร้อมใช้งาน
                 </div>
                 
                 {/* Icon */}
@@ -266,10 +269,9 @@ const MarketResearch = () => {
                 
                 {/* Action Button */}
                 <Button 
-                  disabled
-                  className="w-full bg-gray-300 text-gray-500 cursor-not-allowed font-bold"
+                  className="w-full bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold"
                 >
-                  กำลังพัฒนา
+                  เริ่มใช้งาน
                 </Button>
               </Card>
 
