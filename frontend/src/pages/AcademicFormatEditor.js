@@ -373,7 +373,6 @@ const AcademicFormatEditor = () => {
                   )}
                 </Button>
               </div>
-            </div>
 
             {/* Guidelines Display */}
             {guidelines && (
