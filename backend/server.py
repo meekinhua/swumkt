@@ -2788,7 +2788,7 @@ async def generate_perception_questions(
 ):
     """Generate interview questions for customer perception research"""
     try:
-        from emergentintegrations import LlmChat
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         # Get admin settings or use default
         settings = await db.admin_settings.find_one({}) or {}
