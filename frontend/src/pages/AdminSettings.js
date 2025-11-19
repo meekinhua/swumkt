@@ -251,6 +251,70 @@ const AdminSettings = () => {
     }
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image too large (max 5MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setTestImage(event.target.result);
+      setTestImagePreview(URL.createObjectURL(file));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleTestImageGeneration = async (mode) => {
+    if (!testPrompt.trim()) {
+      toast.error('Please enter a prompt');
+      return;
+    }
+
+    if (mode === 'edit' && !testImage) {
+      toast.error('Please upload an image first');
+      return;
+    }
+
+    try {
+      setGeneratingTest(true);
+      setGeneratedTestImage(null);
+
+      const response = await axios.post(
+        `${API}/admin/test-image-generation`,
+        {
+          prompt: testPrompt,
+          model: imageModel,
+          base_image: mode === 'edit' ? testImage : null
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setGeneratedTestImage(response.data.image_url);
+      toast.success(`Image generated with ${response.data.model_used}!`);
+    } catch (error) {
+      console.error('Error generating test image:', error);
+      toast.error(error.response?.data?.detail || 'Failed to generate image');
+    } finally {
+      setGeneratingTest(false);
+    }
+  };
+
+  const clearTestImage = () => {
+    setTestImage(null);
+    setTestImagePreview(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
