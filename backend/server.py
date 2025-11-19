@@ -4271,6 +4271,12 @@ class FileAnalysisResponse(BaseModel):
     tables_count: int
     estimated_citations: int
     file_size_kb: float
+    # Document formatting detected
+    detected_font: Optional[str] = None
+    detected_font_size: Optional[float] = None
+    detected_line_spacing: Optional[str] = None
+    detected_margins: Optional[str] = None
+    detected_styles: List[str] = []
 
 @api_router.post("/format-editor/analyze-file", response_model=FileAnalysisResponse)
 async def analyze_uploaded_file(
