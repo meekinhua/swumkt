@@ -2904,19 +2904,131 @@ No explanation, just the style name."""
         logging.error(f"Error detecting citation style: {str(e)}")
         return "APA"
 
-def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str):
-    """Format document using Pandoc with CSL"""
+async def extract_formatting_specs_from_guidelines(guidelines: str):
+    """Use LLM to extract formatting specifications from journal guidelines"""
     try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            return None
+        
+        system_prompt = """You are an expert at extracting document formatting specifications from journal author guidelines.
+
+Extract ONLY formatting information in JSON format. Be precise and return valid JSON.
+
+Required fields (return "default" if not specified):
+- font_name: string (e.g., "Times New Roman", "Arial")
+- font_size: number (e.g., 12, 11)
+- line_spacing: number (1.0, 1.5, 2.0)
+- margin_inches: number (e.g., 1.0, 2.5)
+- heading_bold: boolean
+- heading_size: number (e.g., 14)
+- reference_hanging_indent: number in inches (e.g., 0.5)
+
+Return ONLY valid JSON, no explanation."""
+
+        user_prompt = f"""Guidelines:
+{guidelines[:3000]}
+
+Extract formatting specs as JSON."""
+
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"extract-specs-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        
+        msg = UserMessage(text=user_prompt)
+        response = await chat.send_message(msg)
+        
+        # Parse JSON
+        import json
+        import re
+        
+        # Extract JSON from response
+        json_match = re.search(r'\{[\s\S]*\}', response)
+        if json_match:
+            specs = json.loads(json_match.group(0))
+            return specs
+        
+        return None
+        
+    except Exception as e:
+        logging.error(f"Error extracting formatting specs: {str(e)}")
+        return None
+
+def generate_template_from_specs(specs: dict, output_path: str):
+    """Generate .docx template from formatting specifications"""
+    try:
+        doc = Document()
+        
+        # Apply Normal style (body text)
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = specs.get('font_name', 'Times New Roman')
+        font.size = Pt(specs.get('font_size', 12))
+        
+        # Paragraph formatting
+        para_format = style.paragraph_format
+        line_spacing_value = specs.get('line_spacing', 2.0)
+        
+        if line_spacing_value == 1.0:
+            para_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        elif line_spacing_value == 1.5:
+            para_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+        elif line_spacing_value == 2.0:
+            para_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
+        else:
+            para_format.line_spacing = line_spacing_value
+        
+        # Margins
+        margin_inches = specs.get('margin_inches', 1.0)
+        sections = doc.sections
+        for section in sections:
+            section.top_margin = Inches(margin_inches)
+            section.bottom_margin = Inches(margin_inches)
+            section.left_margin = Inches(margin_inches)
+            section.right_margin = Inches(margin_inches)
+        
+        # Heading 1 style
+        heading_style = doc.styles['Heading 1']
+        heading_font = heading_style.font
+        heading_font.name = specs.get('font_name', 'Times New Roman')
+        heading_font.size = Pt(specs.get('heading_size', 14))
+        heading_font.bold = specs.get('heading_bold', True)
+        
+        # Add dummy content to make styles work
+        doc.add_paragraph("Sample text")
+        
+        # Save template
+        doc.save(output_path)
+        logging.info(f"Template generated: {output_path}")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Error generating template: {str(e)}")
+        return False
+
+def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str, template_file: str = None):
+    """Format document using Pandoc with CSL and optional template"""
+    try:
+        extra_args = [
+            '--citeproc',  # Enable citation processing
+            f'--csl={csl_file}',  # Citation style
+            '--standalone'
+        ]
+        
+        # Add reference document if provided
+        if template_file and os.path.exists(template_file):
+            extra_args.append(f'--reference-doc={template_file}')
+        
         # Convert with citation processing
         pypandoc.convert_file(
             input_file,
             'docx',
             outputfile=output_file,
-            extra_args=[
-                '--citeproc',  # Enable citation processing
-                f'--csl={csl_file}',  # Citation style
-                '--standalone'
-            ]
+            extra_args=extra_args
         )
         return True
     except Exception as e:
