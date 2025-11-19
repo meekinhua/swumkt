@@ -33,6 +33,11 @@ const AdminSettings = () => {
   const [imageModelMetadata, setImageModelMetadata] = useState(null);
   const [savingImageModel, setSavingImageModel] = useState(false);
   
+  // Behavior Image Prompt
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [imagePromptMetadata, setImagePromptMetadata] = useState(null);
+  const [savingImagePrompt, setSavingImagePrompt] = useState(false);
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
