@@ -35,6 +35,17 @@ const CustomerBehaviorTool = () => {
   const [imageStyle, setImageStyle] = useState('infographic');
   const [generatingImage, setGeneratingImage] = useState(false);
   const [showFullscreenImage, setShowFullscreenImage] = useState(false);
+
+  // ESC key handler for fullscreen image
+  React.useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && showFullscreenImage) {
+        setShowFullscreenImage(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showFullscreenImage]);
   
   // Step 4: Save as content
   const [showSaveForm, setShowSaveForm] = useState(false);
