@@ -78,6 +78,14 @@ function App() {
               }
             />
             <Route
+              path="/market-research/journal-finder"
+              element={
+                <ProtectedRoute>
+                  <JournalFinder />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/settings"
               element={
                 <ProtectedRoute>
