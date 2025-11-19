@@ -2915,7 +2915,7 @@ No explanation, just the style name."""
         return "APA"
 
 async def extract_formatting_specs_from_guidelines(guidelines: str):
-    """Use LLM to extract formatting specifications from journal guidelines"""
+    """Use LLM to extract comprehensive formatting specifications from journal guidelines"""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -2925,30 +2925,79 @@ async def extract_formatting_specs_from_guidelines(guidelines: str):
         
         system_prompt = """You are an expert at extracting document formatting specifications from journal author guidelines.
 
-Extract ONLY formatting information in JSON format. Be precise and return valid JSON.
+Extract ALL formatting details in JSON format. Be comprehensive and precise.
 
-IMPORTANT RULES:
-1. If Times New Roman is mentioned → use "Times New Roman"
-2. If no font specified → use "Times New Roman" (academic standard)
-3. Never suggest Cambria, Calibri, or other non-academic fonts
-4. Line spacing: use exact numbers (1.0, 1.5, 2.0)
-5. Margins: use decimal inches (1.0, 1.5, 2.54)
+EXTRACTION RULES:
+1. Academic fonts: Times New Roman, Georgia, Garamond (never Calibri/Cambria)
+2. Line spacing: 1.0 (single), 1.5, or 2.0 (double)
+3. Measurements in inches (convert cm/mm if needed)
+4. Text alignment: "left", "center", "right", or "justify"
+5. Page size: "Letter" (8.5x11) or "A4" (8.27x11.69)
+6. Orientation: "portrait" or "landscape"
 
-Required fields:
+COMPREHENSIVE FIELDS TO EXTRACT:
+
+**Body Text:**
 - font_name: string (default: "Times New Roman")
-- font_size: number (default: 12)
-- line_spacing: number (default: 2.0 for double spacing)
-- margin_inches: number (default: 1.0)
+- font_size: number in pt (default: 12)
+- font_color: string hex (default: "#000000")
+- line_spacing: number (default: 2.0)
+- text_alignment: string (default: "left")
+- paragraph_spacing_before: number in pt (default: 0)
+- paragraph_spacing_after: number in pt (default: 0)
+- first_line_indent: number in inches (default: 0.5)
+
+**Margins (separate for precision):**
+- margin_top: number in inches (default: 1.0)
+- margin_bottom: number in inches (default: 1.0)
+- margin_left: number in inches (default: 1.0)
+- margin_right: number in inches (default: 1.0)
+
+**Headings (Level 1):**
+- heading_font_name: string (default: "Times New Roman")
+- heading_font_size: number in pt (default: 14)
 - heading_bold: boolean (default: true)
-- heading_size: number (default: 14)
+- heading_italic: boolean (default: false)
+- heading_underline: boolean (default: false)
+- heading_alignment: string (default: "center")
+- heading_spacing_before: number in pt (default: 12)
+- heading_spacing_after: number in pt (default: 6)
+- heading_all_caps: boolean (default: false)
+
+**Subheadings (Level 2):**
+- subheading_font_size: number in pt (default: 12)
+- subheading_bold: boolean (default: true)
+- subheading_italic: boolean (default: false)
+- subheading_alignment: string (default: "left")
+
+**References/Bibliography:**
+- reference_font_size: number in pt (default: 12)
 - reference_hanging_indent: number in inches (default: 0.5)
+- reference_line_spacing: number (default: 1.0)
+- reference_spacing_between: number in pt (default: 0)
 
-Return ONLY valid JSON, no explanation."""
+**Page Setup:**
+- page_size: string (default: "Letter")
+- page_orientation: string (default: "portrait")
+- page_numbers: boolean (default: true)
+- page_number_position: string (default: "top-right")
 
-        user_prompt = f"""Guidelines:
-{guidelines[:3000]}
+**Block Quotes:**
+- block_quote_indent_left: number in inches (default: 0.5)
+- block_quote_indent_right: number in inches (default: 0.5)
+- block_quote_font_size: number in pt (default: 12)
 
-Extract formatting specs as JSON."""
+**Tables & Figures:**
+- caption_font_size: number in pt (default: 10)
+- caption_italic: boolean (default: true)
+- caption_alignment: string (default: "left")
+
+Return ONLY valid JSON with all fields, no explanations or markdown."""
+
+        user_prompt = f"""Journal Author Guidelines:
+{guidelines[:4000]}
+
+Extract ALL formatting specifications as comprehensive JSON."""
 
         chat = LlmChat(
             api_key=api_key,
