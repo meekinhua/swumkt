@@ -65,6 +65,35 @@ const JournalFinder = () => {
     }
   };
 
+  const handleBrowse = async () => {
+    try {
+      setSearching(true);
+      setResults(null);
+
+      const response = await axios.post(
+        `${API}/api/journal-finder/browse`,
+        {
+          search_query: browseData.searchQuery || null,
+          abdc_rating: browseData.abdcRating || null,
+          ajg_rating: browseData.ajgRating || null,
+          limit: 100,
+          target_language: 'th'
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setResults(response.data);
+      toast.success(`พบ ${response.data.journals.length} วารสาร`);
+    } catch (error) {
+      console.error('Journal browse error:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถค้นหาวารสารได้');
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const getQuartileColor = (quartile) => {
     const colors = {
       'Q1': 'bg-green-100 text-green-800 border-green-300',
