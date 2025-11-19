@@ -434,6 +434,51 @@ const AdminSettings = () => {
                     </Button>
                   </div>
 
+                  {/* Image Prompt */}
+                  <div>
+                    <Label className="text-gray-800 font-bold mb-2 text-lg">
+                      Image Generation Prompt
+                    </Label>
+                    {imagePromptMetadata && imagePromptMetadata.updated_at && (
+                      <div className="mb-3 p-3 bg-purple-50 rounded border border-purple-200 text-xs">
+                        <p className="text-gray-700 font-semibold">
+                          <strong>Last Updated:</strong> {new Date(imagePromptMetadata.updated_at).toLocaleString()} by {imagePromptMetadata.updated_by}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      Customize the prompt used for AI image generation. This affects the style and content of generated illustrations.
+                    </p>
+                    <Textarea
+                      value={imagePrompt}
+                      onChange={(e) => setImagePrompt(e.target.value)}
+                      rows={15}
+                      className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="Enter image generation prompt guidelines..."
+                    />
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      💡 Tip: Include style guidelines, color preferences, layout instructions, and elements to include/avoid.
+                    </p>
+
+                    <Button
+                      onClick={handleSaveImagePrompt}
+                      disabled={savingImagePrompt || !imagePrompt.trim()}
+                      className="mt-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold"
+                    >
+                      {savingImagePrompt ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Image Prompt
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
                   <div className="flex gap-4">
                     <Button
                       onClick={handleSaveBehavior}
