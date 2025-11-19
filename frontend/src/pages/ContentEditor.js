@@ -32,6 +32,7 @@ const ContentEditor = () => {
   });
   const [tagInput, setTagInput] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
     if (id) {
