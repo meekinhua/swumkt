@@ -349,7 +349,7 @@ const AcademicFormatEditor = () => {
             </div>
 
             {/* Format Button */}
-            <div>
+            <div className="mt-6">
                 <Button
                   onClick={handleFormat}
                   disabled={
