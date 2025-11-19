@@ -215,6 +215,21 @@ backend:
         comment: "✅ TESTED: Login endpoint working correctly. Successfully logged in with test@test.com/test123 and received valid JWT token. No ObjectId serialization errors encountered."
 
 frontend:
+  - task: "Customer Perception Analysis Tool - Full E2E Testing"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/CustomerPerceptionTool.js, /app/frontend/src/pages/AdminSettings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Customer Perception Analysis Tool implemented with Phase 1 (qualitative analysis) containing Question Generator and Interview Analysis tabs, Phase 2 placeholder, and Admin Settings integration"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Full end-to-end testing successful. Navigation working from Market Research page. Tool structure correct with Phase 1/2 tabs and sub-tabs. Question Generator: Successfully generated 12 Thai questions with Export to Survey button. Interview Analysis: Successfully analyzed sample data with all sections (analysis text, key findings, recommendations) generated. Phase 2 shows proper placeholder content. Admin Settings: Both perception analysis and question generator prompt textareas found with save buttons. LLM processing takes 10-40 seconds but completes successfully. All core functionality working as designed."
+
   - task: "เพิ่ม translation keys สำหรับ CustomerJourneyTool"
     implemented: true
     working: "NA"
