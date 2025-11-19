@@ -421,6 +421,35 @@ const CustomerBehaviorTool = () => {
           </TabsContent>
         </Tabs>
 
+        {/* Fullscreen Image Modal */}
+        {showFullscreenImage && imageUrl && (
+          <div 
+            className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowFullscreenImage(false)}
+          >
+            <div className="relative max-w-7xl max-h-screen">
+              <button
+                onClick={() => setShowFullscreenImage(false)}
+                className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 backdrop-blur-sm transition-all z-10"
+                title="Close"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <img
+                src={imageUrl}
+                alt="Behavior Analysis Illustration - Fullscreen"
+                className="max-w-full max-h-screen object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm">
+                Press ESC or click outside to close
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Save Form Modal */}
         {showSaveForm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
