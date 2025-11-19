@@ -104,6 +104,10 @@ class SurveyDSLParser:
     
     def _validate_survey_type(self, survey_type: str) -> str:
         """Validate survey type"""
+        # Clean enum prefix if present (e.g., "SurveyType.PERCEPTION" -> "perception")
+        if '.' in survey_type:
+            survey_type = survey_type.split('.')[-1].lower()
+        
         if survey_type not in self.SURVEY_TYPES:
             raise ValueError(f"Invalid survey type: {survey_type}. Must be one of {self.SURVEY_TYPES}")
         return survey_type
