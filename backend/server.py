@@ -15,6 +15,10 @@ import jwt
 from enum import Enum
 import csv
 import openpyxl
+import pypandoc
+import tempfile
+import base64
+from docx import Document
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
