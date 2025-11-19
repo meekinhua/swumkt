@@ -2227,7 +2227,7 @@ async def generate_behavior_image(
 ):
     """Generate illustration/diagram for behavior analysis using AI Image Generation"""
     try:
-        from emergentintegrations.image import ImageGenerator
+        import httpx
         
         # Get API key
         api_key = os.environ.get('EMERGENT_LLM_KEY')
@@ -2255,21 +2255,37 @@ Language for labels: {request.target_language}
 Format: Horizontal layout, suitable for presentation
 """
         
-        # Generate image using OpenAI DALL-E
-        image_gen = ImageGenerator(api_key=api_key)
-        result = await image_gen.generate_image(
-            prompt=image_prompt,
-            provider="openai",
-            model="gpt-image-1",
-            size="1024x1024",
-            quality="standard"
-        )
+        # Generate image using OpenAI DALL-E API
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/images/generations",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "dall-e-3",
+                    "prompt": image_prompt,
+                    "n": 1,
+                    "size": "1024x1024",
+                    "quality": "standard"
+                }
+            )
+            
+            if response.status_code != 200:
+                error_detail = response.json().get('error', {}).get('message', 'Unknown error')
+                raise HTTPException(status_code=500, detail=f"Image generation failed: {error_detail}")
+            
+            result = response.json()
+            image_url = result['data'][0]['url']
         
         return BehaviorImageResponse(
-            image_url=result["url"],
+            image_url=image_url,
             image_prompt=image_prompt
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Image generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
