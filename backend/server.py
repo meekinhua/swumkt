@@ -4274,10 +4274,9 @@ class FileAnalysisResponse(BaseModel):
 
 @api_router.post("/format-editor/analyze-file", response_model=FileAnalysisResponse)
 async def analyze_uploaded_file(
-    request: FileAnalysisRequest,
-    current_user: User = Depends(get_current_user)
+    request: FileAnalysisRequest
 ):
-    """Analyze uploaded .docx file and return structure information"""
+    """Analyze uploaded .docx file and return structure information (no auth required for analysis only)"""
     try:
         import base64
         from docx import Document
