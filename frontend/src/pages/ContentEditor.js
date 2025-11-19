@@ -89,7 +89,7 @@ const ContentEditor = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 5MB)
+    // Validate file size (max 5MB before compression)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('ไฟล์ใหญ่เกินไป (สูงสุด 5MB)');
       return;
@@ -102,18 +102,26 @@ const ContentEditor = () => {
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
-          const base64String = event.target.result;
-          
-          // If it's an image, compress it
-          let fileData = base64String;
+          let base64String = event.target.result;
+          let finalFileData = base64String;
+          let finalFileSize = file.size;
+
+          // If it's an image, compress it on backend
           if (file.type.startsWith('image/')) {
-            // Send to backend for compression
-            const response = await axios.post(
-              `${API}/api/compress-image`,
-              { image_base64: base64String },
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            fileData = response.data.compressed_image;
+            try {
+              const response = await axios.post(
+                `${API}/api/compress-image`,
+                { image_base64: base64String },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              finalFileData = response.data.compressed_image;
+              // Calculate compressed size
+              const base64Length = finalFileData.split(',')[1].length;
+              finalFileSize = (base64Length * 0.75); // Approximate size from base64
+            } catch (compressionError) {
+              console.warn('Image compression failed, using original:', compressionError);
+              // Use original if compression fails
+            }
           }
 
           // Create attachment object
@@ -121,8 +129,8 @@ const ContentEditor = () => {
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             filename: file.name,
             file_type: file.type,
-            file_size_kb: Math.round((file.size / 1024) * 100) / 100,
-            file_data: fileData,
+            file_size_kb: Math.round((finalFileSize / 1024) * 100) / 100,
+            file_data: finalFileData,
             uploaded_at: new Date().toISOString()
           };
 
@@ -133,7 +141,7 @@ const ContentEditor = () => {
 
           toast.success('อัปโหลดไฟล์สำเร็จ');
         } catch (error) {
-          console.error('Compression error:', error);
+          console.error('File processing error:', error);
           toast.error('ไม่สามารถประมวลผลไฟล์ได้');
         } finally {
           setUploadingFile(false);
