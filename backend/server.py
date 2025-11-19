@@ -2443,8 +2443,17 @@ Target Language for Labels: {request.target_language}
         image_base64 = base64.b64encode(images[0]).decode('utf-8')
         image_data_url = f"data:image/png;base64,{image_base64}"
         
+        # Compress image to reduce file size
+        from image_utils import compress_base64_image, get_image_size_kb
+        
+        original_size = get_image_size_kb(image_data_url)
+        compressed_image = compress_base64_image(image_data_url, max_size_kb=500, quality=85)
+        compressed_size = get_image_size_kb(compressed_image)
+        
+        logging.info(f"Image compressed: {original_size:.1f}KB → {compressed_size:.1f}KB")
+        
         return BehaviorImageResponse(
-            image_url=image_data_url,
+            image_url=compressed_image,
             image_prompt=image_prompt
         )
         
