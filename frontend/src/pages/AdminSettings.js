@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, User, LogOut, Settings, Save, RefreshCw, Shield } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, User, LogOut, Settings, Save, RefreshCw, Shield, Map, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 
@@ -16,10 +17,18 @@ const AdminSettings = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, token, logout } = useAuth();
-  const [prompt, setPrompt] = useState('');
+  
+  // Journey Map Prompt
+  const [journeyPrompt, setJourneyPrompt] = useState('');
+  const [journeyMetadata, setJourneyMetadata] = useState(null);
+  const [savingJourney, setSavingJourney] = useState(false);
+  
+  // Behavior Analysis Prompt
+  const [behaviorPrompt, setBehaviorPrompt] = useState('');
+  const [behaviorMetadata, setBehaviorMetadata] = useState(null);
+  const [savingBehavior, setSavingBehavior] = useState(false);
+  
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [metadata, setMetadata] = useState(null);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -27,18 +36,29 @@ const AdminSettings = () => {
       navigate('/dashboard');
       return;
     }
-    fetchPromptSettings();
+    fetchAllSettings();
   }, [user]);
 
-  const fetchPromptSettings = async () => {
+  const fetchAllSettings = async () => {
     try {
-      const response = await axios.get(`${API}/admin/journey-map-prompt`, {
+      // Fetch Journey Map prompt
+      const journeyResponse = await axios.get(`${API}/admin/journey-map-prompt`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPrompt(response.data.journey_map_prompt);
-      setMetadata({
-        updated_by: response.data.updated_by,
-        updated_at: response.data.updated_at
+      setJourneyPrompt(journeyResponse.data.journey_map_prompt);
+      setJourneyMetadata({
+        updated_by: journeyResponse.data.updated_by,
+        updated_at: journeyResponse.data.updated_at
+      });
+
+      // Fetch Behavior Analysis prompt
+      const behaviorResponse = await axios.get(`${API}/admin/behavior-prompt`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBehaviorPrompt(behaviorResponse.data.behavior_prompt);
+      setBehaviorMetadata({
+        updated_by: behaviorResponse.data.updated_by,
+        updated_at: behaviorResponse.data.updated_at
       });
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -48,27 +68,47 @@ const AdminSettings = () => {
     }
   };
 
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSaveJourney = async () => {
+    setSavingJourney(true);
     try {
-      await axios.put(
+      await axios.post(
         `${API}/admin/journey-map-prompt`,
         {
-          journey_map_prompt: prompt,
-          updated_by: user.email,
-          updated_at: new Date().toISOString()
+          journey_map_prompt: journeyPrompt
         },
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      toast.success('Settings saved successfully');
-      fetchPromptSettings();
+      toast.success('Journey Map prompt saved successfully');
+      fetchAllSettings();
     } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error('Failed to save settings');
+      console.error('Error saving journey prompt:', error);
+      toast.error('Failed to save Journey Map prompt');
     } finally {
-      setSaving(false);
+      setSavingJourney(false);
+    }
+  };
+
+  const handleSaveBehavior = async () => {
+    setSavingBehavior(true);
+    try {
+      await axios.post(
+        `${API}/admin/behavior-prompt`,
+        {
+          behavior_prompt: behaviorPrompt
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      toast.success('Behavior Analysis prompt saved successfully');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving behavior prompt:', error);
+      toast.error('Failed to save Behavior Analysis prompt');
+    } finally {
+      setSavingBehavior(false);
     }
   };
 
