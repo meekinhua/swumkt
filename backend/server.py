@@ -3129,7 +3129,14 @@ async def test_image_generation(
                 raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
             
             gemini = GeminiImageGeneration(api_key=api_key)
-            image_url = gemini.generate(request.prompt)
+            images = await gemini.generate_images(
+                prompt=request.prompt,
+                number_of_images=1
+            )
+            if images and len(images) > 0:
+                image_url = images[0]
+            else:
+                raise HTTPException(status_code=500, detail="No image generated")
             
         elif request.model == "openai":
             # Use OpenAI DALL-E
@@ -3140,7 +3147,15 @@ async def test_image_generation(
                 raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
             
             openai = OpenAIImageGeneration(api_key=api_key)
-            image_url = openai.generate(request.prompt)
+            images = await openai.generate_images(
+                prompt=request.prompt,
+                model="gpt-image-1",
+                number_of_images=1
+            )
+            if images and len(images) > 0:
+                image_url = images[0]
+            else:
+                raise HTTPException(status_code=500, detail="No image generated")
             
         else:
             raise HTTPException(status_code=400, detail="Invalid model specified")
