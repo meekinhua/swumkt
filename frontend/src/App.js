@@ -69,6 +69,14 @@ function App() {
               }
             />
             <Route
+              path="/market-research/customer-perception"
+              element={
+                <ProtectedRoute>
+                  <CustomerPerceptionTool />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/settings"
               element={
                 <ProtectedRoute>
