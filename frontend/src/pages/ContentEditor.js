@@ -86,78 +86,82 @@ const ContentEditor = () => {
   };
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    // Validate file size (max 5MB before compression)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('ไฟล์ใหญ่เกินไป (สูงสุด 5MB)');
+    // Validate total files
+    if (formData.attachments.length + files.length > 10) {
+      toast.error('สามารถแนบได้สูงสุด 10 ไฟล์');
       return;
     }
 
     try {
       setUploadingFile(true);
+      const newAttachments = [];
 
-      // Read file as base64
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          let base64String = event.target.result;
-          let finalFileData = base64String;
-          let finalFileSize = file.size;
-
-          // If it's an image, compress it on backend
-          if (file.type.startsWith('image/')) {
-            try {
-              const response = await axios.post(
-                `${API}/api/compress-image`,
-                { image_base64: base64String },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-              finalFileData = response.data.compressed_image;
-              // Calculate compressed size
-              const base64Length = finalFileData.split(',')[1].length;
-              finalFileSize = (base64Length * 0.75); // Approximate size from base64
-            } catch (compressionError) {
-              console.warn('Image compression failed, using original:', compressionError);
-              // Use original if compression fails
-            }
-          }
-
-          // Create attachment object
-          const attachment = {
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            filename: file.name,
-            file_type: file.type,
-            file_size_kb: Math.round((finalFileSize / 1024) * 100) / 100,
-            file_data: finalFileData,
-            uploaded_at: new Date().toISOString()
-          };
-
-          setFormData({
-            ...formData,
-            attachments: [...formData.attachments, attachment]
-          });
-
-          toast.success('อัปโหลดไฟล์สำเร็จ');
-        } catch (error) {
-          console.error('File processing error:', error);
-          toast.error('ไม่สามารถประมวลผลไฟล์ได้');
-        } finally {
-          setUploadingFile(false);
+      for (const file of files) {
+        // Validate file size (max 5MB before compression)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`ไฟล์ ${file.name} ใหญ่เกินไป (สูงสุด 5MB)`);
+          continue;
         }
-      };
 
-      reader.onerror = () => {
-        toast.error('ไม่สามารถอ่านไฟล์ได้');
-        setUploadingFile(false);
-      };
+        // Read file as base64
+        const base64String = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => resolve(event.target.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
-      reader.readAsDataURL(file);
+        let finalFileData = base64String;
+        let finalFileSize = file.size;
+
+        // If it's an image, compress it on backend
+        if (file.type.startsWith('image/')) {
+          try {
+            const response = await axios.post(
+              `${API}/api/compress-image`,
+              { image_base64: base64String },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            finalFileData = response.data.compressed_image;
+            // Calculate compressed size
+            const base64Length = finalFileData.split(',')[1].length;
+            finalFileSize = (base64Length * 0.75); // Approximate size from base64
+          } catch (compressionError) {
+            console.warn('Image compression failed, using original:', compressionError);
+            // Use original if compression fails
+          }
+        }
+
+        // Create attachment object
+        const attachment = {
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          filename: file.name,
+          file_type: file.type,
+          file_size_kb: Math.round((finalFileSize / 1024) * 100) / 100,
+          file_data: finalFileData,
+          uploaded_at: new Date().toISOString()
+        };
+
+        newAttachments.push(attachment);
+      }
+
+      if (newAttachments.length > 0) {
+        setFormData({
+          ...formData,
+          attachments: [...formData.attachments, ...newAttachments]
+        });
+        toast.success(`อัปโหลด ${newAttachments.length} ไฟล์สำเร็จ`);
+      }
     } catch (error) {
       console.error('File upload error:', error);
       toast.error('เกิดข้อผิดพลาดในการอัปโหลดไฟล์');
+    } finally {
       setUploadingFile(false);
+      // Reset input
+      e.target.value = '';
     }
   };
 
