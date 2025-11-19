@@ -2027,6 +2027,7 @@ class BehaviorContentCreate(BaseModel):
     research_context: Optional[str] = Field(None, description="Research context")
     output_language: str = Field(..., description="Output language")
     image_url: Optional[str] = Field(None, description="Generated image URL if any")
+    image_base64: Optional[str] = Field(None, description="Base64 encoded image for attachment")
 
 def get_default_behavior_prompt():
     """Get default customer behavior analysis prompt"""
