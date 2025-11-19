@@ -252,7 +252,17 @@ const AcademicFormatEditor = () => {
                 <div className="flex flex-col items-center justify-center h-[500px]">
                   <Loader2 className="w-16 h-16 text-purple-600 animate-spin mb-4" />
                   <p className="text-lg font-medium text-gray-700">กำลังแก้ไข Format...</p>
-                  <p className="text-sm text-gray-500 mt-2">AI กำลังปรับแต่งข้อความของคุณ</p>
+                  <p className="text-sm text-gray-500 mt-2">AI กำลังประมวลผลแบบ Section-by-Section</p>
+                  {formattingProgress && (
+                    <div className="mt-4 px-4 py-2 bg-purple-50 border border-purple-300 rounded-lg">
+                      <p className="text-xs text-purple-700 font-medium">{formattingProgress}</p>
+                    </div>
+                  )}
+                  {estimatedSections > 0 && (
+                    <p className="text-xs text-gray-400 mt-4">
+                      ⏱️ เวลาโดยประมาณ: {estimatedSections * 30} - {estimatedSections * 40} วินาที
+                    </p>
+                  )}
                 </div>
               )}
 
