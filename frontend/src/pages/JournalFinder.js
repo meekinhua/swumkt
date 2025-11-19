@@ -158,7 +158,7 @@ const JournalFinder = () => {
               {/* Search Button */}
               <Button
                 onClick={handleSearch}
-                disabled={searching || !formData.researchTitle.trim() || !formData.abstract.trim()}
+                disabled={searching || !formData.topic.trim() || !formData.abstract.trim()}
                 className="w-full h-14 bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold shadow-xl text-lg"
               >
                 {searching ? (
