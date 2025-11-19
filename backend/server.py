@@ -4033,7 +4033,18 @@ If you're not certain about specific details, indicate that with "Note: Please v
         # Try to extract format style
         format_style = None
         response_lower = response_text.lower()
-        if 'apa' in response_lower:
+        
+        # Check publisher-specific styles first
+        if 'emerald' in response_lower:
+            format_style = 'Emerald'
+        elif 'elsevier' in response_lower:
+            format_style = 'Elsevier-Harvard'
+        elif 'springer' in response_lower:
+            format_style = 'Springer'
+        elif 'nature' in response_lower:
+            format_style = 'Nature'
+        # Then check general styles
+        elif 'apa' in response_lower:
             format_style = 'APA'
         elif 'mla' in response_lower:
             format_style = 'MLA'
@@ -4043,6 +4054,8 @@ If you're not certain about specific details, indicate that with "Note: Please v
             format_style = 'Harvard'
         elif 'ieee' in response_lower:
             format_style = 'IEEE'
+        elif 'vancouver' in response_lower:
+            format_style = 'Vancouver'
         
         # Extract formatting specs and generate template
         try:
