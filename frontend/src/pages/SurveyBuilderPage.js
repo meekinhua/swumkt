@@ -353,33 +353,35 @@ const SurveyBuilderPage = () => {
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="mb-8">
           <Button
             variant="ghost"
             onClick={() => navigate('/surveys')}
-            className="text-gray-800 hover:text-[#00A9CE]"
+            className="text-gray-800 hover:text-[#00A9CE] mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Surveys
           </Button>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {surveyId && (
               <Button
                 variant="outline"
                 onClick={handleSaveAsTemplate}
-                className="border-2 border-gray-300"
+                className="border-2 border-gray-300 text-sm sm:text-base flex-1 sm:flex-none"
               >
                 <BookMarked className="w-4 h-4 mr-2" />
-                Save as Template
+                <span className="hidden sm:inline">Save as Template</span>
+                <span className="sm:hidden">Template</span>
               </Button>
             )}
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold"
+              className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold text-sm sm:text-base flex-1 sm:flex-none"
             >
               <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Survey'}
+              <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Survey'}</span>
+              <span className="sm:hidden">{saving ? 'Saving...' : 'Save'}</span>
             </Button>
           </div>
         </div>
