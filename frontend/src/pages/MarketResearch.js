@@ -152,9 +152,14 @@ const MarketResearch = () => {
             </div>
           </div>
 
-          {/* Tools Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {tools.map((tool, index) => (
+          {/* Research Tools Section */}
+          <div className="mb-16">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-1 w-12 bg-gradient-to-r from-[#005A73] to-[#00A9CE] rounded-full"></div>
+              <h2 className="text-2xl font-black text-gray-900">Market Research Tools</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {tools.map((tool, index) => (
               <Card 
                 key={tool.id}
                 className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden"
