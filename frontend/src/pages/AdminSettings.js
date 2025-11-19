@@ -80,6 +80,16 @@ const AdminSettings = () => {
         updated_by: imageModelResponse.data.updated_by,
         updated_at: imageModelResponse.data.updated_at
       });
+
+      // Fetch Behavior Image Prompt
+      const imagePromptResponse = await axios.get(`${API}/admin/behavior-image-prompt`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setImagePrompt(imagePromptResponse.data.behavior_image_prompt);
+      setImagePromptMetadata({
+        updated_by: imagePromptResponse.data.updated_by,
+        updated_at: imagePromptResponse.data.updated_at
+      });
     } catch (error) {
       console.error('Error fetching settings:', error);
       toast.error('Failed to load settings');
