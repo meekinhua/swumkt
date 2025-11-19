@@ -374,8 +374,8 @@ const ContentEditor = () => {
                       ) : (
                         <>
                           <Upload className="w-5 h-5 text-gray-500" />
-                          <span className="text-gray-600 font-medium">คลิกเพื่ออัปโหลดไฟล์</span>
-                          <span className="text-gray-400 text-sm">(สูงสุด 5MB)</span>
+                          <span className="text-gray-600 font-medium">คลิกเพื่ออัปโหลดไฟล์ (หลายไฟล์)</span>
+                          <span className="text-gray-400 text-sm">(สูงสุด 10 ไฟล์, ไฟล์ละ 5MB)</span>
                         </>
                       )}
                     </div>
