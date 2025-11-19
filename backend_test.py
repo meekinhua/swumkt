@@ -1465,7 +1465,20 @@ class BackendTester:
             ("Journey Map With Context", self.test_journey_map_with_context),
         ]
         
-        print("📋 PHASE 1B: Core Survey Builder Backend APIs")
+        print("🔍 MAIN FOCUS: Journal Finder API Tests")
+        print("-" * 50)
+        
+        journal_finder_passed = 0
+        journal_finder_total = len(journal_finder_tests)
+        
+        for test_name, test_func in journal_finder_tests:
+            try:
+                if test_func():
+                    journal_finder_passed += 1
+            except Exception as e:
+                self.log_result(test_name, False, f"Unexpected error: {str(e)}")
+        
+        print("\n📋 REGRESSION: Phase 1B Survey Builder Backend APIs")
         print("-" * 50)
         
         phase1b_passed = 0
@@ -1504,10 +1517,11 @@ class BackendTester:
             except Exception as e:
                 self.log_result(test_name, False, f"Unexpected error: {str(e)}")
         
-        total_passed = phase1b_passed + phase1a_passed + journey_passed
-        total_tests = phase1b_total + phase1a_total + journey_total
+        total_passed = journal_finder_passed + phase1b_passed + phase1a_passed + journey_passed
+        total_tests = journal_finder_total + phase1b_total + phase1a_total + journey_total
         
         print("=" * 80)
+        print(f"📊 Journal Finder API Results: {journal_finder_passed}/{journal_finder_total} tests passed")
         print(f"📊 Phase 1B Survey Builder Results: {phase1b_passed}/{phase1b_total} tests passed")
         print(f"📊 Phase 1A Authentication Results: {phase1a_passed}/{phase1a_total} tests passed")
         print(f"📊 Journey Map Results: {journey_passed}/{journey_total} tests passed")
