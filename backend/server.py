@@ -3858,7 +3858,7 @@ async def format_academic_text(
     request: FormatEditorRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Format academic text according to journal guidelines and citation style"""
+    """Format academic text using section-by-section processing"""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -3866,121 +3866,111 @@ async def format_academic_text(
         if not api_key:
             raise HTTPException(status_code=500, detail="Format Editor service not configured")
         
-        system_prompt = f"""You are an expert academic editor specializing in formatting academic manuscripts according to specific journal guidelines and citation styles.
-
-Your task is to reformat academic text according to:
-1. Citation style: {request.format_style}
-2. Journal-specific guidelines (if provided)
-3. Academic writing standards
+        # Get configured LLM model
+        model_name = await get_format_editor_model()
+        provider, full_model = get_llm_provider_and_model(model_name)
+        
+        # Split document into sections
+        sections = split_document_into_sections(request.original_text)
+        
+        formatted_sections = {}
+        all_changes = []
+        sections_processed = []
+        
+        # Process each section
+        for section_name, section_text in sections.items():
+            try:
+                logging.info(f"Processing section: {section_name}")
+                
+                system_prompt = f"""You are an expert academic editor. Format this section according to {request.format_style} style.
 
 Focus on:
-- Correcting in-text citations to match {request.format_style} style
-- Formatting references/bibliography correctly
-- Adjusting heading levels and formatting
-- Formatting tables and figures appropriately
-- Ensuring consistent formatting throughout
+- In-text citations ({request.format_style} format)
+- Reference list format
+- Heading levels
+- Tables and figures
+- Consistency
 
-Provide:
-1. The fully formatted text
-2. A detailed list of changes made (what was changed and why)
-3. A brief summary of the formatting work done"""
+Keep the content, only fix formatting."""
 
-        # Build user prompt
-        user_prompt = f"""Original Text:
-{request.original_text}
+                user_prompt = f"""Section: {section_name}
+
+Text:
+{section_text}
 
 Format Style: {request.format_style}"""
 
-        if request.journal_name:
-            user_prompt += f"\n\nJournal Name: {request.journal_name}"
-        
-        if request.guidelines:
-            user_prompt += f"\n\nJournal Author Guidelines:\n{request.guidelines}"
-        
-        user_prompt += """
+                if request.guidelines:
+                    user_prompt += f"\n\nGuidelines:\n{request.guidelines[:1000]}"  # Truncate guidelines
+                
+                user_prompt += """
 
-Please format this text according to the specified style and guidelines. Provide your response in the following format:
-
-FORMATTED_TEXT:
-[The complete formatted text]
+Return ONLY:
+FORMATTED:
+[formatted text]
 
 CHANGES:
-SECTION: [Section name, e.g., "In-text Citations"]
-ORIGINAL: [Original text]
-FORMATTED: [Formatted text]
-REASON: [Why this change was made]
----
-[Repeat for each change]
+- [change 1]
+- [change 2]"""
 
-SUMMARY:
-[Brief summary of the formatting work done]"""
-
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"format-editor-{uuid.uuid4()}",
-            system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
-        
-        msg = UserMessage(text=user_prompt)
-        response_text = await chat.send_message(msg)
-        
-        # Parse response
-        formatted_text = ""
-        changes = []
-        summary = ""
-        
-        # Extract formatted text
-        if "FORMATTED_TEXT:" in response_text:
-            parts = response_text.split("CHANGES:")
-            formatted_text = parts[0].replace("FORMATTED_TEXT:", "").strip()
-            
-            if len(parts) > 1:
-                changes_section = parts[1].split("SUMMARY:")[0].strip()
+                # Create chat with configured model
+                chat = LlmChat(
+                    api_key=api_key,
+                    session_id=f"format-{section_name}-{uuid.uuid4()}",
+                    system_message=system_prompt
+                ).with_model(provider, full_model)
                 
-                # Parse changes
-                change_blocks = changes_section.split("---")
-                for block in change_blocks:
-                    block = block.strip()
-                    if not block:
-                        continue
-                    
-                    section = ""
-                    original = ""
-                    formatted = ""
-                    reason = ""
-                    
-                    lines = block.split("\n")
-                    for line in lines:
-                        line = line.strip()
-                        if line.startswith("SECTION:"):
-                            section = line.replace("SECTION:", "").strip()
-                        elif line.startswith("ORIGINAL:"):
-                            original = line.replace("ORIGINAL:", "").strip()
-                        elif line.startswith("FORMATTED:"):
-                            formatted = line.replace("FORMATTED:", "").strip()
-                        elif line.startswith("REASON:"):
-                            reason = line.replace("REASON:", "").strip()
-                    
-                    if section and original and formatted:
-                        changes.append(FormatChange(
-                            section=section,
-                            original=original,
-                            formatted=formatted,
-                            reason=reason
-                        ))
+                msg = UserMessage(text=user_prompt)
+                response = await chat.send_message(msg)
                 
-                # Extract summary
-                if "SUMMARY:" in parts[1]:
-                    summary = parts[1].split("SUMMARY:")[1].strip()
+                # Parse response
+                if "FORMATTED:" in response:
+                    parts = response.split("CHANGES:")
+                    formatted_text = parts[0].replace("FORMATTED:", "").strip()
+                    formatted_sections[section_name] = formatted_text
+                    
+                    # Extract changes
+                    if len(parts) > 1:
+                        changes_text = parts[1].strip()
+                        for line in changes_text.split('\n'):
+                            line = line.strip()
+                            if line.startswith('-') or line.startswith('•'):
+                                change_desc = line[1:].strip()
+                                if change_desc:
+                                    all_changes.append(FormatChange(
+                                        section=section_name,
+                                        original="",
+                                        formatted="",
+                                        reason=change_desc
+                                    ))
+                else:
+                    formatted_sections[section_name] = response
+                
+                sections_processed.append(section_name)
+                logging.info(f"Completed section: {section_name}")
+                
+            except Exception as e:
+                logging.error(f"Error processing section {section_name}: {str(e)}")
+                # Use original text if section fails
+                formatted_sections[section_name] = section_text
+                sections_processed.append(f"{section_name} (error)")
+        
+        # Combine formatted sections
+        final_text = "\n\n".join([
+            f"{name}\n{text}" for name, text in formatted_sections.items()
+        ])
+        
+        # Build summary
+        if request.target_language == 'th':
+            summary = f"แก้ไขเรียบร้อยแล้ว {len(sections_processed)} ส่วน ใช้ {request.format_style} style"
         else:
-            # Fallback if format not followed
-            formatted_text = response_text
-            summary = "Text has been formatted according to the specified style."
+            summary = f"Successfully formatted {len(sections_processed)} sections using {request.format_style} style"
         
         return FormatEditorResponse(
-            formatted_text=formatted_text,
-            changes=changes,
-            summary=summary
+            formatted_text=final_text,
+            changes=all_changes,
+            summary=summary,
+            sections_processed=sections_processed
         )
         
     except Exception as e:
