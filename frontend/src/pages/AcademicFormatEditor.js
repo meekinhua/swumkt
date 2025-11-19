@@ -264,7 +264,7 @@ const AcademicFormatEditor = () => {
                         <span className="font-semibold">{uploadedFileName}</span>
                       </div>
                       {uploadedFileInfo && (
-                        <div className="bg-blue-50 rounded-lg p-4 text-left">
+                        <div className="bg-blue-50 rounded-lg p-4 text-left space-y-3">
                           <p className="text-xs font-bold text-blue-800 mb-2">📊 ข้อมูลไฟล์:</p>
                           <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
                             <div>📝 <span className="font-semibold">{uploadedFileInfo.word_count.toLocaleString()}</span> คำ</div>
@@ -274,6 +274,26 @@ const AcademicFormatEditor = () => {
                             <div>📚 ~<span className="font-semibold">{uploadedFileInfo.estimated_citations}</span> citations</div>
                             <div>💾 <span className="font-semibold">{uploadedFileInfo.file_size_kb}</span> KB</div>
                           </div>
+                          
+                          {(uploadedFileInfo.detected_font || uploadedFileInfo.detected_font_size || uploadedFileInfo.detected_line_spacing || uploadedFileInfo.detected_margins) && (
+                            <div className="border-t border-blue-200 pt-3 mt-3">
+                              <p className="text-xs font-bold text-purple-800 mb-2">🎨 รูปแบบที่ตรวจพบ (จาก Pandoc):</p>
+                              <div className="grid grid-cols-1 gap-1 text-xs text-gray-700">
+                                {uploadedFileInfo.detected_font && (
+                                  <div>📝 Font: <span className="font-semibold">{uploadedFileInfo.detected_font}</span> {uploadedFileInfo.detected_font_size && `(${uploadedFileInfo.detected_font_size}pt)`}</div>
+                                )}
+                                {uploadedFileInfo.detected_line_spacing && (
+                                  <div>📐 Line Spacing: <span className="font-semibold">{uploadedFileInfo.detected_line_spacing}</span></div>
+                                )}
+                                {uploadedFileInfo.detected_margins && (
+                                  <div>📄 Margins: <span className="font-semibold text-xs">{uploadedFileInfo.detected_margins}</span></div>
+                                )}
+                                {uploadedFileInfo.detected_styles && uploadedFileInfo.detected_styles.length > 0 && (
+                                  <div>🎨 Styles: <span className="font-semibold text-xs">{uploadedFileInfo.detected_styles.slice(0, 5).join(', ')}</span></div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
