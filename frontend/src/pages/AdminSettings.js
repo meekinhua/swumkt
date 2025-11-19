@@ -287,7 +287,7 @@ const AdminSettings = () => {
             </div>
 
             <Tabs defaultValue="journey" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="journey" className="flex items-center gap-2">
                   <Map className="w-4 h-4" />
                   Journey Map
@@ -295,6 +295,10 @@ const AdminSettings = () => {
                 <TabsTrigger value="behavior" className="flex items-center gap-2">
                   <BarChart3 className="w-4 h-4" />
                   Behavior Analysis
+                </TabsTrigger>
+                <TabsTrigger value="perception" className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Perception Analysis
                 </TabsTrigger>
               </TabsList>
 
