@@ -120,6 +120,9 @@ const SurveyListPage = () => {
 
   return (
     <>
+      {showAIGeneratorModal && (
+        <AISurveyGeneratorModal onClose={() => setShowAIGeneratorModal(false)} />
+      )}
       {showTemplateModal && (
         <SurveyTemplateModal onClose={() => setShowTemplateModal(false)} />
       )}
