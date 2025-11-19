@@ -1305,16 +1305,15 @@ async def ai_generate_survey(
     current_user: User = Depends(get_current_user)
 ):
     """Generate a survey using AI based on description using Survey Definition Language (SDL)"""
-    import json
-    import re
-    import httpx
     from survey_dsl import SurveyDSLParser, SurveyDSLValidator
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    import re
     
     try:
         # Get Emergent LLM key
-        llm_key = os.environ.get('EMERGENT_LLM_KEY')
-        if not llm_key:
-            raise HTTPException(status_code=500, detail="LLM key not configured")
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="AI Survey generation service not configured")
         
         # Determine language instructions
         lang_instruction = "English" if request.target_language == "en" else "Thai (ไทย)"
