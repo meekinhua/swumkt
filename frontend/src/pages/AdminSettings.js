@@ -271,6 +271,24 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSaveFormatEditorModel = async () => {
+    setSavingFormatEditorModel(true);
+    try {
+      await axios.post(
+        `${API}/admin/format-editor-model`,
+        { model: formatEditorModel },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Format Editor LLM model saved successfully');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving format editor model:', error);
+      toast.error('Failed to save format editor model');
+    } finally {
+      setSavingFormatEditorModel(false);
+    }
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
