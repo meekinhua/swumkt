@@ -1409,7 +1409,7 @@ Return JSON only, no markdown."""
             response_text = result['choices'][0]['message']['content']
         
         # Clean response
-        response_text = response.strip()
+        response_text = response_text.strip()
         
         # Remove markdown code blocks
         response_text = re.sub(r'^```(?:json)?\s*', '', response_text, flags=re.MULTILINE)
