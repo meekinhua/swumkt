@@ -641,9 +641,10 @@ TEMPLATES = [
 
 async def seed_templates():
     client = AsyncIOMotorClient(MONGO_URL)
-    db = client.get_database()
+    db = client[DB_NAME]
     
-    print("Seeding survey templates...")
+    print(f"Seeding survey templates to database: {DB_NAME}...")
+    print(f"Using MongoDB URL: {MONGO_URL}\n")
     
     for template in TEMPLATES:
         template['created_at'] = datetime.now(timezone.utc).isoformat()
