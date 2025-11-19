@@ -1290,6 +1290,121 @@ async def create_survey_from_template(
     await db.surveys.insert_one(survey_dict)
     return survey
 
+# ============ AI SURVEY GENERATOR ============
+class AIGenerateSurveyRequest(BaseModel):
+    description: str
+    survey_type: SurveyType = SurveyType.CUSTOM
+    num_questions: Optional[int] = 10
+    target_language: str = "en"
+
+@api_router.post("/surveys/ai-generate", response_model=Survey)
+async def ai_generate_survey(
+    request: AIGenerateSurveyRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a survey using AI based on description"""
+    from emergentintegrations import LLMClient
+    
+    try:
+        # Get Emergent LLM key
+        llm_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not llm_key:
+            raise HTTPException(status_code=500, detail="LLM key not configured")
+        
+        client = LLMClient(llm_key)
+        
+        # Build prompt
+        prompt = f"""You are a professional survey designer. Create a comprehensive survey based on the following:
+
+Description: {request.description}
+Survey Type: {request.survey_type}
+Number of Questions: {request.num_questions}
+Target Language: {request.target_language}
+
+Generate a survey with 2-3 sections, each containing relevant questions. Include:
+- Multiple choice questions (single and multiple select)
+- Rating scale questions (1-5 or 1-10)
+- Open-ended questions for detailed feedback
+
+Return ONLY valid JSON in this exact format (no markdown, no extra text):
+{{
+  "title": "Survey Title",
+  "description": "Survey description",
+  "sections": [
+    {{
+      "id": "sec_1",
+      "title": "Section Title",
+      "description": "Section description",
+      "order": 0,
+      "questions": [
+        {{
+          "id": "q_1",
+          "type": "multiple_choice_single",
+          "text": "Question text?",
+          "required": true,
+          "data_type": "nominal",
+          "options": [
+            {{"id": "opt_1", "text": "Option 1", "value": "1"}},
+            {{"id": "opt_2", "text": "Option 2", "value": "2"}}
+          ],
+          "order": 0
+        }}
+      ]
+    }}
+  ]
+}}
+
+Important:
+- Use {request.target_language} language for all text
+- Include 8-12 questions total across sections
+- Mix question types appropriately
+- Use proper data_type: "nominal", "ordinal", or "scale"
+- Generate unique IDs for all elements
+"""
+        
+        # Call LLM
+        response = client.call_llm(
+            prompt=prompt,
+            model="openai/gpt-4o",
+            temperature=0.7,
+            max_tokens=3000
+        )
+        
+        # Parse JSON
+        import json
+        import re
+        
+        # Try to extract JSON from response
+        response_text = response.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith('```'):
+            response_text = re.sub(r'^```(?:json)?\n', '', response_text)
+            response_text = re.sub(r'\n```$', '', response_text)
+        
+        survey_data = json.loads(response_text)
+        
+        # Create survey
+        survey = Survey(
+            title=survey_data['title'],
+            description=survey_data.get('description', ''),
+            survey_type=request.survey_type,
+            sections=survey_data['sections'],
+            created_by=current_user.id
+        )
+        
+        survey_dict = survey.model_dump()
+        survey_dict['created_at'] = survey_dict['created_at'].isoformat()
+        survey_dict['updated_at'] = survey_dict['updated_at'].isoformat()
+        
+        await db.surveys.insert_one(survey_dict)
+        return survey
+        
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
+
 # ============ CONTENT ROUTES ============
 @api_router.post("/content", response_model=Content)
 async def create_content(
