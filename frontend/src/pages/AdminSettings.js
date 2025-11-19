@@ -48,6 +48,11 @@ const AdminSettings = () => {
   const [perceptionQuestionMetadata, setPerceptionQuestionMetadata] = useState(null);
   const [savingPerceptionQuestion, setSavingPerceptionQuestion] = useState(false);
   
+  // Format Editor LLM Model
+  const [formatEditorModel, setFormatEditorModel] = useState('claude-sonnet-4');
+  const [formatEditorModelMetadata, setFormatEditorModelMetadata] = useState(null);
+  const [savingFormatEditorModel, setSavingFormatEditorModel] = useState(false);
+  
   // Image Playground
   const [testPrompt, setTestPrompt] = useState('');
   const [testImage, setTestImage] = useState(null);
