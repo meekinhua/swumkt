@@ -252,6 +252,7 @@ class ContentCreate(BaseModel):
     tags: List[str] = []
     featured_image: Optional[str] = None
     status: ContentStatus = ContentStatus.DRAFT
+    attachments: Optional[List[dict]] = Field(default_factory=list, description="File attachments")
 
 class ContentUpdate(BaseModel):
     title: Optional[str] = None
