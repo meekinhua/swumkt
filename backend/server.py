@@ -1843,7 +1843,7 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
             api_key=api_key,
             session_id=f"journey-map-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("openai", "gpt-4o")
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
         
         # Determine language instruction
         language_name = "Thai" if request.target_language == "th" else "English"
