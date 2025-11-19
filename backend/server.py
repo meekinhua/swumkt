@@ -3655,6 +3655,210 @@ async def browse_journals(
         logging.error(f"Journal Browse error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to browse journals: {str(e)}")
 
+# ============ ACADEMIC FORMAT EDITOR API ============
+@api_router.post("/format-editor/fetch-guidelines", response_model=FetchGuidelinesResponse)
+async def fetch_author_guidelines(
+    request: FetchGuidelinesRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Fetch author guidelines for a journal using AI"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Format Editor service not configured")
+        
+        system_prompt = """You are an expert academic publishing consultant with comprehensive knowledge of journal author guidelines.
+
+Your task is to provide detailed author guidelines for academic journals, including:
+1. Citation style (APA, MLA, Chicago, Harvard, IEEE, etc.)
+2. Manuscript structure requirements
+3. Heading levels and formatting
+4. In-text citation format
+5. Reference list format
+6. Figure and table formatting
+7. Any specific requirements
+
+Provide accurate, detailed guidelines based on the journal's official author guidelines."""
+
+        user_prompt = f"""Journal Name: {request.journal_name}
+
+Please provide comprehensive author guidelines for this journal, including:
+- Citation style used
+- Manuscript structure
+- Formatting requirements for headings, citations, references, tables, and figures
+- Any specific formatting rules
+
+If you're not certain about specific details, indicate that with "Note: Please verify from official journal website" """
+
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"fetch-guidelines-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        
+        msg = UserMessage(text=user_prompt)
+        response_text = await chat.send_message(msg)
+        
+        # Try to extract format style
+        format_style = None
+        response_lower = response_text.lower()
+        if 'apa' in response_lower:
+            format_style = 'APA'
+        elif 'mla' in response_lower:
+            format_style = 'MLA'
+        elif 'chicago' in response_lower:
+            format_style = 'Chicago'
+        elif 'harvard' in response_lower:
+            format_style = 'Harvard'
+        elif 'ieee' in response_lower:
+            format_style = 'IEEE'
+        
+        return FetchGuidelinesResponse(
+            journal_name=request.journal_name,
+            guidelines=response_text,
+            format_style=format_style
+        )
+        
+    except Exception as e:
+        logging.error(f"Fetch Guidelines error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch guidelines: {str(e)}")
+
+@api_router.post("/format-editor/format", response_model=FormatEditorResponse)
+async def format_academic_text(
+    request: FormatEditorRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Format academic text according to journal guidelines and citation style"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Format Editor service not configured")
+        
+        system_prompt = f"""You are an expert academic editor specializing in formatting academic manuscripts according to specific journal guidelines and citation styles.
+
+Your task is to reformat academic text according to:
+1. Citation style: {request.format_style}
+2. Journal-specific guidelines (if provided)
+3. Academic writing standards
+
+Focus on:
+- Correcting in-text citations to match {request.format_style} style
+- Formatting references/bibliography correctly
+- Adjusting heading levels and formatting
+- Formatting tables and figures appropriately
+- Ensuring consistent formatting throughout
+
+Provide:
+1. The fully formatted text
+2. A detailed list of changes made (what was changed and why)
+3. A brief summary of the formatting work done"""
+
+        # Build user prompt
+        user_prompt = f"""Original Text:
+{request.original_text}
+
+Format Style: {request.format_style}"""
+
+        if request.journal_name:
+            user_prompt += f"\n\nJournal Name: {request.journal_name}"
+        
+        if request.guidelines:
+            user_prompt += f"\n\nJournal Author Guidelines:\n{request.guidelines}"
+        
+        user_prompt += """
+
+Please format this text according to the specified style and guidelines. Provide your response in the following format:
+
+FORMATTED_TEXT:
+[The complete formatted text]
+
+CHANGES:
+SECTION: [Section name, e.g., "In-text Citations"]
+ORIGINAL: [Original text]
+FORMATTED: [Formatted text]
+REASON: [Why this change was made]
+---
+[Repeat for each change]
+
+SUMMARY:
+[Brief summary of the formatting work done]"""
+
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"format-editor-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        
+        msg = UserMessage(text=user_prompt)
+        response_text = await chat.send_message(msg)
+        
+        # Parse response
+        formatted_text = ""
+        changes = []
+        summary = ""
+        
+        # Extract formatted text
+        if "FORMATTED_TEXT:" in response_text:
+            parts = response_text.split("CHANGES:")
+            formatted_text = parts[0].replace("FORMATTED_TEXT:", "").strip()
+            
+            if len(parts) > 1:
+                changes_section = parts[1].split("SUMMARY:")[0].strip()
+                
+                # Parse changes
+                change_blocks = changes_section.split("---")
+                for block in change_blocks:
+                    block = block.strip()
+                    if not block:
+                        continue
+                    
+                    section = ""
+                    original = ""
+                    formatted = ""
+                    reason = ""
+                    
+                    lines = block.split("\n")
+                    for line in lines:
+                        line = line.strip()
+                        if line.startswith("SECTION:"):
+                            section = line.replace("SECTION:", "").strip()
+                        elif line.startswith("ORIGINAL:"):
+                            original = line.replace("ORIGINAL:", "").strip()
+                        elif line.startswith("FORMATTED:"):
+                            formatted = line.replace("FORMATTED:", "").strip()
+                        elif line.startswith("REASON:"):
+                            reason = line.replace("REASON:", "").strip()
+                    
+                    if section and original and formatted:
+                        changes.append(FormatChange(
+                            section=section,
+                            original=original,
+                            formatted=formatted,
+                            reason=reason
+                        ))
+                
+                # Extract summary
+                if "SUMMARY:" in parts[1]:
+                    summary = parts[1].split("SUMMARY:")[1].strip()
+        else:
+            # Fallback if format not followed
+            formatted_text = response_text
+            summary = "Text has been formatted according to the specified style."
+        
+        return FormatEditorResponse(
+            formatted_text=formatted_text,
+            changes=changes,
+            summary=summary
+        )
+        
+    except Exception as e:
+        logging.error(f"Format Editor error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to format text: {str(e)}")
+
 # ============ PLACEHOLDER ROUTES FOR FUTURE FEATURES ============
 @api_router.get("/market-research/projects")
 async def get_market_research_projects(current_user: User = Depends(get_current_user)):
