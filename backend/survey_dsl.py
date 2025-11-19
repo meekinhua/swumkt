@@ -172,6 +172,10 @@ class SurveyDSLParser:
     
     def _validate_question_type(self, q_type: str) -> str:
         """Validate question type"""
+        # Map likert_scale to rating_scale (backend compatibility)
+        if q_type == 'likert_scale':
+            q_type = 'rating_scale'
+        
         if q_type not in self.QUESTION_TYPES:
             raise ValueError(f"Invalid question type: {q_type}. Must be one of {self.QUESTION_TYPES}")
         return q_type
