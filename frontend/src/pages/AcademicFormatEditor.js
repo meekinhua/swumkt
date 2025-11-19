@@ -277,8 +277,26 @@ const AcademicFormatEditor = () => {
                   {/* Summary */}
                   {result.summary && (
                     <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                      <h3 className="font-bold text-gray-900 mb-2">สรุป</h3>
-                      <p className="text-sm text-gray-700">{result.summary}</p>
+                      <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        สรุป
+                      </h3>
+                      <p className="text-sm text-gray-700 mb-2">{result.summary}</p>
+                      {result.sections_processed && result.sections_processed.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-green-300">
+                          <p className="text-xs font-semibold text-gray-600 mb-1">ส่วนที่ประมวลผล:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {result.sections_processed.map((section, idx) => (
+                              <span 
+                                key={idx} 
+                                className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded border border-green-300"
+                              >
+                                {section}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
