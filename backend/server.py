@@ -1389,36 +1389,18 @@ sections:
 
 **Now create the survey. Return ONLY the YAML, no markdown blocks, no explanations:**"""
         
-        # Call OpenAI API through Emergent proxy
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {llm_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "gpt-4o-mini",
-                    "messages": [
-                        {
-                            "role": "system", 
-                            "content": "You are a professional survey designer. You create surveys using YAML format. Return only valid YAML without markdown code blocks or explanations."
-                        },
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.7,
-                    "max_tokens": 4000
-                }
-            )
-            
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"AI API error: {response.status_code}"
-                )
-            
-            result = response.json()
-            sdl_text = result['choices'][0]['message']['content']
+        # Create LLM chat using emergentintegrations
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"survey-gen-{uuid.uuid4()}",
+            system_message="You are a professional survey designer. You create surveys using YAML format. Return only valid YAML without markdown code blocks or explanations."
+        ).with_model("openai", "gpt-4o-mini")
+        
+        # Create user message
+        user_message = UserMessage(text=prompt)
+        
+        # Get response from LLM
+        sdl_text = await chat.send_message(user_message)
         
         # Clean response - remove markdown code blocks
         sdl_text = sdl_text.strip()
