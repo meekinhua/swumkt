@@ -144,14 +144,15 @@ const CustomerBehaviorTool = () => {
           raw_data: rawData,
           research_context: researchContext || null,
           output_language: targetLanguage,
-          image_url: imageUrl || null
+          image_url: imageUrl || null,
+          image_base64: imageUrl || null  // Attach generated image
         },
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      toast.success('Analysis saved as content successfully!');
+      toast.success('Analysis saved as content with image attachment!');
       setShowSaveForm(false);
       // Optionally navigate to content page
       // navigate('/content');
