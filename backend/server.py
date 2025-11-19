@@ -1195,10 +1195,12 @@ async def list_survey_templates(
     current_user: User = Depends(get_current_user)
 ):
     """List survey templates"""
+    # Build query - include user's own templates, public templates, and system templates
     query = {
         "$or": [
             {"created_by": current_user.id},
-            {"is_public": True}
+            {"is_public": True},
+            {"created_by": "system"}
         ]
     }
     
@@ -1207,7 +1209,7 @@ async def list_survey_templates(
     if tag:
         query["tags"] = tag
     
-    templates = await db.survey_templates.find(query, {"_id": 0}).to_list(100)
+    templates = await db.survey_templates.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
     
     for template in templates:
         if isinstance(template.get('created_at'), str):
