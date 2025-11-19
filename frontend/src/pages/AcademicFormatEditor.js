@@ -28,6 +28,7 @@ const AcademicFormatEditor = () => {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [guidelines, setGuidelines] = useState('');
+  const [formattingSpecs, setFormattingSpecs] = useState(null);
   const [fetchingGuidelines, setFetchingGuidelines] = useState(false);
   const [formatting, setFormatting] = useState(false);
   const [result, setResult] = useState(null);
