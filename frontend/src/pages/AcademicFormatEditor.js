@@ -87,13 +87,19 @@ const AcademicFormatEditor = () => {
   };
 
   const handleFormat = async () => {
-    // Validate based on mode
+    // Validate input mode
     if (inputMode === 'file' && !uploadedFile) {
       toast.error('กรุณาอัปโหลดไฟล์ .docx');
       return;
     }
     if (inputMode === 'text' && !formData.originalText.trim()) {
       toast.error('กรุณาใส่ข้อความที่ต้องการแก้ไข');
+      return;
+    }
+
+    // Validate style selection mode
+    if (styleSelectionMode === 'auto' && !formData.journalName.trim()) {
+      toast.error('กรุณาใส่ชื่อวารสารและคลิก "ค้นหา" ก่อน');
       return;
     }
 
