@@ -2842,6 +2842,78 @@ class FormatEditorResponse(BaseModel):
     summary: str
     sections_processed: List[str] = []
 
+# ============ Format Editor Helper Functions ============
+async def get_format_editor_model():
+    """Get configured LLM model for format editor from admin settings"""
+    try:
+        settings = await db.admin_settings.find_one(
+            {"setting_type": "format_editor_model"}, 
+            {"_id": 0}
+        )
+        if settings and settings.get("model"):
+            return settings["model"]
+    except Exception as e:
+        logging.error(f"Error fetching format editor model: {str(e)}")
+    
+    return "claude-sonnet-4"  # Default
+
+def get_llm_provider_and_model(model_name: str):
+    """Map model name to provider and full model identifier"""
+    model_map = {
+        "claude-sonnet-4": ("anthropic", "claude-sonnet-4-20250514"),
+        "gpt-5": ("openai", "gpt-5"),
+        "gemini-2.5-pro": ("google", "gemini-2.5-pro-preview-01-17"),
+        "gemini-flash": ("google", "gemini-2.0-flash-exp")
+    }
+    return model_map.get(model_name, ("anthropic", "claude-sonnet-4-20250514"))
+
+def split_document_into_sections(text: str):
+    """Split document into logical sections for processing"""
+    import re
+    
+    sections = {}
+    
+    # Common section headers
+    section_patterns = [
+        (r'(?i)(abstract|บทคัดย่อ)[:\s]*\n', 'Abstract'),
+        (r'(?i)(introduction|บทนำ)[:\s]*\n', 'Introduction'),
+        (r'(?i)(literature review|ทบทวนวรรณกรรม)[:\s]*\n', 'Literature Review'),
+        (r'(?i)(method(ology)?|วิธีการวิจัย)[:\s]*\n', 'Methodology'),
+        (r'(?i)(results?|ผลการวิจัย)[:\s]*\n', 'Results'),
+        (r'(?i)(discussion|อภิปรายผล)[:\s]*\n', 'Discussion'),
+        (r'(?i)(conclusion|สรุป)[:\s]*\n', 'Conclusion'),
+        (r'(?i)(references?|เอกสารอ้างอิง|bibliography)[:\s]*\n', 'References')
+    ]
+    
+    # Find section positions
+    section_positions = []
+    for pattern, name in section_patterns:
+        for match in re.finditer(pattern, text, re.MULTILINE):
+            section_positions.append((match.start(), name))
+    
+    # Sort by position
+    section_positions.sort()
+    
+    # If no clear sections found, split by length
+    if len(section_positions) < 2:
+        # Split into chunks of ~3000 words
+        words = text.split()
+        chunk_size = 3000
+        for i in range(0, len(words), chunk_size):
+            chunk_text = ' '.join(words[i:i+chunk_size])
+            sections[f'Section {i//chunk_size + 1}'] = chunk_text
+        return sections
+    
+    # Extract sections based on found positions
+    for i, (pos, name) in enumerate(section_positions):
+        if i < len(section_positions) - 1:
+            next_pos = section_positions[i + 1][0]
+            sections[name] = text[pos:next_pos].strip()
+        else:
+            sections[name] = text[pos:].strip()
+    
+    return sections
+
 # ============ Journal Database Loaders ============
 def load_abdc_database():
     """Load ABDC journal database from CSV"""
