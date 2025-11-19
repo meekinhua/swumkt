@@ -3119,14 +3119,22 @@ async def test_image_generation(
             # Use Gemini Imagen
             from emergentintegrations.llm.gemeni.image_generation import GeminiImageGeneration
             
-            gemini = GeminiImageGeneration()
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            if not api_key:
+                raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+            
+            gemini = GeminiImageGeneration(api_key=api_key)
             image_url = gemini.generate(request.prompt)
             
         elif request.model == "openai":
             # Use OpenAI DALL-E
             from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
             
-            openai = OpenAIImageGeneration()
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            if not api_key:
+                raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+            
+            openai = OpenAIImageGeneration(api_key=api_key)
             image_url = openai.generate(request.prompt)
             
         else:
