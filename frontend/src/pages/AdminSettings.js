@@ -297,6 +297,103 @@ const AdminSettings = () => {
                     </p>
                   </div>
 
+                  {/* Image Model Selection */}
+                  <div>
+                    <Label className="text-gray-800 font-bold mb-2 text-lg">
+                      Image Generation Model
+                    </Label>
+                    {imageModelMetadata && imageModelMetadata.updated_at && (
+                      <div className="mb-3 p-3 bg-green-50 rounded border border-green-200 text-xs">
+                        <p className="text-gray-700 font-semibold">
+                          <strong>Last Updated:</strong> {new Date(imageModelMetadata.updated_at).toLocaleString()} by {imageModelMetadata.updated_by}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      Choose which AI model to use for generating behavior analysis illustrations
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* OpenAI Option */}
+                      <div
+                        onClick={() => setImageModel('openai')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          imageModel === 'openai'
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-300 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="imageModel"
+                            value="openai"
+                            checked={imageModel === 'openai'}
+                            onChange={(e) => setImageModel(e.target.value)}
+                            className="mt-1"
+                          />
+                          <div>
+                            <h4 className="font-bold text-gray-900">OpenAI (DALL-E)</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Model: gpt-image-1
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              High-quality photorealistic images with detailed control
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Gemini Option */}
+                      <div
+                        onClick={() => setImageModel('gemini')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          imageModel === 'gemini'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-300 hover:border-green-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="imageModel"
+                            value="gemini"
+                            checked={imageModel === 'gemini'}
+                            onChange={(e) => setImageModel(e.target.value)}
+                            className="mt-1"
+                          />
+                          <div>
+                            <h4 className="font-bold text-gray-900">Google Gemini (Imagen)</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Model: imagen-3.0-generate-002
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Fast generation with artistic style variations
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleSaveImageModel}
+                      disabled={savingImageModel}
+                      className="mt-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
+                    >
+                      {savingImageModel ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Image Model
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
                   <div className="flex gap-4">
                     <Button
                       onClick={handleSaveBehavior}
