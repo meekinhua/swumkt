@@ -356,6 +356,19 @@ const AcademicFormatEditor = () => {
 
               {result && (
                 <div className="space-y-4">
+                  {/* Download Button */}
+                  {result.formatted_file_base64 && (
+                    <Button
+                      onClick={handleDownload}
+                      className="w-full h-14 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white font-bold shadow-xl text-lg"
+                    >
+                      <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      ดาวน์โหลดไฟล์ที่แก้ไขแล้ว (.docx)
+                    </Button>
+                  )}
+
                   <Textarea
                     value={result.formatted_text}
                     readOnly
