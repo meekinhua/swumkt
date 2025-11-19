@@ -292,17 +292,36 @@ const AdminSettings = () => {
             </Tabs>
           </Card>
 
-          {/* Info Card */}
-          <Card className="mt-8 p-6 bg-gradient-to-br from-[#00A9CE]/10 to-[#33BCDA]/10 border-2 border-[#00A9CE]/30">
-            <h3 className="text-lg font-black text-gray-900 mb-3">📝 Prompt Guidelines</h3>
-            <ul className="space-y-2 text-gray-700 font-medium">
-              <li>• Clearly define the AI's role (e.g., "expert market researcher")</li>
-              <li>• Specify what to analyze (stages, touchpoints, pain points, emotions)</li>
-              <li>• Include output format instructions (analysis summary + Mermaid code)</li>
-              <li>• Provide Mermaid syntax examples with proper styling</li>
-              <li>• Use consistent formatting tags (e.g., ANALYSIS: and MERMAID:)</li>
-            </ul>
-          </Card>
+          {/* Info Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <Card className="p-6 bg-gradient-to-br from-[#00A9CE]/10 to-[#33BCDA]/10 border-2 border-[#00A9CE]/30">
+              <h3 className="text-lg font-black text-gray-900 mb-3 flex items-center gap-2">
+                <Map className="w-5 h-5" />
+                Journey Map Guidelines
+              </h3>
+              <ul className="space-y-2 text-sm text-gray-700 font-medium">
+                <li>• Define AI's role (e.g., "expert customer experience analyst")</li>
+                <li>• Specify analysis elements: stages, touchpoints, pain points, emotions</li>
+                <li>• Include output format: ANALYSIS + MERMAID sections</li>
+                <li>• Provide Mermaid syntax examples with styling</li>
+                <li>• Use consistent formatting tags</li>
+              </ul>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+              <h3 className="text-lg font-black text-gray-900 mb-3 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Behavior Analysis Guidelines
+              </h3>
+              <ul className="space-y-2 text-sm text-gray-700 font-medium">
+                <li>• Define AI's role (e.g., "consumer behavior analyst")</li>
+                <li>• Specify analysis elements: behavioral patterns, motivations, barriers</li>
+                <li>• Include output format: ANALYSIS + KEY_FINDINGS + RECOMMENDATIONS</li>
+                <li>• Focus on actionable insights</li>
+                <li>• Identify psychological and social factors</li>
+              </ul>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
