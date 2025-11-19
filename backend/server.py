@@ -2185,6 +2185,60 @@ async def get_behavior_image_model(current_user: User = Depends(get_current_user
         logging.error(f"Error fetching image model setting: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch setting: {str(e)}")
 
+# Admin: Get/Set Behavior Image Prompt
+@api_router.get("/admin/behavior-image-prompt")
+async def get_behavior_image_prompt(current_user: User = Depends(get_current_user)):
+    """Get current behavior image prompt settings (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        settings = await db.admin_settings.find_one({"setting_type": "behavior_image_prompt"})
+        if not settings:
+            return {
+                "behavior_image_prompt": get_default_behavior_image_prompt(),
+                "updated_by": "system",
+                "updated_at": None
+            }
+        
+        if '_id' in settings:
+            del settings['_id']
+        
+        return settings
+        
+    except Exception as e:
+        logging.error(f"Error fetching behavior image prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch prompt: {str(e)}")
+
+@api_router.post("/admin/behavior-image-prompt")
+async def update_behavior_image_prompt(
+    prompt_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update behavior image prompt (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        settings_doc = {
+            "setting_type": "behavior_image_prompt",
+            "behavior_image_prompt": prompt_data.get("behavior_image_prompt"),
+            "updated_by": current_user.id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.admin_settings.update_one(
+            {"setting_type": "behavior_image_prompt"},
+            {"$set": settings_doc},
+            upsert=True
+        )
+        
+        return {"message": "Behavior image prompt updated successfully"}
+        
+    except Exception as e:
+        logging.error(f"Error updating behavior image prompt: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
+
 @api_router.post("/admin/behavior-image-model")
 async def update_behavior_image_model(
     model_data: dict,
