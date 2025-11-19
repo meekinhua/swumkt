@@ -1390,62 +1390,7 @@ sections:
 
 **Now create the survey. Return ONLY the YAML, no markdown blocks, no explanations:**
 
-{{
-  "title": "Survey Title in {lang_instruction}",
-  "description": "Brief description",
-  "sections": [
-    {{
-      "id": "section_1",
-      "title": "Section 1 Title",
-      "description": "Section description",
-      "order": 0,
-      "questions": [
-        {{
-          "id": "q1",
-          "type": "multiple_choice_single",
-          "text": "Question in {lang_instruction}?",
-          "required": true,
-          "data_type": "nominal",
-          "options": [
-            {{"id": "opt1", "text": "Option 1", "value": "1"}},
-            {{"id": "opt2", "text": "Option 2", "value": "2"}}
-          ],
-          "order": 0
-        }},
-        {{
-          "id": "q2",
-          "type": "rating_scale",
-          "text": "Rate this (1-5)?",
-          "required": true,
-          "data_type": "scale",
-          "options": [
-            {{"id": "r1", "text": "1", "value": "1"}},
-            {{"id": "r2", "text": "2", "value": "2"}},
-            {{"id": "r3", "text": "3", "value": "3"}},
-            {{"id": "r4", "text": "4", "value": "4"}},
-            {{"id": "r5", "text": "5", "value": "5"}}
-          ],
-          "order": 1
-        }},
-        {{
-          "id": "q3",
-          "type": "open_ended",
-          "text": "Your thoughts?",
-          "required": false,
-          "data_type": "nominal",
-          "options": [],
-          "order": 2
-        }}
-      ]
-    }}
-  ]
-}}
-
-Types: multiple_choice_single, multiple_choice_multiple, rating_scale, open_ended
-Data types: nominal, ordinal, scale
-Return JSON only, no markdown."""
-        
-        # Call OpenAI API directly through Emergent proxy
+        # Call OpenAI API through Emergent proxy
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 "https://api.openai.com/v1/chat/completions",
@@ -1456,7 +1401,10 @@ Return JSON only, no markdown."""
                 json={
                     "model": "gpt-4o-mini",
                     "messages": [
-                        {"role": "system", "content": "You are a professional survey designer. Return only valid JSON."},
+                        {
+                            "role": "system", 
+                            "content": "You are a professional survey designer. You create surveys using YAML format. Return only valid YAML without markdown code blocks or explanations."
+                        },
                         {"role": "user", "content": prompt}
                     ],
                     "temperature": 0.7,
@@ -1471,47 +1419,44 @@ Return JSON only, no markdown."""
                 )
             
             result = response.json()
-            response_text = result['choices'][0]['message']['content']
+            sdl_text = result['choices'][0]['message']['content']
         
-        # Clean response
-        response_text = response_text.strip()
+        # Clean response - remove markdown code blocks
+        sdl_text = sdl_text.strip()
+        sdl_text = re.sub(r'^```(?:yaml|yml)?\s*', '', sdl_text, flags=re.MULTILINE)
+        sdl_text = re.sub(r'\s*```$', '', sdl_text, flags=re.MULTILINE)
+        sdl_text = sdl_text.strip()
         
-        # Remove markdown code blocks
-        response_text = re.sub(r'^```(?:json)?\s*', '', response_text, flags=re.MULTILINE)
-        response_text = re.sub(r'\s*```$', '', response_text, flags=re.MULTILINE)
-        response_text = response_text.strip()
+        print(f"AI Generated SDL:\n{sdl_text[:500]}...")
         
-        # Try to find JSON in response
-        json_match = re.search(r'\{[\s\S]*\}', response_text)
-        if json_match:
-            response_text = json_match.group(0)
-        
-        # Parse JSON
+        # Parse SDL to survey object
         try:
-            survey_data = json.loads(response_text)
-        except json.JSONDecodeError as e:
-            # Log the problematic response
-            print(f"Failed to parse JSON: {response_text[:500]}")
-            raise HTTPException(
-                status_code=500, 
-                detail=f"AI returned invalid JSON. Please try again or use templates instead."
-            )
-        
-        # Validate required fields
-        if 'title' not in survey_data or 'sections' not in survey_data:
+            parser = SurveyDSLParser()
+            survey_data = parser.parse(sdl_text)
+        except Exception as e:
+            print(f"SDL Parsing Error: {str(e)}")
+            print(f"Problematic SDL: {sdl_text[:1000]}")
             raise HTTPException(
                 status_code=500,
-                detail="AI response missing required fields. Please try again."
+                detail=f"Failed to parse AI-generated survey format. Please try again or use templates instead."
             )
         
-        # Create survey
-        survey = Survey(
-            title=survey_data['title'],
-            description=survey_data.get('description', ''),
-            survey_type=request.survey_type,
-            sections=survey_data['sections'],
-            created_by=current_user.id
-        )
+        # Validate survey
+        validator = SurveyDSLValidator()
+        is_valid, errors = validator.validate_survey(survey_data)
+        
+        if not is_valid:
+            print(f"Validation errors: {errors}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI-generated survey is incomplete. Please try again or use templates."
+            )
+        
+        # Add user info
+        survey_data['created_by'] = current_user.id
+        
+        # Create Survey object for response
+        survey = Survey(**survey_data)
         
         survey_dict = survey.model_dump()
         survey_dict['created_at'] = survey_dict['created_at'].isoformat()
