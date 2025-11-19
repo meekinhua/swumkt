@@ -2132,6 +2132,72 @@ async def update_behavior_prompt(
         logging.error(f"Error updating behavior prompt: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
 
+# Admin: Get/Set Behavior Image Model
+@api_router.get("/admin/behavior-image-model")
+async def get_behavior_image_model(current_user: User = Depends(get_current_user)):
+    """Get current behavior image model setting (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        settings = await db.admin_settings.find_one({"setting_type": "behavior_image_model"})
+        if not settings:
+            return {
+                "image_model": "openai",
+                "available_models": ["openai", "gemini"],
+                "updated_by": "system",
+                "updated_at": None
+            }
+        
+        if '_id' in settings:
+            del settings['_id']
+        
+        return {
+            **settings,
+            "available_models": ["openai", "gemini"]
+        }
+        
+    except Exception as e:
+        logging.error(f"Error fetching image model setting: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch setting: {str(e)}")
+
+@api_router.post("/admin/behavior-image-model")
+async def update_behavior_image_model(
+    model_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update behavior image model setting (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        image_model = model_data.get("image_model", "openai")
+        
+        # Validate model
+        if image_model not in ["openai", "gemini"]:
+            raise HTTPException(status_code=400, detail="Invalid image model. Must be 'openai' or 'gemini'")
+        
+        settings_doc = {
+            "setting_type": "behavior_image_model",
+            "image_model": image_model,
+            "updated_by": current_user.id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.admin_settings.update_one(
+            {"setting_type": "behavior_image_model"},
+            {"$set": settings_doc},
+            upsert=True
+        )
+        
+        return {"message": f"Image model updated to {image_model} successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating image model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update setting: {str(e)}")
+
 # Generate Behavior Analysis (Text only)
 @api_router.post("/generate-behavior-analysis", response_model=BehaviorAnalysisResponse)
 async def generate_behavior_analysis(
