@@ -13,6 +13,7 @@ import ProfilePage from '@/pages/ProfilePage';
 import MarketResearch from '@/pages/MarketResearch';
 import CustomerJourneyTool from '@/pages/CustomerJourneyTool';
 import CustomerBehaviorTool from '@/pages/CustomerBehaviorTool';
+import CustomerPerceptionTool from '@/pages/CustomerPerceptionTool';
 import AdminSettings from '@/pages/AdminSettings';
 import SurveyListPage from '@/pages/SurveyListPage';
 import SurveyBuilderPage from '@/pages/SurveyBuilderPage';
