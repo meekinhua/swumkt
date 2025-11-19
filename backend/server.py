@@ -2160,28 +2160,27 @@ async def update_behavior_prompt(
         raise HTTPException(status_code=500, detail=f"Failed to update prompt: {str(e)}")
 
 # Admin: Get/Set Behavior Image Model
-@api_router.get("/admin/behavior-image-model")
-async def get_behavior_image_model(current_user: User = Depends(get_current_user)):
-    """Get current behavior image model setting (admin only)"""
+@api_router.get("/admin/image-model")
+async def get_image_model(current_user: User = Depends(get_current_user)):
+    """Get current image generation model setting (admin only) - applies to all tools"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     try:
-        settings = await db.admin_settings.find_one({"setting_type": "behavior_image_model"})
-        if not settings:
+        settings = await db.admin_settings.find_one({}, {"_id": 0})
+        if not settings or "image_generation_model" not in settings:
             return {
-                "image_model": "openai",
-                "available_models": ["openai", "gemini"],
+                "image_model": "nanobanana",
+                "available_models": ["nanobanana", "openai"],
                 "updated_by": "system",
                 "updated_at": None
             }
         
-        if '_id' in settings:
-            del settings['_id']
-        
         return {
-            **settings,
-            "available_models": ["openai", "gemini"]
+            "image_model": settings.get("image_generation_model", "nanobanana"),
+            "available_models": ["nanobanana", "openai"],
+            "updated_by": settings.get("updated_by", "system"),
+            "updated_at": settings.get("updated_at")
         }
         
     except Exception as e:
