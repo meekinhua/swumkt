@@ -336,11 +336,24 @@ const AcademicFormatEditor = () => {
                         onChange={(e) => setFormData({...formData, formatStyle: e.target.value})}
                         className="w-full h-10 border-2 border-purple-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
                       >
-                        <option value="APA">APA (7th Edition)</option>
-                        <option value="MLA">MLA (9th Edition)</option>
-                        <option value="Chicago">Chicago Style</option>
-                        <option value="Harvard">Harvard Style</option>
-                        <option value="IEEE">IEEE Style</option>
+                        <optgroup label="📚 General Academic">
+                          <option value="APA">APA (7th Edition)</option>
+                          <option value="MLA">MLA (9th Edition)</option>
+                          <option value="Chicago">Chicago Style (Author-Date)</option>
+                          <option value="Turabian">Turabian (Notes-Bibliography)</option>
+                          <option value="Harvard">Harvard Style</option>
+                        </optgroup>
+                        <optgroup label="🔬 Sciences">
+                          <option value="IEEE">IEEE (Engineering)</option>
+                          <option value="Vancouver">Vancouver (Medical)</option>
+                          <option value="AMA">AMA (American Medical Association)</option>
+                          <option value="ACS">ACS (American Chemical Society)</option>
+                          <option value="Nature">Nature Journal</option>
+                        </optgroup>
+                        <optgroup label="📖 Publishers">
+                          <option value="Elsevier-Harvard">Elsevier-Harvard</option>
+                          <option value="Springer">Springer (Basic Author-Date)</option>
+                        </optgroup>
                       </select>
                     )}
                   </div>
