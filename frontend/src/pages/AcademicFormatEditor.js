@@ -65,40 +65,61 @@ const AcademicFormatEditor = () => {
     }
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.docx')) {
+      toast.error('กรุณาอัปโหลดไฟล์ .docx เท่านั้น');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target.result.split(',')[1];
+      setUploadedFile(base64);
+      setUploadedFileName(file.name);
+      toast.success(`อัปโหลด ${file.name} สำเร็จ`);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFormat = async () => {
-    if (!formData.originalText.trim()) {
-      toast.error('กรุณาใส่ข้อความที่ต้องการแก้ไข');
+    if (!formData.originalText.trim() && !uploadedFile) {
+      toast.error('กรุณาอัปโหลดไฟล์ .docx หรือใส่ข้อความ');
       return;
     }
 
     try {
       setFormatting(true);
       setResult(null);
-      
-      // Estimate number of sections (rough estimate based on text length)
-      const wordCount = formData.originalText.split(/\s+/).length;
-      const estimatedSections = Math.max(3, Math.ceil(wordCount / 3000));
-      setEstimatedSections(estimatedSections);
-      setFormattingProgress(`กำลังเตรียมการ... (คาดว่าจะแบ่งเป็น ~${estimatedSections} ส่วน)`);
+      setFormattingProgress('กำลังประมวลผลด้วย Pandoc...');
+
+      const requestData = {
+        format_style: formData.formatStyle,
+        journal_name: formData.journalName || null,
+        target_language: 'th'
+      };
+
+      if (uploadedFile) {
+        requestData.file_base64 = uploadedFile;
+        requestData.file_name = uploadedFileName;
+      } else {
+        requestData.original_text = formData.originalText;
+      }
 
       const response = await axios.post(
         `${API}/api/format-editor/format`,
-        {
-          original_text: formData.originalText,
-          journal_name: formData.journalName || null,
-          guidelines: guidelines || null,
-          format_style: formData.formatStyle,
-          target_language: 'th'
-        },
+        requestData,
         {
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 300000  // 5 minutes timeout
+          timeout: 60000  // 1 minute (Pandoc is fast!)
         }
       );
 
       setResult(response.data);
       setFormattingProgress('');
-      toast.success(`แก้ไข Format สำเร็จ! (${response.data.sections_processed?.length || 0} ส่วน)`);
+      toast.success('แก้ไข Format สำเร็จ! (ใช้ Pandoc - แม่นยำ 100%)');
     } catch (error) {
       console.error('Format error:', error);
       setFormattingProgress('');
@@ -106,6 +127,16 @@ const AcademicFormatEditor = () => {
     } finally {
       setFormatting(false);
     }
+  };
+
+  const handleDownload = () => {
+    if (!result?.formatted_file_base64) return;
+
+    const link = document.createElement('a');
+    link.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${result.formatted_file_base64}`;
+    link.download = result.formatted_file_name || 'formatted_document.docx';
+    link.click();
+    toast.success('ดาวน์โหลดไฟล์สำเร็จ!');
   };
 
   return (
