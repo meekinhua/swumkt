@@ -173,24 +173,6 @@ const Dashboard = () => {
           <TabsContent value="features" className="mt-6" data-testid="features-tab-panel">
             <div className="grid md:grid-cols-2 gap-6">
               <Card 
-                className="p-6 bg-white/98 border-2 border-blue-200 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer"
-                onClick={() => navigate('/surveys')}
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white">
-                    <FileText className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Survey Builder</h3>
-                </div>
-                <p className="text-gray-700 mb-4 font-medium">
-                  Create and manage comprehensive surveys for market research, customer feedback, and data collection.
-                </p>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                  Manage Surveys
-                </Button>
-              </Card>
-
-              <Card 
                 className="p-6 bg-white/98 border-2 border-[#00A9CE]/20 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer"
                 onClick={() => navigate('/market-research')}
               >
@@ -203,9 +185,9 @@ const Dashboard = () => {
                 <p className="text-gray-700 mb-4 font-medium">
                   {t('features.marketResearch.description')}
                 </p>
-                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
-                  {t('features.inDevelopment')}
-                </span>
+                <Button className="w-full bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold">
+                  เริ่มใช้งาน
+                </Button>
               </Card>
 
               <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
