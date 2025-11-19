@@ -33,10 +33,12 @@ const SurveyTemplateModal = ({ onClose }) => {
     try {
       setLoading(true);
       const params = selectedType !== 'all' ? { survey_type: selectedType } : {};
+      console.log('Loading templates with params:', params);
       const response = await axios.get(`${API}/api/survey-templates`, {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
+      console.log('Templates loaded:', response.data.length, 'templates');
       setTemplates(response.data);
     } catch (error) {
       console.error('Failed to load templates:', error);
