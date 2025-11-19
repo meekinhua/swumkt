@@ -238,6 +238,78 @@ const JournalFinder = () => {
                 )}
               </Button>
             </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Search Query */}
+                <div>
+                  <Label className="text-gray-800 font-bold mb-2">
+                    ค้นหาจากชื่อวารสารหรือสำนักพิมพ์
+                  </Label>
+                  <Input
+                    value={browseData.searchQuery}
+                    onChange={(e) => setBrowseData({...browseData, searchQuery: e.target.value})}
+                    className="mt-2 h-12 border-2 border-gray-300 focus:border-purple-500"
+                    placeholder="ใส่ชื่อวารสารหรือสำนักพิมพ์"
+                  />
+                </div>
+
+                {/* ABDC Rating Filter */}
+                <div>
+                  <Label className="text-gray-800 font-bold mb-2">
+                    ABDC Rating
+                  </Label>
+                  <select
+                    value={browseData.abdcRating}
+                    onChange={(e) => setBrowseData({...browseData, abdcRating: e.target.value})}
+                    className="w-full mt-2 h-12 border-2 border-gray-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="">ทั้งหมด</option>
+                    <option value="A*">A* (Top tier)</option>
+                    <option value="A">A (Excellent)</option>
+                    <option value="B">B (Good)</option>
+                    <option value="C">C (Acceptable)</option>
+                  </select>
+                </div>
+
+                {/* AJG Rating Filter */}
+                <div>
+                  <Label className="text-gray-800 font-bold mb-2">
+                    AJG 2024 Rating
+                  </Label>
+                  <select
+                    value={browseData.ajgRating}
+                    onChange={(e) => setBrowseData({...browseData, ajgRating: e.target.value})}
+                    className="w-full mt-2 h-12 border-2 border-gray-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="">ทั้งหมด</option>
+                    <option value="4*">4* (World elite)</option>
+                    <option value="4">4 (Top)</option>
+                    <option value="3">3 (Highly regarded)</option>
+                    <option value="2">2 (Well regarded)</option>
+                    <option value="1">1 (Recognized)</option>
+                  </select>
+                </div>
+
+                {/* Browse Button */}
+                <Button
+                  onClick={handleBrowse}
+                  disabled={searching}
+                  className="w-full h-14 bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold shadow-xl text-lg"
+                >
+                  {searching ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      กำลังค้นหา...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5 mr-2" />
+                      ค้นหาจากฐานข้อมูล
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* Right Panel: Results */}
