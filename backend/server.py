@@ -4256,6 +4256,10 @@ If you're not certain about specific details, indicate that with "Note: Please v
         logging.error(f"Fetch Guidelines error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch guidelines: {str(e)}")
 
+class FileAnalysisRequest(BaseModel):
+    file_base64: str
+    file_name: str
+
 class FileAnalysisResponse(BaseModel):
     file_name: str
     word_count: int
@@ -4270,8 +4274,7 @@ class FileAnalysisResponse(BaseModel):
 
 @api_router.post("/format-editor/analyze-file", response_model=FileAnalysisResponse)
 async def analyze_uploaded_file(
-    file_base64: str = Body(...),
-    file_name: str = Body(...),
+    request: FileAnalysisRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Analyze uploaded .docx file and return structure information"""
