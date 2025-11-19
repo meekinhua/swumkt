@@ -2331,23 +2331,36 @@ Format: Horizontal layout, suitable for presentation
         
         # Generate image based on selected model
         images = []
-        if selected_model == "gemini":
-            from emergentintegrations.llm.gemeni.image_generation import GeminiImageGeneration
+        try:
+            if selected_model == "gemini":
+                from emergentintegrations.llm.gemeni.image_generation import GeminiImageGeneration
+                
+                try:
+                    image_gen = GeminiImageGeneration(api_key=api_key)
+                    images = await image_gen.generate_images(
+                        prompt=image_prompt,
+                        model="imagen-3.0-generate-002",
+                        number_of_images=1
+                    )
+                except Exception as gemini_error:
+                    logging.warning(f"Gemini image generation failed: {str(gemini_error)}, falling back to OpenAI")
+                    # Fallback to OpenAI if Gemini fails
+                    selected_model = "openai"
             
-            image_gen = GeminiImageGeneration(api_key=api_key)
-            images = await image_gen.generate_images(
-                prompt=image_prompt,
-                model="imagen-3.0-generate-002",
-                number_of_images=1
-            )
-        else:  # default to openai
-            from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-            
-            image_gen = OpenAIImageGeneration(api_key=api_key)
-            images = await image_gen.generate_images(
-                prompt=image_prompt,
-                model="gpt-image-1",
-                number_of_images=1
+            if selected_model == "openai":
+                from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+                
+                image_gen = OpenAIImageGeneration(api_key=api_key)
+                images = await image_gen.generate_images(
+                    prompt=image_prompt,
+                    model="gpt-image-1",
+                    number_of_images=1
+                )
+        except Exception as e:
+            logging.error(f"Image generation failed for model {selected_model}: {str(e)}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Image generation failed. Please try again or contact support if the issue persists."
             )
         
         if not images or len(images) == 0:
