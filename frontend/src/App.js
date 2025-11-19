@@ -87,6 +87,14 @@ function App() {
               }
             />
             <Route
+              path="/market-research/academic-format-editor"
+              element={
+                <ProtectedRoute>
+                  <AcademicFormatEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/settings"
               element={
                 <ProtectedRoute>
