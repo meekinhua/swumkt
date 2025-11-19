@@ -2790,6 +2790,11 @@ async def generate_perception_questions(
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
+        # Get API key from environment
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Perception Question service not configured")
+        
         # Get admin settings or use default
         settings = await db.admin_settings.find_one({}) or {}
         system_prompt = settings.get("perception_question_prompt", get_default_perception_question_prompt())
@@ -2802,9 +2807,17 @@ async def generate_perception_questions(
         
         user_prompt += f"\n\nGenerate interview questions in {request.target_language} language."
         
-        # Call LLM
-        llm = LlmChat(system_prompt)
-        response = llm.chat(user_prompt)
+        # Create LLM chat
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"perception-questions-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        
+        user_message = UserMessage(text=user_prompt)
+        
+        # Get response from LLM
+        response = await chat.send_message(user_message)
         
         # Parse questions from response
         lines = [line.strip() for line in response.split('\n') if line.strip()]
