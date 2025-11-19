@@ -351,6 +351,7 @@ const AcademicFormatEditor = () => {
                           <option value="Nature">Nature Journal</option>
                         </optgroup>
                         <optgroup label="📖 Publishers">
+                          <option value="Emerald">Emerald (Harvard Style)</option>
                           <option value="Elsevier-Harvard">Elsevier-Harvard</option>
                           <option value="Springer">Springer (Basic Author-Date)</option>
                         </optgroup>
