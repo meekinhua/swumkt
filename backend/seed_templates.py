@@ -6,8 +6,14 @@ import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 import os
+from dotenv import load_dotenv
+from pathlib import Path
 
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/swumkt')
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
+MONGO_URL = os.environ.get('MONGO_URL')
+DB_NAME = os.environ.get('DB_NAME')
 
 # Pre-built templates
 TEMPLATES = [
