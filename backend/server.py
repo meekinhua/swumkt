@@ -2568,6 +2568,24 @@ Customer Behavior Analysis
         logging.error(f"Error sharing behavior analysis as content: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
 
+# ============ IMAGE COMPRESSION ROUTE ============
+class ImageCompressRequest(BaseModel):
+    image_base64: str
+
+@api_router.post("/compress-image")
+async def compress_image(
+    request: ImageCompressRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Compress an uploaded image"""
+    try:
+        from image_utils import compress_base64_image
+        compressed_image = compress_base64_image(request.image_base64, max_size_kb=500)
+        return {"compressed_image": compressed_image}
+    except Exception as e:
+        logging.error(f"Image compression error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to compress image: {str(e)}")
+
 # ============ COMMENT ROUTES ============
 @api_router.post("/comments", response_model=Comment)
 async def create_comment(
