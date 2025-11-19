@@ -4406,23 +4406,44 @@ async def format_academic_text(
                 os.unlink(temp_input.name)
                 os.unlink(temp_output_path)
                 
+                # Build detailed changes list
+                changes_list = []
+                
+                # Citation style change
+                changes_list.append(FormatChange(
+                    section="📚 Citations & References",
+                    original="ไม่มีรูปแบบ citation ที่กำหนด",
+                    formatted=f"{format_style} citation style",
+                    reason=f"จัดรูปแบบ citations และ references ตาม {format_style} style โดยใช้ CSL file"
+                ))
+                
+                # Template changes (if custom template used)
+                if template_file and request.journal_name:
+                    changes_list.append(FormatChange(
+                        section="📝 Document Formatting",
+                        original="รูปแบบเอกสารทั่วไป",
+                        formatted=f"รูปแบบเอกสารตาม {request.journal_name} guidelines",
+                        reason="ใช้ custom template ที่สร้างจาก AI-extracted parameters (font, margins, spacing, headings, etc.)"
+                    ))
+                
+                # Text to document conversion
+                changes_list.append(FormatChange(
+                    section="🔧 Document Conversion",
+                    original="Plain text / Markdown",
+                    formatted="Microsoft Word .docx document",
+                    reason="แปลงข้อความเป็น formatted .docx พร้อม structure, headings, และ styling"
+                ))
+                
                 summary = f"✅ ข้อความถูกแก้ไขด้วย Pandoc และ {format_style} citation style\n"
                 if template_file:
-                    summary += f"🎨 ใช้ Template: {request.journal_name} (LLM-generated)\n"
-                summary += f"⚡ เวลาประมวลผล: ~2-5 วินาที (Library-based, 100% accurate)"
+                    summary += f"🎨 ใช้ Custom Template: {request.journal_name} (AI-generated จาก author guidelines)\n"
+                summary += f"⚡ เวลาประมวลผล: ~2-5 วินาที (Pandoc library-based)"
                 
                 return FormatEditorResponse(
                     formatted_text=formatted_text,
                     formatted_file_base64=formatted_base64,
                     formatted_file_name="formatted_document.docx",
-                    changes=[
-                        FormatChange(
-                            section="Citations",
-                            original="Various citation formats",
-                            formatted=f"{format_style} format",
-                            reason=f"Standardized to {format_style} style"
-                        )
-                    ],
+                    changes=changes_list,
                     summary=summary,
                     sections_processed=["Full Document"],
                     method_used="pandoc"
