@@ -245,13 +245,7 @@ const AcademicFormatEditor = () => {
               💡 แนะนำ: อัปโหลดไฟล์ .docx จะได้ผลลัพธ์ที่แม่นยำที่สุด (Pandoc จะประมวลผล format, citations, และ references อัตโนมัติ)
             </p>
           </Card>
-
-          {/* OR Divider */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 border-t-2 border-gray-300"></div>
-            <span className="text-gray-500 font-bold">หรือ</span>
-            <div className="flex-1 border-t-2 border-gray-300"></div>
-          </div>
+          )}
 
           {/* Journal & Style Selection */}
           <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
