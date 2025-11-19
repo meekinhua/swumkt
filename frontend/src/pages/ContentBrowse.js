@@ -120,15 +120,43 @@ const ContentBrowse = () => {
                 data-testid={`content-card-${index}`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                {content.featured_image && (
-                  <div className="mb-4 rounded-lg overflow-hidden">
-                    <img
-                      src={content.featured_image}
-                      alt={content.title}
-                      className="w-full h-48 object-cover"
-                    />
-                  </div>
-                )}
+                {/* Show featured_image or first image attachment */}
+                {(() => {
+                  // Check if there's a featured_image
+                  if (content.featured_image) {
+                    return (
+                      <div className="mb-4 rounded-lg overflow-hidden">
+                        <img
+                          src={content.featured_image}
+                          alt={content.title}
+                          className="w-full h-48 object-cover"
+                        />
+                      </div>
+                    );
+                  }
+                  
+                  // Otherwise, check for first image attachment
+                  const imageAttachments = content.attachments?.filter(
+                    att => att.file_type && att.file_type.startsWith('image/')
+                  ) || [];
+                  
+                  if (imageAttachments.length > 0 && imageAttachments[0].file_data) {
+                    return (
+                      <div className="mb-4 rounded-lg overflow-hidden">
+                        <img
+                          src={imageAttachments[0].file_data}
+                          alt={content.title}
+                          className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
                 
                 <div className="flex items-center gap-2 mb-3">
                   <span className="badge-success text-xs px-3 py-1.5 rounded-full">
