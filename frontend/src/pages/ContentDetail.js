@@ -182,16 +182,43 @@ const ContentDetail = () => {
             </div>
           </div>
 
-          {/* Featured Image */}
-          {content.featured_image && (
-            <div className="mb-6 rounded-lg overflow-hidden border-2 border-gray-200">
-              <img
-                src={content.featured_image}
-                alt={content.title}
-                className="w-full h-auto"
-              />
-            </div>
-          )}
+          {/* Featured Image - Show featured_image or first image attachment */}
+          {(() => {
+            // Check if there's a featured_image
+            if (content.featured_image) {
+              return (
+                <div className="mb-6 rounded-lg overflow-hidden border-2 border-gray-200">
+                  <img
+                    src={content.featured_image}
+                    alt={content.title}
+                    className="w-full h-auto"
+                  />
+                </div>
+              );
+            }
+            
+            // Otherwise, check for first image attachment
+            const imageAttachments = content.attachments?.filter(
+              att => att.file_type && att.file_type.startsWith('image/')
+            ) || [];
+            
+            if (imageAttachments.length > 0 && imageAttachments[0].file_data) {
+              return (
+                <div className="mb-6 rounded-lg overflow-hidden border-2 border-gray-200">
+                  <img
+                    src={imageAttachments[0].file_data}
+                    alt={content.title}
+                    className="w-full h-auto"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              );
+            }
+            
+            return null;
+          })()}
 
           {/* Journey Map Viewer - Show if this is a journey map content */}
           {content.journey_map_metadata && content.journey_map_metadata.mermaid_code && (
