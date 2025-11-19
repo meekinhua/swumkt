@@ -18,7 +18,7 @@ const JournalFinder = () => {
   const { token } = useAuth();
 
   const [formData, setFormData] = useState({
-    researchTitle: '',
+    topic: '',
     abstract: '',
     keywords: ''
   });
@@ -27,7 +27,7 @@ const JournalFinder = () => {
   const [results, setResults] = useState(null);
 
   const handleSearch = async () => {
-    if (!formData.researchTitle.trim() || !formData.abstract.trim()) {
+    if (!formData.topic.trim() || !formData.abstract.trim()) {
       toast.error('กรุณากรอกหัวข้อวิจัยและ Abstract');
       return;
     }
@@ -37,8 +37,11 @@ const JournalFinder = () => {
       setResults(null);
 
       const response = await axios.post(
-        `${API}/api/journal-finder/search`,
-        formData,
+        `${API}/api/journal-finder`,
+        {
+          ...formData,
+          target_language: 'th'
+        },
         {
           headers: { Authorization: `Bearer ${token}` }
         }
