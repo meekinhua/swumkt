@@ -288,7 +288,11 @@ const AcademicFormatEditor = () => {
               </label>
               {uploadedFileName && (
                 <Button
-                  onClick={() => {setUploadedFile(null); setUploadedFileName('');}}
+                  onClick={() => {
+                    setUploadedFile(null); 
+                    setUploadedFileName('');
+                    setUploadedFileInfo(null);
+                  }}
                   variant="outline"
                   className="border-red-300 text-red-600 hover:bg-red-50"
                 >
