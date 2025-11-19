@@ -3444,6 +3444,187 @@ async def get_comments(content_id: str):
     
     return comments
 
+# ============ JOURNAL FINDER API ============
+@api_router.post("/journal-finder", response_model=JournalFinderResponse)
+async def find_journals(
+    request: JournalFinderRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Find suitable academic journals based on research topic, abstract, and keywords"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        # Get API key
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Journal Finder service not configured")
+        
+        # Load journal databases
+        abdc_db = load_abdc_database()
+        ajg_db = load_ajg_database()
+        
+        # Build system prompt
+        system_prompt = """You are an expert academic research advisor specializing in helping researchers find suitable journals for publication.
+
+Your task is to suggest suitable academic journals based on the research topic, abstract, and keywords provided.
+
+Guidelines:
+1. Suggest 5-10 highly relevant journals
+2. Consider the research field, methodology, and scope
+3. Include journals of varying prestige levels (top-tier to mid-tier)
+4. Provide journal names EXACTLY as they appear in official databases
+5. For each journal, provide:
+   - Full journal name (exact official name)
+   - Brief explanation of why it's suitable
+   - Estimated Impact Factor (if you know it, otherwise mark as "Unknown")
+   - Estimated Quartile (Q1, Q2, Q3, Q4, or "Unknown")
+   - Scopus/ISI indexing status (Yes/No/Unknown)
+
+Output Format (IMPORTANT - Follow exactly):
+JOURNAL: [Exact Journal Name]
+PUBLISHER: [Publisher name if known, otherwise "Unknown"]
+REASON: [Brief explanation of suitability]
+IMPACT_FACTOR: [Estimated IF or "Unknown"]
+QUARTILE: [Q1/Q2/Q3/Q4 or "Unknown"]
+SCOPUS: [Yes/No/Unknown]
+---
+
+Repeat for each journal suggestion."""
+
+        # Build user prompt
+        user_prompt = f"""Research Topic: {request.topic}
+
+Abstract:
+{request.abstract}
+
+Keywords: {request.keywords}
+
+Please suggest suitable academic journals for this research."""
+
+        # Get response from Claude
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"journal-finder-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("anthropic", "claude-sonnet-4")
+        
+        msg = UserMessage(text=user_prompt)
+        response_text = await chat.send_message(msg)
+        
+        # Parse response and match with databases
+        journals = []
+        current_journal = {}
+        
+        for line in response_text.split('\n'):
+            line = line.strip()
+            
+            if line.startswith('JOURNAL:'):
+                if current_journal.get('journal_name'):
+                    journals.append(current_journal)
+                current_journal = {'journal_name': line.replace('JOURNAL:', '').strip()}
+            elif line.startswith('PUBLISHER:'):
+                current_journal['publisher'] = line.replace('PUBLISHER:', '').strip()
+            elif line.startswith('REASON:'):
+                current_journal['reason'] = line.replace('REASON:', '').strip()
+            elif line.startswith('IMPACT_FACTOR:'):
+                current_journal['ai_impact_factor'] = line.replace('IMPACT_FACTOR:', '').strip()
+            elif line.startswith('QUARTILE:'):
+                current_journal['ai_quartile'] = line.replace('QUARTILE:', '').strip()
+            elif line.startswith('SCOPUS:'):
+                current_journal['ai_scopus'] = line.replace('SCOPUS:', '').strip()
+        
+        # Add last journal
+        if current_journal.get('journal_name'):
+            journals.append(current_journal)
+        
+        # Match with ABDC and AJG databases
+        results = []
+        for journal in journals:
+            journal_name = journal['journal_name']
+            journal_name_lower = journal_name.lower()
+            
+            # Check ABDC database
+            abdc_match = abdc_db.get(journal_name_lower)
+            abdc_rating = None
+            issn = None
+            website = None
+            
+            if abdc_match:
+                abdc_rating = abdc_match['rating']
+                issn = abdc_match['issn'] or abdc_match['issn_online']
+                website = abdc_match['website']
+            
+            # Check AJG database
+            ajg_match = ajg_db.get(journal_name_lower)
+            ajg_rating = ajg_match['rating'] if ajg_match else None
+            
+            # Build result
+            result = JournalResult(
+                journal_name=journal_name,
+                publisher=journal.get('publisher', 'Unknown'),
+                issn=issn,
+                website=website,
+                abdc_rating=abdc_rating,
+                ajg_rating=ajg_rating,
+                impact_factor=journal.get('ai_impact_factor', 'Unknown'),
+                quartile=journal.get('ai_quartile', 'Unknown'),
+                scopus_indexed=journal.get('ai_scopus', 'Unknown'),
+                is_official_data=bool(abdc_rating or ajg_rating),
+                scimago_url=f"https://www.scimagojr.com/journalsearch.php?q={journal_name.replace(' ', '+')}&tip=sid"
+            )
+            results.append(result)
+        
+        # Build explanation
+        language_map = {
+            'th': 'Thai',
+            'en': 'English'
+        }
+        language_name = language_map.get(request.target_language, 'English')
+        
+        explanation = f"Based on your research topic and abstract, here are {len(results)} suitable journals for your consideration."
+        
+        disclaimer_th = """
+⚠️ **คำแนะนำในการใช้ข้อมูล:**
+
+✅ **ข้อมูลที่แม่นยำ 100%** (จากฐานข้อมูลอย่างเป็นทางการ):
+- ABDC Rating (A*, A, B, C)
+- AJG 2024 Rating (4*, 3, 2, 1)
+
+⚠️ **ข้อมูลโดยประมาณจาก AI:**
+- Impact Factor
+- Quartile (Q1-Q4)
+- Scopus Indexing
+
+กรุณาตรวจสอบข้อมูล Impact Factor, Quartile และ Scopus จาก **SCImago Journal Rank** หรือแหล่งอย่างเป็นทางการเพื่อความแม่นยำสูงสุด
+"""
+        
+        disclaimer_en = """
+⚠️ **Data Usage Disclaimer:**
+
+✅ **100% Accurate Data** (from official databases):
+- ABDC Rating (A*, A, B, C)
+- AJG 2024 Rating (4*, 3, 2, 1)
+
+⚠️ **AI-Estimated Data:**
+- Impact Factor
+- Quartile (Q1-Q4)
+- Scopus Indexing
+
+Please verify Impact Factor, Quartile, and Scopus indexing from **SCImago Journal Rank** or official sources for highest accuracy.
+"""
+        
+        disclaimer = disclaimer_th if request.target_language == 'th' else disclaimer_en
+        
+        return JournalFinderResponse(
+            journals=results,
+            explanation=explanation,
+            disclaimer=disclaimer
+        )
+        
+    except Exception as e:
+        logging.error(f"Journal Finder error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to find journals: {str(e)}")
+
 # ============ PLACEHOLDER ROUTES FOR FUTURE FEATURES ============
 @api_router.get("/market-research/projects")
 async def get_market_research_projects(current_user: User = Depends(get_current_user)):
