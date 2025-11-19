@@ -60,21 +60,12 @@ const AcademicFormatEditor = () => {
         setFormData({...formData, formatStyle: response.data.format_style});
       }
       
-      // Show formatting specs if available
+      // Store formatting specs if available
       if (response.data.formatting_specs) {
-        const specs = response.data.formatting_specs;
-        const specsMessage = `
-📊 Detected Formatting Parameters:
-• Font: ${specs.font_name || 'N/A'}
-• Font Size: ${specs.font_size || 'N/A'}pt
-• Line Spacing: ${specs.line_spacing || 'N/A'}
-• Margins: ${specs.margin_inches || 'N/A'} inches
-• Heading Bold: ${specs.heading_bold ? 'Yes' : 'No'}
-• Heading Size: ${specs.heading_size || 'N/A'}pt
-        `;
-        console.log(specsMessage);
-        toast.success('ดึง Author Guidelines สำเร็จ! (ดู console สำหรับ parameters)', { duration: 5000 });
+        setFormattingSpecs(response.data.formatting_specs);
+        toast.success('ดึง Author Guidelines และ Formatting Parameters สำเร็จ!', { duration: 3000 });
       } else {
+        setFormattingSpecs(null);
         toast.success('ดึง Author Guidelines สำเร็จ!');
       }
     } catch (error) {
