@@ -1336,7 +1336,7 @@ async def ai_generate_survey(
 **SDL Format Example:**
 ```yaml
 survey: "Survey Title in {lang_instruction}"
-type: {request.survey_type}
+type: perception
 description: "Brief description in {lang_instruction}"
 
 demographics:
