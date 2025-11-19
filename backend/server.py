@@ -2504,6 +2504,24 @@ Customer Behavior Analysis
         if data.additional_notes:
             content_body += f"\n\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}"
         
+        # Handle image attachment
+        attachments = []
+        if data.image_base64:
+            from image_utils import compress_base64_image, get_image_size_kb
+            
+            # Compress image for storage
+            compressed_image = compress_base64_image(data.image_base64, max_size_kb=500)
+            image_size = get_image_size_kb(compressed_image)
+            
+            attachments.append({
+                "id": str(uuid.uuid4()),
+                "filename": "behavior_analysis_illustration.jpg",
+                "file_type": "image/jpeg",
+                "file_size_kb": round(image_size, 2),
+                "file_data": compressed_image,
+                "uploaded_at": datetime.now(timezone.utc).isoformat()
+            })
+        
         # Create content document
         content_dict = {
             "id": str(uuid.uuid4()),
@@ -2522,6 +2540,7 @@ Customer Behavior Analysis
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "views": 0,
+            "attachments": attachments,
             "behavior_metadata": {
                 "research_type": data.research_type,
                 "sample_size": data.sample_size,
