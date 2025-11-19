@@ -2751,6 +2751,52 @@ class JournalFinderResponse(BaseModel):
     explanation: str
     disclaimer: str
 
+# ============ Journal Database Loaders ============
+def load_abdc_database():
+    """Load ABDC journal database from CSV"""
+    abdc_journals = {}
+    try:
+        csv_path = ROOT_DIR / 'data' / 'abdc_journals.csv'
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                title = row.get('Title', '').strip()
+                if title:
+                    abdc_journals[title.lower()] = {
+                        'title': title,
+                        'publisher': row.get('Publisher', ''),
+                        'rating': row.get('Rating', ''),
+                        'issn': row.get('ISSN', ''),
+                        'issn_online': row.get('ISSN Online', ''),
+                        'website': row.get('Website', '')
+                    }
+    except Exception as e:
+        logging.error(f"Error loading ABDC database: {str(e)}")
+    return abdc_journals
+
+def load_ajg_database():
+    """Load AJG 2024 journal database from Excel"""
+    ajg_journals = {}
+    try:
+        xlsx_path = ROOT_DIR / 'data' / 'ajg_2024.xlsx'
+        wb = openpyxl.load_workbook(xlsx_path, read_only=True)
+        ws = wb.active
+        
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if row and len(row) >= 3:
+                journal_title = str(row[2]).strip() if row[2] else None
+                ajg_rating = str(row[3]).strip() if len(row) > 3 and row[3] else None
+                
+                if journal_title:
+                    ajg_journals[journal_title.lower()] = {
+                        'title': journal_title,
+                        'rating': ajg_rating,
+                        'category': str(row[0]).strip() if row[0] else ''
+                    }
+    except Exception as e:
+        logging.error(f"Error loading AJG database: {str(e)}")
+    return ajg_journals
+
 def get_default_perception_prompt():
     """Get default customer perception analysis prompt"""
     return """You are an expert in customer perception analysis and qualitative research.
