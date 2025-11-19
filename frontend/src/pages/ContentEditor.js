@@ -58,7 +58,8 @@ const ContentEditor = () => {
         category: content.category || '',
         tags: content.tags || [],
         featured_image: content.featured_image || '',
-        status: content.status
+        status: content.status,
+        attachments: content.attachments || []
       });
     } catch (error) {
       console.error('Error fetching content:', error);
