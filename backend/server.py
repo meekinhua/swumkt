@@ -2751,6 +2751,13 @@ class JournalFinderResponse(BaseModel):
     explanation: str
     disclaimer: str
 
+class JournalBrowseRequest(BaseModel):
+    search_query: Optional[str] = None
+    abdc_rating: Optional[str] = None  # A*, A, B, C
+    ajg_rating: Optional[str] = None   # 4*, 4, 3, 2, 1
+    limit: int = 100
+    target_language: str = "th"
+
 # ============ Journal Database Loaders ============
 def load_abdc_database():
     """Load ABDC journal database from CSV"""
