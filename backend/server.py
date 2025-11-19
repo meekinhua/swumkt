@@ -2227,7 +2227,8 @@ async def generate_behavior_image(
 ):
     """Generate illustration/diagram for behavior analysis using AI Image Generation"""
     try:
-        import httpx
+        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+        import base64
         
         # Get API key
         api_key = os.environ.get('EMERGENT_LLM_KEY')
@@ -2255,32 +2256,23 @@ Language for labels: {request.target_language}
 Format: Horizontal layout, suitable for presentation
 """
         
-        # Generate image using OpenAI DALL-E API
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/images/generations",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "dall-e-3",
-                    "prompt": image_prompt,
-                    "n": 1,
-                    "size": "1024x1024",
-                    "quality": "standard"
-                }
-            )
-            
-            if response.status_code != 200:
-                error_detail = response.json().get('error', {}).get('message', 'Unknown error')
-                raise HTTPException(status_code=500, detail=f"Image generation failed: {error_detail}")
-            
-            result = response.json()
-            image_url = result['data'][0]['url']
+        # Generate image using emergentintegrations
+        image_gen = OpenAIImageGeneration(api_key=api_key)
+        images = await image_gen.generate_images(
+            prompt=image_prompt,
+            model="gpt-image-1",
+            number_of_images=1
+        )
+        
+        if not images or len(images) == 0:
+            raise HTTPException(status_code=500, detail="No image was generated")
+        
+        # Convert image bytes to base64 data URL
+        image_base64 = base64.b64encode(images[0]).decode('utf-8')
+        image_data_url = f"data:image/png;base64,{image_base64}"
         
         return BehaviorImageResponse(
-            image_url=image_url,
+            image_url=image_data_url,
             image_prompt=image_prompt
         )
         
