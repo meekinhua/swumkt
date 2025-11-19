@@ -34,6 +34,7 @@ const CustomerBehaviorTool = () => {
   const [imageUrl, setImageUrl] = useState(null);
   const [imageStyle, setImageStyle] = useState('infographic');
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [showFullscreenImage, setShowFullscreenImage] = useState(false);
   
   // Step 4: Save as content
   const [showSaveForm, setShowSaveForm] = useState(false);
