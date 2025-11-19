@@ -2389,7 +2389,7 @@ async def generate_behavior_analysis(
             api_key=api_key,
             session_id=f"behavior-analysis-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("openai", "gpt-4o")
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
         
         # Determine language
         language_name = "Thai" if request.target_language == "th" else "English"
