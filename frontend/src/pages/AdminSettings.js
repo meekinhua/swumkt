@@ -48,6 +48,13 @@ const AdminSettings = () => {
   const [perceptionQuestionMetadata, setPerceptionQuestionMetadata] = useState(null);
   const [savingPerceptionQuestion, setSavingPerceptionQuestion] = useState(false);
   
+  // Image Playground
+  const [testPrompt, setTestPrompt] = useState('');
+  const [testImage, setTestImage] = useState(null);
+  const [testImagePreview, setTestImagePreview] = useState(null);
+  const [generatedTestImage, setGeneratedTestImage] = useState(null);
+  const [generatingTest, setGeneratingTest] = useState(false);
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
