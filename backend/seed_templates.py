@@ -358,6 +358,278 @@ TEMPLATES = [
                 ]
             }
         ]
+    },
+    {
+        "id": "template_product_feedback_1",
+        "name": "Product Feedback Survey",
+        "description": "Collect detailed feedback on product features, usability, and improvement areas",
+        "survey_type": "custom",
+        "is_public": True,
+        "usage_count": 0,
+        "tags": ["product", "feedback", "usability", "features"],
+        "created_by": "system",
+        "sections": [
+            {
+                "id": "sec_usage",
+                "title": "Product Usage",
+                "description": "How you use our product",
+                "order": 0,
+                "questions": [
+                    {
+                        "id": "q_usage_freq",
+                        "type": "multiple_choice_single",
+                        "text": "How often do you use our product?",
+                        "required": True,
+                        "data_type": "ordinal",
+                        "options": [
+                            {"id": "uf_1", "text": "Multiple times per day", "value": "5"},
+                            {"id": "uf_2", "text": "Once a day", "value": "4"},
+                            {"id": "uf_3", "text": "Few times a week", "value": "3"},
+                            {"id": "uf_4", "text": "Once a week", "value": "2"},
+                            {"id": "uf_5", "text": "Less than once a week", "value": "1"}
+                        ],
+                        "order": 0
+                    },
+                    {
+                        "id": "q_primary_use",
+                        "type": "open_ended",
+                        "text": "What is your primary use case for our product?",
+                        "required": True,
+                        "data_type": "nominal",
+                        "options": [],
+                        "order": 1
+                    }
+                ]
+            },
+            {
+                "id": "sec_features",
+                "title": "Features",
+                "description": "Rate our features",
+                "order": 1,
+                "questions": [
+                    {
+                        "id": "q_feature_complete",
+                        "type": "rating_scale",
+                        "text": "The product has all the features I need",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "fc_1", "text": "1 - Strongly Disagree", "value": "1"},
+                            {"id": "fc_2", "text": "2", "value": "2"},
+                            {"id": "fc_3", "text": "3 - Neutral", "value": "3"},
+                            {"id": "fc_4", "text": "4", "value": "4"},
+                            {"id": "fc_5", "text": "5 - Strongly Agree", "value": "5"}
+                        ],
+                        "order": 0
+                    },
+                    {
+                        "id": "q_ease_use",
+                        "type": "rating_scale",
+                        "text": "The product is easy to use",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "eu_1", "text": "1 - Strongly Disagree", "value": "1"},
+                            {"id": "eu_2", "text": "2", "value": "2"},
+                            {"id": "eu_3", "text": "3 - Neutral", "value": "3"},
+                            {"id": "eu_4", "text": "4", "value": "4"},
+                            {"id": "eu_5", "text": "5 - Strongly Agree", "value": "5"}
+                        ],
+                        "order": 1
+                    },
+                    {
+                        "id": "q_feature_request",
+                        "type": "open_ended",
+                        "text": "What features would you like to see added?",
+                        "required": False,
+                        "data_type": "nominal",
+                        "options": [],
+                        "order": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "template_employee_engagement_1",
+        "name": "Employee Engagement Survey",
+        "description": "Measure employee satisfaction, engagement, and workplace culture",
+        "survey_type": "behavior",
+        "is_public": True,
+        "usage_count": 0,
+        "tags": ["employee", "engagement", "workplace", "culture"],
+        "created_by": "system",
+        "sections": [
+            {
+                "id": "sec_satisfaction",
+                "title": "Job Satisfaction",
+                "description": "Your satisfaction at work",
+                "order": 0,
+                "questions": [
+                    {
+                        "id": "q_job_sat",
+                        "type": "rating_scale",
+                        "text": "Overall, how satisfied are you with your job?",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "js_1", "text": "1 - Very Dissatisfied", "value": "1"},
+                            {"id": "js_2", "text": "2", "value": "2"},
+                            {"id": "js_3", "text": "3", "value": "3"},
+                            {"id": "js_4", "text": "4", "value": "4"},
+                            {"id": "js_5", "text": "5 - Very Satisfied", "value": "5"}
+                        ],
+                        "order": 0
+                    },
+                    {
+                        "id": "q_recommend",
+                        "type": "rating_scale",
+                        "text": "How likely are you to recommend this company as a place to work?",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "rec_0", "text": "0", "value": "0"},
+                            {"id": "rec_5", "text": "5", "value": "5"},
+                            {"id": "rec_10", "text": "10", "value": "10"}
+                        ],
+                        "order": 1
+                    }
+                ]
+            },
+            {
+                "id": "sec_culture",
+                "title": "Workplace Culture",
+                "description": "Your experience with our culture",
+                "order": 1,
+                "questions": [
+                    {
+                        "id": "q_values",
+                        "type": "rating_scale",
+                        "text": "I understand and support the company's values",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "val_1", "text": "1 - Strongly Disagree", "value": "1"},
+                            {"id": "val_2", "text": "2", "value": "2"},
+                            {"id": "val_3", "text": "3 - Neutral", "value": "3"},
+                            {"id": "val_4", "text": "4", "value": "4"},
+                            {"id": "val_5", "text": "5 - Strongly Agree", "value": "5"}
+                        ],
+                        "order": 0
+                    },
+                    {
+                        "id": "q_teamwork",
+                        "type": "rating_scale",
+                        "text": "I feel my team works well together",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "team_1", "text": "1 - Strongly Disagree", "value": "1"},
+                            {"id": "team_2", "text": "2", "value": "2"},
+                            {"id": "team_3", "text": "3 - Neutral", "value": "3"},
+                            {"id": "team_4", "text": "4", "value": "4"},
+                            {"id": "team_5", "text": "5 - Strongly Agree", "value": "5"}
+                        ],
+                        "order": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "template_event_feedback_1",
+        "name": "Event Feedback Survey",
+        "description": "Collect feedback from event attendees on organization, content, and overall experience",
+        "survey_type": "custom",
+        "is_public": True,
+        "usage_count": 0,
+        "tags": ["event", "feedback", "attendee", "experience"],
+        "created_by": "system",
+        "sections": [
+            {
+                "id": "sec_overall",
+                "title": "Overall Experience",
+                "description": "Your overall impression",
+                "order": 0,
+                "questions": [
+                    {
+                        "id": "q_overall_rating",
+                        "type": "rating_scale",
+                        "text": "How would you rate the event overall?",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "or_1", "text": "1 - Poor", "value": "1"},
+                            {"id": "or_2", "text": "2", "value": "2"},
+                            {"id": "or_3", "text": "3", "value": "3"},
+                            {"id": "or_4", "text": "4", "value": "4"},
+                            {"id": "or_5", "text": "5 - Excellent", "value": "5"}
+                        ],
+                        "order": 0
+                    },
+                    {
+                        "id": "q_expectations",
+                        "type": "multiple_choice_single",
+                        "text": "Did the event meet your expectations?",
+                        "required": True,
+                        "data_type": "ordinal",
+                        "options": [
+                            {"id": "exp_1", "text": "Exceeded expectations", "value": "3"},
+                            {"id": "exp_2", "text": "Met expectations", "value": "2"},
+                            {"id": "exp_3", "text": "Below expectations", "value": "1"}
+                        ],
+                        "order": 1
+                    }
+                ]
+            },
+            {
+                "id": "sec_specifics",
+                "title": "Event Details",
+                "description": "Rate specific aspects",
+                "order": 1,
+                "questions": [
+                    {
+                        "id": "q_content",
+                        "type": "rating_scale",
+                        "text": "How would you rate the content/sessions?",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "cont_1", "text": "1 - Poor", "value": "1"},
+                            {"id": "cont_2", "text": "2", "value": "2"},
+                            {"id": "cont_3", "text": "3", "value": "3"},
+                            {"id": "cont_4", "text": "4", "value": "4"},
+                            {"id": "cont_5", "text": "5 - Excellent", "value": "5"}
+                        ],
+                        "order": 0
+                    },
+                    {
+                        "id": "q_venue",
+                        "type": "rating_scale",
+                        "text": "How would you rate the venue/location?",
+                        "required": True,
+                        "data_type": "scale",
+                        "options": [
+                            {"id": "ven_1", "text": "1 - Poor", "value": "1"},
+                            {"id": "ven_2", "text": "2", "value": "2"},
+                            {"id": "ven_3", "text": "3", "value": "3"},
+                            {"id": "ven_4", "text": "4", "value": "4"},
+                            {"id": "ven_5", "text": "5 - Excellent", "value": "5"}
+                        ],
+                        "order": 1
+                    },
+                    {
+                        "id": "q_comments",
+                        "type": "open_ended",
+                        "text": "Any additional comments or suggestions?",
+                        "required": False,
+                        "data_type": "nominal",
+                        "options": [],
+                        "order": 2
+                    }
+                ]
+            }
+        ]
     }
 ]
 
