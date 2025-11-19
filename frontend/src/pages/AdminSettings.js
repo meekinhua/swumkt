@@ -922,6 +922,85 @@ const AdminSettings = () => {
                   </div>
                 </div>
               </TabsContent>
+
+              {/* Format Editor Tab */}
+              <TabsContent value="format" className="space-y-6">
+                <Card className="p-6 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
+                  <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-600" />
+                    LLM Model สำหรับ Format Editor
+                  </h3>
+                  
+                  <p className="text-sm text-gray-600 mb-4">
+                    เลือก LLM model ที่จะใช้ในการแก้ไข format บทความวิจัย (Section-by-Section Processing)
+                  </p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-gray-800 font-bold mb-2">
+                        LLM Model *
+                      </Label>
+                      <select
+                        value={formatEditorModel}
+                        onChange={(e) => setFormatEditorModel(e.target.value)}
+                        className="w-full mt-2 h-12 border-2 border-gray-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
+                      >
+                        <option value="claude-sonnet-4">Claude Sonnet 4 (Anthropic) - Recommended</option>
+                        <option value="gpt-5">GPT-5 (OpenAI)</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Google)</option>
+                        <option value="gemini-flash">Gemini 2.0 Flash (Google) - Fast</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        💡 Claude Sonnet 4 และ GPT-5 ให้ผลลัพธ์ที่ดีที่สุด | Gemini Flash เร็วกว่าแต่อาจแม่นยำน้อยกว่า
+                      </p>
+                    </div>
+
+                    {formatEditorModelMetadata && (
+                      <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+                        <p>Last updated by: {formatEditorModelMetadata.updated_by || 'System'}</p>
+                        <p>Last updated: {formatEditorModelMetadata.updated_at ? new Date(formatEditorModelMetadata.updated_at).toLocaleString('th-TH') : 'N/A'}</p>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleSaveFormatEditorModel}
+                      disabled={savingFormatEditorModel}
+                      className="w-full h-12 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white font-bold"
+                    >
+                      {savingFormatEditorModel ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          กำลังบันทึก...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          บันทึก Model Setting
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Model Comparison */}
+                  <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                    <h4 className="font-bold text-gray-900 mb-3">เปรียบเทียบ Models:</h4>
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div>
+                        <strong>Claude Sonnet 4:</strong> ความแม่นยำสูง, เข้าใจ context ดีที่สุด, ช้ากว่า (30-40 วินาที/section)
+                      </div>
+                      <div>
+                        <strong>GPT-5:</strong> สมดุล, เร็วกว่า Claude นิดหน่อย (25-35 วินาที/section)
+                      </div>
+                      <div>
+                        <strong>Gemini 2.5 Pro:</strong> คล้าย GPT-5, ดีกับ technical content (25-35 วินาที/section)
+                      </div>
+                      <div>
+                        <strong>Gemini Flash:</strong> เร็วที่สุด แต่แม่นยำน้อยกว่า (15-20 วินาที/section)
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </TabsContent>
             </Tabs>
           </Card>
 
