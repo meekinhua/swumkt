@@ -164,6 +164,28 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSaveImagePrompt = async () => {
+    setSavingImagePrompt(true);
+    try {
+      await axios.post(
+        `${API}/admin/behavior-image-prompt`,
+        {
+          behavior_image_prompt: imagePrompt
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      toast.success('Image generation prompt saved successfully');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving image prompt:', error);
+      toast.error('Failed to save image prompt');
+    } finally {
+      setSavingImagePrompt(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
