@@ -473,21 +473,12 @@ const AdminSettings = () => {
                     </p>
                   </div>
 
-                  {/* Image Model Selection */}
-                  <div>
-                    <Label className="text-gray-800 font-bold mb-2 text-lg">
-                      Image Generation Model
-                    </Label>
-                    {imageModelMetadata && imageModelMetadata.updated_at && (
-                      <div className="mb-3 p-3 bg-green-50 rounded border border-green-200 text-xs">
-                        <p className="text-gray-700 font-semibold">
-                          <strong>Last Updated:</strong> {new Date(imageModelMetadata.updated_at).toLocaleString()} by {imageModelMetadata.updated_by}
-                        </p>
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-600 mb-4 font-medium">
-                      Choose which AI model to use for generating behavior analysis illustrations
+                  {/* Note about Image Settings */}
+                  <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                    <p className="text-sm text-gray-700 font-medium">
+                      💡 <strong>Image generation settings</strong> (model selection, prompt) have been moved to the <strong>"Image Generation"</strong> tab and apply to all tools.
                     </p>
+                  </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* OpenAI Option */}
