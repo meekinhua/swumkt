@@ -1401,7 +1401,7 @@ class BackendTester:
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print(f"🚀 Starting Backend Tests for Survey Builder - Phase 1B Core Survey Builder")
+        print(f"🚀 Starting Backend Tests - Journal Finder API Testing")
         print(f"Backend URL: {self.base_url}")
         print("=" * 80)
         
@@ -1410,8 +1410,19 @@ class BackendTester:
         self.survey_id = None
         self.anonymous_response_id = None
         self.logged_in_response_id = None
+        self.journal_token = None
         
-        # Test sequence - Phase 1B Survey Builder Tests (Main Focus)
+        # Test sequence - Journal Finder Tests (Main Focus)
+        journal_finder_tests = [
+            ("Journal Finder Admin Login", self.test_journal_finder_admin_login),
+            ("Journal Finder Marketing Research", self.test_journal_finder_marketing_research),
+            ("Journal Finder Management Research", self.test_journal_finder_management_research),
+            ("Journal Finder Minimal Input", self.test_journal_finder_minimal_input),
+            ("Journal Finder Invalid Input", self.test_journal_finder_invalid_input),
+            ("Journal Finder Response Time", self.test_journal_finder_response_time),
+        ]
+        
+        # Test sequence - Phase 1B Survey Builder Tests (Regression)
         phase1b_tests = [
             ("Login User", self.test_login_user),
             ("Survey Create", self.test_survey_create),
