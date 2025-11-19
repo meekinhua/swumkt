@@ -15,6 +15,7 @@ import CustomerJourneyTool from '@/pages/CustomerJourneyTool';
 import CustomerBehaviorTool from '@/pages/CustomerBehaviorTool';
 import CustomerPerceptionTool from '@/pages/CustomerPerceptionTool';
 import JournalFinder from '@/pages/JournalFinder';
+import AcademicFormatEditor from '@/pages/AcademicFormatEditor';
 import AdminSettings from '@/pages/AdminSettings';
 import SurveyListPage from '@/pages/SurveyListPage';
 import SurveyBuilderPage from '@/pages/SurveyBuilderPage';
