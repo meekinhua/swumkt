@@ -107,7 +107,7 @@ const AcademicFormatEditor = () => {
         target_language: 'th'
       };
 
-      if (uploadedFile) {
+      if (inputMode === 'file') {
         requestData.file_base64 = uploadedFile;
         requestData.file_name = uploadedFileName;
       } else {
