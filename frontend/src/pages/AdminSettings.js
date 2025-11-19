@@ -65,6 +65,16 @@ const AdminSettings = () => {
         updated_by: behaviorResponse.data.updated_by,
         updated_at: behaviorResponse.data.updated_at
       });
+
+      // Fetch Behavior Image Model
+      const imageModelResponse = await axios.get(`${API}/admin/behavior-image-model`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setImageModel(imageModelResponse.data.image_model);
+      setImageModelMetadata({
+        updated_by: imageModelResponse.data.updated_by,
+        updated_at: imageModelResponse.data.updated_at
+      });
     } catch (error) {
       console.error('Error fetching settings:', error);
       toast.error('Failed to load settings');
