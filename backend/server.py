@@ -261,6 +261,7 @@ class ContentUpdate(BaseModel):
     tags: Optional[List[str]] = None
     featured_image: Optional[str] = None
     status: Optional[ContentStatus] = None
+    attachments: Optional[List[dict]] = None
 
 class Content(BaseModel):
     model_config = ConfigDict(extra="ignore")
