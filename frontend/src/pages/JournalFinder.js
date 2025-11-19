@@ -201,16 +201,25 @@ const JournalFinder = () => {
 
             {results && (
               <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
-                {/* Analysis Summary */}
-                {results.analysis_summary && (
-                  <div className="mb-6 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+                {/* Explanation */}
+                {results.explanation && (
+                  <div className="mb-4 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
                     <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-purple-600" />
-                      การวิเคราะห์
+                      คำอธิบาย
                     </h3>
                     <p className="text-sm text-gray-700 leading-relaxed">
-                      {results.analysis_summary}
+                      {results.explanation}
                     </p>
+                  </div>
+                )}
+
+                {/* Disclaimer */}
+                {results.disclaimer && (
+                  <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                    <div className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">
+                      {results.disclaimer}
+                    </div>
                   </div>
                 )}
 
@@ -219,32 +228,61 @@ const JournalFinder = () => {
                   results.journals.map((journal, idx) => (
                     <Card key={idx} className="p-5 bg-gradient-to-br from-white to-purple-50/30 border-2 border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg">
                       {/* Journal Name */}
-                      <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                      <div className="flex items-start gap-3 mb-3">
                         <span className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
                           {idx + 1}
                         </span>
-                        {journal.name}
-                      </h3>
+                        <div className="flex-1">
+                          <h3 className="text-base font-bold text-gray-900">
+                            {journal.journal_name}
+                          </h3>
+                          {journal.publisher && journal.publisher !== 'Unknown' && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              <strong>Publisher:</strong> {journal.publisher}
+                            </p>
+                          )}
+                        </div>
+                      </div>
 
-                      {/* Metrics Row */}
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        {/* Impact Factor */}
-                        {journal.impact_factor && (
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-blue-600" />
+                      {/* Official Ratings - ABDC and AJG */}
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {journal.abdc_rating && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border-2 border-green-200 rounded">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
                             <div>
-                              <p className="text-xs text-gray-600">Impact Factor</p>
+                              <p className="text-xs text-gray-600 font-semibold">ABDC ✅</p>
+                              <p className="text-sm font-bold text-green-800">{journal.abdc_rating}</p>
+                            </div>
+                          </div>
+                        )}
+                        {journal.ajg_rating && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border-2 border-green-200 rounded">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <div>
+                              <p className="text-xs text-gray-600 font-semibold">AJG 2024 ✅</p>
+                              <p className="text-sm font-bold text-green-800">{journal.ajg_rating}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* AI-Estimated Data */}
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        {journal.impact_factor && journal.impact_factor !== 'Unknown' && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded">
+                            <TrendingUp className="w-4 h-4 text-orange-600" />
+                            <div>
+                              <p className="text-xs text-gray-600">Impact Factor ⚠️</p>
                               <p className="text-sm font-bold text-gray-900">{journal.impact_factor}</p>
                             </div>
                           </div>
                         )}
 
-                        {/* Quartile */}
-                        {journal.quartile && (
-                          <div className="flex items-center gap-2">
-                            <Award className="w-4 h-4 text-green-600" />
+                        {journal.quartile && journal.quartile !== 'Unknown' && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded">
+                            <Award className="w-4 h-4 text-orange-600" />
                             <div>
-                              <p className="text-xs text-gray-600">Quartile</p>
+                              <p className="text-xs text-gray-600">Quartile ⚠️</p>
                               <span className={`text-xs font-bold px-2 py-1 rounded border ${getQuartileColor(journal.quartile)}`}>
                                 {journal.quartile}
                               </span>
@@ -253,31 +291,47 @@ const JournalFinder = () => {
                         )}
                       </div>
 
-                      {/* Indexing Badges */}
-                      {journal.indexing && journal.indexing.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {journal.indexing.map((index, i) => (
-                            <span key={i} className={`text-xs font-bold px-2 py-1 rounded ${getIndexBadgeColor(index)}`}>
-                              {index}
-                            </span>
-                          ))}
+                      {/* Scopus Indexing */}
+                      {journal.scopus_indexed && journal.scopus_indexed !== 'Unknown' && (
+                        <div className="mb-3">
+                          <span className="text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-800 border border-blue-300 rounded">
+                            Scopus: {journal.scopus_indexed} ⚠️
+                          </span>
                         </div>
                       )}
 
-                      {/* Match Reason */}
-                      {journal.match_reason && (
-                        <div className="mt-3 p-3 bg-white/80 rounded border border-purple-200">
-                          <p className="text-xs text-gray-600 mb-1 font-semibold">เหตุผลที่แนะนำ:</p>
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            {journal.match_reason}
-                          </p>
+                      {/* SCImago Link */}
+                      {journal.scimago_url && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <a 
+                            href={journal.scimago_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+                          >
+                            🔗 ตรวจสอบข้อมูลล่าสุดที่ SCImago →
+                          </a>
                         </div>
                       )}
 
-                      {/* Publisher */}
-                      {journal.publisher && (
-                        <p className="text-xs text-gray-500 mt-3">
-                          <strong>Publisher:</strong> {journal.publisher}
+                      {/* Website Link */}
+                      {journal.website && (
+                        <div className="mt-2">
+                          <a 
+                            href={journal.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-purple-600 hover:text-purple-800 font-semibold hover:underline"
+                          >
+                            🌐 เว็บไซต์วารสาร →
+                          </a>
+                        </div>
+                      )}
+
+                      {/* ISSN */}
+                      {journal.issn && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          <strong>ISSN:</strong> {journal.issn}
                         </p>
                       )}
                     </Card>
