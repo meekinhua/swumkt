@@ -86,8 +86,13 @@ const AcademicFormatEditor = () => {
   };
 
   const handleFormat = async () => {
-    if (!formData.originalText.trim() && !uploadedFile) {
-      toast.error('กรุณาอัปโหลดไฟล์ .docx หรือใส่ข้อความ');
+    // Validate based on mode
+    if (inputMode === 'file' && !uploadedFile) {
+      toast.error('กรุณาอัปโหลดไฟล์ .docx');
+      return;
+    }
+    if (inputMode === 'text' && !formData.originalText.trim()) {
+      toast.error('กรุณาใส่ข้อความที่ต้องการแก้ไข');
       return;
     }
 
