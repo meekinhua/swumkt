@@ -145,49 +145,63 @@ const AdminSettings = () => {
             </p>
           </div>
 
-          {/* Settings Card */}
+          {/* Settings Card with Tabs */}
           <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
             <div className="flex items-center gap-3 mb-6">
               <Settings className="w-8 h-8 text-[#00A9CE]" />
               <h2 className="text-2xl font-black text-gray-900">
-                Customer Journey Map - AI Prompt
+                AI Prompt Configuration
               </h2>
             </div>
 
-            {metadata && metadata.updated_at && (
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-gray-700 font-semibold">
-                  <strong>Last Updated:</strong> {new Date(metadata.updated_at).toLocaleString()} by {metadata.updated_by}
-                </p>
-              </div>
-            )}
+            <Tabs defaultValue="journey" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="journey" className="flex items-center gap-2">
+                  <Map className="w-4 h-4" />
+                  Journey Map
+                </TabsTrigger>
+                <TabsTrigger value="behavior" className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Behavior Analysis
+                </TabsTrigger>
+              </TabsList>
 
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="prompt" className="text-gray-800 font-bold mb-2 text-lg">
-                  System Prompt for Journey Map Generation
-                </Label>
-                <p className="text-sm text-gray-600 mb-4 font-medium">
-                  This prompt will be used by the AI to analyze qualitative research data and generate customer journey maps. 
-                  Include guidelines, output format, and examples.
-                </p>
-                <Textarea
-                  id="prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={20}
-                  className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
-                  placeholder="Enter the system prompt for AI..."
-                />
-                <p className="text-xs text-gray-500 mt-2 font-medium">
-                  💡 Tip: Include instructions for identifying stages, touchpoints, pain points, and Mermaid diagram formatting.
-                </p>
-              </div>
+              {/* Journey Map Prompt Tab */}
+              <TabsContent value="journey">
+                {journeyMetadata && journeyMetadata.updated_at && (
+                  <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-gray-700 font-semibold">
+                      <strong>Last Updated:</strong> {new Date(journeyMetadata.updated_at).toLocaleString()} by {journeyMetadata.updated_by}
+                    </p>
+                  </div>
+                )}
 
-              <div className="flex gap-4">
-                <Button
-                  onClick={handleSave}
-                  disabled={saving || !prompt.trim()}
+                <div className="space-y-6">
+                  <div>
+                    <Label htmlFor="journey-prompt" className="text-gray-800 font-bold mb-2 text-lg">
+                      System Prompt for Journey Map Generation
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      This prompt will be used by the AI to analyze qualitative research data and generate customer journey maps. 
+                      Include guidelines, output format, and Mermaid diagram examples.
+                    </p>
+                    <Textarea
+                      id="journey-prompt"
+                      value={journeyPrompt}
+                      onChange={(e) => setJourneyPrompt(e.target.value)}
+                      rows={20}
+                      className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="Enter the system prompt for AI..."
+                    />
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      💡 Tip: Include instructions for identifying stages, touchpoints, pain points, and Mermaid diagram formatting.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={handleSaveJourney}
+                      disabled={savingJourney || !journeyPrompt.trim()}
                   className="flex-1 h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-lg"
                 >
                   {saving ? (
