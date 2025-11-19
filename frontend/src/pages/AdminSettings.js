@@ -29,7 +29,7 @@ const AdminSettings = () => {
   const [savingBehavior, setSavingBehavior] = useState(false);
   
   // Behavior Image Model
-  const [imageModel, setImageModel] = useState('openai');
+  const [imageModel, setImageModel] = useState('nanobanana');
   const [imageModelMetadata, setImageModelMetadata] = useState(null);
   const [savingImageModel, setSavingImageModel] = useState(false);
   
