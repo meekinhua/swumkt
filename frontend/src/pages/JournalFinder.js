@@ -169,7 +169,7 @@ const JournalFinder = () => {
           <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <Search className="w-5 h-5 text-purple-600" />
-              {activeTab === 'ai' ? 'ค้นหาด้วย AI' : 'ค้นหาจากฐานข้อมูล'}
+              อัปโหลดเอกสาร หรือ ใส่ข้อความ
             </h2>
 
             {activeTab === 'ai' ? (
