@@ -175,8 +175,21 @@ const CustomerBehaviorTool = () => {
           </p>
         </div>
 
-        {/* Two-Panel Layout: Input (Left) & Results (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
+        {/* Tabs: Phase 1 & Phase 2 */}
+        <Tabs defaultValue="qualitative" className="w-full">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-2 bg-white/98 border-2 border-gray-300 mb-8">
+            <TabsTrigger value="qualitative" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00A9CE] data-[state=active]:to-[#33BCDA] data-[state=active]:text-white font-bold">
+              Phase 1: การวิเคราะห์เชิงคุณภาพ
+            </TabsTrigger>
+            <TabsTrigger value="quantitative" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#007B9A] data-[state=active]:to-[#005A73] data-[state=active]:text-white font-bold">
+              Phase 2: การวิเคราะห์เชิงปริมาณ
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Phase 1: Qualitative */}
+          <TabsContent value="qualitative">
+            {/* Two-Panel Layout: Input (Left) & Results (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
           {/* Left Panel: Input Section */}
           <Card className="p-4 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 md:mb-6 flex items-center gap-2">
