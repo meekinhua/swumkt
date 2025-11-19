@@ -138,15 +138,42 @@ const JournalFinder = () => {
           </p>
         </div>
 
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b-2 border-gray-200">
+          <button
+            onClick={() => {setActiveTab('ai'); setResults(null);}}
+            className={`px-6 py-3 font-bold transition-all ${
+              activeTab === 'ai'
+                ? 'border-b-4 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-500'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            AI Search
+          </button>
+          <button
+            onClick={() => {setActiveTab('browse'); setResults(null);}}
+            className={`px-6 py-3 font-bold transition-all ${
+              activeTab === 'browse'
+                ? 'border-b-4 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-500'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 inline mr-2" />
+            Browse Database
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Panel: Input Form */}
           <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <Search className="w-5 h-5 text-purple-600" />
-              ข้อมูลงานวิจัย
+              {activeTab === 'ai' ? 'ค้นหาด้วย AI' : 'ค้นหาจากฐานข้อมูล'}
             </h2>
 
-            <div className="space-y-6">
+            {activeTab === 'ai' ? (
+              <div className="space-y-6">
               {/* Research Title */}
               <div>
                 <Label className="text-gray-800 font-bold mb-2">
