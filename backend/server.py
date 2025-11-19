@@ -4283,7 +4283,7 @@ async def analyze_uploaded_file(
         from docx import Document
         
         # Decode file
-        file_data = base64.b64decode(file_base64)
+        file_data = base64.b64decode(request.file_base64)
         file_size_kb = len(file_data) / 1024
         
         # Save to temp file
@@ -4310,7 +4310,7 @@ async def analyze_uploaded_file(
         os.unlink(temp_path)
         
         return FileAnalysisResponse(
-            file_name=file_name,
+            file_name=request.file_name,
             word_count=word_count,
             paragraphs=total_paragraphs,
             headings_count=headings_count,
