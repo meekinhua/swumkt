@@ -2832,7 +2832,7 @@ async def generate_perception_analysis(
 ):
     """Generate customer perception analysis from interview data"""
     try:
-        from emergentintegrations import LlmChat
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         # Get admin settings or use default
         settings = await db.admin_settings.find_one({}) or {}
