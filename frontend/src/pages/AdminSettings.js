@@ -208,6 +208,42 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSavePerceptionPrompt = async () => {
+    setSavingPerception(true);
+    try {
+      await axios.post(
+        `${API}/admin/perception-prompt`,
+        { prompt: perceptionPrompt },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Perception analysis prompt saved successfully');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving perception prompt:', error);
+      toast.error('Failed to save perception prompt');
+    } finally {
+      setSavingPerception(false);
+    }
+  };
+
+  const handleSavePerceptionQuestionPrompt = async () => {
+    setSavingPerceptionQuestion(true);
+    try {
+      await axios.post(
+        `${API}/admin/perception-question-prompt`,
+        { prompt: perceptionQuestionPrompt },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Perception question prompt saved successfully');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving perception question prompt:', error);
+      toast.error('Failed to save perception question prompt');
+    } finally {
+      setSavingPerceptionQuestion(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
