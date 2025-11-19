@@ -3117,14 +3117,14 @@ async def test_image_generation(
                 
         elif request.model == "gemini":
             # Use Gemini Imagen
-            from emergentintegrations import GeminiImageGeneration
+            from emergentintegrations.llm.gemeni.image_generation import GeminiImageGeneration
             
             gemini = GeminiImageGeneration()
             image_url = gemini.generate(request.prompt)
             
         elif request.model == "openai":
             # Use OpenAI DALL-E
-            from emergentintegrations import OpenAIImageGeneration
+            from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
             
             openai = OpenAIImageGeneration()
             image_url = openai.generate(request.prompt)
