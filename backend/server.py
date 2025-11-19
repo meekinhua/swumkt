@@ -2493,30 +2493,46 @@ Target Language for Labels: {request.target_language}
         # Generate image based on selected model
         images = []
         try:
-            if selected_model == "gemini":
-                from emergentintegrations.llm.gemeni.image_generation import GeminiImageGeneration
+            if selected_model == "nanobanana":
+                from emergentintegrations.llm.chat import LlmChat, UserMessage
+                import base64
                 
-                try:
-                    image_gen = GeminiImageGeneration(api_key=api_key)
-                    images = await image_gen.generate_images(
-                        prompt=image_prompt,
-                        model="imagen-3.0-generate-002",
-                        number_of_images=1
-                    )
-                except Exception as gemini_error:
-                    logging.warning(f"Gemini image generation failed: {str(gemini_error)}, falling back to OpenAI")
-                    # Fallback to OpenAI if Gemini fails
-                    selected_model = "openai"
+                chat = LlmChat(
+                    api_key=api_key,
+                    session_id=f"behavior-image-{uuid.uuid4()}",
+                    system_message="You are an AI image generator"
+                ).with_model("gemini", "gemini-2.5-flash-image-preview").with_params(modalities=["image", "text"])
+                
+                msg = UserMessage(text=image_prompt)
+                text, generated_images = await chat.send_message_multimodal_response(msg)
+                
+                if generated_images and len(generated_images) > 0:
+                    # Convert to format expected by downstream code
+                    image_data = generated_images[0]['data']
+                    mime_type = generated_images[0]['mime_type']
+                    # Return as list of base64 data URLs
+                    images = [f"data:{mime_type};base64,{image_data}"]
+                else:
+                    raise Exception("No image generated from Nano Banana")
             
-            if selected_model == "openai":
+            elif selected_model == "openai":
                 from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+                import base64
                 
                 image_gen = OpenAIImageGeneration(api_key=api_key)
-                images = await image_gen.generate_images(
+                raw_images = await image_gen.generate_images(
                     prompt=image_prompt,
                     model="gpt-image-1",
                     number_of_images=1
                 )
+                # Convert bytes to base64 data URL
+                if raw_images and len(raw_images) > 0:
+                    image_bytes = raw_images[0]
+                    if isinstance(image_bytes, bytes):
+                        image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+                        images = [f"data:image/png;base64,{image_b64}"]
+                    else:
+                        images = raw_images
         except Exception as e:
             logging.error(f"Image generation failed for model {selected_model}: {str(e)}")
             raise HTTPException(
