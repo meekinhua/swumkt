@@ -248,58 +248,102 @@ const AcademicFormatEditor = () => {
           </Card>
           )}
 
-          {/* Journal & Style Selection */}
+          {/* Style Selection Method */}
           <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Journal Name */}
-              <div>
-                <Label className="text-gray-800 font-bold mb-2">
-                  ชื่อวารสาร (ถ้ามี)
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={formData.journalName}
-                    onChange={(e) => setFormData({...formData, journalName: e.target.value})}
-                    className="mt-2 h-12 border-2 border-gray-300 focus:border-purple-500"
-                    placeholder="เช่น Journal of Marketing"
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              🎯 วิธีเลือก Citation Style
+            </h3>
+
+            {/* Radio Buttons */}
+            <div className="space-y-4 mb-6">
+              {/* Auto Mode */}
+              <div 
+                onClick={() => setStyleSelectionMode('auto')}
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  styleSelectionMode === 'auto' 
+                    ? 'border-purple-500 bg-purple-50' 
+                    : 'border-gray-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    checked={styleSelectionMode === 'auto'}
+                    onChange={() => setStyleSelectionMode('auto')}
+                    className="mt-1 w-4 h-4 text-purple-600"
                   />
-                  <Button
-                    onClick={handleFetchGuidelines}
-                    disabled={fetchingGuidelines || !formData.journalName.trim()}
-                    className="mt-2 bg-blue-600 hover:bg-blue-700 text-white h-12 px-4"
-                  >
-                    {fetchingGuidelines ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4" />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900 mb-1">ให้ AI หาให้อัตโนมัติ</p>
+                    <p className="text-sm text-gray-600 mb-3">AI จะหา Author Guidelines และ Citation Style จากชื่อวารสาร</p>
+                    
+                    {styleSelectionMode === 'auto' && (
+                      <div className="flex gap-2">
+                        <Input
+                          value={formData.journalName}
+                          onChange={(e) => setFormData({...formData, journalName: e.target.value})}
+                          className="h-10 border-2 border-purple-300 focus:border-purple-500"
+                          placeholder="ชื่อวารสาร เช่น Journal of Marketing"
+                        />
+                        <Button
+                          onClick={handleFetchGuidelines}
+                          disabled={fetchingGuidelines || !formData.journalName.trim()}
+                          className="bg-purple-600 hover:bg-purple-700 text-white h-10 px-4"
+                        >
+                          {fetchingGuidelines ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              ค้นหา
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     )}
-                  </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  AI จะหา Author Guidelines ให้อัตโนมัติ
-                </p>
               </div>
 
-              {/* Format Style */}
-              <div>
-                <Label className="text-gray-800 font-bold mb-2">
-                  รูปแบบการอ้างอิง *
-                </Label>
-                <select
-                  value={formData.formatStyle}
-                  onChange={(e) => setFormData({...formData, formatStyle: e.target.value})}
-                  className="w-full mt-2 h-12 border-2 border-gray-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
-                >
-                  <option value="APA">APA (7th Edition)</option>
-                  <option value="MLA">MLA (9th Edition)</option>
-                  <option value="Chicago">Chicago Style</option>
-                  <option value="Harvard">Harvard Style</option>
-                  <option value="IEEE">IEEE Style</option>
-                </select>
+              {/* Manual Mode */}
+              <div 
+                onClick={() => setStyleSelectionMode('manual')}
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  styleSelectionMode === 'manual' 
+                    ? 'border-purple-500 bg-purple-50' 
+                    : 'border-gray-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    checked={styleSelectionMode === 'manual'}
+                    onChange={() => setStyleSelectionMode('manual')}
+                    className="mt-1 w-4 h-4 text-purple-600"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900 mb-1">เลือก Style เอง</p>
+                    <p className="text-sm text-gray-600 mb-3">เลือก Citation Style ที่ต้องการด้วยตัวเอง</p>
+                    
+                    {styleSelectionMode === 'manual' && (
+                      <select
+                        value={formData.formatStyle}
+                        onChange={(e) => setFormData({...formData, formatStyle: e.target.value})}
+                        className="w-full h-10 border-2 border-purple-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
+                      >
+                        <option value="APA">APA (7th Edition)</option>
+                        <option value="MLA">MLA (9th Edition)</option>
+                        <option value="Chicago">Chicago Style</option>
+                        <option value="Harvard">Harvard Style</option>
+                        <option value="IEEE">IEEE Style</option>
+                      </select>
+                    )}
+                  </div>
+                </div>
               </div>
+            </div>
 
-              {/* Format Button */}
-              <div className="flex items-end">
+            {/* Format Button */}
+            <div>
                 <Button
                   onClick={handleFormat}
                   disabled={
