@@ -98,7 +98,8 @@ const MarketResearch = () => {
         t('marketResearch.customerPerception.feature4')
       ],
       gradient: 'from-[#005A73] via-[#33BCDA] to-[#00A9CE]',
-      comingSoon: true
+      comingSoon: false,
+      path: '/market-research/customer-perception'
     },
     {
       id: 'competitor-analysis',
