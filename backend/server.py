@@ -18,6 +18,7 @@ import openpyxl
 import pypandoc
 import tempfile
 import base64
+import re
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
