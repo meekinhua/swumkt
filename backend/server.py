@@ -2033,6 +2033,33 @@ def get_default_behavior_prompt():
     """Get default customer behavior analysis prompt"""
     return """You are an expert consumer behavior analyst and market researcher.
 
+def get_default_behavior_image_prompt():
+    """Get default behavior analysis image generation prompt"""
+    return """Create a professional business illustration that visualizes customer behavior analysis.
+
+Guidelines:
+1. Style: Clean, modern, business-appropriate
+2. Colors: Use a professional color palette (blues, greens, grays)
+3. Content: Visual representations of behavioral patterns and insights
+4. Layout: Horizontal orientation, suitable for presentation
+5. Elements to include:
+   - Icons or symbols representing customer actions
+   - Flow diagrams showing behavior patterns
+   - Data visualization elements (charts, graphs)
+   - Clear labels and annotations
+6. Avoid: Cluttered designs, too much text, overly complex imagery
+
+The image should be:
+- Professional and clean
+- Easy to understand at a glance
+- Suitable for business presentations
+- Focused on key behavioral insights
+"""
+
+def get_default_behavior_prompt():
+    """Get default customer behavior analysis prompt"""
+    return """You are an expert consumer behavior analyst and market researcher.
+
 Your task is to analyze qualitative research data about customer behavior and provide insights.
 
 Guidelines:
