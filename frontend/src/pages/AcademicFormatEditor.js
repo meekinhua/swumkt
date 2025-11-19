@@ -301,7 +301,11 @@ const AcademicFormatEditor = () => {
               <div className="flex items-end">
                 <Button
                   onClick={handleFormat}
-                  disabled={formatting || !formData.originalText.trim()}
+                  disabled={
+                    formatting || 
+                    (inputMode === 'file' && !uploadedFile) ||
+                    (inputMode === 'text' && !formData.originalText.trim())
+                  }
                   className="w-full h-12 bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold shadow-xl"
                 >
                   {formatting ? (
