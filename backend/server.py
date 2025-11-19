@@ -4131,6 +4131,8 @@ async def format_academic_text(
                 # Build response
                 summary = f"✅ เอกสารถูกแก้ไขด้วย Pandoc และ {format_style} citation style\n"
                 summary += f"📄 ไฟล์: {request.file_name or 'document.docx'}\n"
+                if template_file:
+                    summary += f"🎨 ใช้ Template: {request.journal_name} (LLM-generated)\n"
                 summary += f"⚡ เวลาประมวลผล: ~2-5 วินาที (Library-based, 100% accurate)"
                 
                 return FormatEditorResponse(
