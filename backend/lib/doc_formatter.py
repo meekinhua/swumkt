@@ -452,48 +452,77 @@ OUTPUT: Return a JSON object with:
         self,
         text: str,
         style_guide: str,
-        bibtex_content: str
+        bibtex_content: str,
+        master_references: Optional[Dict] = None,
+        chunk_info: Optional[Dict] = None
     ) -> str:
-        """Build the formatting prompt for LLM."""
+        """Build the formatting prompt for LLM with consistency support."""
         
         # Count citations in text
         import re
         citation_count = len(re.findall(r'\[@\w+\]|\([A-Z][a-z]+.*?\d{4}\)|\[\d+\]', text))
         
-        prompt = f"""Task: Reformat this academic document according to the specified citation style.
+        # Build master references section if provided (Pass 2)
+        master_ref_section = ""
+        if master_references and master_references.get("references"):
+            ref_list = master_references["references"][:20]  # Show first 20 for context
+            master_ref_section = f"""
+MASTER REFERENCE LIST (USE THIS FOR CONSISTENCY):
+You MUST use these exact references and their assigned numbers/keys:
+{chr(10).join([f"{r['id']}. {r['text']}" for r in ref_list])}
+... (Total: {master_references.get('total_references', 0)} references)
+
+CRITICAL: When you see a citation in the text, map it to the corresponding number/key from this master list.
+Do NOT create new reference numbers. Use ONLY the numbers from the master list above.
+"""
+        
+        # Build chunk context if provided
+        chunk_context = ""
+        if chunk_info:
+            chunk_context = f"""
+CHUNK INFORMATION:
+This is chunk {chunk_info['chunk_number']} of {chunk_info['total_chunks']}.
+{"This is the FIRST chunk - it may contain the introduction." if chunk_info['is_first'] else ""}
+{"This is the LAST chunk - it may contain the reference list." if chunk_info['is_last'] else ""}
+
+IMPORTANT: Maintain citation number consistency with the master reference list.
+"""
+        
+        prompt = f"""Task: Reformat this academic document chunk according to the specified citation style.
 
 CITATION STYLE TO USE:
 {style_guide}
+{master_ref_section}
+{chunk_context}
 
-BIBTEX REFERENCES:
-{bibtex_content if bibtex_content else "No BibTeX data provided. Use references as they appear in text."}
+BIBTEX REFERENCES (for context):
+{bibtex_content[:2000] if bibtex_content else "No BibTeX data provided."}
 
-DOCUMENT TO FORMAT:
+DOCUMENT CHUNK TO FORMAT:
 {text}
 
 INSTRUCTIONS:
 1. Identify all in-text citations (may be in format [@CitationKey], (Author, Year), [1], etc.)
-2. Reformat ALL in-text citations according to the target style
-3. Locate or create a "References" or "Bibliography" section
-4. Reformat ALL reference entries according to the target style
-5. Maintain document structure (headings, paragraphs, spacing)
-6. Ensure citation numbers/keys match between text and reference list
-7. Alphabetize or number references according to style requirements
+2. Map each citation to the MASTER REFERENCE LIST number/key
+3. Reformat ALL in-text citations according to the target style using master list numbers
+4. Maintain document structure (headings, paragraphs, spacing)
+5. Do NOT create new reference numbers - use ONLY numbers from master list
+6. Do NOT include the reference list in the output (unless this is the last chunk)
 
 IMPORTANT:
 - Do NOT change the content or meaning of the text
-- ONLY change citation formatting and reference list formatting
+- ONLY change citation formatting
 - Preserve all headings, tables, and document structure
-- Be consistent throughout the document
+- Be CONSISTENT with master reference numbering
 
-DETECTED CITATIONS IN TEXT: Approximately {citation_count} citations found
+DETECTED CITATIONS: Approximately {citation_count} citations found
 
 OUTPUT FORMAT:
 Return a valid JSON object:
 {{
-  "formatted_text": "Complete document with all citations and content",
-  "formatted_references": "Just the formatted reference list section",
-  "changes_summary": "Brief summary of formatting changes made"
+  "formatted_text": "Complete chunk with formatted citations (NO reference list unless last chunk)",
+  "formatted_references": "",
+  "changes_summary": "Brief summary of changes"
 }}"""
         
         return prompt
