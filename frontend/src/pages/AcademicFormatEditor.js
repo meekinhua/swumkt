@@ -98,35 +98,54 @@ const AcademicFormatEditor = () => {
       
       toast.success(`อัปโหลด ${file.name} สำเร็จ`, { duration: 2000 });
       
-      // Analyze file with simulated progress
+      // Analyze file with smart progress simulation
       setAnalyzingFile(true);
       setAnalysisProgress(0);
       setAnalysisMessage('เริ่มต้นวิเคราะห์ไฟล์...');
       
-      // Simulate progress during analysis
+      // Smart progress: fast at start, slower near end
+      let currentProgress = 0;
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
-          if (prev >= 90) return prev; // Cap at 90% until real response
-          return prev + Math.random() * 15; // Increment randomly
+          currentProgress = prev;
+          
+          // Logarithmic progress: slow down as we approach 100%
+          if (prev < 30) {
+            return prev + Math.random() * 8; // Fast initially (0-30%)
+          } else if (prev < 60) {
+            return prev + Math.random() * 5; // Medium speed (30-60%)
+          } else if (prev < 85) {
+            return prev + Math.random() * 3; // Slower (60-85%)
+          } else if (prev < 95) {
+            return prev + Math.random() * 1.5; // Very slow (85-95%)
+          } else {
+            return prev + Math.random() * 0.5; // Crawl near end (95-98%)
+          }
         });
-      }, 800);
+      }, 1000); // Check every second
       
-      // Update messages during analysis
+      // Dynamic messages that change more frequently near the end
       const messageSteps = [
         { time: 1000, message: 'อ่านไฟล์และวิเคราะห์โครงสร้าง...' },
         { time: 3000, message: 'ค้นหา References section...' },
         { time: 5000, message: 'AI กำลังแปลง References เป็น BibTeX...' },
-        { time: 10000, message: 'กำลังประมวลผลส่วนที่ 1...' },
-        { time: 15000, message: 'กำลังประมวลผลส่วนที่ 2...' },
-        { time: 20000, message: 'เกือบเสร็จแล้ว...' }
+        { time: 8000, message: 'กำลังประมวลผลส่วนที่ 1 จาก 4...' },
+        { time: 12000, message: 'กำลังประมวลผลส่วนที่ 2 จาก 4...' },
+        { time: 16000, message: 'กำลังประมวลผลส่วนที่ 3 จาก 4...' },
+        { time: 20000, message: 'กำลังประมวลผลส่วนที่ 4 จาก 4...' },
+        { time: 24000, message: 'กำลังรวมผลลัพธ์และตรวจสอบความถูกต้อง...' },
+        { time: 28000, message: 'กำลังจัดรูปแบบ BibTeX entries...' },
+        { time: 32000, message: 'เกือบเสร็จแล้ว กรุณารอสักครู่...' },
+        { time: 36000, message: 'กำลังสร้าง citation keys...' },
+        { time: 40000, message: 'กำลังเตรียมผลลัพธ์...' }
       ];
       
+      const messageTimeouts = [];
       messageSteps.forEach(step => {
-        setTimeout(() => {
-          if (analyzingFile) {
-            setAnalysisMessage(step.message);
-          }
+        const timeout = setTimeout(() => {
+          setAnalysisMessage(step.message);
         }, step.time);
+        messageTimeouts.push(timeout);
       });
       
       try {
