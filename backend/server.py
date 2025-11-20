@@ -3182,8 +3182,8 @@ def generate_template_from_specs(specs: dict, output_path: str):
         traceback.print_exc()
         return False
 
-def extract_references_to_bib(docx_path: str, output_bib_path: str):
-    """Extract references from docx and convert to .bib using anystyle"""
+async def extract_references_to_bib(docx_path: str, output_bib_path: str):
+    """Extract references from docx and convert to .bib using AI (OpenAI GPT-4)"""
     try:
         from docx import Document
         
@@ -3211,48 +3211,26 @@ def extract_references_to_bib(docx_path: str, output_bib_path: str):
             logging.warning("References section is empty")
             return False
         
-        # Save to temp file for anystyle
-        temp_ref_file = f"{output_bib_path}.txt"
-        with open(temp_ref_file, 'w', encoding='utf-8') as f:
-            f.write(references_text)
+        # Use RefExtract with AI to convert to BibTeX
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-8C9010bB74cCfAc069')
+        extractor = RefExtract(api_key=emergent_key, model="gpt-4o")
         
-        # Use anystyle to convert to bib via Ruby API
-        import subprocess
+        # Extract references
+        refs = await extractor.extract_from_text(references_text)
         
-        # Create Ruby script to use AnyStyle API
-        ruby_script = f"""
-require 'anystyle'
-
-input_file = '{temp_ref_file}'
-output_file = '{output_bib_path}'
-
-# Read references text
-references_text = File.read(input_file, encoding: 'utf-8')
-
-# Parse and output directly to BibTeX format
-parser = AnyStyle.parser
-bib_output = parser.parse(references_text, format: :bibtex)
-
-# Write to file
-File.write(output_file, bib_output, encoding: 'utf-8')
-"""
-        
-        result = subprocess.run(
-            ['ruby', '-e', ruby_script],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if result.returncode == 0 and os.path.exists(output_bib_path):
-            # Cleanup temp file
-            os.unlink(temp_ref_file)
-            
-            logging.info(f"Successfully created .bib file with anystyle: {output_bib_path}")
-            return True
-        else:
-            logging.error(f"Anystyle parsing failed: {result.stderr}")
+        if not refs:
+            logging.warning("No references extracted by AI")
             return False
+        
+        # Convert to BibTeX format
+        bib_content = RefExtract.to_bibtex_file(refs)
+        
+        # Write to output file
+        with open(output_bib_path, 'w', encoding='utf-8') as f:
+            f.write(bib_content)
+        
+        logging.info(f"Successfully created .bib file with AI: {output_bib_path} ({len(refs)} entries)")
+        return True
             
     except Exception as e:
         logging.error(f"Error extracting references to bib: {str(e)}")
