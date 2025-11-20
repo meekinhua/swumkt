@@ -444,6 +444,167 @@ Return JSON:
         
         return formatted
     
+    async def _extract_all_references(self, document_text: str) -> List[Dict]:
+        """
+        Step 1: Extract all references from document (like BibTeX extraction).
+        
+        Returns list of references with metadata.
+        """
+        # Use AI to extract all references
+        prompt = f"""Extract ALL references from this academic document.
+
+DOCUMENT TEXT (showing full text for reference extraction):
+{document_text[:20000]}...
+
+TASK:
+1. Find the References/Bibliography section
+2. Extract each reference entry
+3. Also find in-text citations to understand context
+4. Return structured JSON
+
+OUTPUT FORMAT:
+{{
+  "references": [
+    {{
+      "text": "Full reference text as appears in document",
+      "authors": "Author names",
+      "year": "2020",
+      "title": "Paper title"
+    }}
+  ]
+}}
+
+Return ONLY valid JSON, nothing else."""
+
+        try:
+            chat = LlmChat(
+                api_key=self.api_key,
+                session_id=f"extract-refs-{id(self)}",
+                system_message="You are an expert at extracting academic references. Return only valid JSON."
+            ).with_model("openai", self.model)
+            
+            import asyncio
+            response = await asyncio.wait_for(
+                chat.send_message(UserMessage(text=prompt)),
+                timeout=60.0
+            )
+            
+            # Parse response
+            response_text = response.strip()
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                response_text = "\n".join(lines[1:-1]).replace("```json", "").replace("```", "").strip()
+            
+            import json
+            data = json.loads(response_text)
+            
+            references = data.get("references", [])
+            logger.info(f"Extracted {len(references)} references")
+            
+            return references
+            
+        except Exception as e:
+            logger.error(f"Error extracting references: {e}")
+            return []
+    
+    async def _create_formatted_references(
+        self,
+        references: List[Dict],
+        format_style: str,
+        style_guide: str
+    ) -> str:
+        """
+        Step 2: Create properly formatted reference list.
+        
+        For IEEE: [1] Author, "Title," Journal, Year.
+        For APA: Author, A. (Year). Title. Journal.
+        """
+        if not references:
+            return ""
+        
+        # For IEEE: number by order
+        # For APA/MLA: alphabetize
+        if format_style == "IEEE" or "numbered" in style_guide.lower():
+            # Numbered list in order
+            formatted_lines = []
+            for i, ref in enumerate(references, 1):
+                ref_text = ref.get("text", "")
+                if ref_text:
+                    formatted_lines.append(f"[{i}] {ref_text}")
+            return "\n".join(formatted_lines)
+        else:
+            # Alphabetical (APA, MLA, etc.)
+            sorted_refs = sorted(references, key=lambda x: x.get("authors", x.get("text", "")))
+            formatted_lines = [ref.get("text", "") for ref in sorted_refs]
+            return "\n".join(formatted_lines)
+    
+    async def _replace_citations_in_document(
+        self,
+        document_text: str,
+        references: List[Dict],
+        format_style: str,
+        style_guide: str
+    ) -> str:
+        """
+        Step 3: Replace in-text citations with correct format.
+        
+        Uses AI to intelligently match citations to references and replace them.
+        """
+        # Build reference mapping for AI
+        ref_map = {}
+        for i, ref in enumerate(references, 1):
+            authors = ref.get("authors", "")
+            year = ref.get("year", "")
+            key = f"{authors} {year}".strip()
+            ref_map[key] = i
+        
+        # Create reference context
+        ref_context = "\n".join([
+            f"[{i}] {ref.get('authors', '')} ({ref.get('year', '')}): {ref.get('title', '')[:50]}..."
+            for i, ref in enumerate(references[:30], 1)  # Show first 30
+        ])
+        
+        prompt = f"""Replace in-text citations with {format_style} format.
+
+REFERENCE LIST:
+{ref_context}
+... (total {len(references)} references)
+
+DOCUMENT TEXT:
+{document_text}
+
+TASK:
+For {format_style} style:
+- Find in-text citations like (Author, Year) or (Author et al., Year)
+- Replace with [{format_style} format]
+  * IEEE: [1], [2], [3] (numbered brackets)
+  * APA: (Author, Year)
+  * MLA: (Author)
+
+Match citations to the reference list above and use correct numbers.
+
+Return the FULL document text with citations replaced.
+DO NOT return JSON, just return the formatted text."""
+
+        try:
+            chat = LlmChat(
+                api_key=self.api_key,
+                session_id=f"replace-cites-{id(self)}",
+                system_message=f"You are a citation formatting expert. Replace citations with {format_style} format."
+            ).with_model("openai", self.model)
+            
+            import asyncio
+            response = await asyncio.wait_for(
+                chat.send_message(UserMessage(text=prompt)),
+                timeout=90.0
+            )
+            
+            return response.strip()
+            
+        except Exception as e:
+            logger.error(f"Error replacing citations: {e}")
+            return document_text  # Return original if fails
+    
     async def _extract_master_references(
         self,
         full_text: str,
