@@ -4814,7 +4814,8 @@ async def reformat_document_with_ai(
         
         # Initialize DocFormatter
         emergent_key = os.environ.get('EMERGENT_LLM_KEY')
-        formatter = DocFormatter(api_key=emergent_key, model="gemini-2.0-flash-exp", provider="google")
+        # Note: Emergent LLM Key supports OpenAI and Claude only (not Gemini)
+        formatter = DocFormatter(api_key=emergent_key, model="gpt-4o", provider="openai")
         
         # Reformat document
         logging.info(f"Calling DocFormatter with style: {request.format_style}")
