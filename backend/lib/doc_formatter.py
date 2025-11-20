@@ -129,7 +129,11 @@ Return a JSON object with:
         progress_callback: Optional[callable] = None
     ) -> Dict[str, str]:
         """
-        Reformat academic document according to citation style.
+        Reformat academic document according to citation style with consistency.
+        
+        TWO-PASS APPROACH for large documents:
+        - Pass 1: Extract all references and create master reference list
+        - Pass 2: Convert each chunk using master reference list for consistency
         
         Args:
             document_text: Full document text (with BibTeX keys or raw citations)
@@ -161,7 +165,8 @@ Return a JSON object with:
         
         if len(chunks) > 1:
             logger.info(f"Document split into {len(chunks)} chunks for processing")
-            return await self._reformat_large_document(
+            return await self._reformat_large_document_consistent(
+                document_text,
                 chunks, 
                 style_guide, 
                 bibtex_content, 
@@ -175,7 +180,9 @@ Return a JSON object with:
         result = await self._reformat_chunk(
             document_text,
             style_guide,
-            bibtex_content
+            bibtex_content,
+            master_references=None,
+            chunk_info=None
         )
         
         if progress_callback:
