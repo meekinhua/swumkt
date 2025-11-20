@@ -4656,6 +4656,16 @@ async def format_academic_text(
                 doc = Document(temp_output_path)
                 formatted_text = "\n\n".join([para.text for para in doc.paragraphs if para.text.strip()])
                 
+                # Read .bib content BEFORE cleanup
+                bib_content = None
+                if bib_file and os.path.exists(bib_file):
+                    try:
+                        with open(bib_file, 'r', encoding='utf-8') as f:
+                            bib_content = f.read()
+                        logging.info(f"Read .bib content ({len(bib_content)} chars)")
+                    except Exception as e:
+                        logging.warning(f"Could not read .bib file: {str(e)}")
+                
                 # Cleanup
                 os.unlink(temp_input_path)
                 os.unlink(temp_output_path)
