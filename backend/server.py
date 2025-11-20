@@ -4667,6 +4667,105 @@ async def analyze_uploaded_file(
         logging.error(f"File analysis error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to analyze file: {str(e)}")
 
+@api_router.post("/format-editor/replace-citations", response_model=ReplaceCitationsResponse)
+async def replace_citations_with_keys(
+    request: ReplaceCitationsRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Replace in-text citations with BibTeX citation keys"""
+    try:
+        import base64
+        from docx import Document
+        
+        logging.info("Starting citation replacement process")
+        
+        # Decode file
+        file_data = base64.b64decode(request.file_base64)
+        
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_input:
+            temp_input.write(file_data)
+            temp_input_path = temp_input.name
+        
+        # Read document
+        doc = Document(temp_input_path)
+        
+        # Extract all text with paragraph tracking
+        full_text = "\n\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+        
+        logging.info(f"Document has {len(full_text)} characters")
+        
+        # Initialize CitationReplacer
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY')
+        replacer = CitationReplacer(api_key=emergent_key, model="gpt-4o")
+        
+        # Parse BibTeX entries
+        bibtex_entries = replacer.parse_bibtex_entries(request.bib_content)
+        
+        logging.info(f"Parsed {len(bibtex_entries)} BibTeX entries")
+        
+        if not bibtex_entries:
+            raise HTTPException(
+                status_code=400, 
+                detail="No BibTeX entries found. Please ensure BibTeX content is valid."
+            )
+        
+        # Replace citations in text
+        modified_text, replaced_count, replacement_log = await replacer.replace_citations_in_text(
+            full_text,
+            bibtex_entries
+        )
+        
+        # Update document with modified text
+        # Split back into paragraphs
+        modified_paragraphs = modified_text.split("\n\n")
+        
+        # Update existing paragraphs
+        paragraph_index = 0
+        for para in doc.paragraphs:
+            if para.text.strip() and paragraph_index < len(modified_paragraphs):
+                para.text = modified_paragraphs[paragraph_index]
+                paragraph_index += 1
+        
+        # Save modified document
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_output:
+            doc.save(temp_output.name)
+            temp_output_path = temp_output.name
+        
+        # Read modified file
+        with open(temp_output_path, 'rb') as f:
+            modified_file_data = f.read()
+        
+        modified_base64 = base64.b64encode(modified_file_data).decode('utf-8')
+        
+        # Cleanup
+        os.unlink(temp_input_path)
+        os.unlink(temp_output_path)
+        
+        # Generate new filename
+        original_name = request.file_name.replace('.docx', '')
+        new_filename = f"{original_name}_with_citation_keys.docx"
+        
+        total_citations = len(replacer.extract_citations_from_text(full_text))
+        
+        logging.info(f"Citation replacement complete: {replaced_count}/{total_citations} replaced")
+        
+        return ReplaceCitationsResponse(
+            success=True,
+            file_base64=modified_base64,
+            file_name=new_filename,
+            replacements_count=replaced_count,
+            total_citations=total_citations,
+            replacement_log=replacement_log,
+            message=f"Successfully replaced {replaced_count} out of {total_citations} citations with BibTeX keys"
+        )
+        
+    except Exception as e:
+        logging.error(f"Citation replacement error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to replace citations: {str(e)}")
+
 @api_router.post("/format-editor/format", response_model=FormatEditorResponse)
 async def format_academic_text(
     request: FormatEditorRequest,
