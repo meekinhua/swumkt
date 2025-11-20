@@ -805,13 +805,13 @@ const AcademicFormatEditor = () => {
               <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-teal-50 border-2 border-green-300 rounded-lg">
                 <h3 className="text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  📚 BibTeX Preview
+                  📚 BibTeX Preview ({(uploadedFileInfo.bib_content.match(/@\w+\{/g) || []).length} entries)
                 </h3>
                 <div className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto font-mono text-xs max-h-64 overflow-y-auto">
                   <pre className="whitespace-pre-wrap">{uploadedFileInfo.bib_content}</pre>
                 </div>
                 <p className="text-xs text-green-700 mt-2 font-medium">
-                  💡 ไฟล์ .bib นี้ถูกสร้างโดย AI จาก References section และจะถูกใช้ร่วมกับ Pandoc เมื่อกด "แก้ไข Format"
+                  ✅ AI ได้แปลง References เป็น BibTeX เรียบร้อยแล้ว! ตอนนี้คุณสามารถเลือก Citation Style และคลิก "Reformat Document" ด้านล่างได้เลย
                 </p>
               </div>
             )}
