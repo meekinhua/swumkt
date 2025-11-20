@@ -775,6 +775,22 @@ const AcademicFormatEditor = () => {
               </div>
             </Card>
           )}
+          
+          {/* BibTeX Content Display */}
+          {result && result.bib_content && (
+            <Card className="p-6 bg-white/98 border-2 border-blue-300 shadow-xl mt-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                📚 BibTeX File (จาก anystyle parser)
+              </h2>
+              <div className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-xs max-h-96 overflow-y-auto">
+                <pre className="whitespace-pre-wrap">{result.bib_content}</pre>
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                💡 ไฟล์ .bib นี้ถูกสร้างโดย anystyle parser จาก References section และใช้ร่วมกับ Pandoc ในการ process citations
+              </p>
+            </Card>
+          )}
         </div>
       </div>
     </div>
