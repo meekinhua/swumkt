@@ -3180,14 +3180,82 @@ def generate_template_from_specs(specs: dict, output_path: str):
         traceback.print_exc()
         return False
 
-def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str, template_file: str = None):
-    """Format document using Pandoc with CSL and optional template"""
+def extract_references_to_bib(docx_path: str, output_bib_path: str):
+    """Extract references from docx and convert to .bib using anystyle"""
+    try:
+        from docx import Document
+        
+        # Read document
+        doc = Document(docx_path)
+        
+        # Find reference section
+        ref_section_start = -1
+        for i, paragraph in enumerate(doc.paragraphs):
+            if paragraph.style.name.startswith('Heading'):
+                text_lower = paragraph.text.lower()
+                if 'reference' in text_lower or 'bibliography' in text_lower or 'works cited' in text_lower:
+                    ref_section_start = i
+                    break
+        
+        if ref_section_start < 0:
+            logging.warning("No references section found in document")
+            return False
+        
+        # Extract references text
+        ref_paragraphs = doc.paragraphs[ref_section_start+1:]
+        references_text = "\n".join([p.text for p in ref_paragraphs if p.text.strip()])
+        
+        if not references_text.strip():
+            logging.warning("References section is empty")
+            return False
+        
+        # Save to temp file for anystyle
+        temp_ref_file = f"{output_bib_path}.txt"
+        with open(temp_ref_file, 'w', encoding='utf-8') as f:
+            f.write(references_text)
+        
+        # Use anystyle to convert to bib
+        import subprocess
+        result = subprocess.run(
+            ['anystyle', '-f', 'bib', 'parse', temp_ref_file],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0 and result.stdout:
+            # Save bib output
+            with open(output_bib_path, 'w', encoding='utf-8') as f:
+                f.write(result.stdout)
+            
+            # Cleanup temp file
+            os.unlink(temp_ref_file)
+            
+            logging.info(f"Successfully created .bib file with anystyle: {output_bib_path}")
+            return True
+        else:
+            logging.error(f"Anystyle parsing failed: {result.stderr}")
+            return False
+            
+    except Exception as e:
+        logging.error(f"Error extracting references to bib: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str, template_file: str = None, bib_file: str = None):
+    """Format document using Pandoc with CSL, optional template, and optional bibliography"""
     try:
         extra_args = [
             '--citeproc',  # Enable citation processing
             f'--csl={csl_file}',  # Citation style
             '--standalone'
         ]
+        
+        # Add bibliography if provided
+        if bib_file and os.path.exists(bib_file):
+            extra_args.append(f'--bibliography={bib_file}')
+            logging.info(f"Using bibliography file: {bib_file}")
         
         # Add reference document if provided
         if template_file and os.path.exists(template_file):
