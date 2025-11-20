@@ -242,72 +242,89 @@ Return a JSON object with:
         progress_callback: Optional[callable] = None
     ) -> Dict[str, str]:
         """
-        TWO-PASS PROCESSING for consistent citation formatting.
+        INCREMENTAL PROCESSING for consistent citation formatting.
         
-        Pass 1: Extract all references and create master reference list
-        Pass 2: Convert each chunk using master list for consistency
+        Instead of 2-pass (slow), we build master references incrementally:
+        - Process chunks sequentially
+        - Track all citations seen so far
+        - Ensure consistency as we go
+        - Much faster & lower token usage
         """
         total_chunks = len(chunks)
-        total_steps = total_chunks + 4
+        total_steps = total_chunks + 3
         
-        # PASS 1: Create Master Reference List
         if progress_callback:
-            await progress_callback(2, total_steps, "🔍 Pass 1: สร้าง Master Reference List...")
+            await progress_callback(2, total_steps, "🚀 เริ่มแปลงแบบ incremental...")
         
-        logger.info("PASS 1: Extracting all references from document")
-        master_references = await self._extract_master_references(
-            full_document,
-            style_guide,
-            bibtex_content
-        )
+        logger.info(f"INCREMENTAL: Processing {total_chunks} chunks with consistency tracking")
         
-        logger.info(f"Master references created: {len(master_references.get('references', []))} entries")
-        
-        # PASS 2: Convert each chunk with master reference list
-        if progress_callback:
-            await progress_callback(3, total_steps, "✍️ Pass 2: แปลงแต่ละส่วนด้วย Master List...")
-        
+        # Track citations incrementally
+        seen_citations = {}  # {citation_text: citation_number}
+        next_citation_number = 1
         formatted_chunks = []
+        all_references = []
         
         for i, chunk in enumerate(chunks):
             if progress_callback:
                 await progress_callback(
-                    4 + i,
+                    3 + i,
                     total_steps,
-                    f"📝 กำลังแปลง chunk {i+1}/{total_chunks} (consistency guaranteed)..."
+                    f"📝 chunk {i+1}/{total_chunks} (citations: {len(seen_citations)})..."
                 )
             
             chunk_info = {
                 "chunk_number": i + 1,
                 "total_chunks": total_chunks,
                 "is_first": i == 0,
-                "is_last": i == len(chunks) - 1
+                "is_last": i == len(chunks) - 1,
+                "seen_citations": dict(list(seen_citations.items())[:20])  # Pass recent citations
             }
             
-            result = await self._reformat_chunk(
+            # Process chunk
+            result = await self._reformat_chunk_incremental(
                 chunk,
                 style_guide,
                 bibtex_content,
-                master_references=master_references,
+                seen_citations=seen_citations,
+                next_citation_number=next_citation_number,
                 chunk_info=chunk_info
             )
             
             formatted_chunks.append(result["formatted_text"])
             
-            # Small delay to avoid rate limits
+            # Update tracking from result
+            if "new_citations" in result:
+                for citation in result["new_citations"]:
+                    if citation not in seen_citations:
+                        seen_citations[citation] = next_citation_number
+                        next_citation_number += 1
+            
+            # Collect references
+            if result.get("references"):
+                all_references.extend(result["references"])
+            
+            # Small delay
             if i < len(chunks) - 1:
                 await asyncio.sleep(0.3)
+            
+            logger.info(f"Chunk {i+1} complete. Total citations tracked: {len(seen_citations)}")
         
         # Combine chunks
         combined_text = "\n\n".join(formatted_chunks)
+        
+        # Build final reference list
+        formatted_references = self._build_final_references(
+            all_references,
+            style_guide
+        )
         
         if progress_callback:
             await progress_callback(total_steps, total_steps, "✅ เสร็จสมบูรณ์!")
         
         return {
             "formatted_text": combined_text,
-            "formatted_references": master_references.get("formatted_references", ""),
-            "changes_summary": f"Formatted {total_chunks} chunks with consistent citation numbering"
+            "formatted_references": formatted_references,
+            "changes_summary": f"Formatted {total_chunks} chunks with {len(seen_citations)} unique citations"
         }
     
     async def _extract_master_references(
