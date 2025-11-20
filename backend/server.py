@@ -4835,16 +4835,6 @@ async def format_academic_text(
                     summary += f"🎨 ใช้ Custom Template: {request.journal_name} (AI-generated จาก author guidelines)\n"
                 summary += f"⚡ เวลาประมวลผล: ~2-5 วินาที (Pandoc library-based)"
                 
-                # Read .bib content if available
-                bib_content = None
-                if bib_file and os.path.exists(bib_file):
-                    try:
-                        with open(bib_file, 'r', encoding='utf-8') as f:
-                            bib_content = f.read()
-                        logging.info(f"Read .bib content ({len(bib_content)} chars)")
-                    except Exception as e:
-                        logging.warning(f"Could not read .bib file: {str(e)}")
-                
                 return FormatEditorResponse(
                     formatted_text=formatted_text,
                     formatted_file_base64=formatted_base64,
