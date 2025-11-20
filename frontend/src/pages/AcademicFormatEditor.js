@@ -699,21 +699,37 @@ const AcademicFormatEditor = () => {
             
             {/* BibTeX Extraction Progress */}
             {analyzingFile && (
-              <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg">
-                <div className="flex items-center gap-3">
+              <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-lg">
+                <div className="flex items-center gap-3 mb-3">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                   <div className="flex-1">
                     <h3 className="text-sm font-bold text-blue-800 mb-1">
                       🤖 AI กำลังวิเคราะห์และ extract BibTeX...
                     </h3>
                     <p className="text-xs text-blue-600">
-                      กำลังใช้ AI อ่านและแปลง References เป็น BibTeX format (ใช้เวลา 10-20 วินาที)
+                      {analysisMessage || 'กำลังประมวลผล...'}
                     </p>
                   </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-blue-700">
+                      {Math.round(analysisProgress)}%
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-3 bg-blue-200 rounded-full h-2 overflow-hidden">
-                  <div className="bg-blue-600 h-full animate-pulse" style={{width: '100%'}}></div>
+                
+                {/* Progress Bar */}
+                <div className="relative bg-blue-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-500 ease-out"
+                    style={{width: `${analysisProgress}%`}}
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                  </div>
                 </div>
+                
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  💡 AI กำลังแบ่งและวิเคราะห์ references ทีละส่วนเพื่อความแม่นยำสูงสุด
+                </p>
               </div>
             )}
             
