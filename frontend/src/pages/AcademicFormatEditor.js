@@ -840,73 +840,59 @@ const AcademicFormatEditor = () => {
 
               {result && (
                 <div className="space-y-4">
-                  {/* Download Button */}
-                  {result.formatted_file_base64 && (
-                    <Button
-                      onClick={handleDownload}
-                      className="w-full h-14 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white font-bold shadow-xl text-lg"
-                    >
-                      <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      ดาวน์โหลดไฟล์ที่แก้ไขแล้ว (.docx)
-                    </Button>
-                  )}
-
-                  <Textarea
-                    value={result.formatted_text}
-                    readOnly
-                    className="min-h-[500px] border-2 border-green-300 bg-green-50/50 font-mono text-sm"
-                  />
-                  
-                  {/* Formatted References Section */}
-                  {result.formatted_references && (
-                    <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                      <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-600" />
-                        📚 Formatted Reference List
-                      </h3>
-                      <div className="bg-white p-3 rounded-lg border border-blue-200 max-h-64 overflow-y-auto">
-                        <pre className="whitespace-pre-wrap text-xs text-gray-800 font-mono">
-                          {result.formatted_references}
-                        </pre>
-                      </div>
-                      <p className="text-xs text-blue-600 mt-2">
-                        ✅ Reference list ถูก format ตาม {formData.formatStyle} style แล้ว
-                      </p>
-                    </div>
-                  )}
+                  {/* Success Message */}
+                  <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg text-center">
+                    <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold text-green-800 mb-2">
+                      ✅ แปลงสำเร็จ!
+                    </h3>
+                    <p className="text-gray-700 mb-4">
+                      ไฟล์ของคุณถูกแปลงเป็น <span className="font-bold text-purple-700">{formData.formatStyle}</span> style แล้ว
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      📄 ไฟล์: <span className="font-semibold">{result.formatted_file_name}</span>
+                    </p>
+                  </div>
 
                   {/* Summary */}
                   {result.summary && (
-                    <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                    <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
                       <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        สรุป
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        📊 สรุปการแปลง
                       </h3>
-                      <p className="text-sm text-gray-700 mb-2">{result.summary}</p>
+                      <p className="text-sm text-gray-700">{result.summary}</p>
                       {result.method_used && (
                         <p className="text-xs text-gray-500 mt-2">
-                          ⚙️ Method: {result.method_used === 'ai' ? '🤖 AI-powered reformatting' : '📄 Pandoc'}
+                          ⚙️ Method: {result.method_used === 'ai' ? '🤖 AI-powered conversion (chunked processing)' : '📄 Traditional'}
                         </p>
-                      )}
-                      {result.sections_processed && result.sections_processed.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-green-300">
-                          <p className="text-xs font-semibold text-gray-600 mb-1">ส่วนที่ประมวลผล:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {result.sections_processed.map((section, idx) => (
-                              <span 
-                                key={idx} 
-                                className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded border border-green-300"
-                              >
-                                {section}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
                       )}
                     </div>
                   )}
+
+                  {/* Download Again Button */}
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-2">
+                      ต้องการดาวน์โหลดอีกครั้ง?
+                    </p>
+                    <Button
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${result.formatted_file_base64}`;
+                        link.download = result.formatted_file_name || `converted_${formData.formatStyle}.docx`;
+                        link.click();
+                        toast.success('ดาวน์โหลดไฟล์แล้ว!');
+                      }}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 inline">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                      ดาวน์โหลดไฟล์อีกครั้ง
+                    </Button>
+                  </div>
                 </div>
               )}
             </Card>
