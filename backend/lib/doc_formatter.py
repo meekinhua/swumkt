@@ -201,7 +201,7 @@ Return a JSON object with:
             self.STYLE_GUIDES["APA"]  # Default to APA
         )
     
-    def _split_document_for_processing(self, text: str, max_chars: int = 8000) -> List[str]:
+    def _split_document_for_processing(self, text: str, max_chars: int = 4000) -> List[str]:
         """
         Split document into chunks for processing.
         Tries to split at section boundaries.
