@@ -107,7 +107,7 @@ Return a JSON object with:
   "changes_summary": "Brief description of changes made"
 }"""
     
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash-exp", provider: str = "google"):
+    def __init__(self, api_key: str, model: str = "gpt-4o", provider: str = "openai"):
         """
         Initialize the Document Formatter.
         
