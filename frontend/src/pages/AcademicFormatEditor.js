@@ -653,22 +653,30 @@ const AcademicFormatEditor = () => {
                     formatting || 
                     (inputMode === 'file' && !uploadedFile) ||
                     (inputMode === 'text' && !formData.originalText.trim()) ||
-                    (styleSelectionMode === 'auto' && !formData.journalName.trim())
+                    (styleSelectionMode === 'auto' && !formData.journalName.trim()) ||
+                    (formData.formatStyle === 'Custom' && !formData.customStyleGuide.trim())
                   }
                   className="w-full h-14 bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold shadow-xl text-lg"
                 >
                   {formatting ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      กำลังแก้ไข...
+                      {inputMode === 'file' && uploadedFileInfo && uploadedFileInfo.bib_content ? 'AI กำลัง Reformat...' : 'กำลังแก้ไข...'}
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5 mr-2" />
-                      แก้ไข Format
+                      {inputMode === 'file' && uploadedFileInfo && uploadedFileInfo.bib_content 
+                        ? `🤖 Reformat with AI (${formData.formatStyle})` 
+                        : 'แก้ไข Format'}
                     </>
                   )}
                 </Button>
+                {inputMode === 'file' && uploadedFileInfo && uploadedFileInfo.bib_content && (
+                  <p className="text-xs text-center text-purple-600 mt-2 font-medium">
+                    ✨ ระบบจะใช้ AI reformat ทั้ง in-text citations และ reference list ตาม {formData.formatStyle} style
+                  </p>
+                )}
               </div>
 
             {/* Guidelines Display */}
