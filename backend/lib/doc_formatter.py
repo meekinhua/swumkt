@@ -403,7 +403,7 @@ Return JSON:
             return {
                 "formatted_text": text,
                 "new_citations": [],
-                "changes_summary": f"Error: skipped"
+                "changes_summary": "Error: skipped"
             }
     
     def _build_final_references(self, all_references: List, style_guide: str) -> str:
