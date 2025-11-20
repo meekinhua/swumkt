@@ -4729,13 +4729,28 @@ async def format_academic_text(
                 doc.save(temp_input.name)
                 temp_input.close()
                 
+                # Extract references to .bib file using anystyle
+                bib_file = None
+                try:
+                    temp_bib_file = tempfile.NamedTemporaryFile(delete=False, suffix='.bib')
+                    temp_bib_path = temp_bib_file.name
+                    temp_bib_file.close()
+                    
+                    if extract_references_to_bib(temp_input.name, temp_bib_path):
+                        bib_file = temp_bib_path
+                        logging.info(f"Created bibliography file for citation processing")
+                    else:
+                        logging.warning("Could not extract references to .bib, continuing without bibliography")
+                except Exception as e:
+                    logging.warning(f"Bibliography extraction failed: {str(e)}")
+                
                 # Create temp output file
                 temp_output = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
                 temp_output_path = temp_output.name
                 temp_output.close()
                 
-                # Format with Pandoc (with custom template if available)
-                success = format_document_with_pandoc(temp_input.name, temp_output_path, csl_file, template_file)
+                # Format with Pandoc (with custom template and bibliography if available)
+                success = format_document_with_pandoc(temp_input.name, temp_output_path, csl_file, template_file, bib_file)
                 
                 if not success:
                     raise HTTPException(status_code=500, detail="Pandoc formatting failed")
