@@ -162,13 +162,19 @@ Rules:
         self.api_key = api_key
         self.model = model
     
-    async def extract_from_text(self, text: str) -> List[ReferenceData]:
+    async def extract_from_text(
+        self, 
+        text: str,
+        progress_callback: Optional[callable] = None
+    ) -> List[ReferenceData]:
         """
         Extract references from plain text.
         Splits text into smaller chunks for better LLM performance.
         
         Args:
             text: Raw text containing references
+            progress_callback: Optional callback function to report progress
+                               Called with (current_chunk, total_chunks, extracted_count)
             
         Returns:
             List of ReferenceData objects
@@ -178,13 +184,20 @@ Rules:
         
         # Split text into reference chunks
         chunks = self._split_into_reference_chunks(text)
+        total_chunks = len(chunks)
         
-        logger.info(f"Split text into {len(chunks)} chunks for processing")
+        logger.info(f"Split text into {total_chunks} chunks for processing")
+        
+        if progress_callback:
+            await progress_callback(0, total_chunks, 0, "เริ่มต้นวิเคราะห์...")
         
         # Process each chunk
         all_refs = []
         for i, chunk in enumerate(chunks):
-            logger.info(f"Processing chunk {i+1}/{len(chunks)} ({len(chunk)} chars)")
+            logger.info(f"Processing chunk {i+1}/{total_chunks} ({len(chunk)} chars)")
+            
+            if progress_callback:
+                await progress_callback(i, total_chunks, len(all_refs), f"กำลังวิเคราะห์ส่วนที่ {i+1}/{total_chunks}...")
             
             prompt = f"""Task: Extract all academic references from the text below.
 
@@ -203,11 +216,30 @@ Output valid JSON array of reference objects."""
                 refs = await self._process(prompt)
                 all_refs.extend(refs)
                 logger.info(f"Extracted {len(refs)} references from chunk {i+1}")
+                
+                if progress_callback:
+                    await progress_callback(
+                        i+1, 
+                        total_chunks, 
+                        len(all_refs), 
+                        f"เสร็จสิ้นส่วนที่ {i+1}/{total_chunks} (พบ {len(refs)} รายการ)"
+                    )
             except Exception as e:
                 logger.error(f"Error processing chunk {i+1}: {e}")
+                if progress_callback:
+                    await progress_callback(
+                        i+1, 
+                        total_chunks, 
+                        len(all_refs), 
+                        f"ข้ามส่วนที่ {i+1} (มีข้อผิดพลาด)"
+                    )
                 continue
         
         logger.info(f"Total extracted: {len(all_refs)} references")
+        
+        if progress_callback:
+            await progress_callback(total_chunks, total_chunks, len(all_refs), "เสร็จสมบูรณ์!")
+        
         return all_refs
     
     def _split_into_reference_chunks(self, text: str, max_refs_per_chunk: int = 8) -> List[str]:
