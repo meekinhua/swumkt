@@ -639,6 +639,22 @@ const AcademicFormatEditor = () => {
                 </p>
               </div>
             )}
+            
+            {/* BibTeX Content from Upload Analysis */}
+            {uploadedFileInfo && uploadedFileInfo.bib_content && (
+              <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-teal-50 border-2 border-green-300 rounded-lg">
+                <h3 className="text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  📚 BibTeX Preview (จาก anystyle parser)
+                </h3>
+                <div className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto font-mono text-xs max-h-64 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap">{uploadedFileInfo.bib_content}</pre>
+                </div>
+                <p className="text-xs text-green-700 mt-2 font-medium">
+                  💡 ไฟล์ .bib นี้ถูกสร้างจาก References section และจะถูกใช้ร่วมกับ Pandoc เมื่อกด "แก้ไข Format"
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* Text Input & Output */}
