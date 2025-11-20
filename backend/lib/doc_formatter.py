@@ -309,25 +309,114 @@ Return a JSON object with:
             "changes_summary": f"Formatted {total_chunks} chunks with consistent citation numbering"
         }
     
+    async def _extract_master_references(
+        self,
+        full_text: str,
+        style_guide: str,
+        bibtex_content: str
+    ) -> Dict[str, any]:
+        """
+        PASS 1: Extract all unique references from entire document.
+        Creates a master reference list with consistent numbering/ordering.
+        
+        Returns:
+            Dict with:
+            - references: List of all unique references
+            - formatted_references: Formatted reference list string
+            - citation_map: Mapping from citation text to reference number
+        """
+        prompt = f"""Task: Extract ALL unique references from this academic document.
+
+CITATION STYLE:
+{style_guide}
+
+FULL DOCUMENT TEXT:
+{full_text[:15000]}...  (showing first part for reference extraction)
+
+BIBTEX DATA (if available):
+{bibtex_content[:5000] if bibtex_content else "None"}
+
+INSTRUCTIONS:
+1. Find ALL unique references/citations mentioned in the document
+2. Create a master reference list according to the target citation style
+3. Assign consistent numbers/keys to each reference
+4. For numbered styles (IEEE): number by order of first appearance
+5. For author-year styles (APA): alphabetize by author surname
+
+OUTPUT: Return a JSON object with:
+{{
+  "references": [
+    {{"id": "1", "text": "Author et al., 'Title,' Journal, 2020"}},
+    {{"id": "2", "text": "Another Author, 'Title 2,' Conference, 2021"}}
+  ],
+  "formatted_references": "Full formatted reference list as string",
+  "total_references": 10
+}}"""
+
+        try:
+            chat = LlmChat(
+                api_key=self.api_key,
+                session_id=f"master-refs-{id(self)}"
+            ).with_model("openai", self.model)
+            
+            response = await chat.send_message(UserMessage(text=prompt))
+            
+            # Parse response
+            response_text = response.strip()
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                response_text = "\n".join(lines[1:-1]).replace("```json", "").replace("```", "").strip()
+            
+            import json
+            data = json.loads(response_text)
+            
+            logger.info(f"Extracted {data.get('total_references', 0)} master references")
+            return data
+            
+        except Exception as e:
+            logger.error(f"Error extracting master references: {e}")
+            # Return empty master list if extraction fails
+            return {
+                "references": [],
+                "formatted_references": "",
+                "total_references": 0
+            }
+    
     async def _reformat_chunk(
         self,
         text: str,
         style_guide: str,
-        bibtex_content: str
+        bibtex_content: str,
+        master_references: Optional[Dict] = None,
+        chunk_info: Optional[Dict] = None
     ) -> Dict[str, str]:
         """
         Reformat a single chunk of text.
         
+        Args:
+            text: Chunk text to format
+            style_guide: Citation style rules
+            bibtex_content: BibTeX data
+            master_references: Master reference list for consistency (Pass 2)
+            chunk_info: Info about chunk position (chunk_number, total_chunks, etc.)
+        
         Returns:
             Dict with formatted_text, formatted_references, changes_summary
         """
-        prompt = self._build_formatting_prompt(text, style_guide, bibtex_content)
+        prompt = self._build_formatting_prompt(
+            text, 
+            style_guide, 
+            bibtex_content,
+            master_references=master_references,
+            chunk_info=chunk_info
+        )
         
         try:
             # Create chat instance
+            session_suffix = f"-chunk{chunk_info['chunk_number']}" if chunk_info else ""
             chat = LlmChat(
                 api_key=self.api_key,
-                session_id=f"doc-format-{id(self)}",
+                session_id=f"doc-format-{id(self)}{session_suffix}",
                 system_message=self.SYSTEM_PROMPT
             ).with_model("openai", self.model)
             
