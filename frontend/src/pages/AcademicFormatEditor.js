@@ -21,7 +21,8 @@ const AcademicFormatEditor = () => {
   const [formData, setFormData] = useState({
     originalText: '',
     journalName: '',
-    formatStyle: 'APA'
+    formatStyle: 'APA',
+    customStyleGuide: ''
   });
 
   const [inputMode, setInputMode] = useState('file'); // 'file' or 'text'
