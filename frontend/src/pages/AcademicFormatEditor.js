@@ -98,8 +98,36 @@ const AcademicFormatEditor = () => {
       
       toast.success(`อัปโหลด ${file.name} สำเร็จ`, { duration: 2000 });
       
-      // Analyze file with progress
+      // Analyze file with simulated progress
       setAnalyzingFile(true);
+      setAnalysisProgress(0);
+      setAnalysisMessage('เริ่มต้นวิเคราะห์ไฟล์...');
+      
+      // Simulate progress during analysis
+      const progressInterval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          if (prev >= 90) return prev; // Cap at 90% until real response
+          return prev + Math.random() * 15; // Increment randomly
+        });
+      }, 800);
+      
+      // Update messages during analysis
+      const messageSteps = [
+        { time: 1000, message: 'อ่านไฟล์และวิเคราะห์โครงสร้าง...' },
+        { time: 3000, message: 'ค้นหา References section...' },
+        { time: 5000, message: 'AI กำลังแปลง References เป็น BibTeX...' },
+        { time: 10000, message: 'กำลังประมวลผลส่วนที่ 1...' },
+        { time: 15000, message: 'กำลังประมวลผลส่วนที่ 2...' },
+        { time: 20000, message: 'เกือบเสร็จแล้ว...' }
+      ];
+      
+      messageSteps.forEach(step => {
+        setTimeout(() => {
+          if (analyzingFile) {
+            setAnalysisMessage(step.message);
+          }
+        }, step.time);
+      });
       
       try {
         const response = await axios.post(
@@ -116,6 +144,12 @@ const AcademicFormatEditor = () => {
           }
         );
         
+        clearInterval(progressInterval);
+        
+        // Complete progress
+        setAnalysisProgress(100);
+        setAnalysisMessage('เสร็จสมบูรณ์!');
+        
         console.log('📊 File analysis response:', response.data);
         console.log('📚 BibTeX content length:', response.data.bib_content ? response.data.bib_content.length : 0);
         
@@ -128,10 +162,15 @@ const AcademicFormatEditor = () => {
           toast.success('วิเคราะห์ไฟล์สำเร็จ! (ไม่พบ References section)', { duration: 3000 });
         }
       } catch (error) {
+        clearInterval(progressInterval);
         console.error('File analysis error:', error);
         toast.error('ไม่สามารถวิเคราะห์ไฟล์ได้ แต่ยังสามารถใช้งานต่อได้');
       } finally {
-        setAnalyzingFile(false);
+        setTimeout(() => {
+          setAnalyzingFile(false);
+          setAnalysisProgress(0);
+          setAnalysisMessage('');
+        }, 500);
       }
     };
     reader.readAsDataURL(file);
