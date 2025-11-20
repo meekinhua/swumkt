@@ -3190,25 +3190,48 @@ async def extract_references_to_bib(docx_path: str, output_bib_path: str):
         # Read document
         doc = Document(docx_path)
         
-        # Find reference section
+        # Get all paragraphs text
+        all_paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+        
+        if not all_paragraphs:
+            logging.warning("Document is empty")
+            return False
+        
+        references_text = None
+        
+        # Method 1: Try to find references section by heading
         ref_section_start = -1
         for i, paragraph in enumerate(doc.paragraphs):
             if paragraph.style.name.startswith('Heading'):
                 text_lower = paragraph.text.lower()
-                if 'reference' in text_lower or 'bibliography' in text_lower or 'works cited' in text_lower:
+                if 'reference' in text_lower or 'bibliography' in text_lower or 'works cited' in text_lower or 'บรรณานุกรม' in text_lower:
                     ref_section_start = i
                     break
         
-        if ref_section_start < 0:
-            logging.warning("No references section found in document")
-            return False
+        if ref_section_start >= 0:
+            # Found heading - extract from there
+            ref_paragraphs = doc.paragraphs[ref_section_start+1:]
+            references_text = "\n".join([p.text for p in ref_paragraphs if p.text.strip()])
+            logging.info(f"Found references section with heading at paragraph {ref_section_start}")
+        else:
+            # Method 2: No heading found - analyze last 40% of document
+            logging.info("No references heading found, analyzing last 40% of document")
+            
+            total_paragraphs = len(all_paragraphs)
+            start_index = int(total_paragraphs * 0.6)  # Start from 60% position
+            
+            # Get last 40% of document
+            last_portion = "\n".join(all_paragraphs[start_index:])
+            
+            if len(last_portion) > 100:  # Only if there's substantial text
+                references_text = last_portion
+                logging.info(f"Using last {total_paragraphs - start_index} paragraphs for reference extraction")
+            else:
+                logging.warning("Last portion of document is too short")
+                return False
         
-        # Extract references text
-        ref_paragraphs = doc.paragraphs[ref_section_start+1:]
-        references_text = "\n".join([p.text for p in ref_paragraphs if p.text.strip()])
-        
-        if not references_text.strip():
-            logging.warning("References section is empty")
+        if not references_text or not references_text.strip():
+            logging.warning("No text to extract references from")
             return False
         
         # Use RefExtract with AI to convert to BibTeX
@@ -3216,6 +3239,7 @@ async def extract_references_to_bib(docx_path: str, output_bib_path: str):
         extractor = RefExtract(api_key=emergent_key, model="gpt-4o")
         
         # Extract references
+        logging.info(f"Extracting references from {len(references_text)} characters of text")
         refs = await extractor.extract_from_text(references_text)
         
         if not refs:
