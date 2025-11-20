@@ -4,95 +4,122 @@ The user's goal is to build a suite of marketing and academic research tools. Th
 1.  **Customer Perception Analysis:** A new tool with two qualitative sub-tools: an Interview Question Generator and an Interview Analysis tool. The basic structure exists but the core logic is not implemented.
 2.  **Academic Marketing Tools:** A new suite of tools.
     *   **Journal Finder (Completed):** An LLM-powered tool that takes a topic/abstract to suggest academic journals, and also allows browsing/filtering a database of journals (ABDC, AJG).
-    *   **Academic Format Corrector (Completed):** A tool to reformat academic papers. It uses an LLM to analyze a journal's author guidelines (font, spacing, margins, citation style) and dynamically creates a  template. It then uses the  library to apply this template and a corresponding CSL file to format an uploaded  or pasted text.
-3.  **UI/UX Refinements:** Ongoing improvements based on user feedback, such as clarifying workflows and adding more options to dropdowns.
+    *   **Academic Format Corrector (Vastly Enhanced):** A tool to reformat academic papers. It has evolved significantly to:
+        *   Use an LLM to extract detailed formatting rules (font, spacing, margins, etc.) from a journal's author guidelines.
+        *   Analyze an uploaded  to detect its existing structure, formatting, and citation style.
+        *   Use the  parser to automatically generate a BibTeX () file from the plain-text references in the document.
+        *   Use  with the generated  file, a CSL file, and a dynamically-created  template to perform true citation processing and document reformatting.
+3.  **UI/UX Refinements:** The user wants a transparent and informative UI. Recent requests focused on showing the user exactly what the tool is detecting and generating at each step (e.g., displaying extracted parameters, showing file analysis results, and previewing the generated BibTeX).
 4.  **Dashboard Fix:** A pending bug fix for a card on the main dashboard showing an incorrect coming soon status.
 
 **User's preferred language**: Thai
 
 **what currently exists?**
-The application is a functional market research PWA.
--   The Journal Finder tool is complete. It features two tabs: an AI Search that uses Claude to recommend journals based on user input, and a Browse Database tab that allows users to search and filter journals from pre-loaded ABDC and AJG lists. The results display is consistent across both tabs.
--   The Academic Format Corrector tool is complete. It uses a sophisticated hybrid approach:
-    -   An LLM fetches a journal's author guidelines and extracts key formatting specs (font, size, spacing, citation style).
-    -   A Python script dynamically generates a  reference template based on these specs.
-    -   The  library handles the core document conversion, applying the generated template and the correct citation style (from a library of CSL files).
-    -   The UI supports both  file uploads and direct text input, with a refined workflow to guide the user.
--   Admin settings have been expanded to support the new tools.
--   The initial Content Attachment feature, image generation admin page, and LLM migration to Claude Sonnet 4 are all stable and complete from the previous session.
+The application is a market research PWA with two main, highly-developed academic tools.
+-   **Journal Finder:** A completed and stable tool for finding academic journals.
+-   **Academic Format Corrector:** This tool has been the focus of the current session and is now feature-complete and powerful. Its workflow is:
+    1.  **File Upload:** User uploads a  file.
+    2.  **Instant Analysis (UI Display):** The backend immediately analyzes the file. The UI displays a detailed report including word count, headings, detected formatting (font, spacing, margins via ), and the most likely citation style (detected via a custom heuristic).
+    3.  **BibTeX Preview (UI Display):** The backend also uses the  parser to convert the document's reference list into BibTeX format, which is previewed for the user in the UI.
+    4.  **Guideline Fetching:** The user enters a journal name, and an LLM fetches its guidelines, extracting over 39 specific formatting parameters. These are displayed in the UI for transparency.
+    5.  **Formatting:** When the user clicks Format, the backend runs  with a complete toolchain: a dynamically generated  template (for fonts/margins), a CSL file (for citation style), and the auto-generated  file (for citation processing).
+    6.  **Results:** The formatted text, a download link, a summary of changes, and the final BibTeX content are all displayed in the UI.
+-   The environment now includes , , and , which were installed to support this new functionality.
 
 **Last working item**:
--   **Last item agent was working:** The agent was implementing a user request to make the Academic Format Editor more transparent. The goal is to display the specific formatting parameters (e.g., Font: Times New Roman, Size: 12pt, Style: Emerald) that the LLM extracts from the journal's guidelines, so the user can see what rules are being applied.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend screenshot tool
+-   **Last item agent was working:** The agent finished implementing the user's request to display the BibTeX content (generated by ) as a preview immediately after a file is uploaded. This provides the user with instant feedback on how their references were parsed, before they even start the main formatting step.
+-   **Status:** USER VERIFICATION PENDING
+-   **Agent Testing Done:** Y
+-   **Which testing method agent to use?** NA
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Display Extracted Guideline Parameters (P0)**
-    -   **Description:** The user wants to see the specific formatting parameters (font, size, spacing, citation style, etc.) that the LLM extracts from the author guidelines before the final document formatting is applied. This adds transparency to the Academic Format Corrector tool.
-    -   **Attempted fixes:** The agent has already modified the backend. The  endpoint now returns the extracted specs, and the response model has been updated.
-    -   **Next debug checklist:**
-        1.  Modify .
-        2.  In the  function, store the new  from the API response in a state variable.
-        3.  Render these specs in a new UI component (e.g., a summary card or list) that appears after the guidelines have been successfully fetched.
-    -   **Why fix this issue and what will be achieved with the fix?** This will improve user trust and provide valuable feedback on what formatting rules the system is about to apply, allowing the user to verify the AI's understanding.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on other issue:** None
-
--   **Issue 2: Incorrect Dashboard Card Status (P1)**
-    -   **Description:** From the previous fork: The Market Research card on the Dashboard page incorrectly shows a coming soon or developing status. This was misunderstood by the previous agent.
-    -   **Attempted fixes:** None.
+-   **Issue 1: Incorrect Dashboard Card Status (P1)**
+    -   **Description:** The Market Research card on the Dashboard page () incorrectly shows a coming soon or developing status, preventing users from navigating to the tool suite from the main page. This is a carry-over issue from a previous fork.
+    -   **Attempted fixes:** None in this session.
     -   **Next debug checklist:**
         1.  Examine .
         2.  Locate the  component for Market Research Tools.
         3.  Update its properties (e.g., , , ) to reflect that it is an active feature linking to .
-    -   **Why fix this issue and what will be achieved with the fix?** To correct the UI and provide users with accurate information and access from the dashboard.
+    -   **Why fix this issue and what will be achieved with the fix?** To correct the main navigation flow of the application and provide users with accurate information.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y (Carried over from a previous fork)
     -   **Should Test frontend/backend/both after fix?** Frontend (screenshot tool)
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1: Complete UI for Displaying Extracted Parameters (P0)**
-    -   **Where to resume:** . Implement the frontend component to display the  received from the backend.
-    -   **What will be achieved with this?** This will complete the user's latest request for the Academic Format Editor, making it fully functional and transparent.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on something:** None
+-   None.
 
 **Upcoming and Future Tasks**
--   **P1: Implement Customer Perception Analysis - Phase 1 (Qualitative):** Build the core functionality for the two sub-tools (Interview Question Generator, Interview Analysis) in  and connect them to the existing backend APIs.
--   **P2: Implement Customer Behavior Analysis - Phase 2 (Quantitative):** Build the functionality for the disabled Quantitative tab.
--   **P3: Implement Customer Perception Analysis - Phase 2 (Quantitative):** Build the functionality for the disabled Quantitative tab.
--   **P4: Survey Analytics & Dashboard:** Implement visualization and analysis for the Survey Builder.
--   **P5: Export Functionality:** Implement exporting for survey results.
+-   **Upcoming Tasks:**
+    -   **P1: Fix Incorrect Dashboard Card:** Resolve the Market Research card status on the Dashboard page.
+    -   **P1: Implement Customer Perception Analysis - Phase 1 (Qualitative):** Build the core functionality for the two sub-tools (Interview Question Generator, Interview Analysis) in  and connect them to backend APIs.
+-   **Future Tasks:**
+    -   **P2: Implement Customer Behavior Analysis (Quantitative):** Build the functionality for the currently disabled Quantitative tab.
+    -   **P3: Survey Analytics & Dashboard:** Implement visualization and analysis for the Survey Builder tool.
+    -   **P4: Export Functionality:** Implement exporting for survey results.
 
 **Completed work in this session**
--   **Feature: Journal Finder Tool:**
-    -   Created a backend API () that uses Claude to suggest journals.
-    -   Created a second backend API () to search and filter local journal data (, ).
-    -   Built a complete frontend UI in  with two tabs for AI Search and Browse Database.
-    -   User tested and confirmed it is working as expected.
--   **Feature: Academic Format Corrector Tool:**
-    -   Iteratively developed the tool, pivoting from a pure-LLM approach to a more robust hybrid  model.
-    -   Implemented an API () that uses an LLM to find a journal's author guidelines and extract formatting specs (font, size, spacing, margins, citation style).
-    -   Implemented a Python script to dynamically generate a  reference template based on the extracted specs.
-    -   Implemented the main formatting API () that uses  to apply the generated template and the correct CSL file for citations.
-    -   Built a comprehensive frontend UI () that supports file uploads () and text input, with a refined UX for selecting formatting modes.
-    -   Expanded the supported citation styles by downloading more CSL files and updating the backend/frontend.
-    -   Fixed bugs related to incorrect style detection and template generation.
--   **Enhancement: Admin Settings:** Added a new tab in Admin Settings to select the LLM model for the Format Editor's guideline analysis.
--   **Refactoring:** Removed significant duplicated code in  related to the Journal Finder.
+-   **Feature: Full Citation Processing with  + :**
+    -   Installed Ruby, the  gem, and the  binary into the environment.
+    -   Integrated  to parse plain-text references from  files and automatically generate a BibTeX () file.
+    -   Modified the Pandoc workflow to use the generated  file (), enabling true citation processing and reformatting.
+    -   Updated the UI to display the generated BibTeX content, both as a preview on upload and in the final results.
+-   **Feature: Real-time File Analysis on Upload:**
+    -   Created a new API endpoint () that analyzes an uploaded .
+    -   Analysis detects document structure (word count, headings), formatting (font, spacing, margins), and citation style (using a robust heuristic).
+    -   The frontend now displays this detailed analysis immediately after a file is uploaded.
+-   **Feature: Enhanced Formatting Transparency:**
+    -   The LLM prompt for guideline extraction was enhanced to pull over 39 specific parameters.
+    -   The UI was updated to display all these extracted parameters before formatting begins.
+-   **Bug Fix: Critical Pandoc Runtime Error:**
+    -   Diagnosed that  was not installed in the environment, causing all formatting to fail.
+    -   Resolved by installing  via apt 2.6.1 (arm64)
+Usage: apt-get [options] command
+       apt-get [options] install|remove pkg1 [pkg2 ...]
+       apt-get [options] source pkg1 [pkg2 ...]
+
+apt-get is a command line interface for retrieval of packages
+and information about them from authenticated sources and
+for installation, upgrade and removal of packages together
+with their dependencies.
+
+Most used commands:
+  update - Retrieve new lists of packages
+  upgrade - Perform an upgrade
+  install - Install new packages (pkg is libc6 not libc6.deb)
+  reinstall - Reinstall packages (pkg is libc6 not libc6.deb)
+  remove - Remove packages
+  purge - Remove packages and config files
+  autoremove - Remove automatically all unused packages
+  dist-upgrade - Distribution upgrade, see apt-get(8)
+  dselect-upgrade - Follow dselect selections
+  build-dep - Configure build-dependencies for source packages
+  satisfy - Satisfy dependency strings
+  clean - Erase downloaded archive files
+  autoclean - Erase old downloaded archive files
+  check - Verify that there are no broken dependencies
+  source - Download source archives
+  download - Download the binary package into the current directory
+  changelog - Download and display the changelog for the given package
+
+See apt-get(8) for more information about the available commands.
+Configuration options and syntax is detailed in apt.conf(5).
+Information about how to configure sources can be found in sources.list(5).
+Package and version choices can be expressed via apt_preferences(5).
+Security details are available in apt-secure(8).
+                                        This APT has Super Cow Powers..
+-   **Refactoring & Bug Fixes:**
+    -   Resolved a 401 Unauthorized error on the new analysis API by adjusting its security dependency.
+    -   Improved the list of changes report to be dynamic and accurately reflect the steps taken (e.g., parsed references to BibTeX).
+    -   Fixed numerous minor bugs related to frontend state, API request formats, and race conditions in file cleanup.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Incorrect Dashboard Card for Market Research**
     -   **Debug checklist:** See All Pending/In progress Issue list.
     -   **Why to solve this issue and what will be achieved with this?** The dashboard is the main entry point and should accurately reflect the status of available tools.
     -   **Should Test frontend/backend/both after fix:** Frontend
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -103,58 +130,53 @@ The application is a functional market research PWA.
 **Key Technical Concepts**
 -   **Frameworks:** React, FastAPI
 -   **Database:** MongoDB
--   **AI/LLM (Text):**  with  is used for analysis and generation tasks.
--   **Document Formatting:** A hybrid approach using an LLM for guideline analysis and  (with  and ) for document conversion. CSL files are used for citation styling, and dynamically generated  files serve as reference templates for fonts, spacing, and margins.
--   **File Handling:** The backend handles  and  for journal data, and  for document formatting (both input and output).
+-   **Document Formatting:** A sophisticated pipeline:  for initial analysis,  (Ruby gem) for BibTeX generation, an LLM for guideline extraction, and  for the final conversion using a CSL file, a dynamically generated  template, and the auto-generated  file.
+-   **Dependencies:** The environment now relies on system-level installations of , the  gem, and the  binary.
 
 **key DB schema**
--   **AdminSettings:**
-    -   : New key to store the selected LLM for the Academic Format Editor's guideline analysis.
+-   No changes to the database schema were made in this session.
 
 **changes in tech stack**
--   New Python libraries installed and used: , , , .
+-   **Added:**  (system binary)
+-   **Added:**  (system binary)
+-   **Added:**  (Ruby gem)
 
 **All files**
-*   **/app/backend/server.py**: Heavily modified. Added multiple APIs for Journal Finder and Academic Format Editor. Includes logic for reading data files, running Pandoc, generating docx templates, and interacting with the LLM.
-*   **/app/frontend/src/pages/JournalFinder.js**: New file, created from scratch. Implements the full UI with tabs for AI search and database browsing.
-*   **/app/frontend/src/pages/AcademicFormatEditor.js**: New file, created from scratch. Implements a complex UI for file/text input and managing the formatting process.
-*   **/app/frontend/src/pages/AdminSettings.js**: Modified to add a new Format Editor tab for selecting the LLM model.
-*   **/app/frontend/src/App.js**: Modified to add routes for  and .
-*   **/app/frontend/src/pages/MarketResearch.js**: Modified to activate the cards for the two new academic tools.
-*   New data/template directories created under .
+-   **/app/backend/server.py**: Heavily modified. A new endpoint () was added. The main formatting endpoint () was completely overhauled to integrate  for BibTeX generation and use it with . Response models were expanded to include analysis results and BibTeX content.
+-   **/app/frontend/src/pages/AcademicFormatEditor.js**: Heavily modified. Implemented UI to display detailed file analysis upon upload, including detected formatting, citation style, and a preview of the generated BibTeX. The results section was also updated to show the final BibTeX.
+
+**Areas that need refactoring**:
+-   The main backend file, , has grown very large and contains logic for multiple distinct tools. It should be refactored by splitting routes into separate  modules (e.g., , ).
+-   The primary frontend component, , is now over 800 lines long and manages a large amount of complex state. It should be broken down into smaller, more manageable sub-components (e.g., , , ).
 
 **key api endpoints**
--   : New endpoint for AI-powered journal search.
--   : New endpoint for browsing/filtering journal database.
--   : New endpoint to find guidelines and generate a formatting template.
--   : New endpoint that uses Pandoc to format a document.
--   : New endpoints to manage the Format Editor's LLM setting.
+-   : **New**. Analyzes an uploaded  file for structure, formatting, and citation style, and uses  to generate BibTeX content for preview.
+-   : **Modified**. Now orchestrates the full pipeline: extracts references, calls  to create a  file, calls  with the  flag for true citation processing, and returns the formatted result along with the generated .
 
 **Critical Info for New Agent**
 -   **User's Language is Thai:** All communication must be in Thai.
--   **Hybrid Formatting Model:** The Academic Format Corrector's architecture is critical. The LLM is **only** for analyzing guidelines and generating a template.  does the actual document formatting. Do not try to use the LLM for the final conversion as it is less reliable and was a rejected approach.
--   **Iterative User Feedback:** The user is highly engaged and provides specific feedback. Be prepared to make small, iterative changes to UX/UI and functionality.
--   **Dashboard Bug:** An old, unresolved bug from the previous session is the incorrect status of the Market Research card on the dashboard. This should be addressed.
+-   **Academic Format Corrector Workflow:** Understand the full, multi-stage backend process. The tool is no longer a simple formatter; it's a complete analysis and citation processing pipeline.  is a key external dependency called from Python via .
+-   **Environment Dependencies:** The application now depends on , , and the  gem being installed in the environment.
 
 **documents created in this job**
 -   None.
 
 **Last 5 User Messages and any pending user messages**
-1.  **User:** Asked to use the LLM to create a  template for font/spacing based on journal guidelines. **Status: Completed**.
-2.  **User:** Reported that the UI for choosing a format style was confusing. **Status: Completed** (Agent redesigned the UI with clear radio buttons).
-3.  **User:** Asked to add all supported citation styles to the dropdown. **Status: Completed**.
-4.  **User:** Reported that the formatting output was incorrect (wrong citation style, font, etc.) for a specific journal. **Status: Completed** (Agent debugged the CSL detection, template generation, and LLM prompts).
-5.  **User:** Asked the tool to report which parameters (font, size, style) it detected from the guidelines for transparency. **Status: In Progress**.
+1.  **User:** Can we process citations too? Can you recommend a parser to create a .bib from plain text? -> **Status: Completed**. Agent suggested  and implemented it.
+2.  **User:** Try using anystyle. -> **Status: Completed**.
+3.  **User:** Please also show the bib content that was generated in the UI. -> **Status: Completed**.
+4.  **User:** Please show the bib content as soon as the file is uploaded. -> **Status: Completed**.
+5.  **No pending user messages.** The agent has presented the final result of the last request and is waiting for the user to specify the next task.
 
 **Project Health Check:**
--   **Working:** Journal Finder, Academic Format Editor (core logic), Admin Settings, Content Management.
--   **In Progress:** The UI for the Academic Format Editor is being updated to display the formatting parameters extracted by the LLM.
--   **Broken:** The Market Research card on the  page may still be displaying an incorrect status.
+-   **Working:** Journal Finder, Academic Format Editor (now highly advanced and feature-complete).
+-   **In Progress:** None.
+-   **Broken:** The Market Research card on the  page remains incorrect, hindering navigation.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, backend testing agent was used once for the Journal Finder.
+-   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None.
+-   **Test files created:** None. Test documents were created dynamically in  for API calls but not saved.
 -   **Known regressions:** None.
 
 **Credentials to test flow:**
@@ -162,4 +184,4 @@ The application is a functional market research PWA.
 -   **Password:** 
 
 **What agent forgot to execute**
--   The agent from the *previous* fork failed to fix the Market Research tool card on the  page. This task has been carried over and remains unaddressed.</analysis>
+-   The agent has consistently deferred fixing the incorrect Market Research card on the  page, which was identified as a P1 issue in the initial handover summary. This remains the most prominent unaddressed task.</analysis>
