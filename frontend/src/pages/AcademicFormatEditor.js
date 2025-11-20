@@ -1015,6 +1015,7 @@ const AcademicFormatEditor = () => {
         </div>
         </>
         )}
+      </div>
     </div>
   );
 };
