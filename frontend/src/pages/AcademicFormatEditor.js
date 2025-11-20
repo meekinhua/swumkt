@@ -276,6 +276,70 @@ const AcademicFormatEditor = () => {
           </p>
         </div>
 
+        {/* Coming Soon Message - Show when feature is disabled */}
+        {!FEATURE_ENABLED && (
+          <div className="max-w-4xl mx-auto">
+            <Card className="p-12 bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 shadow-xl text-center">
+              <div className="mb-6">
+                <div className="w-24 h-24 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-12 h-12 text-purple-600" />
+                </div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                  🚧 Coming Soon
+                </h2>
+                <p className="text-lg text-gray-700 mb-6">
+                  Academic Format Editor กำลังอยู่ในระหว่างการพัฒนา
+                </p>
+                <div className="bg-white/80 rounded-lg p-6 mb-6">
+                  <h3 className="text-xl font-semibold text-purple-800 mb-4">
+                    ✨ ฟีเจอร์ที่จะมาใน Version ถัดไป:
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-gray-900">AI Citation Converter</p>
+                        <p className="text-sm text-gray-600">แปลง citations เป็น APA, MLA, Chicago อัตโนมัติ</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-gray-900">Journal Guidelines</p>
+                        <p className="text-sm text-gray-600">ดึง Author Guidelines จากวารสารโดยตรง</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-gray-900">Format Checker</p>
+                        <p className="text-sm text-gray-600">ตรวจสอบรูปแบบและแนะนำการแก้ไข</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-gray-900">Batch Processing</p>
+                        <p className="text-sm text-gray-600">แปลงไฟล์หลายไฟล์พร้อมกัน</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate('/market-research')}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  กลับหน้าเครื่องมือวิจัย
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Main Content - Show only when feature is enabled */}
+        {FEATURE_ENABLED && (
+          <>
         {/* Mode Selection Tabs */}
         <div className="mb-6 flex gap-2 border-b-2 border-gray-200">
           <button
