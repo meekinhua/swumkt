@@ -383,7 +383,7 @@ Return JSON:
                 api_key=self.api_key,
                 session_id=f"c{chunk_info['chunk_number']}",
                 system_message=f"Convert citations to {style_name}. Return JSON only."
-            ).with_model("openai", self.model)
+            ).with_model(self.provider, self.model)
             
             # Add timeout
             import asyncio
@@ -483,7 +483,7 @@ Return ONLY valid JSON, nothing else."""
                 api_key=self.api_key,
                 session_id=f"extract-refs-{id(self)}",
                 system_message="You are an expert at extracting academic references. Return only valid JSON."
-            ).with_model("openai", self.model)
+            ).with_model(self.provider, self.model)
             
             import asyncio
             response = await asyncio.wait_for(
@@ -593,7 +593,7 @@ DO NOT return JSON, just return the formatted text."""
                 api_key=self.api_key,
                 session_id=f"replace-cites-{id(self)}",
                 system_message=f"You are a citation formatting expert. Replace citations with {format_style} format."
-            ).with_model("openai", self.model)
+            ).with_model(self.provider, self.model)
             
             import asyncio
             response = await asyncio.wait_for(
@@ -656,7 +656,7 @@ OUTPUT: Return a JSON object with:
                 api_key=self.api_key,
                 session_id=f"master-refs-{id(self)}",
                 system_message="You are an expert at extracting and organizing academic references."
-            ).with_model("openai", self.model)
+            ).with_model(self.provider, self.model)
             
             response = await chat.send_message(UserMessage(text=prompt))
             
@@ -717,7 +717,7 @@ OUTPUT: Return a JSON object with:
                 api_key=self.api_key,
                 session_id=f"doc-format-{id(self)}{session_suffix}",
                 system_message=self.SYSTEM_PROMPT
-            ).with_model("openai", self.model)
+            ).with_model(self.provider, self.model)
             
             # Send message
             response = await chat.send_message(UserMessage(text=prompt))
@@ -898,7 +898,7 @@ OUTPUT: Plain text reference list, one entry per line or properly formatted."""
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"ref-list-{id(self)}"
-            ).with_model("openai", self.model)
+            ).with_model(self.provider, self.model)
             
             response = await chat.send_message(UserMessage(text=prompt))
             return response.strip() if response else ""
