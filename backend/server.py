@@ -4348,6 +4348,7 @@ class FileAnalysisResponse(BaseModel):
     detected_styles: List[str] = []
     detected_citation_style: Optional[str] = None
     citation_confidence: Optional[str] = None
+    bib_content: Optional[str] = None  # BibTeX from anystyle
 
 @api_router.post("/format-editor/analyze-file", response_model=FileAnalysisResponse)
 async def analyze_uploaded_file(
