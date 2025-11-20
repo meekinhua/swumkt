@@ -656,18 +656,38 @@ const AcademicFormatEditor = () => {
               </div>
             )}
             
+            {/* BibTeX Extraction Progress */}
+            {analyzingFile && (
+              <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-blue-800 mb-1">
+                      🤖 AI กำลังวิเคราะห์และ extract BibTeX...
+                    </h3>
+                    <p className="text-xs text-blue-600">
+                      กำลังใช้ AI อ่านและแปลง References เป็น BibTeX format (ใช้เวลา 10-20 วินาที)
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 bg-blue-200 rounded-full h-2 overflow-hidden">
+                  <div className="bg-blue-600 h-full animate-pulse" style={{width: '100%'}}></div>
+                </div>
+              </div>
+            )}
+            
             {/* BibTeX Content from Upload Analysis */}
-            {uploadedFileInfo && uploadedFileInfo.bib_content && (
+            {!analyzingFile && uploadedFileInfo && uploadedFileInfo.bib_content && (
               <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-teal-50 border-2 border-green-300 rounded-lg">
                 <h3 className="text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  📚 BibTeX Preview (จาก anystyle parser)
+                  📚 BibTeX Preview
                 </h3>
                 <div className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto font-mono text-xs max-h-64 overflow-y-auto">
                   <pre className="whitespace-pre-wrap">{uploadedFileInfo.bib_content}</pre>
                 </div>
                 <p className="text-xs text-green-700 mt-2 font-medium">
-                  💡 ไฟล์ .bib นี้ถูกสร้างจาก References section และจะถูกใช้ร่วมกับ Pandoc เมื่อกด "แก้ไข Format"
+                  💡 ไฟล์ .bib นี้ถูกสร้างโดย AI จาก References section และจะถูกใช้ร่วมกับ Pandoc เมื่อกด "แก้ไข Format"
                 </p>
               </div>
             )}
