@@ -293,10 +293,16 @@ Return a JSON object with:
             formatted_chunks.append(result["formatted_text"])
             
             # Update tracking from result
-            if "new_citations" in result:
+            if "new_citations" in result and result["new_citations"]:
                 for citation in result["new_citations"]:
-                    if citation not in seen_citations:
-                        seen_citations[citation] = next_citation_number
+                    # Handle both string and dict citations
+                    if isinstance(citation, dict):
+                        citation_key = citation.get("text", str(citation))
+                    else:
+                        citation_key = str(citation)
+                    
+                    if citation_key not in seen_citations:
+                        seen_citations[citation_key] = next_citation_number
                         next_citation_number += 1
             
             # Collect references
