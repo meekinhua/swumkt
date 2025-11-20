@@ -4768,7 +4768,7 @@ async def format_academic_text(
                     temp_bib_path = temp_bib_file.name
                     temp_bib_file.close()
                     
-                    if extract_references_to_bib(temp_input.name, temp_bib_path):
+                    if await extract_references_to_bib(temp_input.name, temp_bib_path):
                         bib_file = temp_bib_path
                         logging.info(f"Created bibliography file for citation processing")
                     else:
