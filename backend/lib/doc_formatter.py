@@ -357,7 +357,8 @@ OUTPUT: Return a JSON object with:
         try:
             chat = LlmChat(
                 api_key=self.api_key,
-                session_id=f"master-refs-{id(self)}"
+                session_id=f"master-refs-{id(self)}",
+                system_message="You are an expert at extracting and organizing academic references."
             ).with_model("openai", self.model)
             
             response = await chat.send_message(UserMessage(text=prompt))
