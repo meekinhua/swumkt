@@ -107,19 +107,21 @@ Return a JSON object with:
   "changes_summary": "Brief description of changes made"
 }"""
     
-    def __init__(self, api_key: str, model: str = "gpt-4o"):
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash-exp", provider: str = "google"):
         """
         Initialize the Document Formatter.
         
         Args:
             api_key: Emergent LLM Key
-            model: OpenAI model to use (default: gpt-4o)
+            model: Model to use (default: gemini-2.0-flash-exp)
+            provider: Provider (default: google for Gemini)
         """
         if not api_key:
             logger.warning("DocFormatter: API Key was not provided. API calls will fail.")
         
         self.api_key = api_key
         self.model = model
+        self.provider = provider
     
     async def reformat_document(
         self,
