@@ -232,41 +232,81 @@ Return a JSON object with:
         
         return chunks if chunks else [text]
     
-    async def _reformat_large_document(
+    async def _reformat_large_document_consistent(
         self,
+        full_document: str,
         chunks: List[str],
         style_guide: str,
         bibtex_content: str,
         progress_callback: Optional[callable] = None
     ) -> Dict[str, str]:
-        """Process document in chunks and combine results."""
-        formatted_chunks = []
+        """
+        TWO-PASS PROCESSING for consistent citation formatting.
+        
+        Pass 1: Extract all references and create master reference list
+        Pass 2: Convert each chunk using master list for consistency
+        """
         total_chunks = len(chunks)
+        total_steps = total_chunks + 4
+        
+        # PASS 1: Create Master Reference List
+        if progress_callback:
+            await progress_callback(2, total_steps, "🔍 Pass 1: สร้าง Master Reference List...")
+        
+        logger.info("PASS 1: Extracting all references from document")
+        master_references = await self._extract_master_references(
+            full_document,
+            style_guide,
+            bibtex_content
+        )
+        
+        logger.info(f"Master references created: {len(master_references.get('references', []))} entries")
+        
+        # PASS 2: Convert each chunk with master reference list
+        if progress_callback:
+            await progress_callback(3, total_steps, "✍️ Pass 2: แปลงแต่ละส่วนด้วย Master List...")
+        
+        formatted_chunks = []
         
         for i, chunk in enumerate(chunks):
             if progress_callback:
                 await progress_callback(
-                    i + 2,
-                    total_chunks + 3,
-                    f"กำลัง format ส่วนที่ {i+1}/{total_chunks}..."
+                    4 + i,
+                    total_steps,
+                    f"📝 กำลังแปลง chunk {i+1}/{total_chunks} (consistency guaranteed)..."
                 )
             
-            result = await self._reformat_chunk(chunk, style_guide, bibtex_content)
+            chunk_info = {
+                "chunk_number": i + 1,
+                "total_chunks": total_chunks,
+                "is_first": i == 0,
+                "is_last": i == len(chunks) - 1
+            }
+            
+            result = await self._reformat_chunk(
+                chunk,
+                style_guide,
+                bibtex_content,
+                master_references=master_references,
+                chunk_info=chunk_info
+            )
+            
             formatted_chunks.append(result["formatted_text"])
+            
+            # Small delay to avoid rate limits
+            if i < len(chunks) - 1:
+                await asyncio.sleep(0.3)
         
         # Combine chunks
         combined_text = "\n\n".join(formatted_chunks)
         
-        # Extract references from last chunk (usually contains references)
-        last_result = await self._reformat_chunk(chunks[-1], style_guide, bibtex_content)
-        
         if progress_callback:
-            await progress_callback(total_chunks + 3, total_chunks + 3, "เสร็จสมบูรณ์!")
+            await progress_callback(total_steps, total_steps, "✅ เสร็จสมบูรณ์!")
         
         return {
             "formatted_text": combined_text,
-            "formatted_references": last_result.get("formatted_references", ""),
-            "changes_summary": f"Formatted {total_chunks} sections of the document"
+            "formatted_references": master_references.get("formatted_references", ""),
+            "changes_summary": f"Formatted {total_chunks} chunks with consistent citation numbering"
         }
     
     async def _reformat_chunk(
