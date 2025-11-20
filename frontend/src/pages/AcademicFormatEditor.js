@@ -498,31 +498,53 @@ const AcademicFormatEditor = () => {
                     <p className="text-sm text-gray-600 mb-3">เลือก Citation Style ที่ต้องการด้วยตัวเอง</p>
                     
                     {styleSelectionMode === 'manual' && (
-                      <select
-                        value={formData.formatStyle}
-                        onChange={(e) => setFormData({...formData, formatStyle: e.target.value})}
-                        className="w-full h-10 border-2 border-purple-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
-                      >
-                        <optgroup label="📚 General Academic">
-                          <option value="APA">APA (7th Edition)</option>
-                          <option value="MLA">MLA (9th Edition)</option>
-                          <option value="Chicago">Chicago Style (Author-Date)</option>
-                          <option value="Turabian">Turabian (Notes-Bibliography)</option>
-                          <option value="Harvard">Harvard Style</option>
-                        </optgroup>
-                        <optgroup label="🔬 Sciences">
-                          <option value="IEEE">IEEE (Engineering)</option>
-                          <option value="Vancouver">Vancouver (Medical)</option>
-                          <option value="AMA">AMA (American Medical Association)</option>
-                          <option value="ACS">ACS (American Chemical Society)</option>
-                          <option value="Nature">Nature Journal</option>
-                        </optgroup>
-                        <optgroup label="📖 Publishers">
-                          <option value="Emerald">Emerald (Harvard Style)</option>
-                          <option value="Elsevier-Harvard">Elsevier-Harvard</option>
-                          <option value="Springer">Springer (Basic Author-Date)</option>
-                        </optgroup>
-                      </select>
+                      <>
+                        <select
+                          value={formData.formatStyle}
+                          onChange={(e) => setFormData({...formData, formatStyle: e.target.value})}
+                          className="w-full h-10 border-2 border-purple-300 rounded-md px-3 focus:border-purple-500 focus:outline-none"
+                        >
+                          <optgroup label="📚 General Academic">
+                            <option value="APA">APA (7th Edition)</option>
+                            <option value="MLA">MLA (9th Edition)</option>
+                            <option value="Chicago">Chicago Style (Author-Date)</option>
+                            <option value="Turabian">Turabian (Notes-Bibliography)</option>
+                            <option value="Harvard">Harvard Style</option>
+                          </optgroup>
+                          <optgroup label="🔬 Sciences">
+                            <option value="IEEE">IEEE (Engineering)</option>
+                            <option value="Vancouver">Vancouver (Medical)</option>
+                            <option value="AMA">AMA (American Medical Association)</option>
+                            <option value="ACS">ACS (American Chemical Society)</option>
+                            <option value="Nature">Nature Journal</option>
+                          </optgroup>
+                          <optgroup label="📖 Publishers">
+                            <option value="Emerald">Emerald (Harvard Style)</option>
+                            <option value="Elsevier-Harvard">Elsevier-Harvard</option>
+                            <option value="Springer">Springer (Basic Author-Date)</option>
+                          </optgroup>
+                          <optgroup label="🎨 Custom">
+                            <option value="Custom">Custom Style (Author Guide)</option>
+                          </optgroup>
+                        </select>
+                        
+                        {formData.formatStyle === 'Custom' && (
+                          <div className="mt-4">
+                            <Label className="text-sm font-semibold text-gray-700 mb-2 block">
+                              📝 Paste Author Guidelines หรือ Citation Style ที่ต้องการ:
+                            </Label>
+                            <Textarea
+                              value={formData.customStyleGuide}
+                              onChange={(e) => setFormData({...formData, customStyleGuide: e.target.value})}
+                              placeholder="ตัวอย่าง: ใช้ตัวเลขในวงเล็บ (1), (2) สำหรับ in-text citations และเรียง references ตามลำดับที่ปรากฏในบทความ..."
+                              className="min-h-[120px] border-2 border-purple-300 focus:border-purple-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                              💡 ใส่รายละเอียดรูปแบบ citation และ reference list ที่ต้องการให้ AI จัดรูปแบบให้
+                            </p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
