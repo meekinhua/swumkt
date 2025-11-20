@@ -17,6 +17,19 @@ code {
         source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s infinite;
+}
+
 @layer base {
     :root {
         --background: 0 0% 100%;
