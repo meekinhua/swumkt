@@ -277,13 +277,13 @@ const MarketResearch = () => {
 
               {/* Academic Format Editor Tool */}
               <Card 
-                onClick={() => navigate('/market-research/academic-format-editor')}
+                onClick={() => window.open('https://ai.studio/apps/drive/1VWUh_KqffdKZObgFBgmHCQv_To1din-l?fullscreenApplet=true', '_blank')}
                 className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 cursor-pointer relative overflow-hidden"
               >
-                {/* Development Badge */}
-                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  กำลังพัฒนา
+                {/* Active Badge */}
+                <div className="absolute top-4 right-4 px-3 py-1.5 bg-gradient-to-r from-[#00A9CE] to-[#00BCD4] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  พร้อมใช้งาน
                 </div>
                 
                 {/* Icon */}
