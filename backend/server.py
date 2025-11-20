@@ -24,6 +24,7 @@ from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from lib.ref_extract import RefExtract
 from lib.citation_replacer import CitationReplacer
+from lib.doc_formatter import DocFormatter
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
