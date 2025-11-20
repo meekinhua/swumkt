@@ -165,6 +165,7 @@ Rules:
     async def extract_from_text(self, text: str) -> List[ReferenceData]:
         """
         Extract references from plain text.
+        Splits text into smaller chunks for better LLM performance.
         
         Args:
             text: Raw text containing references
@@ -175,7 +176,17 @@ Rules:
         if not text.strip():
             return []
         
-        prompt = f"""Task: Extract all academic references from the text below.
+        # Split text into reference chunks
+        chunks = self._split_into_reference_chunks(text)
+        
+        logger.info(f"Split text into {len(chunks)} chunks for processing")
+        
+        # Process each chunk
+        all_refs = []
+        for i, chunk in enumerate(chunks):
+            logger.info(f"Processing chunk {i+1}/{len(chunks)} ({len(chunk)} chars)")
+            
+            prompt = f"""Task: Extract all academic references from the text below.
 
 Requirements:
 1. Ignore non-reference text (headers, page numbers, etc.)
@@ -184,11 +195,89 @@ Requirements:
 4. Extract all available fields
 
 Text to process:
-{text}
+{chunk}
 
 Output valid JSON array of reference objects."""
+            
+            try:
+                refs = await self._process(prompt)
+                all_refs.extend(refs)
+                logger.info(f"Extracted {len(refs)} references from chunk {i+1}")
+            except Exception as e:
+                logger.error(f"Error processing chunk {i+1}: {e}")
+                continue
         
-        return await self._process(prompt)
+        logger.info(f"Total extracted: {len(all_refs)} references")
+        return all_refs
+    
+    def _split_into_reference_chunks(self, text: str, max_refs_per_chunk: int = 8) -> List[str]:
+        """
+        Split reference text into smaller chunks.
+        Each reference is typically 1-3 lines.
+        
+        Args:
+            text: Full reference text
+            max_refs_per_chunk: Maximum references per chunk
+            
+        Returns:
+            List of text chunks
+        """
+        # Split by double newlines or numbered patterns
+        import re
+        
+        # Try to split by common patterns:
+        # 1. Numbered references (1., [1], 1), etc.)
+        # 2. Author-year patterns at line start
+        # 3. Double newlines
+        
+        # First, normalize line endings
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        
+        # Split by patterns that indicate start of new reference
+        # Pattern 1: Lines starting with numbers (1., [1], 1))
+        pattern1 = r'\n(?=\d+[\.\)\]]?\s+[A-Z])'
+        
+        # Pattern 2: Lines starting with Author name (Uppercase letter at start of line)
+        pattern2 = r'\n(?=[A-Z][a-z]+,\s+[A-Z]\.?)'
+        
+        # Try pattern 1 first
+        parts = re.split(pattern1, text)
+        
+        # If didn't split well, try pattern 2
+        if len(parts) < 2:
+            parts = re.split(pattern2, text)
+        
+        # If still didn't split, split by double newlines
+        if len(parts) < 2:
+            parts = [p.strip() for p in text.split('\n\n') if p.strip()]
+        
+        # If still single part, split by single newlines as last resort
+        if len(parts) == 1 and len(text) > 1000:
+            parts = [p.strip() for p in text.split('\n') if p.strip() and len(p.strip()) > 50]
+        
+        # Clean up parts
+        parts = [p.strip() for p in parts if p.strip()]
+        
+        # Group into chunks
+        chunks = []
+        current_chunk = []
+        
+        for part in parts:
+            current_chunk.append(part)
+            
+            if len(current_chunk) >= max_refs_per_chunk:
+                chunks.append('\n\n'.join(current_chunk))
+                current_chunk = []
+        
+        # Add remaining
+        if current_chunk:
+            chunks.append('\n\n'.join(current_chunk))
+        
+        # If no chunks created (text is small), return as single chunk
+        if not chunks:
+            chunks = [text]
+        
+        return chunks
     
     async def extract_from_image(self, base64_image: str) -> List[ReferenceData]:
         """
