@@ -338,55 +338,45 @@ Return a JSON object with:
     ) -> Dict[str, any]:
         """
         Reformat chunk with incremental citation tracking.
-        Much lighter than two-pass approach.
+        ULTRA-SIMPLIFIED for speed.
         
         Returns:
             Dict with formatted_text, new_citations, references
         """
-        # Build lightweight prompt
-        citation_context = ""
-        if seen_citations:
-            cite_list = [f"{text}: [{num}]" for text, num in list(seen_citations.items())[:15]]
-            citation_context = f"""
-KNOWN CITATIONS (use these numbers if you see them):
-{chr(10).join(cite_list)}
-... ({len(seen_citations)} total citations tracked)
-
-For NEW citations not in the list above, assign numbers starting from [{next_citation_number}].
-"""
+        # Ultra-simple prompt
+        style_name = style_guide.split(':')[0].strip()
         
-        prompt = f"""Task: Convert citations in this academic text chunk to {style_guide.split(':')[0]} style.
+        # Show only last 10 citations (not 15)
+        cite_sample = ""
+        if seen_citations and len(seen_citations) > 0:
+            recent = list(seen_citations.items())[-10:]
+            cite_sample = ", ".join([f"{txt}=[{num}]" for txt, num in recent[:5]])
+            cite_sample = f"Known: {cite_sample}... (total {len(seen_citations)})"
+        
+        prompt = f"""Convert citations to {style_name} format.
 
-STYLE:
-{style_guide[:500]}...
+Chunk {chunk_info['chunk_number']}/{chunk_info['total_chunks']}:
+{text[:3000]}...
 
-{citation_context}
+{cite_sample}
+New citations start at [{next_citation_number}]
 
-TEXT CHUNK ({chunk_info['chunk_number']}/{chunk_info['total_chunks']}):
-{text}
-
-INSTRUCTIONS:
-1. Find all citations: (Author, Year), [N], etc.
-2. Convert to {style_guide.split(':')[0]} format
-3. Use existing citation numbers from KNOWN list
-4. For new citations, assign next available numbers
-5. ONLY format citations, keep all other text unchanged
-
-OUTPUT (JSON):
-{{
-  "formatted_text": "text with formatted citations",
-  "new_citations": ["citation text 1", "citation text 2"],
-  "changes_summary": "brief summary"
-}}"""
+Return JSON:
+{{"formatted_text": "...", "new_citations": [...]}}"""
 
         try:
             chat = LlmChat(
                 api_key=self.api_key,
-                session_id=f"incr-{chunk_info['chunk_number']}",
-                system_message="You are a citation formatting expert."
+                session_id=f"c{chunk_info['chunk_number']}",
+                system_message=f"Convert citations to {style_name}. Return JSON only."
             ).with_model("openai", self.model)
             
-            response = await chat.send_message(UserMessage(text=prompt))
+            # Add timeout
+            import asyncio
+            response = await asyncio.wait_for(
+                chat.send_message(UserMessage(text=prompt)),
+                timeout=45.0  # 45 second timeout per chunk
+            )
             
             # Parse response
             response_text = response.strip()
@@ -397,15 +387,23 @@ OUTPUT (JSON):
             import json
             result = json.loads(response_text)
             
+            logger.info(f"Chunk {chunk_info['chunk_number']} processed successfully")
             return result
             
+        except asyncio.TimeoutError:
+            logger.warning(f"Chunk {chunk_info['chunk_number']} TIMEOUT - using original text")
+            return {
+                "formatted_text": text,
+                "new_citations": [],
+                "changes_summary": "Timeout - skipped"
+            }
         except Exception as e:
-            logger.error(f"Error in incremental chunk processing: {e}")
+            logger.error(f"Chunk {chunk_info['chunk_number']} ERROR: {e}")
             # Fallback: return original
             return {
                 "formatted_text": text,
                 "new_citations": [],
-                "changes_summary": f"Error: {str(e)}"
+                "changes_summary": f"Error: skipped"
             }
     
     def _build_final_references(self, all_references: List, style_guide: str) -> str:
