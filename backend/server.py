@@ -4531,6 +4531,24 @@ async def analyze_uploaded_file(
         except Exception as e:
             logging.warning(f"Error detecting document formatting: {str(e)}")
         
+        # Extract references to .bib file using anystyle
+        bib_content = None
+        try:
+            temp_bib_file = tempfile.NamedTemporaryFile(delete=False, suffix='.bib')
+            temp_bib_path = temp_bib_file.name
+            temp_bib_file.close()
+            
+            if extract_references_to_bib(temp_path, temp_bib_path):
+                # Read .bib content
+                with open(temp_bib_path, 'r', encoding='utf-8') as f:
+                    bib_content = f.read()
+                logging.info(f"Created .bib file during analysis ({len(bib_content)} chars)")
+                os.unlink(temp_bib_path)
+            else:
+                logging.info("No references found or could not create .bib file")
+        except Exception as e:
+            logging.warning(f"Bibliography extraction during analysis failed: {str(e)}")
+        
         # Cleanup
         os.unlink(temp_path)
         
@@ -4551,7 +4569,8 @@ async def analyze_uploaded_file(
             detected_margins=detected_margins,
             detected_styles=detected_styles,
             detected_citation_style=detected_citation_style,
-            citation_confidence=citation_confidence
+            citation_confidence=citation_confidence,
+            bib_content=bib_content
         )
         
     except Exception as e:
