@@ -172,7 +172,7 @@ const AcademicFormatEditor = () => {
         requestData,
         {
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 180000  // 3 minutes for AI processing
+          timeout: 600000  // 10 minutes for large files
         }
       );
 
