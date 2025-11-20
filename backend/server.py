@@ -4674,11 +4674,15 @@ async def format_academic_text(
                 ))
                 
                 # Citation style change
+                citation_reason = f"จัดรูปแบบ citations และ references ตาม {format_style} style โดยใช้ Pandoc citeproc"
+                if bib_file:
+                    citation_reason += " + anystyle parser (parsed references to BibTeX)"
+                
                 changes_list.append(FormatChange(
                     section="📚 Citations & References",
                     original="ไม่มีรูปแบบ citation ที่กำหนด",
                     formatted=f"{format_style} citation style",
-                    reason=f"จัดรูปแบบ citations และ references ตาม {format_style} style โดยใช้ CSL file (Pandoc citeproc)"
+                    reason=citation_reason
                 ))
                 
                 # Template changes (if custom template used)
