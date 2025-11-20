@@ -992,6 +992,24 @@ const AcademicFormatEditor = () => {
                     className="min-h-[500px] border-2 border-green-300 bg-green-50/50 font-mono text-sm"
                   />
                   
+                  {/* Formatted References Section */}
+                  {result.formatted_references && (
+                    <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                      <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        📚 Formatted Reference List
+                      </h3>
+                      <div className="bg-white p-3 rounded-lg border border-blue-200 max-h-64 overflow-y-auto">
+                        <pre className="whitespace-pre-wrap text-xs text-gray-800 font-mono">
+                          {result.formatted_references}
+                        </pre>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2">
+                        ✅ Reference list ถูก format ตาม {formData.formatStyle} style แล้ว
+                      </p>
+                    </div>
+                  )}
+
                   {/* Summary */}
                   {result.summary && (
                     <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
@@ -1000,6 +1018,11 @@ const AcademicFormatEditor = () => {
                         สรุป
                       </h3>
                       <p className="text-sm text-gray-700 mb-2">{result.summary}</p>
+                      {result.method_used && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          ⚙️ Method: {result.method_used === 'ai' ? '🤖 AI-powered reformatting' : '📄 Pandoc'}
+                        </p>
+                      )}
                       {result.sections_processed && result.sections_processed.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-green-300">
                           <p className="text-xs font-semibold text-gray-600 mb-1">ส่วนที่ประมวลผล:</p>
