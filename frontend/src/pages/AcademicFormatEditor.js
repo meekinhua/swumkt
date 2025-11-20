@@ -163,9 +163,16 @@ const AcademicFormatEditor = () => {
           }
         );
         
+        // Clear all intervals and timeouts
         clearInterval(progressInterval);
+        messageTimeouts.forEach(timeout => clearTimeout(timeout));
         
-        // Complete progress
+        // Animate to 100%
+        setAnalysisProgress(98);
+        setAnalysisMessage('กำลังจัดเรียงผลลัพธ์...');
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         setAnalysisProgress(100);
         setAnalysisMessage('เสร็จสมบูรณ์!');
         
@@ -182,6 +189,7 @@ const AcademicFormatEditor = () => {
         }
       } catch (error) {
         clearInterval(progressInterval);
+        messageTimeouts.forEach(timeout => clearTimeout(timeout));
         console.error('File analysis error:', error);
         toast.error('ไม่สามารถวิเคราะห์ไฟล์ได้ แต่ยังสามารถใช้งานต่อได้');
       } finally {
@@ -189,7 +197,7 @@ const AcademicFormatEditor = () => {
           setAnalyzingFile(false);
           setAnalysisProgress(0);
           setAnalysisMessage('');
-        }, 500);
+        }, 800);
       }
     };
     reader.readAsDataURL(file);
