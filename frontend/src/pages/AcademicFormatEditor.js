@@ -109,8 +109,16 @@ const AcademicFormatEditor = () => {
           }
         );
         
+        console.log('📊 File analysis response:', response.data);
+        console.log('📚 BibTeX content length:', response.data.bib_content ? response.data.bib_content.length : 0);
+        
         setUploadedFileInfo(response.data);
-        toast.success('วิเคราะห์ไฟล์สำเร็จ!', { duration: 2000 });
+        
+        if (response.data.bib_content) {
+          toast.success('วิเคราะห์ไฟล์สำเร็จ! พบ BibTeX entries', { duration: 3000 });
+        } else {
+          toast.success('วิเคราะห์ไฟล์สำเร็จ! (ไม่พบ References section)', { duration: 3000 });
+        }
       } catch (error) {
         console.error('File analysis error:', error);
         toast.error('ไม่สามารถวิเคราะห์ไฟล์ได้ แต่ยังสามารถใช้งานต่อได้');
