@@ -4782,6 +4782,109 @@ async def replace_citations_with_keys(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to replace citations: {str(e)}")
 
+@api_router.post("/format-editor/reformat-with-ai", response_model=AIReformatResponse)
+async def reformat_document_with_ai(
+    request: AIReformatRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Reformat document using AI (replaces Pandoc) - supports multiple citation styles"""
+    try:
+        import base64
+        from docx import Document
+        from lib.doc_formatter import DocFormatter
+        
+        logging.info(f"Starting AI reformatting: style={request.format_style}")
+        
+        # Decode file
+        file_data = base64.b64decode(request.file_base64)
+        
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_input:
+            temp_input.write(file_data)
+            temp_input_path = temp_input.name
+        
+        # Read document
+        doc = Document(temp_input_path)
+        
+        # Extract all text with paragraph tracking
+        full_text = "\n\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+        
+        logging.info(f"Document has {len(full_text)} characters, {len(doc.paragraphs)} paragraphs")
+        
+        # Initialize DocFormatter
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY')
+        formatter = DocFormatter(api_key=emergent_key, model="gpt-4o")
+        
+        # Reformat document
+        logging.info(f"Calling DocFormatter with style: {request.format_style}")
+        
+        result = await formatter.reformat_document(
+            document_text=full_text,
+            format_style=request.format_style,
+            bibtex_content=request.bib_content or "",
+            custom_style_guide=request.custom_style_guide or ""
+        )
+        
+        formatted_text = result.get("formatted_text", full_text)
+        formatted_references = result.get("formatted_references", "")
+        changes_summary = result.get("changes_summary", "Document formatted successfully")
+        
+        logging.info(f"Formatting complete. Summary: {changes_summary}")
+        
+        # Create new document with formatted text
+        new_doc = Document()
+        
+        # Split formatted text into paragraphs and add to document
+        formatted_paragraphs = formatted_text.split("\n\n")
+        
+        for para_text in formatted_paragraphs:
+            if para_text.strip():
+                # Check if it's a heading (basic heuristic)
+                if para_text.strip().isupper() or (len(para_text) < 100 and para_text.endswith(":")):
+                    new_doc.add_heading(para_text.strip(), level=1)
+                else:
+                    new_doc.add_paragraph(para_text.strip())
+        
+        # Save new document
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_output:
+            new_doc.save(temp_output.name)
+            temp_output_path = temp_output.name
+        
+        # Read formatted file
+        with open(temp_output_path, 'rb') as f:
+            formatted_file_data = f.read()
+        
+        formatted_base64 = base64.b64encode(formatted_file_data).decode('utf-8')
+        
+        # Cleanup
+        os.unlink(temp_input_path)
+        os.unlink(temp_output_path)
+        
+        # Generate new filename
+        original_name = request.file_name.replace('.docx', '')
+        new_filename = f"{original_name}_formatted_{request.format_style}.docx"
+        
+        # Create preview (first 1000 chars)
+        preview_text = formatted_text[:1000] + "..." if len(formatted_text) > 1000 else formatted_text
+        
+        logging.info(f"AI reformatting complete: {new_filename}")
+        
+        return AIReformatResponse(
+            success=True,
+            file_base64=formatted_base64,
+            file_name=new_filename,
+            formatted_text_preview=preview_text,
+            formatted_references=formatted_references,
+            changes_summary=changes_summary,
+            message=f"Successfully reformatted document using AI ({request.format_style} style)"
+        )
+        
+    except Exception as e:
+        logging.error(f"AI reformatting error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to reformat document: {str(e)}")
+
 @api_router.post("/format-editor/format", response_model=FormatEditorResponse)
 async def format_academic_text(
     request: FormatEditorRequest,
