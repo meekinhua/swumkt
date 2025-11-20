@@ -735,36 +735,37 @@ const AcademicFormatEditor = () => {
             )}
             
             {/* BibTeX Extraction Progress */}
-            {analyzingFile && (
-              <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-lg">
+            {/* Conversion Progress - Show only during conversion */}
+            {analyzingFile && formatting && (
+              <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                   <div className="flex-1">
-                    <h3 className="text-sm font-bold text-blue-800 mb-1">
-                      🤖 AI กำลังวิเคราะห์และ extract BibTeX...
+                    <h3 className="text-sm font-bold text-purple-800 mb-1">
+                      🤖 AI กำลังแปลง Citation Style...
                     </h3>
-                    <p className={`text-xs ${analysisProgress > 85 ? 'text-green-600 font-semibold animate-pulse' : 'text-blue-600'}`}>
+                    <p className={`text-xs ${analysisProgress > 85 ? 'text-green-600 font-semibold animate-pulse' : 'text-purple-600'}`}>
                       {analysisMessage || 'กำลังประมวลผล...'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className={`text-lg font-bold ${analysisProgress > 85 ? 'text-green-600' : 'text-blue-700'}`}>
+                    <span className={`text-lg font-bold ${analysisProgress > 85 ? 'text-green-600' : 'text-purple-700'}`}>
                       {Math.round(analysisProgress)}%
                     </span>
                   </div>
                 </div>
                 
                 {/* Progress Bar with shimmer effect */}
-                <div className="relative bg-blue-200 rounded-full h-3 overflow-hidden shadow-inner">
+                <div className="relative bg-purple-200 rounded-full h-3 overflow-hidden shadow-inner">
                   <div 
                     className={`h-full transition-all duration-700 ease-out ${
                       analysisProgress > 85 
                         ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-green-600' 
-                        : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                        : 'bg-gradient-to-r from-purple-500 to-indigo-600'
                     }`}
                     style={{width: `${analysisProgress}%`}}
                   >
-                    {/* Shimmer effect - more visible when > 85% */}
+                    {/* Shimmer effect */}
                     <div className={`absolute inset-0 ${
                       analysisProgress > 85 
                         ? 'bg-white/40 animate-pulse' 
@@ -780,25 +781,9 @@ const AcademicFormatEditor = () => {
                 
                 <p className="text-xs text-gray-500 mt-2 text-center">
                   {analysisProgress > 85 
-                    ? '⏳ กำลังรวมและตรวจสอบผลลัพธ์ขั้นสุดท้าย...' 
-                    : '💡 AI กำลังแบ่งและวิเคราะห์ references ทีละส่วนเพื่อความแม่นยำสูงสุด'
+                    ? '⏳ เกือบเสร็จแล้ว กำลังตรวจสอบความถูกต้อง...' 
+                    : `💡 AI กำลังแปลงเป็น ${formData.formatStyle} style แบบ chunk-by-chunk เพื่อความแม่นยำ`
                   }
-                </p>
-              </div>
-            )}
-            
-            {/* BibTeX Content from Upload Analysis */}
-            {!analyzingFile && uploadedFileInfo && uploadedFileInfo.bib_content && (
-              <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-teal-50 border-2 border-green-300 rounded-lg">
-                <h3 className="text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  📚 BibTeX Preview ({(uploadedFileInfo.bib_content.match(/@\w+\{/g) || []).length} entries)
-                </h3>
-                <div className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto font-mono text-xs max-h-64 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap">{uploadedFileInfo.bib_content}</pre>
-                </div>
-                <p className="text-xs text-green-700 mt-2 font-medium">
-                  ✅ AI ได้แปลง References เป็น BibTeX เรียบร้อยแล้ว! ตอนนี้คุณสามารถเลือก Citation Style และคลิก "Reformat Document" ด้านล่างได้เลย
                 </p>
               </div>
             )}
