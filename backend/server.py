@@ -4368,6 +4368,63 @@ class FileAnalysisResponse(BaseModel):
     citation_confidence: Optional[str] = None
     bib_content: Optional[str] = None  # BibTeX from anystyle
 
+@api_router.post("/format-editor/analyze-file-stream")
+async def analyze_uploaded_file_stream(
+    request: FileAnalysisRequest
+):
+    """Analyze uploaded .docx file with streaming progress updates"""
+    from fastapi.responses import StreamingResponse
+    import json
+    
+    async def generate_progress():
+        try:
+            import base64
+            from docx import Document
+            
+            # Send initial progress
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'เริ่มต้นวิเคราะห์ไฟล์...', 'progress': 0})}\n\n"
+            
+            # Decode file
+            file_bytes = base64.b64decode(request.file_base64)
+            
+            # Save to temp file
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
+            temp_file.write(file_bytes)
+            temp_file.close()
+            temp_path = temp_file.name
+            
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'อ่านไฟล์สำเร็จ...', 'progress': 5})}\n\n"
+            
+            # Analyze document
+            doc = Document(temp_path)
+            
+            # ... (same analysis logic)
+            word_count = sum(len(p.text.split()) for p in doc.paragraphs if p.text.strip())
+            
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'วิเคราะห์โครงสร้างเอกสาร...', 'progress': 15})}\n\n"
+            
+            # Extract references with progress callback
+            bib_content = None
+            
+            async def progress_callback(current, total, extracted, message):
+                # Map chunk progress to 15-95% range
+                if total > 0:
+                    chunk_progress = 15 + int((current / total) * 80)
+                else:
+                    chunk_progress = 15
+                
+                yield f"data: {json.dumps({'type': 'progress', 'message': message, 'progress': chunk_progress, 'current': current, 'total': total, 'extracted': extracted})}\n\n"
+            
+            # ... BibTeX extraction with progress
+            
+            # Send final result
+            yield f"data: {json.dumps({'type': 'complete', 'data': 'analysis_data', 'progress': 100})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(generate_progress(), media_type="text/event-stream")
+
 @api_router.post("/format-editor/analyze-file", response_model=FileAnalysisResponse)
 async def analyze_uploaded_file(
     request: FileAnalysisRequest
