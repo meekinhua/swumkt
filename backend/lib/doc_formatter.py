@@ -130,66 +130,72 @@ Return a JSON object with:
         progress_callback: Optional[callable] = None
     ) -> Dict[str, str]:
         """
-        Reformat academic document according to citation style with consistency.
+        Reformat academic document with PROPER citation extraction & formatting.
         
-        TWO-PASS APPROACH for large documents:
-        - Pass 1: Extract all references and create master reference list
-        - Pass 2: Convert each chunk using master reference list for consistency
+        NEW APPROACH (Like BibTeX extraction):
+        - Step 1: Extract all references from document
+        - Step 2: Create numbered reference list (IEEE) or alphabetical (APA)
+        - Step 3: Replace in-text citations with correct numbers/format
+        - Step 4: Write back formatted document
         
         Args:
-            document_text: Full document text (with BibTeX keys or raw citations)
+            document_text: Full document text
             format_style: Target style (APA, IEEE, MLA, Chicago, Vancouver, Custom)
             bibtex_content: BibTeX entries with reference information
-            custom_style_guide: Custom formatting rules (used if format_style="Custom")
+            custom_style_guide: Custom formatting rules
             progress_callback: Optional callback for progress updates
         
         Returns:
-            Dictionary with:
-            - formatted_text: Complete formatted document
-            - formatted_references: Formatted reference list
-            - changes_summary: Summary of changes
+            Dictionary with formatted_text, formatted_references, changes_summary
         """
         if not document_text.strip():
             raise ValueError("Document text is empty")
         
         if progress_callback:
-            await progress_callback(0, 4, "เริ่มต้นการ format document...")
+            await progress_callback(0, 5, "เริ่มต้นการ format document...")
         
-        # Get style guide
+        # Step 1: Extract references like BibTeX extraction
+        if progress_callback:
+            await progress_callback(1, 5, "📚 Step 1: Extract references from document...")
+        
+        logger.info("Step 1: Extracting references using AI")
+        references = await self._extract_all_references(document_text)
+        
+        logger.info(f"Found {len(references)} references")
+        
+        if progress_callback:
+            await progress_callback(2, 5, f"✅ Found {len(references)} references")
+        
+        # Step 2: Create formatted reference list
+        if progress_callback:
+            await progress_callback(3, 5, "📝 Step 2: Creating formatted reference list...")
+        
         style_guide = self._get_style_guide(format_style, custom_style_guide)
+        formatted_ref_list = await self._create_formatted_references(
+            references,
+            format_style,
+            style_guide
+        )
         
+        # Step 3: Replace citations in document
         if progress_callback:
-            await progress_callback(1, 4, "วิเคราะห์รูปแบบ citation style...")
+            await progress_callback(4, 5, "🔄 Step 3: Replacing citations in document...")
         
-        # Split document into manageable chunks if too large
-        chunks = self._split_document_for_processing(document_text)
-        
-        if len(chunks) > 1:
-            logger.info(f"Document split into {len(chunks)} chunks for processing")
-            return await self._reformat_large_document_consistent(
-                document_text,
-                chunks, 
-                style_guide, 
-                bibtex_content, 
-                progress_callback
-            )
-        
-        # Single chunk processing
-        if progress_callback:
-            await progress_callback(2, 4, "AI กำลัง reformat document...")
-        
-        result = await self._reformat_chunk(
+        formatted_text = await self._replace_citations_in_document(
             document_text,
-            style_guide,
-            bibtex_content,
-            master_references=None,
-            chunk_info=None
+            references,
+            format_style,
+            style_guide
         )
         
         if progress_callback:
-            await progress_callback(4, 4, "เสร็จสมบูรณ์!")
+            await progress_callback(5, 5, "✅ เสร็จสมบูรณ์!")
         
-        return result
+        return {
+            "formatted_text": formatted_text,
+            "formatted_references": formatted_ref_list,
+            "changes_summary": f"Converted to {format_style} with {len(references)} references"
+        }
     
     def _get_style_guide(self, format_style: str, custom_guide: str) -> str:
         """Get style guide text for LLM."""
