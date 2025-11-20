@@ -4347,6 +4347,20 @@ class FileAnalysisRequest(BaseModel):
     file_base64: str
     file_name: str
 
+class ReplaceCitationsRequest(BaseModel):
+    file_base64: str
+    file_name: str
+    bib_content: str
+
+class ReplaceCitationsResponse(BaseModel):
+    success: bool
+    file_base64: str
+    file_name: str
+    replacements_count: int
+    total_citations: int
+    replacement_log: List[Dict]
+    message: str
+
 class FileAnalysisResponse(BaseModel):
     file_name: str
     word_count: int
