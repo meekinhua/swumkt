@@ -733,29 +733,46 @@ const AcademicFormatEditor = () => {
                     <h3 className="text-sm font-bold text-blue-800 mb-1">
                       🤖 AI กำลังวิเคราะห์และ extract BibTeX...
                     </h3>
-                    <p className="text-xs text-blue-600">
+                    <p className={`text-xs ${analysisProgress > 85 ? 'text-green-600 font-semibold animate-pulse' : 'text-blue-600'}`}>
                       {analysisMessage || 'กำลังประมวลผล...'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-blue-700">
+                    <span className={`text-lg font-bold ${analysisProgress > 85 ? 'text-green-600' : 'text-blue-700'}`}>
                       {Math.round(analysisProgress)}%
                     </span>
                   </div>
                 </div>
                 
-                {/* Progress Bar */}
-                <div className="relative bg-blue-200 rounded-full h-3 overflow-hidden">
+                {/* Progress Bar with shimmer effect */}
+                <div className="relative bg-blue-200 rounded-full h-3 overflow-hidden shadow-inner">
                   <div 
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-500 ease-out"
+                    className={`h-full transition-all duration-700 ease-out ${
+                      analysisProgress > 85 
+                        ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-green-600' 
+                        : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                    }`}
                     style={{width: `${analysisProgress}%`}}
                   >
-                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    {/* Shimmer effect - more visible when > 85% */}
+                    <div className={`absolute inset-0 ${
+                      analysisProgress > 85 
+                        ? 'bg-white/40 animate-pulse' 
+                        : 'bg-white/20'
+                    }`}></div>
+                    
+                    {/* Moving shine effect */}
+                    {analysisProgress > 85 && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer"></div>
+                    )}
                   </div>
                 </div>
                 
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  💡 AI กำลังแบ่งและวิเคราะห์ references ทีละส่วนเพื่อความแม่นยำสูงสุด
+                  {analysisProgress > 85 
+                    ? '⏳ กำลังรวมและตรวจสอบผลลัพธ์ขั้นสุดท้าย...' 
+                    : '💡 AI กำลังแบ่งและวิเคราะห์ references ทีละส่วนเพื่อความแม่นยำสูงสุด'
+                  }
                 </p>
               </div>
             )}
