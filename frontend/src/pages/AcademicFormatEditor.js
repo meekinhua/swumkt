@@ -16,6 +16,9 @@ const API = process.env.REACT_APP_BACKEND_URL || 'https://cite-master-2.preview.
 const AcademicFormatEditor = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
+  
+  // FEATURE DISABLED: Coming Soon
+  const FEATURE_ENABLED = false;
 
   const [styleSelectionMode, setStyleSelectionMode] = useState('manual'); // 'auto' or 'manual'
   const [formData, setFormData] = useState({
