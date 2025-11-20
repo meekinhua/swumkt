@@ -3221,7 +3221,6 @@ def extract_references_to_bib(docx_path: str, output_bib_path: str):
         # Create Ruby script to use AnyStyle API
         ruby_script = f"""
 require 'anystyle'
-require 'bibtex'
 
 input_file = '{temp_ref_file}'
 output_file = '{output_bib_path}'
@@ -3229,30 +3228,12 @@ output_file = '{output_bib_path}'
 # Read references text
 references_text = File.read(input_file, encoding: 'utf-8')
 
-# Parse with AnyStyle
+# Parse and output directly to BibTeX format
 parser = AnyStyle.parser
-parsed_refs = parser.parse(references_text, layout: false)
-
-# Convert to BibTeX
-bib = BibTeX::Bibliography.new
-parsed_refs.each_with_index do |ref, idx|
-  entry = BibTeX::Entry.new
-  entry.type = :article
-  entry.key = "ref#{{idx + 1}}"
-  
-  # Map AnyStyle fields to BibTeX fields
-  entry.author = ref[:author].join(' and ') if ref[:author]
-  entry.title = ref[:title].first if ref[:title]
-  entry.journal = ref[:journal].first if ref[:journal]
-  entry.year = ref[:date].first if ref[:date]
-  entry.volume = ref[:volume].first if ref[:volume]
-  entry.pages = ref[:pages].first if ref[:pages]
-  
-  bib << entry
-end
+bib_output = parser.parse(references_text, format: :bibtex)
 
 # Write to file
-File.write(output_file, bib.to_s, encoding: 'utf-8')
+File.write(output_file, bib_output, encoding: 'utf-8')
 """
         
         result = subprocess.run(
