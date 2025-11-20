@@ -327,6 +327,113 @@ Return a JSON object with:
             "changes_summary": f"Formatted {total_chunks} chunks with {len(seen_citations)} unique citations"
         }
     
+    async def _reformat_chunk_incremental(
+        self,
+        text: str,
+        style_guide: str,
+        bibtex_content: str,
+        seen_citations: Dict[str, int],
+        next_citation_number: int,
+        chunk_info: Dict
+    ) -> Dict[str, any]:
+        """
+        Reformat chunk with incremental citation tracking.
+        Much lighter than two-pass approach.
+        
+        Returns:
+            Dict with formatted_text, new_citations, references
+        """
+        # Build lightweight prompt
+        citation_context = ""
+        if seen_citations:
+            cite_list = [f"{text}: [{num}]" for text, num in list(seen_citations.items())[:15]]
+            citation_context = f"""
+KNOWN CITATIONS (use these numbers if you see them):
+{chr(10).join(cite_list)}
+... ({len(seen_citations)} total citations tracked)
+
+For NEW citations not in the list above, assign numbers starting from [{next_citation_number}].
+"""
+        
+        prompt = f"""Task: Convert citations in this academic text chunk to {style_guide.split(':')[0]} style.
+
+STYLE:
+{style_guide[:500]}...
+
+{citation_context}
+
+TEXT CHUNK ({chunk_info['chunk_number']}/{chunk_info['total_chunks']}):
+{text}
+
+INSTRUCTIONS:
+1. Find all citations: (Author, Year), [N], etc.
+2. Convert to {style_guide.split(':')[0]} format
+3. Use existing citation numbers from KNOWN list
+4. For new citations, assign next available numbers
+5. ONLY format citations, keep all other text unchanged
+
+OUTPUT (JSON):
+{{
+  "formatted_text": "text with formatted citations",
+  "new_citations": ["citation text 1", "citation text 2"],
+  "changes_summary": "brief summary"
+}}"""
+
+        try:
+            chat = LlmChat(
+                api_key=self.api_key,
+                session_id=f"incr-{chunk_info['chunk_number']}",
+                system_message="You are a citation formatting expert."
+            ).with_model("openai", self.model)
+            
+            response = await chat.send_message(UserMessage(text=prompt))
+            
+            # Parse response
+            response_text = response.strip()
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                response_text = "\n".join(lines[1:-1]).replace("```json", "").replace("```", "").strip()
+            
+            import json
+            result = json.loads(response_text)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in incremental chunk processing: {e}")
+            # Fallback: return original
+            return {
+                "formatted_text": text,
+                "new_citations": [],
+                "changes_summary": f"Error: {str(e)}"
+            }
+    
+    def _build_final_references(self, all_references: List, style_guide: str) -> str:
+        """Build final reference list from collected references."""
+        if not all_references:
+            return ""
+        
+        # Deduplicate and sort
+        unique_refs = []
+        seen = set()
+        
+        for ref in all_references:
+            ref_text = ref.get("text", "")
+            if ref_text and ref_text not in seen:
+                unique_refs.append(ref)
+                seen.add(ref_text)
+        
+        # Format based on style
+        if "IEEE" in style_guide or "numbered" in style_guide.lower():
+            # Numbered list
+            formatted = "\n".join([f"[{i+1}] {ref.get('text', '')}" for i, ref in enumerate(unique_refs)])
+        else:
+            # Alphabetical (APA, MLA, etc.)
+            sorted_refs = sorted(unique_refs, key=lambda x: x.get('text', ''))
+            formatted = "\n".join([ref.get('text', '') for ref in sorted_refs])
+        
+        return formatted
+    
     async def _extract_master_references(
         self,
         full_text: str,
