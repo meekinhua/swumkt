@@ -92,9 +92,13 @@ const AcademicFormatEditor = () => {
       const base64 = event.target.result.split(',')[1];
       setUploadedFile(base64);
       setUploadedFileName(file.name);
-      toast.success(`อัปโหลด ${file.name} สำเร็จ - กำลังวิเคราะห์...`, { duration: 2000 });
+      setUploadedFileInfo(null);
       
-      // Analyze file
+      toast.success(`อัปโหลด ${file.name} สำเร็จ`, { duration: 2000 });
+      
+      // Analyze file with progress
+      setAnalyzingFile(true);
+      
       try {
         const response = await axios.post(
           `${process.env.REACT_APP_BACKEND_URL}/api/format-editor/analyze-file`,
@@ -116,13 +120,16 @@ const AcademicFormatEditor = () => {
         setUploadedFileInfo(response.data);
         
         if (response.data.bib_content) {
-          toast.success('วิเคราะห์ไฟล์สำเร็จ! พบ BibTeX entries', { duration: 3000 });
+          const entryCount = (response.data.bib_content.match(/@\w+\{/g) || []).length;
+          toast.success(`วิเคราะห์ไฟล์สำเร็จ! พบ ${entryCount} BibTeX entries`, { duration: 3000 });
         } else {
           toast.success('วิเคราะห์ไฟล์สำเร็จ! (ไม่พบ References section)', { duration: 3000 });
         }
       } catch (error) {
         console.error('File analysis error:', error);
         toast.error('ไม่สามารถวิเคราะห์ไฟล์ได้ แต่ยังสามารถใช้งานต่อได้');
+      } finally {
+        setAnalyzingFile(false);
       }
     };
     reader.readAsDataURL(file);
