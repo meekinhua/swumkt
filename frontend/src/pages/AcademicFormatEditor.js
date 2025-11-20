@@ -109,11 +109,6 @@ const AcademicFormatEditor = () => {
       return;
     }
 
-    if (!uploadedFileInfo || !uploadedFileInfo.bib_content) {
-      toast.error('กรุณา Analyze ไฟล์ก่อนเพื่อสร้าง BibTeX');
-      return;
-    }
-
     // Validate custom style guide if Custom is selected
     if (formData.formatStyle === 'Custom' && !formData.customStyleGuide.trim()) {
       toast.error('กรุณาใส่ Custom Style Guide');
@@ -123,64 +118,101 @@ const AcademicFormatEditor = () => {
     try {
       setFormatting(true);
       setResult(null);
-      setFormattingProgress('AI กำลังวิเคราะห์ document structure...');
+      setAnalysisProgress(0);
+      setAnalyzingFile(true);
+      setAnalysisMessage('เริ่มต้นแปลง Citation Style...');
 
       const requestData = {
         file_base64: uploadedFile,
         file_name: uploadedFileName,
         format_style: formData.formatStyle,
-        bib_content: uploadedFileInfo.bib_content,
-        custom_style_guide: formData.formatStyle === 'Custom' ? formData.customStyleGuide : null
+        custom_style_guide: formData.formatStyle === 'Custom' ? formData.customStyleGuide : null,
+        journal_name: styleSelectionMode === 'auto' ? formData.journalName : null
       };
 
-      // Simulate progress updates
-      const progressMessages = [
-        'AI กำลังวิเคราะห์ document structure...',
-        'กำลังระบุ in-text citations...',
-        'กำลัง reformat citations...',
-        'กำลังสร้าง reference list...',
-        'กำลังจัดรูปแบบตาม ' + formData.formatStyle + ' style...',
-        'เกือบเสร็จแล้ว...'
+      // Smart progress simulation
+      let currentProgress = 0;
+      const progressInterval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          currentProgress = prev;
+          if (prev < 20) return prev + Math.random() * 3;
+          else if (prev < 50) return prev + Math.random() * 2;
+          else if (prev < 80) return prev + Math.random() * 1;
+          else if (prev < 95) return prev + Math.random() * 0.5;
+          else return prev + Math.random() * 0.2;
+        });
+      }, 1500);
+
+      // Progress messages
+      const messageSteps = [
+        { time: 2000, message: 'อ่านไฟล์และวิเคราะห์โครงสร้าง...' },
+        { time: 5000, message: 'แบ่งเอกสารเป็น chunks เพื่อประมวลผล...' },
+        { time: 8000, message: `AI กำลังแปลงเป็น ${formData.formatStyle} style...` },
+        { time: 15000, message: 'กำลังประมวลผล chunk 1...' },
+        { time: 25000, message: 'กำลังประมวลผล chunk 2...' },
+        { time: 35000, message: 'กำลังประมวลผล chunk 3...' },
+        { time: 45000, message: 'กำลังประมวลผล chunk 4...' },
+        { time: 55000, message: 'กำลังรวมผลลัพธ์ทั้งหมด...' },
+        { time: 65000, message: 'ตรวจสอบความถูกต้องของ citations...' },
+        { time: 75000, message: 'จัดรูปแบบ reference list...' },
+        { time: 85000, message: 'กำลังสร้างไฟล์ .docx ใหม่...' },
+        { time: 95000, message: 'เกือบเสร็จแล้ว กรุณารอสักครู่...' }
       ];
 
-      let progressIndex = 0;
-      const progressInterval = setInterval(() => {
-        if (progressIndex < progressMessages.length) {
-          setFormattingProgress(progressMessages[progressIndex]);
-          progressIndex++;
-        }
-      }, 5000);
+      const messageTimeouts = [];
+      messageSteps.forEach(step => {
+        const timeout = setTimeout(() => {
+          setAnalysisMessage(step.message);
+        }, step.time);
+        messageTimeouts.push(timeout);
+      });
 
       const response = await axios.post(
         `${API}/api/format-editor/reformat-with-ai`,
         requestData,
         {
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 120000  // 2 minutes for AI processing
+          timeout: 180000  // 3 minutes for AI processing
         }
       );
 
+      // Clear intervals
       clearInterval(progressInterval);
+      messageTimeouts.forEach(timeout => clearTimeout(timeout));
 
-      // Transform response to match old format for compatibility
-      const formattedResult = {
-        formatted_text: response.data.formatted_text_preview,
-        formatted_file_base64: response.data.file_base64,
+      // Animate to 100%
+      setAnalysisProgress(98);
+      setAnalysisMessage('เตรียมไฟล์สำหรับดาวน์โหลด...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setAnalysisProgress(100);
+      setAnalysisMessage('เสร็จสมบูรณ์!');
+
+      // Auto download
+      const link = document.createElement('a');
+      link.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${response.data.file_base64}`;
+      link.download = response.data.file_name || `${uploadedFileName.replace('.docx', '')}_${formData.formatStyle}.docx`;
+      link.click();
+
+      toast.success(`✨ แปลงสำเร็จ! ไฟล์ถูกดาวน์โหลดแล้ว (${formData.formatStyle} style)`, { duration: 4000 });
+
+      // Show summary
+      setResult({
         formatted_file_name: response.data.file_name,
         summary: response.data.changes_summary,
-        method_used: 'ai',
-        formatted_references: response.data.formatted_references
-      };
+        method_used: 'ai'
+      });
 
-      setResult(formattedResult);
-      setFormattingProgress('');
-      toast.success(`✨ Reformat สำเร็จด้วย AI! (${formData.formatStyle} style)`, { duration: 4000 });
     } catch (error) {
       console.error('AI Reformat error:', error);
-      setFormattingProgress('');
-      toast.error(error.response?.data?.detail || 'ไม่สามารถ Reformat ด้วย AI ได้');
+      toast.error(error.response?.data?.detail || 'ไม่สามารถแปลง Citation Style ได้');
     } finally {
-      setFormatting(false);
+      setTimeout(() => {
+        setAnalyzingFile(false);
+        setAnalysisProgress(0);
+        setAnalysisMessage('');
+        setFormatting(false);
+      }, 1000);
     }
   };
 
