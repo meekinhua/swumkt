@@ -2854,6 +2854,7 @@ class FormatEditorResponse(BaseModel):
     summary: str
     sections_processed: List[str] = []
     method_used: str = "pandoc"  # "pandoc" or "llm"
+    bib_content: Optional[str] = None  # BibTeX content from anystyle
 
 # ============ Format Editor Helper Functions ============
 def get_csl_file_path(format_style: str):
