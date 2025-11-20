@@ -4658,6 +4658,8 @@ async def format_academic_text(
                 # Cleanup
                 os.unlink(temp_input_path)
                 os.unlink(temp_output_path)
+                if bib_file and os.path.exists(bib_file):
+                    os.unlink(bib_file)
                 
                 # Build response
                 # Build detailed changes list
