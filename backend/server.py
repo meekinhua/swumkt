@@ -4532,7 +4532,7 @@ async def analyze_uploaded_file(
             temp_bib_path = temp_bib_file.name
             temp_bib_file.close()
             
-            if extract_references_to_bib(temp_path, temp_bib_path):
+            if await extract_references_to_bib(temp_path, temp_bib_path):
                 # Read .bib content
                 with open(temp_bib_path, 'r', encoding='utf-8') as f:
                     bib_content = f.read()
