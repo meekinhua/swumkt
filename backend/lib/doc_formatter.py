@@ -38,6 +38,7 @@ formatted_text = await formatter.reformat_document(
 
 import json
 import logging
+import asyncio
 from typing import Optional, Dict, List, Tuple
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
