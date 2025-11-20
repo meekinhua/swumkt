@@ -4362,6 +4362,22 @@ class ReplaceCitationsResponse(BaseModel):
     replacement_log: List[Dict]
     message: str
 
+class AIReformatRequest(BaseModel):
+    file_base64: str
+    file_name: str
+    format_style: str  # APA, IEEE, MLA, Chicago, Vancouver, Custom
+    custom_style_guide: Optional[str] = None  # Used when format_style = "Custom"
+    bib_content: Optional[str] = None
+
+class AIReformatResponse(BaseModel):
+    success: bool
+    file_base64: str
+    file_name: str
+    formatted_text_preview: str
+    formatted_references: str
+    changes_summary: str
+    message: str
+
 class FileAnalysisResponse(BaseModel):
     file_name: str
     word_count: int
