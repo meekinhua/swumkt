@@ -3215,20 +3215,54 @@ def extract_references_to_bib(docx_path: str, output_bib_path: str):
         with open(temp_ref_file, 'w', encoding='utf-8') as f:
             f.write(references_text)
         
-        # Use anystyle to convert to bib
+        # Use anystyle to convert to bib via Ruby API
         import subprocess
+        
+        # Create Ruby script to use AnyStyle API
+        ruby_script = f"""
+require 'anystyle'
+require 'bibtex'
+
+input_file = '{temp_ref_file}'
+output_file = '{output_bib_path}'
+
+# Read references text
+references_text = File.read(input_file, encoding: 'utf-8')
+
+# Parse with AnyStyle
+parser = AnyStyle.parser
+parsed_refs = parser.parse(references_text, layout: false)
+
+# Convert to BibTeX
+bib = BibTeX::Bibliography.new
+parsed_refs.each_with_index do |ref, idx|
+  entry = BibTeX::Entry.new
+  entry.type = :article
+  entry.key = "ref#{{idx + 1}}"
+  
+  # Map AnyStyle fields to BibTeX fields
+  entry.author = ref[:author].join(' and ') if ref[:author]
+  entry.title = ref[:title].first if ref[:title]
+  entry.journal = ref[:journal].first if ref[:journal]
+  entry.year = ref[:date].first if ref[:date]
+  entry.volume = ref[:volume].first if ref[:volume]
+  entry.pages = ref[:pages].first if ref[:pages]
+  
+  bib << entry
+end
+
+# Write to file
+File.write(output_file, bib.to_s, encoding: 'utf-8')
+"""
+        
         result = subprocess.run(
-            ['anystyle', '-f', 'bib', 'parse', temp_ref_file],
+            ['ruby', '-e', ruby_script],
             capture_output=True,
             text=True,
             timeout=30
         )
         
-        if result.returncode == 0 and result.stdout:
-            # Save bib output
-            with open(output_bib_path, 'w', encoding='utf-8') as f:
-                f.write(result.stdout)
-            
+        if result.returncode == 0 and os.path.exists(output_bib_path):
             # Cleanup temp file
             os.unlink(temp_ref_file)
             
