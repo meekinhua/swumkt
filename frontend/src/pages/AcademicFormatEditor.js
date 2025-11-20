@@ -530,14 +530,13 @@ const AcademicFormatEditor = () => {
               </div>
             </div>
 
-            {/* Format Button */}
+            {/* Convert Button */}
             <div className="mt-6">
                 <Button
                   onClick={handleFormat}
                   disabled={
                     formatting || 
-                    (inputMode === 'file' && !uploadedFile) ||
-                    (inputMode === 'text' && !formData.originalText.trim()) ||
+                    !uploadedFile ||
                     (styleSelectionMode === 'auto' && !formData.journalName.trim()) ||
                     (formData.formatStyle === 'Custom' && !formData.customStyleGuide.trim())
                   }
@@ -546,20 +545,18 @@ const AcademicFormatEditor = () => {
                   {formatting ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      {inputMode === 'file' && uploadedFileInfo && uploadedFileInfo.bib_content ? 'AI กำลัง Reformat...' : 'กำลังแก้ไข...'}
+                      AI กำลังแปลง...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5 mr-2" />
-                      {inputMode === 'file' && uploadedFileInfo && uploadedFileInfo.bib_content 
-                        ? `🤖 Reformat with AI (${formData.formatStyle})` 
-                        : 'แก้ไข Format'}
+                      🤖 แปลงเป็น {formData.formatStyle} Style
                     </>
                   )}
                 </Button>
-                {inputMode === 'file' && uploadedFileInfo && uploadedFileInfo.bib_content && (
+                {uploadedFile && !formatting && (
                   <p className="text-xs text-center text-purple-600 mt-2 font-medium">
-                    ✨ ระบบจะใช้ AI reformat ทั้ง in-text citations และ reference list ตาม {formData.formatStyle} style
+                    ✨ AI จะแปลง citations และ references ทั้งหมดเป็น {formData.formatStyle} style
                   </p>
                 )}
               </div>
