@@ -1012,9 +1012,9 @@ const AcademicFormatEditor = () => {
               </p>
             </Card>
           )}
+        </div>
         </>
         )}
-      </div>
     </div>
   );
 };
