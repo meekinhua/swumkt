@@ -218,12 +218,8 @@ const AcademicFormatEditor = () => {
 
   const handleFormat = async () => {
     // Validate input mode
-    if (inputMode === 'file' && !uploadedFile) {
+    if (!uploadedFile) {
       toast.error('กรุณาอัปโหลดไฟล์ .docx');
-      return;
-    }
-    if (inputMode === 'text' && !formData.originalText.trim()) {
-      toast.error('กรุณาใส่ข้อความที่ต้องการแก้ไข');
       return;
     }
 
@@ -239,49 +235,8 @@ const AcademicFormatEditor = () => {
       return;
     }
 
-    // For file mode with BibTeX, use AI reformat
-    if (inputMode === 'file' && uploadedFileInfo && uploadedFileInfo.bib_content) {
-      return handleAIReformat();
-    }
-
-    // Fallback to old Pandoc method for text mode or files without BibTeX
-    try {
-      setFormatting(true);
-      setResult(null);
-      setFormattingProgress('กำลังประมวลผลด้วย Pandoc...');
-
-      const requestData = {
-        format_style: formData.formatStyle,
-        journal_name: styleSelectionMode === 'auto' ? formData.journalName : null,
-        target_language: 'th'
-      };
-
-      if (inputMode === 'file') {
-        requestData.file_base64 = uploadedFile;
-        requestData.file_name = uploadedFileName;
-      } else {
-        requestData.original_text = formData.originalText;
-      }
-
-      const response = await axios.post(
-        `${API}/api/format-editor/format`,
-        requestData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 60000  // 1 minute (Pandoc is fast!)
-        }
-      );
-
-      setResult(response.data);
-      setFormattingProgress('');
-      toast.success('แก้ไข Format สำเร็จ! (ใช้ Pandoc - แม่นยำ 100%)');
-    } catch (error) {
-      console.error('Format error:', error);
-      setFormattingProgress('');
-      toast.error(error.response?.data?.detail || 'ไม่สามารถแก้ไข Format ได้');
-    } finally {
-      setFormatting(false);
-    }
+    // Always use AI reformat
+    return handleAIReformat();
   };
 
   const handleDownload = () => {
