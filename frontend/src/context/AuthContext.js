@@ -107,9 +107,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async (profileData) => {
+    console.log('[AuthContext] updateProfile called with:', profileData);
     const response = await axios.put(`${API}/auth/profile`, profileData, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    console.log('[AuthContext] updateProfile response:', response.data);
     // Create new object to force re-render
     setUser({...response.data});
     return response.data;
