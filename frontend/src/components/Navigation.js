@@ -150,17 +150,17 @@ const Navigation = ({ showAdminButton = false }) => {
                   <User className="w-4 h-4 mr-2" />
                   {t('nav.profile')}
                 </Button>
+                {user.role === 'admin' && (
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => { navigate('/admin/settings'); setMobileMenuOpen(false); }} 
+                    className="w-full justify-start text-yellow-300 hover:bg-white/10 font-bold border-t-2 border-white/20 pt-4 mt-2"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    🔐 Admin Zone
+                  </Button>
+                )}
               </>
-            )}
-            {showAdminButton && user && user.role === 'admin' && (
-              <Button 
-                variant="ghost" 
-                onClick={() => { navigate('/admin/settings'); setMobileMenuOpen(false); }} 
-                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Admin
-              </Button>
             )}
             <div className="pt-2 pb-2">
               <LanguageSwitcher />
