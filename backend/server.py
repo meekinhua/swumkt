@@ -653,6 +653,87 @@ async def login(credentials: UserLogin):
         user=UserProfile(**user_obj.model_dump())
     )
 
+@api_router.post("/auth/google/verify")
+async def google_auth_verify(token_data: dict = Body(...)):
+    """Verify Google ID token and create/login user"""
+    import httpx
+    from jose import jwt as jose_jwt
+    
+    try:
+        google_token = token_data.get("credential")
+        if not google_token:
+            raise HTTPException(status_code=400, detail="No credential provided")
+        
+        # Verify token with Google
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={google_token}",
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail="Invalid Google token")
+            
+            token_info = response.json()
+            
+            # Verify audience (client ID)
+            if token_info.get("aud") != GOOGLE_CLIENT_ID:
+                raise HTTPException(status_code=400, detail="Invalid token audience")
+            
+            email = token_info.get("email")
+            name = token_info.get("name")
+            picture = token_info.get("picture")
+            
+            if not email:
+                raise HTTPException(status_code=400, detail="Email not found in token")
+        
+        # Check if user exists
+        existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+        
+        if existing_user:
+            # User exists - login
+            user = User(**existing_user)
+        else:
+            # Create new user with Google auth
+            user = User(
+                email=email,
+                full_name=name or email,
+                role=UserRole.PUBLIC_USER,
+                user_type=UserType.REGULAR,
+                auth_method="google",
+                avatar_url=picture,
+                password=""  # No password for Google users
+            )
+            
+            user_dict = user.model_dump()
+            user_dict['created_at'] = user_dict['created_at'].isoformat()
+            user_dict['updated_at'] = user_dict['updated_at'].isoformat()
+            user_dict['user_rating'] = {
+                'total_surveys_completed': 0,
+                'quality_score': 0.0,
+                'trust_score': 0.0,
+                'last_updated': datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.users.insert_one(user_dict)
+        
+        # Generate JWT token
+        token = jwt.encode({
+            'user_id': user.id,
+            'email': user.email,
+            'exp': datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+        }, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        
+        user_profile = UserProfile(**user.model_dump())
+        
+        return AuthResponse(access_token=token, user=user_profile)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Google auth error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Google authentication failed: {str(e)}")
+
 @api_router.get("/auth/me", response_model=UserProfile)
 async def get_me(current_user: User = Depends(get_current_user)):
     return UserProfile(**current_user.model_dump())
