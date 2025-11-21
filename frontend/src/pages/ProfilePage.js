@@ -181,14 +181,20 @@ const ProfilePage = () => {
               disabled={zbs04Loading}
               onClick={async () => {
                 setZbs04Loading(true);
+                const newStatus = !zbs04Status;
+                
+                console.log('[ZBS04] Current status:', zbs04Status);
+                console.log('[ZBS04] Will toggle to:', newStatus);
+                
                 try {
-                  const newStatus = !zbs04Status;
-                  
                   // Update in backend
-                  await updateProfile({ zbs04_enrolled: newStatus });
+                  console.log('[ZBS04] Calling updateProfile...');
+                  const result = await updateProfile({ zbs04_enrolled: newStatus });
+                  console.log('[ZBS04] updateProfile response:', result);
                   
                   // Update local state immediately
                   setZbs04Status(newStatus);
+                  console.log('[ZBS04] Local state updated to:', newStatus);
                   
                   // Show success message
                   toast.success(
@@ -198,10 +204,11 @@ const ProfilePage = () => {
                   );
                   
                 } catch (error) {
-                  console.error('ZBS04 update error:', error);
+                  console.error('[ZBS04] Error:', error);
                   toast.error('ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่');
                 } finally {
                   setZbs04Loading(false);
+                  console.log('[ZBS04] Loading complete');
                 }
               }}
               className={`min-w-[120px] transition-all duration-300 ${
