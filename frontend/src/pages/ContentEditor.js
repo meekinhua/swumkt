@@ -38,6 +38,7 @@ const ContentEditor = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [memberEmail, setMemberEmail] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+  const [memberDetails, setMemberDetails] = useState([]);
 
   useEffect(() => {
     if (id) {
