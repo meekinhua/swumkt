@@ -5,8 +5,6 @@ import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Send, Users, Bell, BarChart2, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
