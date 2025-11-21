@@ -386,22 +386,52 @@ const ContentDetail = () => {
             </div>
           )}
 
-          {/* Contributors */}
-          {content.contributors && content.contributors.length > 0 && (
+          {/* Contributors & Group Members */}
+          {((content.contributors && content.contributors.length > 0) || 
+            (content.groupMemberDetails && content.groupMemberDetails.length > 0)) && (
             <div className="border-t-2 border-gray-300 pt-6">
-              <h3 className="text-lg font-black text-gray-900 mb-4">ผู้มีส่วนร่วม</h3>
+              <h3 className="text-lg font-black text-gray-900 mb-4">
+                {content.is_zbs04_assignment ? 'สมาชิกกลุ่ม' : 'ผู้มีส่วนร่วม'}
+              </h3>
               <div className="flex flex-wrap gap-4">
-                {content.contributors.map((contributor, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-3 bg-[#00A9CE]/5 rounded-lg border border-[#00A9CE]/20">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#007B9A] to-[#00A9CE] flex items-center justify-center text-white font-bold">
-                      {contributor.user_name.charAt(0)}
+                {/* Show group members for ZBS04 assignments */}
+                {content.is_zbs04_assignment && content.groupMemberDetails ? (
+                  content.groupMemberDetails.map((member, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-[#00A9CE]/5 rounded-lg border border-[#00A9CE]/20">
+                      {member.google_picture || member.avatar_url ? (
+                        <img 
+                          src={member.google_picture || member.avatar_url} 
+                          alt={member.full_name}
+                          className="w-12 h-12 rounded-full border-2 border-[#00A9CE] object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-[#007B9A] to-[#00A9CE] items-center justify-center text-white font-bold ${member.google_picture || member.avatar_url ? 'hidden' : 'flex'}`}>
+                        {member.full_name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{member.full_name}</p>
+                        <p className="text-xs text-gray-600 font-semibold">{member.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{contributor.user_name}</p>
-                      <p className="text-xs text-gray-600 font-semibold">{contributor.role}</p>
+                  ))
+                ) : (
+                  /* Show contributors for regular content */
+                  content.contributors.map((contributor, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-3 bg-[#00A9CE]/5 rounded-lg border border-[#00A9CE]/20">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#007B9A] to-[#00A9CE] flex items-center justify-center text-white font-bold">
+                        {contributor.user_name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{contributor.user_name}</p>
+                        <p className="text-xs text-gray-600 font-semibold">{contributor.role}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
