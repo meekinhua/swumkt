@@ -5702,6 +5702,41 @@ async def send_notification(
         logging.error(f"Send notification error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Debug: Check subscription details
+@api_router.get("/notifications/debug/subscription")
+async def debug_subscription(current_user: User = Depends(get_current_user)):
+    """Debug endpoint to check subscription details"""
+    try:
+        subscriptions = await db.notification_subscriptions.find({
+            "user_id": current_user.id
+        }, {"_id": 0}).to_list(None)
+        
+        if not subscriptions:
+            return {
+                "subscribed": False,
+                "message": "No subscriptions found"
+            }
+        
+        # Analyze subscription
+        sub = subscriptions[0]
+        endpoint = sub.get("subscription_info", {}).get("endpoint", "")
+        
+        return {
+            "subscribed": True,
+            "count": len(subscriptions),
+            "endpoint_preview": endpoint[:50] + "..." if len(endpoint) > 50 else endpoint,
+            "has_keys": "keys" in sub.get("subscription_info", {}),
+            "created_at": sub.get("created_at"),
+            "last_used": sub.get("last_used"),
+            "endpoint_type": "Apple" if "apple" in endpoint.lower() else 
+                           "Google" if "google" in endpoint.lower() or "fcm" in endpoint.lower() else
+                           "Mozilla" if "mozilla" in endpoint.lower() else
+                           "Unknown"
+        }
+    except Exception as e:
+        logging.error(f"Debug subscription error: {e}")
+        return {"error": str(e)}
+
 # Test notification (send to self)
 @api_router.post("/notifications/test")
 async def test_notification(current_user: User = Depends(get_current_user)):
