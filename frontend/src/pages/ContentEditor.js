@@ -93,6 +93,47 @@ const ContentEditor = () => {
     });
   };
 
+  const handleAddMember = async () => {
+    if (!memberEmail.trim()) {
+      toast.error('กรุณากรอกอีเมลสมาชิก');
+      return;
+    }
+
+    setAddingMember(true);
+    try {
+      // Search for user by email
+      const response = await axios.get(`${API}/users/search?email=${memberEmail}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && response.data.id) {
+        // Check if already added
+        if (formData.group_members.includes(response.data.id)) {
+          toast.error('สมาชิกคนนี้ถูกเพิ่มแล้ว');
+          return;
+        }
+        
+        setFormData({
+          ...formData,
+          group_members: [...formData.group_members, response.data.id]
+        });
+        setMemberEmail('');
+        toast.success(`เพิ่ม ${response.data.full_name} แล้ว`);
+      }
+    } catch (error) {
+      toast.error('ไม่พบผู้ใช้ที่มีอีเมลนี้');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = (memberId) => {
+    setFormData({
+      ...formData,
+      group_members: formData.group_members.filter(id => id !== memberId)
+    });
+  };
+
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
