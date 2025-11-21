@@ -57,18 +57,23 @@ const AdminUserManagement = () => {
       const adminsResponse = await axios.get(`${API}/admin/users/admins`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAdmins(adminsResponse.data.admins);
-      setHardcodedAdmins(adminsResponse.data.hardcoded_admins);
+      setAdmins(adminsResponse.data.admins || []);
+      setHardcodedAdmins(adminsResponse.data.hardcoded_admins || []);
 
       // Load all users
       const usersResponse = await axios.get(`${API}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAllUsers(usersResponse.data.users);
-      setFilteredUsers(usersResponse.data.users);
+      setAllUsers(usersResponse.data.users || []);
+      setFilteredUsers(usersResponse.data.users || []);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('ไม่สามารถโหลดข้อมูลได้');
+      toast.error('ไม่สามารถโหลดข้อมูลได้: ' + (error.response?.data?.detail || error.message));
+      // Set empty arrays on error
+      setAdmins([]);
+      setAllUsers([]);
+      setFilteredUsers([]);
+      setHardcodedAdmins([]);
     } finally {
       setLoading(false);
     }
