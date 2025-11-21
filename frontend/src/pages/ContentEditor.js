@@ -103,25 +103,27 @@ const ContentEditor = () => {
     setAddingMember(true);
     try {
       // Search for user by email
-      const response = await axios.get(`${API}/users/search?email=${memberEmail}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API}/users/search?email=${encodeURIComponent(memberEmail)}`);
       
       if (response.data && response.data.id) {
         // Check if already added
         if (formData.group_members.includes(response.data.id)) {
           toast.error('สมาชิกคนนี้ถูกเพิ่มแล้ว');
+          setAddingMember(false);
           return;
         }
         
+        // Add to group_members and memberDetails
         setFormData({
           ...formData,
           group_members: [...formData.group_members, response.data.id]
         });
+        setMemberDetails([...memberDetails, response.data]);
         setMemberEmail('');
         toast.success(`เพิ่ม ${response.data.full_name} แล้ว`);
       }
     } catch (error) {
+      console.error('Search user error:', error);
       toast.error('ไม่พบผู้ใช้ที่มีอีเมลนี้');
     } finally {
       setAddingMember(false);
