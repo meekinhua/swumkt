@@ -562,27 +562,33 @@ agent_communication:
     message: "✅ JOURNAL FINDER API TESTING COMPLETE: New Journal Finder endpoint (POST /api/journal-finder) fully tested and working perfectly! 🔍 Test Coverage: All 6 requested test cases passed successfully. 📊 Marketing Research (Thai): Generated 5-10 relevant journals with proper ABDC/AJG ratings integration, Thai disclaimer text, and complete response structure. 📈 Management Research (English): Successfully found strategic management journals with AI-estimated Impact Factor/Quartile info and SCImago URLs for verification. ⚡ Performance: All requests completed under 60 seconds (typically 10-30 seconds response time). 🔐 Authentication: Admin credentials (admin@swu.ac.th/admin123) working correctly for API access. 📚 Database Integration: ABDC and AJG 2024 databases properly loaded and matched with AI suggestions. 🤖 AI Integration: Claude Sonnet model providing accurate journal recommendations with proper parsing and structured output. 🛡️ Validation: Proper handling of minimal input (empty keywords) and invalid input (empty required fields). All core functionality ready for production use."
   - task: "แยกการนับ 'ผู้สร้าง' และ 'ความคิดเห็น' ในหน้า ContentDetail"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/ContentDetail.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: แยกการแสดงจำนวน 'ผู้สร้าง Content' (ผู้แต่ง + สมาชิกกลุ่ม) และ 'ความคิดเห็น' (จำนวนคอมเมนต์) ออกจากกัน ลบการใช้ฟิลด์ contributors แบบเดิมที่ทำให้สับสน"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: ContentDetail metrics separation working perfectly! Successfully tested on content page showing three separate metrics: 1) Views: '37 ครั้งที่เข้าชม' with Eye icon, 2) Creators: '2 ผู้สร้าง Content' with Users icon (correctly shows author + group members for ZBS04 assignment), 3) Comments: '0 ความคิดเห็น' with MessageCircle icon. All metrics properly separated and no old combined patterns found. Icons properly implemented with 20+ SVG elements detected for each metric type."
 
   - task: "ปรับ Navigation Bar ให้มีเมนูคงที่ทุกหน้า (Dashboard/เครื่องมือวิจัยตลาด/ศูนย์ความรู้/โปรไฟล์)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/components/Navigation.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: แก้ไข Navigation component ให้แสดงเมนูคงที่ทุกหน้า (Dashboard, เครื่องมือวิจัยตลาด, ศูนย์ความรู้, โปรไฟล์) สำหรับผู้ใช้ที่ login แล้ว ลบ conditional props ที่ไม่จำเป็น (showContentButton, showMarketResearchButton, showBackButton, showDashboardButton) เหลือเฉพาะ showAdminButton อัปเดตทุกหน้าให้ใช้ Navigation แบบเดียวกัน"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Navigation consistency working perfectly across all pages! Tested on Dashboard, Market Research, Knowledge Hub, and Profile pages - all show consistent 4/4 menu items (แดชบอร์ด, เครื่องมือวิจัยตลาด, ศูนย์ความรู้, โปรไฟล์). Desktop navigation: All 4 items found on every page. Mobile navigation: Successfully tested - mobile menu opens correctly and shows all 4 navigation items. Navigation remains consistent when switching between pages."
 
 agent_communication:
   - agent: "main"
