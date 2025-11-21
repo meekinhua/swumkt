@@ -248,16 +248,15 @@ const AdminNotifications = () => {
               <label className="block text-sm font-bold text-gray-900 mb-2">
                 ประเภท
               </label>
-              <Select value={notificationType} onValueChange={setNotificationType}>
-                <SelectTrigger className="border-2 border-gray-300">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="system_announcement">📢 ประกาศจากระบบ</SelectItem>
-                  <SelectItem value="content_update">🔔 อัปเดตเนื้อหา</SelectItem>
-                  <SelectItem value="custom">✨ ข้อความพิเศษ</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={notificationType}
+                onChange={(e) => setNotificationType(e.target.value)}
+                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
+              >
+                <option value="system_announcement">📢 ประกาศจากระบบ</option>
+                <option value="content_update">🔔 อัปเดตเนื้อหา</option>
+                <option value="custom">✨ ข้อความพิเศษ</option>
+              </select>
             </div>
 
             {/* Title */}
