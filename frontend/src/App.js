@@ -21,6 +21,8 @@ import SurveyListPage from '@/pages/SurveyListPage';
 import SurveyBuilderPage from '@/pages/SurveyBuilderPage';
 import SurveyTakingPage from '@/pages/SurveyTakingPage';
 import SurveyResponsesPage from '@/pages/SurveyResponsesPage';
+import NotificationSettings from '@/pages/NotificationSettings';
+import AdminNotifications from '@/pages/AdminNotifications';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
