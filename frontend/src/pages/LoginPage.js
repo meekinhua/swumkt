@@ -63,7 +63,7 @@ const LoginPage = () => {
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00A9CE]/15 to-[#33BCDA]/15 rounded-full border-2 border-[#00A9CE]/25 mb-4">
               <Sparkles className="w-4 h-4 text-[#005A73]" />
-              <span className="text-sm font-bold text-[#005A73]">Welcome Back</span>
+              <span className="text-sm font-bold text-[#005A73]">{t('auth.welcomeBadge')}</span>
             </div>
             <h1 className="text-4xl font-black mb-2" data-testid="login-title">
               <span className="gradient-text">{t('auth.loginTitle')}</span>
