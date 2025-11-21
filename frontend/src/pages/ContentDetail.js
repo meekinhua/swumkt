@@ -36,7 +36,24 @@ const ContentDetail = () => {
   const fetchContent = async () => {
     try {
       const response = await axios.get(`${API}/content/${id}`);
-      setContent(response.data);
+      const contentData = response.data;
+      
+      // Fetch user details for group members
+      if (contentData.group_members && contentData.group_members.length > 0) {
+        const memberPromises = contentData.group_members.map(async (memberId) => {
+          try {
+            const userResponse = await axios.get(`${API}/users/${memberId}`);
+            return userResponse.data;
+          } catch (err) {
+            console.error(`Error fetching user ${memberId}:`, err);
+            return null;
+          }
+        });
+        const members = await Promise.all(memberPromises);
+        contentData.groupMemberDetails = members.filter(m => m !== null);
+      }
+      
+      setContent(contentData);
     } catch (error) {
       console.error('Error fetching content:', error);
       toast.error('ไม่พบเนื้อหา');
