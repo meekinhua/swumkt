@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import SurveyTemplateModal from '@/components/SurveyTemplateModal';
 import AISurveyGeneratorModal from '@/components/AISurveyGeneratorModal';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://cite-master-2.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://researchtools.preview.emergentagent.com';
 
 const SurveyListPage = () => {
   const navigate = useNavigate();

@@ -1,187 +1,147 @@
 <analysis>**original_problem_statement:**
-The user's goal is to build a suite of marketing and academic research tools. The project started with a Content Attachment feature and has since expanded to include several new, complex tools:
+The user's initial goal was to build a suite of marketing and academic research tools. The primary focus was the Academic Format Corrector, which was intended to be a fully LLM-powered tool to extract references, replace in-text citations, and reformat entire  documents. After encountering significant issues with making the tool reliable for large files, the user pivoted to disabling the feature and linking to an external tool instead.
 
-1.  **Customer Perception Analysis:** A new tool with two qualitative sub-tools: an Interview Question Generator and an Interview Analysis tool. The basic structure exists but the core logic is not implemented.
-2.  **Academic Marketing Tools:** A new suite of tools.
-    *   **Journal Finder (Completed):** An LLM-powered tool that takes a topic/abstract to suggest academic journals, and also allows browsing/filtering a database of journals (ABDC, AJG).
-    *   **Academic Format Corrector (Vastly Enhanced):** A tool to reformat academic papers. It has evolved significantly to:
-        *   Use an LLM to extract detailed formatting rules (font, spacing, margins, etc.) from a journal's author guidelines.
-        *   Analyze an uploaded  to detect its existing structure, formatting, and citation style.
-        *   Use the  parser to automatically generate a BibTeX () file from the plain-text references in the document.
-        *   Use  with the generated  file, a CSL file, and a dynamically-created  template to perform true citation processing and document reformatting.
-3.  **UI/UX Refinements:** The user wants a transparent and informative UI. Recent requests focused on showing the user exactly what the tool is detecting and generating at each step (e.g., displaying extracted parameters, showing file analysis results, and previewing the generated BibTeX).
-4.  **Dashboard Fix:** A pending bug fix for a card on the main dashboard showing an incorrect coming soon status.
+Subsequently, the user requested the implementation of Google OAuth for user login, using their own client credentials. The final request in the session was to add missing translations (Thai and English) to the login page and other parts of the interface.
+
+**PRODUCT REQUIREMENTS:**
+1.  **AI-Powered Document Formatting (Abandoned):** The core requirement to build an LLM-based document formatter that works reliably on large files has been abandoned for now due to persistent failures. The feature is now disabled.
+2.  **Custom Google OAuth Login (Complete):** Implement Google login using user-provided  and , allowing users to sign in with either their email/password or their Google account.
+3.  **UI Internationalization (In Progress):** Add missing translations for UI elements, starting with the login page, for both Thai and English languages.
+4.  **Dashboard Link Fix (Pending):** A recurring bug where the Market Research card on the main dashboard is incorrectly marked coming soon, blocking navigation.
 
 **User's preferred language**: Thai
 
 **what currently exists?**
-The application is a market research PWA with two main, highly-developed academic tools.
--   **Journal Finder:** A completed and stable tool for finding academic journals.
--   **Academic Format Corrector:** This tool has been the focus of the current session and is now feature-complete and powerful. Its workflow is:
-    1.  **File Upload:** User uploads a  file.
-    2.  **Instant Analysis (UI Display):** The backend immediately analyzes the file. The UI displays a detailed report including word count, headings, detected formatting (font, spacing, margins via ), and the most likely citation style (detected via a custom heuristic).
-    3.  **BibTeX Preview (UI Display):** The backend also uses the  parser to convert the document's reference list into BibTeX format, which is previewed for the user in the UI.
-    4.  **Guideline Fetching:** The user enters a journal name, and an LLM fetches its guidelines, extracting over 39 specific formatting parameters. These are displayed in the UI for transparency.
-    5.  **Formatting:** When the user clicks Format, the backend runs  with a complete toolchain: a dynamically generated  template (for fonts/margins), a CSL file (for citation style), and the auto-generated  file (for citation processing).
-    6.  **Results:** The formatted text, a download link, a summary of changes, and the final BibTeX content are all displayed in the UI.
--   The environment now includes , , and , which were installed to support this new functionality.
+The application has a dual login system supporting both email/password and a newly implemented custom Google OAuth flow. The backend uses FastAPI with  for Google authentication and stores credentials in the  file. The frontend has been updated with a Sign in with Google button on the login page, and the  now correctly handles the state for both login methods.
+
+The Academic Format Corrector feature, which was the main focus, has been **disabled**. The complex backend logic in  for chunking and reformatting documents remains but is not actively used. On the frontend, the UI for this tool has been replaced with a link to an external application, and its card on the  page is marked as พร้อมใช้งาน (Ready) but directs users to that external URL.
+
+The internationalization (i18n) framework is in place using , with translation files located in .
 
 **Last working item**:
--   **Last item agent was working:** The agent finished implementing the user's request to display the BibTeX content (generated by ) as a preview immediately after a file is uploaded. This provides the user with instant feedback on how their references were parsed, before they even start the main formatting step.
--   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** Y
--   **Which testing method agent to use?** NA
+-   **Last item agent was working:** The agent was tasked with adding missing translations for the application, starting with the login page, for both English and Thai. It had successfully located the relevant i18n configuration and translation files ( and ) and was preparing to add the missing keys.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Frontend testing agent
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
 -   **Issue 1: Incorrect Dashboard Card Status (P1)**
-    -   **Description:** The Market Research card on the Dashboard page () incorrectly shows a coming soon or developing status, preventing users from navigating to the tool suite from the main page. This is a carry-over issue from a previous fork.
-    -   **Attempted fixes:** None in this session.
-    -   **Next debug checklist:**
-        1.  Examine .
-        2.  Locate the  component for Market Research Tools.
-        3.  Update its properties (e.g., , , ) to reflect that it is an active feature linking to .
-    -   **Why fix this issue and what will be achieved with the fix?** To correct the main navigation flow of the application and provide users with accurate information.
+    -   **Description:** The Market Research card on the main Dashboard page () incorrectly shows a coming soon status, preventing navigation to . This is a recurring issue from the previous fork. The agent fixed a similar card on the  page but did not verify or fix the card on the main  page.
+    -   **Why fix this issue and what will be achieved with the fix?** To restore the application's primary navigation flow from the main dashboard.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y (Carried over from a previous fork)
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Frontend (screenshot tool)
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   None.
+-   **Task 1: Complete UI Translations (P0)**
+    -   **Where to resume:** Edit  and  to add missing keys and values for the login page and any other identified areas.
+    -   **What will be achieved with this?** A fully localized user interface in both English and Thai, improving user experience.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P1: Fix Incorrect Dashboard Card:** Resolve the Market Research card status on the Dashboard page.
-    -   **P1: Implement Customer Perception Analysis - Phase 1 (Qualitative):** Build the core functionality for the two sub-tools (Interview Question Generator, Interview Analysis) in  and connect them to backend APIs.
+    -   **P1: Implement Customer Perception Analysis - Phase 1 (Qualitative):** Build the core functionality for the two sub-tools (Interview Question Generator, Interview Analysis) in .
 -   **Future Tasks:**
-    -   **P2: Implement Customer Behavior Analysis (Quantitative):** Build the functionality for the currently disabled Quantitative tab.
-    -   **P3: Survey Analytics & Dashboard:** Implement visualization and analysis for the Survey Builder tool.
-    -   **P4: Export Functionality:** Implement exporting for survey results.
+    -   **P2: Revist Academic Format Corrector:** The user may want to re-attempt building this tool with a new strategy in the future. The current code is non-functional for large files.
+    -   **P3: Implement Customer Behavior Analysis (Quantitative):** Build the functionality for the currently disabled Quantitative tab.
+    -   **P4: Survey Analytics & Dashboard:** Implement visualization and analysis for the Survey Builder tool.
+    -   **P5: Export Functionality:** Implement exporting for survey results.
 
 **Completed work in this session**
--   **Feature: Full Citation Processing with  + :**
-    -   Installed Ruby, the  gem, and the  binary into the environment.
-    -   Integrated  to parse plain-text references from  files and automatically generate a BibTeX () file.
-    -   Modified the Pandoc workflow to use the generated  file (), enabling true citation processing and reformatting.
-    -   Updated the UI to display the generated BibTeX content, both as a preview on upload and in the final results.
--   **Feature: Real-time File Analysis on Upload:**
-    -   Created a new API endpoint () that analyzes an uploaded .
-    -   Analysis detects document structure (word count, headings), formatting (font, spacing, margins), and citation style (using a robust heuristic).
-    -   The frontend now displays this detailed analysis immediately after a file is uploaded.
--   **Feature: Enhanced Formatting Transparency:**
-    -   The LLM prompt for guideline extraction was enhanced to pull over 39 specific parameters.
-    -   The UI was updated to display all these extracted parameters before formatting begins.
--   **Bug Fix: Critical Pandoc Runtime Error:**
-    -   Diagnosed that  was not installed in the environment, causing all formatting to fail.
-    -   Resolved by installing  via apt 2.6.1 (arm64)
-Usage: apt-get [options] command
-       apt-get [options] install|remove pkg1 [pkg2 ...]
-       apt-get [options] source pkg1 [pkg2 ...]
-
-apt-get is a command line interface for retrieval of packages
-and information about them from authenticated sources and
-for installation, upgrade and removal of packages together
-with their dependencies.
-
-Most used commands:
-  update - Retrieve new lists of packages
-  upgrade - Perform an upgrade
-  install - Install new packages (pkg is libc6 not libc6.deb)
-  reinstall - Reinstall packages (pkg is libc6 not libc6.deb)
-  remove - Remove packages
-  purge - Remove packages and config files
-  autoremove - Remove automatically all unused packages
-  dist-upgrade - Distribution upgrade, see apt-get(8)
-  dselect-upgrade - Follow dselect selections
-  build-dep - Configure build-dependencies for source packages
-  satisfy - Satisfy dependency strings
-  clean - Erase downloaded archive files
-  autoclean - Erase old downloaded archive files
-  check - Verify that there are no broken dependencies
-  source - Download source archives
-  download - Download the binary package into the current directory
-  changelog - Download and display the changelog for the given package
-
-See apt-get(8) for more information about the available commands.
-Configuration options and syntax is detailed in apt.conf(5).
-Information about how to configure sources can be found in sources.list(5).
-Package and version choices can be expressed via apt_preferences(5).
-Security details are available in apt-secure(8).
-                                        This APT has Super Cow Powers..
--   **Refactoring & Bug Fixes:**
-    -   Resolved a 401 Unauthorized error on the new analysis API by adjusting its security dependency.
-    -   Improved the list of changes report to be dynamic and accurately reflect the steps taken (e.g., parsed references to BibTeX).
-    -   Fixed numerous minor bugs related to frontend state, API request formats, and race conditions in file cleanup.
+-   **Feature: Custom Google OAuth Implementation:**
+    -   Added Google credentials to .
+    -   Installed and configured  in  to create custom  and  endpoints.
+    -   Modified  to use the new custom endpoints.
+    -   Fixed  to correctly manage authentication state after a successful Google login.
+-   **Feature: Disabled Academic Format Corrector:**
+    -   After multiple failed attempts to fix performance and accuracy issues with large files, the feature was disabled.
+    -   The card on  was updated to link to an external URL  and marked as พร้อมใช้งาน (Ready).
+-   **Documentation: Created Concept Document:**
+    -   Generated a user-focused concept document for the Academic Format Corrector tool in .
+-   **Bug Fix: Google Login State:**
+    -   Resolved an issue where the application state would not update after a successful Google login.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Incorrect Dashboard Card for Market Research**
-    -   **Debug checklist:** See All Pending/In progress Issue list.
-    -   **Why to solve this issue and what will be achieved with this?** The dashboard is the main entry point and should accurately reflect the status of available tools.
-    -   **Should Test frontend/backend/both after fix:** Frontend
+-   **Issue 1: Academic Format Corrector fails on large documents**
+    -   **Debug checklist:** The agent attempted several strategies: a two-pass approach (extract all references, then format) and an incremental approach (build reference list while formatting chunks). Both failed due to performance bottlenecks, timeouts, and inconsistent outputs from the LLM. The final attempt was to use a BibTeX-style extraction flow, but this was also abandoned.
+    -   **Why to solve this issue and what will be achieved with this?** This was the core feature requested by the user. Fixing it would deliver the main tool for the application. However, the user has decided to shelve it for now.
+    -   **Should Test frontend/backend/both after fix:** Both
     -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
--   None.
+-   **Issue recurrence in previous fork:** The incorrect status of the Market Research card on the main dashboard () was mentioned as recurring.
+-   **Recurrence count:** At least 2.
+-   **Status:** NOT STARTED (The agent addressed a different page, not the one specified in the original bug report).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frameworks:** React, FastAPI
--   **Database:** MongoDB
--   **Document Formatting:** A sophisticated pipeline:  for initial analysis,  (Ruby gem) for BibTeX generation, an LLM for guideline extraction, and  for the final conversion using a CSL file, a dynamically generated  template, and the auto-generated  file.
--   **Dependencies:** The environment now relies on system-level installations of , the  gem, and the  binary.
+-   **OAuth 2.0:** Implemented Google Sign-In using the  library in Python for the backend flow.
+-   **Internationalization (i18n):** Using  and  with JSON translation files for multi-language support.
+-   **Feature Disabling:** A key decision was made to disable a complex, non-functional feature by replacing its UI with a link to an external tool, effectively creating a workaround.
+-   **Failed LLM Patterns:** The session involved failed attempts at advanced LLM orchestration for large document processing (two-pass, incremental stateful chunking). These are important anti-patterns to note for future work.
 
 **key DB schema**
--   No changes to the database schema were made in this session.
+-   No changes to the database schema were made.
 
 **changes in tech stack**
--   **Added:**  (system binary)
--   **Added:**  (system binary)
--   **Added:**  (Ruby gem)
+-   **Added:**  for Python backend to handle custom Google OAuth.
 
 **All files**
--   **/app/backend/server.py**: Heavily modified. A new endpoint () was added. The main formatting endpoint () was completely overhauled to integrate  for BibTeX generation and use it with . Response models were expanded to include analysis results and BibTeX content.
--   **/app/frontend/src/pages/AcademicFormatEditor.js**: Heavily modified. Implemented UI to display detailed file analysis upon upload, including detected formatting, citation style, and a preview of the generated BibTeX. The results section was also updated to show the final BibTeX.
+-   **/app/backend/server.py**: Modified to add Google OAuth endpoints using  and to configure the OAuth provider with credentials from . The model used in  was also changed multiple times.
+-   **/app/backend/lib/doc_formatter.py**: Created and heavily modified with several complex, but ultimately unsuccessful, strategies for processing large documents with an LLM. This file is currently not used by any functional part of the application.
+-   **/app/frontend/src/pages/MarketResearch.js**: Modified to change the Academic Format Editor card's status badge and its  handler to open an external URL in a new tab.
+-   **/app/frontend/src/pages/AcademicFormatEditor.js**: The page content was removed and replaced with a Coming Soon message, which was then also removed as the card now links externally.
+-   **/app/frontend/src/components/GoogleLoginButton.js**: The  handler was changed from the Emergent-managed flow to a simple redirect to the new  backend endpoint.
+-   **/app/frontend/src/context/AuthContext.js**: A new  function was added to handle the post-OAuth callback, fetching user info and setting the token in local storage.
+-   **/app/backend/.env**: Updated to include  and .
+-   **/app/backend/requirements.txt**: Updated with  dependency.
 
 **Areas that need refactoring**:
--   The main backend file, , has grown very large and contains logic for multiple distinct tools. It should be refactored by splitting routes into separate  modules (e.g., , ).
--   The primary frontend component, , is now over 800 lines long and manages a large amount of complex state. It should be broken down into smaller, more manageable sub-components (e.g., , , ).
+-   : This file contains a significant amount of complex, dead code from the failed attempts to build the formatter. It should be removed or completely refactored if the feature is ever revisited.
+-   The Academic Format Editor feature is in a state of abandonment. All related code (, parts of , ) should be cleaned up to avoid confusion.
 
 **key api endpoints**
--   : **New**. Analyzes an uploaded  file for structure, formatting, and citation style, and uses  to generate BibTeX content for preview.
--   : **Modified**. Now orchestrates the full pipeline: extracts references, calls  to create a  file, calls  with the  flag for true citation processing, and returns the formatted result along with the generated .
+-   : **New**. Redirects the user to Google's OAuth consent screen.
+-   : **New**. Handles the callback from Google, exchanges the code for a token, retrieves user info, and creates a local user session and JWT.
+-   : **Unused**. The endpoint exists but is part of the disabled Academic Format Corrector feature.
 
 **Critical Info for New Agent**
 -   **User's Language is Thai:** All communication must be in Thai.
--   **Academic Format Corrector Workflow:** Understand the full, multi-stage backend process. The tool is no longer a simple formatter; it's a complete analysis and citation processing pipeline.  is a key external dependency called from Python via .
--   **Environment Dependencies:** The application now depends on , , and the  gem being installed in the environment.
+-   **Academic Format Corrector is ABANDONED:** The user has given up on this feature for now after multiple failures. The feature now links to an external tool. **DO NOT** attempt to fix the existing logic in . Treat the feature as deprecated unless the user explicitly requests to restart its development from scratch with a new approach.
+-   **Priority is on i18n:** The immediate next task is to complete the UI translations for Thai and English.
+-   **Main Dashboard Bug:** Pay attention to the recurring bug on the main  page. The previous agent fixed a card on , which is a different page. The original bug likely still exists.
 
 **documents created in this job**
--   None.
+-   : A user-focused concept document for the abandoned tool.
 
 **Last 5 User Messages and any pending user messages**
-1.  **User:** Can we process citations too? Can you recommend a parser to create a .bib from plain text? -> **Status: Completed**. Agent suggested  and implemented it.
-2.  **User:** Try using anystyle. -> **Status: Completed**.
-3.  **User:** Please also show the bib content that was generated in the UI. -> **Status: Completed**.
-4.  **User:** Please show the bib content as soon as the file is uploaded. -> **Status: Completed**.
-5.  **No pending user messages.** The agent has presented the final result of the last request and is waiting for the user to specify the next task.
+1.  **User:** Implement Google Login using the provided client ID and secret. -> **Status: Completed**.
+2.  **User:** The Google login is successful, but the application doesn't recognize that I'm logged in. -> **Status: Completed**.
+3.  **User:** The interface has missing translations on pages like the login page. Please translate them into Thai and English. -> **Status: IN PROGRESS**.
+4.  **Agent:** (Views i18n files and configuration) -> **Status: IN PROGRESS**.
+5.  **Agent:** (Views the Thai translation file to assess missing keys) -> **Status: IN PROGRESS**.
 
 **Project Health Check:**
--   **Working:** Journal Finder, Academic Format Editor (now highly advanced and feature-complete).
--   **In Progress:** None.
--   **Broken:** The Market Research card on the  page remains incorrect, hindering navigation.
+-   **Working:** Email/password login, Custom Google OAuth login, Core navigation (except for the main dashboard card).
+-   **Broken:** The entire backend logic for the Academic Format Corrector () is non-functional for its intended purpose.
+-   **Mocked:** The Academic Format Corrector feature is implemented as a workaround, redirecting to an external URL instead of using internal functionality.
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None. Test documents were created dynamically in  for API calls but not saved.
+-   **Test files created:** None
 -   **Known regressions:** None.
 
 **Credentials to test flow:**
 -   **Email:** 
 -   **Password:** 
+-   **Google Login:** Should now work with the configured credentials.
 
 **What agent forgot to execute**
--   The agent has consistently deferred fixing the incorrect Market Research card on the  page, which was identified as a P1 issue in the initial handover summary. This remains the most prominent unaddressed task.</analysis>
+-   The agent did not address the recurring P1 bug on the main  page concerning the Market Research card. It fixed a different card on the  page but failed to verify the original issue on the main dashboard, which was explicitly mentioned in the handover summary.</analysis>
