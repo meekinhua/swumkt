@@ -47,7 +47,7 @@ class NotificationService:
         url: str = "/",
         icon: Optional[str] = None,
         tag: str = "swumkt-notification",
-        require_interaction: bool = False
+        require_interaction: bool = True  # Changed to True for iOS
     ) -> bool:
         """
         Send push notification to a subscription
