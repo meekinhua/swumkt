@@ -1,19 +1,77 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
-const GoogleLoginButton = ({ redirectUrl, className = "" }) => {
+const GOOGLE_CLIENT_ID = "949663376782-cd9128nvekdavpu09mko30rfn9c2kre4.apps.googleusercontent.com";
+
+const GoogleLoginButton = ({ redirectUrl = '/dashboard', className = "", onSuccess }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+    
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+        });
+      }
+    };
+    
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+  
+  const handleCredentialResponse = async (response) => {
+    try {
+      // Send credential to backend
+      const result = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/auth/google/verify`,
+        { credential: response.credential }
+      );
+      
+      // Save token
+      localStorage.setItem('access_token', result.data.access_token);
+      localStorage.setItem('user', JSON.stringify(result.data.user));
+      
+      toast.success('เข้าสู่ระบบด้วย Google สำเร็จ!');
+      
+      if (onSuccess) {
+        onSuccess(result.data);
+      } else {
+        navigate(redirectUrl);
+        window.location.reload(); // Reload to update auth context
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.error('ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+    }
+  };
   
   const handleGoogleLogin = () => {
-    const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-    window.location.href = authUrl;
+    if (window.google) {
+      window.google.accounts.id.prompt(); // Show One Tap UI
+    } else {
+      toast.error('กำลังโหลด Google Sign-In...');
+    }
   };
 
   return (
     <Button
       onClick={handleGoogleLogin}
       variant="outline"
+      type="button"
       className={`w-full border-2 border-gray-300 hover:bg-gray-50 ${className}`}
     >
       <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
