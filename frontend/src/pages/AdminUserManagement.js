@@ -34,11 +34,16 @@ const AdminUserManagement = () => {
 
   useEffect(() => {
     // Filter users based on search query
+    if (!allUsers || allUsers.length === 0) {
+      setFilteredUsers([]);
+      return;
+    }
+    
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const filtered = allUsers.filter(u => 
-        u.full_name.toLowerCase().includes(query) ||
-        u.email.toLowerCase().includes(query)
+        u?.full_name?.toLowerCase().includes(query) ||
+        u?.email?.toLowerCase().includes(query)
       );
       setFilteredUsers(filtered);
     } else {
