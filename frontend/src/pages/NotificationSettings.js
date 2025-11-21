@@ -198,6 +198,32 @@ const NotificationSettings = () => {
           ⚙️ การตั้งค่าการแจ้งเตือน
         </h1>
 
+        {/* iOS Install Prompt Modal */}
+        {showIOSPrompt && <IOSInstallPrompt onClose={() => setShowIOSPrompt(false)} />}
+
+        {/* iOS Warning for non-PWA */}
+        {isIOS && !isStandalone && (
+          <Card className="p-6 mb-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 shadow-xl">
+            <div className="flex items-start gap-4">
+              <Smartphone className="w-12 h-12 text-blue-600 flex-shrink-0" />
+              <div className="flex-1">
+                <h2 className="text-xl font-black text-blue-900 mb-2">
+                  📱 สำหรับผู้ใช้ iPhone/iPad
+                </h2>
+                <p className="text-blue-800 mb-3 font-semibold">
+                  การแจ้งเตือนบน iOS ต้องติดตั้งแอปก่อน (Add to Home Screen)
+                </p>
+                <Button
+                  onClick={() => setShowIOSPrompt(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  ดูวิธีติดตั้ง →
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Enable/Disable Notifications */}
         <Card className="p-6 mb-6 bg-white/98 border-2 border-gray-300 shadow-xl">
           <div className="flex items-start justify-between">
@@ -209,6 +235,8 @@ const NotificationSettings = () => {
               <p className="text-gray-600 mb-4">
                 {isSubscribed 
                   ? '✅ คุณได้เปิดใช้งานการแจ้งเตือนแล้ว คุณจะได้รับการแจ้งเตือนแม้ว่าเบราว์เซอร์จะไม่ได้เปิดอยู่'
+                  : isIOS && !isStandalone
+                  ? '📱 กรุณาติดตั้งแอปก่อนเพื่อเปิดใช้งานการแจ้งเตือน'
                   : '🔕 เปิดใช้งานการแจ้งเตือนเพื่อรับข่าวสารและการอัปเดตแบบ real-time'
                 }
               </p>
