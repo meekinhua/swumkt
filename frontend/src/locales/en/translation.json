@@ -91,6 +91,8 @@
     "graduationYear": "Graduation Year",
     "creating": "Creating account...",
     "welcomeBadge": "Welcome Back",
+    "joinUsBadge": "Join Us Today",
+    "passwordPlaceholder": "Min 6 characters",
     "continueWithGoogle": "Continue with Google",
     "googleLoginSuccess": "Successfully signed in with Google!",
     "googleLoginError": "Unable to sign in with Google",
