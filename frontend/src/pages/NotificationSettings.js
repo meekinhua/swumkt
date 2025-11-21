@@ -503,6 +503,37 @@ const NotificationSettings = () => {
                 >
                   🧹 Clear Badge
                 </Button>
+
+                {/* Test 7: Check Subscription */}
+                <Button
+                  onClick={async () => {
+                    try {
+                      const response = await axios.get(`${API}/notifications/debug/subscription`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      console.log('📋 Subscription Debug:', response.data);
+                      
+                      const info = response.data;
+                      const message = `
+📱 Subscription Info:
+- Subscribed: ${info.subscribed ? 'Yes ✅' : 'No ❌'}
+- Endpoint Type: ${info.endpoint_type || 'Unknown'}
+- Has Keys: ${info.has_keys ? 'Yes ✅' : 'No ❌'}
+- Count: ${info.count || 0}
+                      `.trim();
+                      
+                      alert(message);
+                      toast.success('Check console for details');
+                    } catch (error) {
+                      toast.error('❌ Error: ' + error.message);
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="border-2 border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-bold"
+                >
+                  📋 Check Sub
+                </Button>
               </div>
               
               {/* Instructions */}
