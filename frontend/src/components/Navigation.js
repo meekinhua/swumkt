@@ -150,11 +150,20 @@ const Navigation = () => {
                   <User className="w-4 h-4 mr-2" />
                   {t('nav.profile')}
                 </Button>
+                {/* Notification Settings Link */}
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { navigate('/profile/notifications'); setMobileMenuOpen(false); }} 
+                  className="w-full justify-start text-white hover:bg-white/10 font-semibold border-t-2 border-white/20 pt-4 mt-2"
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  {t('notifications.settings') || 'การตั้งค่าการแจ้งเตือน'}
+                </Button>
                 {user.role === 'admin' && (
                   <Button 
                     variant="ghost" 
                     onClick={() => { navigate('/admin/settings'); setMobileMenuOpen(false); }} 
-                    className="w-full justify-start text-yellow-300 hover:bg-white/10 font-bold border-t-2 border-white/20 pt-4 mt-2"
+                    className="w-full justify-start text-yellow-300 hover:bg-white/10 font-bold pt-2"
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     🔐 Admin Zone
