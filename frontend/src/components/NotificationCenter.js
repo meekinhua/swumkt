@@ -91,17 +91,9 @@ const NotificationCenter = () => {
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
       
-      // Update app badge
-      if ('setAppBadge' in navigator) {
-        const newCount = unreadCount - 1;
-        if (newCount > 0) {
-          navigator.setAppBadge(newCount);
-        } else {
-          navigator.clearAppBadge();
-        }
-      }
+      // Refresh unread count from server to ensure accuracy
+      await fetchUnreadCount();
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
