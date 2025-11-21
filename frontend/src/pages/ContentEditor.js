@@ -567,14 +567,15 @@ const ContentEditor = () => {
                         </div>
 
                         {/* Member List */}
-                        {formData.group_members.length > 0 && (
+                        {memberDetails.length > 0 && (
                           <div className="flex flex-wrap gap-2">
-                            {formData.group_members.map((memberId, idx) => (
-                              <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border-2 border-[#00A9CE]/30">
-                                <span className="text-sm font-medium text-gray-900">สมาชิก {idx + 1}</span>
+                            {memberDetails.map((member, idx) => (
+                              <div key={member.id} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border-2 border-[#00A9CE]/30">
+                                <span className="text-sm font-bold text-gray-900">{member.full_name}</span>
+                                <span className="text-xs text-gray-500">({member.email})</span>
                                 <button
                                   type="button"
-                                  onClick={() => handleRemoveMember(memberId)}
+                                  onClick={() => handleRemoveMember(member.id)}
                                   className="text-red-600 hover:text-red-800"
                                 >
                                   <X className="w-4 h-4" />
