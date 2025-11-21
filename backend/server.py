@@ -5380,6 +5380,405 @@ async def get_integrations_status(current_user: User = Depends(get_admin_user)):
         "sms_gateway": {"enabled": False, "status": "Not configured"}
     }
 
+# ============ NOTIFICATION SYSTEM ============
+from notification_service import notification_service
+
+# Notification Models
+class NotificationType(str, Enum):
+    COMMENT = "comment"
+    ZBS04_ASSIGNMENT = "zbs04_assignment"
+    SYSTEM_ANNOUNCEMENT = "system_announcement"
+    CONTENT_UPDATE = "content_update"
+    CUSTOM = "custom"
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: Dict[str, str]
+
+class NotificationSubscriptionCreate(BaseModel):
+    subscription_info: Dict[str, Any]
+
+class NotificationPreferences(BaseModel):
+    comment_notifications: bool = True
+    zbs04_notifications: bool = True
+    system_notifications: bool = True
+    content_update_notifications: bool = True
+    custom_notifications: bool = True
+
+class SendNotificationRequest(BaseModel):
+    user_ids: Optional[List[str]] = None  # None = broadcast to all
+    title: str
+    body: str
+    url: str = "/"
+    notification_type: NotificationType = NotificationType.CUSTOM
+    icon: Optional[str] = None
+
+class Notification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    body: str
+    url: str = "/"
+    notification_type: NotificationType
+    icon: Optional[str] = None
+    read: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Get VAPID public key
+@api_router.get("/notifications/vapid-public-key")
+async def get_vapid_public_key():
+    """Get VAPID public key for push subscription"""
+    return {"public_key": notification_service.get_public_key()}
+
+# Subscribe to push notifications
+@api_router.post("/notifications/subscribe")
+async def subscribe_to_notifications(
+    subscription: NotificationSubscriptionCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Subscribe user to push notifications"""
+    try:
+        # Check if subscription already exists
+        existing = await db.notification_subscriptions.find_one({
+            "user_id": current_user.id,
+            "subscription_info.endpoint": subscription.subscription_info.get("endpoint")
+        })
+        
+        if existing:
+            return {"message": "Subscription already exists", "id": existing["id"]}
+        
+        # Create new subscription
+        subscription_doc = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.id,
+            "subscription_info": subscription.subscription_info,
+            "created_at": datetime.now(timezone.utc),
+            "last_used": datetime.now(timezone.utc)
+        }
+        
+        await db.notification_subscriptions.insert_one(subscription_doc)
+        
+        # Create default preferences if not exists
+        prefs = await db.notification_preferences.find_one({"user_id": current_user.id})
+        if not prefs:
+            await db.notification_preferences.insert_one({
+                "user_id": current_user.id,
+                "comment_notifications": True,
+                "zbs04_notifications": True,
+                "system_notifications": True,
+                "content_update_notifications": True,
+                "custom_notifications": True,
+                "created_at": datetime.now(timezone.utc)
+            })
+        
+        return {"message": "Subscribed successfully", "id": subscription_doc["id"]}
+        
+    except Exception as e:
+        logging.error(f"Subscription error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Unsubscribe from push notifications
+@api_router.delete("/notifications/unsubscribe")
+async def unsubscribe_from_notifications(
+    endpoint: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Unsubscribe user from push notifications"""
+    result = await db.notification_subscriptions.delete_one({
+        "user_id": current_user.id,
+        "subscription_info.endpoint": endpoint
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    return {"message": "Unsubscribed successfully"}
+
+# Get user's notification preferences
+@api_router.get("/notifications/preferences")
+async def get_notification_preferences(current_user: User = Depends(get_current_user)):
+    """Get user's notification preferences"""
+    prefs = await db.notification_preferences.find_one(
+        {"user_id": current_user.id},
+        {"_id": 0}
+    )
+    
+    if not prefs:
+        # Return default preferences
+        return NotificationPreferences().dict()
+    
+    return prefs
+
+# Update user's notification preferences
+@api_router.put("/notifications/preferences")
+async def update_notification_preferences(
+    preferences: NotificationPreferences,
+    current_user: User = Depends(get_current_user)
+):
+    """Update user's notification preferences"""
+    await db.notification_preferences.update_one(
+        {"user_id": current_user.id},
+        {"$set": {**preferences.dict(), "updated_at": datetime.now(timezone.utc)}},
+        upsert=True
+    )
+    
+    return {"message": "Preferences updated successfully"}
+
+# Get user's notifications (inbox)
+@api_router.get("/notifications")
+async def get_notifications(
+    skip: int = 0,
+    limit: int = 20,
+    unread_only: bool = False,
+    current_user: User = Depends(get_current_user)
+):
+    """Get user's notifications"""
+    query = {"user_id": current_user.id}
+    if unread_only:
+        query["read"] = False
+    
+    notifications = await db.notifications.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.notifications.count_documents(query)
+    unread_count = await db.notifications.count_documents({
+        "user_id": current_user.id,
+        "read": False
+    })
+    
+    return {
+        "notifications": notifications,
+        "total": total,
+        "unread_count": unread_count
+    }
+
+# Get unread notification count
+@api_router.get("/notifications/unread-count")
+async def get_unread_count(current_user: User = Depends(get_current_user)):
+    """Get count of unread notifications"""
+    count = await db.notifications.count_documents({
+        "user_id": current_user.id,
+        "read": False
+    })
+    return {"count": count}
+
+# Mark notification as read
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Mark a notification as read"""
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": current_user.id},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification marked as read"}
+
+# Mark all notifications as read
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(current_user: User = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    result = await db.notifications.update_many(
+        {"user_id": current_user.id, "read": False},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}}
+    )
+    
+    return {"message": f"Marked {result.modified_count} notifications as read"}
+
+# Send notification (admin or system)
+@api_router.post("/notifications/send")
+async def send_notification(
+    request: SendNotificationRequest,
+    current_user: User = Depends(get_admin_user)
+):
+    """Send push notification (admin only)"""
+    try:
+        # Determine recipients
+        if request.user_ids:
+            # Send to specific users
+            target_users = request.user_ids
+        else:
+            # Broadcast to all subscribed users
+            all_subs = await db.notification_subscriptions.distinct("user_id")
+            target_users = all_subs
+        
+        # Get subscriptions for target users
+        subscriptions = await db.notification_subscriptions.find({
+            "user_id": {"$in": target_users}
+        }, {"_id": 0}).to_list(None)
+        
+        if not subscriptions:
+            return {"message": "No active subscriptions found", "sent": 0}
+        
+        # Check user preferences and filter
+        valid_subscriptions = []
+        for sub in subscriptions:
+            prefs = await db.notification_preferences.find_one(
+                {"user_id": sub["user_id"]},
+                {"_id": 0}
+            )
+            
+            # Check if user has enabled this notification type
+            if prefs:
+                type_mapping = {
+                    NotificationType.COMMENT: prefs.get("comment_notifications", True),
+                    NotificationType.ZBS04_ASSIGNMENT: prefs.get("zbs04_notifications", True),
+                    NotificationType.SYSTEM_ANNOUNCEMENT: prefs.get("system_notifications", True),
+                    NotificationType.CONTENT_UPDATE: prefs.get("content_update_notifications", True),
+                    NotificationType.CUSTOM: prefs.get("custom_notifications", True)
+                }
+                
+                if type_mapping.get(request.notification_type, True):
+                    valid_subscriptions.append(sub)
+            else:
+                valid_subscriptions.append(sub)
+        
+        # Send push notifications
+        results = await notification_service.send_to_multiple(
+            subscriptions=valid_subscriptions,
+            title=request.title,
+            body=request.body,
+            url=request.url,
+            icon=request.icon,
+            tag=request.notification_type.value
+        )
+        
+        # Store notifications in database for inbox
+        notification_docs = []
+        for user_id in target_users:
+            notification_docs.append({
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "title": request.title,
+                "body": request.body,
+                "url": request.url,
+                "notification_type": request.notification_type.value,
+                "icon": request.icon,
+                "read": False,
+                "created_at": datetime.now(timezone.utc)
+            })
+        
+        if notification_docs:
+            await db.notifications.insert_many(notification_docs)
+        
+        # Clean up invalid subscriptions
+        if results["invalid_subscriptions"]:
+            await db.notification_subscriptions.delete_many({
+                "id": {"$in": results["invalid_subscriptions"]}
+            })
+        
+        return {
+            "message": "Notifications sent",
+            "sent": results["sent"],
+            "failed": results["failed"],
+            "total_recipients": len(target_users)
+        }
+        
+    except Exception as e:
+        logging.error(f"Send notification error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Test notification (send to self)
+@api_router.post("/notifications/test")
+async def test_notification(current_user: User = Depends(get_current_user)):
+    """Send test notification to yourself"""
+    try:
+        # Get user's subscriptions
+        subscriptions = await db.notification_subscriptions.find({
+            "user_id": current_user.id
+        }, {"_id": 0}).to_list(None)
+        
+        if not subscriptions:
+            raise HTTPException(status_code=404, detail="No active subscriptions found. Please enable notifications first.")
+        
+        # Send test notification
+        results = await notification_service.send_to_multiple(
+            subscriptions=subscriptions,
+            title="🔔 ทดสอบการแจ้งเตือน",
+            body=f"สวัสดี {current_user.full_name}! ระบบแจ้งเตือนของคุณทำงานอย่างสมบูรณ์",
+            url="/profile/notifications",
+            tag="test"
+        )
+        
+        # Store in inbox
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.id,
+            "title": "🔔 ทดสอบการแจ้งเตือน",
+            "body": f"สวัสดี {current_user.full_name}! ระบบแจ้งเตือนของคุณทำงานอย่างสมบูรณ์",
+            "url": "/profile/notifications",
+            "notification_type": "custom",
+            "read": False,
+            "created_at": datetime.now(timezone.utc)
+        })
+        
+        return {
+            "message": "Test notification sent successfully",
+            "sent": results["sent"]
+        }
+        
+    except Exception as e:
+        logging.error(f"Test notification error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Admin: Get all subscriptions
+@api_router.get("/admin/notifications/subscriptions")
+async def get_all_subscriptions(
+    current_user: User = Depends(get_admin_user)
+):
+    """Get all notification subscriptions (admin only)"""
+    subscriptions = await db.notification_subscriptions.find({}, {"_id": 0}).to_list(None)
+    
+    # Get user details for each subscription
+    user_ids = list(set([sub["user_id"] for sub in subscriptions]))
+    users = await db.users.find(
+        {"id": {"$in": user_ids}},
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1}
+    ).to_list(None)
+    
+    user_map = {u["id"]: u for u in users}
+    
+    # Enrich subscriptions with user data
+    for sub in subscriptions:
+        sub["user"] = user_map.get(sub["user_id"], {})
+    
+    return {
+        "subscriptions": subscriptions,
+        "total": len(subscriptions),
+        "unique_users": len(user_ids)
+    }
+
+# Admin: Get notification statistics
+@api_router.get("/admin/notifications/stats")
+async def get_notification_stats(
+    current_user: User = Depends(get_admin_user)
+):
+    """Get notification statistics (admin only)"""
+    total_subscriptions = await db.notification_subscriptions.count_documents({})
+    total_notifications = await db.notifications.count_documents({})
+    unread_notifications = await db.notifications.count_documents({"read": False})
+    
+    # Get notifications by type
+    pipeline = [
+        {"$group": {"_id": "$notification_type", "count": {"$sum": 1}}}
+    ]
+    by_type = await db.notifications.aggregate(pipeline).to_list(None)
+    
+    return {
+        "total_subscriptions": total_subscriptions,
+        "unique_users": len(await db.notification_subscriptions.distinct("user_id")),
+        "total_notifications_sent": total_notifications,
+        "unread_notifications": unread_notifications,
+        "notifications_by_type": by_type
+    }
+
 # Include the router
 app.include_router(api_router)
 
