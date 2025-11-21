@@ -5,10 +5,12 @@ Self-hosted Web Push implementation using VAPID
 
 import os
 import json
+import base64
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from py_vapid import Vapid
 from pywebpush import webpush, WebPushException
+from cryptography.hazmat.primitives import serialization
 import logging
 
 logger = logging.getLogger(__name__)
