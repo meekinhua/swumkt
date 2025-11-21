@@ -84,8 +84,11 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification support - iOS compatible
 self.addEventListener('push', (event) => {
-  console.log('🔔 [SW] Push event received');
+  console.log('========================================');
+  console.log('🔔 [SW] PUSH EVENT RECEIVED FROM BACKEND!');
+  console.log('🔔 [SW] Timestamp:', new Date().toISOString());
   console.log('🔔 [SW] Event data exists:', !!event.data);
+  console.log('========================================');
   
   let notificationData = {
     title: 'SWUMKT Portal',
