@@ -749,29 +749,33 @@ async def google_auth_verify(token_data: dict = Body(...)):
 async def get_me(current_user: User = Depends(get_current_user)):
     return UserProfile(**current_user.model_dump())
 
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    student_id: Optional[str] = None
+    graduation_year: Optional[int] = None
+    zbs04_enrolled: Optional[bool] = None
+
 @api_router.put("/auth/profile", response_model=UserProfile)
 async def update_profile(
-    full_name: Optional[str] = None,
-    bio: Optional[str] = None,
-    avatar_url: Optional[str] = None,
-    student_id: Optional[str] = None,
-    graduation_year: Optional[int] = None,
-    zbs04_enrolled: Optional[bool] = None,
+    profile_data: ProfileUpdate,
     current_user: User = Depends(get_current_user)
 ):
     update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
-    if full_name:
-        update_data["full_name"] = full_name
-    if bio:
-        update_data["bio"] = bio
-    if avatar_url:
-        update_data["avatar_url"] = avatar_url
-    if student_id:
-        update_data["student_id"] = student_id
-    if graduation_year:
-        update_data["graduation_year"] = graduation_year
-    if zbs04_enrolled is not None:
-        update_data["zbs04_enrolled"] = zbs04_enrolled
+    
+    if profile_data.full_name:
+        update_data["full_name"] = profile_data.full_name
+    if profile_data.bio:
+        update_data["bio"] = profile_data.bio
+    if profile_data.avatar_url:
+        update_data["avatar_url"] = profile_data.avatar_url
+    if profile_data.student_id:
+        update_data["student_id"] = profile_data.student_id
+    if profile_data.graduation_year:
+        update_data["graduation_year"] = profile_data.graduation_year
+    if profile_data.zbs04_enrolled is not None:
+        update_data["zbs04_enrolled"] = profile_data.zbs04_enrolled
     
     await db.users.update_one({"id": current_user.id}, {"$set": update_data})
     
