@@ -258,6 +258,14 @@ const NotificationSettings = () => {
                   <BellOff className="w-4 h-4 mr-2" />
                   ปิดการแจ้งเตือน
                 </Button>
+              ) : isIOS && !isStandalone ? (
+                <Button
+                  onClick={() => setShowIOSPrompt(true)}
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold"
+                >
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  ติดตั้งแอป
+                </Button>
               ) : (
                 <Button
                   onClick={handleEnableNotifications}
