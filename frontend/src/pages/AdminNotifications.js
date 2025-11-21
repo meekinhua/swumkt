@@ -205,15 +205,14 @@ const AdminNotifications = () => {
               <label className="block text-sm font-bold text-gray-900 mb-2">
                 ส่งถึง
               </label>
-              <Select value={sendMode} onValueChange={setSendMode}>
-                <SelectTrigger className="border-2 border-gray-300">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="broadcast">📢 ทุกคนที่ subscribe</SelectItem>
-                  <SelectItem value="specific">👤 เลือกผู้ใช้เฉพาะ</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={sendMode}
+                onChange={(e) => setSendMode(e.target.value)}
+                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
+              >
+                <option value="broadcast">📢 ทุกคนที่ subscribe</option>
+                <option value="specific">👤 เลือกผู้ใช้เฉพาะ</option>
+              </select>
             </div>
 
             {/* User Selection (if specific mode) */}
