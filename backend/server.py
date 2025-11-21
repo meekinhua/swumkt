@@ -42,9 +42,18 @@ JWT_EXPIRATION_HOURS = 72
 # Security
 security = HTTPBearer()
 
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://cite-master-2.preview.emergentagent.com/auth/google/callback')
+
 # Create the main app
 app = FastAPI(title="SWUMKT API")
 api_router = APIRouter(prefix="/api")
+
+# Session middleware for OAuth (needed for state management)
+from starlette.middleware.sessions import SessionMiddleware
+app.add_middleware(SessionMiddleware, secret_key=JWT_SECRET)
 
 # Enums
 class UserRole(str, Enum):
