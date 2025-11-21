@@ -31,7 +31,11 @@ const ProfilePage = () => {
 
   useEffect(() => {
     loadDemographicsAndRating();
-  }, []);
+    // Sync zbs04Status with user data
+    if (user) {
+      setZbs04Status(user.zbs04_enrolled || false);
+    }
+  }, [user]);
 
   const loadDemographicsAndRating = async () => {
     try {
