@@ -492,6 +492,98 @@ const ContentEditor = () => {
                 </Select>
               </div>
 
+              {/* ZBS04 Assignment Section - Only for enrolled students */}
+              {user?.zbs04_enrolled && (
+                <Card className="p-6 bg-gradient-to-r from-[#00A9CE]/5 to-[#33BCDA]/5 border-2 border-[#00A9CE]/30">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">งาน ZBS04 (ถ้ามี)</h3>
+                  
+                  {/* Checkbox - Is ZBS04 Assignment */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <input
+                      type="checkbox"
+                      id="is_zbs04"
+                      checked={formData.is_zbs04_assignment}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        is_zbs04_assignment: e.target.checked,
+                        zbs04_assignment_type: e.target.checked ? formData.zbs04_assignment_type : '',
+                        group_members: e.target.checked ? formData.group_members : []
+                      })}
+                      className="w-5 h-5 rounded border-2 border-[#00A9CE] text-[#00A9CE] focus:ring-[#00A9CE]"
+                    />
+                    <Label htmlFor="is_zbs04" className="text-gray-800 font-bold cursor-pointer">
+                      เป็นงานส่งในวิชา ZBS04
+                    </Label>
+                  </div>
+
+                  {/* Show fields only if checkbox is checked */}
+                  {formData.is_zbs04_assignment && (
+                    <>
+                      {/* Assignment Type */}
+                      <div className="mb-4">
+                        <Label className="text-gray-800 font-bold mb-2">ประเภทงาน *</Label>
+                        <Select
+                          value={formData.zbs04_assignment_type}
+                          onValueChange={(value) => setFormData({ ...formData, zbs04_assignment_type: value })}
+                        >
+                          <SelectTrigger className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium">
+                            <SelectValue placeholder="เลือกประเภทงาน" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="customer_behavior_analysis">การวิเคราะห์พฤติกรรมลูกค้า</SelectItem>
+                            <SelectItem value="customer_perception_analysis">การวิเคราะห์การรับรู้ของลูกค้า</SelectItem>
+                            <SelectItem value="competitor_analysis">การวิเคราะห์คู่แข่ง</SelectItem>
+                            <SelectItem value="customer_journey_map">แผนที่เส้นทางลูกค้า</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Group Members */}
+                      <div>
+                        <Label className="text-gray-800 font-bold mb-2">สมาชิกกลุ่ม</Label>
+                        <div className="flex gap-2 mb-3">
+                          <Input
+                            type="email"
+                            placeholder="อีเมลสมาชิกกลุ่ม"
+                            value={memberEmail}
+                            onChange={(e) => setMemberEmail(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
+                            className="flex-1 h-10 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleAddMember}
+                            disabled={addingMember}
+                            className="bg-[#00A9CE] hover:bg-[#008FB5] text-white font-bold"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            เพิ่ม
+                          </Button>
+                        </div>
+
+                        {/* Member List */}
+                        {formData.group_members.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.group_members.map((memberId, idx) => (
+                              <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border-2 border-[#00A9CE]/30">
+                                <span className="text-sm font-medium text-gray-900">สมาชิก {idx + 1}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMember(memberId)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </Card>
+              )}
+
               {/* Submit Buttons */}
               <div className="flex gap-4 pt-4">
                 <Button
