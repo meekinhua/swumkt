@@ -18,8 +18,9 @@ const AdminNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [stats, setStats] = useState(null);
-  const [subscriptions, setSubscriptions] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [usersWithNotifications, setUsersWithNotifications] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   
   // Form state
   const [sendMode, setSendMode] = useState('broadcast'); // broadcast | specific
@@ -29,6 +30,7 @@ const AdminNotifications = () => {
   const [url, setUrl] = useState('/');
   const [notificationType, setNotificationType] = useState('custom');
   const [searchQuery, setSearchQuery] = useState('');
+  const [userSearchDebounce, setUserSearchDebounce] = useState('');
 
   useEffect(() => {
     if (user && user.role === 'admin') {
