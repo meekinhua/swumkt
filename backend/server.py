@@ -278,6 +278,9 @@ class ContentCreate(BaseModel):
     featured_image: Optional[str] = None
     status: ContentStatus = ContentStatus.DRAFT
     attachments: Optional[List[dict]] = Field(default_factory=list, description="File attachments")
+    is_zbs04_assignment: bool = False
+    zbs04_assignment_type: Optional[str] = None
+    group_members: List[str] = Field(default_factory=list)
 
 class ContentUpdate(BaseModel):
     title: Optional[str] = None
@@ -287,6 +290,7 @@ class ContentUpdate(BaseModel):
     featured_image: Optional[str] = None
     status: Optional[ContentStatus] = None
     attachments: Optional[List[dict]] = None
+    group_members: Optional[List[str]] = None
 
 class ZBS04AssignmentType(str, Enum):
     CUSTOMER_BEHAVIOR = "customer_behavior_analysis"
