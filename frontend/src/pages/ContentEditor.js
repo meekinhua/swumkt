@@ -135,6 +135,8 @@ const ContentEditor = () => {
       ...formData,
       group_members: formData.group_members.filter(id => id !== memberId)
     });
+    setMemberDetails(memberDetails.filter(member => member.id !== memberId));
+    toast.success('ลบสมาชิกแล้ว');
   };
 
   const handleFileUpload = async (e) => {
