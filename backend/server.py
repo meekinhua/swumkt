@@ -821,6 +821,14 @@ async def update_demographics(
     user_obj = User(**updated_user)
     return user_obj.demographics_profile or DemographicsProfile()
 
+@api_router.get("/users/{user_id}", response_model=UserProfile)
+async def get_user_by_id(user_id: str):
+    """Get public user profile by ID"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserProfile(**User(**user).model_dump())
+
 @api_router.get("/user/rating", response_model=UserRating)
 async def get_user_rating(current_user: User = Depends(get_current_user)):
     """Get user's rating and statistics"""
