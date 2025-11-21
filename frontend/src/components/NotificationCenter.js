@@ -178,12 +178,12 @@ const NotificationCenter = () => {
         <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-2xl border-2 border-gray-200 z-50 max-h-[600px] sm:max-h-[80vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-3 sm:p-4 border-b-2 border-gray-200">
-            <div>
-              <h3 className="text-lg font-black text-gray-900">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base sm:text-lg font-black text-gray-900 truncate">
                 {t('notifications.title') || 'การแจ้งเตือน'}
               </h3>
               {unreadCount > 0 && (
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600">
                   {unreadCount} รายการใหม่
                 </p>
               )}
@@ -191,10 +191,11 @@ const NotificationCenter = () => {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="flex items-center gap-1 text-sm text-[#00A9CE] hover:text-[#008FB5] font-semibold"
+                className="flex items-center gap-1 text-xs sm:text-sm text-[#00A9CE] hover:text-[#008FB5] font-semibold flex-shrink-0 ml-2"
               >
-                <CheckCheck className="w-4 h-4" />
-                อ่านทั้งหมด
+                <CheckCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">อ่านทั้งหมด</span>
+                <span className="sm:hidden">อ่าน</span>
               </button>
             )}
           </div>
