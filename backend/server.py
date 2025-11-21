@@ -1525,7 +1525,7 @@ sections:
             print(f"Problematic SDL: {sdl_text[:1000]}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to parse AI-generated survey format. Please try again or use templates instead."
+                detail="Failed to parse AI-generated survey format. Please try again or use templates instead."
             )
         
         # Validate survey
@@ -1536,7 +1536,7 @@ sections:
             print(f"Validation errors: {errors}")
             raise HTTPException(
                 status_code=500,
-                detail=f"AI-generated survey is incomplete. Please try again or use templates."
+                detail="AI-generated survey is incomplete. Please try again or use templates."
             )
         
         # Add user info
@@ -2686,7 +2686,7 @@ Target Language for Labels: {request.target_language}
             logging.error(f"Image generation failed for model {selected_model}: {str(e)}")
             raise HTTPException(
                 status_code=500, 
-                detail=f"Image generation failed. Please try again or contact support if the issue persists."
+                detail="Image generation failed. Please try again or contact support if the issue persists."
             )
         
         if not images or len(images) == 0:
@@ -5050,7 +5050,7 @@ async def format_academic_text(
                     
                     if await extract_references_to_bib(temp_input_path, temp_bib_path):
                         bib_file = temp_bib_path
-                        logging.info(f"Created bibliography file for citation processing")
+                        logging.info("Created bibliography file for citation processing")
                     else:
                         logging.warning("Could not extract references to .bib, continuing without bibliography")
                 except Exception as e:
@@ -5138,7 +5138,7 @@ async def format_academic_text(
                 summary += f"📊 วิเคราะห์เอกสาร: {word_count:,} คำ, {headings_count} headings, {tables_count} tables\n"
                 if template_file:
                     summary += f"🎨 ใช้ Custom Template: {request.journal_name} (AI-generated จาก author guidelines)\n"
-                summary += f"⚡ เวลาประมวลผล: ~2-5 วินาที (Pandoc library-based)"
+                summary += "⚡ เวลาประมวลผล: ~2-5 วินาที (Pandoc library-based)"
                 
                 return FormatEditorResponse(
                     formatted_text=formatted_text[:5000] + "..." if len(formatted_text) > 5000 else formatted_text,
@@ -5176,7 +5176,7 @@ async def format_academic_text(
                     
                     if await extract_references_to_bib(temp_input.name, temp_bib_path):
                         bib_file = temp_bib_path
-                        logging.info(f"Created bibliography file for citation processing")
+                        logging.info("Created bibliography file for citation processing")
                     else:
                         logging.warning("Could not extract references to .bib, continuing without bibliography")
                 except Exception as e:
@@ -5253,7 +5253,7 @@ async def format_academic_text(
                 summary = f"✅ ข้อความถูกแก้ไขด้วย Pandoc และ {format_style} citation style\n"
                 if template_file:
                     summary += f"🎨 ใช้ Custom Template: {request.journal_name} (AI-generated จาก author guidelines)\n"
-                summary += f"⚡ เวลาประมวลผล: ~2-5 วินาที (Pandoc library-based)"
+                summary += "⚡ เวลาประมวลผล: ~2-5 วินาที (Pandoc library-based)"
                 
                 return FormatEditorResponse(
                     formatted_text=formatted_text,
