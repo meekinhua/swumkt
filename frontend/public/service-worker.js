@@ -82,9 +82,10 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notification support
+// Push notification support - iOS compatible
 self.addEventListener('push', (event) => {
-  console.log('Push event received:', event);
+  console.log('🔔 [SW] Push event received');
+  console.log('🔔 [SW] Event data exists:', !!event.data);
   
   let notificationData = {
     title: 'SWUMKT Portal',
@@ -93,14 +94,20 @@ self.addEventListener('push', (event) => {
     badge: 'https://customer-assets.emergentagent.com/job_swumkt-journey-map/artifacts/1psb2wj1_SWU_MKT%20Stacked%20Logo%20-%20Edited.png',
     vibrate: [200, 100, 200],
     data: { url: '/' },
-    requireInteraction: false,
-    tag: 'swumkt-notification'
+    tag: 'swumkt-notification',
+    // iOS requires this for notifications to show
+    requireInteraction: true,
+    // iOS specific
+    silent: false,
+    renotify: true
   };
 
   // Parse push data if available
   if (event.data) {
     try {
       const payload = event.data.json();
+      console.log('🔔 [SW] Parsed payload:', payload);
+      
       notificationData = {
         ...notificationData,
         title: payload.title || notificationData.title,
@@ -108,25 +115,41 @@ self.addEventListener('push', (event) => {
         icon: payload.icon || notificationData.icon,
         data: payload.data || notificationData.data,
         tag: payload.tag || notificationData.tag,
-        requireInteraction: payload.requireInteraction || false
+        requireInteraction: payload.requireInteraction !== undefined ? payload.requireInteraction : true
       };
     } catch (e) {
-      console.log('Error parsing push data:', e);
-      notificationData.body = event.data.text();
+      console.error('🔔 [SW] Error parsing push data:', e);
+      try {
+        notificationData.body = event.data.text();
+      } catch (textError) {
+        console.error('🔔 [SW] Error getting text:', textError);
+      }
     }
+  } else {
+    console.warn('🔔 [SW] No data in push event');
   }
 
-  event.waitUntil(
-    self.registration.showNotification(notificationData.title, {
-      body: notificationData.body,
-      icon: notificationData.icon,
-      badge: notificationData.badge,
-      vibrate: notificationData.vibrate,
-      data: notificationData.data,
-      tag: notificationData.tag,
-      requireInteraction: notificationData.requireInteraction
-    })
-  );
+  console.log('🔔 [SW] Showing notification:', notificationData.title);
+
+  const promise = self.registration.showNotification(notificationData.title, {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    vibrate: notificationData.vibrate,
+    data: notificationData.data,
+    tag: notificationData.tag,
+    requireInteraction: notificationData.requireInteraction,
+    silent: notificationData.silent,
+    renotify: notificationData.renotify,
+    // iOS specific options
+    actions: [] // Empty actions array for iOS compatibility
+  }).then(() => {
+    console.log('✅ [SW] Notification shown successfully');
+  }).catch((error) => {
+    console.error('❌ [SW] Error showing notification:', error);
+  });
+
+  event.waitUntil(promise);
 });
 
 // Notification click handler
