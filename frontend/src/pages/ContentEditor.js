@@ -291,7 +291,7 @@ const ContentEditor = () => {
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
-      <Navigation showMarketResearchButton={true} showContentButton={true} showProfileButton={true} />
+      <Navigation />
 
       {/* Editor */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
