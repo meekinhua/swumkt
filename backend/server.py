@@ -5798,6 +5798,29 @@ async def get_notification_stats(
 
 # ============ ADMIN USER MANAGEMENT ============
 
+# Get admin list (MUST come before /admin/users to avoid route conflict)
+@api_router.get("/admin/users/admins")
+async def get_admin_list(
+    current_user: User = Depends(get_admin_user)
+):
+    """Get list of all admins"""
+    admins = await db.users.find(
+        {"role": UserRole.ADMIN},
+        {"_id": 0, "password": 0}
+    ).to_list(None)
+    
+    # Mark hard-coded admins
+    HARDCODED_ADMINS = ["intaka@hotmail.com", "intaka@gmail.com"]
+    for admin in admins:
+        admin["is_hardcoded_admin"] = admin.get("email", "").lower() in [email.lower() for email in HARDCODED_ADMINS]
+        admin["can_be_demoted"] = not admin["is_hardcoded_admin"]
+    
+    return {
+        "admins": admins,
+        "total": len(admins),
+        "hardcoded_admins": HARDCODED_ADMINS
+    }
+
 # Get all users with admin filter
 @api_router.get("/admin/users")
 async def get_all_users(
