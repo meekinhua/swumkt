@@ -109,6 +109,9 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* ZBS04 Assignments Section - Only show for enrolled students */}
+        {user?.zbs04_enrolled && <ZBS04Assignments />}
+
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="content" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2 bg-white/98 border-2 border-gray-300">
