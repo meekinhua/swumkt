@@ -278,13 +278,13 @@ const AdminNotifications = () => {
               <label htmlFor="body" className="block text-sm font-bold text-gray-900 mb-2">
                 ข้อความ *
               </label>
-              <Textarea
+              <textarea
                 id="body"
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="พิมพ์ข้อความที่ต้องการส่ง..."
                 rows={4}
-                className="border-2 border-gray-300 focus:border-[#00A9CE]"
+                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
               />
             </div>
 
