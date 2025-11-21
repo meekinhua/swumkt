@@ -87,6 +87,10 @@ class NotificationService:
                 "actions": []
             })
             
+            # Log subscription endpoint for debugging
+            endpoint = subscription_info.get("endpoint", "")
+            logger.info(f"📤 Sending to endpoint: {endpoint[:60]}...")
+            
             # Send push notification
             response = webpush(
                 subscription_info=subscription_info,
@@ -97,7 +101,8 @@ class NotificationService:
                 }
             )
             
-            logger.info(f"Push notification sent successfully: {response.status_code}")
+            logger.info(f"✅ Push notification sent successfully: HTTP {response.status_code}")
+            logger.info(f"📱 Response: {response.text if hasattr(response, 'text') else 'No response text'}")
             return True
             
         except WebPushException as e:
