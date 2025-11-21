@@ -131,7 +131,7 @@ const RegisterPage = () => {
                 id="password"
                 type="password"
                 data-testid="register-password-input"
-                placeholder="Min 6 characters"
+                placeholder={t('auth.passwordPlaceholder')}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
