@@ -258,8 +258,7 @@ const NotificationSettings = () => {
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
                   <p className="text-xs text-yellow-800">
                     <strong>⚠️ หมายเหตุ:</strong> หากติดตั้งแล้วแต่ยังเห็นข้อความนี้ 
-                    ให้ปิด Safari ทั้งหมด แล้วเปิดแอปจาก Home Screen อีกครั้ง 
-                    หรือคลิก "Force Hide Warning" ใน Debug Info ข้างล่าง
+                    ให้ปิด Safari ทั้งหมด แล้วเปิดแอปจาก Home Screen อีกครั้ง
                   </p>
                 </div>
               </div>
