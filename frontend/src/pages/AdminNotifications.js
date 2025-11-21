@@ -48,17 +48,8 @@ const AdminNotifications = () => {
       });
       setStats(statsResponse.data);
 
-      // Load subscriptions
-      const subsResponse = await axios.get(`${API}/admin/notifications/subscriptions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSubscriptions(subsResponse.data.subscriptions);
-
-      // Load all users
-      const usersResponse = await axios.get(`${API}/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUsers(usersResponse.data.users || []);
+      // Load users with notification subscriptions
+      await loadUsersWithNotifications();
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('ไม่สามารถโหลดข้อมูลได้');
@@ -66,6 +57,44 @@ const AdminNotifications = () => {
       setLoading(false);
     }
   };
+
+  const loadUsersWithNotifications = async (search = '') => {
+    setLoadingUsers(true);
+    try {
+      const response = await axios.get(
+        `${API}/admin/notifications/users-with-subscriptions`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            search: search || undefined,
+            limit: 1000 // Load more users
+          }
+        }
+      );
+      setUsersWithNotifications(response.data.users || []);
+      setTotalUsers(response.data.total || 0);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast.error('ไม่สามารถโหลดรายชื่อผู้ใช้ได้');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setUserSearchDebounce(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Load users when search changes
+  useEffect(() => {
+    if (sendMode === 'specific') {
+      loadUsersWithNotifications(userSearchDebounce);
+    }
+  }, [userSearchDebounce, sendMode]);
 
   const handleSendNotification = async () => {
     if (!title || !body) {
