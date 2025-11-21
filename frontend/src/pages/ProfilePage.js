@@ -19,6 +19,8 @@ const ProfilePage = () => {
   const [demographics, setDemographics] = useState(null);
   const [rating, setRating] = useState(null);
   const [editingDemographics, setEditingDemographics] = useState(false);
+  const [zbs04Loading, setZbs04Loading] = useState(false);
+  const [zbs04Status, setZbs04Status] = useState(user?.zbs04_enrolled || false);
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     bio: user?.bio || '',
