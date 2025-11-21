@@ -1746,6 +1746,43 @@ async def add_contributor(
     
     return {"message": "Contributor added successfully"}
 
+# ZBS04 Assignment endpoints
+@api_router.get("/zbs04/assignments")
+async def get_zbs04_assignments(current_user: User = Depends(get_current_user)):
+    """Get user's ZBS04 assignment status"""
+    if not current_user.zbs04_enrolled:
+        raise HTTPException(status_code=403, detail="User not enrolled in ZBS04")
+    
+    # Get all assignment types
+    assignment_types = [
+        ZBS04AssignmentType.CUSTOMER_BEHAVIOR,
+        ZBS04AssignmentType.CUSTOMER_PERCEPTION,
+        ZBS04AssignmentType.COMPETITOR_ANALYSIS,
+        ZBS04AssignmentType.CUSTOMER_JOURNEY
+    ]
+    
+    assignments = []
+    for assignment_type in assignment_types:
+        # Check if user has submitted this assignment
+        content = await db.contents.find_one({
+            "is_zbs04_assignment": True,
+            "zbs04_assignment_type": assignment_type.value,
+            "$or": [
+                {"created_by": current_user.id},
+                {"group_members": current_user.id}
+            ]
+        }, {"_id": 0})
+        
+        assignments.append({
+            "type": assignment_type.value,
+            "submitted": content is not None,
+            "content_id": content.get('id') if content else None,
+            "title": content.get('title') if content else None,
+            "group_members": content.get('group_members', []) if content else []
+        })
+    
+    return assignments
+
 # Translation Models
 class TranslationRequest(BaseModel):
     text: str
