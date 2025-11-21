@@ -288,6 +288,12 @@ class ContentUpdate(BaseModel):
     status: Optional[ContentStatus] = None
     attachments: Optional[List[dict]] = None
 
+class ZBS04AssignmentType(str, Enum):
+    CUSTOMER_BEHAVIOR = "customer_behavior_analysis"
+    CUSTOMER_PERCEPTION = "customer_perception_analysis"
+    COMPETITOR_ANALYSIS = "competitor_analysis"
+    CUSTOMER_JOURNEY = "customer_journey_map"
+
 class Content(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -305,6 +311,9 @@ class Content(BaseModel):
     views: int = 0
     journey_map_metadata: Optional[dict] = None
     attachments: Optional[List[dict]] = Field(default_factory=list, description="File attachments")
+    is_zbs04_assignment: bool = False
+    zbs04_assignment_type: Optional[ZBS04AssignmentType] = None
+    group_members: List[str] = Field(default_factory=list, description="User IDs of group members")
 
 class Comment(BaseModel):
     model_config = ConfigDict(extra="ignore")
