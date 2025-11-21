@@ -532,8 +532,25 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return User(**user_doc)
 
 async def get_admin_user(current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.ADMIN:
+    # Hard-coded admin emails
+    HARDCODED_ADMINS = ["intaka@hotmail.com", "intaka@gmail.com"]
+    
+    # Check if user is admin by role OR hard-coded email
+    is_admin = (current_user.role == UserRole.ADMIN or 
+                current_user.email.lower() in [email.lower() for email in HARDCODED_ADMINS])
+    
+    if not is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Auto-promote hard-coded admins if not already admin
+    if current_user.email.lower() in [email.lower() for email in HARDCODED_ADMINS]:
+        if current_user.role != UserRole.ADMIN:
+            await db.users.update_one(
+                {"id": current_user.id},
+                {"$set": {"role": UserRole.ADMIN}}
+            )
+            current_user.role = UserRole.ADMIN
+    
     return current_user
 
 # ============ AUTH ROUTES ============
