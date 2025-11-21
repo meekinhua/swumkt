@@ -290,6 +290,8 @@ class ContentUpdate(BaseModel):
     featured_image: Optional[str] = None
     status: Optional[ContentStatus] = None
     attachments: Optional[List[dict]] = None
+    is_zbs04_assignment: Optional[bool] = None
+    zbs04_assignment_type: Optional[str] = None
     group_members: Optional[List[str]] = None
 
 class ZBS04AssignmentType(str, Enum):
