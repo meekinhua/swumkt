@@ -582,11 +582,25 @@ const ContentEditor = () => {
 
                       {/* Group Members */}
                       <div>
-                        <Label className="text-gray-800 font-bold mb-2">สมาชิกกลุ่ม</Label>
+                        <Label className="text-gray-800 font-bold mb-2">
+                          {t('content.groupMembers') || 'สมาชิกกลุ่ม'}
+                        </Label>
+                        
+                        {/* Show Creator First (Cannot be removed) */}
+                        <div className="mb-3 p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border-2 border-green-300">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-gray-900">{user.full_name}</span>
+                            <span className="text-xs text-gray-500">({user.email})</span>
+                            <span className="ml-auto text-xs px-2 py-0.5 bg-green-600 text-white rounded-full font-bold">
+                              {t('content.creator') || 'ผู้สร้าง'}
+                            </span>
+                          </div>
+                        </div>
+
                         <div className="flex gap-2 mb-3">
                           <Input
                             type="email"
-                            placeholder="อีเมลสมาชิกกลุ่ม"
+                            placeholder={t('content.memberEmailPlaceholder') || 'อีเมลสมาชิกกลุ่ม'}
                             value={memberEmail}
                             onChange={(e) => setMemberEmail(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
@@ -599,26 +613,28 @@ const ContentEditor = () => {
                             className="bg-[#00A9CE] hover:bg-[#008FB5] text-white font-bold"
                           >
                             <Plus className="w-4 h-4 mr-1" />
-                            เพิ่ม
+                            {t('content.addMember') || 'เพิ่ม'}
                           </Button>
                         </div>
 
-                        {/* Member List */}
-                        {memberDetails.length > 0 && (
+                        {/* Member List (excluding creator) */}
+                        {memberDetails.filter(m => m.id !== user.id).length > 0 && (
                           <div className="flex flex-wrap gap-2">
-                            {memberDetails.map((member, idx) => (
-                              <div key={member.id} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border-2 border-[#00A9CE]/30">
-                                <span className="text-sm font-bold text-gray-900">{member.full_name}</span>
-                                <span className="text-xs text-gray-500">({member.email})</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveMember(member.id)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
+                            {memberDetails
+                              .filter(m => m.id !== user.id)
+                              .map((member) => (
+                                <div key={member.id} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border-2 border-[#00A9CE]/30">
+                                  <span className="text-sm font-bold text-gray-900">{member.full_name}</span>
+                                  <span className="text-xs text-gray-500">({member.email})</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMember(member.id)}
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
                           </div>
                         )}
                       </div>
