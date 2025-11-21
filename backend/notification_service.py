@@ -84,20 +84,35 @@ class NotificationService:
                 # iOS specific
                 "silent": False,
                 "renotify": True,
-                "actions": []
+                "actions": [],
+                "vibrate": [200, 100, 200]
             })
             
             # Log subscription endpoint for debugging
             endpoint = subscription_info.get("endpoint", "")
+            is_ios = "push.apple.com" in endpoint
             logger.info(f"📤 Sending to endpoint: {endpoint[:60]}...")
+            logger.info(f"📱 Detected platform: {'iOS Safari' if is_ios else 'Other'}")
             
-            # Send push notification
+            # iOS-specific headers for maximum compatibility
+            headers = {
+                "Urgency": "high",  # Critical for iOS to show notification immediately
+                "Topic": tag  # Helps iOS group notifications
+            }
+            
+            logger.info(f"📮 Push headers: {headers}")
+            logger.info(f"📦 Payload size: {len(payload)} bytes")
+            
+            # Send push notification with iOS-optimized settings
             response = webpush(
                 subscription_info=subscription_info,
                 data=payload,
+                ttl=3600,  # 1 hour TTL for better iOS delivery
+                headers=headers,
                 vapid_private_key=self.vapid_private_key,
                 vapid_claims={
-                    "sub": self.vapid_email
+                    "sub": self.vapid_email,
+                    "aud": endpoint.split('/')[0] + '//' + endpoint.split('/')[2]  # Proper audience
                 }
             )
             
