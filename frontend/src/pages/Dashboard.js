@@ -175,18 +175,24 @@ const Dashboard = () => {
               <Card 
                 className="p-6 bg-white/98 border-2 border-[#00A9CE]/20 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer"
                 onClick={() => navigate('/market-research')}
+                data-testid="market-research-card"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-[#005A73] to-[#00A9CE] text-white">
-                    <TrendingUp className="w-8 h-8" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-[#005A73] to-[#00A9CE] text-white">
+                      <TrendingUp className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">{t('features.marketResearch.title')}</h3>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">{t('features.marketResearch.title')}</h3>
+                  <span className="badge-success text-sm px-3 py-1.5 rounded-full">
+                    {t('features.marketResearch.status')}
+                  </span>
                 </div>
                 <p className="text-gray-700 mb-4 font-medium">
                   {t('features.marketResearch.description')}
                 </p>
                 <Button className="w-full bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold">
-                  เริ่มใช้งาน
+                  {t('marketResearch.getStarted')}
                 </Button>
               </Card>
 
