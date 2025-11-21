@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, User, TrendingUp, Award, Edit } from 'lucide-react';
+import { ArrowLeft, Save, User, TrendingUp, Award, Edit, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import UserTypeBadge from '@/components/UserTypeBadge';
