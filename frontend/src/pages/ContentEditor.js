@@ -28,11 +28,16 @@ const ContentEditor = () => {
     tags: [],
     featured_image: '',
     status: 'draft',
-    attachments: []
+    attachments: [],
+    is_zbs04_assignment: false,
+    zbs04_assignment_type: '',
+    group_members: []
   });
   const [tagInput, setTagInput] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [memberEmail, setMemberEmail] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
 
   useEffect(() => {
     if (id) {
