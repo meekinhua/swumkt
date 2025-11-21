@@ -90,6 +90,11 @@
     "studentId": "Student ID (Optional)",
     "graduationYear": "Graduation Year",
     "creating": "Creating account...",
+    "welcomeBadge": "Welcome Back",
+    "continueWithGoogle": "Continue with Google",
+    "googleLoginSuccess": "Successfully signed in with Google!",
+    "googleLoginError": "Unable to sign in with Google",
+    "googleLoginLoading": "Loading Google Sign-In...",
     "roles": {
       "admin": "Administrator",
       "alumni": "Alumni",
