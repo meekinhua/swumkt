@@ -198,19 +198,20 @@ const ContentDetail = () => {
                 <Eye className="w-4 h-4 text-[#00A9CE]" />
                 <span data-testid="content-views">{content.views || 0} ครั้งที่เข้าชม</span>
               </div>
-              {(content.is_zbs04_assignment 
-                ? (content.creatorDetails || (content.group_members && content.group_members.length > 0))
-                : (content.contributors && content.contributors.length > 0)) && (
+              {(content.creatorDetails || (content.group_members && content.group_members.length > 0)) && (
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4 text-[#00A9CE]" />
                   <span>
-                    {content.is_zbs04_assignment 
-                      ? `${1 + (content.group_members?.length || 0)} ${t('content.creators') || 'ผู้สร้าง'}`
-                      : `${content.contributors.length} ${t('content.contributors') || 'ผู้มีส่วนร่วม'}`
-                    }
+                    {1 + (content.group_members?.length || 0)} {t('content.creators') || 'ผู้สร้าง'}
                   </span>
                 </div>
               )}
+              <div className="flex items-center gap-1">
+                <MessageCircle className="w-4 h-4 text-[#00A9CE]" />
+                <span data-testid="content-comments-count">
+                  {comments.length} {t('content.comments') || 'ความคิดเห็น'}
+                </span>
+              </div>
             </div>
           </div>
 
