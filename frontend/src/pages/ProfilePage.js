@@ -91,14 +91,24 @@ const ProfilePage = () => {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/dashboard')} 
-          className="mb-6 text-gray-800 hover:text-[#00A9CE]"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/dashboard')} 
+            className="text-gray-800 hover:text-[#00A9CE]"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <Button
+            onClick={() => navigate('/profile/notifications')}
+            variant="outline"
+            className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10 font-bold"
+          >
+            <Bell className="w-4 h-4 mr-2" />
+            Notification Settings
+          </Button>
+        </div>
 
         {/* User Type & Rating Card */}
         <Card className="p-6 bg-white/98 shadow-xl border-2 border-gray-300 mb-6">
