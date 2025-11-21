@@ -175,9 +175,9 @@ const NotificationCenter = () => {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border-2 border-gray-200 z-50 max-h-[600px] flex flex-col">
+        <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-2xl border-2 border-gray-200 z-50 max-h-[600px] sm:max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b-2 border-gray-200">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b-2 border-gray-200">
             <div>
               <h3 className="text-lg font-black text-gray-900">
                 {t('notifications.title') || 'การแจ้งเตือน'}
