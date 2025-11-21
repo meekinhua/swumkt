@@ -18,9 +18,29 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export const pushNotifications = {
+  // Detect iOS
+  isIOS: () => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  },
+
+  // Detect if running as standalone PWA
+  isStandalone: () => {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone ||
+           document.referrer.includes('android-app://');
+  },
+
   // Check if push notifications are supported
   isSupported: () => {
-    return 'serviceWorker' in navigator && 'PushManager' in window;
+    const hasServiceWorker = 'serviceWorker' in navigator;
+    const hasPushManager = 'PushManager' in window;
+    
+    // On iOS, only supported if installed as PWA
+    if (pushNotifications.isIOS()) {
+      return hasServiceWorker && hasPushManager && pushNotifications.isStandalone();
+    }
+    
+    return hasServiceWorker && hasPushManager;
   },
 
   // Get notification permission status
@@ -28,6 +48,12 @@ export const pushNotifications = {
     if (!('Notification' in window)) {
       return 'unsupported';
     }
+    
+    // iOS Safari (not PWA) doesn't support notifications
+    if (pushNotifications.isIOS() && !pushNotifications.isStandalone()) {
+      return 'ios-not-installed';
+    }
+    
     return Notification.permission;
   },
 
