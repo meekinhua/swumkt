@@ -25,9 +25,18 @@ export const pushNotifications = {
 
   // Detect if running as standalone PWA
   isStandalone: () => {
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone ||
-           document.referrer.includes('android-app://');
+    // Check multiple conditions for PWA
+    const isDisplayStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isNavigatorStandalone = window.navigator.standalone === true;
+    const isAndroidApp = document.referrer.includes('android-app://');
+    
+    // iOS specific: check if there's no Safari UI
+    const isIOSStandalone = pushNotifications.isIOS() && 
+                           (isNavigatorStandalone || 
+                            isDisplayStandalone ||
+                            !window.navigator.standalone === false); // explicit check
+    
+    return isDisplayStandalone || isNavigatorStandalone || isAndroidApp || isIOSStandalone;
   },
 
   // Check if push notifications are supported
