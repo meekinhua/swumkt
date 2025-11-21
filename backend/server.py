@@ -749,6 +749,7 @@ async def update_profile(
     avatar_url: Optional[str] = None,
     student_id: Optional[str] = None,
     graduation_year: Optional[int] = None,
+    zbs04_enrolled: Optional[bool] = None,
     current_user: User = Depends(get_current_user)
 ):
     update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
@@ -762,6 +763,8 @@ async def update_profile(
         update_data["student_id"] = student_id
     if graduation_year:
         update_data["graduation_year"] = graduation_year
+    if zbs04_enrolled is not None:
+        update_data["zbs04_enrolled"] = zbs04_enrolled
     
     await db.users.update_one({"id": current_user.id}, {"$set": update_data})
     
