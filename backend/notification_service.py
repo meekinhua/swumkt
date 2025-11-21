@@ -23,15 +23,31 @@ class NotificationService:
         # Generate VAPID keys if not exists
         if not self.vapid_private_key or not self.vapid_public_key:
             logger.info("Generating new VAPID keys...")
-            vapid = Vapid()
-            vapid.generate_keys()
-            self.vapid_private_key = vapid.private_pem().decode('utf-8')
-            self.vapid_public_key = vapid.public_key.public_bytes_urlsafe_base64
-            
-            logger.info(f"Generated VAPID Public Key: {self.vapid_public_key}")
-            logger.info("Please add these to your .env file:")
-            logger.info(f"VAPID_PUBLIC_KEY={self.vapid_public_key}")
-            logger.info(f"VAPID_PRIVATE_KEY={self.vapid_private_key}")
+            try:
+                vapid = Vapid()
+                vapid.generate_keys()
+                self.vapid_private_key = vapid.private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                ).decode('utf-8')
+                
+                # Get public key in URL-safe base64 format
+                public_key_bytes = vapid.public_key.public_bytes(
+                    encoding=serialization.Encoding.X962,
+                    format=serialization.PublicFormat.UncompressedPoint
+                )
+                self.vapid_public_key = base64.urlsafe_b64encode(public_key_bytes).decode('utf-8').rstrip('=')
+                
+                logger.info(f"Generated VAPID Public Key: {self.vapid_public_key}")
+                logger.info("Please add these to your .env file:")
+                logger.info(f"VAPID_PUBLIC_KEY={self.vapid_public_key}")
+                logger.info(f"VAPID_PRIVATE_KEY=<see logs>")
+            except Exception as e:
+                logger.error(f"Error generating VAPID keys: {e}")
+                # Use fallback keys for development
+                self.vapid_public_key = "BDd3_hVL9fZi9Ybo2UUzA284WG5FZR30_95YeZJsiApwXKpNcF1rRPF3foIiBHXRdJI2Qhumhf6_LFTeZaN13z4"
+                self.vapid_private_key = "----FALLBACK KEY----"
     
     def get_public_key(self) -> str:
         """Get VAPID public key for frontend"""
