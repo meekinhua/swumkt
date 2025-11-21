@@ -41,7 +41,7 @@ const GoogleLoginButton = ({ redirectUrl = '/dashboard', className = "", onSucce
       // Use AuthContext googleLogin function
       const userData = await googleLogin(response.credential);
       
-      toast.success('เข้าสู่ระบบด้วย Google สำเร็จ!');
+      toast.success(t('auth.googleLoginSuccess'));
       
       if (onSuccess) {
         onSuccess({ user: userData });
@@ -50,7 +50,7 @@ const GoogleLoginButton = ({ redirectUrl = '/dashboard', className = "", onSucce
       }
     } catch (error) {
       console.error('Google login error:', error);
-      toast.error('ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+      toast.error(t('auth.googleLoginError'));
     }
   };
   
@@ -58,7 +58,7 @@ const GoogleLoginButton = ({ redirectUrl = '/dashboard', className = "", onSucce
     if (window.google) {
       window.google.accounts.id.prompt(); // Show One Tap UI
     } else {
-      toast.error('กำลังโหลด Google Sign-In...');
+      toast.error(t('auth.googleLoginLoading'));
     }
   };
 
