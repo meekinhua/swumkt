@@ -28,6 +28,7 @@ const AdminNotifications = () => {
   const [body, setBody] = useState('');
   const [url, setUrl] = useState('/');
   const [notificationType, setNotificationType] = useState('custom');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (user && user.role === 'admin') {
