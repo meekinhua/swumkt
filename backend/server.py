@@ -5796,6 +5796,110 @@ async def get_notification_stats(
         "notifications_by_type": by_type
     }
 
+# ============ ADMIN USER MANAGEMENT ============
+
+# Get all users with admin filter
+@api_router.get("/admin/users")
+async def get_all_users(
+    role: Optional[str] = None,
+    current_user: User = Depends(get_admin_user)
+):
+    """Get all users (admin only)"""
+    query = {}
+    if role:
+        query["role"] = role
+    
+    users = await db.users.find(query, {"_id": 0, "password": 0}).to_list(None)
+    
+    # Mark hard-coded admins
+    HARDCODED_ADMINS = ["intaka@hotmail.com", "intaka@gmail.com"]
+    for user in users:
+        user["is_hardcoded_admin"] = user.get("email", "").lower() in [email.lower() for email in HARDCODED_ADMINS]
+    
+    return {"users": users, "total": len(users)}
+
+# Promote user to admin
+@api_router.put("/admin/users/{user_id}/promote")
+async def promote_to_admin(
+    user_id: str,
+    current_user: User = Depends(get_admin_user)
+):
+    """Promote a user to admin role"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user["role"] == UserRole.ADMIN:
+        raise HTTPException(status_code=400, detail="User is already an admin")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "role": UserRole.ADMIN,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+    
+    return {"message": f"User {user['full_name']} promoted to admin"}
+
+# Demote admin to regular user
+@api_router.put("/admin/users/{user_id}/demote")
+async def demote_from_admin(
+    user_id: str,
+    current_user: User = Depends(get_admin_user)
+):
+    """Demote an admin to regular user"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if user is hard-coded admin
+    HARDCODED_ADMINS = ["intaka@hotmail.com", "intaka@gmail.com"]
+    if user.get("email", "").lower() in [email.lower() for email in HARDCODED_ADMINS]:
+        raise HTTPException(status_code=400, detail="Cannot demote hard-coded admin")
+    
+    if user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=400, detail="User is not an admin")
+    
+    # Don't allow self-demotion
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot demote yourself")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "role": UserRole.PUBLIC_USER,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+    
+    return {"message": f"User {user['full_name']} demoted from admin"}
+
+# Get admin list
+@api_router.get("/admin/users/admins")
+async def get_admin_list(
+    current_user: User = Depends(get_admin_user)
+):
+    """Get list of all admins"""
+    admins = await db.users.find(
+        {"role": UserRole.ADMIN},
+        {"_id": 0, "password": 0}
+    ).to_list(None)
+    
+    # Mark hard-coded admins
+    HARDCODED_ADMINS = ["intaka@hotmail.com", "intaka@gmail.com"]
+    for admin in admins:
+        admin["is_hardcoded_admin"] = admin.get("email", "").lower() in [email.lower() for email in HARDCODED_ADMINS]
+        admin["can_be_demoted"] = not admin["is_hardcoded_admin"]
+    
+    return {
+        "admins": admins,
+        "total": len(admins),
+        "hardcoded_admins": HARDCODED_ADMINS
+    }
+
 # Include the router
 app.include_router(api_router)
 
