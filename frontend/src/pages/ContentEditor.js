@@ -64,7 +64,10 @@ const ContentEditor = () => {
         tags: content.tags || [],
         featured_image: content.featured_image || '',
         status: content.status,
-        attachments: content.attachments || []
+        attachments: content.attachments || [],
+        is_zbs04_assignment: content.is_zbs04_assignment || false,
+        zbs04_assignment_type: content.zbs04_assignment_type || '',
+        group_members: content.group_members || []
       });
     } catch (error) {
       console.error('Error fetching content:', error);
