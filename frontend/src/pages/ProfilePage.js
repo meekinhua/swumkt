@@ -98,7 +98,19 @@ const ProfilePage = () => {
         <Card className="p-6 bg-white/98 shadow-xl border-2 border-gray-300 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-4 bg-gradient-to-br from-[#005A73] to-[#00A9CE] rounded-full">
+              {/* Profile Picture - Google or Avatar URL */}
+              {user?.google_picture || user?.avatar_url ? (
+                <img 
+                  src={user?.google_picture || user?.avatar_url} 
+                  alt={user?.full_name}
+                  className="w-16 h-16 rounded-full border-4 border-[#00A9CE] object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className={`p-4 bg-gradient-to-br from-[#005A73] to-[#00A9CE] rounded-full ${user?.google_picture || user?.avatar_url ? 'hidden' : 'flex'}`}>
                 <User className="w-8 h-8 text-white" />
               </div>
               <div>
