@@ -374,7 +374,7 @@ const CustomerJourneyTool = () => {
       <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
         {/* Navigation */}
         <div className="fixed top-0 w-full z-50">
-          <Navigation showAdminButton={true} />
+          <Navigation />
         </div>
 
       {/* Main Content */}
