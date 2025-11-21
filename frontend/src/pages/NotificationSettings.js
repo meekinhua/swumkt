@@ -226,6 +226,17 @@ const NotificationSettings = () => {
                 <p>🖥️ matchMedia: <strong>{window.matchMedia('(display-mode: standalone)').matches ? 'Yes' : 'No'}</strong></p>
                 <p>🧭 navigator.standalone: <strong>{window.navigator.standalone ? 'Yes' : 'No'}</strong></p>
                 <p className="text-xs text-gray-500 break-all">User Agent: {navigator.userAgent.substring(0, 100)}...</p>
+                <Button
+                  onClick={() => {
+                    setIsIOS(pushNotifications.isIOS());
+                    setIsStandalone(pushNotifications.isStandalone());
+                    toast.success('Refreshed detection!');
+                  }}
+                  className="mt-2 text-xs"
+                  size="sm"
+                >
+                  🔄 Refresh Detection
+                </Button>
               </div>
             </details>
           </Card>
