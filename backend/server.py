@@ -829,6 +829,14 @@ async def get_user_by_id(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
     return UserProfile(**User(**user).model_dump())
 
+@api_router.get("/users/search", response_model=UserProfile)
+async def search_user_by_email(email: EmailStr):
+    """Search user by email"""
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserProfile(**User(**user).model_dump())
+
 @api_router.get("/user/rating", response_model=UserRating)
 async def get_user_rating(current_user: User = Depends(get_current_user)):
     """Get user's rating and statistics"""
