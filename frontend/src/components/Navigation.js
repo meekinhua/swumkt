@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Menu, X, User, LogOut, FileText, TrendingUp, Settings, ArrowLeft, BarChart } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import NotificationCenter from '@/components/NotificationCenter';
 
 const Navigation = ({ showAdminButton = false }) => {
   const navigate = useNavigate();
