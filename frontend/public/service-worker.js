@@ -84,24 +84,104 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification support
 self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data ? event.data.text() : 'New notification from SWUMKT',
+  console.log('Push event received:', event);
+  
+  let notificationData = {
+    title: 'SWUMKT Portal',
+    body: 'คุณมีการแจ้งเตือนใหม่',
     icon: 'https://customer-assets.emergentagent.com/job_swumkt-journey-map/artifacts/1psb2wj1_SWU_MKT%20Stacked%20Logo%20-%20Edited.png',
     badge: 'https://customer-assets.emergentagent.com/job_swumkt-journey-map/artifacts/1psb2wj1_SWU_MKT%20Stacked%20Logo%20-%20Edited.png',
     vibrate: [200, 100, 200],
-    tag: 'swumkt-notification',
-    requireInteraction: false
+    data: { url: '/' },
+    requireInteraction: false,
+    tag: 'swumkt-notification'
   };
 
+  // Parse push data if available
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      notificationData = {
+        ...notificationData,
+        title: payload.title || notificationData.title,
+        body: payload.body || notificationData.body,
+        icon: payload.icon || notificationData.icon,
+        data: payload.data || notificationData.data,
+        tag: payload.tag || notificationData.tag,
+        requireInteraction: payload.requireInteraction || false
+      };
+    } catch (e) {
+      console.log('Error parsing push data:', e);
+      notificationData.body = event.data.text();
+    }
+  }
+
   event.waitUntil(
-    self.registration.showNotification('SWUMKT Portal', options)
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      vibrate: notificationData.vibrate,
+      data: notificationData.data,
+      tag: notificationData.tag,
+      requireInteraction: notificationData.requireInteraction
+    })
   );
 });
 
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
+  console.log('Notification clicked:', event.notification);
   event.notification.close();
+
+  const urlToOpen = event.notification.data?.url || '/';
+
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        // Check if there's already a window open
+        for (let client of windowClients) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            return client.focus().then(client => {
+              // Navigate to the notification URL
+              if (client.navigate) {
+                return client.navigate(urlToOpen);
+              }
+            });
+          }
+        }
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
   );
 });
+
+// Background sync for badge counter
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'update-badge') {
+    event.waitUntil(updateBadgeCount());
+  }
+});
+
+async function updateBadgeCount() {
+  try {
+    // Get unread count from server or local storage
+    const badge = await getUnreadCount();
+    if ('setAppBadge' in navigator) {
+      if (badge > 0) {
+        navigator.setAppBadge(badge);
+      } else {
+        navigator.clearAppBadge();
+      }
+    }
+  } catch (error) {
+    console.log('Error updating badge:', error);
+  }
+}
+
+async function getUnreadCount() {
+  // This will be implemented with IndexedDB or fetch from server
+  return 0;
+}
