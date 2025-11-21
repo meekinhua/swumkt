@@ -36,8 +36,20 @@ const NotificationSettings = () => {
   useEffect(() => {
     if (user) {
       // Check iOS
-      setIsIOS(pushNotifications.isIOS());
-      setIsStandalone(pushNotifications.isStandalone());
+      const iosDetected = pushNotifications.isIOS();
+      const standaloneDetected = pushNotifications.isStandalone();
+      
+      // Debug log
+      console.log('🔍 Device Detection:', {
+        isIOS: iosDetected,
+        isStandalone: standaloneDetected,
+        matchMedia: window.matchMedia('(display-mode: standalone)').matches,
+        navigatorStandalone: window.navigator.standalone,
+        userAgent: navigator.userAgent
+      });
+      
+      setIsIOS(iosDetected);
+      setIsStandalone(standaloneDetected);
       
       loadSettings();
       loadNotifications();
