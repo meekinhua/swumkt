@@ -110,7 +110,8 @@ export const AuthProvider = ({ children }) => {
     const response = await axios.put(`${API}/auth/profile`, profileData, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    setUser(response.data);
+    // Create new object to force re-render
+    setUser({...response.data});
     return response.data;
   };
 
