@@ -227,26 +227,105 @@ const AdminNotifications = () => {
             {sendMode === 'specific' && (
               <div className="mb-4">
                 <label className="block text-sm font-bold text-gray-900 mb-2">
-                  เลือกผู้ใช้
+                  เลือกผู้ใช้ ({selectedUsers.length} คน)
                 </label>
-                <select
-                  multiple
-                  value={selectedUsers}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                    setSelectedUsers(selected);
-                  }}
-                  className="w-full p-2 border-2 border-gray-300 rounded-lg min-h-[150px]"
-                >
-                  {subscriptions.map((sub) => (
-                    <option key={sub.user_id} value={sub.user_id}>
-                      {sub.user?.full_name || 'Unknown'} ({sub.user?.email || 'No email'})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-600 mt-1">
-                  Hold Ctrl/Cmd เพื่อเลือกหลายคน (เลือกแล้ว: {selectedUsers.length})
-                </p>
+                
+                {/* Search Box */}
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="🔍 ค้นหาชื่อหรืออีเมล..."
+                  className="w-full p-2 mb-2 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
+                />
+                
+                {/* User List with Checkboxes */}
+                <div className="border-2 border-gray-300 rounded-lg max-h-[300px] overflow-y-auto p-3 space-y-2 bg-gray-50">
+                  {subscriptions
+                    .filter(sub => {
+                      const email = sub.user?.email || '';
+                      const name = sub.user?.name || sub.user?.full_name || '';
+                      const query = searchQuery.toLowerCase();
+                      return email.toLowerCase().includes(query) || name.toLowerCase().includes(query);
+                    })
+                    .map((sub) => {
+                      const userId = sub.user_id;
+                      const isSelected = selectedUsers.includes(userId);
+                      
+                      return (
+                        <label
+                          key={userId}
+                          className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            isSelected 
+                              ? 'bg-[#00A9CE] border-[#005A73] text-white' 
+                              : 'bg-white border-gray-200 hover:border-[#00A9CE]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedUsers([...selectedUsers, userId]);
+                              } else {
+                                setSelectedUsers(selectedUsers.filter(id => id !== userId));
+                              }
+                            }}
+                            className="w-5 h-5 mr-3"
+                          />
+                          <div className="flex-1">
+                            <div className="font-bold">
+                              {sub.user?.name || sub.user?.full_name || 'Unknown'}
+                            </div>
+                            <div className={`text-sm ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
+                              {sub.user?.email || 'No email'}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  
+                  {subscriptions.filter(sub => {
+                    const email = sub.user?.email || '';
+                    const name = sub.user?.name || sub.user?.full_name || '';
+                    const query = searchQuery.toLowerCase();
+                    return email.toLowerCase().includes(query) || name.toLowerCase().includes(query);
+                  }).length === 0 && (
+                    <div className="text-center text-gray-500 py-4">
+                      ไม่พบผู้ใช้
+                    </div>
+                  )}
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const filtered = subscriptions.filter(sub => {
+                        const email = sub.user?.email || '';
+                        const name = sub.user?.name || sub.user?.full_name || '';
+                        const query = searchQuery.toLowerCase();
+                        return email.toLowerCase().includes(query) || name.toLowerCase().includes(query);
+                      });
+                      setSelectedUsers(filtered.map(sub => sub.user_id));
+                    }}
+                    className="text-xs"
+                  >
+                    ✅ เลือกทั้งหมด
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedUsers([])}
+                    className="text-xs"
+                  >
+                    ❌ ยกเลิกทั้งหมด
+                  </Button>
+                </div>
               </div>
             )}
 
