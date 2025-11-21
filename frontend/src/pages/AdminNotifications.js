@@ -463,44 +463,53 @@ const AdminNotifications = () => {
             </div>
           </Card>
 
-          {/* Subscriptions List */}
+          {/* Users with Notifications List */}
           <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
             <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
               <Users className="w-6 h-6 text-[#00A9CE]" />
-              Subscribers ({subscriptions.length})
+              ผู้ใช้ที่เปิด Notification ({totalUsers})
             </h2>
 
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {subscriptions.length === 0 ? (
+              {usersWithNotifications.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 font-semibold">ยังไม่มี subscribers</p>
+                  <p className="text-gray-500 font-semibold">ยังไม่มีผู้ใช้ที่เปิด notification</p>
                 </div>
               ) : (
-                subscriptions.map((sub) => (
-                  <div
-                    key={sub.id}
-                    className="p-4 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#007B9A] to-[#00A9CE] flex items-center justify-center text-white font-bold flex-shrink-0">
-                        {sub.user?.full_name?.charAt(0) || '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900">{sub.user?.full_name || 'Unknown'}</p>
-                        <p className="text-sm text-gray-600">{sub.user?.email || 'No email'}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Subscribed: {new Date(sub.created_at).toLocaleDateString('th-TH')}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
-                          Active
-                        </span>
+                usersWithNotifications.slice(0, 20).map((user) => {
+                  const displayName = user.name || user.full_name || 'ไม่มีชื่อ';
+                  return (
+                    <div
+                      key={user.id}
+                      className="p-4 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#007B9A] to-[#00A9CE] flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-900 truncate">{displayName}</p>
+                          <p className="text-sm text-gray-600 truncate">{user.email}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            📱 {user.subscription_count} อุปกรณ์
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
+                            Active
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
+              )}
+              
+              {usersWithNotifications.length > 20 && (
+                <div className="text-center py-3 text-sm text-gray-600">
+                  แสดง 20 คนแรก จากทั้งหมด {totalUsers} คน
+                </div>
               )}
             </div>
           </Card>
