@@ -202,6 +202,8 @@ class User(BaseModel):
     graduation_year: Optional[int] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    google_picture: Optional[str] = None
+    zbs04_enrolled: bool = False
     demographics_profile: Optional[DemographicsProfile] = None
     user_rating: UserRating = Field(default_factory=UserRating)
     promoted_to_trust: Optional[TrustPromotion] = None
