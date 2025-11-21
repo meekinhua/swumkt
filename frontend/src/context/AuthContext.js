@@ -137,13 +137,25 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const googleLogin = async (googleToken) => {
+    const response = await axios.post(`${API}/auth/google/verify`, {
+      credential: googleToken
+    });
+    const { access_token, user: userData } = response.data;
+    localStorage.setItem('token', access_token);
+    setToken(access_token);
+    setUser(userData);
+    return userData;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       loading, 
       token, 
       login, 
-      register, 
+      register,
+      googleLogin, 
       logout, 
       updateProfile,
       updateDemographics,
