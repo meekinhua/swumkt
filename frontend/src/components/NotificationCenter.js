@@ -108,11 +108,9 @@ const NotificationCenter = () => {
       );
       
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
       
-      if ('setAppBadge' in navigator) {
-        navigator.clearAppBadge();
-      }
+      // Refresh unread count from server
+      await fetchUnreadCount();
       
       toast.success('ทำเครื่องหมายทั้งหมดว่าอ่านแล้ว');
     } catch (error) {
