@@ -269,12 +269,21 @@ const NotificationSettings = () => {
                 <p className="text-blue-800 mb-3 font-semibold">
                   การแจ้งเตือนบน iOS ต้องติดตั้งแอปก่อน (Add to Home Screen)
                 </p>
-                <Button
-                  onClick={() => setShowIOSPrompt(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                >
-                  ดูวิธีติดตั้ง →
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowIOSPrompt(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  >
+                    ดูวิธีติดตั้ง →
+                  </Button>
+                </div>
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                  <p className="text-xs text-yellow-800">
+                    <strong>⚠️ หมายเหตุ:</strong> หากติดตั้งแล้วแต่ยังเห็นข้อความนี้ 
+                    ให้ปิด Safari ทั้งหมด แล้วเปิดแอปจาก Home Screen อีกครั้ง 
+                    หรือคลิก "Force Hide Warning" ใน Debug Info ข้างล่าง
+                  </p>
+                </div>
               </div>
             </div>
           </Card>
