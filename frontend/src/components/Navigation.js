@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, X, User, LogOut, FileText, TrendingUp, Settings, ArrowLeft, BarChart } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
-const Navigation = ({ showContentButton = true, showMarketResearchButton = false, showProfileButton = true, showAdminButton = false, showBackButton = false, backButtonPath = '/market-research', showDashboardButton = false }) => {
+const Navigation = ({ showAdminButton = false }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, logout } = useAuth();
@@ -33,55 +33,41 @@ const Navigation = ({ showContentButton = true, showMarketResearchButton = false
           
           {/* Desktop Menu */}
           <div className="hidden xl:flex items-center gap-4">
-            {showBackButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate(backButtonPath)} 
-                className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                {t('content.back')}
-              </Button>
-            )}
-            {showDashboardButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/dashboard')} 
-                className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
-              >
-                <BarChart className="w-4 h-4 mr-2" />
-                {t('nav.dashboard')}
-              </Button>
-            )}
-            {showMarketResearchButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/market-research')} 
-                className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
-              >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                {t('nav.marketResearch')}
-              </Button>
-            )}
-            {showContentButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/content')} 
-                className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                {t('nav.content')}
-              </Button>
-            )}
-            {showProfileButton && user && (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/profile')} 
-                className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
-              >
-                <User className="w-4 h-4 mr-2" />
-                {t('nav.profile')}
-              </Button>
+            {user && (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/dashboard')} 
+                  className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
+                >
+                  <BarChart className="w-4 h-4 mr-2" />
+                  {t('nav.dashboard')}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/market-research')} 
+                  className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  {t('nav.marketResearch')}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/content')} 
+                  className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {t('nav.content')}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/profile')} 
+                  className="text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  {t('nav.profile')}
+                </Button>
+              </>
             )}
             {showAdminButton && user && user.role === 'admin' && (
               <Button 
