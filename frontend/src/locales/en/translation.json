@@ -181,6 +181,22 @@
     "yes": "Yes",
     "no": "No"
   },
+  "notifications": {
+    "title": "Notifications",
+    "enable": "Enable Notifications",
+    "disable": "Disable Notifications",
+    "sendTest": "Send Test Notification",
+    "markAllRead": "Mark All as Read",
+    "viewAll": "View All",
+    "noNotifications": "No notifications",
+    "settings": "Notification Settings",
+    "preferences": "Notification Preferences",
+    "commentNotifications": "Comment Notifications",
+    "zbs04Notifications": "ZBS04 Assignment Notifications",
+    "systemNotifications": "System Announcements",
+    "contentUpdateNotifications": "Content Update Notifications",
+    "customNotifications": "Custom Messages from Admin"
+  },
   "marketResearch": {
     "title": "Market Research Tools",
     "subtitle": "Complete toolkit for market research and analysis to make accurate decisions",
