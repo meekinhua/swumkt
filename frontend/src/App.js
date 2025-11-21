@@ -114,6 +114,14 @@ function App() {
               }
             />
             <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute>
+                  <AdminUserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/profile/notifications"
               element={
                 <ProtectedRoute>
