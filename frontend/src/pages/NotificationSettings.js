@@ -35,6 +35,10 @@ const NotificationSettings = () => {
 
   useEffect(() => {
     if (user) {
+      // Check iOS
+      setIsIOS(pushNotifications.isIOS());
+      setIsStandalone(pushNotifications.isStandalone());
+      
       loadSettings();
       loadNotifications();
     }
