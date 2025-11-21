@@ -181,6 +181,22 @@
     "yes": "ใช่",
     "no": "ไม่"
   },
+  "notifications": {
+    "title": "การแจ้งเตือน",
+    "enable": "เปิดการแจ้งเตือน",
+    "disable": "ปิดการแจ้งเตือน",
+    "sendTest": "ทดสอบส่งการแจ้งเตือน",
+    "markAllRead": "อ่านทั้งหมด",
+    "viewAll": "ดูทั้งหมด",
+    "noNotifications": "ไม่มีการแจ้งเตือน",
+    "settings": "การตั้งค่าการแจ้งเตือน",
+    "preferences": "ความชอบการแจ้งเตือน",
+    "commentNotifications": "การแจ้งเตือนความคิดเห็น",
+    "zbs04Notifications": "การแจ้งเตือนงาน ZBS04",
+    "systemNotifications": "ประกาศจากระบบ",
+    "contentUpdateNotifications": "การแจ้งเตือนอัปเดตเนื้อหา",
+    "customNotifications": "ข้อความพิเศษจาก Admin"
+  },
   "marketResearch": {
     "title": "เครื่องมือวิจัยตลาด",
     "subtitle": "ชุดเครื่องมือครบวงจรสำหรับการวิจัยและวิเคราะห์ตลาด เพื่อการตัดสินใจที่แม่นยำ",
