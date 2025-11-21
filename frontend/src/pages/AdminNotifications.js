@@ -258,7 +258,7 @@ const AdminNotifications = () => {
             {sendMode === 'specific' && (
               <div className="mb-4">
                 <label className="block text-sm font-bold text-gray-900 mb-2">
-                  เลือกผู้ใช้ ({selectedUsers.length} คน)
+                  เลือกผู้ใช้ที่เปิด Notification ({selectedUsers.length}/{totalUsers} คน)
                 </label>
                 
                 {/* Search Box */}
@@ -270,26 +270,34 @@ const AdminNotifications = () => {
                   className="w-full p-2 mb-2 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
                 />
                 
+                {loadingUsers && (
+                  <div className="text-center py-4 text-gray-500">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A9CE] mx-auto"></div>
+                    <p className="mt-2 text-sm">กำลังโหลด...</p>
+                  </div>
+                )}
+                
                 {/* User List with Checkboxes */}
-                <div className="border-2 border-gray-300 rounded-lg max-h-[300px] overflow-y-auto p-3 space-y-2 bg-gray-50">
-                  {subscriptions
-                    .filter(sub => {
-                      const email = sub.user?.email || '';
-                      const name = sub.user?.name || sub.user?.full_name || '';
-                      const query = searchQuery.toLowerCase();
-                      return email.toLowerCase().includes(query) || name.toLowerCase().includes(query);
-                    })
-                    .map((sub) => {
-                      const userId = sub.user_id;
+                {!loadingUsers && (
+                  <div className="border-2 border-gray-300 rounded-lg max-h-[400px] overflow-y-auto p-3 space-y-2 bg-gray-50">
+                    {usersWithNotifications.length === 0 && (
+                      <div className="text-center text-gray-500 py-8">
+                        {searchQuery ? '🔍 ไม่พบผู้ใช้ที่ตรงกับคำค้นหา' : '📭 ยังไม่มีผู้ใช้ที่เปิด notification'}
+                      </div>
+                    )}
+                    
+                    {usersWithNotifications.map((user) => {
+                      const userId = user.id;
                       const isSelected = selectedUsers.includes(userId);
+                      const displayName = user.name || user.full_name || 'ไม่มีชื่อ';
                       
                       return (
                         <label
                           key={userId}
                           className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
                             isSelected 
-                              ? 'bg-[#00A9CE] border-[#005A73] text-white' 
-                              : 'bg-white border-gray-200 hover:border-[#00A9CE]'
+                              ? 'bg-[#00A9CE] border-[#005A73] text-white shadow-md' 
+                              : 'bg-white border-gray-200 hover:border-[#00A9CE] hover:shadow-sm'
                           }`}
                         >
                           <input
@@ -302,31 +310,24 @@ const AdminNotifications = () => {
                                 setSelectedUsers(selectedUsers.filter(id => id !== userId));
                               }
                             }}
-                            className="w-5 h-5 mr-3"
+                            className="w-5 h-5 mr-3 flex-shrink-0"
                           />
-                          <div className="flex-1">
-                            <div className="font-bold">
-                              {sub.user?.name || sub.user?.full_name || 'Unknown'}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold truncate">
+                              {displayName}
                             </div>
-                            <div className={`text-sm ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
-                              {sub.user?.email || 'No email'}
+                            <div className={`text-sm truncate ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
+                              {user.email}
+                            </div>
+                            <div className={`text-xs mt-1 ${isSelected ? 'text-blue-200' : 'text-gray-500'}`}>
+                              📱 {user.subscription_count} อุปกรณ์
                             </div>
                           </div>
                         </label>
                       );
                     })}
-                  
-                  {subscriptions.filter(sub => {
-                    const email = sub.user?.email || '';
-                    const name = sub.user?.name || sub.user?.full_name || '';
-                    const query = searchQuery.toLowerCase();
-                    return email.toLowerCase().includes(query) || name.toLowerCase().includes(query);
-                  }).length === 0 && (
-                    <div className="text-center text-gray-500 py-4">
-                      ไม่พบผู้ใช้
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 
                 {/* Quick Actions */}
                 <div className="flex gap-2 mt-2">
@@ -335,14 +336,9 @@ const AdminNotifications = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const filtered = subscriptions.filter(sub => {
-                        const email = sub.user?.email || '';
-                        const name = sub.user?.name || sub.user?.full_name || '';
-                        const query = searchQuery.toLowerCase();
-                        return email.toLowerCase().includes(query) || name.toLowerCase().includes(query);
-                      });
-                      setSelectedUsers(filtered.map(sub => sub.user_id));
+                      setSelectedUsers(usersWithNotifications.map(user => user.id));
                     }}
+                    disabled={loadingUsers || usersWithNotifications.length === 0}
                     className="text-xs"
                   >
                     ✅ เลือกทั้งหมด
@@ -356,7 +352,23 @@ const AdminNotifications = () => {
                   >
                     ❌ ยกเลิกทั้งหมด
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => loadUsersWithNotifications(userSearchDebounce)}
+                    disabled={loadingUsers}
+                    className="text-xs ml-auto"
+                  >
+                    🔄 รีเฟรช
+                  </Button>
                 </div>
+                
+                {totalUsers > usersWithNotifications.length && (
+                  <p className="text-xs text-gray-600 mt-2 text-center">
+                    แสดง {usersWithNotifications.length} จาก {totalUsers} คน
+                  </p>
+                )}
               </div>
             )}
 
