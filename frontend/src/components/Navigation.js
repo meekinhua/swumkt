@@ -114,55 +114,41 @@ const Navigation = ({ showAdminButton = false }) => {
       {mobileMenuOpen && (
         <div className="xl:hidden bg-gradient-to-br from-[#005A73] to-[#007B9A] border-t border-white/10">
           <div className="px-4 py-6 space-y-3 max-h-[calc(100vh-5rem)] overflow-y-auto">
-            {showBackButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => { navigate(backButtonPath); setMobileMenuOpen(false); }} 
-                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                {t('content.back')}
-              </Button>
-            )}
-            {showDashboardButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }} 
-                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
-              >
-                <BarChart className="w-4 h-4 mr-2" />
-                {t('nav.dashboard')}
-              </Button>
-            )}
-            {showMarketResearchButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => { navigate('/market-research'); setMobileMenuOpen(false); }} 
-                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
-              >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                {t('nav.marketResearch')}
-              </Button>
-            )}
-            {showContentButton && (
-              <Button 
-                variant="ghost" 
-                onClick={() => { navigate('/content'); setMobileMenuOpen(false); }} 
-                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                {t('nav.content')}
-              </Button>
-            )}
-            {showProfileButton && user && (
-              <Button 
-                variant="ghost" 
-                onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }} 
-                className="w-full justify-start text-white hover:bg-white/10 font-semibold"
-              >
-                <User className="w-4 h-4 mr-2" />
-                {t('nav.profile')}
-              </Button>
+            {user && (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }} 
+                  className="w-full justify-start text-white hover:bg-white/10 font-semibold"
+                >
+                  <BarChart className="w-4 h-4 mr-2" />
+                  {t('nav.dashboard')}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { navigate('/market-research'); setMobileMenuOpen(false); }} 
+                  className="w-full justify-start text-white hover:bg-white/10 font-semibold"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  {t('nav.marketResearch')}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { navigate('/content'); setMobileMenuOpen(false); }} 
+                  className="w-full justify-start text-white hover:bg-white/10 font-semibold"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {t('nav.content')}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }} 
+                  className="w-full justify-start text-white hover:bg-white/10 font-semibold"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  {t('nav.profile')}
+                </Button>
+              </>
             )}
             {showAdminButton && user && user.role === 'admin' && (
               <Button 
