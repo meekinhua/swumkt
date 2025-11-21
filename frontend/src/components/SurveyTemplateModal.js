@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { X, Search, FileText, Users, TrendingUp, Target, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://researchtools.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://zbs04-course.preview.emergentagent.com';
 
 const SurveyTemplateModal = ({ onClose }) => {
   const navigate = useNavigate();
