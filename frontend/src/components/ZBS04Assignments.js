@@ -18,28 +18,32 @@ const ZBS04Assignments = () => {
       titleTh: 'การวิเคราะห์พฤติกรรมลูกค้า',
       icon: TrendingUp,
       color: 'from-blue-500 to-blue-600',
-      path: '/customer-behavior'
+      path: '/market-research',
+      toolName: 'Customer Behavior Analysis'
     },
     customer_perception_analysis: {
       title: 'Customer Perception Analysis',
       titleTh: 'การวิเคราะห์การรับรู้ของลูกค้า',
       icon: Eye,
       color: 'from-purple-500 to-purple-600',
-      path: '/customer-perception'
+      path: '/market-research',
+      toolName: 'Customer Perception Analysis'
     },
     competitor_analysis: {
       title: 'Competitor Analysis',
       titleTh: 'การวิเคราะห์คู่แข่ง',
       icon: Users,
       color: 'from-orange-500 to-orange-600',
-      path: '/competitor-analysis'
+      path: '/market-research',
+      toolName: 'Competitor Analysis'
     },
     customer_journey_map: {
       title: 'Customer Journey Map',
       titleTh: 'แผนที่เส้นทางลูกค้า',
       icon: Map,
       color: 'from-green-500 to-green-600',
-      path: '/customer-journey'
+      path: '/market-research',
+      toolName: 'Customer Journey Mapping'
     }
   };
 
