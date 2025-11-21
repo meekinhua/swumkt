@@ -213,6 +213,24 @@ const NotificationSettings = () => {
         {/* iOS Install Prompt Modal */}
         {showIOSPrompt && <IOSInstallPrompt onClose={() => setShowIOSPrompt(false)} />}
 
+        {/* Debug Info Card (temporary for testing) */}
+        {isIOS && (
+          <Card className="p-4 mb-4 bg-gray-50 border border-gray-300">
+            <details>
+              <summary className="cursor-pointer font-bold text-sm text-gray-700">
+                🔧 Debug Info (สำหรับทดสอบ)
+              </summary>
+              <div className="mt-2 text-xs space-y-1">
+                <p>📱 isIOS: <strong>{isIOS ? 'Yes' : 'No'}</strong></p>
+                <p>📲 isStandalone: <strong>{isStandalone ? 'Yes ✅' : 'No ❌'}</strong></p>
+                <p>🖥️ matchMedia: <strong>{window.matchMedia('(display-mode: standalone)').matches ? 'Yes' : 'No'}</strong></p>
+                <p>🧭 navigator.standalone: <strong>{window.navigator.standalone ? 'Yes' : 'No'}</strong></p>
+                <p className="text-xs text-gray-500 break-all">User Agent: {navigator.userAgent.substring(0, 100)}...</p>
+              </div>
+            </details>
+          </Card>
+        )}
+
         {/* iOS Warning for non-PWA */}
         {isIOS && !isStandalone && (
           <Card className="p-6 mb-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 shadow-xl">
