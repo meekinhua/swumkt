@@ -5900,29 +5900,6 @@ async def demote_from_admin(
     
     return {"message": f"User {user['full_name']} demoted from admin"}
 
-# Get admin list
-@api_router.get("/admin/users/admins")
-async def get_admin_list(
-    current_user: User = Depends(get_admin_user)
-):
-    """Get list of all admins"""
-    admins = await db.users.find(
-        {"role": UserRole.ADMIN},
-        {"_id": 0, "password": 0}
-    ).to_list(None)
-    
-    # Mark hard-coded admins
-    HARDCODED_ADMINS = ["intaka@hotmail.com", "intaka@gmail.com"]
-    for admin in admins:
-        admin["is_hardcoded_admin"] = admin.get("email", "").lower() in [email.lower() for email in HARDCODED_ADMINS]
-        admin["can_be_demoted"] = not admin["is_hardcoded_admin"]
-    
-    return {
-        "admins": admins,
-        "total": len(admins),
-        "hardcoded_admins": HARDCODED_ADMINS
-    }
-
 # Include the router
 app.include_router(api_router)
 
