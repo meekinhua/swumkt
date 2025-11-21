@@ -5715,6 +5715,10 @@ async def test_notification(current_user: User = Depends(get_current_user)):
         if not subscriptions:
             raise HTTPException(status_code=404, detail="No active subscriptions found. Please enable notifications first.")
         
+        # Log for debugging
+        logging.info(f"🔔 Sending test notification to user {current_user.id}")
+        logging.info(f"📱 Found {len(subscriptions)} subscription(s)")
+        
         # Send test notification
         results = await notification_service.send_to_multiple(
             subscriptions=subscriptions,
@@ -5723,6 +5727,8 @@ async def test_notification(current_user: User = Depends(get_current_user)):
             url="/profile/notifications",
             tag="test"
         )
+        
+        logging.info(f"✅ Notification results: sent={results['sent']}, failed={results['failed']}")
         
         # Store in inbox
         await db.notifications.insert_one({
@@ -5738,11 +5744,16 @@ async def test_notification(current_user: User = Depends(get_current_user)):
         
         return {
             "message": "Test notification sent successfully",
-            "sent": results["sent"]
+            "sent": results["sent"],
+            "failed": results["failed"],
+            "debug": {
+                "subscriptions_count": len(subscriptions),
+                "user_id": current_user.id
+            }
         }
         
     except Exception as e:
-        logging.error(f"Test notification error: {e}")
+        logging.error(f"❌ Test notification error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Admin: Get all subscriptions
