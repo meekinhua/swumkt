@@ -90,6 +90,11 @@
     "studentId": "รหัสนิสิต (ถ้ามี)",
     "graduationYear": "ปีที่สำเร็จการศึกษา",
     "creating": "กำลังสร้างบัญชี...",
+    "welcomeBadge": "ยินดีต้อนรับกลับ",
+    "continueWithGoogle": "ดำเนินการต่อด้วย Google",
+    "googleLoginSuccess": "เข้าสู่ระบบด้วย Google สำเร็จ!",
+    "googleLoginError": "ไม่สามารถเข้าสู่ระบบด้วย Google ได้",
+    "googleLoginLoading": "กำลังโหลด Google Sign-In...",
     "roles": {
       "admin": "ผู้ดูแลระบบ",
       "alumni": "ศิษย์เก่า",
