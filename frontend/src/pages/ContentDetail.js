@@ -38,6 +38,14 @@ const ContentDetail = () => {
       const response = await axios.get(`${API}/content/${id}`);
       const contentData = response.data;
       
+      // Fetch creator details
+      try {
+        const creatorResponse = await axios.get(`${API}/users/${contentData.created_by}`);
+        contentData.creatorDetails = creatorResponse.data;
+      } catch (err) {
+        console.error('Error fetching creator:', err);
+      }
+      
       // Fetch user details for group members
       if (contentData.group_members && contentData.group_members.length > 0) {
         const memberPromises = contentData.group_members.map(async (memberId) => {
@@ -56,7 +64,7 @@ const ContentDetail = () => {
       setContent(contentData);
     } catch (error) {
       console.error('Error fetching content:', error);
-      toast.error('ไม่พบเนื้อหา');
+      toast.error(t('content.notFound') || 'ไม่พบเนื้อหา');
       navigate('/content');
     } finally {
       setLoading(false);
