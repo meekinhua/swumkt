@@ -695,8 +695,14 @@ async def google_auth_verify(token_data: dict = Body(...)):
         existing_user = await db.users.find_one({"email": email}, {"_id": 0})
         
         if existing_user:
-            # User exists - login
+            # User exists - update google_picture if changed
             user = User(**existing_user)
+            if picture and user.google_picture != picture:
+                await db.users.update_one(
+                    {"id": user.id},
+                    {"$set": {"google_picture": picture, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                user.google_picture = picture
         else:
             # Create new user with Google auth
             user = User(
@@ -706,6 +712,7 @@ async def google_auth_verify(token_data: dict = Body(...)):
                 user_type=UserType.REGULAR,
                 auth_method="google",
                 avatar_url=picture,
+                google_picture=picture,
                 password=""  # No password for Google users
             )
             
