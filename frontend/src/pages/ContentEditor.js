@@ -540,12 +540,17 @@ const ContentEditor = () => {
                     <>
                       {/* Assignment Type */}
                       <div className="mb-4">
-                        <Label className="text-gray-800 font-bold mb-2">ประเภทงาน *</Label>
+                        <Label className="text-gray-800 font-bold mb-2">
+                          ประเภทงาน <span className="text-red-600">*</span>
+                        </Label>
                         <Select
                           value={formData.zbs04_assignment_type}
                           onValueChange={(value) => setFormData({ ...formData, zbs04_assignment_type: value })}
+                          required
                         >
-                          <SelectTrigger className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium">
+                          <SelectTrigger className={`mt-1 h-12 border-2 focus:border-[#00A9CE] text-gray-900 font-medium ${
+                            !formData.zbs04_assignment_type ? 'border-red-300' : 'border-gray-300'
+                          }`}>
                             <SelectValue placeholder="เลือกประเภทงาน" />
                           </SelectTrigger>
                           <SelectContent>
@@ -555,6 +560,9 @@ const ContentEditor = () => {
                             <SelectItem value="customer_journey_map">แผนที่เส้นทางลูกค้า</SelectItem>
                           </SelectContent>
                         </Select>
+                        {!formData.zbs04_assignment_type && (
+                          <p className="text-xs text-red-600 mt-1">กรุณาเลือกประเภทงาน</p>
+                        )}
                       </div>
 
                       {/* Group Members */}
