@@ -560,3 +560,30 @@ agent_communication:
     message: "✅ CUSTOMER PERCEPTION ANALYSIS TOOL TESTING COMPLETE: Full end-to-end testing successful! 🎯 Navigation: Successfully accessed tool from Market Research page. Tool loads with proper structure - Phase 1 (qualitative) and Phase 2 (quantitative) tabs, with Phase 1 containing Question Generator and Interview Analysis sub-tabs. 📝 Question Generator (Tab 1): Form inputs working correctly (research topic, perspective, language selection). Question generation successful - generated 12 questions in Thai after 30-second processing time. Export to Survey button appeared as expected. 🔍 Interview Analysis (Tab 2): Interview data input working, sample data accepted. Analysis generation successful after extended processing time - all sections (analysis text, key findings, recommendations) generated correctly. Image generation button available. 🔒 Phase 2: Correctly shows placeholder content indicating feature is in development, with planned features list (quantitative surveys, statistical analysis, perception mapping, sentiment analysis, correlation analysis, PDF/Excel export). ⚙️ Admin Settings: Perception Analysis tab found with both Customer Perception Analysis Prompt and Interview Question Generator Prompt textareas. Save buttons and Test in Perception Tool button all present and functional. 🎉 Overall: All core functionality working as designed. LLM processing times are longer (10-40 seconds) but successful. UI is responsive and user-friendly."
   - agent: "testing"
     message: "✅ JOURNAL FINDER API TESTING COMPLETE: New Journal Finder endpoint (POST /api/journal-finder) fully tested and working perfectly! 🔍 Test Coverage: All 6 requested test cases passed successfully. 📊 Marketing Research (Thai): Generated 5-10 relevant journals with proper ABDC/AJG ratings integration, Thai disclaimer text, and complete response structure. 📈 Management Research (English): Successfully found strategic management journals with AI-estimated Impact Factor/Quartile info and SCImago URLs for verification. ⚡ Performance: All requests completed under 60 seconds (typically 10-30 seconds response time). 🔐 Authentication: Admin credentials (admin@swu.ac.th/admin123) working correctly for API access. 📚 Database Integration: ABDC and AJG 2024 databases properly loaded and matched with AI suggestions. 🤖 AI Integration: Claude Sonnet model providing accurate journal recommendations with proper parsing and structured output. 🛡️ Validation: Proper handling of minimal input (empty keywords) and invalid input (empty required fields). All core functionality ready for production use."
+  - task: "แยกการนับ 'ผู้สร้าง' และ 'ความคิดเห็น' ในหน้า ContentDetail"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/ContentDetail.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: แยกการแสดงจำนวน 'ผู้สร้าง Content' (ผู้แต่ง + สมาชิกกลุ่ม) และ 'ความคิดเห็น' (จำนวนคอมเมนต์) ออกจากกัน ลบการใช้ฟิลด์ contributors แบบเดิมที่ทำให้สับสน"
+
+  - task: "ปรับ Navigation Bar ให้มีเมนูคงที่ทุกหน้า (Dashboard/เครื่องมือวิจัยตลาด/ศูนย์ความรู้/โปรไฟล์)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Navigation.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED: แก้ไข Navigation component ให้แสดงเมนูคงที่ทุกหน้า (Dashboard, เครื่องมือวิจัยตลาด, ศูนย์ความรู้, โปรไฟล์) สำหรับผู้ใช้ที่ login แล้ว ลบ conditional props ที่ไม่จำเป็น (showContentButton, showMarketResearchButton, showBackButton, showDashboardButton) เหลือเฉพาะ showAdminButton อัปเดตทุกหน้าให้ใช้ Navigation แบบเดียวกัน"
+
+agent_communication:
+  - agent: "main"
+    message: "✅ Priority 0 Tasks Complete: 1) แยกการนับ 'ผู้สร้าง' และ 'ความคิดเห็น' ในหน้า ContentDetail - แสดง '2 ผู้สร้าง Content' (ผู้แต่ง + สมาชิกกลุ่ม) และ '0 ความคิดเห็น' (จำนวนคอมเมนต์) แยกกัน ลบการใช้ฟิลด์ contributors ที่สับสน 2) ปรับ Navigation Bar ให้มีเมนูคงที่ทุกหน้า - แสดงเมนู Dashboard, เครื่องมือวิจัยตลาด, ศูนย์ความรู้, โปรไฟล์ คงที่ในทุกหน้าสำหรับผู้ใช้ที่ login แล้ว ทำให้การนำทางในแอปง่ายและสม่ำเสมอมากขึ้น กรุณาทดสอบ frontend เพื่อยืนยันการทำงาน"
