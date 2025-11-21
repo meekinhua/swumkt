@@ -70,6 +70,21 @@ const ContentEditor = () => {
         zbs04_assignment_type: content.zbs04_assignment_type || '',
         group_members: content.group_members || []
       });
+
+      // Fetch member details for existing group members
+      if (content.group_members && content.group_members.length > 0) {
+        const memberPromises = content.group_members.map(async (memberId) => {
+          try {
+            const memberResponse = await axios.get(`${API}/users/${memberId}`);
+            return memberResponse.data;
+          } catch (err) {
+            console.error(`Error fetching member ${memberId}:`, err);
+            return null;
+          }
+        });
+        const members = await Promise.all(memberPromises);
+        setMemberDetails(members.filter(m => m !== null));
+      }
     } catch (error) {
       console.error('Error fetching content:', error);
       toast.error('ไม่สามารถโหลดเนื้อหาได้');
