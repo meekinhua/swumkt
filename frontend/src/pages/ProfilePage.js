@@ -169,6 +169,7 @@ const ProfilePage = () => {
               </div>
             </div>
             <Button
+              data-testid="zbs04-toggle-btn"
               onClick={async () => {
                 try {
                   const newStatus = !user?.zbs04_enrolled;
