@@ -79,6 +79,12 @@ const NotificationSettings = () => {
 
   const handleEnableNotifications = async () => {
     try {
+      // Check if iOS and not installed as PWA
+      if (isIOS && !isStandalone) {
+        setShowIOSPrompt(true);
+        return;
+      }
+      
       // Request permission
       const granted = await pushNotifications.requestPermission();
       
@@ -93,7 +99,7 @@ const NotificationSettings = () => {
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
-      toast.error('ไม่สามารถเปิดใช้งานการแจ้งเตือนได้');
+      toast.error('ไม่สามารถเปิดใช้งานการแจ้งเตือนได้: ' + error.message);
     }
   };
 
