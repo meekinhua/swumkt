@@ -218,29 +218,29 @@ const NotificationCenter = () => {
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
+                  className={`p-3 sm:p-4 border-b border-gray-100 cursor-pointer transition-colors ${
                     notification.read
                       ? 'bg-white hover:bg-gray-50'
                       : 'bg-blue-50 hover:bg-blue-100'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="text-2xl flex-shrink-0">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <div className="text-xl sm:text-2xl flex-shrink-0">
                       {getNotificationIcon(notification.notification_type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-bold text-gray-900 text-sm">
+                        <p className="font-bold text-gray-900 text-xs sm:text-sm break-words">
                           {notification.title}
                         </p>
                         {!notification.read && (
                           <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2 break-words">
                         {notification.body}
                       </p>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2">
                         {formatTimeAgo(notification.created_at)}
                       </p>
                     </div>
