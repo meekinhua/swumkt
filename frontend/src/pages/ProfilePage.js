@@ -205,11 +205,6 @@ const ProfilePage = () => {
                       : 'ยกเลิกการบันทึก ZBS04'
                   );
                   
-                  // Reload page to reflect changes
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 1000);
-                  
                 } catch (error) {
                   console.error('[ZBS04] Error:', error);
                   toast.error('ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่');
