@@ -192,9 +192,11 @@ const ProfilePage = () => {
                   const result = await updateProfile({ zbs04_enrolled: newStatus });
                   console.log('[ZBS04] updateProfile response:', result);
                   
-                  // Update local state immediately
-                  setZbs04Status(newStatus);
-                  console.log('[ZBS04] Local state updated to:', newStatus);
+                  // Update local state using functional update to ensure re-render
+                  setZbs04Status(prev => {
+                    console.log('[ZBS04] Updating state from', prev, 'to', newStatus);
+                    return newStatus;
+                  });
                   
                   // Show success message
                   toast.success(
