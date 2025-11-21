@@ -7,7 +7,7 @@ import { Menu, X, User, LogOut, FileText, TrendingUp, Settings, ArrowLeft, BarCh
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import NotificationCenter from '@/components/NotificationCenter';
 
-const Navigation = ({ showAdminButton = false }) => {
+const Navigation = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, logout } = useAuth();
