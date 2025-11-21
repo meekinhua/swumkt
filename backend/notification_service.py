@@ -69,7 +69,7 @@ class NotificationService:
             if not icon:
                 icon = "https://customer-assets.emergentagent.com/job_swumkt-journey-map/artifacts/1psb2wj1_SWU_MKT%20Stacked%20Logo%20-%20Edited.png"
             
-            # Prepare notification payload
+            # Prepare notification payload (iOS compatible)
             payload = json.dumps({
                 "title": title,
                 "body": body,
@@ -80,7 +80,11 @@ class NotificationService:
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 },
                 "tag": tag,
-                "requireInteraction": require_interaction
+                "requireInteraction": require_interaction,
+                # iOS specific
+                "silent": False,
+                "renotify": True,
+                "actions": []
             })
             
             # Send push notification
