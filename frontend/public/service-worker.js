@@ -127,6 +127,7 @@ self.addEventListener('push', (event) => {
     try {
       const payload = event.data.json();
       console.log('🔔 [SW] Parsed payload:', payload);
+      broadcastLog('📋 Parsed payload: ' + JSON.stringify(payload).substring(0, 100) + '...');
       
       notificationData = {
         ...notificationData,
@@ -137,19 +138,27 @@ self.addEventListener('push', (event) => {
         tag: payload.tag || notificationData.tag,
         requireInteraction: payload.requireInteraction !== undefined ? payload.requireInteraction : true
       };
+      
+      broadcastLog('📝 Title: ' + notificationData.title);
+      broadcastLog('📝 Body: ' + notificationData.body);
     } catch (e) {
       console.error('🔔 [SW] Error parsing push data:', e);
+      broadcastLog('❌ Error parsing data: ' + e.message);
       try {
         notificationData.body = event.data.text();
+        broadcastLog('📝 Using text data: ' + notificationData.body);
       } catch (textError) {
         console.error('🔔 [SW] Error getting text:', textError);
+        broadcastLog('❌ Error getting text: ' + textError.message);
       }
     }
   } else {
     console.warn('🔔 [SW] No data in push event');
+    broadcastLog('⚠️ No data in push event - using defaults');
   }
 
   console.log('🔔 [SW] Showing notification:', notificationData.title);
+  broadcastLog('🔔 Attempting to show notification...');
 
   const promise = self.registration.showNotification(notificationData.title, {
     body: notificationData.body,
@@ -165,8 +174,10 @@ self.addEventListener('push', (event) => {
     actions: [] // Empty actions array for iOS compatibility
   }).then(() => {
     console.log('✅ [SW] Notification shown successfully');
+    broadcastLog('✅ Notification shown successfully!');
   }).catch((error) => {
     console.error('❌ [SW] Error showing notification:', error);
+    broadcastLog('❌ ERROR showing notification: ' + error.message);
   });
 
   event.waitUntil(promise);
