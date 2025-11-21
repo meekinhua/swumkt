@@ -82,6 +82,18 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Helper function to broadcast logs to Debug Console
+function broadcastLog(message) {
+  try {
+    const channel = new BroadcastChannel('sw-logs');
+    channel.postMessage(message);
+    channel.close();
+  } catch (e) {
+    // BroadcastChannel might not be available
+    console.log('Could not broadcast log:', e);
+  }
+}
+
 // Push notification support - iOS compatible
 self.addEventListener('push', (event) => {
   console.log('========================================');
@@ -89,6 +101,11 @@ self.addEventListener('push', (event) => {
   console.log('🔔 [SW] Timestamp:', new Date().toISOString());
   console.log('🔔 [SW] Event data exists:', !!event.data);
   console.log('========================================');
+  
+  // Broadcast to Debug Console
+  broadcastLog('🔔 PUSH EVENT RECEIVED FROM BACKEND!');
+  broadcastLog('⏰ Timestamp: ' + new Date().toISOString());
+  broadcastLog('📦 Has data: ' + (event.data ? 'Yes' : 'No'));
   
   let notificationData = {
     title: 'SWUMKT Portal',
