@@ -232,6 +232,13 @@ const ContentEditor = () => {
     setLoading(true);
 
     try {
+      // Validate ZBS04 fields
+      if (formData.is_zbs04_assignment && !formData.zbs04_assignment_type) {
+        toast.error('กรุณาเลือกประเภทงาน ZBS04');
+        setLoading(false);
+        return;
+      }
+
       const submitData = { ...formData };
       if (!submitData.category) delete submitData.category;
       if (!submitData.featured_image) delete submitData.featured_image;
