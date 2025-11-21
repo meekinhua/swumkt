@@ -5,11 +5,12 @@ import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bell, BellOff, ArrowLeft, Send, CheckCircle, XCircle } from 'lucide-react';
+import { Bell, BellOff, ArrowLeft, Send, CheckCircle, XCircle, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '@/App';
 import { pushNotifications } from '@/utils/pushNotifications';
+import IOSInstallPrompt from '@/components/IOSInstallPrompt';
 
 const NotificationSettings = () => {
   const navigate = useNavigate();
