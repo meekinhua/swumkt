@@ -56,26 +56,7 @@ const NotificationSettings = () => {
     }
   }, [user]);
 
-  // Listen for Service Worker logs via BroadcastChannel
-  useEffect(() => {
-    const channel = new BroadcastChannel('sw-logs');
-    
-    channel.onmessage = (event) => {
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        message: event.data
-      };
-      setSwLogs(prev => [...prev, logEntry].slice(-50)); // Keep last 50 logs
-    };
-
-    // Add initial message
-    setSwLogs([{
-      timestamp: new Date().toISOString(),
-      message: '🔧 Debug Console started. Waiting for Service Worker events...'
-    }]);
-
-    return () => channel.close();
-  }, []);
+  // No longer using debug console
 
   const loadSettings = async () => {
     try {
