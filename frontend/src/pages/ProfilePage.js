@@ -173,9 +173,14 @@ const ProfilePage = () => {
               onClick={async () => {
                 try {
                   const newStatus = !user?.zbs04_enrolled;
-                  await updateProfile({ zbs04_enrolled: newStatus });
-                  toast.success(newStatus ? 'บันทึกว่าคุณเรียน ZBS04 แล้ว!' : 'ยกเลิกการบันทึก ZBS04');
+                  const updatedUser = await updateProfile({ zbs04_enrolled: newStatus });
+                  
+                  // Force page to recognize the state change
+                  if (updatedUser && updatedUser.zbs04_enrolled !== undefined) {
+                    toast.success(newStatus ? 'บันทึกว่าคุณเรียน ZBS04 แล้ว!' : 'ยกเลิกการบันทึก ZBS04');
+                  }
                 } catch (error) {
+                  console.error('ZBS04 update error:', error);
                   toast.error('ไม่สามารถอัปเดตสถานะได้');
                 }
               }}
