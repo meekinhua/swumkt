@@ -22,34 +22,18 @@ class NotificationService:
         self.vapid_public_key = os.environ.get('VAPID_PUBLIC_KEY')
         self.vapid_email = os.environ.get('VAPID_EMAIL', 'mailto:admin@swumkt.ac.th')
         
-        # Generate VAPID keys if not exists
+        # Validate VAPID keys
         if not self.vapid_private_key or not self.vapid_public_key:
-            logger.info("Generating new VAPID keys...")
-            try:
-                vapid = Vapid()
-                vapid.generate_keys()
-                self.vapid_private_key = vapid.private_key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption()
-                ).decode('utf-8')
-                
-                # Get public key in URL-safe base64 format
-                public_key_bytes = vapid.public_key.public_bytes(
-                    encoding=serialization.Encoding.X962,
-                    format=serialization.PublicFormat.UncompressedPoint
-                )
-                self.vapid_public_key = base64.urlsafe_b64encode(public_key_bytes).decode('utf-8').rstrip('=')
-                
-                logger.info(f"Generated VAPID Public Key: {self.vapid_public_key}")
-                logger.info("Please add these to your .env file:")
-                logger.info(f"VAPID_PUBLIC_KEY={self.vapid_public_key}")
-                logger.info(f"VAPID_PRIVATE_KEY=<see logs>")
-            except Exception as e:
-                logger.error(f"Error generating VAPID keys: {e}")
-                # Use fallback keys for development
-                self.vapid_public_key = "BDd3_hVL9fZi9Ybo2UUzA284WG5FZR30_95YeZJsiApwXKpNcF1rRPF3foIiBHXRdJI2Qhumhf6_LFTeZaN13z4"
-                self.vapid_private_key = "----FALLBACK KEY----"
+            logger.error("VAPID keys not found in environment variables!")
+            logger.error("Please set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env file")
+            raise ValueError("VAPID keys are required for push notifications")
+        
+        # Validate public key format (should be 87 chars for P-256)
+        if len(self.vapid_public_key) != 87:
+            logger.warning(f"VAPID public key length is {len(self.vapid_public_key)}, expected 87")
+        
+        logger.info(f"✅ VAPID keys loaded successfully")
+        logger.info(f"Public key: {self.vapid_public_key[:20]}...{self.vapid_public_key[-20:]}")
     
     def get_public_key(self) -> str:
         """Get VAPID public key for frontend"""
