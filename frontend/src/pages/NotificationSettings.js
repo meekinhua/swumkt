@@ -32,6 +32,7 @@ const NotificationSettings = () => {
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [swLogs, setSwLogs] = useState([]);
 
   useEffect(() => {
     if (user) {
