@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, FileText, Upload as UploadIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://zbs04-course.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://edunotifs.preview.emergentagent.com';
 
 const CustomerPerceptionTool = () => {
   const navigate = useNavigate();
