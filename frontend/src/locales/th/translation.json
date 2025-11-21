@@ -91,6 +91,8 @@
     "graduationYear": "ปีที่สำเร็จการศึกษา",
     "creating": "กำลังสร้างบัญชี...",
     "welcomeBadge": "ยินดีต้อนรับกลับ",
+    "joinUsBadge": "เข้าร่วมกับเราวันนี้",
+    "passwordPlaceholder": "อย่างน้อย 6 ตัวอักษร",
     "continueWithGoogle": "ดำเนินการต่อด้วย Google",
     "googleLoginSuccess": "เข้าสู่ระบบด้วย Google สำเร็จ!",
     "googleLoginError": "ไม่สามารถเข้าสู่ระบบด้วย Google ได้",
