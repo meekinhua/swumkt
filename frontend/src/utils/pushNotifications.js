@@ -25,18 +25,34 @@ export const pushNotifications = {
 
   // Detect if running as standalone PWA
   isStandalone: () => {
-    // Check multiple conditions for PWA
-    const isDisplayStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isNavigatorStandalone = window.navigator.standalone === true;
-    const isAndroidApp = document.referrer.includes('android-app://');
+    // Method 1: Display mode (works on most modern browsers)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      return true;
+    }
     
-    // iOS specific: check if there's no Safari UI
-    const isIOSStandalone = pushNotifications.isIOS() && 
-                           (isNavigatorStandalone || 
-                            isDisplayStandalone ||
-                            !window.navigator.standalone === false); // explicit check
+    // Method 2: iOS specific navigator.standalone
+    if (window.navigator.standalone === true) {
+      return true;
+    }
     
-    return isDisplayStandalone || isNavigatorStandalone || isAndroidApp || isIOSStandalone;
+    // Method 3: Android app
+    if (document.referrer.includes('android-app://')) {
+      return true;
+    }
+    
+    // Method 4: Check if running in fullscreen (no browser chrome)
+    // This works when PWA is installed and opened
+    if (window.matchMedia('(display-mode: fullscreen)').matches) {
+      return true;
+    }
+    
+    // Method 5: Check URL parameters (some PWAs add this)
+    if (window.location.search.includes('utm_source=homescreen') ||
+        window.location.search.includes('source=pwa')) {
+      return true;
+    }
+    
+    return false;
   },
 
   // Check if push notifications are supported
