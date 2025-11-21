@@ -1,15 +1,16 @@
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import axios from 'axios';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 const GOOGLE_CLIENT_ID = "949663376782-cd9128nvekdavpu09mko30rfn9c2kre4.apps.googleusercontent.com";
 
 const GoogleLoginButton = ({ redirectUrl = '/dashboard', className = "", onSuccess }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { googleLogin } = useAuth();
   
   useEffect(() => {
     // Load Google Sign-In script
@@ -29,29 +30,23 @@ const GoogleLoginButton = ({ redirectUrl = '/dashboard', className = "", onSucce
     };
     
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
   
   const handleCredentialResponse = async (response) => {
     try {
-      // Send credential to backend
-      const result = await axios.post(
-        `${process.env.REACT_APP_BACKEND_URL}/api/auth/google/verify`,
-        { credential: response.credential }
-      );
-      
-      // Save token
-      localStorage.setItem('access_token', result.data.access_token);
-      localStorage.setItem('user', JSON.stringify(result.data.user));
+      // Use AuthContext googleLogin function
+      const userData = await googleLogin(response.credential);
       
       toast.success('เข้าสู่ระบบด้วย Google สำเร็จ!');
       
       if (onSuccess) {
-        onSuccess(result.data);
+        onSuccess({ user: userData });
       } else {
         navigate(redirectUrl);
-        window.location.reload(); // Reload to update auth context
       }
     } catch (error) {
       console.error('Google login error:', error);
