@@ -80,6 +80,7 @@ const Navigation = ({ showAdminButton = false }) => {
                 Admin
               </Button>
             )}
+            <NotificationCenter />
             <LanguageSwitcher />
             {user ? (
               <Button 
