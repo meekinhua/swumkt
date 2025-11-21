@@ -279,6 +279,47 @@ const NotificationSettings = () => {
           </Card>
         )}
 
+        {/* Debug Console - Service Worker Logs */}
+        <Card className="p-4 mb-4 bg-black border-2 border-green-500">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-mono font-bold text-green-400 text-sm">
+              🖥️ DEBUG CONSOLE - Service Worker Logs
+            </h3>
+            <Button
+              onClick={() => setSwLogs([{
+                timestamp: new Date().toISOString(),
+                message: '🧹 Console cleared'
+              }])}
+              size="sm"
+              variant="outline"
+              className="text-xs border-green-500 text-green-400 hover:bg-green-900"
+            >
+              Clear
+            </Button>
+          </div>
+          <div className="bg-gray-900 rounded p-3 max-h-64 overflow-y-auto font-mono text-xs">
+            {swLogs.length === 0 ? (
+              <p className="text-gray-500">No logs yet...</p>
+            ) : (
+              <div className="space-y-1">
+                {swLogs.map((log, index) => (
+                  <div key={index} className="text-green-400">
+                    <span className="text-gray-500">[{new Date(log.timestamp).toLocaleTimeString('th-TH')}]</span>
+                    {' '}
+                    <span>{log.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="mt-2 p-2 bg-yellow-900/30 border border-yellow-600 rounded">
+            <p className="text-xs text-yellow-300">
+              <strong>💡 วิธีใช้:</strong> Console นี้จะแสดง logs จาก Service Worker เมื่อมี Push Event เข้ามา 
+              ให้ส่ง notification จาก Admin Panel แล้วดูว่ามีข้อความ "PUSH EVENT RECEIVED" ปรากฏหรือไม่
+            </p>
+          </div>
+        </Card>
+
         {/* iOS Warning for non-PWA */}
         {isIOS && !isStandalone && (
           <Card className="p-6 mb-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 shadow-xl">
