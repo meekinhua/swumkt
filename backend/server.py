@@ -5609,6 +5609,66 @@ async def mark_all_notifications_read(current_user: User = Depends(get_current_u
     
     return {"message": f"Marked {result.modified_count} notifications as read"}
 
+
+# Get users with active notification subscriptions (for admin)
+@api_router.get("/admin/notifications/users-with-subscriptions")
+async def get_users_with_subscriptions(
+    search: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: User = Depends(get_admin_user)
+):
+    """Get list of users who have active notification subscriptions"""
+    try:
+        # Get all unique user_ids with active subscriptions
+        user_ids_with_subs = await db.notification_subscriptions.distinct("user_id")
+        
+        if not user_ids_with_subs:
+            return {"users": [], "total": 0}
+        
+        # Build query for users
+        query = {"id": {"$in": user_ids_with_subs}}
+        
+        # Add search filter if provided
+        if search:
+            search_regex = {"$regex": search, "$options": "i"}
+            query["$or"] = [
+                {"email": search_regex},
+                {"name": search_regex},
+                {"full_name": search_regex}
+            ]
+        
+        # Get total count
+        total = await db.users.count_documents(query)
+        
+        # Get users with pagination
+        users = await db.users.find(
+            query,
+            {"_id": 0, "id": 1, "email": 1, "name": 1, "full_name": 1}
+        ).skip(offset).limit(limit).to_list(limit)
+        
+        # Get subscription count for each user
+        users_with_count = []
+        for user in users:
+            sub_count = await db.notification_subscriptions.count_documents({
+                "user_id": user["id"]
+            })
+            users_with_count.append({
+                **user,
+                "subscription_count": sub_count
+            })
+        
+        return {
+            "users": users_with_count,
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting users with subscriptions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Send notification (admin or system)
 @api_router.post("/notifications/send")
 async def send_notification(
