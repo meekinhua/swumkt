@@ -70,6 +70,11 @@ const AdminNotifications = () => {
       return;
     }
 
+    if (sendMode === 'specific' && selectedUsers.length === 0) {
+      toast.error('กรุณาเลือกผู้ใช้อย่างน้อย 1 คน');
+      return;
+    }
+
     setSending(true);
     try {
       const payload = {
@@ -77,8 +82,10 @@ const AdminNotifications = () => {
         body,
         url,
         notification_type: notificationType,
-        user_ids: sendMode === 'broadcast' ? null : selectedUsers
+        user_ids: sendMode === 'broadcast' ? [] : selectedUsers
       };
+
+      console.log('Sending notification with payload:', payload);
 
       const response = await axios.post(
         `${API}/notifications/send`,
