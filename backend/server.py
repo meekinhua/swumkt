@@ -6540,13 +6540,13 @@ async def update_llm_prompt(
     updated_prompt = await db.llm_prompts.find_one({"id": prompt_id}, {"_id": 0})
     return {"message": "Prompt updated successfully", "prompt": updated_prompt}
 
-# Generate images for attribute levels
+# Generate images for attribute levels (optional - can be skipped)
 @api_router.post("/conjoint/studies/{study_id}/generate-images")
 async def generate_profile_images(
     study_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Generate images for all attribute levels using AI"""
+    """Generate images for all attribute levels using AI (optional feature)"""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
@@ -6557,17 +6557,44 @@ async def generate_profile_images(
     if not study.get("attributes"):
         raise HTTPException(status_code=400, detail="No attributes defined")
     
-    # Get API key
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
-    if not api_key:
-        raise HTTPException(status_code=500, detail="Image generation service not configured")
-    
+    # Image generation is optional - if not available, just mark as skipped
     try:
-        from emergentintegrations.llm.image import ImageGenerator
+        # Try to import image generation (may not be available)
+        try:
+            from emergentintegrations.image import generate_image
+            image_gen_available = True
+        except ImportError:
+            logging.warning("Image generation module not available - skipping image generation")
+            image_gen_available = False
         
-        generator = ImageGenerator(api_key=api_key)
+        if not image_gen_available:
+            # Mark as skipped but allow proceeding
+            await db.conjoint_studies.update_one(
+                {"id": study_id},
+                {
+                    "$set": {
+                        "images_generated": False,
+                        "images_skipped": True,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+            
+            return {
+                "message": "Image generation skipped (feature not available)",
+                "images_generated": False,
+                "skipped": True
+            }
+        
+        # If available, generate images
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="LLM service not configured")
         
         updated_attributes = []
+        generated_count = 0
+        failed_count = 0
+        
         for attr in study["attributes"]:
             updated_levels = []
             for level in attr.get("levels", []):
@@ -6578,16 +6605,19 @@ async def generate_profile_images(
                     image_prompt += f" {level['description']}"
                 
                 try:
-                    image_url = await generator.generate_image(
+                    # Attempt to generate image
+                    image_url = await generate_image(
                         prompt=image_prompt,
-                        model="nanobanana"
+                        api_key=api_key
                     )
                     
                     level["image_url"] = image_url
                     level["image_prompt"] = image_prompt
+                    generated_count += 1
                 except Exception as img_error:
                     logging.error(f"Failed to generate image for {level['value']}: {img_error}")
                     level["image_url"] = None
+                    failed_count += 1
                 
                 updated_levels.append(level)
             
@@ -6600,20 +6630,40 @@ async def generate_profile_images(
             {
                 "$set": {
                     "attributes": updated_attributes,
-                    "images_generated": True,
+                    "images_generated": generated_count > 0,
+                    "images_skipped": False,
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
         
         return {
-            "message": "Images generated successfully",
-            "attributes": updated_attributes
+            "message": f"Images generated: {generated_count}, failed: {failed_count}",
+            "attributes": updated_attributes,
+            "generated_count": generated_count,
+            "failed_count": failed_count
         }
         
     except Exception as e:
         logging.error(f"Image generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
+        # Don't fail the entire request - just mark as skipped
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {
+                "$set": {
+                    "images_generated": False,
+                    "images_skipped": True,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "message": "Image generation failed - proceeding without images",
+            "error": str(e),
+            "images_generated": False,
+            "skipped": True
+        }
 
 # Get survey (public endpoint - no auth required)
 @api_router.get("/conjoint/survey/{study_id}")
