@@ -6252,8 +6252,8 @@ Respond in {request.target_language} language."""
         chat = LlmChat(
             api_key=api_key,
             session_id=f"conjoint-qual-{study_id}",
-            system_message="You are an expert marketing researcher."
-        ).with_model("openai", "gpt-5")
+            system_message="You are an expert marketing researcher specializing in Conjoint Analysis and consumer research."
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
         
         response_text, _ = await chat.send_message(UserMessage(text=analysis_prompt))
         
