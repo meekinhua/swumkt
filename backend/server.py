@@ -6298,15 +6298,18 @@ async def analyze_qualitative_data(
         target_language=request.target_language
     )
     
-    # Call LLM
+    # Call LLM with configured model
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         chat = LlmChat(
             api_key=api_key,
             session_id=f"conjoint-qual-{study_id}",
-            system_message="You are an expert marketing researcher specializing in Conjoint Analysis and consumer research."
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+            system_message=prompt_config.get("system_message", "You are an expert marketing researcher.")
+        ).with_model(
+            prompt_config.get("model_provider", "anthropic"),
+            prompt_config.get("model_name", "claude-sonnet-4-20250514")
+        )
         
         response_text, _ = await chat.send_message(UserMessage(text=analysis_prompt))
         
