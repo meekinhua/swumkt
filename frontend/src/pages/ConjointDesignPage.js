@@ -513,14 +513,85 @@ const ConjointDesignPage = () => {
           </Card>
         )}
 
-        {/* Next Step */}
+        {/* Generate Images & Survey Link */}
         {designGenerated && (
+          <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
+            <h2 className="text-2xl font-black text-gray-900 mb-6">
+              Phase 3: สร้างรูปภาพและแชร์แบบสอบถาม
+            </h2>
+
+            {!imagesGenerated ? (
+              <div className="text-center py-8">
+                <p className="text-gray-700 mb-6">
+                  สร้างรูปภาพสำหรับแต่ละ attribute level เพื่อให้ respondents เห็นภาพชัดเจนขึ้น
+                </p>
+                <Button
+                  onClick={handleGenerateImages}
+                  disabled={generatingImages}
+                  className="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold"
+                >
+                  {generatingImages ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      กำลังสร้างรูปภาพ...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      สร้างรูปภาพด้วย AI
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-4 bg-green-50 rounded-lg border-2 border-green-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <span className="font-bold text-green-900">รูปภาพถูกสร้างแล้ว</span>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    ระบบได้สร้างรูปภาพสำหรับทุก attribute level เรียบร้อยแล้ว
+                  </p>
+                </div>
+
+                {showSurveyLink && (
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
+                      ลิงก์แบบสอบถาม (แชร์ให้ respondents)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={`${window.location.origin}/survey/conjoint/${studyId}`}
+                        readOnly
+                        className="flex-1 p-3 border-2 border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                      />
+                      <Button
+                        onClick={handleCopySurveyLink}
+                        className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white"
+                      >
+                        คัดลอก
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-2">
+                      💡 แชร์ลิงก์นี้ให้ผู้ตอบแบบสอบถาม - ไม่ต้องล็อกอิน
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Next Step - View Results */}
+        {imagesGenerated && (
           <div className="flex justify-end">
             <Button
               onClick={() => navigate(`/research/conjoint/${studyId}/results`)}
               className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white font-bold"
             >
-              ดำเนินการต่อไป Phase 3
+              ดูผลการวิเคราะห์
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
