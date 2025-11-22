@@ -545,6 +545,10 @@ test_plan:
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+  completed_tests:
+    - "Conjoint Analysis AI Image Generation - Level Images: ✅ PASSED"
+    - "Conjoint Analysis AI Image Generation - Profile Images: ✅ PASSED"
+    - "Conjoint Analysis AI Image Generation - Image Persistence: ✅ PASSED"
 
   - task: "แก้ไข mouse-wheel zoom ใน CustomerJourneyTool expanded view"
     implemented: true
