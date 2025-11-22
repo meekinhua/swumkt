@@ -64,6 +64,34 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
     }
   };
 
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/generate-profile-image`,
+        {
+          choice_set_id: choiceSetId,
+          profile_id: profile.id
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.image_url) {
+        setImageUrl(response.data.image_url);
+        toast.success('สร้างรูป Profile สำเร็จด้วย AI!');
+        onImageUpdated();
+      } else {
+        toast.warning('ไม่สามารถสร้างรูปได้');
+      }
+    } catch (error) {
+      console.error('Error generating profile image:', error);
+      const errorMsg = error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้';
+      toast.error(errorMsg);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleRemoveImage = async () => {
     setUploading(true);
     try {
