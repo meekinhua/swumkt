@@ -631,7 +631,7 @@ const ConjointDesignPage = () => {
         )}
 
         {/* Next Step - View Results */}
-        {imagesGenerated && (
+        {showSurveyLink && (
           <div className="flex justify-end">
             <Button
               onClick={() => navigate(`/research/conjoint/${studyId}/results`)}
