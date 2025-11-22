@@ -2384,11 +2384,12 @@ class BackendTester:
             except Exception as e:
                 self.log_result(test_name, False, f"Unexpected error: {str(e)}")
         
-        total_passed = conjoint_passed + journal_finder_passed + phase1b_passed + phase1a_passed + journey_passed
-        total_tests = conjoint_total + journal_finder_total + phase1b_total + phase1a_total + journey_total
+        total_passed = conjoint_passed + conjoint_image_passed + journal_finder_passed + phase1b_passed + phase1a_passed + journey_passed
+        total_tests = conjoint_total + conjoint_image_total + journal_finder_total + phase1b_total + phase1a_total + journey_total
         
         print("=" * 80)
         print(f"📊 Conjoint Analysis Results: {conjoint_passed}/{conjoint_total} tests passed")
+        print(f"🎨 Conjoint Image Generation Results: {conjoint_image_passed}/{conjoint_image_total} tests passed")
         print(f"📊 Journal Finder API Results: {journal_finder_passed}/{journal_finder_total} tests passed")
         print(f"📊 Phase 1B Survey Builder Results: {phase1b_passed}/{phase1b_total} tests passed")
         print(f"📊 Phase 1A Authentication Results: {phase1a_passed}/{phase1a_total} tests passed")
