@@ -6540,6 +6540,244 @@ async def update_llm_prompt(
     updated_prompt = await db.llm_prompts.find_one({"id": prompt_id}, {"_id": 0})
     return {"message": "Prompt updated successfully", "prompt": updated_prompt}
 
+# Generate images for attribute levels
+@api_router.post("/conjoint/studies/{study_id}/generate-images")
+async def generate_profile_images(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate images for all attribute levels using AI"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if not study.get("attributes"):
+        raise HTTPException(status_code=400, detail="No attributes defined")
+    
+    # Get API key
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Image generation service not configured")
+    
+    try:
+        from emergentintegrations.llm.image import ImageGenerator
+        
+        generator = ImageGenerator(api_key=api_key)
+        
+        updated_attributes = []
+        for attr in study["attributes"]:
+            updated_levels = []
+            for level in attr.get("levels", []):
+                # Generate image for each level
+                image_prompt = f"Professional product visualization: {attr['name']} - {level['value']}. Clean, minimalist style on white background."
+                
+                if level.get("description"):
+                    image_prompt += f" {level['description']}"
+                
+                try:
+                    image_url = await generator.generate_image(
+                        prompt=image_prompt,
+                        model="nanobanana"
+                    )
+                    
+                    level["image_url"] = image_url
+                    level["image_prompt"] = image_prompt
+                except Exception as img_error:
+                    logging.error(f"Failed to generate image for {level['value']}: {img_error}")
+                    level["image_url"] = None
+                
+                updated_levels.append(level)
+            
+            attr["levels"] = updated_levels
+            updated_attributes.append(attr)
+        
+        # Update study
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {
+                "$set": {
+                    "attributes": updated_attributes,
+                    "images_generated": True,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "message": "Images generated successfully",
+            "attributes": updated_attributes
+        }
+        
+    except Exception as e:
+        logging.error(f"Image generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
+
+# Get survey (public endpoint - no auth required)
+@api_router.get("/conjoint/survey/{study_id}")
+async def get_survey(study_id: str):
+    """Get public survey for respondents (no authentication required)"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["status"] != ConjointStudyStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Survey is not active")
+    
+    return {
+        "study_id": study["id"],
+        "title": study["title"],
+        "description": study.get("description"),
+        "attributes": study.get("attributes", []),
+        "choice_sets": study.get("choice_sets", []),
+        "alternatives_per_set": study.get("alternatives_per_set", 3)
+    }
+
+# Submit survey response (public endpoint - no auth required)
+@api_router.post("/conjoint/survey/{study_id}/response")
+async def submit_survey_response(
+    study_id: str,
+    response: SurveyResponse
+):
+    """Submit survey response (no authentication required)"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["status"] != ConjointStudyStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Survey is not accepting responses")
+    
+    # Create response document
+    response_doc = {
+        "id": str(uuid.uuid4()),
+        "study_id": study_id,
+        "respondent_id": response.respondent_id or str(uuid.uuid4()),
+        "respondent_email": response.respondent_email,
+        "responses": response.responses,
+        "submitted_at": datetime.now(timezone.utc)
+    }
+    
+    await db.conjoint_responses.insert_one(response_doc)
+    
+    # Update study respondent count
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$inc": {"respondent_count": 1},
+            "$set": {"updated_at": datetime.now(timezone.utc)}
+        }
+    )
+    
+    return {"message": "Response submitted successfully", "response_id": response_doc["id"]}
+
+# Get study results and analysis
+@api_router.get("/conjoint/studies/{study_id}/results")
+async def get_study_results(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get analysis results for a study"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get all responses
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if len(responses) < 30:
+        return {
+            "study_id": study_id,
+            "respondent_count": len(responses),
+            "status": "insufficient_data",
+            "message": "Need at least 30 responses for reliable analysis",
+            "responses": responses
+        }
+    
+    # Calculate part-worths using aggregation method
+    # In production, use Hierarchical Bayes or similar sophisticated methods
+    part_worths = calculate_part_worths(study, responses)
+    importance_scores = calculate_importance_scores(part_worths, study)
+    
+    return {
+        "study_id": study_id,
+        "respondent_count": len(responses),
+        "status": "complete",
+        "part_worths": part_worths,
+        "importance_scores": importance_scores,
+        "responses": responses
+    }
+
+def calculate_part_worths(study: Dict, responses: List[Dict]) -> Dict[str, Dict[str, float]]:
+    """Calculate part-worth utilities for each attribute level"""
+    # Simplified aggregation method - count preferences
+    part_worths = {}
+    
+    for attr in study.get("attributes", []):
+        attr_id = attr["id"]
+        part_worths[attr_id] = {
+            "name": attr["name"],
+            "levels": {}
+        }
+        
+        for level in attr.get("levels", []):
+            level_id = level["id"]
+            selection_count = 0
+            
+            # Count how many times this level was in the selected profile
+            for response in responses:
+                for choice in response.get("responses", []):
+                    selected_profile_id = choice.get("selected_profile_id")
+                    
+                    # Find the selected profile in choice sets
+                    for choice_set in study.get("choice_sets", []):
+                        if choice_set["id"] == choice.get("choice_set_id"):
+                            for profile in choice_set.get("profiles", []):
+                                if profile["id"] == selected_profile_id:
+                                    if profile["attribute_levels"].get(attr_id) == level_id:
+                                        selection_count += 1
+            
+            # Normalize to utility score
+            total_choices = len(responses) * len(study.get("choice_sets", []))
+            utility = (selection_count / total_choices) * 100 if total_choices > 0 else 0
+            
+            part_worths[attr_id]["levels"][level_id] = {
+                "value": level["value"],
+                "utility": round(utility, 2),
+                "selection_count": selection_count
+            }
+    
+    return part_worths
+
+def calculate_importance_scores(part_worths: Dict, study: Dict) -> Dict[str, float]:
+    """Calculate relative importance of each attribute"""
+    importance_scores = {}
+    
+    # Calculate range of utilities for each attribute
+    ranges = {}
+    for attr_id, attr_data in part_worths.items():
+        utilities = [level_data["utility"] for level_data in attr_data["levels"].values()]
+        ranges[attr_id] = max(utilities) - min(utilities) if utilities else 0
+    
+    # Calculate relative importance
+    total_range = sum(ranges.values())
+    
+    if total_range > 0:
+        for attr_id, range_val in ranges.items():
+            importance_scores[attr_id] = {
+                "name": part_worths[attr_id]["name"],
+                "importance": round((range_val / total_range) * 100, 2)
+            }
+    
+    return importance_scores
+
 
 app.include_router(api_router)
 
