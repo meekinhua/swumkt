@@ -1889,6 +1889,46 @@ class BackendTester:
             self.log_result("Journal Finder Response Time", False, f"Exception: {str(e)}")
             return False
     
+    def run_focused_conjoint_tests(self):
+        """Run focused conjoint analysis tests for the 2 failed endpoints"""
+        print(f"\n🎯 FOCUSED CONJOINT ANALYSIS TESTING")
+        print(f"Testing 2 critical fixes: Qualitative Analysis + Admin LLM Prompts")
+        print(f"Backend URL: {self.base_url}")
+        print("=" * 80)
+        
+        # Initialize tokens and IDs
+        self.conjoint_token = None
+        self.conjoint_study_id = None
+        
+        # Focused tests for the 2 failed endpoints
+        focused_tests = [
+            ("Conjoint Admin Login", self.test_conjoint_admin_login),
+            ("Conjoint Create Study", self.test_conjoint_create_study),
+            ("Conjoint Qualitative Analysis", self.test_conjoint_qualitative_analysis),  # FIXED LLM Parsing
+            ("Admin LLM Prompts Access", self.test_admin_llm_prompts_access),       # FIXED Access Control
+        ]
+        
+        passed = 0
+        failed = 0
+        
+        for test_name, test_func in focused_tests:
+            try:
+                if test_func():
+                    passed += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                self.log_result(test_name, False, f"Unexpected error: {str(e)}")
+                failed += 1
+        
+        print("\n" + "=" * 80)
+        print(f"🎯 FOCUSED TEST SUMMARY")
+        print(f"✅ Passed: {passed}")
+        print(f"❌ Failed: {failed}")
+        print(f"📈 Success Rate: {passed/(passed+failed)*100:.1f}%")
+        
+        return self.test_results
+    
     def run_all_tests(self):
         """Run all backend tests"""
         print(f"🚀 Starting Backend Tests - Conjoint Analysis Feature Testing")
