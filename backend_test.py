@@ -1820,7 +1820,7 @@ class BackendTester:
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print(f"🚀 Starting Backend Tests - Journal Finder API Testing")
+        print(f"🚀 Starting Backend Tests - Conjoint Analysis Feature Testing")
         print(f"Backend URL: {self.base_url}")
         print("=" * 80)
         
@@ -1830,8 +1830,24 @@ class BackendTester:
         self.anonymous_response_id = None
         self.logged_in_response_id = None
         self.journal_token = None
+        self.conjoint_token = None
+        self.conjoint_study_id = None
         
-        # Test sequence - Journal Finder Tests (Main Focus)
+        # Test sequence - Conjoint Analysis Tests (Main Focus)
+        conjoint_tests = [
+            ("Conjoint Admin Login", self.test_conjoint_admin_login),
+            ("Conjoint Create Study", self.test_conjoint_create_study),
+            ("Conjoint Qualitative Analysis", self.test_conjoint_qualitative_analysis),
+            ("Conjoint Update Attributes", self.test_conjoint_update_attributes),
+            ("Conjoint Generate Design", self.test_conjoint_generate_design),
+            ("Conjoint Get Survey Public", self.test_conjoint_get_survey_public),
+            ("Conjoint Submit Response Public", self.test_conjoint_submit_response_public),
+            ("Conjoint Admin LLM Prompts", self.test_conjoint_admin_llm_prompts),
+            ("Conjoint Get Study Details", self.test_conjoint_get_study_details),
+            ("Conjoint List Studies", self.test_conjoint_list_studies),
+        ]
+        
+        # Test sequence - Journal Finder Tests (Regression)
         journal_finder_tests = [
             ("Journal Finder Admin Login", self.test_journal_finder_admin_login),
             ("Journal Finder Marketing Research", self.test_journal_finder_marketing_research),
