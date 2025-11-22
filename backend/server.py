@@ -6100,6 +6100,11 @@ class UploadImageRequest(BaseModel):
     level_id: str
     image_url: str
 
+class UploadProfileImageRequest(BaseModel):
+    choice_set_id: str
+    profile_id: str
+    image_url: str
+
 class SurveyResponse(BaseModel):
     study_id: str
     respondent_id: Optional[str] = None
