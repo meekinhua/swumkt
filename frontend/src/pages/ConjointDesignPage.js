@@ -213,6 +213,33 @@ const ConjointDesignPage = () => {
     }));
   };
 
+  const handleGenerateImages = async () => {
+    setGeneratingImages(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/generate-images`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('สร้างรูปภาพสำเร็จ!');
+      setImagesGenerated(true);
+      setShowSurveyLink(true);
+      await loadStudy();
+    } catch (error) {
+      console.error('Error generating images:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างรูปภาพได้');
+    } finally {
+      setGeneratingImages(false);
+    }
+  };
+
+  const handleCopySurveyLink = () => {
+    const surveyLink = `${window.location.origin}/survey/conjoint/${studyId}`;
+    navigator.clipboard.writeText(surveyLink);
+    toast.success('คัดลอกลิงก์แล้ว!');
+  };
+
   const calculateRecommendedSets = () => {
     if (attributes.length === 0) return 12;
     
