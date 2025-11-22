@@ -173,6 +173,7 @@ const ConjointSurveyPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {currentSet.profiles.map((profile, idx) => {
               const isSelected = selections[currentSet.id] === profile.id;
+              const hasProfileImage = profile.profile_image_url;
               
               return (
                 <button
@@ -188,6 +189,21 @@ const ConjointSurveyPage = () => {
                     ตัวเลือก {String.fromCharCode(65 + idx)}
                   </div>
                   
+                  {/* Show Profile Image if available */}
+                  {hasProfileImage ? (
+                    <div className="mb-4">
+                      <img
+                        src={profile.profile_image_url}
+                        alt={`Profile ${String.fromCharCode(65 + idx)}`}
+                        className="w-full h-48 object-cover rounded border-2 border-gray-200"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  
+                  {/* Attribute details */}
                   <div className="space-y-3">
                     {survey.attributes.map((attr) => {
                       const level = getAttributeValue(profile, attr.id);
@@ -198,11 +214,15 @@ const ConjointSurveyPage = () => {
                             {attr.name}
                           </div>
                           
-                          {level?.image_url && (
+                          {/* Show individual level image only if no profile image */}
+                          {!hasProfileImage && level?.image_url && (
                             <img
                               src={level.image_url}
                               alt={level.value}
                               className="w-full h-32 object-cover rounded mb-2"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
                             />
                           )}
                           
