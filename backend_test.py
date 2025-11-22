@@ -1359,23 +1359,18 @@ class BackendTester:
             
             if response.status_code == 200:
                 result = response.json()
-                if "choice_sets" in result and "message" in result:
-                    choice_sets = result["choice_sets"]
-                    if len(choice_sets) > 0:
-                        # Check choice set structure
-                        first_set = choice_sets[0]
-                        if "profiles" in first_set and len(first_set["profiles"]) == 3:
-                            self.log_result("Conjoint Generate Design", True, 
-                                          f"D-optimal design generated successfully ({len(choice_sets)} choice sets)")
-                            return True
-                        else:
-                            self.log_result("Conjoint Generate Design", False, "Invalid choice set structure", first_set)
-                            return False
+                if "message" in result and "num_choice_sets" in result:
+                    num_choice_sets = result["num_choice_sets"]
+                    alternatives_per_set = result.get("alternatives_per_set", 0)
+                    if num_choice_sets > 0 and alternatives_per_set == 3:
+                        self.log_result("Conjoint Generate Design", True, 
+                                      f"D-optimal design generated successfully ({num_choice_sets} choice sets, {alternatives_per_set} alternatives per set)")
+                        return True
                     else:
-                        self.log_result("Conjoint Generate Design", False, "No choice sets generated", result)
+                        self.log_result("Conjoint Generate Design", False, f"Invalid design parameters (sets: {num_choice_sets}, alternatives: {alternatives_per_set})", result)
                         return False
                 else:
-                    self.log_result("Conjoint Generate Design", False, "Missing choice_sets or message", result)
+                    self.log_result("Conjoint Generate Design", False, "Missing message or num_choice_sets", result)
                     return False
             else:
                 self.log_result("Conjoint Generate Design", False, f"HTTP {response.status_code}", response.text)
