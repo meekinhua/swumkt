@@ -1509,7 +1509,7 @@ class BackendTester:
                     self.log_result("Conjoint Admin LLM Prompts", False, "Response does not contain prompts list", result)
                     return False
             elif response.status_code == 403:
-                self.log_result("Conjoint Admin LLM Prompts", False, f"Admin access denied - user may not have admin user_type (HTTP {response.status_code})", response.text)
+                self.log_result("Conjoint Admin LLM Prompts", False, f"Admin access denied - backend checks user_type instead of role (admin user has role='admin' but user_type='regular') (HTTP {response.status_code})", response.text)
                 return False
             else:
                 self.log_result("Conjoint Admin LLM Prompts", False, f"HTTP {response.status_code}", response.text)
