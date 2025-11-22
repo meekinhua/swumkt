@@ -112,6 +112,18 @@ function App() {
               }
             />
             <Route
+              path="/research/conjoint/:studyId/results"
+              element={
+                <ProtectedRoute>
+                  <ConjointResultsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/survey/conjoint/:studyId"
+              element={<ConjointSurveyPage />}
+            />
+            <Route
               path="/market-research/journal-finder"
               element={
                 <ProtectedRoute>
