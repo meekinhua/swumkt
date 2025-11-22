@@ -539,28 +539,42 @@ const ConjointDesignPage = () => {
               Phase 3: สร้างรูปภาพและแชร์แบบสอบถาม
             </h2>
 
-            {!imagesGenerated ? (
+            {!showSurveyLink ? (
               <div className="text-center py-8">
                 <p className="text-gray-700 mb-6">
                   สร้างรูปภาพสำหรับแต่ละ attribute level เพื่อให้ respondents เห็นภาพชัดเจนขึ้น
+                  <br />
+                  <span className="text-sm text-gray-600">
+                    (Optional - สามารถข้ามและดำเนินการต่อได้)
+                  </span>
                 </p>
-                <Button
-                  onClick={handleGenerateImages}
-                  disabled={generatingImages}
-                  className="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold"
-                >
-                  {generatingImages ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      กำลังสร้างรูปภาพ...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      สร้างรูปภาพด้วย AI
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-3 justify-center">
+                  <Button
+                    onClick={handleGenerateImages}
+                    disabled={generatingImages}
+                    className="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold"
+                  >
+                    {generatingImages ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        กำลังสร้างรูปภาพ...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        สร้างรูปภาพด้วย AI
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleSkipImages}
+                    variant="outline"
+                    className="border-2 border-gray-400 text-gray-700"
+                  >
+                    ข้ามขั้นตอนนี้
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-6">
