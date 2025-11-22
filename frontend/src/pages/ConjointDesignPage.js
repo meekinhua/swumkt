@@ -229,9 +229,6 @@ const ConjointDesignPage = () => {
   const [alternativesPerSet, setAlternativesPerSet] = useState(3);
   const [numberOfSets, setNumberOfSets] = useState(null);
   const [designGenerated, setDesignGenerated] = useState(false);
-  const [generatingImages, setGeneratingImages] = useState(false);
-  const [imagesGenerated, setImagesGenerated] = useState(false);
-  const [showSurveyLink, setShowSurveyLink] = useState(false);
 
   useEffect(() => {
     if (user && token && studyId) {
