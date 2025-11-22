@@ -1548,23 +1548,24 @@ class BackendTester:
             
             if response.status_code == 200:
                 result = response.json()
-                if isinstance(result, list):
+                if "studies" in result and isinstance(result["studies"], list):
+                    studies = result["studies"]
                     # Check if our created study is in the list
                     if hasattr(self, 'conjoint_study_id'):
-                        study_found = any(study.get("id") == self.conjoint_study_id for study in result)
+                        study_found = any(study.get("id") == self.conjoint_study_id for study in studies)
                         if study_found:
                             self.log_result("Conjoint List Studies", True, 
-                                          f"Studies listed successfully ({len(result)} studies, created study found)")
+                                          f"Studies listed successfully ({len(studies)} studies, created study found)")
                             return True
                         else:
                             self.log_result("Conjoint List Studies", True, 
-                                          f"Studies listed successfully ({len(result)} studies, created study not found - may be expected)")
+                                          f"Studies listed successfully ({len(studies)} studies, created study not found - may be expected)")
                             return True
                     else:
-                        self.log_result("Conjoint List Studies", True, f"Studies listed successfully ({len(result)} studies)")
+                        self.log_result("Conjoint List Studies", True, f"Studies listed successfully ({len(studies)} studies)")
                         return True
                 else:
-                    self.log_result("Conjoint List Studies", False, "Response is not a list", result)
+                    self.log_result("Conjoint List Studies", False, "Response does not contain studies list", result)
                     return False
             else:
                 self.log_result("Conjoint List Studies", False, f"HTTP {response.status_code}", response.text)
