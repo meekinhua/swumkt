@@ -6069,6 +6069,24 @@ class GenerateDesignRequest(BaseModel):
     number_of_sets: Optional[int] = None  # Auto-calculate if not provided
     design_method: str = "d-optimal"
 
+class LLMPromptTemplate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    category: str  # "conjoint_qualitative", "image_generation", etc.
+    prompt_template: str
+    system_message: Optional[str] = None
+    model_provider: str = "anthropic"
+    model_name: str = "claude-sonnet-4-20250514"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_by: Optional[str] = None
+
+class UpdateLLMPromptRequest(BaseModel):
+    prompt_template: str
+    system_message: Optional[str] = None
+    model_provider: Optional[str] = None
+    model_name: Optional[str] = None
+
 class GenerateProfileImageRequest(BaseModel):
     study_id: str
     profile: ConjointProfile
