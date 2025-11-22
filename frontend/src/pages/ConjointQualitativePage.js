@@ -422,8 +422,36 @@ const ConjointQualitativePage = () => {
               </div>
             </Card>
 
+            {/* Analysis History */}
+            {analysisHistory.length > 1 && (
+              <Card className="p-4 mb-6 bg-gray-50 border-2 border-gray-200">
+                <h3 className="text-sm font-bold text-gray-700 mb-3">
+                  ประวัติการวิเคราะห์ ({analysisHistory.length} รอบ)
+                </h3>
+                <div className="space-y-2">
+                  {analysisHistory.slice(0, -1).reverse().map((item, idx) => (
+                    <div key={idx} className="p-2 bg-white rounded border border-gray-200 text-xs text-gray-600">
+                      <span className="font-semibold">รอบที่ {analysisHistory.length - idx - 1}:</span> {' '}
+                      {new Date(item.timestamp).toLocaleString('th-TH')} - {' '}
+                      {item.result.suggested_attributes?.length || 0} attributes
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             {/* Proceed Button */}
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                💡 ไม่พอใจผล? คุณสามารถ
+                <button 
+                  onClick={() => setQualitativeInputs([...qualitativeInputs])}
+                  className="text-blue-600 hover:underline mx-1"
+                >
+                  แก้ไขข้อมูล
+                </button>
+                และวิเคราะห์ใหม่ หรือไปแก้ไข attributes ใน Phase 2
+              </div>
               <Button
                 onClick={handleProceedToDesign}
                 className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white font-bold"
