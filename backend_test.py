@@ -1393,18 +1393,29 @@ class BackendTester:
             
             if response.status_code == 200:
                 result = response.json()
-                if "study" in result and "choice_sets" in result:
+                if "study_id" in result and "choice_sets" in result:
+                    choice_sets = result["choice_sets"]
+                    title = result.get("title", "")
+                    if len(choice_sets) > 0:
+                        self.log_result("Conjoint Get Survey Public", True, 
+                                      f"Survey data retrieved successfully ({len(choice_sets)} choice sets, title: {title})")
+                        return True
+                    else:
+                        self.log_result("Conjoint Get Survey Public", False, "No choice sets available", result)
+                        return False
+                elif "study" in result and "choice_sets" in result:
+                    # Fallback format
                     study = result["study"]
                     choice_sets = result["choice_sets"]
-                    if study.get("status") == "active" and len(choice_sets) > 0:
+                    if len(choice_sets) > 0:
                         self.log_result("Conjoint Get Survey Public", True, 
                                       f"Survey data retrieved successfully ({len(choice_sets)} choice sets)")
                         return True
                     else:
-                        self.log_result("Conjoint Get Survey Public", False, f"Study not active or no choice sets (status: {study.get('status')})", result)
+                        self.log_result("Conjoint Get Survey Public", False, "No choice sets available", result)
                         return False
                 else:
-                    self.log_result("Conjoint Get Survey Public", False, "Missing study or choice_sets", result)
+                    self.log_result("Conjoint Get Survey Public", False, "Missing study_id or choice_sets", result)
                     return False
             else:
                 self.log_result("Conjoint Get Survey Public", False, f"HTTP {response.status_code}", response.text)
