@@ -233,16 +233,17 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data.skipped) {
-        toast.info('ฟีเจอร์สร้างรูปยังไม่พร้อมใช้งาน - กรุณาอัพโหลดรูปเอง');
-      } else if (response.data.image_url) {
+      if (response.data.image_url) {
         setImageUrl(response.data.image_url);
-        toast.success('สร้างรูปภาพสำเร็จ');
+        toast.success('สร้างรูปภาพสำเร็จด้วย AI!');
         onImageUpdated();
+      } else {
+        toast.warning('ไม่สามารถสร้างรูปได้ - กรุณาอัพโหลดรูปเอง');
       }
     } catch (error) {
       console.error('Error generating image:', error);
-      toast.warning('ไม่สามารถสร้างรูปได้ - กรุณาอัพโหลดรูปเอง');
+      const errorMsg = error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้';
+      toast.error(errorMsg);
     } finally {
       setGenerating(false);
     }
