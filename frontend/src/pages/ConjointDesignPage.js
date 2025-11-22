@@ -747,6 +747,54 @@ const ConjointDesignPage = () => {
           </Card>
         )}
 
+        {/* Profile Images Management */}
+        {designGenerated && study?.choice_sets && study.choice_sets.length > 0 && (
+          <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
+            <h2 className="text-2xl font-black text-gray-900 mb-4">
+              จัดการรูปภาพ Profile (Optional)
+            </h2>
+            
+            <p className="text-gray-700 mb-6">
+              Profile = การรวมกันของหลาย levels จากต่าง attributes<br />
+              <span className="text-sm text-gray-600">
+                เช่น: Profile A = ราคา 15,000 บาท + แบรนด์ Samsung + หน้าจอ 6.5 นิ้ว<br />
+                คุณสามารถ set รูปประกอบ (composite image) ให้แต่ละ profile ได้
+              </span>
+            </p>
+
+            <div className="space-y-4">
+              {study.choice_sets.slice(0, 3).map((choiceSet, idx) => (
+                <div key={choiceSet.id} className="p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                  <h3 className="text-base font-bold text-gray-900 mb-3">
+                    Choice Set {idx + 1}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {choiceSet.profiles.map((profile, profileIdx) => (
+                      <ProfileImageCard
+                        key={profile.id}
+                        studyId={studyId}
+                        choiceSetId={choiceSet.id}
+                        profile={profile}
+                        profileIndex={profileIdx}
+                        attributes={attributes}
+                        token={token}
+                        onImageUpdated={loadStudy}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              {study.choice_sets.length > 3 && (
+                <p className="text-sm text-gray-600 text-center">
+                  แสดง 3 choice sets แรก (มีทั้งหมด {study.choice_sets.length} sets)
+                </p>
+              )}
+            </div>
+          </Card>
+        )}
+
         {/* Next Step - View Results */}
         {designGenerated && (
           <div className="flex justify-end">
