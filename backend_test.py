@@ -1901,23 +1901,20 @@ class BackendTester:
                 
                 # Verify both images persist
                 if level_image_found and profile_image_found:
-                        self.log_result("Conjoint Verify Images Persist", True, 
-                                      "Both level and profile images successfully saved to database and persist in study")
-                        return True
-                    elif level_image_found:
-                        self.log_result("Conjoint Verify Images Persist", False, 
-                                      "Level image persists but profile image not found in database")
-                        return False
-                    elif profile_image_found:
-                        self.log_result("Conjoint Verify Images Persist", False, 
-                                      "Profile image persists but level image not found in database")
-                        return False
-                    else:
-                        self.log_result("Conjoint Verify Images Persist", False, 
-                                      "Neither level nor profile images found in database")
-                        return False
+                    self.log_result("Conjoint Verify Images Persist", True, 
+                                  "Both level and profile images successfully saved to database and persist in study")
+                    return True
+                elif level_image_found:
+                    self.log_result("Conjoint Verify Images Persist", False, 
+                                  "Level image persists but profile image not found in database")
+                    return False
+                elif profile_image_found:
+                    self.log_result("Conjoint Verify Images Persist", False, 
+                                  "Profile image persists but level image not found in database")
+                    return False
                 else:
-                    self.log_result("Conjoint Verify Images Persist", False, "Missing study in response", result)
+                    self.log_result("Conjoint Verify Images Persist", False, 
+                                  "Neither level nor profile images found in database")
                     return False
             else:
                 self.log_result("Conjoint Verify Images Persist", False, f"HTTP {response.status_code}", response.text)
