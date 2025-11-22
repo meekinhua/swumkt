@@ -6087,6 +6087,15 @@ class UpdateLLMPromptRequest(BaseModel):
     model_provider: Optional[str] = None
     model_name: Optional[str] = None
 
+class GenerateImagesRequest(BaseModel):
+    study_id: str
+
+class SurveyResponse(BaseModel):
+    study_id: str
+    respondent_id: Optional[str] = None
+    respondent_email: Optional[str] = None
+    responses: List[Dict[str, Any]]  # list of {choice_set_id, selected_profile_id}
+
 class GenerateProfileImageRequest(BaseModel):
     study_id: str
     profile: ConjointProfile
