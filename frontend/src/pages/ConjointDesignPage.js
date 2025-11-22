@@ -28,6 +28,7 @@ import {
 // Component for managing profile image (composite image)
 const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attributes, token, onImageUpdated }) => {
   const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState(profile.profile_image_url || '');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [tempUrl, setTempUrl] = useState('');
