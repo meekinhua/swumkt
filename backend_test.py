@@ -2319,6 +2319,19 @@ class BackendTester:
             except Exception as e:
                 self.log_result(test_name, False, f"Unexpected error: {str(e)}")
         
+        print("\n🎨 NEW FOCUS: Conjoint Analysis AI Image Generation Tests")
+        print("-" * 50)
+        
+        conjoint_image_passed = 0
+        conjoint_image_total = len(conjoint_image_tests)
+        
+        for test_name, test_func in conjoint_image_tests:
+            try:
+                if test_func():
+                    conjoint_image_passed += 1
+            except Exception as e:
+                self.log_result(test_name, False, f"Unexpected error: {str(e)}")
+        
         print("\n📋 REGRESSION: Journal Finder API Tests")
         print("-" * 50)
         
