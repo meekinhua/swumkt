@@ -17,6 +17,8 @@ import CustomerPerceptionTool from '@/pages/CustomerPerceptionTool';
 import ConjointAnalysisTool from '@/pages/ConjointAnalysisTool';
 import ConjointQualitativePage from '@/pages/ConjointQualitativePage';
 import ConjointDesignPage from '@/pages/ConjointDesignPage';
+import ConjointSurveyPage from '@/pages/ConjointSurveyPage';
+import ConjointResultsPage from '@/pages/ConjointResultsPage';
 import JournalFinder from '@/pages/JournalFinder';
 import AcademicFormatEditor from '@/pages/AcademicFormatEditor';
 import AdminSettings from '@/pages/AdminSettings';
