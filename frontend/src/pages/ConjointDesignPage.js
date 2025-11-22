@@ -18,7 +18,8 @@ import {
   CheckCircle,
   RefreshCw,
   Copy,
-  Link
+  Link,
+  AlertCircle
 } from 'lucide-react';
 
 const ConjointDesignPage = () => {
