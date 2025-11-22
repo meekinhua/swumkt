@@ -346,17 +346,37 @@ const ConjointQualitativePage = () => {
         {analysisResult && (
           <>
             <Card className="p-6 mb-6 bg-white border-2 border-green-300">
-              <div className="flex items-start gap-4 mb-4">
-                <CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0" />
-                <div>
-                  <h2 className="text-2xl font-black text-gray-900 mb-2">
-                    ผลการวิเคราะห์
-                  </h2>
-                  {analysisResult.recommendations && (
-                    <p className="text-gray-700 mb-4">
-                      {analysisResult.recommendations}
-                    </p>
-                  )}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start gap-4">
+                  <CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0" />
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-900 mb-2">
+                      ผลการวิเคราะห์
+                      {analysisHistory.length > 0 && (
+                        <span className="ml-3 text-sm font-normal text-gray-600">
+                          (รอบที่ {analysisHistory.length})
+                        </span>
+                      )}
+                    </h2>
+                    {analysisResult.recommendations && (
+                      <p className="text-gray-700 mb-4">
+                        {analysisResult.recommendations}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Reanalyze Button */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleReanalyze}
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-orange-400 text-orange-700 hover:bg-orange-50"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    วิเคราะห์ใหม่
+                  </Button>
                 </div>
               </div>
 
