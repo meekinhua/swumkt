@@ -606,6 +606,22 @@ agent_communication:
         agent: "testing"
         comment: "✅ TESTED: Navigation consistency working perfectly across all pages! Tested on Dashboard, Market Research, Knowledge Hub, and Profile pages - all show consistent 4/4 menu items (แดชบอร์ด, เครื่องมือวิจัยตลาด, ศูนย์ความรู้, โปรไฟล์). Desktop navigation: All 4 items found on every page. Mobile navigation: Successfully tested - mobile menu opens correctly and shows all 4 navigation items. Navigation remains consistent when switching between pages."
 
+backend:
+  - task: "Conjoint Analysis Feature - Complete Backend API Testing"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing complete Conjoint Analysis feature flow with 10 phases as requested: Authentication, Create Study, Qualitative Analysis, Update Attributes, Generate D-Optimal Design, Get Survey (Public), Submit Survey Response (Public), Admin LLM Prompts, Get Study Details, List All Studies"
+      - working: false
+        agent: "testing"
+        comment: "✅ CONJOINT ANALYSIS BACKEND TESTING COMPLETE: 8/10 tests passed with 2 critical issues requiring main agent fixes. 🔐 Authentication: PASS - admin@swu.ac.th/admin123 login successful. ✅ WORKING FEATURES: 1) Create Study: Successfully created study 'สมาร์ทโฟน 2025' with proper metadata. 2) Update Attributes: Successfully updated 3 attributes (ราคา, แบรนด์, ขนาดหน้าจอ) with levels. 3) Generate D-Optimal Design: Successfully generated 8 choice sets with 3 alternatives per set. 4) Get Survey (Public): Successfully retrieved survey data with 8 choice sets (no auth required). 5) Submit Survey Response (Public): Successfully submitted mock response (no auth required). 6) Get Study Details: Successfully retrieved complete study details with status 'active'. 7) List All Studies: Successfully listed 3 studies including created study. 8) Admin Login: Authentication working correctly. ❌ CRITICAL ISSUES REQUIRING MAIN AGENT FIXES: 1) Qualitative Analysis (Phase 3): Backend LLM response parsing error - 'too many values to unpack (expected 2)' - Claude Sonnet integration has parsing bug in qualitative analysis endpoint. 2) Admin LLM Prompts (Phase 8): Admin access denied - backend checks user_type='regular' instead of role='admin' (admin user has correct role but wrong user_type). 🎯 OVERALL: Core conjoint analysis workflow is 80% functional. D-optimal design generation, choice set creation, and survey response collection all working perfectly. Only LLM integration and admin access control need fixes."
+
 agent_communication:
   - agent: "main"
     message: "✅ Priority 0 Tasks Complete: 1) แยกการนับ 'ผู้สร้าง' และ 'ความคิดเห็น' ในหน้า ContentDetail - แสดง '2 ผู้สร้าง Content' (ผู้แต่ง + สมาชิกกลุ่ม) และ '0 ความคิดเห็น' (จำนวนคอมเมนต์) แยกกัน ลบการใช้ฟิลด์ contributors ที่สับสน 2) ปรับ Navigation Bar ให้มีเมนูคงที่ทุกหน้า - แสดงเมนู Dashboard, เครื่องมือวิจัยตลาด, ศูนย์ความรู้, โปรไฟล์ คงที่ในทุกหน้าสำหรับผู้ใช้ที่ login แล้ว ทำให้การนำทางในแอปง่ายและสม่ำเสมอมากขึ้น กรุณาทดสอบ frontend เพื่อยืนยันการทำงาน"
