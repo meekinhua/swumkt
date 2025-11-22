@@ -1875,19 +1875,19 @@ class BackendTester:
                 
                 # Check if level image is saved in attributes
                 level_image_found = False
-                    if hasattr(self, 'first_attribute_id') and hasattr(self, 'first_level_id'):
-                        attributes = study.get("attributes", [])
-                        for attr in attributes:
-                            if attr["id"] == self.first_attribute_id:
-                                for level in attr.get("levels", []):
-                                    if level["id"] == self.first_level_id:
-                                        if level.get("image_url") and level["image_url"].startswith("data:image/png;base64,"):
-                                            level_image_found = True
-                                            break
-                                break
-                    
-                    # Check if profile image is saved in choice_sets
-                    profile_image_found = False
+                if hasattr(self, 'first_attribute_id') and hasattr(self, 'first_level_id'):
+                    attributes = study.get("attributes", [])
+                    for attr in attributes:
+                        if attr["id"] == self.first_attribute_id:
+                            for level in attr.get("levels", []):
+                                if level["id"] == self.first_level_id:
+                                    if level.get("image_url") and level["image_url"].startswith("data:image/png;base64,"):
+                                        level_image_found = True
+                                        break
+                            break
+                
+                # Check if profile image is saved in choice_sets
+                profile_image_found = False
                     if hasattr(self, 'first_choice_set_id') and hasattr(self, 'first_profile_id'):
                         choice_sets = study.get("choice_sets", [])
                         for choice_set in choice_sets:
