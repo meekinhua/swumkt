@@ -6828,6 +6828,112 @@ async def upload_level_image(
         "image_url": request.image_url
     }
 
+# Generate image for complete profile (composite image)
+@api_router.post("/conjoint/studies/{study_id}/generate-profile-image")
+async def generate_profile_image(
+    study_id: str,
+    request: GenerateProfileImageRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate composite image for a complete profile using AI"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Find the profile
+    choice_sets = study.get("choice_sets", [])
+    profile_found = None
+    choice_set_found = None
+    
+    for choice_set in choice_sets:
+        if choice_set["id"] == request.choice_set_id:
+            choice_set_found = choice_set
+            for profile in choice_set.get("profiles", []):
+                if profile["id"] == request.profile_id:
+                    profile_found = profile
+                    break
+            break
+    
+    if not profile_found or not choice_set_found:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    # Build prompt from profile attributes
+    if request.prompt:
+        image_prompt = request.prompt
+    else:
+        # Get all attribute values for this profile
+        attributes = study.get("attributes", [])
+        profile_description = []
+        
+        for attr_id, level_id in profile_found["attribute_levels"].items():
+            attr = next((a for a in attributes if a["id"] == attr_id), None)
+            if attr:
+                level = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
+                if level:
+                    profile_description.append(f"{attr['name']}: {level['value']}")
+        
+        description_text = ", ".join(profile_description)
+        image_prompt = f"Professional product photo showing: {description_text}. High quality, clean background, product-focused composition."
+    
+    # Generate image using OpenAI
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="LLM service not configured")
+    
+    try:
+        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+        import base64
+        
+        image_gen = OpenAIImageGeneration(api_key=api_key)
+        
+        # Generate image
+        images = await image_gen.generate_images(
+            prompt=image_prompt,
+            model="gpt-image-1",
+            number_of_images=1
+        )
+        
+        if not images or len(images) == 0:
+            raise HTTPException(status_code=500, detail="No image was generated")
+        
+        # Convert to base64 data URL
+        image_base64 = base64.b64encode(images[0]).decode('utf-8')
+        image_data_url = f"data:image/png;base64,{image_base64}"
+        
+        # Update the profile with the generated image
+        for choice_set in choice_sets:
+            if choice_set["id"] == request.choice_set_id:
+                for profile in choice_set.get("profiles", []):
+                    if profile["id"] == request.profile_id:
+                        profile["profile_image_url"] = image_data_url
+                        profile["profile_image_prompt"] = image_prompt
+                        break
+                break
+        
+        # Save updated choice_sets
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {
+                "$set": {
+                    "choice_sets": choice_sets,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "message": "Profile image generated successfully",
+            "image_url": image_data_url,
+            "prompt_used": image_prompt
+        }
+        
+    except Exception as e:
+        logging.error(f"Profile image generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
+
 # Upload image for complete profile (composite image)
 @api_router.post("/conjoint/studies/{study_id}/upload-profile-image")
 async def upload_profile_image(
