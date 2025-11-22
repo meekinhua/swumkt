@@ -83,6 +83,14 @@ function App() {
               }
             />
             <Route
+              path="/market-research/conjoint-analysis"
+              element={
+                <ProtectedRoute>
+                  <ConjointAnalysisTool />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/market-research/journal-finder"
               element={
                 <ProtectedRoute>
