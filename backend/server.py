@@ -6090,6 +6090,16 @@ class UpdateLLMPromptRequest(BaseModel):
 class GenerateImagesRequest(BaseModel):
     study_id: str
 
+class GenerateSingleImageRequest(BaseModel):
+    attribute_id: str
+    level_id: str
+    prompt: Optional[str] = None
+
+class UploadImageRequest(BaseModel):
+    attribute_id: str
+    level_id: str
+    image_url: str
+
 class SurveyResponse(BaseModel):
     study_id: str
     respondent_id: Optional[str] = None
