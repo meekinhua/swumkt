@@ -1151,6 +1151,425 @@ class BackendTester:
             self.log_result("Survey Delete", False, f"Exception: {str(e)}")
             return False
 
+    # ============ CONJOINT ANALYSIS TESTS ============
+    
+    def test_conjoint_admin_login(self):
+        """Test admin login for conjoint analysis"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            data = {
+                "email": "admin@swu.ac.th",
+                "password": "admin123"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "access_token" in result and "user" in result:
+                    self.conjoint_token = result["access_token"]
+                    self.log_result("Conjoint Admin Login", True, "Admin login successful for conjoint analysis")
+                    return True
+                else:
+                    self.log_result("Conjoint Admin Login", False, "Missing token or user in response", result)
+                    return False
+            else:
+                self.log_result("Conjoint Admin Login", False, f"Admin credentials not found (HTTP {response.status_code})")
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Admin Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_create_study(self):
+        """Test creating a new conjoint study"""
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Conjoint Create Study", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            data = {
+                "title": "สมาร์ทโฟน 2025",
+                "description": "ศึกษาคุณสมบัติที่ผู้บริโภคต้องการ",
+                "product_category": "Electronics"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "study_id" in result and "message" in result:
+                    self.conjoint_study_id = result["study_id"]
+                    self.log_result("Conjoint Create Study", True, f"Study created successfully with ID: {self.conjoint_study_id}")
+                    return True
+                else:
+                    self.log_result("Conjoint Create Study", False, "Missing study_id or message in response", result)
+                    return False
+            else:
+                self.log_result("Conjoint Create Study", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Create Study", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_qualitative_analysis(self):
+        """Test qualitative analysis phase"""
+        if not hasattr(self, 'conjoint_study_id') or not self.conjoint_study_id:
+            self.log_result("Conjoint Qualitative Analysis", False, "No conjoint study ID available")
+            return False
+            
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Conjoint Qualitative Analysis", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.conjoint_study_id}/qualitative-analysis"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            data = {
+                "qualitative_data": [
+                    {
+                        "type": "interview",
+                        "content": "ผู้บริโภคให้ความสำคัญกับราคา แบรนด์ และขนาดหน้าจอของสมาร์ทโฟน โดยราคาที่ยอมรับได้คือ 10000-30000 บาท แบรนด์ที่นิยม คือ Samsung, iPhone, Xiaomi และหน้าจอควรมีขนาด 6-7 นิ้ว"
+                    }
+                ],
+                "target_language": "th"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=120)  # Longer timeout for LLM
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "suggested_attributes" in result and "analysis_summary" in result:
+                    attributes = result["suggested_attributes"]
+                    if 3 <= len(attributes) <= 5:  # Expected 3-5 attributes
+                        # Check attribute structure
+                        first_attr = attributes[0]
+                        if "name" in first_attr and "levels" in first_attr:
+                            self.log_result("Conjoint Qualitative Analysis", True, 
+                                          f"Qualitative analysis successful ({len(attributes)} attributes suggested)")
+                            return True
+                        else:
+                            self.log_result("Conjoint Qualitative Analysis", False, "Invalid attribute structure", first_attr)
+                            return False
+                    else:
+                        self.log_result("Conjoint Qualitative Analysis", False, f"Expected 3-5 attributes, got {len(attributes)}", result)
+                        return False
+                else:
+                    self.log_result("Conjoint Qualitative Analysis", False, "Missing suggested_attributes or analysis_summary", result)
+                    return False
+            else:
+                self.log_result("Conjoint Qualitative Analysis", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Qualitative Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_update_attributes(self):
+        """Test updating study attributes"""
+        if not hasattr(self, 'conjoint_study_id') or not self.conjoint_study_id:
+            self.log_result("Conjoint Update Attributes", False, "No conjoint study ID available")
+            return False
+            
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Conjoint Update Attributes", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.conjoint_study_id}/attributes"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            data = {
+                "attributes": [
+                    {
+                        "name": "ราคา",
+                        "description": "ราคาของสมาร์ทโฟน",
+                        "levels": [
+                            {"value": "10,000-15,000 บาท"},
+                            {"value": "15,001-20,000 บาท"},
+                            {"value": "20,001-30,000 บาท"}
+                        ],
+                        "order": 0
+                    },
+                    {
+                        "name": "แบรนด์",
+                        "description": "แบรนด์ของสมาร์ทโฟน",
+                        "levels": [
+                            {"value": "Samsung"},
+                            {"value": "iPhone"},
+                            {"value": "Xiaomi"}
+                        ],
+                        "order": 1
+                    },
+                    {
+                        "name": "ขนาดหน้าจอ",
+                        "description": "ขนาดหน้าจอของสมาร์ทโฟน",
+                        "levels": [
+                            {"value": "6.0-6.3 นิ้ว"},
+                            {"value": "6.4-6.7 นิ้ว"},
+                            {"value": "6.8-7.0 นิ้ว"}
+                        ],
+                        "order": 2
+                    }
+                ]
+            }
+            
+            response = requests.put(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("Conjoint Update Attributes", True, "Attributes updated successfully")
+                    return True
+                else:
+                    self.log_result("Conjoint Update Attributes", False, "Missing message in response", result)
+                    return False
+            else:
+                self.log_result("Conjoint Update Attributes", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Update Attributes", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_generate_design(self):
+        """Test generating D-optimal design"""
+        if not hasattr(self, 'conjoint_study_id') or not self.conjoint_study_id:
+            self.log_result("Conjoint Generate Design", False, "No conjoint study ID available")
+            return False
+            
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Conjoint Generate Design", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.conjoint_study_id}/generate-design"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            data = {
+                "alternatives_per_set": 3,
+                "design_method": "d-optimal"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "choice_sets" in result and "message" in result:
+                    choice_sets = result["choice_sets"]
+                    if len(choice_sets) > 0:
+                        # Check choice set structure
+                        first_set = choice_sets[0]
+                        if "profiles" in first_set and len(first_set["profiles"]) == 3:
+                            self.log_result("Conjoint Generate Design", True, 
+                                          f"D-optimal design generated successfully ({len(choice_sets)} choice sets)")
+                            return True
+                        else:
+                            self.log_result("Conjoint Generate Design", False, "Invalid choice set structure", first_set)
+                            return False
+                    else:
+                        self.log_result("Conjoint Generate Design", False, "No choice sets generated", result)
+                        return False
+                else:
+                    self.log_result("Conjoint Generate Design", False, "Missing choice_sets or message", result)
+                    return False
+            else:
+                self.log_result("Conjoint Generate Design", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Generate Design", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_get_survey_public(self):
+        """Test getting survey data (public endpoint)"""
+        if not hasattr(self, 'conjoint_study_id') or not self.conjoint_study_id:
+            self.log_result("Conjoint Get Survey Public", False, "No conjoint study ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/survey/{self.conjoint_study_id}"
+            
+            response = requests.get(url, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "study" in result and "choice_sets" in result:
+                    study = result["study"]
+                    choice_sets = result["choice_sets"]
+                    if study.get("status") == "active" and len(choice_sets) > 0:
+                        self.log_result("Conjoint Get Survey Public", True, 
+                                      f"Survey data retrieved successfully ({len(choice_sets)} choice sets)")
+                        return True
+                    else:
+                        self.log_result("Conjoint Get Survey Public", False, f"Study not active or no choice sets (status: {study.get('status')})", result)
+                        return False
+                else:
+                    self.log_result("Conjoint Get Survey Public", False, "Missing study or choice_sets", result)
+                    return False
+            else:
+                self.log_result("Conjoint Get Survey Public", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Get Survey Public", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_submit_response_public(self):
+        """Test submitting survey response (public endpoint)"""
+        if not hasattr(self, 'conjoint_study_id') or not self.conjoint_study_id:
+            self.log_result("Conjoint Submit Response Public", False, "No conjoint study ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/survey/{self.conjoint_study_id}/response"
+            data = {
+                "respondent_id": "test_respondent_001",
+                "responses": [
+                    {
+                        "choice_set_id": "set_1",
+                        "selected_profile_id": "profile_1"
+                    },
+                    {
+                        "choice_set_id": "set_2", 
+                        "selected_profile_id": "profile_2"
+                    }
+                ]
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("Conjoint Submit Response Public", True, "Survey response submitted successfully")
+                    return True
+                else:
+                    self.log_result("Conjoint Submit Response Public", False, "Missing message in response", result)
+                    return False
+            else:
+                self.log_result("Conjoint Submit Response Public", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Submit Response Public", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_admin_llm_prompts(self):
+        """Test getting admin LLM prompts"""
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Conjoint Admin LLM Prompts", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/llm-prompts"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Look for conjoint qualitative analysis prompt
+                    conjoint_prompt = next((p for p in result if p.get("category") == "conjoint_qualitative"), None)
+                    if conjoint_prompt:
+                        if conjoint_prompt.get("model_provider") == "anthropic" and "claude" in conjoint_prompt.get("model_name", "").lower():
+                            self.log_result("Conjoint Admin LLM Prompts", True, 
+                                          f"LLM prompts retrieved successfully (found conjoint prompt using Claude)")
+                            return True
+                        else:
+                            self.log_result("Conjoint Admin LLM Prompts", True, 
+                                          f"LLM prompts retrieved (conjoint prompt found but different model: {conjoint_prompt.get('model_provider')}/{conjoint_prompt.get('model_name')})")
+                            return True
+                    else:
+                        self.log_result("Conjoint Admin LLM Prompts", False, "Conjoint qualitative analysis prompt not found", result)
+                        return False
+                else:
+                    self.log_result("Conjoint Admin LLM Prompts", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Conjoint Admin LLM Prompts", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Admin LLM Prompts", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_get_study_details(self):
+        """Test getting study details"""
+        if not hasattr(self, 'conjoint_study_id') or not self.conjoint_study_id:
+            self.log_result("Conjoint Get Study Details", False, "No conjoint study ID available")
+            return False
+            
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Conjoint Get Study Details", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.conjoint_study_id}"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("id" in result and "title" in result and "status" in result and 
+                    result.get("id") == self.conjoint_study_id):
+                    self.log_result("Conjoint Get Study Details", True, 
+                                  f"Study details retrieved successfully (status: {result.get('status')})")
+                    return True
+                else:
+                    self.log_result("Conjoint Get Study Details", False, "Missing expected fields or incorrect ID", result)
+                    return False
+            else:
+                self.log_result("Conjoint Get Study Details", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Get Study Details", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_list_studies(self):
+        """Test listing all studies"""
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Conjoint List Studies", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Check if our created study is in the list
+                    if hasattr(self, 'conjoint_study_id'):
+                        study_found = any(study.get("id") == self.conjoint_study_id for study in result)
+                        if study_found:
+                            self.log_result("Conjoint List Studies", True, 
+                                          f"Studies listed successfully ({len(result)} studies, created study found)")
+                            return True
+                        else:
+                            self.log_result("Conjoint List Studies", True, 
+                                          f"Studies listed successfully ({len(result)} studies, created study not found - may be expected)")
+                            return True
+                    else:
+                        self.log_result("Conjoint List Studies", True, f"Studies listed successfully ({len(result)} studies)")
+                        return True
+                else:
+                    self.log_result("Conjoint List Studies", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Conjoint List Studies", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint List Studies", False, f"Exception: {str(e)}")
+            return False
+
     # ============ JOURNAL FINDER TESTS ============
     
     def test_journal_finder_admin_login(self):
