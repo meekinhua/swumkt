@@ -1641,6 +1641,292 @@ class BackendTester:
             self.log_result("Conjoint List Studies", False, f"Exception: {str(e)}")
             return False
 
+    # ============ CONJOINT ANALYSIS IMAGE GENERATION TESTS ============
+    
+    def test_conjoint_image_admin_login(self):
+        """Test admin login for conjoint image generation"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            data = {
+                "email": "admin@swu.ac.th",
+                "password": "admin123"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "access_token" in result and "user" in result:
+                    self.image_token = result["access_token"]
+                    self.log_result("Conjoint Image Admin Login", True, "Admin login successful for image generation")
+                    return True
+                else:
+                    self.log_result("Conjoint Image Admin Login", False, "Missing token or user in response", result)
+                    return False
+            else:
+                self.log_result("Conjoint Image Admin Login", False, f"Admin credentials not found (HTTP {response.status_code})")
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Image Admin Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_get_active_study(self):
+        """Test getting an active study with attributes and choice_sets"""
+        if not hasattr(self, 'image_token') or not self.image_token:
+            self.log_result("Conjoint Get Active Study", False, "No image token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies"
+            headers = {"Authorization": f"Bearer {self.image_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "studies" in result and isinstance(result["studies"], list):
+                    studies = result["studies"]
+                    
+                    # Find a study with attributes and choice_sets
+                    active_study = None
+                    for study in studies:
+                        if (study.get("status") == "active" and 
+                            study.get("attributes") and len(study.get("attributes", [])) > 0 and
+                            study.get("choice_sets") and len(study.get("choice_sets", [])) > 0):
+                            active_study = study
+                            break
+                    
+                    if active_study:
+                        self.image_study_id = active_study["id"]
+                        self.image_study_attributes = active_study["attributes"]
+                        self.image_study_choice_sets = active_study["choice_sets"]
+                        
+                        # Store first attribute and level for testing
+                        if len(self.image_study_attributes) > 0:
+                            first_attr = self.image_study_attributes[0]
+                            self.first_attribute_id = first_attr["id"]
+                            if len(first_attr.get("levels", [])) > 0:
+                                self.first_level_id = first_attr["levels"][0]["id"]
+                        
+                        # Store first choice_set and profile for testing
+                        if len(self.image_study_choice_sets) > 0:
+                            first_choice_set = self.image_study_choice_sets[0]
+                            self.first_choice_set_id = first_choice_set["id"]
+                            if len(first_choice_set.get("profiles", [])) > 0:
+                                self.first_profile_id = first_choice_set["profiles"][0]["id"]
+                        
+                        self.log_result("Conjoint Get Active Study", True, 
+                                      f"Active study found with {len(self.image_study_attributes)} attributes and {len(self.image_study_choice_sets)} choice sets")
+                        return True
+                    else:
+                        self.log_result("Conjoint Get Active Study", False, 
+                                      f"No active study with attributes and choice_sets found ({len(studies)} studies total)")
+                        return False
+                else:
+                    self.log_result("Conjoint Get Active Study", False, "Response does not contain studies list", result)
+                    return False
+            else:
+                self.log_result("Conjoint Get Active Study", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Get Active Study", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_generate_level_image(self):
+        """Test Level Image Generation - POST /api/conjoint/studies/{study_id}/generate-single-image"""
+        if not hasattr(self, 'image_study_id') or not self.image_study_id:
+            self.log_result("Conjoint Generate Level Image", False, "No image study ID available")
+            return False
+            
+        if not hasattr(self, 'first_attribute_id') or not hasattr(self, 'first_level_id'):
+            self.log_result("Conjoint Generate Level Image", False, "No attribute/level IDs available")
+            return False
+            
+        if not hasattr(self, 'image_token') or not self.image_token:
+            self.log_result("Conjoint Generate Level Image", False, "No image token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.image_study_id}/generate-single-image"
+            headers = {"Authorization": f"Bearer {self.image_token}"}
+            data = {
+                "attribute_id": self.first_attribute_id,
+                "level_id": self.first_level_id
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=120)  # Longer timeout for image generation
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("image_url" in result and "prompt_used" in result and "message" in result):
+                    image_url = result["image_url"]
+                    prompt_used = result["prompt_used"]
+                    
+                    # Verify base64 data URL format
+                    if image_url.startswith("data:image/png;base64,"):
+                        base64_part = image_url.split(",")[1]
+                        if len(base64_part) > 100:  # Basic check for substantial base64 content
+                            self.generated_level_image_url = image_url
+                            self.log_result("Conjoint Generate Level Image", True, 
+                                          f"Level image generated successfully using OpenAI gpt-image-1 (base64 length: {len(base64_part)}, prompt: {prompt_used[:50]}...)")
+                            return True
+                        else:
+                            self.log_result("Conjoint Generate Level Image", False, 
+                                          f"Base64 content too short ({len(base64_part)} chars)", result)
+                            return False
+                    else:
+                        self.log_result("Conjoint Generate Level Image", False, 
+                                      f"Invalid image URL format: {image_url[:50]}...", result)
+                        return False
+                else:
+                    self.log_result("Conjoint Generate Level Image", False, "Missing image_url, prompt_used, or message", result)
+                    return False
+            else:
+                self.log_result("Conjoint Generate Level Image", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Generate Level Image", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_generate_profile_image(self):
+        """Test Profile Image Generation - POST /api/conjoint/studies/{study_id}/generate-profile-image"""
+        if not hasattr(self, 'image_study_id') or not self.image_study_id:
+            self.log_result("Conjoint Generate Profile Image", False, "No image study ID available")
+            return False
+            
+        if not hasattr(self, 'first_choice_set_id') or not hasattr(self, 'first_profile_id'):
+            self.log_result("Conjoint Generate Profile Image", False, "No choice_set/profile IDs available")
+            return False
+            
+        if not hasattr(self, 'image_token') or not self.image_token:
+            self.log_result("Conjoint Generate Profile Image", False, "No image token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.image_study_id}/generate-profile-image"
+            headers = {"Authorization": f"Bearer {self.image_token}"}
+            data = {
+                "choice_set_id": self.first_choice_set_id,
+                "profile_id": self.first_profile_id
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=120)  # Longer timeout for image generation
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("image_url" in result and "prompt_used" in result and "message" in result):
+                    image_url = result["image_url"]
+                    prompt_used = result["prompt_used"]
+                    
+                    # Verify base64 data URL format
+                    if image_url.startswith("data:image/png;base64,"):
+                        base64_part = image_url.split(",")[1]
+                        if len(base64_part) > 100:  # Basic check for substantial base64 content
+                            self.generated_profile_image_url = image_url
+                            
+                            # Check if prompt contains profile composition (multiple attributes)
+                            has_composition = ":" in prompt_used and ("," in prompt_used or len(prompt_used.split()) > 10)
+                            
+                            self.log_result("Conjoint Generate Profile Image", True, 
+                                          f"Profile image generated successfully using OpenAI gpt-image-1 (base64 length: {len(base64_part)}, composition prompt: {has_composition}, prompt: {prompt_used[:50]}...)")
+                            return True
+                        else:
+                            self.log_result("Conjoint Generate Profile Image", False, 
+                                          f"Base64 content too short ({len(base64_part)} chars)", result)
+                            return False
+                    else:
+                        self.log_result("Conjoint Generate Profile Image", False, 
+                                      f"Invalid image URL format: {image_url[:50]}...", result)
+                        return False
+                else:
+                    self.log_result("Conjoint Generate Profile Image", False, "Missing image_url, prompt_used, or message", result)
+                    return False
+            else:
+                self.log_result("Conjoint Generate Profile Image", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Generate Profile Image", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_verify_images_persist(self):
+        """Test Verify Images Persist - GET study again and verify both level and profile images are saved"""
+        if not hasattr(self, 'image_study_id') or not self.image_study_id:
+            self.log_result("Conjoint Verify Images Persist", False, "No image study ID available")
+            return False
+            
+        if not hasattr(self, 'image_token') or not self.image_token:
+            self.log_result("Conjoint Verify Images Persist", False, "No image token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.image_study_id}"
+            headers = {"Authorization": f"Bearer {self.image_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "study" in result:
+                    study = result["study"]
+                    
+                    # Check if level image is saved in attributes
+                    level_image_found = False
+                    if hasattr(self, 'first_attribute_id') and hasattr(self, 'first_level_id'):
+                        attributes = study.get("attributes", [])
+                        for attr in attributes:
+                            if attr["id"] == self.first_attribute_id:
+                                for level in attr.get("levels", []):
+                                    if level["id"] == self.first_level_id:
+                                        if level.get("image_url") and level["image_url"].startswith("data:image/png;base64,"):
+                                            level_image_found = True
+                                            break
+                                break
+                    
+                    # Check if profile image is saved in choice_sets
+                    profile_image_found = False
+                    if hasattr(self, 'first_choice_set_id') and hasattr(self, 'first_profile_id'):
+                        choice_sets = study.get("choice_sets", [])
+                        for choice_set in choice_sets:
+                            if choice_set["id"] == self.first_choice_set_id:
+                                for profile in choice_set.get("profiles", []):
+                                    if profile["id"] == self.first_profile_id:
+                                        if profile.get("profile_image_url") and profile["profile_image_url"].startswith("data:image/png;base64,"):
+                                            profile_image_found = True
+                                            break
+                                break
+                    
+                    # Verify both images persist
+                    if level_image_found and profile_image_found:
+                        self.log_result("Conjoint Verify Images Persist", True, 
+                                      "Both level and profile images successfully saved to database and persist in study")
+                        return True
+                    elif level_image_found:
+                        self.log_result("Conjoint Verify Images Persist", False, 
+                                      "Level image persists but profile image not found in database")
+                        return False
+                    elif profile_image_found:
+                        self.log_result("Conjoint Verify Images Persist", False, 
+                                      "Profile image persists but level image not found in database")
+                        return False
+                    else:
+                        self.log_result("Conjoint Verify Images Persist", False, 
+                                      "Neither level nor profile images found in database")
+                        return False
+                else:
+                    self.log_result("Conjoint Verify Images Persist", False, "Missing study in response", result)
+                    return False
+            else:
+                self.log_result("Conjoint Verify Images Persist", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Conjoint Verify Images Persist", False, f"Exception: {str(e)}")
+            return False
+
     # ============ JOURNAL FINDER TESTS ============
     
     def test_journal_finder_admin_login(self):
