@@ -1870,8 +1870,8 @@ class BackendTester:
             
             if response.status_code == 200:
                 result = response.json()
-                if "study" in result:
-                    study = result["study"]
+                # The response is the study object directly, not wrapped in a "study" field
+                study = result
                     
                     # Check if level image is saved in attributes
                     level_image_found = False
