@@ -2098,11 +2098,18 @@ class BackendTester:
 
 if __name__ == "__main__":
     tester = BackendTester()
-    passed, total, results = tester.run_all_tests()
+    
+    # Run focused tests for the 2 failed endpoints
+    results = tester.run_focused_conjoint_tests()
+    
+    # Count results
+    passed = len([r for r in results if r["success"]])
+    total = len(results)
     
     # Exit with error code if tests failed
     if passed < total:
+        print(f"\n❌ {total - passed} tests failed")
         sys.exit(1)
     else:
-        print("\n🎉 All tests passed!")
+        print("\n🎉 All focused tests passed!")
         sys.exit(0)
