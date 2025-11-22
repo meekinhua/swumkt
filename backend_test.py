@@ -1474,9 +1474,10 @@ class BackendTester:
             
             if response.status_code == 200:
                 result = response.json()
-                if isinstance(result, list):
+                if "prompts" in result and isinstance(result["prompts"], list):
+                    prompts = result["prompts"]
                     # Look for conjoint qualitative analysis prompt
-                    conjoint_prompt = next((p for p in result if p.get("category") == "conjoint_qualitative"), None)
+                    conjoint_prompt = next((p for p in prompts if p.get("category") == "conjoint_qualitative"), None)
                     if conjoint_prompt:
                         if conjoint_prompt.get("model_provider") == "anthropic" and "claude" in conjoint_prompt.get("model_name", "").lower():
                             self.log_result("Conjoint Admin LLM Prompts", True, 
@@ -1487,11 +1488,23 @@ class BackendTester:
                                           f"LLM prompts retrieved (conjoint prompt found but different model: {conjoint_prompt.get('model_provider')}/{conjoint_prompt.get('model_name')})")
                             return True
                     else:
+                        self.log_result("Conjoint Admin LLM Prompts", False, "Conjoint qualitative analysis prompt not found", prompts)
+                        return False
+                elif isinstance(result, list):
+                    # Fallback if response is directly a list
+                    conjoint_prompt = next((p for p in result if p.get("category") == "conjoint_qualitative"), None)
+                    if conjoint_prompt:
+                        self.log_result("Conjoint Admin LLM Prompts", True, "LLM prompts retrieved successfully (found conjoint prompt)")
+                        return True
+                    else:
                         self.log_result("Conjoint Admin LLM Prompts", False, "Conjoint qualitative analysis prompt not found", result)
                         return False
                 else:
-                    self.log_result("Conjoint Admin LLM Prompts", False, "Response is not a list", result)
+                    self.log_result("Conjoint Admin LLM Prompts", False, "Response does not contain prompts list", result)
                     return False
+            elif response.status_code == 403:
+                self.log_result("Conjoint Admin LLM Prompts", False, f"Admin access denied - user may not have admin user_type (HTTP {response.status_code})", response.text)
+                return False
             else:
                 self.log_result("Conjoint Admin LLM Prompts", False, f"HTTP {response.status_code}", response.text)
                 return False
