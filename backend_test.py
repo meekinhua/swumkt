@@ -2229,6 +2229,17 @@ class BackendTester:
         self.journal_token = None
         self.conjoint_token = None
         self.conjoint_study_id = None
+        # Image generation test variables
+        self.image_token = None
+        self.image_study_id = None
+        self.image_study_attributes = None
+        self.image_study_choice_sets = None
+        self.first_attribute_id = None
+        self.first_level_id = None
+        self.first_choice_set_id = None
+        self.first_profile_id = None
+        self.generated_level_image_url = None
+        self.generated_profile_image_url = None
         
         # Test sequence - Conjoint Analysis Tests (Main Focus)
         conjoint_tests = [
