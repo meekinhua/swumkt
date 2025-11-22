@@ -1872,9 +1872,9 @@ class BackendTester:
                 result = response.json()
                 # The response is the study object directly, not wrapped in a "study" field
                 study = result
-                    
-                    # Check if level image is saved in attributes
-                    level_image_found = False
+                
+                # Check if level image is saved in attributes
+                level_image_found = False
                     if hasattr(self, 'first_attribute_id') and hasattr(self, 'first_level_id'):
                         attributes = study.get("attributes", [])
                         for attr in attributes:
