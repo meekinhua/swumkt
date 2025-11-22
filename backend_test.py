@@ -1261,6 +1261,9 @@ class BackendTester:
                 else:
                     self.log_result("Conjoint Qualitative Analysis", False, "Missing suggested_attributes or analysis_summary", result)
                     return False
+            elif response.status_code == 500 and "too many values to unpack" in response.text:
+                self.log_result("Conjoint Qualitative Analysis", False, "Backend LLM response parsing error - 'too many values to unpack (expected 2)' - needs main agent fix", response.text)
+                return False
             else:
                 self.log_result("Conjoint Qualitative Analysis", False, f"HTTP {response.status_code}", response.text)
                 return False
