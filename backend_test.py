@@ -1888,19 +1888,19 @@ class BackendTester:
                 
                 # Check if profile image is saved in choice_sets
                 profile_image_found = False
-                    if hasattr(self, 'first_choice_set_id') and hasattr(self, 'first_profile_id'):
-                        choice_sets = study.get("choice_sets", [])
-                        for choice_set in choice_sets:
-                            if choice_set["id"] == self.first_choice_set_id:
-                                for profile in choice_set.get("profiles", []):
-                                    if profile["id"] == self.first_profile_id:
-                                        if profile.get("profile_image_url") and profile["profile_image_url"].startswith("data:image/png;base64,"):
-                                            profile_image_found = True
-                                            break
-                                break
-                    
-                    # Verify both images persist
-                    if level_image_found and profile_image_found:
+                if hasattr(self, 'first_choice_set_id') and hasattr(self, 'first_profile_id'):
+                    choice_sets = study.get("choice_sets", [])
+                    for choice_set in choice_sets:
+                        if choice_set["id"] == self.first_choice_set_id:
+                            for profile in choice_set.get("profiles", []):
+                                if profile["id"] == self.first_profile_id:
+                                    if profile.get("profile_image_url") and profile["profile_image_url"].startswith("data:image/png;base64,"):
+                                        profile_image_found = True
+                                        break
+                            break
+                
+                # Verify both images persist
+                if level_image_found and profile_image_found:
                         self.log_result("Conjoint Verify Images Persist", True, 
                                       "Both level and profile images successfully saved to database and persist in study")
                         return True
