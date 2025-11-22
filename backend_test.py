@@ -2419,12 +2419,31 @@ class BackendTester:
 if __name__ == "__main__":
     tester = BackendTester()
     
-    # Run focused tests for the 2 failed endpoints
-    results = tester.run_focused_conjoint_tests()
+    # Run image generation tests specifically
+    print("🎨 TESTING AI IMAGE GENERATION FOR CONJOINT ANALYSIS")
+    print("=" * 80)
     
-    # Count results
-    passed = len([r for r in results if r["success"]])
-    total = len(results)
+    # Run only the image generation tests
+    image_tests = [
+        ("Conjoint Image Admin Login", tester.test_conjoint_image_admin_login),
+        ("Conjoint Get Active Study", tester.test_conjoint_get_active_study),
+        ("Conjoint Generate Level Image", tester.test_conjoint_generate_level_image),
+        ("Conjoint Generate Profile Image", tester.test_conjoint_generate_profile_image),
+        ("Conjoint Verify Images Persist", tester.test_conjoint_verify_images_persist),
+    ]
+    
+    passed = 0
+    total = len(image_tests)
+    
+    for test_name, test_func in image_tests:
+        try:
+            if test_func():
+                passed += 1
+        except Exception as e:
+            tester.log_result(test_name, False, f"Unexpected error: {str(e)}")
+    
+    print("=" * 80)
+    print(f"🎨 AI Image Generation Test Results: {passed}/{total} tests passed")
     
     # Exit with error code if tests failed
     if passed < total:
