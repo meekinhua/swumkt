@@ -37,6 +37,7 @@ const ConjointQualitativePage = () => {
   
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showAddInput, setShowAddInput] = useState(false);
+  const [analysisHistory, setAnalysisHistory] = useState([]);
 
   useEffect(() => {
     if (user && token && studyId) {
