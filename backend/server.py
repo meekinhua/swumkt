@@ -6781,6 +6781,53 @@ async def upload_level_image(
         "image_url": request.image_url
     }
 
+# Upload image for complete profile (composite image)
+@api_router.post("/conjoint/studies/{study_id}/upload-profile-image")
+async def upload_profile_image(
+    study_id: str,
+    request: UploadProfileImageRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Upload/set image URL for a complete profile (combination of levels)"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Update the specific profile's image_url in choice_sets
+    choice_sets = study.get("choice_sets", [])
+    updated = False
+    
+    for choice_set in choice_sets:
+        if choice_set["id"] == request.choice_set_id:
+            for profile in choice_set.get("profiles", []):
+                if profile["id"] == request.profile_id:
+                    profile["profile_image_url"] = request.image_url
+                    updated = True
+                    break
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Choice set or profile not found")
+    
+    # Save updated choice_sets
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$set": {
+                "choice_sets": choice_sets,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": "Profile image uploaded successfully",
+        "image_url": request.image_url
+    }
+
 # Get survey (public endpoint - no auth required)
 @api_router.get("/conjoint/survey/{study_id}")
 async def get_survey(study_id: str):
