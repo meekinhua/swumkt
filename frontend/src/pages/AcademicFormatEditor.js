@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Sparkles, Loader2, FileText, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://edunotifs.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://conjoint-analyzer.preview.emergentagent.com';
 
 const AcademicFormatEditor = () => {
   const navigate = useNavigate();
