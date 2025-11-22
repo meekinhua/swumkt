@@ -6202,34 +6202,16 @@ async def create_conjoint_study(
     
     return {"study_id": study_id, "message": "Study created successfully"}
 
-# Phase 1: Qualitative Analysis
-@api_router.post("/conjoint/studies/{study_id}/qualitative-analysis")
-async def analyze_qualitative_data(
-    study_id: str,
-    request: QualitativeAnalysisRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """Use LLM to analyze qualitative data and suggest attributes/levels"""
-    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
-    
-    if study["creator_id"] != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Get API key
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
-    if not api_key:
-        raise HTTPException(status_code=500, detail="LLM service not configured")
-    
-    # Combine all qualitative inputs
-    combined_data = "\n\n".join([
-        f"=== {item.type.upper()} ===\n{item.content}"
-        for item in request.qualitative_data
-    ])
-    
-    # Create analysis prompt
-    analysis_prompt = f"""You are an expert marketing researcher specializing in Conjoint Analysis.
+# Initialize default LLM prompts
+async def initialize_default_prompts():
+    """Initialize default LLM prompt templates if they don't exist"""
+    default_prompts = [
+        {
+            "id": "conjoint-qualitative-analysis",
+            "name": "Conjoint Qualitative Analysis",
+            "category": "conjoint_qualitative",
+            "system_message": "You are an expert marketing researcher specializing in Conjoint Analysis and consumer research.",
+            "prompt_template": """You are an expert marketing researcher specializing in Conjoint Analysis.
 
 Analyze the following qualitative data to identify the most important product/service attributes and their levels for a Choice-Based Conjoint Analysis study.
 
@@ -6261,7 +6243,60 @@ Output Format (JSON):
   "recommendations": "Overall recommendations for the study design"
 }}
 
-Respond in {request.target_language} language."""
+Respond in {target_language} language.""",
+            "model_provider": "anthropic",
+            "model_name": "claude-sonnet-4-20250514",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+    ]
+    
+    for prompt_data in default_prompts:
+        existing = await db.llm_prompts.find_one({"id": prompt_data["id"]}, {"_id": 0})
+        if not existing:
+            await db.llm_prompts.insert_one(prompt_data)
+
+# Phase 1: Qualitative Analysis
+@api_router.post("/conjoint/studies/{study_id}/qualitative-analysis")
+async def analyze_qualitative_data(
+    study_id: str,
+    request: QualitativeAnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Use LLM to analyze qualitative data and suggest attributes/levels"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get API key
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="LLM service not configured")
+    
+    # Combine all qualitative inputs
+    combined_data = "\n\n".join([
+        f"=== {item.type.upper()} ===\n{item.content}"
+        for item in request.qualitative_data
+    ])
+    
+    # Get prompt template from database
+    await initialize_default_prompts()
+    prompt_config = await db.llm_prompts.find_one(
+        {"id": "conjoint-qualitative-analysis"},
+        {"_id": 0}
+    )
+    
+    if not prompt_config:
+        raise HTTPException(status_code=500, detail="Prompt configuration not found")
+    
+    # Format the prompt with actual data
+    analysis_prompt = prompt_config["prompt_template"].format(
+        combined_data=combined_data,
+        target_language=request.target_language
+    )
     
     # Call LLM
     try:
