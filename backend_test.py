@@ -1428,6 +1428,7 @@ class BackendTester:
         try:
             url = f"{self.base_url}/conjoint/survey/{self.conjoint_study_id}/response"
             data = {
+                "study_id": self.conjoint_study_id,
                 "respondent_id": "test_respondent_001",
                 "responses": [
                     {
