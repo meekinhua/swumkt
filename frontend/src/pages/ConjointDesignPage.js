@@ -578,15 +578,27 @@ const ConjointDesignPage = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="p-4 bg-green-50 rounded-lg border-2 border-green-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <span className="font-bold text-green-900">รูปภาพถูกสร้างแล้ว</span>
+                {imagesGenerated ? (
+                  <div className="p-4 bg-green-50 rounded-lg border-2 border-green-300">
+                    <div className="flex items-center gap-3 mb-2">
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                      <span className="font-bold text-green-900">รูปภาพถูกสร้างแล้ว</span>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      ระบบได้สร้างรูปภาพสำหรับทุก attribute level เรียบร้อยแล้ว
+                    </p>
                   </div>
-                  <p className="text-sm text-green-700">
-                    ระบบได้สร้างรูปภาพสำหรับทุก attribute level เรียบร้อยแล้ว
-                  </p>
-                </div>
+                ) : (
+                  <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+                    <div className="flex items-center gap-3 mb-2">
+                      <AlertCircle className="w-6 h-6 text-blue-600" />
+                      <span className="font-bold text-blue-900">ดำเนินการต่อโดยไม่มีรูปภาพ</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      Survey จะแสดงเฉพาะข้อความอธิบาย - สามารถเพิ่มรูปภาพทีหลังได้
+                    </p>
+                  </div>
+                )}
 
                 {showSurveyLink && (
                   <div>
