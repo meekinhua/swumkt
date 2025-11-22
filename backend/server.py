@@ -6687,7 +6687,7 @@ async def generate_single_image(
     request: GenerateSingleImageRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Generate image for a specific attribute level"""
+    """Generate image for a specific attribute level using AI"""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
@@ -6720,19 +6720,61 @@ async def generate_single_image(
         if level_found.get("description"):
             image_prompt += f" {level_found['description']}"
     
-    # For now, since image generation module is not available, return placeholder
-    # In production, this would call the actual image generation service
+    # Generate image using OpenAI
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="LLM service not configured")
+    
     try:
-        # Placeholder: return a mock response indicating feature not available
+        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+        import base64
+        
+        image_gen = OpenAIImageGeneration(api_key=api_key)
+        
+        # Generate image
+        images = await image_gen.generate_images(
+            prompt=image_prompt,
+            model="gpt-image-1",
+            number_of_images=1
+        )
+        
+        if not images or len(images) == 0:
+            raise HTTPException(status_code=500, detail="No image was generated")
+        
+        # Convert to base64 data URL
+        image_base64 = base64.b64encode(images[0]).decode('utf-8')
+        image_data_url = f"data:image/png;base64,{image_base64}"
+        
+        # Update the level with the generated image
+        for attr in attributes:
+            if attr["id"] == request.attribute_id:
+                for level in attr.get("levels", []):
+                    if level["id"] == request.level_id:
+                        level["image_url"] = image_data_url
+                        level["image_prompt"] = image_prompt
+                        break
+                break
+        
+        # Save updated attributes
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {
+                "$set": {
+                    "attributes": attributes,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
         return {
-            "message": "Image generation feature not available",
-            "skipped": True,
-            "image_url": None,
+            "message": "Image generated successfully",
+            "image_url": image_data_url,
             "prompt_used": image_prompt
         }
+        
     except Exception as e:
         logging.error(f"Single image generation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
 # Upload image for attribute level
 @api_router.post("/conjoint/studies/{study_id}/upload-image")
