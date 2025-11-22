@@ -1229,6 +1229,7 @@ class BackendTester:
             url = f"{self.base_url}/conjoint/studies/{self.conjoint_study_id}/qualitative-analysis"
             headers = {"Authorization": f"Bearer {self.conjoint_token}"}
             data = {
+                "study_id": self.conjoint_study_id,
                 "qualitative_data": [
                     {
                         "type": "interview",
