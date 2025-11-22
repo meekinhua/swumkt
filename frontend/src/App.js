@@ -93,6 +93,22 @@ function App() {
               }
             />
             <Route
+              path="/research/conjoint/:studyId/qualitative"
+              element={
+                <ProtectedRoute>
+                  <ConjointQualitativePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/research/conjoint/:studyId/design"
+              element={
+                <ProtectedRoute>
+                  <ConjointDesignPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/market-research/journal-finder"
               element={
                 <ProtectedRoute>
