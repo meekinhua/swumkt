@@ -6116,12 +6116,6 @@ class SurveyResponse(BaseModel):
     respondent_email: Optional[str] = None
     responses: List[Dict[str, Any]]  # list of {choice_set_id, selected_profile_id}
 
-class GenerateProfileImageRequest(BaseModel):
-    study_id: str
-    profile: ConjointProfile
-    image_style: str = "product_photo"
-    custom_prompt: Optional[str] = None
-
 # Helper Functions
 def calculate_optimal_choice_sets(num_attributes: int, num_levels_per_attr: List[int], alternatives_per_set: int = 3) -> int:
     """Calculate statistically optimal number of choice sets based on D-optimal criteria"""
