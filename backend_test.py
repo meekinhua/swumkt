@@ -1168,7 +1168,8 @@ class BackendTester:
                 result = response.json()
                 if "access_token" in result and "user" in result:
                     self.conjoint_token = result["access_token"]
-                    self.log_result("Conjoint Admin Login", True, "Admin login successful for conjoint analysis")
+                    user = result["user"]
+                    self.log_result("Conjoint Admin Login", True, f"Admin login successful - role: {user.get('role')}, user_type: {user.get('user_type')}")
                     return True
                 else:
                     self.log_result("Conjoint Admin Login", False, "Missing token or user in response", result)
@@ -1179,6 +1180,49 @@ class BackendTester:
                 
         except Exception as e:
             self.log_result("Conjoint Admin Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_admin_llm_prompts_access(self):
+        """Test admin LLM prompts access - FIXED ACCESS CONTROL"""
+        if not hasattr(self, 'conjoint_token') or not self.conjoint_token:
+            self.log_result("Admin LLM Prompts Access", False, "No conjoint token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/llm-prompts"
+            headers = {"Authorization": f"Bearer {self.conjoint_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "prompts" in result and isinstance(result["prompts"], list):
+                    prompts = result["prompts"]
+                    # Look for conjoint qualitative analysis prompt
+                    conjoint_prompt = next((p for p in prompts if p.get("id") == "conjoint-qualitative-analysis"), None)
+                    if conjoint_prompt:
+                        model_info = f"{conjoint_prompt.get('model_provider', 'unknown')}/{conjoint_prompt.get('model_name', 'unknown')}"
+                        self.log_result("Admin LLM Prompts Access", True, 
+                                      f"✅ FIXED: Admin can access LLM prompts ({len(prompts)} prompts) - conjoint prompt found using {model_info}")
+                        return True
+                    else:
+                        self.log_result("Admin LLM Prompts Access", True, 
+                                      f"Admin can access LLM prompts ({len(prompts)} prompts) - conjoint prompt not found but access working")
+                        return True
+                else:
+                    self.log_result("Admin LLM Prompts Access", False, "Missing prompts array in response", result)
+                    return False
+            elif response.status_code == 403:
+                self.log_result("Admin LLM Prompts Access", False, 
+                              "❌ CRITICAL: Admin access denied - backend checks user_type='regular' instead of role='admin' (admin user has correct role but wrong user_type)", 
+                              response.text)
+                return False
+            else:
+                self.log_result("Admin LLM Prompts Access", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Admin LLM Prompts Access", False, f"Exception: {str(e)}")
             return False
 
     def test_conjoint_create_study(self):
