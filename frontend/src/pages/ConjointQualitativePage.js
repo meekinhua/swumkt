@@ -278,7 +278,7 @@ const ConjointQualitativePage = () => {
           )}
         </Card>
 
-        {/* Analysis Button */}
+        {/* Analysis Button & Skip Option */}
         {qualitativeInputs.length > 0 && !analysisResult && (
           <Card className="p-6 mb-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300">
             <div className="text-center">
@@ -289,22 +289,54 @@ const ConjointQualitativePage = () => {
               <p className="text-blue-700 mb-4">
                 LLM จะวิเคราะห์ข้อมูลของคุณและแนะนำ Attributes และ Levels ที่เหมาะสม
               </p>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={analyzing}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  {analyzing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      กำลังวิเคราะห์...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      เริ่มวิเคราะห์
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleSkipToDesign}
+                  variant="outline"
+                  className="border-2 border-blue-400 text-blue-700 hover:bg-blue-100"
+                >
+                  ข้ามไป Phase 2
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+              <p className="text-xs text-blue-600 mt-3">
+                💡 หรือข้ามขั้นตอนนี้และไปกรอก Attributes เองใน Phase 2
+              </p>
+            </div>
+          </Card>
+        )}
+
+        {/* No Data - Skip Option */}
+        {qualitativeInputs.length === 0 && (
+          <Card className="p-6 mb-6 bg-gray-50 border-2 border-gray-300">
+            <div className="text-center">
+              <p className="text-gray-700 mb-4">
+                คุณสามารถข้าม Phase 1 และไปกรอก Attributes เองใน Phase 2 ได้เลย
+              </p>
               <Button
-                onClick={handleAnalyze}
-                disabled={analyzing}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                onClick={handleSkipToDesign}
+                variant="outline"
+                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-100"
               >
-                {analyzing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    กำลังวิเคราะห์...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    เริ่มวิเคราะห์
-                  </>
-                )}
+                ข้ามไป Phase 2
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </Card>
