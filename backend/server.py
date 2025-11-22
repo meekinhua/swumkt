@@ -6095,6 +6095,11 @@ class GenerateSingleImageRequest(BaseModel):
     level_id: str
     prompt: Optional[str] = None
 
+class GenerateProfileImageRequest(BaseModel):
+    choice_set_id: str
+    profile_id: str
+    prompt: Optional[str] = None
+
 class UploadImageRequest(BaseModel):
     attribute_id: str
     level_id: str
