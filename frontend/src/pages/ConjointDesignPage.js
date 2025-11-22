@@ -63,6 +63,16 @@ const ConjointDesignPage = () => {
         setAlternativesPerSet(response.data.alternatives_per_set || 3);
         setNumberOfSets(response.data.choice_sets.length);
       }
+      
+      // Check if images generated
+      if (response.data.images_generated) {
+        setImagesGenerated(true);
+      }
+      
+      // Show survey link if study is active
+      if (response.data.status === 'active') {
+        setShowSurveyLink(true);
+      }
     } catch (error) {
       console.error('Error loading study:', error);
       toast.error('ไม่สามารถโหลดข้อมูลการศึกษาได้');
