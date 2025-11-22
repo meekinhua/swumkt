@@ -218,22 +218,39 @@ const ConjointDesignPage = () => {
   const handleGenerateImages = async () => {
     setGeneratingImages(true);
     try {
-      await axios.post(
+      const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/generate-images`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success('สร้างรูปภาพสำเร็จ!');
-      setImagesGenerated(true);
+      if (response.data.skipped) {
+        toast.info('ข้ามการสร้างรูปภาพ - สามารถใช้งานได้โดยไม่มีรูปภาพ');
+        setImagesGenerated(false);
+      } else if (response.data.generated_count > 0) {
+        toast.success(`สร้างรูปภาพสำเร็จ ${response.data.generated_count} รูป!`);
+        setImagesGenerated(true);
+      } else {
+        toast.warning('ไม่สามารถสร้างรูปภาพได้ แต่สามารถดำเนินการต่อได้');
+        setImagesGenerated(false);
+      }
+      
       setShowSurveyLink(true);
       await loadStudy();
     } catch (error) {
       console.error('Error generating images:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างรูปภาพได้');
+      toast.warning('ข้ามการสร้างรูปภาพ - ดำเนินการต่อโดยไม่มีรูป');
+      setImagesGenerated(false);
+      setShowSurveyLink(true);
     } finally {
       setGeneratingImages(false);
     }
+  };
+
+  const handleSkipImages = () => {
+    setImagesGenerated(false);
+    setShowSurveyLink(true);
+    toast.info('ข้ามการสร้างรูปภาพ - สามารถเพิ่มรูปทีหลังได้');
   };
 
   const handleCopySurveyLink = () => {
