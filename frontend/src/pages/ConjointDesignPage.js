@@ -19,8 +19,201 @@ import {
   RefreshCw,
   Copy,
   Link,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
+
+// Component for managing image for each level
+const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onImageUpdated }) => {
+  const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [imageUrl, setImageUrl] = useState(level.image_url || '');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [tempUrl, setTempUrl] = useState('');
+
+  const handleUploadUrl = async () => {
+    if (!tempUrl.trim()) {
+      toast.error('กรุณากรอก URL รูปภาพ');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-image`,
+        {
+          attribute_id: attributeId,
+          level_id: level.id,
+          image_url: tempUrl
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setImageUrl(tempUrl);
+      setShowUrlInput(false);
+      setTempUrl('');
+      toast.success('อัพโหลดรูปภาพสำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('ไม่สามารถอัพโหลดรูปภาพได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/generate-single-image`,
+        {
+          attribute_id: attributeId,
+          level_id: level.id
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.skipped) {
+        toast.info('ฟีเจอร์สร้างรูปยังไม่พร้อมใช้งาน - กรุณาอัพโหลดรูปเอง');
+      } else if (response.data.image_url) {
+        setImageUrl(response.data.image_url);
+        toast.success('สร้างรูปภาพสำเร็จ');
+        onImageUpdated();
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      toast.warning('ไม่สามารถสร้างรูปได้ - กรุณาอัพโหลดรูปเอง');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-image`,
+        {
+          attribute_id: attributeId,
+          level_id: level.id,
+          image_url: ''
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setImageUrl('');
+      toast.success('ลบรูปภาพสำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      console.error('Error removing image:', error);
+      toast.error('ไม่สามารถลบรูปภาพได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="p-3 bg-white rounded-lg border-2 border-gray-200">
+      <div className="font-semibold text-gray-900 mb-2 text-sm">
+        {level.value}
+      </div>
+      
+      {level.description && (
+        <p className="text-xs text-gray-600 mb-3">
+          {level.description}
+        </p>
+      )}
+
+      {/* Image Preview */}
+      {imageUrl ? (
+        <div className="relative mb-3">
+          <img 
+            src={imageUrl} 
+            alt={level.value}
+            className="w-full h-32 object-cover rounded border-2 border-gray-200"
+            onError={(e) => {
+              e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Image</text></svg>';
+            }}
+          />
+          <button
+            onClick={handleRemoveImage}
+            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ) : (
+        <div className="w-full h-32 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center mb-3">
+          <ImageIcon className="w-8 h-8 text-gray-400" />
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      {!showUrlInput ? (
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowUrlInput(true)}
+            size="sm"
+            variant="outline"
+            className="flex-1 text-xs border-2"
+          >
+            <Upload className="w-3 h-3 mr-1" />
+            Upload
+          </Button>
+          <Button
+            onClick={handleGenerate}
+            size="sm"
+            disabled={generating}
+            className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {generating ? (
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI
+              </>
+            )}
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={tempUrl}
+            onChange={(e) => setTempUrl(e.target.value)}
+            placeholder="วาง URL รูปภาพ"
+            className="w-full p-2 border-2 border-gray-300 rounded text-xs"
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                setShowUrlInput(false);
+                setTempUrl('');
+              }}
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs"
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              onClick={handleUploadUrl}
+              size="sm"
+              disabled={uploading}
+              className="flex-1 text-xs bg-blue-600 text-white"
+            >
+              {uploading ? 'กำลังบันทึก...' : 'บันทึก'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ConjointDesignPage = () => {
   const navigate = useNavigate();
