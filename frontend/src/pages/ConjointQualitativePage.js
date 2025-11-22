@@ -104,6 +104,17 @@ const ConjointQualitativePage = () => {
       );
 
       setAnalysisResult(response.data);
+      
+      // Add to history
+      setAnalysisHistory([
+        ...analysisHistory,
+        {
+          timestamp: new Date(),
+          result: response.data,
+          input_count: qualitativeInputs.length
+        }
+      ]);
+      
       toast.success('วิเคราะห์ข้อมูลเสร็จสิ้น!');
       
       // Reload study to get updated status
