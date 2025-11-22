@@ -229,6 +229,51 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Journal Finder API fully functional! All 6 test cases passed: 1) Marketing Research (Thai) - Successfully found 5-10 journals with ABDC/AJG ratings where available, proper response structure with journals array, explanation, and disclaimer. 2) Management Research (English) - Generated relevant journals with Impact Factor/Quartile info marked as AI-estimated, SCImago URLs provided. 3) Minimal Input - Handled topic and abstract only (empty keywords) successfully. 4) Invalid Input - Properly validated missing required fields with appropriate error responses. 5) Response Time - All requests completed under 60 seconds (typically 10-30 seconds). 6) Authentication - Admin credentials (admin@swu.ac.th/admin123) working correctly. Journal database integration working with ABDC and AJG 2024 data files. Claude Sonnet model providing accurate journal suggestions with proper parsing and database matching."
 
+  - task: "Conjoint Analysis AI Image Generation - Level Images"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing AI image generation for conjoint analysis level images using OpenAI gpt-image-1"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Level image generation working perfectly! POST /api/conjoint/studies/{study_id}/generate-single-image endpoint successfully generates images using OpenAI gpt-image-1. Test with admin@swu.ac.th credentials found active study with 3 attributes and 8 choice sets. Generated level image for first attribute/level with base64 length 1,411,588 characters. Returns proper base64 data URL format (data:image/png;base64,), includes prompt_used field, and images are saved to study attributes in database. Fixed backend bug: removed duplicate GenerateProfileImageRequest model definition that was causing validation conflicts."
+
+  - task: "Conjoint Analysis AI Image Generation - Profile Images"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing AI image generation for conjoint analysis profile images using OpenAI gpt-image-1"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Profile image generation working perfectly! POST /api/conjoint/studies/{study_id}/generate-profile-image endpoint successfully generates composite images using OpenAI gpt-image-1. Generated profile image for first choice_set/profile with base64 length 2,440,948 characters. Returns proper base64 data URL format, includes composition prompt with multiple attributes, and images are saved to choice_sets profiles in database. Both level and profile images persist correctly in database after generation."
+
+  - task: "Conjoint Analysis AI Image Generation - Image Persistence"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing image persistence in database after AI generation"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Image persistence working perfectly! After generating both level and profile images, GET /api/conjoint/studies/{study_id} endpoint returns study with images properly saved. Level images found in attributes[].levels[].image_url field with correct base64 data URL format. Profile images found in choice_sets[].profiles[].profile_image_url field with correct base64 data URL format. Both images persist correctly in MongoDB database and are retrievable in subsequent API calls."
+
 frontend:
   - task: "Customer Perception Analysis Tool - Full E2E Testing"
     implemented: true
