@@ -127,12 +127,18 @@ const ConjointQualitativePage = () => {
     }
   };
 
-  const handleProceedToDesign = () => {
-    if (!analysisResult) {
-      toast.error('กรุณาวิเคราะห์ข้อมูลก่อน');
-      return;
-    }
+  const handleSkipToDesign = () => {
+    // Allow skipping directly to Phase 2 without LLM analysis
     navigate(`/research/conjoint/${studyId}/design`);
+  };
+
+  const handleProceedToDesign = () => {
+    navigate(`/research/conjoint/${studyId}/design`);
+  };
+
+  const handleReanalyze = () => {
+    setAnalysisResult(null);
+    toast.info('กรุณาตรวจสอบข้อมูลและวิเคราะห์ใหม่');
   };
 
   const getInputTypeLabel = (type) => {
