@@ -25,6 +25,163 @@ import {
   X
 } from 'lucide-react';
 
+// Component for managing profile image (composite image)
+const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attributes, token, onImageUpdated }) => {
+  const [uploading, setUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState(profile.profile_image_url || '');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [tempUrl, setTempUrl] = useState('');
+
+  const handleUploadUrl = async () => {
+    if (!tempUrl.trim()) {
+      toast.error('กรุณากรอก URL รูปภาพ');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-profile-image`,
+        {
+          choice_set_id: choiceSetId,
+          profile_id: profile.id,
+          image_url: tempUrl
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setImageUrl(tempUrl);
+      setShowUrlInput(false);
+      setTempUrl('');
+      toast.success('อัพโหลดรูป Profile สำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      console.error('Error uploading profile image:', error);
+      toast.error('ไม่สามารถอัพโหลดรูปได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-profile-image`,
+        {
+          choice_set_id: choiceSetId,
+          profile_id: profile.id,
+          image_url: ''
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setImageUrl('');
+      toast.success('ลบรูป Profile สำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      console.error('Error removing profile image:', error);
+      toast.error('ไม่สามารถลบรูปได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Get level values for this profile
+  const getLevelInfo = (attrId) => {
+    const levelId = profile.attribute_levels[attrId];
+    const attr = attributes.find(a => a.id === attrId);
+    const level = attr?.levels.find(l => l.id === levelId);
+    return level ? `${attr.name}: ${level.value}` : '';
+  };
+
+  return (
+    <div className="p-3 bg-white rounded-lg border-2 border-blue-200">
+      <div className="font-bold text-gray-900 mb-2 text-sm">
+        Profile {String.fromCharCode(65 + profileIndex)}
+      </div>
+      
+      {/* Profile composition */}
+      <div className="text-xs text-gray-600 mb-3 space-y-1">
+        {Object.keys(profile.attribute_levels).map(attrId => (
+          <div key={attrId}>• {getLevelInfo(attrId)}</div>
+        ))}
+      </div>
+
+      {/* Image Preview */}
+      {imageUrl ? (
+        <div className="relative mb-3">
+          <img 
+            src={imageUrl} 
+            alt={`Profile ${String.fromCharCode(65 + profileIndex)}`}
+            className="w-full h-40 object-cover rounded border-2 border-blue-300"
+            onError={(e) => {
+              e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Image</text></svg>';
+            }}
+          />
+          <button
+            onClick={handleRemoveImage}
+            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ) : (
+        <div className="w-full h-40 bg-blue-50 rounded border-2 border-dashed border-blue-300 flex items-center justify-center mb-3">
+          <div className="text-center">
+            <ImageIcon className="w-8 h-8 text-blue-400 mx-auto mb-1" />
+            <span className="text-xs text-blue-600">Composite Image</span>
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      {!showUrlInput ? (
+        <Button
+          onClick={() => setShowUrlInput(true)}
+          size="sm"
+          variant="outline"
+          className="w-full text-xs border-2 border-blue-400 text-blue-700"
+        >
+          <Upload className="w-3 h-3 mr-1" />
+          Upload Profile Image
+        </Button>
+      ) : (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={tempUrl}
+            onChange={(e) => setTempUrl(e.target.value)}
+            placeholder="วาง URL รูปภาพ Profile"
+            className="w-full p-2 border-2 border-blue-300 rounded text-xs"
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                setShowUrlInput(false);
+                setTempUrl('');
+              }}
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs"
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              onClick={handleUploadUrl}
+              size="sm"
+              disabled={uploading}
+              className="flex-1 text-xs bg-blue-600 text-white"
+            >
+              {uploading ? 'กำลังบันทึก...' : 'บันทึก'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Component for managing image for each level
 const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onImageUpdated }) => {
   const [uploading, setUploading] = useState(false);
