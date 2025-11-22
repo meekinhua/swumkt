@@ -405,6 +405,13 @@ const AdminSettings = () => {
                 </svg>
                 Manage Admin Users
               </Button>
+              <Button
+                onClick={() => navigate('/admin/llm-prompts')}
+                className="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold shadow-xl hover:shadow-2xl"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                LLM Prompts Management
+              </Button>
             </div>
           </div>
 
