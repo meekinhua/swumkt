@@ -799,7 +799,7 @@ const ConjointDesignPage = () => {
         )}
 
         {/* Next Step - View Results */}
-        {showSurveyLink && (
+        {designGenerated && (
           <div className="flex justify-end">
             <Button
               onClick={() => navigate(`/research/conjoint/${studyId}/results`)}
