@@ -16,7 +16,8 @@ import {
   Trash2,
   Sparkles,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 const ConjointQualitativePage = () => {
