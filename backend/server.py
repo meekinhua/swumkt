@@ -6007,6 +6007,425 @@ async def demote_from_admin(
     return {"message": f"User {user['full_name']} demoted from admin"}
 
 # Include the router
+
+# ============================================================================
+# CONJOINT ANALYSIS
+# ============================================================================
+
+# Models
+class ConjointStudyStatus(str, Enum):
+    DRAFT = "draft"
+    QUALITATIVE = "qualitative_phase"
+    DESIGN = "design_phase"
+    ACTIVE = "active"
+    CLOSED = "closed"
+
+class AttributeLevel(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    value: str
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+
+class ConjointAttribute(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    levels: List[AttributeLevel]
+    order: int = 0
+
+class QualitativeInput(BaseModel):
+    type: str  # "interview", "observation", "constraints"
+    content: str
+    filename: Optional[str] = None
+
+class ConjointProfile(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    attribute_levels: Dict[str, str]  # attribute_id -> level_id
+    image_url: Optional[str] = None
+    description: Optional[str] = None
+
+class ChoiceSet(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    profiles: List[ConjointProfile]
+    set_number: int
+
+class CreateConjointStudyRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+    product_category: Optional[str] = None
+
+class QualitativeAnalysisRequest(BaseModel):
+    study_id: str
+    qualitative_data: List[QualitativeInput]
+    target_language: str = "th"
+
+class UpdateAttributesRequest(BaseModel):
+    study_id: str
+    attributes: List[ConjointAttribute]
+
+class GenerateDesignRequest(BaseModel):
+    study_id: str
+    alternatives_per_set: int = 3
+    number_of_sets: Optional[int] = None  # Auto-calculate if not provided
+    design_method: str = "d-optimal"
+
+class GenerateProfileImageRequest(BaseModel):
+    study_id: str
+    profile: ConjointProfile
+    image_style: str = "product_photo"
+    custom_prompt: Optional[str] = None
+
+# Helper Functions
+def calculate_optimal_choice_sets(num_attributes: int, num_levels_per_attr: List[int], alternatives_per_set: int = 3) -> int:
+    """Calculate statistically optimal number of choice sets based on D-optimal criteria"""
+    # Rule of thumb: need at least 3 * (total parameters) / alternatives_per_set
+    total_parameters = sum(num_levels_per_attr) - num_attributes  # minus reference levels
+    min_sets = max(8, int((3 * total_parameters) / alternatives_per_set))
+    # Round to nearest multiple of 4 for balanced design
+    optimal_sets = ((min_sets + 3) // 4) * 4
+    return min(max(8, optimal_sets), 20)  # Between 8-20 sets
+
+async def generate_d_optimal_design(attributes: List[ConjointAttribute], alternatives_per_set: int, num_sets: int) -> List[ChoiceSet]:
+    """Generate D-optimal fractional factorial design for choice sets"""
+    import itertools
+    import random
+    
+    # Create full factorial of all possible profiles
+    attr_levels_map = {}
+    for attr in attributes:
+        attr_levels_map[attr.id] = [level.id for level in attr.levels]
+    
+    # Generate all possible combinations
+    attr_ids = list(attr_levels_map.keys())
+    all_combinations = list(itertools.product(*[attr_levels_map[aid] for aid in attr_ids]))
+    
+    # Convert to profile format
+    all_profiles = []
+    for combo in all_combinations:
+        profile_dict = {attr_ids[i]: combo[i] for i in range(len(attr_ids))}
+        all_profiles.append(ConjointProfile(attribute_levels=profile_dict))
+    
+    # D-optimal selection (simplified - use random sampling with constraints)
+    # In production, use specialized DOE libraries like pyDOE or R's AlgDesign
+    choice_sets = []
+    used_profiles = set()
+    
+    for set_num in range(num_sets):
+        # Select alternatives ensuring variety
+        set_profiles = []
+        attempts = 0
+        max_attempts = 100
+        
+        while len(set_profiles) < alternatives_per_set and attempts < max_attempts:
+            candidate = random.choice(all_profiles)
+            profile_key = tuple(sorted(candidate.attribute_levels.items()))
+            
+            if profile_key not in used_profiles:
+                # Check for attribute level balance in this choice set
+                if not set_profiles or is_balanced_set(set_profiles + [candidate], attributes):
+                    set_profiles.append(candidate)
+                    used_profiles.add(profile_key)
+            
+            attempts += 1
+        
+        if len(set_profiles) == alternatives_per_set:
+            choice_sets.append(ChoiceSet(
+                profiles=set_profiles,
+                set_number=set_num + 1
+            ))
+    
+    return choice_sets
+
+def is_balanced_set(profiles: List[ConjointProfile], attributes: List[ConjointAttribute]) -> bool:
+    """Check if choice set has good attribute level variation"""
+    if len(profiles) < 2:
+        return True
+    
+    # Count unique levels per attribute
+    for attr in attributes:
+        levels_in_set = set()
+        for profile in profiles:
+            if attr.id in profile.attribute_levels:
+                levels_in_set.add(profile.attribute_levels[attr.id])
+        
+        # Prefer sets where each attribute shows variation
+        if len(levels_in_set) < 2 and len(attr.levels) > 1:
+            return False
+    
+    return True
+
+# API Endpoints
+
+# Create new conjoint study
+@api_router.post("/conjoint/studies")
+async def create_conjoint_study(
+    request: CreateConjointStudyRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new conjoint analysis study"""
+    study_id = str(uuid.uuid4())
+    
+    study = {
+        "id": study_id,
+        "title": request.title,
+        "description": request.description,
+        "product_category": request.product_category,
+        "status": ConjointStudyStatus.DRAFT,
+        "creator_id": current_user.id,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "qualitative_data": [],
+        "attributes": [],
+        "choice_sets": [],
+        "respondent_count": 0
+    }
+    
+    await db.conjoint_studies.insert_one(study)
+    
+    return {"study_id": study_id, "message": "Study created successfully"}
+
+# Phase 1: Qualitative Analysis
+@api_router.post("/conjoint/studies/{study_id}/qualitative-analysis")
+async def analyze_qualitative_data(
+    study_id: str,
+    request: QualitativeAnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Use LLM to analyze qualitative data and suggest attributes/levels"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get API key
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="LLM service not configured")
+    
+    # Combine all qualitative inputs
+    combined_data = "\n\n".join([
+        f"=== {item.type.upper()} ===\n{item.content}"
+        for item in request.qualitative_data
+    ])
+    
+    # Create analysis prompt
+    analysis_prompt = f"""You are an expert marketing researcher specializing in Conjoint Analysis.
+
+Analyze the following qualitative data to identify the most important product/service attributes and their levels for a Choice-Based Conjoint Analysis study.
+
+Qualitative Data:
+{combined_data}
+
+Instructions:
+1. Identify 3-5 key attributes that customers care about most
+2. For each attribute, suggest 2-4 realistic levels
+3. Ensure levels are:
+   - Clearly distinguishable
+   - Feasible to implement
+   - Cover a reasonable range
+4. Provide brief rationale for each attribute
+
+Output Format (JSON):
+{{
+  "attributes": [
+    {{
+      "name": "Attribute Name",
+      "description": "Brief description",
+      "rationale": "Why this attribute is important",
+      "levels": [
+        {{"value": "Level 1", "description": "Brief description"}},
+        {{"value": "Level 2", "description": "Brief description"}}
+      ]
+    }}
+  ],
+  "recommendations": "Overall recommendations for the study design"
+}}
+
+Respond in {request.target_language} language."""
+    
+    # Call LLM
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"conjoint-qual-{study_id}",
+            system_message="You are an expert marketing researcher."
+        ).with_model("openai", "gpt-5")
+        
+        response_text, _ = await chat.send_message(UserMessage(text=analysis_prompt))
+        
+        # Parse JSON response
+        import json
+        import re
+        
+        # Extract JSON from response (in case there's extra text)
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if json_match:
+            analysis_result = json.loads(json_match.group())
+        else:
+            raise Exception("Failed to parse LLM response")
+        
+        # Convert to our attribute format
+        suggested_attributes = []
+        for i, attr_data in enumerate(analysis_result.get("attributes", [])):
+            attr_levels = []
+            for level_data in attr_data.get("levels", []):
+                attr_levels.append(AttributeLevel(
+                    value=level_data.get("value", ""),
+                    description=level_data.get("description")
+                ))
+            
+            suggested_attributes.append(ConjointAttribute(
+                name=attr_data.get("name", ""),
+                description=attr_data.get("description"),
+                levels=attr_levels,
+                order=i
+            ))
+        
+        # Update study
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {
+                "$set": {
+                    "qualitative_data": [item.dict() for item in request.qualitative_data],
+                    "suggested_attributes": [attr.dict() for attr in suggested_attributes],
+                    "llm_analysis": analysis_result,
+                    "status": ConjointStudyStatus.QUALITATIVE,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "suggested_attributes": [attr.dict() for attr in suggested_attributes],
+            "recommendations": analysis_result.get("recommendations", ""),
+            "raw_analysis": analysis_result
+        }
+        
+    except Exception as e:
+        logging.error(f"Qualitative analysis error: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+# Update attributes (after reviewing LLM suggestions)
+@api_router.put("/conjoint/studies/{study_id}/attributes")
+async def update_study_attributes(
+    study_id: str,
+    request: UpdateAttributesRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Update study attributes after reviewing/editing LLM suggestions"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$set": {
+                "attributes": [attr.dict() for attr in request.attributes],
+                "status": ConjointStudyStatus.DESIGN,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {"message": "Attributes updated successfully"}
+
+# Generate D-Optimal Design
+@api_router.post("/conjoint/studies/{study_id}/generate-design")
+async def generate_conjoint_design(
+    study_id: str,
+    request: GenerateDesignRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate D-optimal choice sets for the study"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if not study.get("attributes"):
+        raise HTTPException(status_code=400, detail="No attributes defined. Please complete Phase 1 first.")
+    
+    # Parse attributes
+    attributes = [ConjointAttribute(**attr) for attr in study["attributes"]]
+    
+    # Calculate optimal number of choice sets if not provided
+    num_sets = request.number_of_sets
+    if not num_sets:
+        num_levels_per_attr = [len(attr.levels) for attr in attributes]
+        num_sets = calculate_optimal_choice_sets(
+            len(attributes),
+            num_levels_per_attr,
+            request.alternatives_per_set
+        )
+    
+    # Generate design
+    choice_sets = await generate_d_optimal_design(
+        attributes,
+        request.alternatives_per_set,
+        num_sets
+    )
+    
+    # Save design
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$set": {
+                "choice_sets": [cs.dict() for cs in choice_sets],
+                "alternatives_per_set": request.alternatives_per_set,
+                "design_method": request.design_method,
+                "status": ConjointStudyStatus.ACTIVE,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": "Design generated successfully",
+        "num_choice_sets": len(choice_sets),
+        "alternatives_per_set": request.alternatives_per_set,
+        "design_efficiency": {
+            "total_profiles": len(choice_sets) * request.alternatives_per_set,
+            "recommended_respondents": max(200, len(choice_sets) * 15)
+        }
+    }
+
+# Get study details
+@api_router.get("/conjoint/studies/{study_id}")
+async def get_conjoint_study(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get conjoint study details"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    return study
+
+# List user's studies
+@api_router.get("/conjoint/studies")
+async def list_conjoint_studies(
+    current_user: User = Depends(get_current_user)
+):
+    """List all conjoint studies created by user"""
+    studies = await db.conjoint_studies.find(
+        {"creator_id": current_user.id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {"studies": studies}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
