@@ -27,6 +27,7 @@ import SurveyResponsesPage from '@/pages/SurveyResponsesPage';
 import NotificationSettings from '@/pages/NotificationSettings';
 import AdminNotifications from '@/pages/AdminNotifications';
 import AdminUserManagement from '@/pages/AdminUserManagement';
+import AdminLLMPrompts from '@/pages/AdminLLMPrompts';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
