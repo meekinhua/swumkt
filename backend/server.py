@@ -6320,7 +6320,7 @@ async def analyze_qualitative_data(
             prompt_config.get("model_name", "claude-sonnet-4-20250514")
         )
         
-        response_text, _ = await chat.send_message(UserMessage(text=analysis_prompt))
+        response_text = await chat.send_message(UserMessage(text=analysis_prompt))
         
         # Parse JSON response
         import json
