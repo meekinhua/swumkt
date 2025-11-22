@@ -225,13 +225,26 @@ const ConjointQualitativePage = () => {
         <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-black text-gray-900">ข้อมูลเชิงคุณภาพ</h2>
-            <Button
-              onClick={() => setShowAddInput(true)}
-              className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              เพิ่มข้อมูล
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowAddInput(true)}
+                className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                เพิ่มข้อมูล
+              </Button>
+              {analysisResult && qualitativeInputs.length > 0 && (
+                <Button
+                  onClick={() => setAnalysisResult(null)}
+                  variant="outline"
+                  className="border-2 border-blue-400 text-blue-700"
+                  size="sm"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  แก้ไขและวิเคราะห์ใหม่
+                </Button>
+              )}
+            </div>
           </div>
 
           {qualitativeInputs.length === 0 ? (
