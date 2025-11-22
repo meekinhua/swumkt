@@ -6675,6 +6675,107 @@ async def generate_profile_images(
             "skipped": True
         }
 
+# Generate image for single attribute level
+@api_router.post("/conjoint/studies/{study_id}/generate-single-image")
+async def generate_single_image(
+    study_id: str,
+    request: GenerateSingleImageRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate image for a specific attribute level"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Find the attribute and level
+    attributes = study.get("attributes", [])
+    attr_found = None
+    level_found = None
+    
+    for attr in attributes:
+        if attr["id"] == request.attribute_id:
+            attr_found = attr
+            for level in attr.get("levels", []):
+                if level["id"] == request.level_id:
+                    level_found = level
+                    break
+            break
+    
+    if not attr_found or not level_found:
+        raise HTTPException(status_code=404, detail="Attribute or level not found")
+    
+    # Use custom prompt or generate default
+    if request.prompt:
+        image_prompt = request.prompt
+    else:
+        image_prompt = f"Professional product visualization: {attr_found['name']} - {level_found['value']}. Clean, minimalist style on white background."
+        if level_found.get("description"):
+            image_prompt += f" {level_found['description']}"
+    
+    # For now, since image generation module is not available, return placeholder
+    # In production, this would call the actual image generation service
+    try:
+        # Placeholder: return a mock response indicating feature not available
+        return {
+            "message": "Image generation feature not available",
+            "skipped": True,
+            "image_url": None,
+            "prompt_used": image_prompt
+        }
+    except Exception as e:
+        logging.error(f"Single image generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Upload image for attribute level
+@api_router.post("/conjoint/studies/{study_id}/upload-image")
+async def upload_level_image(
+    study_id: str,
+    request: UploadImageRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Upload/set image URL for a specific attribute level"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Update the specific level's image_url
+    attributes = study.get("attributes", [])
+    updated = False
+    
+    for attr in attributes:
+        if attr["id"] == request.attribute_id:
+            for level in attr.get("levels", []):
+                if level["id"] == request.level_id:
+                    level["image_url"] = request.image_url
+                    updated = True
+                    break
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Attribute or level not found")
+    
+    # Save updated attributes
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$set": {
+                "attributes": attributes,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": "Image uploaded successfully",
+        "image_url": request.image_url
+    }
+
 # Get survey (public endpoint - no auth required)
 @api_router.get("/conjoint/survey/{study_id}")
 async def get_survey(study_id: str):
