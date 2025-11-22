@@ -166,15 +166,32 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
 
       {/* Action Buttons */}
       {!showUrlInput ? (
-        <Button
-          onClick={() => setShowUrlInput(true)}
-          size="sm"
-          variant="outline"
-          className="w-full text-xs border-2 border-blue-400 text-blue-700"
-        >
-          <Upload className="w-3 h-3 mr-1" />
-          Upload Profile Image
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowUrlInput(true)}
+            size="sm"
+            variant="outline"
+            className="flex-1 text-xs border-2 border-blue-400 text-blue-700"
+          >
+            <Upload className="w-3 h-3 mr-1" />
+            Upload
+          </Button>
+          <Button
+            onClick={handleGenerate}
+            size="sm"
+            disabled={generating}
+            className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {generating ? (
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI
+              </>
+            )}
+          </Button>
+        </div>
       ) : (
         <div className="space-y-2">
           <input
