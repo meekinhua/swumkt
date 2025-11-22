@@ -150,6 +150,14 @@ function App() {
               }
             />
             <Route
+              path="/admin/llm-prompts"
+              element={
+                <ProtectedRoute>
+                  <AdminLLMPrompts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/profile/notifications"
               element={
                 <ProtectedRoute>
