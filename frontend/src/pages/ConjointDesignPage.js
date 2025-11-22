@@ -16,7 +16,9 @@ import {
   Save,
   Sparkles,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Copy,
+  Link
 } from 'lucide-react';
 
 const ConjointDesignPage = () => {
