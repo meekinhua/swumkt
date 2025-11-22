@@ -609,9 +609,9 @@ agent_communication:
 backend:
   - task: "Conjoint Analysis Feature - Complete Backend API Testing"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -621,6 +621,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "✅ CONJOINT ANALYSIS BACKEND TESTING COMPLETE: 8/10 tests passed with 2 critical issues requiring main agent fixes. 🔐 Authentication: PASS - admin@swu.ac.th/admin123 login successful. ✅ WORKING FEATURES: 1) Create Study: Successfully created study 'สมาร์ทโฟน 2025' with proper metadata. 2) Update Attributes: Successfully updated 3 attributes (ราคา, แบรนด์, ขนาดหน้าจอ) with levels. 3) Generate D-Optimal Design: Successfully generated 8 choice sets with 3 alternatives per set. 4) Get Survey (Public): Successfully retrieved survey data with 8 choice sets (no auth required). 5) Submit Survey Response (Public): Successfully submitted mock response (no auth required). 6) Get Study Details: Successfully retrieved complete study details with status 'active'. 7) List All Studies: Successfully listed 3 studies including created study. 8) Admin Login: Authentication working correctly. ❌ CRITICAL ISSUES REQUIRING MAIN AGENT FIXES: 1) Qualitative Analysis (Phase 3): Backend LLM response parsing error - 'too many values to unpack (expected 2)' - Claude Sonnet integration has parsing bug in qualitative analysis endpoint. 2) Admin LLM Prompts (Phase 8): Admin access denied - backend checks user_type='regular' instead of role='admin' (admin user has correct role but wrong user_type). 🎯 OVERALL: Core conjoint analysis workflow is 80% functional. D-optimal design generation, choice set creation, and survey response collection all working perfectly. Only LLM integration and admin access control need fixes."
+      - working: true
+        agent: "testing"
+        comment: "🎉 CONJOINT ANALYSIS FIXES VERIFIED: Both critical issues have been successfully resolved! ✅ FOCUSED RETEST RESULTS: 4/4 tests passed (100% success rate). 1) Qualitative Analysis (FIXED): Claude LLM successfully analyzes smartphone features and returns 5 structured attributes with proper parsing - no more 'too many values to unpack' error. 2) Admin LLM Prompts (FIXED): Admin user (admin@swu.ac.th) can now access GET /api/admin/llm-prompts endpoint correctly - access control now properly checks role='admin' instead of user_type. 🔧 TECHNICAL DETAILS: Admin login shows role='admin', user_type='regular' which is correct. LLM prompt found using anthropic/claude-sonnet-4-20250514 model. Both endpoints now working as designed. 🎯 OVERALL: Conjoint Analysis feature is now fully functional with all critical components working correctly."
 
 agent_communication:
   - agent: "main"
