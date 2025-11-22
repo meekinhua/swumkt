@@ -2244,6 +2244,15 @@ class BackendTester:
             ("Conjoint List Studies", self.test_conjoint_list_studies),
         ]
         
+        # Test sequence - Conjoint Analysis Image Generation Tests (NEW FOCUS)
+        conjoint_image_tests = [
+            ("Conjoint Image Admin Login", self.test_conjoint_image_admin_login),
+            ("Conjoint Get Active Study", self.test_conjoint_get_active_study),
+            ("Conjoint Generate Level Image", self.test_conjoint_generate_level_image),
+            ("Conjoint Generate Profile Image", self.test_conjoint_generate_profile_image),
+            ("Conjoint Verify Images Persist", self.test_conjoint_verify_images_persist),
+        ]
+        
         # Test sequence - Journal Finder Tests (Regression)
         journal_finder_tests = [
             ("Journal Finder Admin Login", self.test_journal_finder_admin_login),
