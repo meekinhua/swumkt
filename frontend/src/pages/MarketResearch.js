@@ -102,6 +102,23 @@ const MarketResearch = () => {
       path: '/market-research/customer-perception'
     },
     {
+      id: 'conjoint-analysis',
+      icon: <TrendingUp className="w-16 h-16" />,
+      title: 'Choice-Based Conjoint Analysis',
+      description: 'วิเคราะห์ความสำคัญของคุณสมบัติผลิตภัณฑ์ด้วย Conjoint Analysis',
+      features: [
+        'วิเคราะห์เชิงคุณภาพด้วย LLM (Attribute Discovery)',
+        'D-Optimal Design สำหรับสร้าง Choice Sets',
+        'AI Image Generation สำหรับ Product Profiles',
+        'Part-Worth Utilities และ Market Simulation',
+        'แชร์แบบสอบถามแบบ Choice-Based',
+        'วิเคราะห์ผลด้วย Hierarchical Bayes'
+      ],
+      gradient: 'from-[#7C3AED] via-[#A78BFA] to-[#C4B5FD]',
+      comingSoon: false,
+      path: '/market-research/conjoint-analysis'
+    },
+    {
       id: 'competitor-analysis',
       icon: <Target className="w-16 h-16" />,
       title: t('marketResearch.competitorAnalysis.title'),
