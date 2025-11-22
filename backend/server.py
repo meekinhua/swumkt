@@ -6481,6 +6481,56 @@ async def list_conjoint_studies(
     
     return {"studies": studies}
 
+# Admin: Get all LLM prompts
+@api_router.get("/admin/llm-prompts")
+async def get_llm_prompts(
+    current_user: User = Depends(get_current_user)
+):
+    """Get all LLM prompt templates (admin only)"""
+    if current_user.user_type != UserType.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    await initialize_default_prompts()
+    prompts = await db.llm_prompts.find({}, {"_id": 0}).to_list(100)
+    
+    return {"prompts": prompts}
+
+# Admin: Update LLM prompt
+@api_router.put("/admin/llm-prompts/{prompt_id}")
+async def update_llm_prompt(
+    prompt_id: str,
+    request: UpdateLLMPromptRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Update an LLM prompt template (admin only)"""
+    if current_user.user_type != UserType.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    prompt = await db.llm_prompts.find_one({"id": prompt_id}, {"_id": 0})
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+    
+    update_data = {
+        "prompt_template": request.prompt_template,
+        "updated_at": datetime.now(timezone.utc),
+        "updated_by": current_user.id
+    }
+    
+    if request.system_message is not None:
+        update_data["system_message"] = request.system_message
+    if request.model_provider is not None:
+        update_data["model_provider"] = request.model_provider
+    if request.model_name is not None:
+        update_data["model_name"] = request.model_name
+    
+    await db.llm_prompts.update_one(
+        {"id": prompt_id},
+        {"$set": update_data}
+    )
+    
+    updated_prompt = await db.llm_prompts.find_one({"id": prompt_id}, {"_id": 0})
+    return {"message": "Prompt updated successfully", "prompt": updated_prompt}
+
 
 app.include_router(api_router)
 
