@@ -995,6 +995,12 @@ const ConjointDesignPage = () => {
                         type="text"
                         value={attr.name}
                         onChange={(e) => handleUpdateAttribute(attr.id, 'name', e.target.value)}
+                        onBlur={(e) => handleAutoSaveAttribute(attr.id, 'name', e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.target.blur();
+                          }
+                        }}
                         placeholder="ชื่อ Attribute (เช่น: ราคา, แบรนด์)"
                         className="w-full p-2 mb-2 border-2 border-gray-300 rounded-lg font-bold text-lg focus:border-[#00A9CE] focus:outline-none"
                       />
@@ -1002,6 +1008,12 @@ const ConjointDesignPage = () => {
                         type="text"
                         value={attr.description || ''}
                         onChange={(e) => handleUpdateAttribute(attr.id, 'description', e.target.value)}
+                        onBlur={(e) => handleAutoSaveAttribute(attr.id, 'description', e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.target.blur();
+                          }
+                        }}
                         placeholder="คำอธิบาย (optional)"
                         className="w-full p-2 border-2 border-gray-300 rounded-lg text-sm focus:border-[#00A9CE] focus:outline-none"
                       />
