@@ -60,12 +60,12 @@ const ConjointResultsPage = () => {
     }
   }, [user, token, studyId]);
 
-  // Load default method (MNL) when results are loaded
+  // Load default method (MNL) when component mounts
   useEffect(() => {
-    if (results && !currentResults && token && studyId) {
+    if (results && token && studyId && selectedMethod === 'mnl' && !statisticalData) {
       loadStatisticalAnalysis('mnl');
     }
-  }, [results]);
+  }, [results, token, studyId]);
 
   const loadResults = async () => {
     try {
