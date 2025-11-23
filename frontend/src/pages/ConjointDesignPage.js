@@ -526,6 +526,7 @@ const ConjointDesignPage = () => {
   const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const [surveyStarted, setSurveyStarted] = useState(false); // Track if survey is active
   const [startingSurvey, setStartingSurvey] = useState(false);
+  const [referenceImages, setReferenceImages] = useState([]); // Reference images for AI
 
   useEffect(() => {
     if (user && token && studyId) {
