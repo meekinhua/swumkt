@@ -7578,6 +7578,99 @@ async def get_study_results(
         "responses": responses
     }
 
+def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
+    """Perform linear regression analysis on conjoint data"""
+    from sklearn.linear_model import LinearRegression
+    import numpy as np
+    
+    # Prepare data for regression
+    X = []  # Feature matrix (dummy coded attributes)
+    y = []  # Target (1 if selected, 0 if not)
+    
+    attributes = study.get("attributes", [])
+    attr_levels_map = {}  # Map attribute_id -> list of level_ids
+    
+    # Build attribute levels map
+    for attr in attributes:
+        attr_levels_map[attr["id"]] = [level["id"] for level in attr.get("levels", [])]
+    
+    # Create training data
+    for response in responses:
+        for choice in response.get("responses", []):
+            choice_set_id = choice.get("choice_set_id")
+            selected_profile_id = choice.get("selected_profile_id")
+            
+            # Find the choice set
+            for choice_set in study.get("choice_sets", []):
+                if choice_set["id"] == choice_set_id:
+                    for profile in choice_set.get("profiles", []):
+                        # Create dummy variables for this profile
+                        dummy_vars = []
+                        for attr in attributes:
+                            attr_id = attr["id"]
+                            level_ids = attr_levels_map[attr_id]
+                            profile_level = profile["attribute_levels"].get(attr_id)
+                            
+                            # Dummy coding (all zeros except the selected level)
+                            for i, level_id in enumerate(level_ids[:-1]):  # Drop last for reference
+                                dummy_vars.append(1 if profile_level == level_id else 0)
+                        
+                        X.append(dummy_vars)
+                        y.append(1 if profile["id"] == selected_profile_id else 0)
+    
+    if len(X) == 0 or len(y) == 0:
+        return None
+    
+    X = np.array(X)
+    y = np.array(y)
+    
+    # Fit linear regression
+    model = LinearRegression()
+    model.fit(X, y)
+    
+    # Get coefficients
+    coefficients = model.coef_
+    intercept = model.intercept_
+    r_squared = model.score(X, y)
+    
+    # Map coefficients back to levels
+    regression_results = {
+        "intercept": float(intercept),
+        "r_squared": float(r_squared),
+        "n_observations": len(y),
+        "coefficients": {}
+    }
+    
+    coef_idx = 0
+    for attr in attributes:
+        attr_id = attr["id"]
+        levels = attr.get("levels", [])
+        
+        regression_results["coefficients"][attr_id] = {
+            "name": attr["name"],
+            "levels": {}
+        }
+        
+        # Add coefficients for each level (except reference)
+        for i, level in enumerate(levels[:-1]):
+            regression_results["coefficients"][attr_id]["levels"][level["id"]] = {
+                "value": level["value"],
+                "coefficient": float(coefficients[coef_idx]),
+                "is_reference": False
+            }
+            coef_idx += 1
+        
+        # Last level is reference (coefficient = 0)
+        if levels:
+            last_level = levels[-1]
+            regression_results["coefficients"][attr_id]["levels"][last_level["id"]] = {
+                "value": last_level["value"],
+                "coefficient": 0.0,
+                "is_reference": True
+            }
+    
+    return regression_results
+
 def calculate_part_worths(study: Dict, responses: List[Dict]) -> Dict[str, Dict[str, float]]:
     """Calculate part-worth utilities for each attribute level"""
     # Simplified aggregation method - count preferences
