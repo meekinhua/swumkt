@@ -209,6 +209,30 @@ const ConjointResultsPage = () => {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6 bg-white rounded-lg p-2 shadow-sm">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex-1 px-6 py-3 rounded-md font-bold transition-all ${
+              activeTab === 'overview'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            📊 ภาพรวมและคำแนะนำ
+          </button>
+          <button
+            onClick={() => setActiveTab('academic')}
+            className={`flex-1 px-6 py-3 rounded-md font-bold transition-all ${
+              activeTab === 'academic'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            🎓 เชิงวิชาการและสถิติ
+          </button>
+        </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
