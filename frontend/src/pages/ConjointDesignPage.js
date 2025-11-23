@@ -336,10 +336,39 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
   const [tempUrl, setTempUrl] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
   const [selectedRefs, setSelectedRefs] = useState([]); // Track selected reference images
+  const [promptSettings, setPromptSettings] = useState(null);
   
-  // Generate prompt for this level
+  // Load prompt settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await axios.get(`${API}/api/admin/conjoint-image-settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPromptSettings(response.data);
+      } catch (error) {
+        console.error('Error loading prompt settings:', error);
+      }
+    };
+    loadSettings();
+  }, [token]);
+  
+  // Generate prompt for this level - changes based on reference selection
   const generatePrompt = () => {
-    return `Create a high-quality product image for: ${attributeName} - ${level.value}${level.description ? ` (${level.description})` : ''}. The image should be clear, professional, and suitable for market research. Use a clean white or neutral background. Focus on showcasing the specific feature mentioned.`;
+    if (!promptSettings) {
+      return `Create a high-quality product image for: ${attributeName} - ${level.value}${level.description ? ` (${level.description})` : ''}`;
+    }
+    
+    // Select appropriate prompt template
+    const template = selectedRefs.length > 0 
+      ? promptSettings.level_image_prompt_with_ref
+      : promptSettings.level_image_prompt_template;
+    
+    // Replace variables
+    return template
+      .replace('{attribute_name}', attributeName)
+      .replace('{level_value}', level.value)
+      .replace('{level_description}', level.description || '');
   };
   
   // Toggle reference image selection
