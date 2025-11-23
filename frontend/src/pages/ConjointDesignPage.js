@@ -1500,7 +1500,7 @@ const ConjointDesignPage = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={`${window.location.origin}/research/conjoint/${studyId}/survey`}
+                      value={`${window.location.origin}/survey/conjoint/${studyId}`}
                       readOnly
                       className="flex-1 p-2 border-2 border-blue-300 rounded-lg bg-white font-mono text-xs"
                     />
