@@ -7641,6 +7641,105 @@ def calculate_importance_scores(part_worths: Dict, study: Dict) -> Dict[str, flo
     
     return importance_scores
 
+# Get AI interpretation of results
+@api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
+async def get_ai_interpretation(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate AI interpretation of conjoint analysis results"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get responses
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if len(responses) < 10:
+        raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
+    
+    # Calculate analysis
+    part_worths = calculate_part_worths(study, responses)
+    importance_scores = calculate_importance_scores(part_worths, study)
+    
+    # Prepare data for AI
+    analysis_summary = {
+        "study_title": study.get("title"),
+        "respondent_count": len(responses),
+        "attributes": []
+    }
+    
+    for attr_id, scores in importance_scores.items():
+        attr_info = {
+            "name": scores["name"],
+            "importance": scores["importance"],
+            "levels": []
+        }
+        
+        if attr_id in part_worths:
+            for level_id, level_data in part_worths[attr_id]["levels"].items():
+                attr_info["levels"].append({
+                    "value": level_data["value"],
+                    "utility": level_data["utility"],
+                    "selection_count": level_data["selection_count"]
+                })
+        
+        analysis_summary["attributes"].append(attr_info)
+    
+    # Sort attributes by importance
+    analysis_summary["attributes"].sort(key=lambda x: x["importance"], reverse=True)
+    
+    # Generate AI interpretation
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        system_message = """คุณเป็นผู้เชี่ยวชาญด้านการวิเคราะห์ตลาดและพฤติกรรมผู้บริโภค โดยเฉพาะ Conjoint Analysis 
+คุณจะต้องอธิบายผลการวิเคราะห์ให้ผู้ใช้ทั่วไปที่ไม่มีความรู้ทางสถิติเข้าใจได้ง่าย
+ใช้ภาษาเรียบง่าย ยกตัวอย่างประกอบ และให้ข้อเสนอแนะเชิงธุรกิจที่นำไปปฏิบัติได้จริง"""
+        
+        prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis ต่อไปนี้:
+
+การศึกษา: {analysis_summary['study_title']}
+จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
+
+คุณลักษณะและความสำคัญ:
+{chr(10).join([f"- {attr['name']}: {attr['importance']:.1f}% (ระดับ: {', '.join([f\"{l['value']} ({l['utility']:.1f})\"] for l in attr['levels'])})" for attr in analysis_summary['attributes']])}
+
+กรุณาเขียนคำอธิบายที่:
+1. **สรุปผลหลัก (3-4 ประโยค):** อะไรคือสิ่งที่ผู้บริโภคให้ความสำคัญมากที่สุด?
+2. **คุณลักษณะที่สำคัญที่สุด (Top 3):** อธิบายว่าทำไมแต่ละคุณลักษณะถึงสำคัญ และระดับไหนที่ผู้บริโภคชอบที่สุด
+3. **ข้อเสนอแนะเชิงธุรกิจ (3-5 ข้อ):** ควรทำอย่างไรกับผลิตภัณฑ์/บริการ เช่น ควรเน้นอะไร ตั้งราคาอย่างไร ทำการตลาดอย่างไร
+4. **ข้อควรระวัง:** มีอะไรที่ต้องระมัดระวังหรือพิจารณาเพิ่มเติม
+
+ใช้ภาษาไทยที่เข้าใจง่าย หลีกเลี่ยงศัพท์เทคนิค และให้ตัวอย่างประกอบ"""
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"conjoint-interpret-{study_id}",
+            system_message=system_message
+        ).with_model("openai", "gpt-4o-mini")
+        
+        response = await chat.send_message(UserMessage(text=prompt))
+        
+        return {
+            "interpretation": response,
+            "summary_data": analysis_summary
+        }
+        
+    except Exception as e:
+        logging.error(f"AI interpretation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate interpretation: {str(e)}")
+
 
 app.include_router(api_router)
 
