@@ -689,18 +689,22 @@ const ConjointResultsPage = () => {
                 <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
                   <p className="text-xs font-bold text-indigo-900 mb-1">⭐ Multinomial Logit (MNL)</p>
                   <p className="text-xs text-gray-600">มาตรฐานวิชาการ, มี p-values, Log-likelihood, Pseudo R²</p>
+                  <p className="text-xs text-indigo-700 mt-1">📊 Utility: Logit coefficients (อิทธิพลต่อการตัดสินใจ)</p>
                 </div>
                 <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                   <p className="text-xs font-bold text-purple-900 mb-1">Mixed Logit</p>
                   <p className="text-xs text-gray-600">แสดงความแตกต่างของความชอบระหว่างผู้ตอบแต่ละคน</p>
+                  <p className="text-xs text-purple-700 mt-1">📊 Utility: Mean & Std of preferences</p>
                 </div>
                 <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
                   <p className="text-xs font-bold text-pink-900 mb-1">Hierarchical Bayes</p>
                   <p className="text-xs text-gray-600">วิเคราะห์ทั้งระดับบุคคลและประชากร (Empirical Bayes)</p>
+                  <p className="text-xs text-pink-700 mt-1">📊 Utility: Individual-level estimates</p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-xs font-bold text-blue-900 mb-1">Linear Regression</p>
                   <p className="text-xs text-gray-600">วิธีพื้นฐาน OLS Regression พร้อม R² และ coefficients</p>
+                  <p className="text-xs text-blue-700 mt-1">📊 Utility: OLS coefficients (linear relationship)</p>
                 </div>
               </div>
 
