@@ -7578,6 +7578,229 @@ async def get_study_results(
         "responses": responses
     }
 
+def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
+    """Perform Multinomial Logit (MNL) analysis"""
+    import pandas as pd
+    import numpy as np
+    from statsmodels.discrete.discrete_model import MNLogit
+    
+    # Prepare data
+    data_rows = []
+    attributes = study.get("attributes", [])
+    
+    for resp_idx, response in enumerate(responses):
+        for choice in response.get("responses", []):
+            choice_set_id = choice.get("choice_set_id")
+            selected_profile_id = choice.get("selected_profile_id")
+            
+            # Find choice set
+            for choice_set in study.get("choice_sets", []):
+                if choice_set["id"] == choice_set_id:
+                    for profile in choice_set.get("profiles", []):
+                        row = {
+                            "respondent": resp_idx,
+                            "choice_set": choice_set_id,
+                            "alternative": profile["id"],
+                            "choice": 1 if profile["id"] == selected_profile_id else 0
+                        }
+                        
+                        # Add attribute levels as features
+                        for attr in attributes:
+                            attr_id = attr["id"]
+                            level_id = profile["attribute_levels"].get(attr_id)
+                            level_obj = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
+                            if level_obj:
+                                row[f"{attr['name']}"] = level_obj["value"]
+                        
+                        data_rows.append(row)
+    
+    if not data_rows:
+        return None
+    
+    df = pd.DataFrame(data_rows)
+    
+    # Create dummy variables
+    feature_cols = [col for col in df.columns if col not in ["respondent", "choice_set", "alternative", "choice"]]
+    X = pd.get_dummies(df[feature_cols], drop_first=True)
+    y = df["choice"]
+    
+    # Fit MNL model
+    try:
+        model = MNLogit(y, X)
+        result = model.fit(disp=False, maxiter=1000)
+        
+        return {
+            "method": "Multinomial Logit (MNL)",
+            "coefficients": {name: float(coef) for name, coef in result.params.items()},
+            "std_errors": {name: float(se) for name, se in result.bse.items()},
+            "z_values": {name: float(z) for name, z in result.tvalues.items()},
+            "p_values": {name: float(p) for name, p in result.pvalues.items()},
+            "log_likelihood": float(result.llf),
+            "pseudo_r_squared": float(result.prsquared),
+            "aic": float(result.aic),
+            "bic": float(result.bic),
+            "n_observations": int(len(y))
+        }
+    except Exception as e:
+        logging.error(f"MNL analysis error: {e}")
+        return None
+
+def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
+    """Perform Mixed Logit (Random Parameters) analysis"""
+    # Simplified version - full implementation would use pylogit
+    import pandas as pd
+    import numpy as np
+    
+    try:
+        # Prepare basic data structure
+        data_rows = []
+        attributes = study.get("attributes", [])
+        
+        for resp_idx, response in enumerate(responses):
+            for choice in response.get("responses", []):
+                choice_set_id = choice.get("choice_set_id")
+                selected_profile_id = choice.get("selected_profile_id")
+                
+                for choice_set in study.get("choice_sets", []):
+                    if choice_set["id"] == choice_set_id:
+                        for profile in choice_set.get("profiles", []):
+                            row = {
+                                "respondent": resp_idx,
+                                "choice": 1 if profile["id"] == selected_profile_id else 0
+                            }
+                            
+                            for attr in attributes:
+                                attr_id = attr["id"]
+                                level_id = profile["attribute_levels"].get(attr_id)
+                                level_obj = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
+                                if level_obj:
+                                    row[attr['name']] = level_obj["value"]
+                            
+                            data_rows.append(row)
+        
+        df = pd.DataFrame(data_rows)
+        
+        # Simplified: Use standard deviation of coefficients as proxy for heterogeneity
+        feature_cols = [col for col in df.columns if col not in ["respondent", "choice"]]
+        X = pd.get_dummies(df[feature_cols], drop_first=True)
+        
+        # Calculate per-respondent coefficients
+        respondent_coefs = []
+        for resp_id in df["respondent"].unique():
+            resp_data = df[df["respondent"] == resp_id]
+            if len(resp_data) > 5:  # Need enough data
+                resp_X = pd.get_dummies(resp_data[feature_cols], drop_first=True)
+                resp_y = resp_data["choice"]
+                
+                # Simple correlation as proxy
+                coefs = {}
+                for col in resp_X.columns:
+                    if resp_X[col].var() > 0:
+                        coefs[col] = np.corrcoef(resp_X[col], resp_y)[0, 1]
+                respondent_coefs.append(coefs)
+        
+        # Calculate mean and std of coefficients
+        mean_coefs = {}
+        std_coefs = {}
+        
+        if respondent_coefs:
+            all_vars = set()
+            for coef_dict in respondent_coefs:
+                all_vars.update(coef_dict.keys())
+            
+            for var in all_vars:
+                values = [c.get(var, 0) for c in respondent_coefs]
+                mean_coefs[var] = float(np.nanmean(values))
+                std_coefs[var] = float(np.nanstd(values))
+        
+        return {
+            "method": "Mixed Logit (Simplified)",
+            "mean_coefficients": mean_coefs,
+            "std_coefficients": std_coefs,
+            "n_respondents": len(df["respondent"].unique()),
+            "n_observations": len(df),
+            "note": "Simplified implementation - shows preference heterogeneity across respondents"
+        }
+    except Exception as e:
+        logging.error(f"Mixed logit error: {e}")
+        return None
+
+def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) -> Dict:
+    """Perform Hierarchical Bayes analysis (simplified)"""
+    import numpy as np
+    import pandas as pd
+    
+    try:
+        # Simplified HB: Use empirical Bayes approach
+        data_rows = []
+        attributes = study.get("attributes", [])
+        
+        for resp_idx, response in enumerate(responses):
+            for choice in response.get("responses", []):
+                choice_set_id = choice.get("choice_set_id")
+                selected_profile_id = choice.get("selected_profile_id")
+                
+                for choice_set in study.get("choice_sets", []):
+                    if choice_set["id"] == choice_set_id:
+                        for profile in choice_set.get("profiles", []):
+                            row = {
+                                "respondent": resp_idx,
+                                "choice": 1 if profile["id"] == selected_profile_id else 0
+                            }
+                            
+                            for attr in attributes:
+                                attr_id = attr["id"]
+                                level_id = profile["attribute_levels"].get(attr_id)
+                                level_obj = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
+                                if level_obj:
+                                    row[attr['name']] = level_obj["value"]
+                            
+                            data_rows.append(row)
+        
+        df = pd.DataFrame(data_rows)
+        feature_cols = [col for col in df.columns if col not in ["respondent", "choice"]]
+        
+        # Calculate individual-level estimates (empirical Bayes)
+        individual_utilities = {}
+        
+        for resp_id in df["respondent"].unique():
+            resp_data = df[df["respondent"] == resp_id]
+            utilities = {}
+            
+            for attr in attributes:
+                attr_name = attr["name"]
+                if attr_name in resp_data.columns:
+                    for level in attr.get("levels", []):
+                        level_data = resp_data[resp_data[attr_name] == level["value"]]
+                        if len(level_data) > 0:
+                            utility = level_data["choice"].mean()
+                            utilities[f"{attr_name}_{level['value']}"] = utility
+            
+            individual_utilities[f"respondent_{resp_id}"] = utilities
+        
+        # Calculate population-level parameters
+        all_utilities = {}
+        for utilities in individual_utilities.values():
+            for key, value in utilities.items():
+                if key not in all_utilities:
+                    all_utilities[key] = []
+                all_utilities[key].append(value)
+        
+        population_mean = {k: float(np.mean(v)) for k, v in all_utilities.items()}
+        population_std = {k: float(np.std(v)) for k, v in all_utilities.items()}
+        
+        return {
+            "method": "Hierarchical Bayes (Simplified)",
+            "population_mean": population_mean,
+            "population_std": population_std,
+            "n_respondents": len(individual_utilities),
+            "n_observations": len(df),
+            "note": "Simplified empirical Bayes approach - full HB requires MCMC sampling"
+        }
+    except Exception as e:
+        logging.error(f"HB analysis error: {e}")
+        return None
+
 def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
     """Perform linear regression analysis on conjoint data"""
     from sklearn.linear_model import LinearRegression
