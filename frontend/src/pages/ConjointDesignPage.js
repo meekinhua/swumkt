@@ -754,7 +754,42 @@ const ConjointDesignPage = () => {
       }
       return attr;
     }));
-    setIsDirty(true); // Mark as changed
+    if (!surveyStarted) {
+      setIsDirty(true); // Mark as changed only if survey not started
+    }
+  };
+
+  // Auto-save level changes when survey is started
+  const handleAutoSaveLevel = async (attrId, levelId, field, value) => {
+    if (!surveyStarted) return; // Only auto-save when survey started
+
+    try {
+      const updatedAttributes = attributes.map(attr => {
+        if (attr.id === attrId) {
+          return {
+            ...attr,
+            levels: attr.levels.map(level =>
+              level.id === levelId ? { ...level, [field]: value } : level
+            )
+          };
+        }
+        return attr;
+      });
+
+      await axios.put(
+        `${API}/conjoint/studies/${studyId}/attributes`,
+        {
+          study_id: studyId,
+          attributes: updatedAttributes
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('บันทึกอัตโนมัติสำเร็จ', { duration: 2000 });
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      toast.error('ไม่สามารถบันทึกอัตโนมัติได้');
+    }
   };
 
   const handleCopySurveyLink = () => {
