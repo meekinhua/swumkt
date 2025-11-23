@@ -6176,12 +6176,14 @@ class GenerateSingleImageRequest(BaseModel):
     level_id: str
     prompt: Optional[str] = None
     reference_image_indices: Optional[List[int]] = None  # Indices of selected reference images
+    additional_prompt: Optional[str] = None  # Additional prompt text to append
 
 class GenerateProfileImageRequest(BaseModel):
     choice_set_id: str
     profile_id: str
     prompt: Optional[str] = None
     reference_image_indices: Optional[List[int]] = None  # Indices of selected reference images
+    additional_prompt: Optional[str] = None  # Additional prompt text to append
 
 class ImageGenerationSettings(BaseModel):
     level_image_prompt_template: str = "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background."
