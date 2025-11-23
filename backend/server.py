@@ -7646,6 +7646,11 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             if attr_utils:
                 attribute_utilities[attr_name] = attr_utils
         
+        # Calculate McFadden's pseudo R-squared manually
+        llf = result.llf
+        llnull = result.llnull if hasattr(result, 'llnull') else None
+        pseudo_r2 = 1 - (llf / llnull) if llnull else 0.0
+        
         return {
             "method": "Multinomial Logit (MNL)",
             "coefficients": {name: float(coef) for name, coef in result.params.items()},
@@ -7653,7 +7658,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "z_values": {name: float(z) for name, z in result.tvalues.items()},
             "p_values": {name: float(p) for name, p in result.pvalues.items()},
             "log_likelihood": float(result.llf),
-            "pseudo_r_squared": float(result.prsquared),
+            "pseudo_r_squared": float(pseudo_r2),
             "aic": float(result.aic),
             "n_observations": int(len(y)),
             "attribute_utilities": attribute_utilities
