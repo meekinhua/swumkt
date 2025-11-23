@@ -620,79 +620,6 @@ const ConjointResultsPage = () => {
         {/* Academic Tab */}
         {activeTab === 'academic' && (
           <>
-            {/* Part-Worth Utilities Table */}
-            <Card className="p-6 mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Part-Worth Utilities</h2>
-                  <p className="text-sm text-gray-600">
-                    ค่า Utility ของแต่ละระดับ (คะแนนความพึงพอใจที่ผู้บริโภคให้)
-                  </p>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-purple-100 to-pink-100">
-                      <th className="border-2 border-purple-300 px-4 py-3 text-left font-bold text-gray-900">
-                        คุณลักษณะ
-                      </th>
-                      <th className="border-2 border-purple-300 px-4 py-3 text-left font-bold text-gray-900">
-                        ระดับ
-                      </th>
-                      <th className="border-2 border-purple-300 px-4 py-3 text-right font-bold text-gray-900">
-                        Utility
-                      </th>
-                      <th className="border-2 border-purple-300 px-4 py-3 text-right font-bold text-gray-900">
-                        จำนวนครั้งที่เลือก
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedImportance.map((feature, attrIdx) => {
-                      const levels = currentResults?.part_worths?.[feature.id]?.levels || {};
-                      const sortedLevels = Object.values(levels).sort((a, b) => b.utility - a.utility);
-                      
-                      return sortedLevels.map((level, levelIdx) => (
-                        <tr key={`${feature.id}-${levelIdx}`} className="hover:bg-purple-50">
-                          {levelIdx === 0 && (
-                            <td
-                              className="border-2 border-purple-200 px-4 py-3 font-bold text-gray-900 bg-purple-50"
-                              rowSpan={sortedLevels.length}
-                            >
-                              {feature.name}
-                            </td>
-                          )}
-                          <td className="border-2 border-purple-200 px-4 py-3 text-gray-700">
-                            {levelIdx === 0 && '⭐ '}{level.value}
-                          </td>
-                          <td className={`border-2 border-purple-200 px-4 py-3 text-right font-mono font-bold ${
-                            level.utility > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {level.utility > 0 ? '+' : ''}{level.utility.toFixed(3)}
-                          </td>
-                          <td className="border-2 border-purple-200 px-4 py-3 text-right text-gray-600">
-                            {level.selection_count}
-                          </td>
-                        </tr>
-                      ));
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-                <p className="text-sm text-gray-700">
-                  <strong>💡 คำอธิบาย:</strong> Utility คือคะแนนความพึงพอใจ ค่า<strong className="text-green-600"> บวก (+)</strong> = ผู้บริโภคชอบมากกว่าค่าเฉลี่ย, 
-                  ค่า<strong className="text-red-600"> ลบ (-)</strong> = ชอบน้อยกว่าค่าเฉลี่ย
-                </p>
-              </div>
-            </Card>
-
             {/* Relative Importance Table */}
             <Card className="p-6 mb-8">
               <div className="flex items-center gap-3 mb-6">
@@ -789,6 +716,79 @@ const ConjointResultsPage = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">สถิติการวิจัย</h2>
+            {/* Part-Worth Utilities Table */}
+            <Card className="p-6 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Part-Worth Utilities</h2>
+                  <p className="text-sm text-gray-600">
+                    ค่า Utility ของแต่ละระดับ (คะแนนความพึงพอใจที่ผู้บริโภคให้)
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-purple-100 to-pink-100">
+                      <th className="border-2 border-purple-300 px-4 py-3 text-left font-bold text-gray-900">
+                        คุณลักษณะ
+                      </th>
+                      <th className="border-2 border-purple-300 px-4 py-3 text-left font-bold text-gray-900">
+                        ระดับ
+                      </th>
+                      <th className="border-2 border-purple-300 px-4 py-3 text-right font-bold text-gray-900">
+                        Utility
+                      </th>
+                      <th className="border-2 border-purple-300 px-4 py-3 text-right font-bold text-gray-900">
+                        จำนวนครั้งที่เลือก
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedImportance.map((feature, attrIdx) => {
+                      const levels = currentResults?.part_worths?.[feature.id]?.levels || {};
+                      const sortedLevels = Object.values(levels).sort((a, b) => b.utility - a.utility);
+                      
+                      return sortedLevels.map((level, levelIdx) => (
+                        <tr key={`${feature.id}-${levelIdx}`} className="hover:bg-purple-50">
+                          {levelIdx === 0 && (
+                            <td
+                              className="border-2 border-purple-200 px-4 py-3 font-bold text-gray-900 bg-purple-50"
+                              rowSpan={sortedLevels.length}
+                            >
+                              {feature.name}
+                            </td>
+                          )}
+                          <td className="border-2 border-purple-200 px-4 py-3 text-gray-700">
+                            {levelIdx === 0 && '⭐ '}{level.value}
+                          </td>
+                          <td className={`border-2 border-purple-200 px-4 py-3 text-right font-mono font-bold ${
+                            level.utility > 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {level.utility > 0 ? '+' : ''}{level.utility.toFixed(3)}
+                          </td>
+                          <td className="border-2 border-purple-200 px-4 py-3 text-right text-gray-600">
+                            {level.selection_count}
+                          </td>
+                        </tr>
+                      ));
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                <p className="text-sm text-gray-700">
+                  <strong>💡 คำอธิบาย:</strong> Utility คือคะแนนความพึงพอใจ ค่า<strong className="text-green-600"> บวก (+)</strong> = ผู้บริโภคชอบมากกว่าค่าเฉลี่ย, 
+                  ค่า<strong className="text-red-600"> ลบ (-)</strong> = ชอบน้อยกว่าค่าเฉลี่ย
+                </p>
+              </div>
+            </Card>
+
             {/* Statistical Analysis with Method Selection */}
             <Card className="p-6 mb-8">
               <div className="flex items-center gap-3 mb-6">
