@@ -47,6 +47,7 @@ const ConjointResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingAI, setLoadingAI] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'academic'
 
   useEffect(() => {
     if (user && token && studyId) {
