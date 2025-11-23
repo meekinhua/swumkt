@@ -7104,18 +7104,40 @@ async def generate_profile_image(
             # Images already in base64 format
             image_base64 = images[0]['data']
             
+        # Prepare reference images if provided
+        ref_images_base64 = []
+        if using_refs:
+            for idx in request.reference_image_indices:
+                if 0 <= idx < len(reference_images):
+                    img_url = reference_images[idx]
+                    # Extract base64 from data URL
+                    if img_url.startswith('data:image'):
+                        ref_images_base64.append(img_url.split(',')[1])
+                    else:
+                        ref_images_base64.append(img_url)
+        
         else:
             # Use OpenAI models
             from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
             
             image_gen = OpenAIImageGeneration(api_key=api_key)
             
-            # Generate image
-            images = await image_gen.generate_images(
-                prompt=image_prompt,
-                model=model_to_use,
-                number_of_images=1
-            )
+            # If using reference images with OpenAI, use image variation mode
+            if using_refs and len(ref_images_base64) > 0:
+                # Use the first reference image for style guidance
+                images = await image_gen.generate_image_variations(
+                    image_data=base64.b64decode(ref_images_base64[0]),
+                    prompt=image_prompt,
+                    model=model_to_use,
+                    number_of_images=1
+                )
+            else:
+                # Standard text-to-image generation
+                images = await image_gen.generate_images(
+                    prompt=image_prompt,
+                    model=model_to_use,
+                    number_of_images=1
+                )
             
             if not images or len(images) == 0:
                 raise HTTPException(status_code=500, detail="No image was generated")
