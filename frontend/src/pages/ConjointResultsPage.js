@@ -608,7 +608,7 @@ const ConjointResultsPage = () => {
                   </thead>
                   <tbody>
                     {sortedImportance.map((feature, attrIdx) => {
-                      const levels = results.part_worths[feature.id]?.levels || {};
+                      const levels = currentResults?.part_worths?.[feature.id]?.levels || {};
                       const sortedLevels = Object.values(levels).sort((a, b) => b.utility - a.utility);
                       
                       return sortedLevels.map((level, levelIdx) => (
