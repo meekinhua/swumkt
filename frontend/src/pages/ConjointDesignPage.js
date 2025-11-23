@@ -936,7 +936,8 @@ const ConjointDesignPage = () => {
                     onClick={() => handleAddLevel(attr.id)}
                     variant="outline"
                     size="sm"
-                    className="text-xs"
+                    disabled={surveyStarted}
+                    className={`text-xs ${surveyStarted ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <Plus className="w-3 h-3 mr-1" />
                     เพิ่ม Level
