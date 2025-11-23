@@ -616,6 +616,176 @@ const ConjointResultsPage = () => {
               </div>
             </Card>
 
+            {/* Regression Analysis */}
+            <Card className="p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Linear Regression Analysis</h2>
+                    <p className="text-sm text-gray-600">
+                      การวิเคราะห์ความถดถอยเชิงเส้น (OLS Regression)
+                    </p>
+                  </div>
+                </div>
+                {!regressionData && (
+                  <Button
+                    onClick={loadRegressionAnalysis}
+                    disabled={loadingRegression}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    {loadingRegression ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        กำลังคำนวณ...
+                      </>
+                    ) : (
+                      <>
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        คำนวณ Regression
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              {!regressionData ? (
+                <div className="text-center py-8 bg-indigo-50 rounded-lg border-2 border-indigo-200">
+                  <p className="text-gray-600 mb-4">
+                    คลิกปุ่มด้านบนเพื่อคำนวณผลการวิเคราะห์ความถดถอยเชิงเส้น
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    ใช้ Ordinary Least Squares (OLS) Regression
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Model Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-200">
+                      <p className="text-sm text-gray-600 mb-1">R² (Coefficient of Determination)</p>
+                      <p className="text-3xl font-black text-indigo-600">
+                        {(regressionData.regression?.r_squared * 100).toFixed(2)}%
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Model fit quality</p>
+                    </div>
+
+                    <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
+                      <p className="text-sm text-gray-600 mb-1">Observations</p>
+                      <p className="text-3xl font-black text-green-600">
+                        {regressionData.regression?.n_observations}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Total data points</p>
+                    </div>
+
+                    <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200">
+                      <p className="text-sm text-gray-600 mb-1">Intercept (β₀)</p>
+                      <p className="text-3xl font-black text-purple-600">
+                        {regressionData.regression?.intercept.toFixed(4)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Baseline probability</p>
+                    </div>
+                  </div>
+
+                  {/* Regression Coefficients Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-indigo-100 to-purple-100">
+                          <th className="border-2 border-indigo-300 px-4 py-3 text-left font-bold text-gray-900">
+                            คุณลักษณะ
+                          </th>
+                          <th className="border-2 border-indigo-300 px-4 py-3 text-left font-bold text-gray-900">
+                            ระดับ
+                          </th>
+                          <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900">
+                            Coefficient (β)
+                          </th>
+                          <th className="border-2 border-indigo-300 px-4 py-3 text-center font-bold text-gray-900">
+                            สถานะ
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(regressionData.regression?.coefficients || {}).map(([attrId, attrData]) => {
+                          const levels = Object.values(attrData.levels);
+                          return levels.map((level, levelIdx) => (
+                            <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
+                              {levelIdx === 0 && (
+                                <td
+                                  className="border-2 border-indigo-200 px-4 py-3 font-bold text-gray-900 bg-indigo-50"
+                                  rowSpan={levels.length}
+                                >
+                                  {attrData.name}
+                                </td>
+                              )}
+                              <td className="border-2 border-indigo-200 px-4 py-3 text-gray-700">
+                                {level.value}
+                              </td>
+                              <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
+                                level.is_reference ? 'text-gray-400' :
+                                level.coefficient > 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {level.is_reference ? '0.0000 (ref)' : 
+                                  (level.coefficient > 0 ? '+' : '') + level.coefficient.toFixed(4)}
+                              </td>
+                              <td className="border-2 border-indigo-200 px-4 py-3 text-center">
+                                {level.is_reference ? (
+                                  <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
+                                    Reference
+                                  </span>
+                                ) : Math.abs(level.coefficient) > 0.01 ? (
+                                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
+                                    Significant
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">
+                                    Low
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ));
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Interpretation */}
+                  <div className="mt-4 p-4 bg-indigo-50 rounded-lg border-2 border-indigo-200">
+                    <p className="text-sm text-gray-700 mb-2">
+                      <strong>💡 คำอธิบาย:</strong>
+                    </p>
+                    <ul className="text-sm text-gray-700 space-y-1 ml-4">
+                      <li>• <strong>Coefficient (β):</strong> ค่าสัมประสิทธิ์ บวก = เพิ่มโอกาสถูกเลือก, ลบ = ลดโอกาส</li>
+                      <li>• <strong>Reference Level:</strong> ระดับอ้างอิง (β=0) ใช้เปรียบเทียบกับระดับอื่น</li>
+                      <li>• <strong>R²:</strong> อธิบายความแปรปรวนได้ {(regressionData.regression?.r_squared * 100).toFixed(1)}% 
+                        ({regressionData.regression?.r_squared > 0.3 ? 'ดี' : 'ปานกลาง'})</li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                    <p className="text-sm font-bold text-gray-900 mb-2">📐 สมการ Regression Model:</p>
+                    <div className="font-mono text-xs bg-white p-3 rounded border border-purple-300 overflow-x-auto">
+                      <p>P(Choice) = {regressionData.regression?.intercept.toFixed(4)}</p>
+                      {Object.entries(regressionData.regression?.coefficients || {}).map(([attrId, attrData]) => {
+                        return Object.values(attrData.levels)
+                          .filter(level => !level.is_reference)
+                          .map((level, idx) => (
+                            <p key={idx}>
+                              &nbsp;&nbsp;&nbsp;&nbsp;{level.coefficient > 0 ? '+' : ''} 
+                              {level.coefficient.toFixed(4)} × [{attrData.name}_{level.value}]
+                            </p>
+                          ));
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </Card>
+
             {/* Relative Importance Table */}
             <Card className="p-6 mb-8">
               <div className="flex items-center gap-3 mb-6">
