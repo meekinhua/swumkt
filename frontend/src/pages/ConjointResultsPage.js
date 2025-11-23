@@ -372,25 +372,6 @@ const ConjointResultsPage = () => {
                 </p>
               </div>
             </div>
-            {sortedImportance.length > 3 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAllFeatures(!showAllFeatures)}
-              >
-                {showAllFeatures ? (
-                  <>
-                    <ChevronUp className="w-4 h-4 mr-1" />
-                    แสดงน้อยลง
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4 mr-1" />
-                    แสดงทั้งหมด
-                  </>
-                )}
-              </Button>
-            )}
           </div>
 
           <div className="space-y-4">
