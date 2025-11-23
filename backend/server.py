@@ -7910,12 +7910,61 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
         population_mean = {k: float(np.mean(v)) for k, v in all_utilities.items()}
         population_std = {k: float(np.std(v)) for k, v in all_utilities.items()}
         
+        # Create part_worths format for frontend
+        part_worths = {}
+        for attr in attributes:
+            attr_id = attr["id"]
+            attr_name = attr["name"]
+            
+            levels_dict = {}
+            for level in attr.get("levels", []):
+                level_value = level["value"]
+                level_id = level["id"]
+                
+                # Get population mean for this level
+                col_name = f"{attr_name}_{level_value}"
+                utility = population_mean.get(col_name, 0.0)
+                
+                levels_dict[level_id] = {
+                    "value": level_value,
+                    "utility": utility,
+                    "selection_count": 0  # Not applicable for HB
+                }
+            
+            part_worths[attr_id] = {
+                "name": attr_name,
+                "levels": levels_dict
+            }
+        
+        # Calculate importance scores
+        importance_scores = {}
+        total_range = 0
+        ranges = {}
+        
+        for attr_id, pw_data in part_worths.items():
+            utilities = [level["utility"] for level in pw_data["levels"].values()]
+            if utilities:
+                attr_range = max(utilities) - min(utilities)
+                ranges[attr_id] = attr_range
+                total_range += attr_range
+        
+        if total_range > 0:
+            for attr_id, attr_range in ranges.items():
+                importance_scores[attr_id] = {
+                    "name": part_worths[attr_id]["name"],
+                    "importance": round((attr_range / total_range) * 100, 2)
+                }
+        
         return {
             "method": "Hierarchical Bayes (Simplified)",
+            "part_worths": part_worths,
+            "importance_scores": importance_scores,
             "population_mean": population_mean,
             "population_std": population_std,
             "n_respondents": len(individual_utilities),
             "n_observations": len(df),
+            "utility_scale": "proportion",
+            "utility_interpretation": "Individual-level choice proportions aggregated at population level (mean ± std)",
             "note": "Simplified empirical Bayes approach - full HB requires MCMC sampling"
         }
     except Exception as e:
