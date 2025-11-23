@@ -278,17 +278,27 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
 };
 
 // Component for managing image for each level
-const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onImageUpdated }) => {
+const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onImageUpdated, referenceImages = [] }) => {
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState(level.image_url || '');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [tempUrl, setTempUrl] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
+  const [selectedRefs, setSelectedRefs] = useState([]); // Track selected reference images
   
   // Generate prompt for this level
   const generatePrompt = () => {
     return `Create a high-quality product image for: ${attributeName} - ${level.value}${level.description ? ` (${level.description})` : ''}. The image should be clear, professional, and suitable for market research. Use a clean white or neutral background. Focus on showcasing the specific feature mentioned.`;
+  };
+  
+  // Toggle reference image selection
+  const toggleRefSelection = (index) => {
+    setSelectedRefs(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
   };
 
   const handleUploadUrl = async () => {
