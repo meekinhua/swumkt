@@ -7039,8 +7039,13 @@ async def generate_profile_image(
     if not settings:
         settings = {
             "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
+            "profile_image_prompt_with_ref": "Using the reference images as style guide, create a product photo showing: {composition}. Match the visual style and aesthetic.",
             "profile_image_model": "gpt-image-1"
         }
+    
+    # Check if using reference images
+    reference_images = study.get("reference_images", [])
+    using_refs = request.reference_image_indices and len(request.reference_image_indices) > 0 and len(reference_images) > 0
     
     # Build prompt from profile attributes
     if request.prompt:
@@ -7059,8 +7064,14 @@ async def generate_profile_image(
         
         composition = ", ".join(profile_description)
         
+        # Select appropriate template based on reference usage
+        if using_refs:
+            template = settings.get("profile_image_prompt_with_ref", settings["profile_image_prompt_template"])
+        else:
+            template = settings["profile_image_prompt_template"]
+        
         # Use template and replace variables
-        image_prompt = settings["profile_image_prompt_template"].format(
+        image_prompt = template.format(
             composition=composition
         )
     
