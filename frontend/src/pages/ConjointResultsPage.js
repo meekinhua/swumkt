@@ -164,7 +164,7 @@ const ConjointResultsPage = () => {
     .map(([id, data]) => ({ id, ...data }))
     .sort((a, b) => b.importance - a.importance);
 
-  const topFeatures = showAllFeatures ? sortedImportance : sortedImportance.slice(0, 3);
+  const topFeatures = sortedImportance; // Show all features
 
   // Prepare data for Pie Chart
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
