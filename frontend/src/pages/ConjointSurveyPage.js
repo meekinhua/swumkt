@@ -27,13 +27,34 @@ const ConjointSurveyPage = () => {
     loadSurvey();
   }, [studyId]);
 
-  const loadSurvey = async () => {
+  const loadSurvey = async (retryCount = 0) => {
     try {
-      const response = await axios.get(`${API}/conjoint/survey/${studyId}`);
+      const response = await axios.get(`${API}/conjoint/survey/${studyId}`, {
+        timeout: 30000, // 30 seconds timeout
+        maxContentLength: 50 * 1024 * 1024, // 50MB
+        maxBodyLength: 50 * 1024 * 1024
+      });
       setSurvey(response.data);
     } catch (error) {
       console.error('Error loading survey:', error);
-      toast.error('ไม่สามารถโหลดแบบสอบถามได้');
+      
+      // Retry logic for timeout or network errors
+      if (retryCount < 2 && (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK')) {
+        console.log(`Retrying... attempt ${retryCount + 1}`);
+        setTimeout(() => loadSurvey(retryCount + 1), 2000);
+        return;
+      }
+      
+      // Show specific error messages
+      if (error.response?.status === 404) {
+        toast.error('ไม่พบแบบสอบถาม');
+      } else if (error.response?.status === 400) {
+        toast.error('แบบสอบถามยังไม่เปิดรับคำตอบ');
+      } else if (error.code === 'ECONNABORTED') {
+        toast.error('การโหลดใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง');
+      } else {
+        toast.error('ไม่สามารถโหลดแบบสอบถามได้ กรุณาลองใหม่อีกครั้ง');
+      }
     } finally {
       setLoading(false);
     }
