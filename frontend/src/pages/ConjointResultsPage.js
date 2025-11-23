@@ -166,6 +166,19 @@ const ConjointResultsPage = () => {
 
   const topFeatures = showAllFeatures ? sortedImportance : sortedImportance.slice(0, 3);
 
+  // Prepare data for Pie Chart
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+  const pieData = sortedImportance.map((feature, index) => ({
+    name: feature.name,
+    value: parseFloat(feature.importance.toFixed(1)),
+    color: COLORS[index % COLORS.length]
+  }));
+
+  // Custom label for pie chart
+  const renderCustomLabel = (entry) => {
+    return `${entry.value}%`;
+  };
+
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
       <Navigation />
