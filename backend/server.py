@@ -6856,6 +6856,10 @@ async def generate_single_image(
         if level_found.get("description") and not using_refs:
             image_prompt += f" {level_found['description']}"
     
+    # Append additional prompt if provided
+    if request.additional_prompt:
+        image_prompt += f" {request.additional_prompt}"
+    
     # Generate image using configured model
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
