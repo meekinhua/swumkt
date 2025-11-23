@@ -773,8 +773,8 @@ const ConjointResultsPage = () => {
                     <ul className="text-sm text-gray-700 space-y-1 ml-4">
                       <li>• <strong>Coefficient (β):</strong> ค่าสัมประสิทธิ์ บวก = เพิ่มโอกาสถูกเลือก, ลบ = ลดโอกาส</li>
                       <li>• <strong>Reference Level:</strong> ระดับอ้างอิง (β=0) ใช้เปรียบเทียบกับระดับอื่น</li>
-                      <li>• <strong>R²:</strong> อธิบายความแปรปรวนได้ {(statisticalData.regression?.r_squared * 100).toFixed(1)}% 
-                        ({statisticalData.regression?.r_squared > 0.3 ? 'ดี' : 'ปานกลาง'})</li>
+                      <li>• <strong>R²:</strong> อธิบายความแปรปรวนได้ {((statisticalData.results?.r_squared || statisticalData.results?.pseudo_r_squared || 0) * 100).toFixed(1)}% 
+                        ({(statisticalData.results?.r_squared || statisticalData.results?.pseudo_r_squared || 0) > 0.3 ? 'ดี' : 'ปานกลาง'})</li>
                     </ul>
                   </div>
 
