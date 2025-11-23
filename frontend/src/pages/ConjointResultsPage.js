@@ -51,7 +51,7 @@ const ConjointResultsPage = () => {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'academic'
   const [statisticalData, setStatisticalData] = useState(null);
   const [loadingStatistical, setLoadingStatistical] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState('counting'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
+  const [selectedMethod, setSelectedMethod] = useState('mnl'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
   const [currentResults, setCurrentResults] = useState(null); // Results to display (either from counting or statistical)
 
   useEffect(() => {
