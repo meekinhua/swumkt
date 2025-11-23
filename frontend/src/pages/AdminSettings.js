@@ -908,22 +908,40 @@ const AdminSettings = () => {
                     </div>
                   </div>
 
-                  {/* Save Button */}
+                  {/* Save Buttons */}
                   <div className="flex gap-4">
                     <Button
                       onClick={handleSaveConjointQualitative}
                       disabled={savingConjointQualitative}
-                      className="flex-1 h-14 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-xl text-lg"
+                      className="flex-1 h-14 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white font-bold shadow-xl text-lg"
                     >
                       {savingConjointQualitative ? (
                         <>
                           <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                          Saving Conjoint Prompt...
+                          Saving Analysis Prompt...
                         </>
                       ) : (
                         <>
                           <Save className="w-5 h-5 mr-2" />
-                          Save Conjoint Prompt
+                          Save Analysis Prompt
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={handleSaveConjointImageSettings}
+                      disabled={savingConjointImage}
+                      className="flex-1 h-14 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-xl text-lg"
+                    >
+                      {savingConjointImage ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                          Saving Image Settings...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Save Image Settings
                         </>
                       )}
                     </Button>
