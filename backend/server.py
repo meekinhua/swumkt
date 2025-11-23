@@ -7699,6 +7699,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         return {
             "method": "Multinomial Logit (MNL)",
             "part_worths": part_worths,
+            "importance_scores": importance_scores,
             "coefficients": {name: float(coef) for name, coef in result.params.items()},
             "std_errors": {name: float(se) for name, se in result.bse.items()},
             "z_values": {name: float(z) for name, z in result.tvalues.items()},
