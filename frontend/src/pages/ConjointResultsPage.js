@@ -10,10 +10,15 @@ import { toast } from 'sonner';
 import {
   ArrowLeft,
   Download,
-  BarChart3,
-  TrendingUp,
   Users,
-  AlertCircle
+  TrendingUp,
+  Star,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
 
 const ConjointResultsPage = () => {
@@ -23,7 +28,10 @@ const ConjointResultsPage = () => {
   
   const [study, setStudy] = useState(null);
   const [results, setResults] = useState(null);
+  const [aiInterpretation, setAiInterpretation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   useEffect(() => {
     if (user && token && studyId) {
@@ -52,10 +60,27 @@ const ConjointResultsPage = () => {
     }
   };
 
+  const loadAIInterpretation = async () => {
+    setLoadingAI(true);
+    try {
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/ai-interpretation`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAiInterpretation(response.data);
+      toast.success('วิเคราะห์ด้วย AI สำเร็จ!');
+    } catch (error) {
+      console.error('Error generating AI interpretation:', error);
+      toast.error('ไม่สามารถสร้างคำแนะนำด้วย AI ได้');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
   const handleExportCSV = () => {
     if (!results || !results.responses) return;
     
-    // Create CSV content
     const headers = ['Respondent ID', 'Email', 'Submitted At', 'Choices'];
     const rows = results.responses.map(resp => [
       resp.respondent_id,
@@ -69,249 +94,300 @@ const ConjointResultsPage = () => {
       ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
     
-    // Download
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `conjoint_responses_${studyId}.csv`;
+    link.download = `conjoint_results_${studyId}.csv`;
     link.click();
     
     toast.success('ดาวน์โหลด CSV สำเร็จ');
   };
 
-  const handleExportResults = () => {
-    if (!results) return;
-    
-    const data = {
-      study: study,
-      results: results,
-      exported_at: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `conjoint_analysis_${studyId}.json`;
-    link.click();
-    
-    toast.success('ดาวน์โหลดผลการวิเคราะห์สำเร็จ');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00A9CE]"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังโหลดผลการวิเคราะห์...</p>
+        </div>
       </div>
     );
   }
 
-  if (!results) {
+  if (!results || results.status === 'insufficient_data') {
     return (
       <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
         <Navigation />
         <div className="max-w-4xl mx-auto px-4 py-8">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            กลับ
+          </Button>
+
           <Card className="p-8 text-center">
-            <p className="text-gray-700">ไม่พบข้อมูลผลการวิเคราะห์</p>
+            <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์
+            </h2>
+            <p className="text-gray-600 mb-4">
+              ต้องการอย่างน้อย 30 คำตอบสำหรับการวิเคราะห์ที่เชื่อถือได้
+            </p>
+            <p className="text-lg font-bold text-blue-600">
+              ปัจจุบัน: {results?.respondent_count || 0} คำตอบ
+            </p>
+            <p className="text-sm text-gray-500 mt-4">
+              ยังขาดอีก {Math.max(0, 30 - (results?.respondent_count || 0))} คำตอบ
+            </p>
           </Card>
         </div>
       </div>
     );
   }
 
-  const insufficientData = results.status === 'insufficient_data';
+  // Sort importance scores
+  const sortedImportance = Object.entries(results.importance_scores || {})
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => b.importance - a.importance);
+
+  const topFeatures = showAllFeatures ? sortedImportance : sortedImportance.slice(0, 3);
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
       <Navigation />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/market-research/conjoint-analysis')}
-            className="mb-4"
-          >
+          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             กลับ
           </Button>
 
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-4xl font-black text-gray-900 mb-2">
-                ผลการวิเคราะห์
+              <h1 className="text-3xl font-black text-gray-900 mb-2">
+                📊 ผลการวิเคราะห์
               </h1>
-              <p className="text-lg text-gray-600 mb-2">
-                {study?.title}
-              </p>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  <span>{results.respondent_count} respondents</span>
-                </div>
-              </div>
+              <p className="text-lg text-gray-600">{study?.title}</p>
             </div>
-            
-            <div className="flex gap-2">
-              <Button
-                onClick={handleExportCSV}
-                variant="outline"
-                disabled={!results.responses || results.responses.length === 0}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button
-                onClick={handleExportResults}
-                className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export Analysis
-              </Button>
-            </div>
+            <Button
+              onClick={handleExportCSV}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              ดาวน์โหลดข้อมูล
+            </Button>
           </div>
         </div>
 
-        {/* Insufficient Data Warning */}
-        {insufficientData && (
-          <Card className="p-6 mb-6 bg-yellow-50 border-2 border-yellow-300">
-            <div className="flex items-start gap-4">
-              <AlertCircle className="w-6 h-6 text-yellow-700 flex-shrink-0" />
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h3 className="font-bold text-yellow-900 mb-2">
-                  ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์
-                </h3>
-                <p className="text-yellow-800 text-sm">
-                  {results.message}
-                  <br />
-                  ปัจจุบันมี <strong>{results.respondent_count} responses</strong> - ต้องการอย่างน้อย <strong>30 responses</strong>
-                </p>
+                <p className="text-sm text-gray-600">จำนวนผู้ตอบ</p>
+                <p className="text-3xl font-black text-blue-600">{results.respondent_count}</p>
+                <p className="text-xs text-gray-500">คน</p>
               </div>
             </div>
           </Card>
-        )}
 
-        {!insufficientData && (
-          <>
-            {/* Attribute Importance */}
-            <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
-              <div className="flex items-center gap-3 mb-6">
-                <TrendingUp className="w-6 h-6 text-[#00A9CE]" />
-                <h2 className="text-2xl font-black text-gray-900">
-                  Attribute Importance
-                </h2>
+          <Card className="p-6 bg-gradient-to-br from-green-50 to-white border-2 border-green-200">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-white" />
               </div>
+              <div>
+                <p className="text-sm text-gray-600">สถานะ</p>
+                <p className="text-xl font-bold text-green-600">พร้อมวิเคราะห์</p>
+                <p className="text-xs text-gray-500">ข้อมูลเพียงพอแล้ว</p>
+              </div>
+            </div>
+          </Card>
 
-              <div className="space-y-4">
-                {results.importance_scores && Object.entries(results.importance_scores)
-                  .sort((a, b) => b[1].importance - a[1].importance)
-                  .map(([attrId, data]) => (
-                    <div key={attrId}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-gray-900">{data.name}</span>
-                        <span className="text-lg font-black text-[#00A9CE]">
-                          {data.importance}%
-                        </span>
-                      </div>
-                      <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#007B9A] to-[#00A9CE] transition-all"
-                          style={{ width: `${data.importance}%` }}
-                        ></div>
-                      </div>
+          <Card className="p-6 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">คุณลักษณะ</p>
+                <p className="text-3xl font-black text-purple-600">{sortedImportance.length}</p>
+                <p className="text-xs text-gray-500">รายการ</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* AI Interpretation Section */}
+        <Card className="p-6 mb-8 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">
+              AI ตีความผลและข้อเสนอแนะ
+            </h2>
+          </div>
+
+          {!aiInterpretation ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">
+                ใช้ AI วิเคราะห์และแปลผลข้อมูลให้เข้าใจง่าย พร้อมข้อเสนอแนะเชิงธุรกิจ
+              </p>
+              <Button
+                onClick={loadAIInterpretation}
+                disabled={loadingAI}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold"
+              >
+                {loadingAI ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    กำลังวิเคราะห์...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    วิเคราะห์ด้วย AI
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg p-6 border-2 border-indigo-200">
+              <div className="prose max-w-none">
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                  {aiInterpretation.interpretation}
+                </div>
+              </div>
+              <Button
+                onClick={loadAIInterpretation}
+                disabled={loadingAI}
+                variant="outline"
+                className="mt-4"
+                size="sm"
+              >
+                🔄 วิเคราะห์ใหม่
+              </Button>
+            </div>
+          )}
+        </Card>
+
+        {/* Feature Importance */}
+        <Card className="p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                <Star className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  คุณลักษณะที่ผู้บริโภคให้ความสำคัญ
+                </h2>
+                <p className="text-sm text-gray-600">
+                  ตัวเลขแสดงระดับความสำคัญ (% จาก 100%)
+                </p>
+              </div>
+            </div>
+            {sortedImportance.length > 3 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllFeatures(!showAllFeatures)}
+              >
+                {showAllFeatures ? (
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-1" />
+                    แสดงน้อยลง
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" />
+                    แสดงทั้งหมด
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {topFeatures.map((feature, index) => (
+              <div key={feature.id} className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
+                      index === 0 ? 'bg-yellow-500' :
+                      index === 1 ? 'bg-gray-400' :
+                      index === 2 ? 'bg-orange-400' : 'bg-gray-300'
+                    }`}>
+                      {index + 1}
                     </div>
-                  ))}
-              </div>
-            </Card>
+                    <h3 className="text-lg font-bold text-gray-900">{feature.name}</h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-blue-600">
+                      {feature.importance.toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-gray-500">ความสำคัญ</p>
+                  </div>
+                </div>
 
-            {/* Part-Worth Utilities */}
-            <Card className="p-6 bg-white border-2 border-gray-300">
-              <div className="flex items-center gap-3 mb-6">
-                <BarChart3 className="w-6 h-6 text-[#00A9CE]" />
-                <h2 className="text-2xl font-black text-gray-900">
-                  Part-Worth Utilities
-                </h2>
-              </div>
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                  <div
+                    className={`h-3 rounded-full transition-all ${
+                      index === 0 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+                      index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-500' :
+                      index === 2 ? 'bg-gradient-to-r from-orange-400 to-red-500' :
+                      'bg-gradient-to-r from-blue-400 to-blue-500'
+                    }`}
+                    style={{ width: `${feature.importance}%` }}
+                  ></div>
+                </div>
 
-              <div className="space-y-8">
-                {results.part_worths && Object.entries(results.part_worths).map(([attrId, attrData]) => (
-                  <div key={attrId}>
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">
-                      {attrData.name}
-                    </h3>
-                    
-                    <div className="space-y-3">
-                      {Object.entries(attrData.levels)
-                        .sort((a, b) => b[1].utility - a[1].utility)
-                        .map(([levelId, levelData]) => (
-                          <div key={levelId} className="p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-semibold text-gray-900">
-                                {levelData.value}
-                              </span>
-                              <div className="text-right">
-                                <div className="text-lg font-black text-[#00A9CE]">
-                                  {levelData.utility.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  {levelData.selection_count} selections
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all"
-                                style={{ 
-                                  width: `${Math.min(100, (levelData.utility / Math.max(...Object.values(attrData.levels).map(l => l.utility))) * 100)}%` 
-                                }}
-                              ></div>
-                            </div>
+                {/* Levels */}
+                {results.part_worths[feature.id] && (
+                  <div className="mt-3 pl-11">
+                    <p className="text-xs text-gray-600 mb-2 font-semibold">ระดับที่ผู้บริโภคชอบ:</p>
+                    <div className="space-y-1">
+                      {Object.values(results.part_worths[feature.id].levels)
+                        .sort((a, b) => b.utility - a.utility)
+                        .map((level, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700">
+                              {idx === 0 && '⭐'} {level.value}
+                            </span>
+                            <span className="text-gray-500">
+                              {level.utility.toFixed(1)} (เลือก {level.selection_count} ครั้ง)
+                            </span>
                           </div>
                         ))}
                     </div>
                   </div>
-                ))}
+                )}
               </div>
-            </Card>
-          </>
-        )}
+            ))}
+          </div>
+        </Card>
 
-        {/* Raw Responses Preview */}
-        {results.responses && results.responses.length > 0 && (
-          <Card className="p-6 mt-6 bg-white border-2 border-gray-300">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">
-              Response Data ({results.responses.length} responses)
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b-2 border-gray-300">
-                    <th className="text-left p-2 font-bold">Respondent ID</th>
-                    <th className="text-left p-2 font-bold">Email</th>
-                    <th className="text-left p-2 font-bold">Submitted</th>
-                    <th className="text-left p-2 font-bold">Choices</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.responses.slice(0, 10).map((resp, idx) => (
-                    <tr key={idx} className="border-b border-gray-200">
-                      <td className="p-2 font-mono text-xs">{resp.respondent_id.substring(0, 8)}...</td>
-                      <td className="p-2">{resp.respondent_email || '-'}</td>
-                      <td className="p-2">{new Date(resp.submitted_at).toLocaleDateString('th-TH')}</td>
-                      <td className="p-2">{resp.responses.length} choices</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {results.responses.length > 10 && (
-                <p className="text-xs text-gray-600 mt-2 text-center">
-                  แสดง 10 รายการแรก จากทั้งหมด {results.responses.length} responses
-                </p>
-              )}
+        {/* Tips */}
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
+          <div className="flex items-start gap-3">
+            <Lightbulb className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-bold text-gray-900 mb-2">💡 วิธีอ่านผลการวิเคราะห์</h3>
+              <ul className="text-sm text-gray-700 space-y-2">
+                <li>• <strong>ความสำคัญ (%):</strong> ยิ่งสูง = ผู้บริโภคให้ความสำคัญมากกว่า เช่น 40% หมายถึงคุณลักษณะนี้มีอิทธิพล 40% ต่อการตัดสินใจซื้อ</li>
+                <li>• <strong>ระดับที่ชอบ:</strong> ระดับที่มี ⭐ คือสิ่งที่ผู้บริโภคต้องการมากที่สุด</li>
+                <li>• <strong>ตัวเลข Utility:</strong> ยิ่งสูง = ยิ่งถูกเลือกบ่อย (ตัวเลขสัมพันธ์กัน ไม่ใช่ร้อยละ)</li>
+                <li>• <strong>คำแนะนำ:</strong> ใช้ปุ่ม "วิเคราะห์ด้วย AI" เพื่อรับคำแนะนำเชิงธุรกิจที่เข้าใจง่าย</li>
+              </ul>
             </div>
-          </Card>
-        )}
+          </div>
+        </Card>
       </div>
     </div>
   );
