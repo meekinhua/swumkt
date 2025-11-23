@@ -7307,8 +7307,10 @@ async def get_image_generation_settings(
         default_settings = {
             "id": "default",
             "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
+            "level_image_prompt_with_ref": "Based on the reference images provided, create a product visualization for: {attribute_name} - {level_value}. Match the style, lighting, and composition of the reference images while showcasing the specific feature.",
             "level_image_model": "gpt-image-1",
             "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
+            "profile_image_prompt_with_ref": "Using the reference images as style guide, create a product photo showing: {composition}. Match the visual style, lighting, and aesthetic of the reference images.",
             "profile_image_model": "gpt-image-1",
             "updated_by": "System",
             "updated_at": datetime.now(timezone.utc).isoformat()
