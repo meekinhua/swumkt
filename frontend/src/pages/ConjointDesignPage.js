@@ -810,8 +810,23 @@ const ConjointDesignPage = () => {
 
         {/* Attributes Section */}
         <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
+          {/* Survey Started Notice */}
+          {surveyStarted && (
+            <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-blue-900 mb-1">
+                  📊 สำรวจเริ่มแล้ว
+                </p>
+                <p className="text-xs text-blue-700">
+                  ไม่สามารถเพิ่ม/ลบ Attributes หรือ Levels ได้ แก้ไขได้เฉพาะชื่อ คำอธิบาย และรูปภาพ
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Unsaved Changes Warning */}
-          {isDirty && (
+          {isDirty && !surveyStarted && (
             <div className="mb-4 p-4 bg-orange-50 border-2 border-orange-300 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
