@@ -32,6 +32,19 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
   const [imageUrl, setImageUrl] = useState(profile.profile_image_url || '');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [tempUrl, setTempUrl] = useState('');
+  const [showPrompt, setShowPrompt] = useState(false);
+  
+  // Generate prompt for this profile
+  const generatePrompt = () => {
+    const features = Object.keys(profile.attribute_levels).map(attrId => {
+      const attr = attributes.find(a => a.id === attrId);
+      const levelId = profile.attribute_levels[attrId];
+      const level = attr?.levels.find(l => l.id === levelId);
+      return `${attr?.name}: ${level?.value}`;
+    }).join(', ');
+    
+    return `Create a high-quality product image with the following specifications: ${features}. The image should be professional, realistic, and clearly show all mentioned features. Use a clean background and good lighting. This is for market research purposes.`;
+  };
 
   const handleUploadUrl = async () => {
     if (!tempUrl.trim()) {
