@@ -848,14 +848,15 @@ const ConjointDesignPage = () => {
               <Button
                 onClick={handleAddAttribute}
                 variant="outline"
-                className="border-2 border-[#00A9CE] text-[#005A73]"
+                disabled={surveyStarted}
+                className={`border-2 border-[#00A9CE] text-[#005A73] ${surveyStarted ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 เพิ่ม Attribute
               </Button>
               <Button
                 onClick={handleSaveAttributes}
-                className={`bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white ${isDirty ? 'animate-pulse ring-4 ring-orange-300' : ''}`}
+                className={`bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white ${isDirty && !surveyStarted ? 'animate-pulse ring-4 ring-orange-300' : ''}`}
               >
                 <Save className="w-4 h-4 mr-2" />
                 บันทึก Attributes & Levels
