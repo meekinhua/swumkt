@@ -333,11 +333,11 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
 
       {/* Image Preview */}
       {imageUrl ? (
-        <div className="relative mb-3">
+        <div className="relative mb-3 w-full aspect-square">
           <img 
             src={imageUrl} 
             alt={level.value}
-            className="w-full h-32 object-cover rounded border-2 border-gray-200"
+            className="w-full h-full object-cover rounded border-2 border-gray-200"
             onError={(e) => {
               e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Image</text></svg>';
             }}
@@ -350,7 +350,7 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
           </button>
         </div>
       ) : (
-        <div className="w-full h-32 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center mb-3">
+        <div className="w-full aspect-square bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center mb-3">
           <ImageIcon className="w-8 h-8 text-gray-400" />
         </div>
       )}
