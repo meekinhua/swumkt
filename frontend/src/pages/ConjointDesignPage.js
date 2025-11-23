@@ -902,7 +902,9 @@ const ConjointDesignPage = () => {
               </Button>
               <Button
                 onClick={handleSaveAttributes}
-                className={`bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white ${isDirty && !surveyStarted ? 'animate-pulse ring-4 ring-orange-300' : ''}`}
+                disabled={surveyStarted}
+                className={`bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white ${surveyStarted ? 'opacity-50 cursor-not-allowed' : isDirty ? 'animate-pulse ring-4 ring-orange-300' : ''}`}
+                title={surveyStarted ? 'ไม่สามารถบันทึกได้เมื่อสำรวจเริ่มแล้ว' : ''}
               >
                 <Save className="w-4 h-4 mr-2" />
                 บันทึก Attributes & Levels
