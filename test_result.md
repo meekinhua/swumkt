@@ -690,6 +690,21 @@ agent_communication:
         agent: "testing"
         comment: "✅ TESTED: Navigation consistency working perfectly across all pages! Tested on Dashboard, Market Research, Knowledge Hub, and Profile pages - all show consistent 4/4 menu items (แดชบอร์ด, เครื่องมือวิจัยตลาด, ศูนย์ความรู้, โปรไฟล์). Desktop navigation: All 4 items found on every page. Mobile navigation: Successfully tested - mobile menu opens correctly and shows all 4 navigation items. Navigation remains consistent when switching between pages."
 
+  - task: "Conjoint Analysis Results Page - Dynamic Method Switching"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/ConjointResultsPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing dynamic method switching functionality in Conjoint Analysis Results Page as requested by user. Testing dropdown positioning, default values, method switching, importance score updates, and UI responsiveness."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Dynamic method switching working perfectly! Dropdown positioned correctly BEFORE tab navigation, contains all 5 methods (Counting, MNL, Linear Regression, Mixed Logit, Hierarchical Bayes), method switching triggers analysis updates, importance scores change correctly (pie chart maintains 5 sectors), method descriptions update properly ('วิธีการคำนวณปัจจุบัน' shows current method), tab navigation preserved, no console errors. Tested with study 'ข้าว' (51 respondents, 5 attributes). All 10 test criteria passed successfully."
+
 backend:
   - task: "Conjoint Analysis Feature - Complete Backend API Testing"
     implemented: true
