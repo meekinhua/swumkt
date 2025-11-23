@@ -461,6 +461,9 @@ const ConjointDesignPage = () => {
         setAlternativesPerSet(response.data.alternatives_per_set || 3);
         setNumberOfSets(response.data.choice_sets.length);
       }
+      
+      // Reset dirty flag after loading
+      setIsDirty(false);
     } catch (error) {
       console.error('Error loading study:', error);
       toast.error('ไม่สามารถโหลดข้อมูลการศึกษาได้');
