@@ -78,6 +78,22 @@ const ConjointResultsPage = () => {
     }
   };
 
+  const loadRegressionAnalysis = async () => {
+    setLoadingRegression(true);
+    try {
+      const response = await axios.get(
+        `${API}/conjoint/studies/${studyId}/regression`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setRegressionData(response.data);
+    } catch (error) {
+      console.error('Error loading regression:', error);
+      toast.error('ไม่สามารถโหลดผล Regression ได้');
+    } finally {
+      setLoadingRegression(false);
+    }
+  };
+
   const loadAIInterpretation = async () => {
     setLoadingAI(true);
     try {
