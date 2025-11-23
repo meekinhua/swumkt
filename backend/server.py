@@ -6871,7 +6871,7 @@ async def generate_single_image(
         
         # Check if using Nano Banana (Gemini)
         if model_to_use == "nanobanana":
-            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
             
             chat = LlmChat(
                 api_key=api_key,
@@ -6879,7 +6879,14 @@ async def generate_single_image(
                 system_message="You are an AI image generator."
             ).with_model("gemini", "gemini-2.5-flash-image-preview").with_params(modalities=["image", "text"])
             
-            msg = UserMessage(text=image_prompt)
+            # Create message with reference images if provided (Image + Text to Image mode)
+            if using_refs and len(ref_images_base64) > 0:
+                # Send reference images as ImageContent for style guidance
+                image_contents = [ImageContent(img_data) for img_data in ref_images_base64]
+                msg = UserMessage(text=image_prompt, file_contents=image_contents)
+            else:
+                msg = UserMessage(text=image_prompt)
+            
             text, images = await chat.send_message_multimodal_response(msg)
             
             if not images or len(images) == 0:
