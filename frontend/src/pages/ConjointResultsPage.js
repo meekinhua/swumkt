@@ -865,16 +865,31 @@ const ConjointResultsPage = () => {
                     <p className="text-sm font-bold text-gray-900 mb-2">📐 สมการ Regression Model:</p>
                     <div className="font-mono text-xs bg-white p-3 rounded border border-purple-300 overflow-x-auto">
                       <p>P(Choice) = {(statisticalData.results?.intercept || 0).toFixed(4)}</p>
-                      {Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
-                        return Object.values(attrData.levels)
-                          .filter(level => !level.is_reference)
-                          .map((level, idx) => (
-                            <p key={idx}>
-                              &nbsp;&nbsp;&nbsp;&nbsp;{level.coefficient > 0 ? '+' : ''} 
-                              {level.coefficient.toFixed(4)} × [{attrData.name}_{level.value}]
-                            </p>
-                          ));
-                      })}
+                      {statisticalData.results?.part_worths ? (
+                        // Use part_worths structure for MNL analysis
+                        Object.entries(statisticalData.results.part_worths).map(([attrId, attrData]) => {
+                          return Object.values(attrData.levels || {})
+                            .filter(level => level.utility !== 0)
+                            .map((level, idx) => (
+                              <p key={idx}>
+                                &nbsp;&nbsp;&nbsp;&nbsp;{level.utility > 0 ? '+' : ''} 
+                                {level.utility.toFixed(4)} × [{attrData.name}_{level.value}]
+                              </p>
+                            ));
+                        })
+                      ) : (
+                        // Fallback for other analysis methods
+                        Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
+                          return Object.values(attrData?.levels || {})
+                            .filter(level => !level?.is_reference)
+                            .map((level, idx) => (
+                              <p key={idx}>
+                                &nbsp;&nbsp;&nbsp;&nbsp;{(level?.coefficient || 0) > 0 ? '+' : ''} 
+                                {(level?.coefficient || 0).toFixed(4)} × [{attrData?.name || attrId}_{level?.value}]
+                              </p>
+                            ));
+                        })
+                      )}
                     </div>
                   </div>
                 </>
