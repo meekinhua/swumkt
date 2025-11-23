@@ -6944,23 +6944,47 @@ async def generate_profile_image(
     model_to_use = settings.get("profile_image_model", "gpt-image-1")
     
     try:
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
         import base64
         
-        image_gen = OpenAIImageGeneration(api_key=api_key)
+        # Check if using Nano Banana (Gemini)
+        if model_to_use == "nanobanana":
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"profile-img-{study_id}-{request.profile_id}",
+                system_message="You are an AI image generator."
+            ).with_model("gemini", "gemini-2.5-flash-image-preview").with_params(modalities=["image", "text"])
+            
+            msg = UserMessage(text=image_prompt)
+            text, images = await chat.send_message_multimodal_response(msg)
+            
+            if not images or len(images) == 0:
+                raise HTTPException(status_code=500, detail="No image was generated")
+            
+            # Images already in base64 format
+            image_base64 = images[0]['data']
+            
+        else:
+            # Use OpenAI models
+            from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+            
+            image_gen = OpenAIImageGeneration(api_key=api_key)
+            
+            # Generate image
+            images = await image_gen.generate_images(
+                prompt=image_prompt,
+                model=model_to_use,
+                number_of_images=1
+            )
+            
+            if not images or len(images) == 0:
+                raise HTTPException(status_code=500, detail="No image was generated")
+            
+            # Convert to base64
+            image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
-        # Generate image
-        images = await image_gen.generate_images(
-            prompt=image_prompt,
-            model=model_to_use,
-            number_of_images=1
-        )
-        
-        if not images or len(images) == 0:
-            raise HTTPException(status_code=500, detail="No image was generated")
-        
-        # Convert to base64 data URL
-        image_base64 = base64.b64encode(images[0]).decode('utf-8')
+        # Create data URL
         image_data_url = f"data:image/png;base64,{image_base64}"
         
         # Update the profile with the generated image
