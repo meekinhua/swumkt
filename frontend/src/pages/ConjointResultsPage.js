@@ -191,10 +191,10 @@ const ConjointResultsPage = () => {
               ต้องการอย่างน้อย 30 คำตอบสำหรับการวิเคราะห์ที่เชื่อถือได้
             </p>
             <p className="text-lg font-bold text-blue-600">
-              ปัจจุบัน: {results?.respondent_count || 0} คำตอบ
+              ปัจจุบัน: {currentResults?.respondent_count || 0} คำตอบ
             </p>
             <p className="text-sm text-gray-500 mt-4">
-              ยังขาดอีก {Math.max(0, 30 - (results?.respondent_count || 0))} คำตอบ
+              ยังขาดอีก {Math.max(0, 30 - (currentResults?.respondent_count || 0))} คำตอบ
             </p>
           </Card>
         </div>
