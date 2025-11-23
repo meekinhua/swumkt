@@ -60,10 +60,10 @@ const ConjointResultsPage = () => {
     }
   }, [user, token, studyId]);
 
-  // Load default method when results are loaded
+  // Load default method (MNL) when results are loaded
   useEffect(() => {
-    if (results && !currentResults) {
-      setCurrentResults(results);
+    if (results && !currentResults && token && studyId) {
+      loadStatisticalAnalysis('mnl');
     }
   }, [results]);
 
