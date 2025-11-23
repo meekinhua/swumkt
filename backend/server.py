@@ -6882,6 +6882,14 @@ async def generate_profile_image(
     if not profile_found or not choice_set_found:
         raise HTTPException(status_code=404, detail="Profile not found")
     
+    # Get image generation settings
+    settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
+    if not settings:
+        settings = {
+            "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
+            "profile_image_model": "gpt-image-1"
+        }
+    
     # Build prompt from profile attributes
     if request.prompt:
         image_prompt = request.prompt
@@ -6897,13 +6905,19 @@ async def generate_profile_image(
                 if level:
                     profile_description.append(f"{attr['name']}: {level['value']}")
         
-        description_text = ", ".join(profile_description)
-        image_prompt = f"Professional product photo showing: {description_text}. High quality, clean background, product-focused composition."
+        composition = ", ".join(profile_description)
+        
+        # Use template and replace variables
+        image_prompt = settings["profile_image_prompt_template"].format(
+            composition=composition
+        )
     
-    # Generate image using OpenAI
+    # Generate image using configured model
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
         raise HTTPException(status_code=500, detail="LLM service not configured")
+    
+    model_to_use = settings.get("profile_image_model", "gpt-image-1")
     
     try:
         from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
@@ -6914,7 +6928,7 @@ async def generate_profile_image(
         # Generate image
         images = await image_gen.generate_images(
             prompt=image_prompt,
-            model="gpt-image-1",
+            model=model_to_use,
             number_of_images=1
         )
         
