@@ -7495,16 +7495,18 @@ async def get_survey(study_id: str):
     # No status check - allow access with any status if URL is known
     
     # Optimize: Send only necessary data for survey display
-    # Remove large profile images if they exist, keep only attribute_levels
     choice_sets = []
     for cs in study.get("choice_sets", []):
         optimized_profiles = []
         for profile in cs.get("profiles", []):
-            # Keep only essential profile data
+            # Keep essential profile data including all image-related fields
             optimized_profile = {
                 "id": profile["id"],
                 "attribute_levels": profile.get("attribute_levels", {}),
-                "images": profile.get("images", {})  # Keep images as they're needed for display
+                "images": profile.get("images", {}),  # New format: {attr_id: image_url}
+                "image_url": profile.get("image_url"),  # Legacy format
+                "profile_image_url": profile.get("profile_image_url"),  # Composite image
+                "description": profile.get("description")
             }
             optimized_profiles.append(optimized_profile)
         
