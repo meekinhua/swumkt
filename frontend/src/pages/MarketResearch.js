@@ -29,20 +29,6 @@ const MarketResearch = () => {
       path: '/surveys'
     },
     {
-      id: 'conjoint-analysis',
-      icon: <TrendingUp className="w-16 h-16" />,
-      title: t('marketResearch.conjointAnalysis.title'),
-      description: t('marketResearch.conjointAnalysis.description'),
-      features: [
-        t('marketResearch.conjointAnalysis.feature1'),
-        t('marketResearch.conjointAnalysis.feature2'),
-        t('marketResearch.conjointAnalysis.feature3'),
-        t('marketResearch.conjointAnalysis.feature4')
-      ],
-      gradient: 'from-[#007B9A] via-[#00A9CE] to-[#33BCDA]',
-      comingSoon: true
-    },
-    {
       id: 'customer-journey',
       icon: <Map className="w-16 h-16" />,
       title: t('marketResearch.customerJourney.title'),
