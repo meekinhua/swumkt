@@ -487,7 +487,7 @@ const ConjointResultsPage = () => {
                 </div>
 
                 {/* Bar Chart for Levels */}
-                {results.part_worths[feature.id] && (
+                {currentResults?.part_worths?.[feature.id] && (
                   <div className="mt-4 pl-11">
                     <div className="flex items-center gap-2 mb-3">
                       <BarChart3 className="w-4 h-4 text-gray-600" />
