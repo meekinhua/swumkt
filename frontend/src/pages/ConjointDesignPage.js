@@ -1245,6 +1245,16 @@ const ConjointDesignPage = () => {
           </Card>
         )}
 
+        {/* Reference Images Section */}
+        {designGenerated && attributes.length > 0 && (
+          <ReferenceImagesSection
+            studyId={studyId}
+            referenceImages={referenceImages}
+            token={token}
+            onUpdate={setReferenceImages}
+          />
+        )}
+
         {/* Image Management - Individual Level Control */}
         {designGenerated && attributes.length > 0 && (
           <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
