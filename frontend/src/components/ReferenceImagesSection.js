@@ -158,27 +158,23 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
             onChange={handleFileUpload}
             className="hidden"
           />
-          <label htmlFor={`reference-upload-${studyId}`}>
+          <label htmlFor={`reference-upload-${studyId}`} className="block">
             <Button
               type="button"
-              onClick={() => document.getElementById(`reference-upload-${studyId}`).click()}
               disabled={uploading || referenceImages.length >= 5}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
-              asChild
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
             >
-              <div className="cursor-pointer">
-                {uploading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    กำลังอัปโหลด...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    อัปโหลดรูป Reference (เลือกได้หลายรูป)
-                  </>
-                )}
-              </div>
+              {uploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  กำลังอัปโหลด...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  อัปโหลดรูป Reference (เลือกได้หลายรูป)
+                </>
+              )}
             </Button>
           </label>
           <p className="text-xs text-indigo-600 text-center mt-2">
