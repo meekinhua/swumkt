@@ -970,7 +970,7 @@ const ConjointResultsPage = () => {
                   </thead>
                   <tbody>
                     {sortedImportance.map((feature, index) => {
-                      const levels = Object.values(results.part_worths[feature.id]?.levels || {});
+                      const levels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {});
                       const utilities = levels.map(l => l.utility);
                       const range = utilities.length > 0 ? Math.max(...utilities) - Math.min(...utilities) : 0;
                       
