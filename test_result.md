@@ -674,6 +674,9 @@ agent_communication:
       - working: true
         agent: "testing"
         comment: "✅ FIXED AND TESTED: Updated ConjointResultsPage.js to handle MNL data structure properly. Changed lines 762-763 and 823-824 to use statisticalData.results.part_worths instead of coefficients for MNL analysis. Added fallback logic for other analysis methods. MNL analysis now works perfectly - no JavaScript errors, statistical data displays correctly (R² = 0.00%, Observations = 1836, Intercept = 0.0000, Coefficients table with proper Reference/Significant labels). User can successfully select MNL method and view results without runtime errors."
+      - working: true
+        agent: "testing"
+        comment: "✅ REGRESSION TESTED: Dynamic method switching functionality confirmed working perfectly. Tested complete flow: Counting → MNL → Linear Regression → back to Counting. All method switches work without errors, importance scores update correctly (26.8%, 26.6%, 21.2%, 20.7%, 4.6%), method descriptions update properly, and pie charts maintain 5 sectors across all methods. No JavaScript console errors detected during extensive testing."
 
   - task: "ปรับ Navigation Bar ให้มีเมนูคงที่ทุกหน้า (Dashboard/เครื่องมือวิจัยตลาด/ศูนย์ความรู้/โปรไฟล์)"
     implemented: true
