@@ -79,20 +79,31 @@ const ConjointResultsPage = () => {
     }
   };
 
-  const loadRegressionAnalysis = async () => {
-    setLoadingRegression(true);
+  const loadStatisticalAnalysis = async (method) => {
+    setLoadingStatistical(true);
     try {
       const response = await axios.get(
-        `${API}/conjoint/studies/${studyId}/regression`,
+        `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setRegressionData(response.data);
+      setStatisticalData(response.data);
+      toast.success(`วิเคราะห์ด้วย ${getMethodName(method)} สำเร็จ!`);
     } catch (error) {
-      console.error('Error loading regression:', error);
-      toast.error('ไม่สามารถโหลดผล Regression ได้');
+      console.error('Error loading statistical analysis:', error);
+      toast.error('ไม่สามารถวิเคราะห์ได้');
     } finally {
-      setLoadingRegression(false);
+      setLoadingStatistical(false);
     }
+  };
+
+  const getMethodName = (method) => {
+    const names = {
+      'mnl': 'Multinomial Logit (MNL)',
+      'mixed_logit': 'Mixed Logit',
+      'hierarchical_bayes': 'Hierarchical Bayes',
+      'linear_regression': 'Linear Regression (OLS)'
+    };
+    return names[method] || method;
   };
 
   const loadAIInterpretation = async () => {
