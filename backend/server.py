@@ -6989,6 +6989,81 @@ async def upload_profile_image(
         "image_url": request.image_url
     }
 
+# Get image generation settings
+@api_router.get("/admin/conjoint-image-settings")
+async def get_image_generation_settings(
+    current_user: User = Depends(get_current_user)
+):
+    """Get image generation settings for Conjoint Analysis"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get settings from database
+    settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
+    
+    if not settings:
+        # Return default settings
+        default_settings = {
+            "id": "default",
+            "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
+            "level_image_model": "gpt-image-1",
+            "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
+            "profile_image_model": "gpt-image-1",
+            "updated_by": "System",
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.conjoint_image_settings.insert_one(default_settings)
+        return default_settings
+    
+    return settings
+
+# Update image generation settings
+@api_router.put("/admin/conjoint-image-settings")
+async def update_image_generation_settings(
+    request: UpdateImageGenerationSettingsRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Update image generation settings for Conjoint Analysis"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get current settings
+    current_settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
+    
+    if not current_settings:
+        # Create default if not exists
+        current_settings = {
+            "id": "default",
+            "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
+            "level_image_model": "gpt-image-1",
+            "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
+            "profile_image_model": "gpt-image-1"
+        }
+        await db.conjoint_image_settings.insert_one(current_settings)
+    
+    # Update fields
+    update_data = {
+        "updated_by": current_user.id,
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    if request.level_image_prompt_template is not None:
+        update_data["level_image_prompt_template"] = request.level_image_prompt_template
+    if request.level_image_model is not None:
+        update_data["level_image_model"] = request.level_image_model
+    if request.profile_image_prompt_template is not None:
+        update_data["profile_image_prompt_template"] = request.profile_image_prompt_template
+    if request.profile_image_model is not None:
+        update_data["profile_image_model"] = request.profile_image_model
+    
+    await db.conjoint_image_settings.update_one(
+        {"id": "default"},
+        {"$set": update_data}
+    )
+    
+    updated_settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
+    return {"message": "Settings updated successfully", "settings": updated_settings}
+
 # Get survey (public endpoint - no auth required)
 @api_router.get("/conjoint/survey/{study_id}")
 async def get_survey(study_id: str):
