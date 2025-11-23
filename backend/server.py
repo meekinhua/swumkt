@@ -7489,12 +7489,32 @@ async def get_survey(study_id: str):
     if study["status"] != ConjointStudyStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Survey is not active")
     
+    # Optimize: Send only necessary data for survey display
+    # Remove large profile images if they exist, keep only attribute_levels
+    choice_sets = []
+    for cs in study.get("choice_sets", []):
+        optimized_profiles = []
+        for profile in cs.get("profiles", []):
+            # Keep only essential profile data
+            optimized_profile = {
+                "id": profile["id"],
+                "attribute_levels": profile.get("attribute_levels", {}),
+                "images": profile.get("images", {})  # Keep images as they're needed for display
+            }
+            optimized_profiles.append(optimized_profile)
+        
+        choice_sets.append({
+            "id": cs["id"],
+            "set_number": cs.get("set_number"),
+            "profiles": optimized_profiles
+        })
+    
     return {
         "study_id": study["id"],
         "title": study["title"],
         "description": study.get("description"),
         "attributes": study.get("attributes", []),
-        "choice_sets": study.get("choice_sets", []),
+        "choice_sets": choice_sets,
         "alternatives_per_set": study.get("alternatives_per_set", 3)
     }
 
