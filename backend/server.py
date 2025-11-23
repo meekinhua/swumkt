@@ -6857,6 +6857,18 @@ async def generate_single_image(
     try:
         import base64
         
+        # Prepare reference images if provided
+        ref_images_base64 = []
+        if using_refs:
+            for idx in request.reference_image_indices:
+                if 0 <= idx < len(reference_images):
+                    img_url = reference_images[idx]
+                    # Extract base64 from data URL
+                    if img_url.startswith('data:image'):
+                        ref_images_base64.append(img_url.split(',')[1])
+                    else:
+                        ref_images_base64.append(img_url)
+        
         # Check if using Nano Banana (Gemini)
         if model_to_use == "nanobanana":
             from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -6882,12 +6894,23 @@ async def generate_single_image(
             
             image_gen = OpenAIImageGeneration(api_key=api_key)
             
-            # Generate image
-            images = await image_gen.generate_images(
-                prompt=image_prompt,
-                model=model_to_use,
-                number_of_images=1
-            )
+            # If using reference images with OpenAI, use image editing/variation mode
+            if using_refs and len(ref_images_base64) > 0:
+                # Use the first reference image for editing
+                # Note: OpenAI edit mode requires mask; for style reference we use variation
+                images = await image_gen.generate_image_variations(
+                    image_data=base64.b64decode(ref_images_base64[0]),
+                    prompt=image_prompt,
+                    model=model_to_use,
+                    number_of_images=1
+                )
+            else:
+                # Standard text-to-image generation
+                images = await image_gen.generate_images(
+                    prompt=image_prompt,
+                    model=model_to_use,
+                    number_of_images=1
+                )
             
             if not images or len(images) == 0:
                 raise HTTPException(status_code=500, detail="No image was generated")
