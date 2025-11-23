@@ -27,7 +27,7 @@ const AdminNotifications = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [url, setUrl] = useState('/');
+  const [url, setUrl] = useState('/dashboard');
   const [notificationType, setNotificationType] = useState('custom');
   const [searchQuery, setSearchQuery] = useState('');
   const [userSearchDebounce, setUserSearchDebounce] = useState('');

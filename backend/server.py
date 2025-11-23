@@ -6100,6 +6100,20 @@ class GenerateProfileImageRequest(BaseModel):
     profile_id: str
     prompt: Optional[str] = None
 
+class ImageGenerationSettings(BaseModel):
+    level_image_prompt_template: str = "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background."
+    level_image_model: str = "gpt-image-1"
+    profile_image_prompt_template: str = "Professional product photo showing: {composition}. High quality, clean background, product-focused composition."
+    profile_image_model: str = "gpt-image-1"
+    updated_by: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+class UpdateImageGenerationSettingsRequest(BaseModel):
+    level_image_prompt_template: Optional[str] = None
+    level_image_model: Optional[str] = None
+    profile_image_prompt_template: Optional[str] = None
+    profile_image_model: Optional[str] = None
+
 class UploadImageRequest(BaseModel):
     attribute_id: str
     level_id: str
