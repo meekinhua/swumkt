@@ -133,3 +133,6 @@ websockets==15.0.1
 yarl==1.22.0
 zipp==3.23.0
 scikit-learn==1.7.2
+patsy==1.0.2
+pylogit==1.0.1
+statsmodels==0.14.5
