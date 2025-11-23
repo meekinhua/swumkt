@@ -628,25 +628,43 @@ const ConjointResultsPage = () => {
               </div>
             </Card>
 
-            {/* Regression Analysis */}
+            {/* Statistical Analysis with Method Selection */}
             <Card className="p-6 mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Linear Regression Analysis</h2>
-                    <p className="text-sm text-gray-600">
-                      การวิเคราะห์ความถดถอยเชิงเส้น (OLS Regression)
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
                 </div>
-                {!statisticalData && (
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">การวิเคราะห์ทางสถิติ (Statistical Analysis)</h2>
+                  <p className="text-sm text-gray-600">
+                    เลือกวิธีการวิเคราะห์ตามมาตรฐานทางวิชาการ
+                  </p>
+                </div>
+              </div>
+
+              {/* Method Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-2 block">
+                    เลือกวิธีการวิเคราะห์:
+                  </label>
+                  <select
+                    value={selectedMethod}
+                    onChange={(e) => setSelectedMethod(e.target.value)}
+                    className="w-full p-3 border-2 border-indigo-300 rounded-lg font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  >
+                    <option value="mnl">⭐ Multinomial Logit (MNL) - แนะนำ</option>
+                    <option value="mixed_logit">Mixed Logit (Random Parameters)</option>
+                    <option value="hierarchical_bayes">Hierarchical Bayes (HB)</option>
+                    <option value="linear_regression">Linear Regression (OLS)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
                   <Button
-                    onClick={loadRegressionAnalysis}
+                    onClick={() => loadStatisticalAnalysis(selectedMethod)}
                     disabled={loadingStatistical}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold h-12"
                   >
                     {loadingStatistical ? (
                       <>
@@ -656,11 +674,31 @@ const ConjointResultsPage = () => {
                     ) : (
                       <>
                         <BarChart3 className="w-4 h-4 mr-2" />
-                        คำนวณ Regression
+                        คำนวณด้วย {getMethodName(selectedMethod)}
                       </>
                     )}
                   </Button>
-                )}
+                </div>
+              </div>
+
+              {/* Method Descriptions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <p className="text-xs font-bold text-indigo-900 mb-1">⭐ Multinomial Logit (MNL)</p>
+                  <p className="text-xs text-gray-600">มาตรฐานวิชาการ, มี p-values, Log-likelihood, Pseudo R²</p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <p className="text-xs font-bold text-purple-900 mb-1">Mixed Logit</p>
+                  <p className="text-xs text-gray-600">แสดงความแตกต่างของความชอบระหว่างผู้ตอบแต่ละคน</p>
+                </div>
+                <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
+                  <p className="text-xs font-bold text-pink-900 mb-1">Hierarchical Bayes</p>
+                  <p className="text-xs text-gray-600">วิเคราะห์ทั้งระดับบุคคลและประชากร (Empirical Bayes)</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs font-bold text-blue-900 mb-1">Linear Regression</p>
+                  <p className="text-xs text-gray-600">วิธีพื้นฐาน OLS Regression พร้อม R² และ coefficients</p>
+                </div>
               </div>
 
               {!statisticalData ? (
