@@ -7707,13 +7707,21 @@ async def get_ai_interpretation(
 คุณจะต้องอธิบายผลการวิเคราะห์ให้ผู้ใช้ทั่วไปที่ไม่มีความรู้ทางสถิติเข้าใจได้ง่าย
 ใช้ภาษาเรียบง่าย ยกตัวอย่างประกอบ และให้ข้อเสนอแนะเชิงธุรกิจที่นำไปปฏิบัติได้จริง"""
         
+        # Build attributes summary
+        attrs_text = []
+        for attr in analysis_summary['attributes']:
+            levels_text = ', '.join([f"{l['value']} ({l['utility']:.1f})" for l in attr['levels']])
+            attrs_text.append(f"- {attr['name']}: {attr['importance']:.1f}% (ระดับ: {levels_text})")
+        
+        attrs_summary = '\n'.join(attrs_text)
+        
         prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis ต่อไปนี้:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
 
 คุณลักษณะและความสำคัญ:
-{chr(10).join([f"- {attr['name']}: {attr['importance']:.1f}% (ระดับ: {', '.join([f\"{l['value']} ({l['utility']:.1f})\"] for l in attr['levels'])})" for attr in analysis_summary['attributes']])}
+{attrs_summary}
 
 กรุณาเขียนคำอธิบายที่:
 1. **สรุปผลหลัก (3-4 ประโยค):** อะไรคือสิ่งที่ผู้บริโภคให้ความสำคัญมากที่สุด?
