@@ -552,16 +552,19 @@ const ConjointDesignPage = () => {
     };
     setAttributes([...attributes, newAttr]);
     setEditingAttr(newAttr.id);
+    setIsDirty(true); // Mark as changed
   };
 
   const handleRemoveAttribute = (attrId) => {
     setAttributes(attributes.filter(a => a.id !== attrId));
+    setIsDirty(true); // Mark as changed
   };
 
   const handleUpdateAttribute = (attrId, field, value) => {
     setAttributes(attributes.map(attr => 
       attr.id === attrId ? { ...attr, [field]: value } : attr
     ));
+    setIsDirty(true); // Mark as changed
   };
 
   const handleAddLevel = (attrId) => {
