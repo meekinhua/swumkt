@@ -922,7 +922,8 @@ const ConjointDesignPage = () => {
                             onClick={() => handleRemoveLevel(attr.id, level.id)}
                             variant="ghost"
                             size="sm"
-                            className="text-red-600"
+                            disabled={surveyStarted}
+                            className={`text-red-600 ${surveyStarted ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
