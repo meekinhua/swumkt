@@ -7957,12 +7957,13 @@ def calculate_importance_scores(part_worths: Dict, study: Dict) -> Dict[str, flo
     
     return importance_scores
 
-@api_router.get("/conjoint/studies/{study_id}/regression")
-async def get_regression_analysis(
+@api_router.get("/conjoint/studies/{study_id}/statistical-analysis")
+async def get_statistical_analysis(
     study_id: str,
+    method: str = "mnl",  # mnl, mixed_logit, hierarchical_bayes, linear_regression
     current_user: User = Depends(get_current_user)
 ):
-    """Get regression analysis results"""
+    """Get statistical analysis results with selected method"""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
@@ -7979,20 +7980,31 @@ async def get_regression_analysis(
     if len(responses) < 30:
         return {
             "status": "insufficient_data",
-            "message": "Need at least 30 responses for regression analysis",
+            "message": "Need at least 30 responses for statistical analysis",
             "respondent_count": len(responses)
         }
     
-    # Calculate regression
-    regression_results = calculate_regression_analysis(study, responses)
+    # Calculate based on method
+    results = None
+    if method == "mnl":
+        results = calculate_mnl_analysis(study, responses)
+    elif method == "mixed_logit":
+        results = calculate_mixed_logit_analysis(study, responses)
+    elif method == "hierarchical_bayes":
+        results = calculate_hierarchical_bayes_analysis(study, responses)
+    elif method == "linear_regression":
+        results = calculate_regression_analysis(study, responses)
+    else:
+        raise HTTPException(status_code=400, detail="Invalid method")
     
-    if not regression_results:
-        raise HTTPException(status_code=500, detail="Failed to perform regression analysis")
+    if not results:
+        raise HTTPException(status_code=500, detail=f"Failed to perform {method} analysis")
     
     return {
         "status": "success",
+        "method": method,
         "respondent_count": len(responses),
-        "regression": regression_results
+        "results": results
     }
 
 # Get AI interpretation of results
