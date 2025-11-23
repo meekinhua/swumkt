@@ -53,11 +53,16 @@ const AdminSettings = () => {
   const [conjointQualitativeMetadata, setConjointQualitativeMetadata] = useState(null);
   const [savingConjointQualitative, setSavingConjointQualitative] = useState(false);
   
-  const [conjointLevelImagePrompt, setConjointLevelImagePrompt] = useState('');
-  const [savingConjointLevelImage, setSavingConjointLevelImage] = useState(false);
-  
-  const [conjointProfileImagePrompt, setConjointProfileImagePrompt] = useState('');
-  const [savingConjointProfileImage, setSavingConjointProfileImage] = useState(false);
+  // Conjoint Image Generation Settings
+  const [conjointImageSettings, setConjointImageSettings] = useState({
+    level_image_prompt_template: '',
+    level_image_model: 'gpt-image-1',
+    profile_image_prompt_template: '',
+    profile_image_model: 'gpt-image-1',
+    updated_by: null,
+    updated_at: null
+  });
+  const [savingConjointImage, setSavingConjointImage] = useState(false);
   
   // Format Editor LLM Model
   const [formatEditorModel, setFormatEditorModel] = useState('claude-sonnet-4');
