@@ -93,22 +93,13 @@ const ConjointAnalysisTool = () => {
     );
   };
 
-  const handleStudyClick = (study) => {
-    // Navigate based on status
-    switch (study.status) {
-      case 'draft':
-      case 'qualitative_phase':
-        navigate(`/research/conjoint/${study.id}/qualitative`);
-        break;
-      case 'design_phase':
-        navigate(`/research/conjoint/${study.id}/design`);
-        break;
-      case 'active':
-      case 'closed':
-        navigate(`/research/conjoint/${study.id}/results`);
-        break;
-      default:
-        navigate(`/research/conjoint/${study.id}/qualitative`);
+  const handleStudyAction = (study, action) => {
+    if (action === 'edit') {
+      // Always go to design page for editing
+      navigate(`/research/conjoint/${study.id}/design`);
+    } else if (action === 'view') {
+      // View results
+      navigate(`/research/conjoint/${study.id}/results`);
     }
   };
 
