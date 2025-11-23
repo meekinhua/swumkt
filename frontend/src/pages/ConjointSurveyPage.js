@@ -170,7 +170,15 @@ const ConjointSurveyPage = () => {
             หากคุณมีทางเลือกต่อไปนี้ คุณจะเลือกแบบไหน?
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${
+            currentSet.profiles.length === 4
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+              : currentSet.profiles.length === 3
+              ? 'grid-cols-1 md:grid-cols-3'
+              : currentSet.profiles.length === 2
+              ? 'grid-cols-1 md:grid-cols-2'
+              : 'grid-cols-1'
+          }`}>
             {currentSet.profiles.map((profile, idx) => {
               const isSelected = selections[currentSet.id] === profile.id;
               const hasProfileImage = profile.profile_image_url;
