@@ -693,6 +693,102 @@ const ConjointResultsPage = () => {
               </div>
             </Card>
 
+            {/* Relative Importance Table */}
+            <Card className="p-6 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Star className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Relative Importance Scores</h2>
+                  <p className="text-sm text-gray-600">
+                    ความสำคัญสัมพัทธ์ของแต่ละคุณลักษณะ (คำนวณจาก Range ของ Utility)
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-orange-100 to-yellow-100">
+                      <th className="border-2 border-orange-300 px-4 py-3 text-center font-bold text-gray-900">
+                        อันดับ
+                      </th>
+                      <th className="border-2 border-orange-300 px-4 py-3 text-left font-bold text-gray-900">
+                        คุณลักษณะ
+                      </th>
+                      <th className="border-2 border-orange-300 px-4 py-3 text-right font-bold text-gray-900">
+                        Range (Max - Min)
+                      </th>
+                      <th className="border-2 border-orange-300 px-4 py-3 text-right font-bold text-gray-900">
+                        Relative Importance (%)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedImportance.map((feature, index) => {
+                      const levels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {});
+                      const utilities = levels.map(l => l.utility);
+                      const range = utilities.length > 0 ? Math.max(...utilities) - Math.min(...utilities) : 0;
+                      
+                      return (
+                        <tr key={feature.id} className="hover:bg-orange-50">
+                          <td className="border-2 border-orange-200 px-4 py-3 text-center">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
+                              index === 0 ? 'bg-yellow-500' :
+                              index === 1 ? 'bg-gray-400' :
+                              index === 2 ? 'bg-orange-400' : 'bg-gray-300'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="border-2 border-orange-200 px-4 py-3 font-bold text-gray-900">
+                            {feature.name}
+                          </td>
+                          <td className="border-2 border-orange-200 px-4 py-3 text-right font-mono text-gray-700">
+                            {range.toFixed(3)}
+                          </td>
+                          <td className="border-2 border-orange-200 px-4 py-3 text-right">
+                            <span className="text-2xl font-black text-orange-600">
+                              {feature.importance.toFixed(2)}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-orange-100 font-bold">
+                      <td colSpan="3" className="border-2 border-orange-300 px-4 py-3 text-right">
+                        รวม:
+                      </td>
+                      <td className="border-2 border-orange-300 px-4 py-3 text-right text-orange-600">
+                        100.00%
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div className="mt-4 p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
+                <p className="text-sm text-gray-700 mb-2">
+                  <strong>📐 สูตรการคำนวณ:</strong>
+                </p>
+                <div className="font-mono text-xs bg-white p-3 rounded border border-orange-300">
+                  <p>Range<sub>i</sub> = Max(Utility<sub>i</sub>) - Min(Utility<sub>i</sub>)</p>
+                  <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Statistical Summary */}
+            <Card className="p-6 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">สถิติการวิจัย</h2>
             {/* Statistical Analysis with Method Selection */}
             <Card className="p-6 mb-8">
               <div className="flex items-center gap-3 mb-6">
@@ -982,102 +1078,6 @@ const ConjointResultsPage = () => {
               )}
             </Card>
 
-            {/* Relative Importance Table */}
-            <Card className="p-6 mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                  <Star className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Relative Importance Scores</h2>
-                  <p className="text-sm text-gray-600">
-                    ความสำคัญสัมพัทธ์ของแต่ละคุณลักษณะ (คำนวณจาก Range ของ Utility)
-                  </p>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-orange-100 to-yellow-100">
-                      <th className="border-2 border-orange-300 px-4 py-3 text-center font-bold text-gray-900">
-                        อันดับ
-                      </th>
-                      <th className="border-2 border-orange-300 px-4 py-3 text-left font-bold text-gray-900">
-                        คุณลักษณะ
-                      </th>
-                      <th className="border-2 border-orange-300 px-4 py-3 text-right font-bold text-gray-900">
-                        Range (Max - Min)
-                      </th>
-                      <th className="border-2 border-orange-300 px-4 py-3 text-right font-bold text-gray-900">
-                        Relative Importance (%)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedImportance.map((feature, index) => {
-                      const levels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {});
-                      const utilities = levels.map(l => l.utility);
-                      const range = utilities.length > 0 ? Math.max(...utilities) - Math.min(...utilities) : 0;
-                      
-                      return (
-                        <tr key={feature.id} className="hover:bg-orange-50">
-                          <td className="border-2 border-orange-200 px-4 py-3 text-center">
-                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
-                              index === 0 ? 'bg-yellow-500' :
-                              index === 1 ? 'bg-gray-400' :
-                              index === 2 ? 'bg-orange-400' : 'bg-gray-300'
-                            }`}>
-                              {index + 1}
-                            </span>
-                          </td>
-                          <td className="border-2 border-orange-200 px-4 py-3 font-bold text-gray-900">
-                            {feature.name}
-                          </td>
-                          <td className="border-2 border-orange-200 px-4 py-3 text-right font-mono text-gray-700">
-                            {range.toFixed(3)}
-                          </td>
-                          <td className="border-2 border-orange-200 px-4 py-3 text-right">
-                            <span className="text-2xl font-black text-orange-600">
-                              {feature.importance.toFixed(2)}%
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-orange-100 font-bold">
-                      <td colSpan="3" className="border-2 border-orange-300 px-4 py-3 text-right">
-                        รวม:
-                      </td>
-                      <td className="border-2 border-orange-300 px-4 py-3 text-right text-orange-600">
-                        100.00%
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              <div className="mt-4 p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
-                <p className="text-sm text-gray-700 mb-2">
-                  <strong>📐 สูตรการคำนวณ:</strong>
-                </p>
-                <div className="font-mono text-xs bg-white p-3 rounded border border-orange-300">
-                  <p>Range<sub>i</sub> = Max(Utility<sub>i</sub>) - Min(Utility<sub>i</sub>)</p>
-                  <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
-                </div>
-              </div>
-            </Card>
-
-            {/* Statistical Summary */}
-            <Card className="p-6 mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">สถิติการวิจัย</h2>
                   <p className="text-sm text-gray-600">
                     ข้อมูลสถิติพื้นฐานของการศึกษา
                   </p>
@@ -1166,4 +1166,3 @@ const ConjointResultsPage = () => {
   );
 };
 
-export default ConjointResultsPage;
