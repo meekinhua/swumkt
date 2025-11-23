@@ -759,46 +759,91 @@ const ConjointResultsPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
-                          const levels = Object.values(attrData.levels);
-                          return levels.map((level, levelIdx) => (
-                            <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
-                              {levelIdx === 0 && (
-                                <td
-                                  className="border-2 border-indigo-200 px-4 py-3 font-bold text-gray-900 bg-indigo-50"
-                                  rowSpan={levels.length}
-                                >
-                                  {attrData.name}
-                                </td>
-                              )}
-                              <td className="border-2 border-indigo-200 px-4 py-3 text-gray-700">
-                                {level.value}
-                              </td>
-                              <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
-                                level.is_reference ? 'text-gray-400' :
-                                level.coefficient > 0 ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {level.is_reference ? '0.0000 (ref)' : 
-                                  (level.coefficient > 0 ? '+' : '') + level.coefficient.toFixed(4)}
-                              </td>
-                              <td className="border-2 border-indigo-200 px-4 py-3 text-center">
-                                {level.is_reference ? (
-                                  <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
-                                    Reference
-                                  </span>
-                                ) : Math.abs(level.coefficient) > 0.01 ? (
-                                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
-                                    Significant
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">
-                                    Low
-                                  </span>
+                        {statisticalData.results?.part_worths ? (
+                          // Use part_worths structure for MNL analysis
+                          Object.entries(statisticalData.results.part_worths).map(([attrId, attrData]) => {
+                            const levels = Object.values(attrData.levels || {});
+                            return levels.map((level, levelIdx) => (
+                              <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
+                                {levelIdx === 0 && (
+                                  <td
+                                    className="border-2 border-indigo-200 px-4 py-3 font-bold text-gray-900 bg-indigo-50"
+                                    rowSpan={levels.length}
+                                  >
+                                    {attrData.name}
+                                  </td>
                                 )}
-                              </td>
-                            </tr>
-                          ));
-                        })}
+                                <td className="border-2 border-indigo-200 px-4 py-3 text-gray-700">
+                                  {level.value}
+                                </td>
+                                <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
+                                  level.utility === 0 ? 'text-gray-400' :
+                                  level.utility > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {level.utility === 0 ? '0.0000 (ref)' : 
+                                    (level.utility > 0 ? '+' : '') + level.utility.toFixed(4)}
+                                </td>
+                                <td className="border-2 border-indigo-200 px-4 py-3 text-center">
+                                  {level.utility === 0 ? (
+                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
+                                      Reference
+                                    </span>
+                                  ) : Math.abs(level.utility) > 0.01 ? (
+                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
+                                      Significant
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">
+                                      Low
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ));
+                          })
+                        ) : (
+                          // Fallback for other analysis methods that might use coefficients structure
+                          Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
+                            const levels = Object.values(attrData?.levels || {});
+                            return levels.map((level, levelIdx) => (
+                              <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
+                                {levelIdx === 0 && (
+                                  <td
+                                    className="border-2 border-indigo-200 px-4 py-3 font-bold text-gray-900 bg-indigo-50"
+                                    rowSpan={levels.length}
+                                  >
+                                    {attrData?.name || attrId}
+                                  </td>
+                                )}
+                                <td className="border-2 border-indigo-200 px-4 py-3 text-gray-700">
+                                  {level?.value || 'N/A'}
+                                </td>
+                                <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
+                                  level?.is_reference ? 'text-gray-400' :
+                                  (level?.coefficient || 0) > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {level?.is_reference ? '0.0000 (ref)' : 
+                                    ((level?.coefficient || 0) > 0 ? '+' : '') + (level?.coefficient || 0).toFixed(4)}
+                                </td>
+                                <td className="border-2 border-indigo-200 px-4 py-3 text-center">
+                                  {level?.is_reference ? (
+                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
+                                      Reference
+                                    </span>
+                                  ) : Math.abs(level?.coefficient || 0) > 0.01 ? (
+                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
+                                      Significant
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">
+                                      Low
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ));
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
