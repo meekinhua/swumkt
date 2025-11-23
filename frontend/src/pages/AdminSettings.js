@@ -352,6 +352,29 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSaveConjointImageSettings = async () => {
+    setSavingConjointImage(true);
+    try {
+      await axios.put(
+        `${API}/admin/conjoint-image-settings`,
+        {
+          level_image_prompt_template: conjointImageSettings.level_image_prompt_template,
+          level_image_model: conjointImageSettings.level_image_model,
+          profile_image_prompt_template: conjointImageSettings.profile_image_prompt_template,
+          profile_image_model: conjointImageSettings.profile_image_model
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Image generation settings saved successfully');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving image settings:', error);
+      toast.error('Failed to save image settings');
+    } finally {
+      setSavingConjointImage(false);
+    }
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
