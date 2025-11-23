@@ -433,6 +433,7 @@ const ConjointDesignPage = () => {
   const [alternativesPerSet, setAlternativesPerSet] = useState(3);
   const [numberOfSets, setNumberOfSets] = useState(null);
   const [designGenerated, setDesignGenerated] = useState(false);
+  const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
 
   useEffect(() => {
     if (user && token && studyId) {
