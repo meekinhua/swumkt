@@ -29,30 +29,42 @@ const ConjointSurveyPage = () => {
 
   const loadSurvey = async (retryCount = 0) => {
     try {
+      console.log(`[Survey] Loading survey: ${studyId}, attempt: ${retryCount + 1}`);
+      
       const response = await axios.get(`${API}/conjoint/survey/${studyId}`, {
         timeout: 30000, // 30 seconds timeout
         maxContentLength: 50 * 1024 * 1024, // 50MB
         maxBodyLength: 50 * 1024 * 1024
       });
+      
+      console.log('[Survey] Successfully loaded survey:', response.data?.study_id);
       setSurvey(response.data);
     } catch (error) {
-      console.error('Error loading survey:', error);
+      console.error('[Survey] Error loading survey:', error);
+      console.error('[Survey] Error response:', error.response?.data);
+      console.error('[Survey] Error status:', error.response?.status);
       
       // Retry logic for timeout or network errors
       if (retryCount < 2 && (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK')) {
-        console.log(`Retrying... attempt ${retryCount + 1}`);
+        console.log(`[Survey] Retrying... attempt ${retryCount + 1}`);
         setTimeout(() => loadSurvey(retryCount + 1), 2000);
         return;
       }
       
       // Show specific error messages
+      const errorDetail = error.response?.data?.detail || '';
+      
       if (error.response?.status === 404) {
-        toast.error('ไม่พบแบบสอบถาม');
+        console.error('[Survey] 404 - Study not found');
+        toast.error('ไม่พบแบบสอบถาม: ID ไม่ถูกต้องหรือถูกลบแล้ว');
       } else if (error.response?.status === 400) {
-        toast.error('แบบสอบถามยังไม่เปิดรับคำตอบ');
+        console.error('[Survey] 400 - Study not active:', errorDetail);
+        toast.error(errorDetail || 'แบบสอบถามยังไม่เปิดรับคำตอบ กรุณารอเจ้าของแบบสอบถามเปิดการเก็บข้อมูล');
       } else if (error.code === 'ECONNABORTED') {
+        console.error('[Survey] Timeout');
         toast.error('การโหลดใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง');
       } else {
+        console.error('[Survey] Unknown error:', error.message);
         toast.error('ไม่สามารถโหลดแบบสอบถามได้ กรุณาลองใหม่อีกครั้ง');
       }
     } finally {
