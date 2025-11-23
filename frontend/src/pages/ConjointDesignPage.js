@@ -967,7 +967,7 @@ const ConjointDesignPage = () => {
             </p>
 
             <div className="space-y-4">
-              {study.choice_sets.slice(0, 3).map((choiceSet, idx) => (
+              {study.choice_sets.map((choiceSet, idx) => (
                 <div key={choiceSet.id} className="p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
                   <h3 className="text-base font-bold text-gray-900 mb-3">
                     Choice Set {idx + 1}
@@ -989,12 +989,6 @@ const ConjointDesignPage = () => {
                   </div>
                 </div>
               ))}
-              
-              {study.choice_sets.length > 3 && (
-                <p className="text-sm text-gray-600 text-center">
-                  แสดง 3 choice sets แรก (มีทั้งหมด {study.choice_sets.length} sets)
-                </p>
-              )}
             </div>
           </Card>
         )}
