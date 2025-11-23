@@ -496,7 +496,7 @@ const ConjointResultsPage = () => {
                     <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
                       <ResponsiveContainer width="100%" height={200}>
                         <BarChart
-                          data={Object.values(results.part_worths[feature.id].levels)
+                          data={Object.values(currentResults?.part_worths?.[feature.id]?.levels || {})
                             .sort((a, b) => b.utility - a.utility)
                             .map(level => ({
                               name: level.value,
