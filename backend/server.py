@@ -6793,11 +6793,7 @@ async def generate_single_image(
             # Convert to base64
             image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
-        if not images or len(images) == 0:
-            raise HTTPException(status_code=500, detail="No image was generated")
-        
-        # Convert to base64 data URL
-        image_base64 = base64.b64encode(images[0]).decode('utf-8')
+        # Create data URL
         image_data_url = f"data:image/png;base64,{image_base64}"
         
         # Update the level with the generated image
