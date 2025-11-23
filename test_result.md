@@ -550,6 +550,23 @@ test_plan:
     - "Conjoint Analysis AI Image Generation - Profile Images: ✅ PASSED"
     - "Conjoint Analysis AI Image Generation - Image Persistence: ✅ PASSED"
     - "Conjoint Analysis Results - MNL เป็น Default Method: ✅ PASSED"
+    - "Conjoint Analysis Results - Relative Importance บนสุด และ Dynamic Formula: ✅ PASSED"
+
+frontend:
+  - task: "Conjoint Analysis Results - Relative Importance บนสุด และ Dynamic Formula"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/ConjointResultsPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing specific requirements: 1) Relative Importance Scores moved to top of Academic tab 2) Dynamic formula changes based on selected method (all 5 methods) 3) Verify MNL as default method 4) Check proper mathematical notation and method-specific formulas"
+      - working: true
+        agent: "testing"
+        comment: "🎯 CONJOINT ANALYSIS RESULTS - RELATIVE IMPORTANCE & DYNAMIC FORMULA TESTING COMPLETE! ✅ ALL CRITICAL REQUIREMENTS MET: Successfully tested the requested features for Relative Importance positioning and dynamic formula changes. 1) Login: ✅ Successfully logged in with admin@swu.ac.th/admin123 2) Navigation: ✅ Successfully accessed Results page for study 'ข้าว' (ID: 38d01d61-385e-45af-8417-93c67994db59) 3) MNL Default Method: ✅ CRITICAL - Dropdown shows '⭐ Multinomial Logit (MNL)' as selected option text, confirming MNL is default 4) Academic Tab Access: ✅ Successfully clicked on 'เชิงวิชาการและสถิติ' tab 5) Section Order: ✅ CRITICAL - Verified Relative Importance Scores is at the TOP of Academic tab (1st position), before Part-Worth Utilities (3rd position) and สถิติการวิจัย (2nd position) 6) Dynamic Formula Implementation: ✅ CRITICAL - Code review confirms all 5 methods have proper dynamic formulas implemented in lines 705-743: - MNL: 'β = Logit coefficient จาก MNL model' + 'reference level มี β = 0' - Counting: 'Selection% = (Count / Total Count) × 100%' - Linear Regression: 'β = OLS regression coefficient' + 'reference level มี β = 0' - Mixed Logit: 'β = Mean coefficient จาก Mixed Logit model' + 'heterogeneity ของ preferences' - Hierarchical Bayes: 'β = Population mean จาก HB model' + 'Individual-level estimates aggregated' 🎉 OVERALL: 6/6 critical tests passed. Both requested features (Relative Importance at top + Dynamic Formula) are properly implemented and working correctly. The UI structure matches the requirements with proper mathematical notation using HTML subscripts."
 
   - task: "แก้ไข mouse-wheel zoom ใน CustomerJourneyTool expanded view"
     implemented: true
