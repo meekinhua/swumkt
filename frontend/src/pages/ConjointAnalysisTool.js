@@ -76,19 +76,36 @@ const ConjointAnalysisTool = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      draft: { label: 'ฉบับร่าง', color: 'bg-gray-100 text-gray-700' },
-      qualitative_phase: { label: 'Phase 1: วิเคราะห์เชิงคุณภาพ', color: 'bg-blue-100 text-blue-700' },
-      design_phase: { label: 'Phase 2: ออกแบบ', color: 'bg-purple-100 text-purple-700' },
-      active: { label: 'กำลังเก็บข้อมูล', color: 'bg-green-100 text-green-700' },
-      closed: { label: 'ปิดแล้ว', color: 'bg-gray-100 text-gray-700' }
-    };
+  const getStatusBadge = (study) => {
+    // Determine status based on actual state, not just status field
+    let label, color;
 
-    const config = statusConfig[status] || statusConfig.draft;
+    if (study.survey_started) {
+      // Survey is published and collecting responses
+      if (study.respondent_count > 0) {
+        label = '🟢 เก็บข้อมูลแล้ว';
+        color = 'bg-green-100 text-green-700 border border-green-300';
+      } else {
+        label = '🟢 สำรวจเปิด';
+        color = 'bg-green-100 text-green-700 border border-green-300';
+      }
+    } else if (study.choice_sets && study.choice_sets.length > 0) {
+      // Design generated but not published yet
+      label = '🟣 Phase 2: ออกแบบ';
+      color = 'bg-purple-100 text-purple-700 border border-purple-300';
+    } else if (study.attributes && study.attributes.length > 0) {
+      // Has attributes but no design yet
+      label = '🔵 Phase 1: วิเคราะห์';
+      color = 'bg-blue-100 text-blue-700 border border-blue-300';
+    } else {
+      // Just created, no data yet
+      label = '⚪ ฉบับร่าง';
+      color = 'bg-gray-100 text-gray-700 border border-gray-300';
+    }
+
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-bold ${config.color}`}>
-        {config.label}
+      <span className={`px-3 py-1 rounded-full text-xs font-bold ${color}`}>
+        {label}
       </span>
     );
   };
