@@ -165,32 +165,31 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
       {referenceImages.length < 5 && (
         <div>
           <input
+            ref={fileInputRef}
             type="file"
-            id={`reference-upload-${studyId}`}
             accept="image/*"
             multiple
             onChange={handleFileUpload}
             className="hidden"
           />
-          <label htmlFor={`reference-upload-${studyId}`} className="block">
-            <Button
-              type="button"
-              disabled={uploading || referenceImages.length >= 5}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
-            >
-              {uploading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  กำลังอัปโหลด...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  อัปโหลดรูป Reference (เลือกได้หลายรูป)
-                </>
-              )}
-            </Button>
-          </label>
+          <Button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || referenceImages.length >= 5}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            {uploading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                กำลังอัปโหลด...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                อัปโหลดรูป Reference (เลือกได้หลายรูป)
+              </>
+            )}
+          </Button>
           <p className="text-xs text-indigo-600 text-center mt-2">
             รองรับ JPG, PNG, WebP (จะถูก compress อัตโนมัติ)
           </p>
