@@ -519,6 +519,264 @@ const ConjointResultsPage = () => {
             </div>
           </div>
         </Card>
+          </>
+        )}
+
+        {/* Academic Tab */}
+        {activeTab === 'academic' && (
+          <>
+            {/* Part-Worth Utilities Table */}
+            <Card className="p-6 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Part-Worth Utilities</h2>
+                  <p className="text-sm text-gray-600">
+                    ค่า Utility ของแต่ละระดับ (คะแนนความพึงพอใจที่ผู้บริโภคให้)
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-purple-100 to-pink-100">
+                      <th className="border-2 border-purple-300 px-4 py-3 text-left font-bold text-gray-900">
+                        คุณลักษณะ
+                      </th>
+                      <th className="border-2 border-purple-300 px-4 py-3 text-left font-bold text-gray-900">
+                        ระดับ
+                      </th>
+                      <th className="border-2 border-purple-300 px-4 py-3 text-right font-bold text-gray-900">
+                        Utility
+                      </th>
+                      <th className="border-2 border-purple-300 px-4 py-3 text-right font-bold text-gray-900">
+                        จำนวนครั้งที่เลือก
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedImportance.map((feature, attrIdx) => {
+                      const levels = results.part_worths[feature.id]?.levels || {};
+                      const sortedLevels = Object.values(levels).sort((a, b) => b.utility - a.utility);
+                      
+                      return sortedLevels.map((level, levelIdx) => (
+                        <tr key={`${feature.id}-${levelIdx}`} className="hover:bg-purple-50">
+                          {levelIdx === 0 && (
+                            <td
+                              className="border-2 border-purple-200 px-4 py-3 font-bold text-gray-900 bg-purple-50"
+                              rowSpan={sortedLevels.length}
+                            >
+                              {feature.name}
+                            </td>
+                          )}
+                          <td className="border-2 border-purple-200 px-4 py-3 text-gray-700">
+                            {levelIdx === 0 && '⭐ '}{level.value}
+                          </td>
+                          <td className={`border-2 border-purple-200 px-4 py-3 text-right font-mono font-bold ${
+                            level.utility > 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {level.utility > 0 ? '+' : ''}{level.utility.toFixed(3)}
+                          </td>
+                          <td className="border-2 border-purple-200 px-4 py-3 text-right text-gray-600">
+                            {level.selection_count}
+                          </td>
+                        </tr>
+                      ));
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                <p className="text-sm text-gray-700">
+                  <strong>💡 คำอธิบาย:</strong> Utility คือคะแนนความพึงพอใจ ค่า<strong className="text-green-600"> บวก (+)</strong> = ผู้บริโภคชอบมากกว่าค่าเฉลี่ย, 
+                  ค่า<strong className="text-red-600"> ลบ (-)</strong> = ชอบน้อยกว่าค่าเฉลี่ย
+                </p>
+              </div>
+            </Card>
+
+            {/* Relative Importance Table */}
+            <Card className="p-6 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Star className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Relative Importance Scores</h2>
+                  <p className="text-sm text-gray-600">
+                    ความสำคัญสัมพัทธ์ของแต่ละคุณลักษณะ (คำนวณจาก Range ของ Utility)
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-orange-100 to-yellow-100">
+                      <th className="border-2 border-orange-300 px-4 py-3 text-center font-bold text-gray-900">
+                        อันดับ
+                      </th>
+                      <th className="border-2 border-orange-300 px-4 py-3 text-left font-bold text-gray-900">
+                        คุณลักษณะ
+                      </th>
+                      <th className="border-2 border-orange-300 px-4 py-3 text-right font-bold text-gray-900">
+                        Range (Max - Min)
+                      </th>
+                      <th className="border-2 border-orange-300 px-4 py-3 text-right font-bold text-gray-900">
+                        Relative Importance (%)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedImportance.map((feature, index) => {
+                      const levels = Object.values(results.part_worths[feature.id]?.levels || {});
+                      const utilities = levels.map(l => l.utility);
+                      const range = utilities.length > 0 ? Math.max(...utilities) - Math.min(...utilities) : 0;
+                      
+                      return (
+                        <tr key={feature.id} className="hover:bg-orange-50">
+                          <td className="border-2 border-orange-200 px-4 py-3 text-center">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
+                              index === 0 ? 'bg-yellow-500' :
+                              index === 1 ? 'bg-gray-400' :
+                              index === 2 ? 'bg-orange-400' : 'bg-gray-300'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="border-2 border-orange-200 px-4 py-3 font-bold text-gray-900">
+                            {feature.name}
+                          </td>
+                          <td className="border-2 border-orange-200 px-4 py-3 text-right font-mono text-gray-700">
+                            {range.toFixed(3)}
+                          </td>
+                          <td className="border-2 border-orange-200 px-4 py-3 text-right">
+                            <span className="text-2xl font-black text-orange-600">
+                              {feature.importance.toFixed(2)}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-orange-100 font-bold">
+                      <td colSpan="3" className="border-2 border-orange-300 px-4 py-3 text-right">
+                        รวม:
+                      </td>
+                      <td className="border-2 border-orange-300 px-4 py-3 text-right text-orange-600">
+                        100.00%
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div className="mt-4 p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
+                <p className="text-sm text-gray-700 mb-2">
+                  <strong>📐 สูตรการคำนวณ:</strong>
+                </p>
+                <div className="font-mono text-xs bg-white p-3 rounded border border-orange-300">
+                  <p>Range<sub>i</sub> = Max(Utility<sub>i</sub>) - Min(Utility<sub>i</sub>)</p>
+                  <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Statistical Summary */}
+            <Card className="p-6 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">สถิติการวิจัย</h2>
+                  <p className="text-sm text-gray-600">
+                    ข้อมูลสถิติพื้นฐานของการศึกษา
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                  <p className="text-sm text-gray-600 mb-1">จำนวนผู้ตอบแบบสอบถาม</p>
+                  <p className="text-3xl font-black text-blue-600">{results.respondent_count}</p>
+                  <p className="text-xs text-gray-500 mt-1">respondents</p>
+                </div>
+
+                <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
+                  <p className="text-sm text-gray-600 mb-1">จำนวนคุณลักษณะ</p>
+                  <p className="text-3xl font-black text-green-600">{sortedImportance.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">attributes</p>
+                </div>
+
+                <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200">
+                  <p className="text-sm text-gray-600 mb-1">จำนวนระดับทั้งหมด</p>
+                  <p className="text-3xl font-black text-purple-600">
+                    {sortedImportance.reduce((sum, f) => {
+                      return sum + Object.keys(results.part_worths[f.id]?.levels || {}).length;
+                    }, 0)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">levels</p>
+                </div>
+
+                <div className="p-4 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg border-2 border-orange-200">
+                  <p className="text-sm text-gray-600 mb-1">วิธีการวิเคราะห์</p>
+                  <p className="text-lg font-bold text-orange-600">Choice-Based</p>
+                  <p className="text-xs text-gray-500 mt-1">Conjoint Analysis</p>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                <h3 className="font-bold text-gray-900 mb-3">📚 วิธีการทางสถิติ</h3>
+                <ul className="text-sm text-gray-700 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600">•</span>
+                    <span><strong>Counting-based approach:</strong> นับจำนวนครั้งที่แต่ละระดับถูกเลือก</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600">•</span>
+                    <span><strong>Part-worth calculation:</strong> คำนวณ utility จากความถี่การเลือก</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600">•</span>
+                    <span><strong>Relative importance:</strong> คำนวณจาก range (max-min) ของ utilities</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600">•</span>
+                    <span><strong>Normalization:</strong> ปรับค่าให้รวมเป็น 100%</span>
+                  </li>
+                </ul>
+              </div>
+            </Card>
+
+            {/* Raw Data Export Info */}
+            <Card className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200">
+              <div className="flex items-start gap-3">
+                <Download className="w-6 h-6 text-indigo-600 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-2">📥 ดาวน์โหลดข้อมูลดิบ</h3>
+                  <p className="text-sm text-gray-700 mb-3">
+                    สำหรับการวิเคราะห์เชิงลึกหรือนำไปใช้กับซอฟต์แวร์สถิติอื่นๆ
+                  </p>
+                  <Button
+                    onClick={handleExportCSV}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    ดาวน์โหลด CSV
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    ไฟล์ CSV จะประกอบด้วย: Respondent ID, Email, Timestamp, Choices
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
