@@ -523,6 +523,8 @@ const ConjointDesignPage = () => {
   const [numberOfSets, setNumberOfSets] = useState(null);
   const [designGenerated, setDesignGenerated] = useState(false);
   const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
+  const [surveyStarted, setSurveyStarted] = useState(false); // Track if survey is active
+  const [startingSurvey, setStartingSurvey] = useState(false);
 
   useEffect(() => {
     if (user && token && studyId) {
