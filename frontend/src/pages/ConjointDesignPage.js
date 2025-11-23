@@ -346,6 +346,7 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
   const [tempUrl, setTempUrl] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
   const [selectedRefs, setSelectedRefs] = useState([]); // Track selected reference images
+  const [additionalPrompt, setAdditionalPrompt] = useState(''); // Additional prompt text
   const [promptSettings, setPromptSettings] = useState(null);
   
   // Load prompt settings
