@@ -102,6 +102,11 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
         payload.reference_image_indices = selectedRefs;
       }
       
+      // Add additional prompt if provided
+      if (additionalPrompt.trim()) {
+        payload.additional_prompt = additionalPrompt.trim();
+      }
+      
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/generate-profile-image`,
         payload,
