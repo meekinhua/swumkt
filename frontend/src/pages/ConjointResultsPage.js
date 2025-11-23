@@ -687,7 +687,7 @@ const ConjointResultsPage = () => {
                     <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
                       <p className="text-sm text-gray-600 mb-1">Observations</p>
                       <p className="text-3xl font-black text-green-600">
-                        {statisticalData.regression?.n_observations}
+                        {statisticalData.results?.n_observations}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Total data points</p>
                     </div>
