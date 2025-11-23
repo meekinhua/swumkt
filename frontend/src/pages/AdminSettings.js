@@ -48,6 +48,17 @@ const AdminSettings = () => {
   const [perceptionQuestionMetadata, setPerceptionQuestionMetadata] = useState(null);
   const [savingPerceptionQuestion, setSavingPerceptionQuestion] = useState(false);
   
+  // Conjoint Analysis Prompts
+  const [conjointQualitativePrompt, setConjointQualitativePrompt] = useState('');
+  const [conjointQualitativeMetadata, setConjointQualitativeMetadata] = useState(null);
+  const [savingConjointQualitative, setSavingConjointQualitative] = useState(false);
+  
+  const [conjointLevelImagePrompt, setConjointLevelImagePrompt] = useState('');
+  const [savingConjointLevelImage, setSavingConjointLevelImage] = useState(false);
+  
+  const [conjointProfileImagePrompt, setConjointProfileImagePrompt] = useState('');
+  const [savingConjointProfileImage, setSavingConjointProfileImage] = useState(false);
+  
   // Format Editor LLM Model
   const [formatEditorModel, setFormatEditorModel] = useState('claude-sonnet-4');
   const [formatEditorModelMetadata, setFormatEditorModelMetadata] = useState(null);
