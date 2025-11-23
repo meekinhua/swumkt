@@ -7097,6 +7097,10 @@ async def generate_profile_image(
             composition=composition
         )
     
+    # Append additional prompt if provided
+    if request.additional_prompt:
+        image_prompt += f" {request.additional_prompt}"
+    
     # Generate image using configured model
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
