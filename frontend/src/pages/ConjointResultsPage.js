@@ -504,8 +504,8 @@ const ConjointResultsPage = () => {
           </div>
         </Card>
 
-        {/* Tips */}
-        <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
+            {/* Tips */}
+            <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
           <div className="flex items-start gap-3">
             <Lightbulb className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
             <div>
