@@ -955,30 +955,41 @@ const ConjointDesignPage = () => {
                     </Button>
                   </div>
 
-                  <div className="space-y-2 mb-3">
+                  <div className="space-y-3 mb-3">
                     {attr.levels.map((level, levelIndex) => (
-                      <div key={level.id} className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-[#00A9CE] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                          {levelIndex + 1}
+                      <div key={level.id} className="p-3 bg-white rounded-lg border-2 border-gray-200">
+                        <div className="flex items-start gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-[#00A9CE] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            {levelIndex + 1}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <input
+                              type="text"
+                              value={level.value}
+                              onChange={(e) => handleUpdateLevel(attr.id, level.id, 'value', e.target.value)}
+                              placeholder="Level value (เช่น: 10,000 บาท)"
+                              className="w-full p-2 border-2 border-gray-300 rounded-lg font-semibold focus:border-[#00A9CE] focus:outline-none"
+                            />
+                            <input
+                              type="text"
+                              value={level.description || ''}
+                              onChange={(e) => handleUpdateLevel(attr.id, level.id, 'description', e.target.value)}
+                              placeholder="คำอธิบาย Level (optional - เช่น: ราคาระดับเริ่มต้น)"
+                              className="w-full p-2 border-2 border-gray-200 rounded-lg text-sm text-gray-700 focus:border-[#00A9CE] focus:outline-none"
+                            />
+                          </div>
+                          {attr.levels.length > 2 && (
+                            <Button
+                              onClick={() => handleRemoveLevel(attr.id, level.id)}
+                              variant="ghost"
+                              size="sm"
+                              disabled={surveyStarted}
+                              className={`text-red-600 ${surveyStarted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
-                        <input
-                          type="text"
-                          value={level.value}
-                          onChange={(e) => handleUpdateLevel(attr.id, level.id, 'value', e.target.value)}
-                          placeholder="Level value"
-                          className="flex-1 p-2 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
-                        />
-                        {attr.levels.length > 2 && (
-                          <Button
-                            onClick={() => handleRemoveLevel(attr.id, level.id)}
-                            variant="ghost"
-                            size="sm"
-                            disabled={surveyStarted}
-                            className={`text-red-600 ${surveyStarted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
                       </div>
                     ))}
                   </div>
