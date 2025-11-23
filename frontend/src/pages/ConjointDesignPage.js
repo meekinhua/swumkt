@@ -906,11 +906,16 @@ const ConjointDesignPage = () => {
               <div className="mt-4 text-center">
                 <Button
                   onClick={() => {
+                    if (isDirty) {
+                      toast.warning('กรุณาบันทึก Attributes & Levels ก่อนสร้าง Design ใหม่');
+                      return;
+                    }
                     setDesignGenerated(false);
                     handleGenerateDesign();
                   }}
                   variant="outline"
                   className="text-sm"
+                  disabled={isDirty}
                 >
                   <RefreshCw className="w-3 h-3 mr-2" />
                   สร้างใหม่
