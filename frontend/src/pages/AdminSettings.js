@@ -109,6 +109,12 @@ const AdminSettings = () => {
         });
       }
       
+      // Fetch Conjoint Image Settings
+      const conjointImageResponse = await axios.get(`${API}/admin/conjoint-image-settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setConjointImageSettings(conjointImageResponse.data);
+      
       // Fetch Journey Map prompt
       const journeyResponse = await axios.get(`${API}/admin/journey-map-prompt`, {
         headers: { Authorization: `Bearer ${token}` }
