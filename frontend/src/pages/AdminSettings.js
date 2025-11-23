@@ -844,10 +844,10 @@ const AdminSettings = () => {
                         </select>
                       </div>
                       
-                      {/* Prompt Template */}
+                      {/* Prompt Template - ไม่มี Reference */}
                       <div>
                         <Label className="text-sm font-bold text-purple-900 mb-2 block">
-                          Prompt Template
+                          Prompt Template (ไม่มีรูปอ้างอิง)
                         </Label>
                         <Textarea
                           value={conjointImageSettings.level_image_prompt_template}
@@ -860,6 +860,25 @@ const AdminSettings = () => {
                         />
                         <p className="text-xs text-purple-700 mt-1">
                           💡 ใช้ {`{attribute_name}`} และ {`{level_value}`}
+                        </p>
+                      </div>
+                      
+                      {/* Prompt Template - มี Reference */}
+                      <div>
+                        <Label className="text-sm font-bold text-purple-900 mb-2 block">
+                          Prompt Template (มีรูปอ้างอิง)
+                        </Label>
+                        <Textarea
+                          value={conjointImageSettings.level_image_prompt_with_ref || ''}
+                          onChange={(e) => setConjointImageSettings({
+                            ...conjointImageSettings,
+                            level_image_prompt_with_ref: e.target.value
+                          })}
+                          className="min-h-[100px] font-mono text-sm border-2 border-purple-300 focus:border-purple-600 bg-purple-50"
+                          placeholder="Based on the reference images provided..."
+                        />
+                        <p className="text-xs text-purple-700 mt-1">
+                          🎨 Prompt นี้ใช้เมื่อผู้ใช้เลือกรูปอ้างอิง
                         </p>
                       </div>
                     </div>
