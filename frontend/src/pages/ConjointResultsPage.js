@@ -48,8 +48,9 @@ const ConjointResultsPage = () => {
   const [loadingAI, setLoadingAI] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(true);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'academic'
-  const [regressionData, setRegressionData] = useState(null);
-  const [loadingRegression, setLoadingRegression] = useState(false);
+  const [statisticalData, setStatisticalData] = useState(null);
+  const [loadingStatistical, setLoadingStatistical] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState('mnl'); // mnl, mixed_logit, hierarchical_bayes, linear_regression
 
   useEffect(() => {
     if (user && token && studyId) {
