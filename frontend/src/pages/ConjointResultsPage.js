@@ -252,6 +252,36 @@ const ConjointResultsPage = () => {
           </div>
         </div>
 
+        {/* Statistical Method Selector */}
+        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border-2 border-blue-200">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              <label className="text-sm font-bold text-gray-700">เลือกวิธีการวิเคราะห์:</label>
+            </div>
+            <select
+              value={selectedMethod}
+              onChange={(e) => {
+                setSelectedMethod(e.target.value);
+                loadStatisticalAnalysis(e.target.value);
+              }}
+              className="px-4 py-2 border-2 border-blue-300 rounded-lg bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[280px]"
+            >
+              <option value="counting">📊 Counting Method (นับความถี่)</option>
+              <option value="mnl">⭐ Multinomial Logit (MNL)</option>
+              <option value="linear_regression">📈 Linear Regression (OLS)</option>
+              <option value="mixed_logit">🔀 Mixed Logit</option>
+              <option value="hierarchical_bayes">🎯 Hierarchical Bayes</option>
+            </select>
+            {loadingStatistical && (
+              <div className="flex items-center gap-2 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-sm">กำลังคำนวณ...</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 bg-white rounded-lg p-2 shadow-sm">
           <button
@@ -259,20 +289,26 @@ const ConjointResultsPage = () => {
             className={`flex-1 px-6 py-3 rounded-md font-bold transition-all ${
               activeTab === 'overview'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            📊 ภาพรวมและคำแนะนำ
+            <div className="flex items-center justify-center gap-2">
+              <PieChartIcon className="w-5 h-5" />
+              <span>ภาพรวมและคำแนะนำ</span>
+            </div>
           </button>
           <button
             onClick={() => setActiveTab('academic')}
             className={`flex-1 px-6 py-3 rounded-md font-bold transition-all ${
               activeTab === 'academic'
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            🎓 เชิงวิชาการและสถิติ
+            <div className="flex items-center justify-center gap-2">
+              <GraduationCap className="w-5 h-5" />
+              <span>เชิงวิชาการและสถิติ</span>
+            </div>
           </button>
         </div>
 
