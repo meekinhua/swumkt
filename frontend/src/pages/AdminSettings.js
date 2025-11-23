@@ -56,8 +56,10 @@ const AdminSettings = () => {
   // Conjoint Image Generation Settings
   const [conjointImageSettings, setConjointImageSettings] = useState({
     level_image_prompt_template: '',
+    level_image_prompt_with_ref: '',
     level_image_model: 'gpt-image-1',
     profile_image_prompt_template: '',
+    profile_image_prompt_with_ref: '',
     profile_image_model: 'gpt-image-1',
     updated_by: null,
     updated_at: null
