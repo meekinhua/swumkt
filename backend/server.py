@@ -6874,8 +6874,8 @@ async def generate_single_image(
             # Convert to base64
             image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
-        # Compress image to stay within MongoDB limits
-        compressed_base64 = compress_base64_image(image_base64, max_size_mb=12.0)
+        # Compress image aggressively (target: 100-150KB for 100+ images per study)
+        compressed_base64 = compress_base64_image(image_base64, max_size_kb=150.0, target_dimension=640)
         
         # Create data URL
         image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
@@ -7068,8 +7068,8 @@ async def generate_profile_image(
             # Convert to base64
             image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
-        # Compress image to stay within MongoDB limits
-        compressed_base64 = compress_base64_image(image_base64, max_size_mb=12.0)
+        # Compress image aggressively (target: 100-150KB for 100+ images per study)
+        compressed_base64 = compress_base64_image(image_base64, max_size_kb=150.0, target_dimension=640)
         
         # Create data URL
         image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
