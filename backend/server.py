@@ -7710,7 +7710,7 @@ async def get_ai_interpretation(
         # Build attributes summary
         attrs_text = []
         for attr in analysis_summary['attributes']:
-            levels_text = ', '.join([f"{l['value']} ({l['utility']:.1f})" for l in attr['levels']])
+            levels_text = ', '.join([f"{level['value']} ({level['utility']:.1f})" for level in attr['levels']])
             attrs_text.append(f"- {attr['name']}: {attr['importance']:.1f}% (ระดับ: {levels_text})")
         
         attrs_summary = '\n'.join(attrs_text)
