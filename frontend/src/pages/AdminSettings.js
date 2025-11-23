@@ -732,6 +732,110 @@ const AdminSettings = () => {
                 </div>
               </TabsContent>
 
+              {/* Conjoint Analysis Tab */}
+              <TabsContent value="conjoint">
+                {conjointQualitativeMetadata && conjointQualitativeMetadata.updated_at && (
+                  <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-gray-700 font-semibold">
+                      <strong>Last Updated:</strong> {new Date(conjointQualitativeMetadata.updated_at).toLocaleString()} by {conjointQualitativeMetadata.updated_by || 'System'}
+                    </p>
+                    <p className="text-sm text-gray-700 font-semibold mt-1">
+                      <strong>Model:</strong> {conjointQualitativeMetadata.model_provider}/{conjointQualitativeMetadata.model_name}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="space-y-6">
+                  {/* Qualitative Analysis Prompt */}
+                  <div>
+                    <Label htmlFor="conjoint-qualitative-prompt" className="text-lg font-bold text-gray-900 mb-3 block">
+                      Qualitative Analysis Prompt (Phase 1)
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      Prompt สำหรับวิเคราะห์ข้อมูลเชิงคุณภาพ (interview, observation) เพื่อหา Attributes และ Levels
+                    </p>
+                    <Textarea
+                      id="conjoint-qualitative-prompt"
+                      value={conjointQualitativePrompt}
+                      onChange={(e) => setConjointQualitativePrompt(e.target.value)}
+                      className="min-h-[300px] font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="Enter qualitative analysis prompt..."
+                    />
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      💡 ใช้ {`{combined_data}`} สำหรับข้อมูล qualitative และ {`{target_language}`} สำหรับภาษา
+                    </p>
+                  </div>
+
+                  {/* System Message */}
+                  <div>
+                    <Label htmlFor="conjoint-system-message" className="text-lg font-bold text-gray-900 mb-3 block">
+                      System Message
+                    </Label>
+                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                      กำหนด role และบริบทของ LLM
+                    </p>
+                    <Textarea
+                      id="conjoint-system-message"
+                      value={conjointQualitativeMetadata?.system_message || ''}
+                      onChange={(e) => setConjointQualitativeMetadata({
+                        ...conjointQualitativeMetadata,
+                        system_message: e.target.value
+                      })}
+                      className="min-h-[100px] font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      placeholder="You are an expert marketing researcher..."
+                    />
+                  </div>
+
+                  {/* Info Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                      <h4 className="font-bold text-purple-900 mb-2">Level Image Generation</h4>
+                      <p className="text-sm text-purple-700">
+                        รูปภาพแต่ละ level ถูกสร้างด้วย OpenAI gpt-image-1<br/>
+                        Prompt: "Professional product visualization: {`{attribute}`} - {`{level}`}"
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 bg-indigo-50 rounded-lg border-2 border-indigo-200">
+                      <h4 className="font-bold text-indigo-900 mb-2">Profile Image Generation</h4>
+                      <p className="text-sm text-indigo-700">
+                        รูป composite ของ profile ทั้งชุดถูกสร้างด้วย OpenAI gpt-image-1<br/>
+                        Prompt: "Professional product photo showing: {`{composition}`}"
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={handleSaveConjointQualitative}
+                      disabled={savingConjointQualitative}
+                      className="flex-1 h-14 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-xl text-lg"
+                    >
+                      {savingConjointQualitative ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                          Saving Conjoint Prompt...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Save Conjoint Prompt
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => navigate('/market-research/conjoint-analysis')}
+                      variant="outline"
+                      className="border-2 border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white font-bold"
+                    >
+                      Test in Conjoint Tool
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
               {/* Image Generation Tab */}
               <TabsContent value="image">
                 <div className="space-y-6">
