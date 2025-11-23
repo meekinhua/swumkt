@@ -7155,6 +7155,98 @@ async def upload_profile_image(
         "image_url": request.image_url
     }
 
+# Upload reference images
+@api_router.post("/conjoint/studies/{study_id}/reference-images")
+async def upload_reference_images(
+    study_id: str,
+    request: UploadReferenceImagesRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Upload reference images for AI image generation (max 5 images)"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Validate max 5 images
+    if len(request.image_urls) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 reference images allowed")
+    
+    # Compress each image
+    compressed_images = []
+    for img_url in request.image_urls:
+        try:
+            # Extract base64 part
+            if 'base64,' in img_url:
+                base64_str = img_url.split('base64,')[1]
+            else:
+                base64_str = img_url
+            
+            # Compress
+            compressed_base64 = compress_base64_image(base64_str, max_size_kb=150.0, target_dimension=640)
+            compressed_url = f"data:image/jpeg;base64,{compressed_base64}"
+            compressed_images.append(compressed_url)
+        except Exception as e:
+            logging.error(f"Error compressing reference image: {e}")
+            raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
+    
+    # Update study with reference images
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$set": {
+                "reference_images": compressed_images,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": f"{len(compressed_images)} reference images uploaded successfully",
+        "reference_images": compressed_images
+    }
+
+# Delete reference image
+@api_router.delete("/conjoint/studies/{study_id}/reference-images/{image_index}")
+async def delete_reference_image(
+    study_id: str,
+    image_index: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a specific reference image by index"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    reference_images = study.get("reference_images", [])
+    
+    if image_index < 0 or image_index >= len(reference_images):
+        raise HTTPException(status_code=400, detail="Invalid image index")
+    
+    # Remove image at index
+    reference_images.pop(image_index)
+    
+    # Update study
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$set": {
+                "reference_images": reference_images,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": "Reference image deleted successfully",
+        "remaining_count": len(reference_images)
+    }
+
 # Start survey - lock study from structural changes
 @api_router.post("/conjoint/studies/{study_id}/start-survey")
 async def start_survey(
