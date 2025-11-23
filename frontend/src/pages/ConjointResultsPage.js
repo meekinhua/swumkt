@@ -377,6 +377,10 @@ const ConjointResultsPage = () => {
                 <span className="text-xs text-gray-500">
                   📊 วิธีการคำนวณ: นับจำนวนครั้งที่แต่ละ level ถูกเลือก (Counting Method)
                 </span>
+                <br/>
+                <span className="text-xs text-amber-600 font-medium">
+                  ⚠️ หมายเหตุ: ค่าความสำคัญในแท็บ "เชิงวิชาการและสถิติ" อาจแตกต่างจากนี้ เพราะคำนวณจากวิธีทางสถิติ (Logit/Regression coefficients)
+                </span>
               </p>
             </div>
           </div>
