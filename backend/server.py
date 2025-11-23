@@ -6835,6 +6835,9 @@ async def generate_single_image(
     # Use custom prompt or generate from template
     if request.prompt:
         image_prompt = request.prompt
+    elif is_test_generation:
+        # For test generation, use a default prompt
+        image_prompt = "High quality product image"
     else:
         # Select appropriate template based on reference usage
         if using_refs:
