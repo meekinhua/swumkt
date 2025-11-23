@@ -12,6 +12,8 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
   const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files);
     
+    console.log('Files selected:', files.length);
+    
     // Validate total count
     const currentCount = referenceImages.length;
     const newCount = currentCount + files.length;
@@ -28,6 +30,8 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
 
       // Convert files to base64
       for (const file of files) {
+        console.log('Processing file:', file.name, file.type);
+        
         if (!file.type.startsWith('image/')) {
           toast.error(`${file.name} ไม่ใช่ไฟล์รูปภาพ`);
           continue;
@@ -36,17 +40,24 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
         const reader = new FileReader();
         const base64 = await new Promise((resolve, reject) => {
           reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
+          reader.onerror = (error) => {
+            console.error('FileReader error:', error);
+            reject(error);
+          };
           reader.readAsDataURL(file);
         });
 
+        console.log('Base64 length:', base64.length);
         imageUrls.push(base64);
       }
 
       if (imageUrls.length === 0) {
+        toast.warning('ไม่มีไฟล์รูปภาพที่ถูกต้อง');
         setUploading(false);
         return;
       }
+
+      console.log('Uploading', imageUrls.length, 'images to backend');
 
       // Upload to backend (will compress)
       const allImages = [...referenceImages, ...imageUrls];
@@ -57,11 +68,13 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log('Upload response:', response.data);
       toast.success(`อัปโหลด ${imageUrls.length} รูปสำเร็จ`);
       onUpdate(response.data.reference_images);
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถอัปโหลดรูปได้');
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.detail || error.message || 'ไม่สามารถอัปโหลดรูปได้');
     } finally {
       setUploading(false);
     }
