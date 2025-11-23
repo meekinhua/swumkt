@@ -683,7 +683,34 @@ const ConjointDesignPage = () => {
     setAttributes(attributes.map(attr => 
       attr.id === attrId ? { ...attr, [field]: value } : attr
     ));
-    setIsDirty(true); // Mark as changed
+    if (!surveyStarted) {
+      setIsDirty(true); // Mark as changed only if survey not started
+    }
+  };
+
+  // Auto-save when survey is started (edit mode)
+  const handleAutoSaveAttribute = async (attrId, field, value) => {
+    if (!surveyStarted) return; // Only auto-save when survey started
+
+    try {
+      const updatedAttributes = attributes.map(attr =>
+        attr.id === attrId ? { ...attr, [field]: value } : attr
+      );
+
+      await axios.put(
+        `${API}/conjoint/studies/${studyId}/attributes`,
+        {
+          study_id: studyId,
+          attributes: updatedAttributes
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('บันทึกอัตโนมัติสำเร็จ', { duration: 2000 });
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      toast.error('ไม่สามารถบันทึกอัตโนมัติได้');
+    }
   };
 
   const handleAddLevel = (attrId) => {
