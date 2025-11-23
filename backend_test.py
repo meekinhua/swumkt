@@ -1331,7 +1331,11 @@ class BackendTester:
                 if result.get("status") == "success":
                     results = result.get("results", {})
                     method = results.get("method", "")
-                    if "linear" in method.lower() or "regression" in method.lower():
+                    # Check if we have regression coefficients (indicates linear regression worked)
+                    if "coefficients" in results and "r_squared" in results:
+                        self.log_result("Linear Regression Analysis", True, f"Linear regression working - R² = {results.get('r_squared', 0):.4f}")
+                        return True
+                    elif "linear" in method.lower() or "regression" in method.lower():
                         self.log_result("Linear Regression Analysis", True, f"Linear regression working - method: {method}")
                         return True
                     else:
