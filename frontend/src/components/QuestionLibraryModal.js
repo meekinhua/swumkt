@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { X, Search, Plus, Trash2, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://conjoint-analyzer.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://conjoint-wizard.preview.emergentagent.com';
 
 const QuestionLibraryModal = ({ onClose, onSelectQuestion }) => {
   const { token } = useAuth();
