@@ -6205,6 +6205,9 @@ class UploadProfileImageRequest(BaseModel):
     profile_id: str
     image_url: str
 
+class UploadReferenceImagesRequest(BaseModel):
+    image_urls: List[str]  # List of base64 image URLs (max 5)
+
 class SurveyResponse(BaseModel):
     study_id: str
     respondent_id: Optional[str] = None
