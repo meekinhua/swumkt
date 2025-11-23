@@ -414,18 +414,28 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
   const handleGenerate = async () => {
     setGenerating(true);
     try {
+      const payload = {
+        attribute_id: attributeId,
+        level_id: level.id
+      };
+      
+      // Add reference images if selected
+      if (selectedRefs.length > 0) {
+        payload.reference_image_indices = selectedRefs;
+      }
+      
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/generate-single-image`,
-        {
-          attribute_id: attributeId,
-          level_id: level.id
-        },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.image_url) {
         setImageUrl(response.data.image_url);
-        toast.success('สร้างรูปภาพสำเร็จด้วย AI!');
+        const msg = selectedRefs.length > 0 
+          ? `สร้างรูปภาพสำเร็จด้วย AI! (ใช้ ${selectedRefs.length} รูปอ้างอิง)`
+          : 'สร้างรูปภาพสำเร็จด้วย AI!';
+        toast.success(msg);
         onImageUpdated();
       } else {
         toast.warning('ไม่สามารถสร้างรูปได้ - กรุณาอัพโหลดรูปเอง');
