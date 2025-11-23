@@ -72,6 +72,7 @@ const ConjointResultsPage = () => {
       
       setStudy(studyRes.data);
       setResults(resultsRes.data);
+      setCurrentResults(resultsRes.data); // Set initial results as counting method
     } catch (error) {
       console.error('Error loading results:', error);
       toast.error('ไม่สามารถโหลดผลการวิเคราะห์ได้');
