@@ -109,6 +109,7 @@ const ConjointResultsPage = () => {
 
   const getMethodName = (method) => {
     const names = {
+      'counting': 'Counting Method (นับความถี่)',
       'mnl': 'Multinomial Logit (MNL)',
       'mixed_logit': 'Mixed Logit',
       'hierarchical_bayes': 'Hierarchical Bayes',
