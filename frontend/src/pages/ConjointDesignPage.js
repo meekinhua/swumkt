@@ -363,32 +363,67 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
 
       {/* Action Buttons */}
       {!showUrlInput ? (
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setShowUrlInput(true)}
-            size="sm"
-            variant="outline"
-            className="flex-1 text-xs border-2"
-          >
-            <Upload className="w-3 h-3 mr-1" />
-            Upload
-          </Button>
-          <Button
-            onClick={handleGenerate}
-            size="sm"
-            disabled={generating}
-            className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            {generating ? (
-              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Sparkles className="w-3 h-3 mr-1" />
-                AI
-              </>
+        <>
+          <div className="flex gap-2 mb-2">
+            <Button
+              onClick={() => setShowUrlInput(true)}
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs border-2"
+            >
+              <Upload className="w-3 h-3 mr-1" />
+              Upload
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              size="sm"
+              disabled={generating}
+              className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {generating ? (
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  AI
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {/* Show Prompt Section */}
+          <div className="border-t border-gray-200 pt-2">
+            <button
+              onClick={() => setShowPrompt(!showPrompt)}
+              className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1 w-full"
+            >
+              <span className="font-medium">
+                {showPrompt ? '▼' : '▶'} AI Prompt
+              </span>
+            </button>
+            
+            {showPrompt && (
+              <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                <p className="text-xs text-gray-700 mb-2 leading-relaxed">
+                  {generatePrompt()}
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatePrompt());
+                    toast.success('คัดลอก prompt แล้ว');
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" />
+                  คัดลอก prompt
+                </button>
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  💡 ใช้ prompt นี้กับ AI ภายนอก (ChatGPT, Midjourney) แล้วนำรูปมา Upload
+                </p>
+              </div>
             )}
-          </Button>
-        </div>
+          </div>
+        </>
       ) : (
         <div className="space-y-2">
           <input
