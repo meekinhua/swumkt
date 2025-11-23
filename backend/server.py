@@ -7482,12 +7482,22 @@ async def update_image_generation_settings(
 @api_router.get("/conjoint/survey/{study_id}")
 async def get_survey(study_id: str):
     """Get public survey for respondents (no authentication required)"""
+    logging.info(f"[SURVEY] Loading survey for study_id: {study_id}")
+    
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
+        logging.error(f"[SURVEY] Study not found: {study_id}")
         raise HTTPException(status_code=404, detail="Study not found")
     
-    if study["status"] != ConjointStudyStatus.ACTIVE:
-        raise HTTPException(status_code=400, detail="Survey is not active")
+    current_status = study.get("status")
+    logging.info(f"[SURVEY] Study '{study.get('title')}' has status: {current_status}")
+    
+    if current_status != ConjointStudyStatus.ACTIVE:
+        logging.warning(f"[SURVEY] Study is not active. Status: {current_status}, Expected: {ConjointStudyStatus.ACTIVE}")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Survey is not active yet. Current status: {current_status}. Please complete the study setup and start the survey."
+        )
     
     # Optimize: Send only necessary data for survey display
     # Remove large profile images if they exist, keep only attribute_levels
