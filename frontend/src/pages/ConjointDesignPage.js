@@ -558,6 +558,9 @@ const ConjointDesignPage = () => {
       // Check if survey has started
       setSurveyStarted(response.data.survey_started || false);
       
+      // Load reference images
+      setReferenceImages(response.data.reference_images || []);
+      
       // Reset dirty flag after loading
       setIsDirty(false);
     } catch (error) {
