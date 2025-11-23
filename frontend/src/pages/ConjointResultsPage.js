@@ -287,7 +287,7 @@ const ConjointResultsPage = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">จำนวนผู้ตอบ</p>
-                <p className="text-3xl font-black text-blue-600">{results.respondent_count}</p>
+                <p className="text-3xl font-black text-blue-600">{currentResults?.respondent_count || results?.respondent_count || 0}</p>
                 <p className="text-xs text-gray-500">คน</p>
               </div>
             </div>
@@ -1041,7 +1041,7 @@ const ConjointResultsPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
                   <p className="text-sm text-gray-600 mb-1">จำนวนผู้ตอบแบบสอบถาม</p>
-                  <p className="text-3xl font-black text-blue-600">{results.respondent_count}</p>
+                  <p className="text-3xl font-black text-blue-600">{currentResults?.respondent_count || results?.respondent_count || 0}</p>
                   <p className="text-xs text-gray-500 mt-1">respondents</p>
                 </div>
 
