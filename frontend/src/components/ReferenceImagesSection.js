@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '../components/ui/button';
-import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -9,6 +9,12 @@ const API = process.env.REACT_APP_BACKEND_URL;
 const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate }) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Test section states
+  const [testPrompt, setTestPrompt] = useState('');
+  const [selectedTestRefs, setSelectedTestRefs] = useState([]);
+  const [generatingTest, setGeneratingTest] = useState(false);
+  const [generatedTestImage, setGeneratedTestImage] = useState(null);
 
   const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files);
