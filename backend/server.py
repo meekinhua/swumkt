@@ -6856,9 +6856,9 @@ async def generate_single_image(
         if level_found.get("description") and not using_refs:
             image_prompt += f" {level_found['description']}"
     
-    # Append additional prompt if provided
+    # Prepend additional prompt if provided (put it at the front)
     if request.additional_prompt:
-        image_prompt += f" {request.additional_prompt}"
+        image_prompt = f"{request.additional_prompt} {image_prompt}"
     
     # Generate image using configured model
     api_key = os.environ.get('EMERGENT_LLM_KEY')
@@ -7097,9 +7097,9 @@ async def generate_profile_image(
             composition=composition
         )
     
-    # Append additional prompt if provided
+    # Prepend additional prompt if provided (put it at the front)
     if request.additional_prompt:
-        image_prompt += f" {request.additional_prompt}"
+        image_prompt = f"{request.additional_prompt} {image_prompt}"
     
     # Generate image using configured model
     api_key = os.environ.get('EMERGENT_LLM_KEY')
