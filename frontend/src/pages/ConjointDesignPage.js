@@ -27,13 +27,14 @@ import {
 } from 'lucide-react';
 
 // Component for managing profile image (composite image)
-const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attributes, token, onImageUpdated }) => {
+const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attributes, token, onImageUpdated, referenceImages = [] }) => {
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState(profile.profile_image_url || '');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [tempUrl, setTempUrl] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
+  const [selectedRefs, setSelectedRefs] = useState([]); // Track selected reference images
   
   // Generate prompt for this profile
   const generatePrompt = () => {
@@ -45,6 +46,15 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
     }).join(', ');
     
     return `Create a high-quality product image with the following specifications: ${features}. The image should be professional, realistic, and clearly show all mentioned features. Use a clean background and good lighting. This is for market research purposes.`;
+  };
+  
+  // Toggle reference image selection
+  const toggleRefSelection = (index) => {
+    setSelectedRefs(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
   };
 
   const handleUploadUrl = async () => {
