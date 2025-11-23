@@ -742,6 +742,23 @@ const ConjointResultsPage = () => {
                     </div>
                   </div>
 
+                  {/* Utility Scale Info */}
+                  {statisticalData.results?.utility_interpretation && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <Lightbulb className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold text-blue-900 mb-1">
+                            📊 วิธีการคำนวณ Utility:
+                          </p>
+                          <p className="text-xs text-gray-700">
+                            {statisticalData.results.utility_interpretation}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Regression Coefficients Table */}
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
