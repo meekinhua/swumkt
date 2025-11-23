@@ -1166,3 +1166,4 @@ const ConjointResultsPage = () => {
   );
 };
 
+export default ConjointResultsPage;
