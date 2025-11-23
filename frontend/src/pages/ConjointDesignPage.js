@@ -35,6 +35,7 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
   const [tempUrl, setTempUrl] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
   const [selectedRefs, setSelectedRefs] = useState([]); // Track selected reference images
+  const [additionalPrompt, setAdditionalPrompt] = useState(''); // Additional prompt text
   
   // Generate prompt for this profile
   const generatePrompt = () => {
