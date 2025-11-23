@@ -6820,19 +6820,31 @@ async def generate_single_image(
     if not settings:
         settings = {
             "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
+            "level_image_prompt_with_ref": "Based on the reference images provided, create a product visualization for: {attribute_name} - {level_value}. Match the style, lighting, and composition of the reference images.",
             "level_image_model": "gpt-image-1"
         }
+    
+    # Check if using reference images
+    reference_images = study.get("reference_images", [])
+    using_refs = request.reference_image_indices and len(request.reference_image_indices) > 0 and len(reference_images) > 0
     
     # Use custom prompt or generate from template
     if request.prompt:
         image_prompt = request.prompt
     else:
+        # Select appropriate template based on reference usage
+        if using_refs:
+            template = settings.get("level_image_prompt_with_ref", settings["level_image_prompt_template"])
+        else:
+            template = settings["level_image_prompt_template"]
+        
         # Use template and replace variables
-        image_prompt = settings["level_image_prompt_template"].format(
+        image_prompt = template.format(
             attribute_name=attr_found['name'],
-            level_value=level_found['value']
+            level_value=level_found['value'],
+            level_description=level_found.get("description", "")
         )
-        if level_found.get("description"):
+        if level_found.get("description") and not using_refs:
             image_prompt += f" {level_found['description']}"
     
     # Generate image using configured model
