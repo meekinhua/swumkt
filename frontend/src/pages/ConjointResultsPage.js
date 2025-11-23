@@ -373,7 +373,10 @@ const ConjointResultsPage = () => {
                 สัดส่วนความสำคัญของแต่ละคุณลักษณะ
               </h2>
               <p className="text-sm text-gray-600">
-                แผนภูมิวงกลมแสดงสัดส่วนความสำคัญ (% จาก 100%)
+                แผนภูมิวงกลมแสดงสัดส่วนความสำคัญ (% จาก 100%) <br/>
+                <span className="text-xs text-gray-500">
+                  📊 วิธีการคำนวณ: นับจำนวนครั้งที่แต่ละ level ถูกเลือก (Counting Method)
+                </span>
               </p>
             </div>
           </div>
