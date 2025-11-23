@@ -7579,12 +7579,12 @@ async def get_study_results(
     }
 
 def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
-    """Perform Multinomial Logit (MNL) analysis"""
+    """Perform Multinomial Logit (MNL) analysis using Conditional Logit"""
     import pandas as pd
     import numpy as np
-    from statsmodels.discrete.discrete_model import MNLogit
+    from statsmodels.discrete.conditional_models import ConditionalLogit
     
-    # Prepare data
+    # Prepare data in long format for Conditional Logit
     data_rows = []
     attributes = study.get("attributes", [])
     
@@ -7596,11 +7596,11 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             # Find choice set
             for choice_set in study.get("choice_sets", []):
                 if choice_set["id"] == choice_set_id:
-                    for profile in choice_set.get("profiles", []):
+                    for alt_idx, profile in enumerate(choice_set.get("profiles", [])):
                         row = {
                             "respondent": resp_idx,
                             "choice_set": choice_set_id,
-                            "alternative": profile["id"],
+                            "alternative": alt_idx,
                             "choice": 1 if profile["id"] == selected_profile_id else 0
                         }
                         
@@ -7619,15 +7619,32 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
     
     df = pd.DataFrame(data_rows)
     
-    # Create dummy variables
+    # Create dummy variables for all categorical attributes
     feature_cols = [col for col in df.columns if col not in ["respondent", "choice_set", "alternative", "choice"]]
     X = pd.get_dummies(df[feature_cols], drop_first=True)
     y = df["choice"]
+    groups = df["respondent"].astype(str) + "_" + df["choice_set"].astype(str)
     
-    # Fit MNL model
+    # Fit Conditional Logit model
     try:
-        model = MNLogit(y, X)
-        result = model.fit(disp=False, maxiter=1000)
+        model = ConditionalLogit(y, X, groups=groups)
+        result = model.fit(disp=False, maxiter=1000, method='bfgs')
+        
+        # Calculate utilities/part-worths by attribute
+        attribute_utilities = {}
+        for attr in attributes:
+            attr_name = attr["name"]
+            attr_utils = {}
+            
+            # Find columns related to this attribute
+            for col in X.columns:
+                if col.startswith(attr_name):
+                    level_name = col.replace(f"{attr_name}_", "")
+                    attr_utils[level_name] = float(result.params[col])
+            
+            # Add baseline (reference level with utility = 0)
+            if attr_utils:
+                attribute_utilities[attr_name] = attr_utils
         
         return {
             "method": "Multinomial Logit (MNL)",
@@ -7638,11 +7655,13 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "log_likelihood": float(result.llf),
             "pseudo_r_squared": float(result.prsquared),
             "aic": float(result.aic),
-            "bic": float(result.bic),
-            "n_observations": int(len(y))
+            "n_observations": int(len(y)),
+            "attribute_utilities": attribute_utilities
         }
     except Exception as e:
         logging.error(f"MNL analysis error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         return None
 
 def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
