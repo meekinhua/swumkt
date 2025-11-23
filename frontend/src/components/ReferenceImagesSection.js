@@ -63,8 +63,13 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
       // Upload to backend (will compress)
       const allImages = [...referenceImages, ...imageUrls];
       
+      const uploadUrl = `${API}/conjoint/studies/${studyId}/reference-images`;
+      console.log('Upload URL:', uploadUrl);
+      console.log('API base:', API);
+      console.log('Study ID:', studyId);
+      
       const response = await axios.post(
-        `${API}/conjoint/studies/${studyId}/reference-images`,
+        uploadUrl,
         { image_urls: allImages },
         { headers: { Authorization: `Bearer ${token}` } }
       );
