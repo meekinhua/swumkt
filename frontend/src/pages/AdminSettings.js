@@ -84,6 +84,26 @@ const AdminSettings = () => {
 
   const fetchAllSettings = async () => {
     try {
+      // Fetch all LLM Prompts (includes Conjoint Analysis)
+      const llmPromptsResponse = await axios.get(`${API}/admin/llm-prompts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const allPrompts = llmPromptsResponse.data.prompts || [];
+      
+      // Find Conjoint Analysis prompt
+      const conjointPrompt = allPrompts.find(p => p.id === 'conjoint-qualitative-analysis');
+      if (conjointPrompt) {
+        setConjointQualitativePrompt(conjointPrompt.prompt_template);
+        setConjointQualitativeMetadata({
+          updated_by: conjointPrompt.updated_by,
+          updated_at: conjointPrompt.updated_at,
+          model_provider: conjointPrompt.model_provider,
+          model_name: conjointPrompt.model_name,
+          system_message: conjointPrompt.system_message
+        });
+      }
+      
       // Fetch Journey Map prompt
       const journeyResponse = await axios.get(`${API}/admin/journey-map-prompt`, {
         headers: { Authorization: `Bearer ${token}` }
