@@ -657,6 +657,24 @@ agent_communication:
         agent: "testing"
         comment: "✅ TESTED: ContentDetail metrics separation working perfectly! Successfully tested on content page showing three separate metrics: 1) Views: '37 ครั้งที่เข้าชม' with Eye icon, 2) Creators: '2 ผู้สร้าง Content' with Users icon (correctly shows author + group members for ZBS04 assignment), 3) Comments: '0 ความคิดเห็น' with MessageCircle icon. All metrics properly separated and no old combined patterns found. Icons properly implemented with 20+ SVG elements detected for each metric type."
 
+  - task: "แก้ไข Conjoint Analysis MNL Frontend Runtime Error"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/ConjointResultsPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User รายงาน runtime error 'TypeError: Cannot convert undefined or null to object' เมื่อเลือก Multinomial Logit (MNL) ใน Conjoint Analysis Results page Academic tab"
+      - working: false
+        agent: "testing"
+        comment: "❌ ISSUE REPRODUCED: Successfully reproduced the exact error. When selecting MNL and clicking analysis button, JavaScript error 'Cannot convert undefined or null to object' occurs in ConjointResultsPage component. Error caused by frontend expecting coefficients structure with nested levels, but backend MNL returns flat coefficients object and part_worths structure."
+      - working: true
+        agent: "testing"
+        comment: "✅ FIXED AND TESTED: Updated ConjointResultsPage.js to handle MNL data structure properly. Changed lines 762-763 and 823-824 to use statisticalData.results.part_worths instead of coefficients for MNL analysis. Added fallback logic for other analysis methods. MNL analysis now works perfectly - no JavaScript errors, statistical data displays correctly (R² = 0.00%, Observations = 1836, Intercept = 0.0000, Coefficients table with proper Reference/Significant labels). User can successfully select MNL method and view results without runtime errors."
+
   - task: "ปรับ Navigation Bar ให้มีเมนูคงที่ทุกหน้า (Dashboard/เครื่องมือวิจัยตลาด/ศูนย์ความรู้/โปรไฟล์)"
     implemented: true
     working: true
