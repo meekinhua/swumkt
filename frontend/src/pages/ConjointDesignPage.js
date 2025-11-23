@@ -271,6 +271,22 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
                   ? `เลือกแล้ว ${selectedRefs.length} รูป` 
                   : 'ไม่ได้เลือกรูปอ้างอิง'}
               </p>
+              
+              {/* Additional Prompt Input */}
+              {selectedRefs.length > 0 && (
+                <div className="mt-2">
+                  <label className="text-xs font-semibold text-blue-700 block mb-1">
+                    ✨ Prompt เสริม:
+                  </label>
+                  <input
+                    type="text"
+                    value={additionalPrompt}
+                    onChange={(e) => setAdditionalPrompt(e.target.value)}
+                    placeholder='เช่น "บรรยากาศสบายๆ"'
+                    className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                  />
+                </div>
+              )}
             </div>
           )}
           
