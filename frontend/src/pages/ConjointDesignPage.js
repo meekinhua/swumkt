@@ -864,10 +864,20 @@ const ConjointDesignPage = () => {
               </div>
             </div>
 
+            {/* Warning if unsaved changes */}
+            {isDirty && (
+              <div className="mb-4 p-3 bg-red-50 border-2 border-red-300 rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                <p className="text-sm font-bold text-red-900">
+                  กรุณาบันทึก Attributes & Levels ก่อนสร้าง Design
+                </p>
+              </div>
+            )}
+
             <Button
               onClick={handleGenerateDesign}
-              disabled={generating || designGenerated}
-              className="w-full bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white font-bold"
+              disabled={generating || designGenerated || isDirty}
+              className={`w-full bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white font-bold ${isDirty ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {generating ? (
                 <>
@@ -878,6 +888,11 @@ const ConjointDesignPage = () => {
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Design ถูกสร้างแล้ว
+                </>
+              ) : isDirty ? (
+                <>
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  บันทึก Attributes ก่อนสร้าง Design
                 </>
               ) : (
                 <>
