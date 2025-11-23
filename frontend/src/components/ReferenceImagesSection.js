@@ -1,0 +1,193 @@
+import React, { useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
+
+const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate }) => {
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    
+    // Validate total count
+    const currentCount = referenceImages.length;
+    const newCount = currentCount + files.length;
+    
+    if (newCount > 5) {
+      toast.error(`สามารถเพิ่มได้สูงสุด 5 รูป (ปัจจุบันมี ${currentCount} รูป)`);
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const imageUrls = [];
+
+      // Convert files to base64
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} ไม่ใช่ไฟล์รูปภาพ`);
+          continue;
+        }
+
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        imageUrls.push(base64);
+      }
+
+      if (imageUrls.length === 0) {
+        setUploading(false);
+        return;
+      }
+
+      // Upload to backend (will compress)
+      const allImages = [...referenceImages, ...imageUrls];
+      
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/reference-images`,
+        { image_urls: allImages },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success(`อัปโหลด ${imageUrls.length} รูปสำเร็จ`);
+      onUpdate(response.data.reference_images);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถอัปโหลดรูปได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (index) => {
+    try {
+      const response = await axios.delete(
+        `${API}/conjoint/studies/${studyId}/reference-images/${index}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('ลบรูป reference สำเร็จ');
+      
+      // Update local state
+      const newImages = referenceImages.filter((_, i) => i !== index);
+      onUpdate(newImages);
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('ไม่สามารถลบรูปได้');
+    }
+  };
+
+  return (
+    <div className="mb-6 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-200 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
+            <ImageIcon className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-indigo-900">
+              Reference Images (รูปอ้างอิง)
+            </h3>
+            <p className="text-xs text-indigo-600">
+              อัปโหลดรูปเพื่อใช้เป็น reference ในการสร้างรูป AI (สูงสุด 5 รูป)
+            </p>
+          </div>
+        </div>
+        
+        <div className="text-sm font-semibold text-indigo-700">
+          {referenceImages.length} / 5 รูป
+        </div>
+      </div>
+
+      {/* Info Box */}
+      <div className="mb-4 p-3 bg-white rounded-lg border border-indigo-200">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-indigo-800">
+            <p className="font-semibold mb-1">💡 วิธีใช้งาน:</p>
+            <ul className="list-disc list-inside space-y-1 text-indigo-700">
+              <li>อัปโหลดรูปที่ต้องการให้ AI ใช้เป็นแนวทาง (สไตล์, สี, องค์ประกอบ)</li>
+              <li>AI จะใช้รูปเหล่านี้เป็น reference ในการสร้างรูป Level และ Profile</li>
+              <li>รูปจะถูก compress อัตโนมัติเป็น 640px และ ~150KB</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Images Grid */}
+      {referenceImages.length > 0 && (
+        <div className="mb-4 grid grid-cols-5 gap-3">
+          {referenceImages.map((imgUrl, index) => (
+            <div key={index} className="relative group">
+              <img
+                src={imgUrl}
+                alt={`Reference ${index + 1}`}
+                className="w-full aspect-square object-cover rounded-lg border-2 border-indigo-300 shadow-sm"
+              />
+              <button
+                onClick={() => handleDelete(index)}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
+                #{index + 1}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload Button */}
+      {referenceImages.length < 5 && (
+        <div>
+          <input
+            type="file"
+            id={`reference-upload-${studyId}`}
+            accept="image/*"
+            multiple
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <label htmlFor={`reference-upload-${studyId}`}>
+            <Button
+              type="button"
+              onClick={() => document.getElementById(`reference-upload-${studyId}`).click()}
+              disabled={uploading || referenceImages.length >= 5}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              asChild
+            >
+              <div className="cursor-pointer">
+                {uploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    กำลังอัปโหลด...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    อัปโหลดรูป Reference (เลือกได้หลายรูป)
+                  </>
+                )}
+              </div>
+            </Button>
+          </label>
+          <p className="text-xs text-indigo-600 text-center mt-2">
+            รองรับ JPG, PNG, WebP (จะถูก compress อัตโนมัติ)
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ReferenceImagesSection;
