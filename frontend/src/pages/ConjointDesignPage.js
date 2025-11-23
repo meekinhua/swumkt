@@ -450,6 +450,46 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
             </Button>
           </div>
           
+          {/* Reference Images Selection */}
+          {referenceImages.length > 0 && (
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <p className="text-xs font-semibold text-gray-700 mb-2">
+                🎨 เลือกรูปอ้างอิง (Optional):
+              </p>
+              <div className="grid grid-cols-5 gap-2">
+                {referenceImages.map((refImg, index) => (
+                  <div key={index} className="relative">
+                    <label className="cursor-pointer block">
+                      <input
+                        type="checkbox"
+                        checked={selectedRefs.includes(index)}
+                        onChange={() => toggleRefSelection(index)}
+                        className="absolute top-1 left-1 w-4 h-4 z-10"
+                      />
+                      <img
+                        src={refImg}
+                        alt={`Ref ${index + 1}`}
+                        className={`w-full aspect-square object-cover rounded border-2 ${
+                          selectedRefs.includes(index) 
+                            ? 'border-purple-500 ring-2 ring-purple-300' 
+                            : 'border-gray-300'
+                        }`}
+                      />
+                      <div className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1 rounded">
+                        #{index + 1}
+                      </div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {selectedRefs.length > 0 
+                  ? `เลือกแล้ว ${selectedRefs.length} รูป` 
+                  : 'ไม่ได้เลือกรูปอ้างอิง'}
+              </p>
+            </div>
+          )}
+          
           {/* Show Prompt Section */}
           <div className="border-t border-gray-200 pt-2">
             <button
