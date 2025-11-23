@@ -110,6 +110,58 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
     }
   };
 
+  const toggleTestRefSelection = (index) => {
+    setSelectedTestRefs(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const handleTestGeneration = async () => {
+    if (!testPrompt.trim()) {
+      toast.error('กรุณากรอก prompt');
+      return;
+    }
+
+    setGeneratingTest(true);
+    setGeneratedTestImage(null);
+
+    try {
+      const payload = {
+        attribute_id: 'test',
+        level_id: 'test'
+      };
+
+      // Add reference images if selected
+      if (selectedTestRefs.length > 0) {
+        payload.reference_image_indices = selectedTestRefs;
+      }
+
+      // Override with custom prompt
+      payload.prompt = testPrompt;
+
+      const response = await axios.post(
+        `${API}/api/conjoint/studies/${studyId}/generate-single-image`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.image_url) {
+        setGeneratedTestImage(response.data.image_url);
+        const msg = selectedTestRefs.length > 0 
+          ? `✅ สร้างรูปสำเร็จ! (ใช้ ${selectedTestRefs.length} รูปอ้างอิง)`
+          : '✅ สร้างรูปสำเร็จ!';
+        toast.success(msg);
+      }
+    } catch (error) {
+      console.error('Test generation error:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้');
+    } finally {
+      setGeneratingTest(false);
+    }
+  };
+
   return (
     <div className="mb-6 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-200 shadow-sm">
       {/* Header */}
