@@ -6725,18 +6725,32 @@ async def generate_single_image(
     if not attr_found or not level_found:
         raise HTTPException(status_code=404, detail="Attribute or level not found")
     
-    # Use custom prompt or generate default
+    # Get image generation settings
+    settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
+    if not settings:
+        settings = {
+            "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
+            "level_image_model": "gpt-image-1"
+        }
+    
+    # Use custom prompt or generate from template
     if request.prompt:
         image_prompt = request.prompt
     else:
-        image_prompt = f"Professional product visualization: {attr_found['name']} - {level_found['value']}. Clean, minimalist style on white background."
+        # Use template and replace variables
+        image_prompt = settings["level_image_prompt_template"].format(
+            attribute_name=attr_found['name'],
+            level_value=level_found['value']
+        )
         if level_found.get("description"):
             image_prompt += f" {level_found['description']}"
     
-    # Generate image using OpenAI
+    # Generate image using configured model
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
         raise HTTPException(status_code=500, detail="LLM service not configured")
+    
+    model_to_use = settings.get("level_image_model", "gpt-image-1")
     
     try:
         from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
@@ -6747,7 +6761,7 @@ async def generate_single_image(
         # Generate image
         images = await image_gen.generate_images(
             prompt=image_prompt,
-            model="gpt-image-1",
+            model=model_to_use,
             number_of_images=1
         )
         
