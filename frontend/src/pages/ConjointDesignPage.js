@@ -991,7 +991,7 @@ const ConjointDesignPage = () => {
   };
 
   const handleCopySurveyLink = () => {
-    const surveyLink = `${window.location.origin}/survey/conjoint/${studyId}`;
+    const surveyLink = `${window.location.origin}/research/conjoint/${studyId}/survey`;
     navigator.clipboard.writeText(surveyLink);
     toast.success('คัดลอกลิงก์แล้ว!');
   };
