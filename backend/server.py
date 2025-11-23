@@ -7490,14 +7490,9 @@ async def get_survey(study_id: str):
         raise HTTPException(status_code=404, detail="Study not found")
     
     current_status = study.get("status")
-    logging.info(f"[SURVEY] Study '{study.get('title')}' has status: {current_status}")
+    logging.info(f"[SURVEY] Study '{study.get('title')}' has status: {current_status} - allowing access regardless of status")
     
-    if current_status != ConjointStudyStatus.ACTIVE:
-        logging.warning(f"[SURVEY] Study is not active. Status: {current_status}, Expected: {ConjointStudyStatus.ACTIVE}")
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Survey is not active yet. Current status: {current_status}. Please complete the study setup and start the survey."
-        )
+    # No status check - allow access with any status if URL is known
     
     # Optimize: Send only necessary data for survey display
     # Remove large profile images if they exist, keep only attribute_levels
