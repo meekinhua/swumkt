@@ -7152,6 +7152,45 @@ async def upload_profile_image(
         "image_url": request.image_url
     }
 
+# Start survey - lock study from structural changes
+@api_router.post("/conjoint/studies/{study_id}/start-survey")
+async def start_survey(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Start survey - locks the study from structural changes
+    After starting, users can only edit names, descriptions, and images
+    Cannot add/remove attributes or levels
+    """
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if design is generated
+    if not study.get("choice_sets") or len(study.get("choice_sets", [])) == 0:
+        raise HTTPException(status_code=400, detail="Please generate D-Optimal design before starting survey")
+    
+    # Update study status
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {
+            "$set": {
+                "survey_started": True,
+                "survey_start_date": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": "Survey started successfully",
+        "survey_started": True
+    }
+
 # Get image generation settings
 @api_router.get("/admin/conjoint-image-settings")
 async def get_image_generation_settings(
