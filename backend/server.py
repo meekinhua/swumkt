@@ -7930,10 +7930,13 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
     
     # Map coefficients back to levels
     regression_results = {
+        "method": "Linear Regression (OLS)",
         "intercept": float(intercept),
         "r_squared": float(r_squared),
         "n_observations": len(y),
-        "coefficients": {}
+        "coefficients": {},
+        "utility_scale": "coefficient",
+        "utility_interpretation": "OLS regression coefficients (reference level = 0). Positive = increases choice probability"
     }
     
     coef_idx = 0
