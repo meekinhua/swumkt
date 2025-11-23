@@ -695,7 +695,7 @@ const ConjointResultsPage = () => {
                     <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200">
                       <p className="text-sm text-gray-600 mb-1">Intercept (β₀)</p>
                       <p className="text-3xl font-black text-purple-600">
-                        {statisticalData.regression?.intercept.toFixed(4)}
+                        {(statisticalData.results?.intercept || 0).toFixed(4)}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Baseline probability</p>
                     </div>
