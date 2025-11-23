@@ -139,11 +139,11 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
 
       {/* Image Preview */}
       {imageUrl ? (
-        <div className="relative mb-3">
+        <div className="relative mb-3 w-full aspect-square">
           <img 
             src={imageUrl} 
             alt={`Profile ${String.fromCharCode(65 + profileIndex)}`}
-            className="w-full h-40 object-cover rounded border-2 border-blue-300"
+            className="w-full h-full object-cover rounded border-2 border-blue-300"
             onError={(e) => {
               e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Image</text></svg>';
             }}
@@ -156,7 +156,7 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
           </button>
         </div>
       ) : (
-        <div className="w-full h-40 bg-blue-50 rounded border-2 border-dashed border-blue-300 flex items-center justify-center mb-3">
+        <div className="w-full aspect-square bg-blue-50 rounded border-2 border-dashed border-blue-300 flex items-center justify-center mb-3">
           <div className="text-center">
             <ImageIcon className="w-8 h-8 text-blue-400 mx-auto mb-1" />
             <span className="text-xs text-blue-600">Composite Image</span>
