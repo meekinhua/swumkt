@@ -1041,6 +1041,12 @@ const ConjointDesignPage = () => {
                               type="text"
                               value={level.value}
                               onChange={(e) => handleUpdateLevel(attr.id, level.id, 'value', e.target.value)}
+                              onBlur={(e) => handleAutoSaveLevel(attr.id, level.id, 'value', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.target.blur();
+                                }
+                              }}
                               placeholder="Level value (เช่น: 10,000 บาท)"
                               className="w-full p-2 border-2 border-gray-300 rounded-lg font-semibold focus:border-[#00A9CE] focus:outline-none"
                             />
@@ -1048,6 +1054,12 @@ const ConjointDesignPage = () => {
                               type="text"
                               value={level.description || ''}
                               onChange={(e) => handleUpdateLevel(attr.id, level.id, 'description', e.target.value)}
+                              onBlur={(e) => handleAutoSaveLevel(attr.id, level.id, 'description', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.target.blur();
+                                }
+                              }}
                               placeholder="คำอธิบาย Level (optional - เช่น: ราคาระดับเริ่มต้น)"
                               className="w-full p-2 border-2 border-gray-200 rounded-lg text-sm text-gray-700 focus:border-[#00A9CE] focus:outline-none"
                             />
