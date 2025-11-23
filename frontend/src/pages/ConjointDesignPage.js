@@ -580,6 +580,7 @@ const ConjointDesignPage = () => {
       }
       return attr;
     }));
+    setIsDirty(true); // Mark as changed
   };
 
   const handleRemoveLevel = (attrId, levelId) => {
@@ -592,6 +593,7 @@ const ConjointDesignPage = () => {
       }
       return attr;
     }));
+    setIsDirty(true); // Mark as changed
   };
 
   const handleUpdateLevel = (attrId, levelId, field, value) => {
@@ -606,6 +608,7 @@ const ConjointDesignPage = () => {
       }
       return attr;
     }));
+    setIsDirty(true); // Mark as changed
   };
 
   const handleCopySurveyLink = () => {
