@@ -20,7 +20,8 @@ import {
   AlertCircle,
   CheckCircle,
   PieChart as PieChartIcon,
-  BarChart3
+  BarChart3,
+  GraduationCap
 } from 'lucide-react';
 import {
   PieChart,
