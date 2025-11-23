@@ -908,10 +908,10 @@ const AdminSettings = () => {
                         </select>
                       </div>
                       
-                      {/* Prompt Template */}
+                      {/* Prompt Template - ไม่มี Reference */}
                       <div>
                         <Label className="text-sm font-bold text-indigo-900 mb-2 block">
-                          Prompt Template
+                          Prompt Template (ไม่มีรูปอ้างอิง)
                         </Label>
                         <Textarea
                           value={conjointImageSettings.profile_image_prompt_template}
@@ -924,6 +924,25 @@ const AdminSettings = () => {
                         />
                         <p className="text-xs text-indigo-700 mt-1">
                           💡 ใช้ {`{composition}`} สำหรับ profile composition
+                        </p>
+                      </div>
+                      
+                      {/* Prompt Template - มี Reference */}
+                      <div>
+                        <Label className="text-sm font-bold text-indigo-900 mb-2 block">
+                          Prompt Template (มีรูปอ้างอิง)
+                        </Label>
+                        <Textarea
+                          value={conjointImageSettings.profile_image_prompt_with_ref || ''}
+                          onChange={(e) => setConjointImageSettings({
+                            ...conjointImageSettings,
+                            profile_image_prompt_with_ref: e.target.value
+                          })}
+                          className="min-h-[100px] font-mono text-sm border-2 border-indigo-300 focus:border-indigo-600 bg-indigo-50"
+                          placeholder="Using the reference images as style guide..."
+                        />
+                        <p className="text-xs text-indigo-700 mt-1">
+                          🎨 Prompt นี้ใช้เมื่อผู้ใช้เลือกรูปอ้างอิง
                         </p>
                       </div>
                     </div>
