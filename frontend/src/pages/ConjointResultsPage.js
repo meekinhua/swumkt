@@ -781,8 +781,8 @@ const ConjointResultsPage = () => {
                   <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
                     <p className="text-sm font-bold text-gray-900 mb-2">📐 สมการ Regression Model:</p>
                     <div className="font-mono text-xs bg-white p-3 rounded border border-purple-300 overflow-x-auto">
-                      <p>P(Choice) = {statisticalData.regression?.intercept.toFixed(4)}</p>
-                      {Object.entries(statisticalData.regression?.coefficients || {}).map(([attrId, attrData]) => {
+                      <p>P(Choice) = {(statisticalData.results?.intercept || 0).toFixed(4)}</p>
+                      {Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
                         return Object.values(attrData.levels)
                           .filter(level => !level.is_reference)
                           .map((level, idx) => (
