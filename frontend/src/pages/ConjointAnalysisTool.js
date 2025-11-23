@@ -198,14 +198,18 @@ const ConjointAnalysisTool = () => {
               {studies.map((study) => (
                 <div
                   key={study.id}
-                  onClick={() => handleStudyClick(study)}
-                  className="p-6 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] hover:shadow-md transition-all cursor-pointer"
+                  className="p-6 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] hover:shadow-md transition-all"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-bold text-gray-900">{study.title}</h3>
                         {getStatusBadge(study.status)}
+                        {study.survey_started && (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                            🟢 สำรวจเปิด
+                          </span>
+                        )}
                       </div>
                       
                       {study.description && (
@@ -234,7 +238,35 @@ const ConjointAnalysisTool = () => {
                       </div>
                     </div>
 
-                    <ArrowRight className="w-6 h-6 text-gray-400" />
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-2 min-w-[120px]">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStudyAction(study, 'edit');
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-2 border-blue-500 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Settings className="w-4 h-4 mr-1" />
+                        แก้ไข
+                      </Button>
+                      
+                      {study.respondent_count > 0 && (
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStudyAction(study, 'view');
+                          }}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <BarChart3 className="w-4 h-4 mr-1" />
+                          ดูรายงาน
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
