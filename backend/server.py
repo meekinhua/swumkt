@@ -7668,6 +7668,25 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
                 "levels": levels_dict
             }
         
+        # Calculate importance scores (range of utilities for each attribute)
+        importance_scores = {}
+        total_range = 0
+        ranges = {}
+        
+        for attr_id, pw_data in part_worths.items():
+            utilities = [level["utility"] for level in pw_data["levels"].values()]
+            if utilities:
+                attr_range = max(utilities) - min(utilities)
+                ranges[attr_id] = attr_range
+                total_range += attr_range
+        
+        if total_range > 0:
+            for attr_id, attr_range in ranges.items():
+                importance_scores[attr_id] = {
+                    "name": part_worths[attr_id]["name"],
+                    "importance": round((attr_range / total_range) * 100, 2)
+                }
+        
         # Calculate McFadden's pseudo R-squared manually
         llf = result.llf
         llnull = result.llnull if hasattr(result, 'llnull') else None
