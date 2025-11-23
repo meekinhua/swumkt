@@ -361,17 +361,19 @@ const AdminSettings = () => {
         `${API}/admin/conjoint-image-settings`,
         {
           level_image_prompt_template: conjointImageSettings.level_image_prompt_template,
+          level_image_prompt_with_ref: conjointImageSettings.level_image_prompt_with_ref,
           level_image_model: conjointImageSettings.level_image_model,
           profile_image_prompt_template: conjointImageSettings.profile_image_prompt_template,
+          profile_image_prompt_with_ref: conjointImageSettings.profile_image_prompt_with_ref,
           profile_image_model: conjointImageSettings.profile_image_model
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success('Image generation settings saved successfully');
+      toast.success('บันทึกการตั้งค่าสำเร็จ!');
       fetchAllSettings();
     } catch (error) {
       console.error('Error saving image settings:', error);
-      toast.error('Failed to save image settings');
+      toast.error('ไม่สามารถบันทึกการตั้งค่าได้');
     } finally {
       setSavingConjointImage(false);
     }
