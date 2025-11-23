@@ -7376,11 +7376,12 @@ async def start_survey(
     if not study.get("choice_sets") or len(study.get("choice_sets", [])) == 0:
         raise HTTPException(status_code=400, detail="Please generate D-Optimal design before starting survey")
     
-    # Update study status
+    # Update study status to ACTIVE
     await db.conjoint_studies.update_one(
         {"id": study_id},
         {
             "$set": {
+                "status": ConjointStudyStatus.ACTIVE,
                 "survey_started": True,
                 "survey_start_date": datetime.now(timezone.utc),
                 "updated_at": datetime.now(timezone.utc)
@@ -7390,7 +7391,8 @@ async def start_survey(
     
     return {
         "message": "Survey started successfully",
-        "survey_started": True
+        "survey_started": True,
+        "status": ConjointStudyStatus.ACTIVE
     }
 
 # Get image generation settings
