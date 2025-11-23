@@ -7707,7 +7707,9 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "log_likelihood": float(result.llf),
             "pseudo_r_squared": float(pseudo_r2),
             "aic": float(aic),
-            "n_observations": int(len(y))
+            "n_observations": int(len(y)),
+            "utility_scale": "logit",
+            "utility_interpretation": "Logit coefficients (reference level = 0). Positive = preferred, Negative = less preferred"
         }
     except Exception as e:
         logging.error(f"MNL analysis error: {e}")
