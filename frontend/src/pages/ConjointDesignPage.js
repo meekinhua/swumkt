@@ -897,7 +897,8 @@ const ConjointDesignPage = () => {
                       onClick={() => handleRemoveAttribute(attr.id)}
                       variant="ghost"
                       size="sm"
-                      className="text-red-600 hover:text-red-700 ml-2"
+                      disabled={surveyStarted}
+                      className={`text-red-600 hover:text-red-700 ml-2 ${surveyStarted ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
