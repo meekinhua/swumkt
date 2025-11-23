@@ -1104,17 +1104,17 @@ const ConjointDesignPage = () => {
                     <div className="flex-1 overflow-hidden">
                       <p className="text-xs text-gray-500 mb-1">ลิงก์สำหรับผู้ตอบแบบสอบถาม:</p>
                       <a
-                        href={`${window.location.origin}/research/conjoint/${studyId}/survey`}
+                        href={`${window.location.origin}/survey/conjoint/${studyId}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 font-mono text-sm break-all underline"
                       >
-                        {`${window.location.origin}/research/conjoint/${studyId}/survey`}
+                        {`${window.location.origin}/survey/conjoint/${studyId}`}
                       </a>
                     </div>
                     <Button
                       onClick={() => {
-                        const surveyLink = `${window.location.origin}/research/conjoint/${studyId}/survey`;
+                        const surveyLink = `${window.location.origin}/survey/conjoint/${studyId}`;
                         navigator.clipboard.writeText(surveyLink);
                         toast.success('คัดลอกลิงก์แล้ว!');
                       }}
