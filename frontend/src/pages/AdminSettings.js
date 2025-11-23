@@ -840,6 +840,7 @@ const AdminSettings = () => {
                         >
                           <option value="gpt-image-1">OpenAI gpt-image-1</option>
                           <option value="dall-e-3">OpenAI DALL-E 3</option>
+                          <option value="nanobanana">🍌 Nano Banana (Gemini 2.5 Flash)</option>
                         </select>
                       </div>
                       
