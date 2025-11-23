@@ -91,18 +91,28 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
   const handleGenerate = async () => {
     setGenerating(true);
     try {
+      const payload = {
+        choice_set_id: choiceSetId,
+        profile_id: profile.id
+      };
+      
+      // Add reference images if selected
+      if (selectedRefs.length > 0) {
+        payload.reference_image_indices = selectedRefs;
+      }
+      
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/generate-profile-image`,
-        {
-          choice_set_id: choiceSetId,
-          profile_id: profile.id
-        },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.image_url) {
         setImageUrl(response.data.image_url);
-        toast.success('สร้างรูป Profile สำเร็จด้วย AI!');
+        const msg = selectedRefs.length > 0 
+          ? `สร้างรูป Profile สำเร็จด้วย AI! (ใช้ ${selectedRefs.length} รูปอ้างอิง)`
+          : 'สร้างรูป Profile สำเร็จด้วย AI!';
+        toast.success(msg);
         onImageUpdated();
       } else {
         toast.warning('ไม่สามารถสร้างรูปได้');
