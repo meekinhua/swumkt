@@ -199,11 +199,11 @@ const ConjointSurveyPage = () => {
                   
                   {/* Show Profile Image if available */}
                   {hasProfileImage ? (
-                    <div className="mb-4">
+                    <div className="mb-4 w-full aspect-square">
                       <img
                         src={profile.profile_image_url}
                         alt={`Profile ${String.fromCharCode(65 + idx)}`}
-                        className="w-full h-48 object-cover rounded border-2 border-gray-200"
+                        className="w-full h-full object-cover rounded border-2 border-gray-200"
                         onError={(e) => {
                           e.target.style.display = 'none';
                         }}
