@@ -1388,6 +1388,7 @@ const ConjointDesignPage = () => {
                         level={level}
                         token={token}
                         onImageUpdated={loadStudy}
+                        referenceImages={referenceImages}
                       />
                     ))}
                   </div>
