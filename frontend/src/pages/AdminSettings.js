@@ -320,6 +320,27 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSaveConjointQualitative = async () => {
+    setSavingConjointQualitative(true);
+    try {
+      await axios.put(
+        `${API}/admin/llm-prompts/conjoint-qualitative-analysis`,
+        { 
+          prompt_template: conjointQualitativePrompt,
+          system_message: conjointQualitativeMetadata?.system_message
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Conjoint qualitative analysis prompt saved successfully');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving conjoint prompt:', error);
+      toast.error('Failed to save conjoint prompt');
+    } finally {
+      setSavingConjointQualitative(false);
+    }
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
