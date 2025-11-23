@@ -275,6 +275,7 @@ const ConjointSurveyPage = () => {
                   <div className="space-y-3">
                     {survey.attributes.map((attr) => {
                       const level = getAttributeValue(profile, attr.id);
+                      const levelImageUrl = profile.images?.[attr.id] || level?.image_url;
                       
                       return (
                         <div key={attr.id}>
@@ -283,11 +284,11 @@ const ConjointSurveyPage = () => {
                           </div>
                           
                           {/* Show individual level image only if no profile image */}
-                          {!hasProfileImage && level?.image_url && (
+                          {!hasProfileImage && levelImageUrl && (
                             <div className="w-full aspect-square mb-2">
                               <img
-                                src={level.image_url}
-                                alt={level.value}
+                                src={levelImageUrl}
+                                alt={level?.value || attr.name}
                                 className="w-full h-full object-cover rounded"
                                 onError={(e) => {
                                   e.target.style.display = 'none';
