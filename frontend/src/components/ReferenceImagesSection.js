@@ -258,6 +258,104 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
           </p>
         </div>
       )}
+
+      {/* Test Section */}
+      {referenceImages.length > 0 && (
+        <div className="mt-6 p-4 bg-white rounded-lg border-2 border-purple-300">
+          <h4 className="text-base font-bold text-purple-900 mb-3 flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            ทดสอบ Reference Images
+          </h4>
+
+          {/* Select Reference Images */}
+          <div className="mb-4">
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">
+              เลือกรูปอ้างอิง (เลือกได้หลายรูป):
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {referenceImages.map((refImg, index) => (
+                <div key={index} className="relative">
+                  <label className="cursor-pointer block">
+                    <input
+                      type="checkbox"
+                      checked={selectedTestRefs.includes(index)}
+                      onChange={() => toggleTestRefSelection(index)}
+                      className="absolute top-1 left-1 w-4 h-4 z-10"
+                    />
+                    <img
+                      src={refImg}
+                      alt={`Ref ${index + 1}`}
+                      className={`w-full aspect-square object-cover rounded border-2 ${
+                        selectedTestRefs.includes(index) 
+                          ? 'border-purple-500 ring-2 ring-purple-300' 
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    <div className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1 rounded">
+                      #{index + 1}
+                    </div>
+                  </label>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {selectedTestRefs.length > 0 
+                ? `เลือกแล้ว ${selectedTestRefs.length} รูป` 
+                : 'ไม่ได้เลือกรูปอ้างอิง (จะสร้างแบบ Text-to-Image)'}
+            </p>
+          </div>
+
+          {/* Prompt Input */}
+          <div className="mb-4">
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">
+              Prompt:
+            </label>
+            <textarea
+              value={testPrompt}
+              onChange={(e) => setTestPrompt(e.target.value)}
+              placeholder="เช่น: A smartphone with metallic finish, modern design..."
+              className="w-full p-3 border-2 border-gray-300 rounded-lg text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+              rows="3"
+            />
+          </div>
+
+          {/* Generate Button */}
+          <Button
+            onClick={handleTestGeneration}
+            disabled={generatingTest || !testPrompt.trim()}
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold"
+          >
+            {generatingTest ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                กำลังสร้างรูป...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                ทดสอบสร้างรูป
+              </>
+            )}
+          </Button>
+
+          {/* Generated Image Result */}
+          {generatedTestImage && (
+            <div className="mt-4 p-3 bg-green-50 rounded-lg border-2 border-green-300">
+              <p className="text-sm font-bold text-green-900 mb-2">✅ ผลลัพธ์:</p>
+              <img
+                src={generatedTestImage}
+                alt="Generated Test"
+                className="w-full rounded-lg border-2 border-green-400"
+              />
+              <p className="text-xs text-green-700 mt-2 text-center">
+                {selectedTestRefs.length > 0 
+                  ? `ใช้ ${selectedTestRefs.length} รูปอ้างอิง` 
+                  : 'Text-to-Image (ไม่ใช้รูปอ้างอิง)'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
