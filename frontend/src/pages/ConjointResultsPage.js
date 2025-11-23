@@ -423,13 +423,15 @@ const ConjointResultsPage = () => {
               </h2>
               <p className="text-sm text-gray-600">
                 แผนภูมิวงกลมแสดงสัดส่วนความสำคัญ (% จาก 100%) <br/>
-                <span className="text-xs text-gray-500">
-                  📊 วิธีการคำนวณ: นับจำนวนครั้งที่แต่ละ level ถูกเลือก (Counting Method)
+                <span className="text-xs text-blue-600 font-medium">
+                  📊 วิธีการคำนวณปัจจุบัน: {getMethodName(selectedMethod)}
                 </span>
                 <br/>
-                <span className="text-xs text-amber-600 font-medium">
-                  ⚠️ หมายเหตุ: ค่าความสำคัญในแท็บ "เชิงวิชาการและสถิติ" อาจแตกต่างจากนี้ เพราะคำนวณจากวิธีทางสถิติ (Logit/Regression coefficients)
-                </span>
+                {currentResults?.utility_interpretation && (
+                  <span className="text-xs text-gray-500 italic">
+                    {currentResults.utility_interpretation}
+                  </span>
+                )}
               </p>
             </div>
           </div>
