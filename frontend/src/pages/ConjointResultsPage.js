@@ -699,11 +699,48 @@ const ConjointResultsPage = () => {
 
               <div className="mt-4 p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
                 <p className="text-sm text-gray-700 mb-2">
-                  <strong>📐 สูตรการคำนวณ:</strong>
+                  <strong>📐 สูตรการคำนวณ ({getMethodName(selectedMethod)}):</strong>
                 </p>
                 <div className="font-mono text-xs bg-white p-3 rounded border border-orange-300">
-                  <p>Range<sub>i</sub> = Max(Utility<sub>i</sub>) - Min(Utility<sub>i</sub>)</p>
-                  <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                  {selectedMethod === 'counting' && (
+                    <>
+                      <p>Selection%<sub>i</sub> = (Count<sub>i</sub> / Total Count) × 100%</p>
+                      <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                      <p className="mt-2 text-gray-600">หมายเหตุ: นับจำนวนครั้งที่แต่ละ level ถูกเลือก</p>
+                    </>
+                  )}
+                  {selectedMethod === 'mnl' && (
+                    <>
+                      <p>β<sub>i</sub> = Logit coefficient จาก MNL model</p>
+                      <p className="mt-2">Range<sub>i</sub> = Max(β<sub>i</sub>) - Min(β<sub>i</sub>)</p>
+                      <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                      <p className="mt-2 text-gray-600">หมายเหตุ: reference level มี β = 0</p>
+                    </>
+                  )}
+                  {selectedMethod === 'linear_regression' && (
+                    <>
+                      <p>β<sub>i</sub> = OLS regression coefficient</p>
+                      <p className="mt-2">Range<sub>i</sub> = Max(β<sub>i</sub>) - Min(β<sub>i</sub>)</p>
+                      <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                      <p className="mt-2 text-gray-600">หมายเหตุ: reference level มี β = 0</p>
+                    </>
+                  )}
+                  {selectedMethod === 'mixed_logit' && (
+                    <>
+                      <p>β<sub>i</sub> = Mean coefficient จาก Mixed Logit model</p>
+                      <p className="mt-2">Range<sub>i</sub> = Max(β<sub>i</sub>) - Min(β<sub>i</sub>)</p>
+                      <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                      <p className="mt-2 text-gray-600">หมายเหตุ: แสดง heterogeneity ของ preferences</p>
+                    </>
+                  )}
+                  {selectedMethod === 'hierarchical_bayes' && (
+                    <>
+                      <p>β<sub>i</sub> = Population mean จาก HB model</p>
+                      <p className="mt-2">Range<sub>i</sub> = Max(β<sub>i</sub>) - Min(β<sub>i</sub>)</p>
+                      <p className="mt-2">Importance<sub>i</sub> = (Range<sub>i</sub> / Σ Range<sub>all</sub>) × 100%</p>
+                      <p className="mt-2 text-gray-600">หมายเหตุ: Individual-level estimates aggregated</p>
+                    </>
+                  )}
                 </div>
               </div>
             </Card>
