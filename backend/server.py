@@ -6938,31 +6938,33 @@ async def generate_single_image(
         # Create data URL
         image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
         
-        # Update the level with the generated image
-        for attr in attributes:
-            if attr["id"] == request.attribute_id:
-                for level in attr.get("levels", []):
-                    if level["id"] == request.level_id:
-                        level["image_url"] = image_data_url
-                        level["image_prompt"] = image_prompt
-                        break
-                break
-        
-        # Save updated attributes
-        await db.conjoint_studies.update_one(
-            {"id": study_id},
-            {
-                "$set": {
-                    "attributes": attributes,
-                    "updated_at": datetime.now(timezone.utc)
+        # Update the level with the generated image (skip for test generation)
+        if not is_test_generation:
+            for attr in attributes:
+                if attr["id"] == request.attribute_id:
+                    for level in attr.get("levels", []):
+                        if level["id"] == request.level_id:
+                            level["image_url"] = image_data_url
+                            level["image_prompt"] = image_prompt
+                            break
+                    break
+            
+            # Save updated attributes
+            await db.conjoint_studies.update_one(
+                {"id": study_id},
+                {
+                    "$set": {
+                        "attributes": attributes,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
                 }
-            }
-        )
+            )
         
         return {
-            "message": "Image generated successfully",
+            "message": "Image generated successfully" if not is_test_generation else "Test image generated successfully",
             "image_url": image_data_url,
-            "prompt_used": image_prompt
+            "prompt_used": image_prompt,
+            "is_test": is_test_generation
         }
         
     except Exception as e:
