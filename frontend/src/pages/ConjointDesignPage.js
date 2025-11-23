@@ -603,6 +603,31 @@ const ConjointDesignPage = () => {
     }
   };
 
+  const handleStartSurvey = async () => {
+    if (!designGenerated) {
+      toast.error('กรุณาสร้าง D-Optimal Design ก่อนเริ่มสำรวจ');
+      return;
+    }
+
+    setStartingSurvey(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/start-survey`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('เริ่มสำรวจสำเร็จ - ตอนนี้แก้ไขได้เฉพาะชื่อ คำอธิบาย และรูปภาพ');
+      setSurveyStarted(true);
+      await loadStudy();
+    } catch (error) {
+      console.error('Error starting survey:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถเริ่มสำรวจได้');
+    } finally {
+      setStartingSurvey(false);
+    }
+  };
+
   const handleGenerateDesign = async () => {
     if (attributes.length === 0) {
       toast.error('กรุณาบันทึก attributes ก่อน');
