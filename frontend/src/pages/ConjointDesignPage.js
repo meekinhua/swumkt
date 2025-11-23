@@ -691,6 +691,21 @@ const ConjointDesignPage = () => {
 
         {/* Attributes Section */}
         <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
+          {/* Unsaved Changes Warning */}
+          {isDirty && (
+            <div className="mb-4 p-4 bg-orange-50 border-2 border-orange-300 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-orange-900 mb-1">
+                  ⚠️ มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก
+                </p>
+                <p className="text-xs text-orange-700">
+                  กรุณากดปุ่ม "บันทึก Attributes & Levels" ด้านขวาบนก่อนสร้าง D-Optimal Design
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-gray-900">
               Attributes & Levels
@@ -706,10 +721,10 @@ const ConjointDesignPage = () => {
               </Button>
               <Button
                 onClick={handleSaveAttributes}
-                className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white"
+                className={`bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white ${isDirty ? 'animate-pulse ring-4 ring-orange-300' : ''}`}
               >
                 <Save className="w-4 h-4 mr-2" />
-                บันทึก
+                บันทึก Attributes & Levels
               </Button>
             </div>
           </div>
