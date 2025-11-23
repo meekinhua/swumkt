@@ -6857,8 +6857,11 @@ async def generate_single_image(
             # Convert to base64
             image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
+        # Compress image to stay within MongoDB limits
+        compressed_base64 = compress_base64_image(image_base64, max_size_mb=12.0)
+        
         # Create data URL
-        image_data_url = f"data:image/png;base64,{image_base64}"
+        image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
         
         # Update the level with the generated image
         for attr in attributes:
@@ -7048,8 +7051,11 @@ async def generate_profile_image(
             # Convert to base64
             image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
+        # Compress image to stay within MongoDB limits
+        compressed_base64 = compress_base64_image(image_base64, max_size_mb=12.0)
+        
         # Create data URL
-        image_data_url = f"data:image/png;base64,{image_base64}"
+        image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
         
         # Update the profile with the generated image
         for choice_set in choice_sets:
