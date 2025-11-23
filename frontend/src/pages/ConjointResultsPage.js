@@ -48,6 +48,8 @@ const ConjointResultsPage = () => {
   const [loadingAI, setLoadingAI] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(true);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'academic'
+  const [regressionData, setRegressionData] = useState(null);
+  const [loadingRegression, setLoadingRegression] = useState(false);
 
   useEffect(() => {
     if (user && token && studyId) {
