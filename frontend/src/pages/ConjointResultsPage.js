@@ -679,7 +679,7 @@ const ConjointResultsPage = () => {
                     <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-200">
                       <p className="text-sm text-gray-600 mb-1">R² (Coefficient of Determination)</p>
                       <p className="text-3xl font-black text-indigo-600">
-                        {(statisticalData.regression?.r_squared * 100).toFixed(2)}%
+                        {(statisticalData.results?.r_squared * 100 || statisticalData.results?.pseudo_r_squared * 100 || 0).toFixed(2)}%
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Model fit quality</p>
                     </div>
