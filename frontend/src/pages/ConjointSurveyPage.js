@@ -138,9 +138,36 @@ const ConjointSurveyPage = () => {
 
   if (!survey) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <Card className="p-8 max-w-md text-center">
-          <p className="text-gray-700 font-semibold">ไม่พบแบบสอบถาม</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <Card className="p-8 max-w-lg text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">ไม่พบแบบสอบถาม</h2>
+          <div className="text-left bg-gray-50 p-4 rounded-lg mb-4">
+            <p className="text-sm text-gray-700 mb-2">
+              <strong>🔍 ข้อมูลการ Debug:</strong>
+            </p>
+            <p className="text-xs text-gray-600 font-mono break-all mb-2">
+              Study ID: {studyId}
+            </p>
+            <p className="text-xs text-gray-600">
+              กรุณาตรวจสอบ Console (F12) เพื่อดูรายละเอียด error
+            </p>
+          </div>
+          <div className="text-sm text-gray-700 space-y-2">
+            <p>💡 <strong>สาเหตุที่เป็นไปได้:</strong></p>
+            <ul className="text-left list-disc list-inside space-y-1 text-gray-600">
+              <li>แบบสอบถามยังไม่เปิดรับคำตอบ</li>
+              <li>Study ID ไม่ถูกต้อง</li>
+              <li>แบบสอบถามถูกลบหรือถูกปิดไปแล้ว</li>
+              <li>ปัญหาการเชื่อมต่อเครือข่าย</li>
+            </ul>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            ลองใหม่อีกครั้ง
+          </button>
         </Card>
       </div>
     );
