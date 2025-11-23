@@ -100,7 +100,7 @@ const MarketResearch = () => {
         'แชร์แบบสอบถามแบบ Choice-Based',
         'วิเคราะห์ผลด้วย Hierarchical Bayes'
       ],
-      gradient: 'from-[#7C3AED] via-[#A78BFA] to-[#C4B5FD]',
+      gradient: 'from-[#007B9A] via-[#00A9CE] to-[#33BCDA]',
       comingSoon: false,
       path: '/market-research/conjoint-analysis'
     },
