@@ -549,7 +549,7 @@ test_plan:
     - "Conjoint Analysis AI Image Generation - Level Images: ✅ PASSED"
     - "Conjoint Analysis AI Image Generation - Profile Images: ✅ PASSED"
     - "Conjoint Analysis AI Image Generation - Image Persistence: ✅ PASSED"
-    - "Conjoint Analysis Results - Initial Load และ Method Switching: ✅ PASSED"
+    - "Conjoint Analysis Results - MNL เป็น Default Method: ✅ PASSED"
 
   - task: "แก้ไข mouse-wheel zoom ใน CustomerJourneyTool expanded view"
     implemented: true
