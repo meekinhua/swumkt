@@ -7651,6 +7651,10 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         llnull = result.llnull if hasattr(result, 'llnull') else None
         pseudo_r2 = 1 - (llf / llnull) if llnull else 0.0
         
+        # Calculate AIC manually: AIC = -2*llf + 2*k (where k is number of parameters)
+        k = len(result.params)
+        aic = -2 * llf + 2 * k
+        
         return {
             "method": "Multinomial Logit (MNL)",
             "coefficients": {name: float(coef) for name, coef in result.params.items()},
@@ -7659,7 +7663,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "p_values": {name: float(p) for name, p in result.pvalues.items()},
             "log_likelihood": float(result.llf),
             "pseudo_r_squared": float(pseudo_r2),
-            "aic": float(result.aic),
+            "aic": float(aic),
             "n_observations": int(len(y)),
             "attribute_utilities": attribute_utilities
         }
