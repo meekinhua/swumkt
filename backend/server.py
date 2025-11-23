@@ -7785,12 +7785,61 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
                 mean_coefs[var] = float(np.nanmean(values))
                 std_coefs[var] = float(np.nanstd(values))
         
+        # Create part_worths format for frontend
+        part_worths = {}
+        for attr in attributes:
+            attr_id = attr["id"]
+            attr_name = attr["name"]
+            
+            levels_dict = {}
+            for level in attr.get("levels", []):
+                level_value = level["value"]
+                level_id = level["id"]
+                
+                # Get mean coefficient for this level
+                col_name = f"{attr_name}_{level_value}"
+                utility = mean_coefs.get(col_name, 0.0)
+                
+                levels_dict[level_id] = {
+                    "value": level_value,
+                    "utility": utility,
+                    "selection_count": 0  # Not applicable for Mixed Logit
+                }
+            
+            part_worths[attr_id] = {
+                "name": attr_name,
+                "levels": levels_dict
+            }
+        
+        # Calculate importance scores
+        importance_scores = {}
+        total_range = 0
+        ranges = {}
+        
+        for attr_id, pw_data in part_worths.items():
+            utilities = [level["utility"] for level in pw_data["levels"].values()]
+            if utilities:
+                attr_range = max(utilities) - min(utilities)
+                ranges[attr_id] = attr_range
+                total_range += attr_range
+        
+        if total_range > 0:
+            for attr_id, attr_range in ranges.items():
+                importance_scores[attr_id] = {
+                    "name": part_worths[attr_id]["name"],
+                    "importance": round((attr_range / total_range) * 100, 2)
+                }
+        
         return {
             "method": "Mixed Logit (Simplified)",
+            "part_worths": part_worths,
+            "importance_scores": importance_scores,
             "mean_coefficients": mean_coefs,
             "std_coefficients": std_coefs,
             "n_respondents": len(df["respondent"].unique()),
             "n_observations": len(df),
+            "utility_scale": "correlation",
+            "utility_interpretation": "Correlation coefficients showing heterogeneity across respondents (mean ± std)",
             "note": "Simplified implementation - shows preference heterogeneity across respondents"
         }
     except Exception as e:
