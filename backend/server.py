@@ -6798,22 +6798,26 @@ async def generate_single_image(
     if study["creator_id"] != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Find the attribute and level
+    # Check if this is a test generation (attribute_id/level_id = 'test')
+    is_test_generation = request.attribute_id == 'test' and request.level_id == 'test'
+    
+    # Find the attribute and level (skip for test generation)
     attributes = study.get("attributes", [])
     attr_found = None
     level_found = None
     
-    for attr in attributes:
-        if attr["id"] == request.attribute_id:
-            attr_found = attr
-            for level in attr.get("levels", []):
-                if level["id"] == request.level_id:
-                    level_found = level
-                    break
-            break
-    
-    if not attr_found or not level_found:
-        raise HTTPException(status_code=404, detail="Attribute or level not found")
+    if not is_test_generation:
+        for attr in attributes:
+            if attr["id"] == request.attribute_id:
+                attr_found = attr
+                for level in attr.get("levels", []):
+                    if level["id"] == request.level_id:
+                        level_found = level
+                        break
+                break
+        
+        if not attr_found or not level_found:
+            raise HTTPException(status_code=404, detail="Attribute or level not found")
     
     # Get image generation settings
     settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
