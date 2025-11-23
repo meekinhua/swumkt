@@ -1040,24 +1040,53 @@ const ConjointDesignPage = () => {
               )}
             </Button>
 
-            {designGenerated && (
-              <div className="mt-4 text-center">
-                <Button
-                  onClick={() => {
-                    if (isDirty) {
-                      toast.warning('กรุณาบันทึก Attributes & Levels ก่อนสร้าง Design ใหม่');
-                      return;
-                    }
-                    setDesignGenerated(false);
-                    handleGenerateDesign();
-                  }}
-                  variant="outline"
-                  className="text-sm"
-                  disabled={isDirty}
-                >
-                  <RefreshCw className="w-3 h-3 mr-2" />
-                  สร้างใหม่
-                </Button>
+            {designGenerated && !surveyStarted && (
+              <div className="mt-4 space-y-3">
+                <div className="text-center">
+                  <Button
+                    onClick={() => {
+                      if (isDirty) {
+                        toast.warning('กรุณาบันทึก Attributes & Levels ก่อนสร้าง Design ใหม่');
+                        return;
+                      }
+                      setDesignGenerated(false);
+                      handleGenerateDesign();
+                    }}
+                    variant="outline"
+                    className="text-sm"
+                    disabled={isDirty}
+                  >
+                    <RefreshCw className="w-3 h-3 mr-2" />
+                    สร้างใหม่
+                  </Button>
+                </div>
+
+                {/* Start Survey Button */}
+                <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                  <p className="text-sm text-green-800 mb-3 font-semibold">
+                    🚀 พร้อมเริ่มเก็บข้อมูลแล้ว? กดปุ่มด้านล่างเพื่อเปิดสำรวจ
+                  </p>
+                  <Button
+                    onClick={handleStartSurvey}
+                    disabled={startingSurvey}
+                    className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white font-bold"
+                  >
+                    {startingSurvey ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        กำลังเริ่มสำรวจ...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        เริ่มสำรวจ
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-green-700 mt-2">
+                    หมายเหตุ: หลังเริ่มแล้วจะแก้ไขได้เฉพาะชื่อ คำอธิบาย และรูปภาพเท่านั้น
+                  </p>
+                </div>
               </div>
             )}
           </Card>
