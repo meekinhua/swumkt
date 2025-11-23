@@ -60,6 +60,13 @@ const ConjointResultsPage = () => {
     }
   }, [user, token, studyId]);
 
+  // Load default method when results are loaded
+  useEffect(() => {
+    if (results && !currentResults) {
+      setCurrentResults(results);
+    }
+  }, [results]);
+
   const loadResults = async () => {
     try {
       const [studyRes, resultsRes] = await Promise.all([
