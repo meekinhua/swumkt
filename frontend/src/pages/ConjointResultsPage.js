@@ -46,7 +46,7 @@ const ConjointResultsPage = () => {
   const [aiInterpretation, setAiInterpretation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingAI, setLoadingAI] = useState(false);
-  const [showAllFeatures, setShowAllFeatures] = useState(false);
+  const [showAllFeatures, setShowAllFeatures] = useState(true);
 
   useEffect(() => {
     if (user && token && studyId) {
