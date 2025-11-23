@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import ReferenceImagesSection from '@/components/ReferenceImagesSection';
 import { API } from '@/App';
 import axios from 'axios';
 import { toast } from 'sonner';
