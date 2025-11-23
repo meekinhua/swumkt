@@ -1151,7 +1151,280 @@ class BackendTester:
             self.log_result("Survey Delete", False, f"Exception: {str(e)}")
             return False
 
-    # ============ CONJOINT ANALYSIS TESTS ============
+    # ============ CONJOINT ANALYSIS MNL STATISTICAL ANALYSIS TESTS ============
+    
+    def test_conjoint_mnl_admin_login(self):
+        """Test admin login for MNL statistical analysis"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            data = {
+                "email": "admin@swu.ac.th",
+                "password": "admin123"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "access_token" in result and "user" in result:
+                    self.mnl_token = result["access_token"]
+                    user = result["user"]
+                    self.log_result("MNL Admin Login", True, f"Admin login successful - {user.get('full_name', 'Admin User')}")
+                    return True
+                else:
+                    self.log_result("MNL Admin Login", False, "Missing token or user in response", result)
+                    return False
+            else:
+                self.log_result("MNL Admin Login", False, f"Admin credentials failed (HTTP {response.status_code})")
+                return False
+                
+        except Exception as e:
+            self.log_result("MNL Admin Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_get_study(self):
+        """Test getting specific conjoint study for MNL analysis"""
+        if not hasattr(self, 'mnl_token') or not self.mnl_token:
+            self.log_result("Get Study", False, "No MNL token available")
+            return False
+            
+        try:
+            study_id = "38d01d61-385e-45af-8417-93c67994db59"
+            url = f"{self.base_url}/conjoint/studies/{study_id}"
+            headers = {"Authorization": f"Bearer {self.mnl_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "id" in result and result["id"] == study_id:
+                    self.mnl_study_id = study_id
+                    study_title = result.get("title", "Unknown")
+                    status = result.get("status", "unknown")
+                    self.log_result("Get Study", True, f"Study retrieved successfully - '{study_title}' (status: {status})")
+                    return True
+                else:
+                    self.log_result("Get Study", False, "Study ID mismatch or missing", result)
+                    return False
+            else:
+                self.log_result("Get Study", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Study", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_mnl_statistical_analysis(self):
+        """Test MNL (Multinomial Logit) statistical analysis - MAIN TEST"""
+        if not hasattr(self, 'mnl_study_id') or not self.mnl_study_id:
+            self.log_result("MNL Statistical Analysis", False, "No MNL study ID available")
+            return False
+            
+        if not hasattr(self, 'mnl_token') or not self.mnl_token:
+            self.log_result("MNL Statistical Analysis", False, "No MNL token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.mnl_study_id}/statistical-analysis?method=mnl"
+            headers = {"Authorization": f"Bearer {self.mnl_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=120)  # Longer timeout for statistical analysis
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Verify status = "success"
+                if result.get("status") != "success":
+                    self.log_result("MNL Statistical Analysis", False, f"Expected status='success', got '{result.get('status')}'", result)
+                    return False
+                
+                # Verify results.method = "Multinomial Logit (MNL)"
+                results = result.get("results", {})
+                if results.get("method") != "Multinomial Logit (MNL)":
+                    self.log_result("MNL Statistical Analysis", False, f"Expected method='Multinomial Logit (MNL)', got '{results.get('method')}'", results)
+                    return False
+                
+                # Verify results.part_worths exists and has correct structure
+                part_worths = results.get("part_worths")
+                if not part_worths or not isinstance(part_worths, dict):
+                    self.log_result("MNL Statistical Analysis", False, "Missing or invalid part_worths structure", results)
+                    return False
+                
+                # Check part_worths structure: {attr_id: {name, levels: {level_id: {value, utility, selection_count}}}}
+                part_worths_valid = True
+                for attr_id, attr_data in part_worths.items():
+                    if not isinstance(attr_data, dict) or "name" not in attr_data or "levels" not in attr_data:
+                        part_worths_valid = False
+                        break
+                    levels = attr_data.get("levels", {})
+                    for level_id, level_data in levels.items():
+                        if not isinstance(level_data, dict) or not all(key in level_data for key in ["value", "utility", "selection_count"]):
+                            part_worths_valid = False
+                            break
+                    if not part_worths_valid:
+                        break
+                
+                if not part_worths_valid:
+                    self.log_result("MNL Statistical Analysis", False, "Invalid part_worths structure", part_worths)
+                    return False
+                
+                # Verify results.importance_scores exists and has correct structure
+                importance_scores = results.get("importance_scores")
+                if not importance_scores or not isinstance(importance_scores, dict):
+                    self.log_result("MNL Statistical Analysis", False, "Missing or invalid importance_scores structure", results)
+                    return False
+                
+                # Check importance_scores structure: {attr_id: {name, importance}}
+                importance_valid = True
+                for attr_id, attr_data in importance_scores.items():
+                    if not isinstance(attr_data, dict) or "name" not in attr_data or "importance" not in attr_data:
+                        importance_valid = False
+                        break
+                
+                if not importance_valid:
+                    self.log_result("MNL Statistical Analysis", False, "Invalid importance_scores structure", importance_scores)
+                    return False
+                
+                # Verify statistical fields exist
+                required_stats = ["coefficients", "std_errors", "z_values", "p_values", "log_likelihood", "pseudo_r_squared", "aic", "n_observations"]
+                missing_stats = [stat for stat in required_stats if stat not in results]
+                
+                if missing_stats:
+                    self.log_result("MNL Statistical Analysis", False, f"Missing statistical fields: {missing_stats}", results)
+                    return False
+                
+                # All verifications passed
+                n_attrs = len(part_worths)
+                n_obs = results.get("n_observations", 0)
+                pseudo_r2 = results.get("pseudo_r_squared", 0)
+                
+                self.log_result("MNL Statistical Analysis", True, 
+                              f"✅ MNL analysis successful - {n_attrs} attributes, {n_obs} observations, pseudo R² = {pseudo_r2:.3f}")
+                return True
+                
+            else:
+                self.log_result("MNL Statistical Analysis", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("MNL Statistical Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_linear_regression_analysis(self):
+        """Test Linear Regression statistical analysis - REGRESSION TEST"""
+        if not hasattr(self, 'mnl_study_id') or not self.mnl_study_id:
+            self.log_result("Linear Regression Analysis", False, "No MNL study ID available")
+            return False
+            
+        if not hasattr(self, 'mnl_token') or not self.mnl_token:
+            self.log_result("Linear Regression Analysis", False, "No MNL token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.mnl_study_id}/statistical-analysis?method=linear_regression"
+            headers = {"Authorization": f"Bearer {self.mnl_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=120)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("status") == "success":
+                    results = result.get("results", {})
+                    method = results.get("method", "")
+                    if "linear" in method.lower() or "regression" in method.lower():
+                        self.log_result("Linear Regression Analysis", True, f"Linear regression working - method: {method}")
+                        return True
+                    else:
+                        self.log_result("Linear Regression Analysis", False, f"Unexpected method: {method}", results)
+                        return False
+                else:
+                    self.log_result("Linear Regression Analysis", False, f"Status not success: {result.get('status')}", result)
+                    return False
+            else:
+                self.log_result("Linear Regression Analysis", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Linear Regression Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_mixed_logit_analysis(self):
+        """Test Mixed Logit statistical analysis - REGRESSION TEST"""
+        if not hasattr(self, 'mnl_study_id') or not self.mnl_study_id:
+            self.log_result("Mixed Logit Analysis", False, "No MNL study ID available")
+            return False
+            
+        if not hasattr(self, 'mnl_token') or not self.mnl_token:
+            self.log_result("Mixed Logit Analysis", False, "No MNL token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.mnl_study_id}/statistical-analysis?method=mixed_logit"
+            headers = {"Authorization": f"Bearer {self.mnl_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=120)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("status") == "success":
+                    results = result.get("results", {})
+                    method = results.get("method", "")
+                    if "mixed" in method.lower() or "logit" in method.lower():
+                        self.log_result("Mixed Logit Analysis", True, f"Mixed logit working - method: {method}")
+                        return True
+                    else:
+                        self.log_result("Mixed Logit Analysis", False, f"Unexpected method: {method}", results)
+                        return False
+                else:
+                    self.log_result("Mixed Logit Analysis", False, f"Status not success: {result.get('status')}", result)
+                    return False
+            else:
+                self.log_result("Mixed Logit Analysis", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Mixed Logit Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    def test_conjoint_hierarchical_bayes_analysis(self):
+        """Test Hierarchical Bayes statistical analysis - REGRESSION TEST"""
+        if not hasattr(self, 'mnl_study_id') or not self.mnl_study_id:
+            self.log_result("Hierarchical Bayes Analysis", False, "No MNL study ID available")
+            return False
+            
+        if not hasattr(self, 'mnl_token') or not self.mnl_token:
+            self.log_result("Hierarchical Bayes Analysis", False, "No MNL token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/conjoint/studies/{self.mnl_study_id}/statistical-analysis?method=hierarchical_bayes"
+            headers = {"Authorization": f"Bearer {self.mnl_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=120)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("status") == "success":
+                    results = result.get("results", {})
+                    method = results.get("method", "")
+                    if "hierarchical" in method.lower() or "bayes" in method.lower():
+                        self.log_result("Hierarchical Bayes Analysis", True, f"Hierarchical Bayes working - method: {method}")
+                        return True
+                    else:
+                        self.log_result("Hierarchical Bayes Analysis", False, f"Unexpected method: {method}", results)
+                        return False
+                else:
+                    self.log_result("Hierarchical Bayes Analysis", False, f"Status not success: {result.get('status')}", result)
+                    return False
+            else:
+                self.log_result("Hierarchical Bayes Analysis", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Hierarchical Bayes Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    # ============ ORIGINAL CONJOINT ANALYSIS TESTS ============
     
     def test_conjoint_admin_login(self):
         """Test admin login for conjoint analysis"""
