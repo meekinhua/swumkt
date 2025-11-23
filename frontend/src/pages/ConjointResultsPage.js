@@ -84,12 +84,21 @@ const ConjointResultsPage = () => {
   const loadStatisticalAnalysis = async (method) => {
     setLoadingStatistical(true);
     try {
-      const response = await axios.get(
-        `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setStatisticalData(response.data);
-      toast.success(`วิเคราะห์ด้วย ${getMethodName(method)} สำเร็จ!`);
+      if (method === 'counting') {
+        // Use original results for counting method
+        setCurrentResults(results);
+        setStatisticalData(null);
+        toast.success('แสดงผลแบบ Counting Method');
+      } else {
+        // Load statistical analysis
+        const response = await axios.get(
+          `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setStatisticalData(response.data);
+        setCurrentResults(response.data.results);
+        toast.success(`วิเคราะห์ด้วย ${getMethodName(method)} สำเร็จ!`);
+      }
     } catch (error) {
       console.error('Error loading statistical analysis:', error);
       toast.error('ไม่สามารถวิเคราะห์ได้');
