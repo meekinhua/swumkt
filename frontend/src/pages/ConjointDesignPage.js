@@ -501,6 +501,7 @@ const ConjointDesignPage = () => {
       );
 
       toast.success('บันทึก attributes สำเร็จ');
+      setIsDirty(false); // Clear dirty flag after successful save
       await loadStudy();
     } catch (error) {
       console.error('Error saving attributes:', error);
