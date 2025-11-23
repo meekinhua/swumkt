@@ -7734,6 +7734,44 @@ def calculate_importance_scores(part_worths: Dict, study: Dict) -> Dict[str, flo
     
     return importance_scores
 
+@api_router.get("/conjoint/studies/{study_id}/regression")
+async def get_regression_analysis(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get regression analysis results"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get responses
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if len(responses) < 30:
+        return {
+            "status": "insufficient_data",
+            "message": "Need at least 30 responses for regression analysis",
+            "respondent_count": len(responses)
+        }
+    
+    # Calculate regression
+    regression_results = calculate_regression_analysis(study, responses)
+    
+    if not regression_results:
+        raise HTTPException(status_code=500, detail="Failed to perform regression analysis")
+    
+    return {
+        "status": "success",
+        "respondent_count": len(responses),
+        "regression": regression_results
+    }
+
 # Get AI interpretation of results
 @api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
 async def get_ai_interpretation(
