@@ -721,7 +721,7 @@ const ConjointResultsPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(statisticalData.regression?.coefficients || {}).map(([attrId, attrData]) => {
+                        {Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
                           const levels = Object.values(attrData.levels);
                           return levels.map((level, levelIdx) => (
                             <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
