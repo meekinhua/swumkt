@@ -224,14 +224,16 @@ const ConjointSurveyPage = () => {
                           
                           {/* Show individual level image only if no profile image */}
                           {!hasProfileImage && level?.image_url && (
-                            <img
-                              src={level.image_url}
-                              alt={level.value}
-                              className="w-full h-32 object-cover rounded mb-2"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
+                            <div className="w-full aspect-square mb-2">
+                              <img
+                                src={level.image_url}
+                                alt={level.value}
+                                className="w-full h-full object-cover rounded"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
                           )}
                           
                           <div className="text-sm font-bold text-gray-900">
