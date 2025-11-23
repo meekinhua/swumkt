@@ -820,22 +820,91 @@ const AdminSettings = () => {
                     />
                   </div>
 
-                  {/* Info Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-                      <h4 className="font-bold text-purple-900 mb-2">Level Image Generation</h4>
-                      <p className="text-sm text-purple-700">
-                        รูปภาพแต่ละ level ถูกสร้างด้วย OpenAI gpt-image-1<br/>
-                        Prompt: "Professional product visualization: {`{attribute}`} - {`{level}`}"
-                      </p>
-                    </div>
+                  {/* Level Image Generation Settings */}
+                  <div className="p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                    <h3 className="text-lg font-bold text-purple-900 mb-4">Level Image Generation</h3>
                     
-                    <div className="p-4 bg-indigo-50 rounded-lg border-2 border-indigo-200">
-                      <h4 className="font-bold text-indigo-900 mb-2">Profile Image Generation</h4>
-                      <p className="text-sm text-indigo-700">
-                        รูป composite ของ profile ทั้งชุดถูกสร้างด้วย OpenAI gpt-image-1<br/>
-                        Prompt: "Professional product photo showing: {`{composition}`}"
-                      </p>
+                    <div className="space-y-4">
+                      {/* Model Selection */}
+                      <div>
+                        <Label className="text-sm font-bold text-purple-900 mb-2 block">
+                          Image Model
+                        </Label>
+                        <select
+                          value={conjointImageSettings.level_image_model}
+                          onChange={(e) => setConjointImageSettings({
+                            ...conjointImageSettings,
+                            level_image_model: e.target.value
+                          })}
+                          className="w-full p-2 border-2 border-purple-300 rounded-lg focus:border-purple-600 focus:outline-none"
+                        >
+                          <option value="gpt-image-1">OpenAI gpt-image-1</option>
+                          <option value="dall-e-3">OpenAI DALL-E 3</option>
+                        </select>
+                      </div>
+                      
+                      {/* Prompt Template */}
+                      <div>
+                        <Label className="text-sm font-bold text-purple-900 mb-2 block">
+                          Prompt Template
+                        </Label>
+                        <Textarea
+                          value={conjointImageSettings.level_image_prompt_template}
+                          onChange={(e) => setConjointImageSettings({
+                            ...conjointImageSettings,
+                            level_image_prompt_template: e.target.value
+                          })}
+                          className="min-h-[100px] font-mono text-sm border-2 border-purple-300 focus:border-purple-600"
+                          placeholder="Professional product visualization..."
+                        />
+                        <p className="text-xs text-purple-700 mt-1">
+                          💡 ใช้ {`{attribute_name}`} และ {`{level_value}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Profile Image Generation Settings */}
+                  <div className="p-4 bg-indigo-50 rounded-lg border-2 border-indigo-200">
+                    <h3 className="text-lg font-bold text-indigo-900 mb-4">Profile Image Generation</h3>
+                    
+                    <div className="space-y-4">
+                      {/* Model Selection */}
+                      <div>
+                        <Label className="text-sm font-bold text-indigo-900 mb-2 block">
+                          Image Model
+                        </Label>
+                        <select
+                          value={conjointImageSettings.profile_image_model}
+                          onChange={(e) => setConjointImageSettings({
+                            ...conjointImageSettings,
+                            profile_image_model: e.target.value
+                          })}
+                          className="w-full p-2 border-2 border-indigo-300 rounded-lg focus:border-indigo-600 focus:outline-none"
+                        >
+                          <option value="gpt-image-1">OpenAI gpt-image-1</option>
+                          <option value="dall-e-3">OpenAI DALL-E 3</option>
+                        </select>
+                      </div>
+                      
+                      {/* Prompt Template */}
+                      <div>
+                        <Label className="text-sm font-bold text-indigo-900 mb-2 block">
+                          Prompt Template
+                        </Label>
+                        <Textarea
+                          value={conjointImageSettings.profile_image_prompt_template}
+                          onChange={(e) => setConjointImageSettings({
+                            ...conjointImageSettings,
+                            profile_image_prompt_template: e.target.value
+                          })}
+                          className="min-h-[100px] font-mono text-sm border-2 border-indigo-300 focus:border-indigo-600"
+                          placeholder="Professional product photo showing..."
+                        />
+                        <p className="text-xs text-indigo-700 mt-1">
+                          💡 ใช้ {`{composition}`} สำหรับ profile composition
+                        </p>
+                      </div>
                     </div>
                   </div>
 
