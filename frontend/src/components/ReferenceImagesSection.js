@@ -89,7 +89,7 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
   const handleDelete = async (index) => {
     try {
       const response = await axios.delete(
-        `${API}/conjoint/studies/${studyId}/reference-images/${index}`,
+        `${API}/api/conjoint/studies/${studyId}/reference-images/${index}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
