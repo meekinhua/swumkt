@@ -435,6 +435,11 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
         payload.reference_image_indices = selectedRefs;
       }
       
+      // Add additional prompt if provided
+      if (additionalPrompt.trim()) {
+        payload.additional_prompt = additionalPrompt.trim();
+      }
+      
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/generate-single-image`,
         payload,
