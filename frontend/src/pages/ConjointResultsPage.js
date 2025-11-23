@@ -428,23 +428,65 @@ const ConjointResultsPage = () => {
                   ></div>
                 </div>
 
-                {/* Levels */}
+                {/* Bar Chart for Levels */}
                 {results.part_worths[feature.id] && (
-                  <div className="mt-3 pl-11">
-                    <p className="text-xs text-gray-600 mb-2 font-semibold">ระดับที่ผู้บริโภคชอบ:</p>
-                    <div className="space-y-1">
-                      {Object.values(results.part_worths[feature.id].levels)
-                        .sort((a, b) => b.utility - a.utility)
-                        .map((level, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-700">
-                              {idx === 0 && '⭐'} {level.value}
-                            </span>
-                            <span className="text-gray-500">
-                              {level.utility.toFixed(1)} (เลือก {level.selection_count} ครั้ง)
-                            </span>
-                          </div>
-                        ))}
+                  <div className="mt-4 pl-11">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-4 h-4 text-gray-600" />
+                      <p className="text-xs text-gray-600 font-semibold">เปรียบเทียบ Utility ของแต่ละระดับ:</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart
+                          data={Object.values(results.part_worths[feature.id].levels)
+                            .sort((a, b) => b.utility - a.utility)
+                            .map(level => ({
+                              name: level.value,
+                              utility: parseFloat(level.utility.toFixed(2)),
+                              count: level.selection_count
+                            }))}
+                          margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                          <XAxis 
+                            dataKey="name" 
+                            tick={{ fontSize: 12 }}
+                            angle={-15}
+                            textAnchor="end"
+                            height={60}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 12 }}
+                            label={{ value: 'Utility', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }}
+                          />
+                          <Tooltip 
+                            formatter={(value, name, props) => {
+                              if (name === 'utility') return [`${value}`, 'Utility'];
+                              return [value, name];
+                            }}
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border-2 border-gray-200 rounded-lg shadow-lg">
+                                    <p className="font-bold text-gray-900">{payload[0].payload.name}</p>
+                                    <p className="text-blue-600">Utility: {payload[0].value}</p>
+                                    <p className="text-green-600 text-sm">เลือก {payload[0].payload.count} ครั้ง</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar 
+                            dataKey="utility" 
+                            fill={COLORS[index % COLORS.length]}
+                            radius={[8, 8, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                      <p className="text-xs text-gray-500 text-center mt-2">
+                        💡 แท่งสูง = ผู้บริโภคให้คะแนนมากกว่า (ชอบมากกว่า)
+                      </p>
                     </div>
                   </div>
                 )}
