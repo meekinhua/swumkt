@@ -18,8 +18,23 @@ import {
   ChevronUp,
   Lightbulb,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  PieChart as PieChartIcon,
+  BarChart3
 } from 'lucide-react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid
+} from 'recharts';
 
 const ConjointResultsPage = () => {
   const navigate = useNavigate();
