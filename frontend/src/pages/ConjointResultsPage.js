@@ -172,7 +172,7 @@ const ConjointResultsPage = () => {
     );
   }
 
-  if (!results || results.status === 'insufficient_data') {
+  if (!currentResults || currentResults.status === 'insufficient_data') {
     return (
       <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
         <Navigation />
