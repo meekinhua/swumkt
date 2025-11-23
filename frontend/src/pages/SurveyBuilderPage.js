@@ -13,7 +13,7 @@ import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Library, BookMar
 import { toast } from 'sonner';
 import QuestionLibraryModal from '@/components/QuestionLibraryModal';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://choice-conjoint.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://conjoint-analysis-1.preview.emergentagent.com';
 
 const SurveyBuilderPage = () => {
   const navigate = useNavigate();
