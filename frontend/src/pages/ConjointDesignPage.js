@@ -553,6 +553,9 @@ const ConjointDesignPage = () => {
         setNumberOfSets(response.data.choice_sets.length);
       }
       
+      // Check if survey has started
+      setSurveyStarted(response.data.survey_started || false);
+      
       // Reset dirty flag after loading
       setIsDirty(false);
     } catch (error) {
