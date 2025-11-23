@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '../components/ui/button';
 import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate }) => {
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files);
