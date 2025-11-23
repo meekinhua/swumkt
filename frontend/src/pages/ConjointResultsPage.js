@@ -1055,7 +1055,7 @@ const ConjointResultsPage = () => {
                   <p className="text-sm text-gray-600 mb-1">จำนวนระดับทั้งหมด</p>
                   <p className="text-3xl font-black text-purple-600">
                     {sortedImportance.reduce((sum, f) => {
-                      return sum + Object.keys(results.part_worths[f.id]?.levels || {}).length;
+                      return sum + Object.keys(currentResults?.part_worths?.[f.id]?.levels || {}).length;
                     }, 0)}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">levels</p>
