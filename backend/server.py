@@ -7630,21 +7630,43 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         model = ConditionalLogit(y, X, groups=groups)
         result = model.fit(disp=False, maxiter=1000, method='bfgs')
         
-        # Calculate utilities/part-worths by attribute
-        attribute_utilities = {}
+        # Calculate utilities/part-worths by attribute in the format expected by frontend
+        part_worths = {}
+        
         for attr in attributes:
+            attr_id = attr["id"]
             attr_name = attr["name"]
-            attr_utils = {}
             
-            # Find columns related to this attribute
-            for col in X.columns:
-                if col.startswith(attr_name):
-                    level_name = col.replace(f"{attr_name}_", "")
-                    attr_utils[level_name] = float(result.params[col])
+            # Initialize levels dict for this attribute
+            levels_dict = {}
             
-            # Add baseline (reference level with utility = 0)
-            if attr_utils:
-                attribute_utilities[attr_name] = attr_utils
+            # Count selections for each level
+            level_counts = {}
+            for row in data_rows:
+                if row["choice"] == 1:
+                    level_value = row.get(attr_name)
+                    if level_value:
+                        level_counts[level_value] = level_counts.get(level_value, 0) + 1
+            
+            # Process each level
+            for level in attr.get("levels", []):
+                level_value = level["value"]
+                level_id = level["id"]
+                
+                # Get utility from coefficients (0 for reference level)
+                col_name = f"{attr_name}_{level_value}"
+                utility = float(result.params.get(col_name, 0.0))
+                
+                levels_dict[level_id] = {
+                    "value": level_value,
+                    "utility": utility,
+                    "selection_count": level_counts.get(level_value, 0)
+                }
+            
+            part_worths[attr_id] = {
+                "name": attr_name,
+                "levels": levels_dict
+            }
         
         # Calculate McFadden's pseudo R-squared manually
         llf = result.llf
@@ -7657,6 +7679,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         
         return {
             "method": "Multinomial Logit (MNL)",
+            "part_worths": part_worths,
             "coefficients": {name: float(coef) for name, coef in result.params.items()},
             "std_errors": {name: float(se) for name, se in result.bse.items()},
             "z_values": {name: float(z) for name, z in result.tvalues.items()},
@@ -7664,8 +7687,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "log_likelihood": float(result.llf),
             "pseudo_r_squared": float(pseudo_r2),
             "aic": float(aic),
-            "n_observations": int(len(y)),
-            "attribute_utilities": attribute_utilities
+            "n_observations": int(len(y))
         }
     except Exception as e:
         logging.error(f"MNL analysis error: {e}")
