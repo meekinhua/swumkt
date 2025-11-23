@@ -130,7 +130,7 @@ const AdminNotifications = () => {
       // Reset form
       setTitle('');
       setBody('');
-      setUrl('/');
+      setUrl('/dashboard');
       setSelectedUsers([]);
       
       // Reload stats
