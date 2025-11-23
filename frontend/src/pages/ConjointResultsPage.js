@@ -202,8 +202,8 @@ const ConjointResultsPage = () => {
     );
   }
 
-  // Sort importance scores
-  const sortedImportance = Object.entries(results.importance_scores || {})
+  // Sort importance scores (use currentResults instead of results)
+  const sortedImportance = Object.entries(currentResults?.importance_scores || {})
     .map(([id, data]) => ({ id, ...data }))
     .sort((a, b) => b.importance - a.importance);
 
