@@ -120,6 +120,14 @@ function App() {
               }
             />
             <Route
+              path="/market-research/conjoint-analysis/:studyId/results"
+              element={
+                <ProtectedRoute>
+                  <ConjointResultsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/survey/conjoint/:studyId"
               element={<ConjointSurveyPage />}
             />
