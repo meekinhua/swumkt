@@ -25,9 +25,73 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from lib.ref_extract import RefExtract
 from lib.citation_replacer import CitationReplacer
 from lib.doc_formatter import DocFormatter
+from PIL import Image
+from io import BytesIO
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Image compression utility
+def compress_base64_image(base64_str: str, max_size_mb: float = 12.0, quality: int = 85) -> str:
+    """
+    Compress base64 image to stay within MongoDB 16MB limit
+    Args:
+        base64_str: Base64 encoded image string (without data:image prefix)
+        max_size_mb: Maximum size in MB (default 12MB to leave room for other data)
+        quality: JPEG quality (1-100, default 85)
+    Returns:
+        Compressed base64 string
+    """
+    try:
+        # Decode base64 to bytes
+        img_bytes = base64.b64decode(base64_str)
+        
+        # Check if already small enough
+        current_size_mb = len(img_bytes) / (1024 * 1024)
+        if current_size_mb <= max_size_mb:
+            return base64_str
+        
+        # Open image with PIL
+        img = Image.open(BytesIO(img_bytes))
+        
+        # Convert RGBA to RGB if needed
+        if img.mode == 'RGBA':
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Try compression with reducing quality
+        for q in [quality, 75, 65, 55, 45]:
+            output = BytesIO()
+            img.save(output, format='JPEG', quality=q, optimize=True)
+            compressed_bytes = output.getvalue()
+            compressed_size_mb = len(compressed_bytes) / (1024 * 1024)
+            
+            if compressed_size_mb <= max_size_mb:
+                compressed_base64 = base64.b64encode(compressed_bytes).decode('utf-8')
+                logging.info(f"Compressed image: {current_size_mb:.2f}MB -> {compressed_size_mb:.2f}MB (quality={q})")
+                return compressed_base64
+        
+        # If still too large, resize and try again
+        logging.warning(f"Image still too large after quality reduction, resizing...")
+        max_dimension = 1024
+        img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        
+        output = BytesIO()
+        img.save(output, format='JPEG', quality=65, optimize=True)
+        compressed_bytes = output.getvalue()
+        compressed_size_mb = len(compressed_bytes) / (1024 * 1024)
+        compressed_base64 = base64.b64encode(compressed_bytes).decode('utf-8')
+        
+        logging.info(f"Resized and compressed: {current_size_mb:.2f}MB -> {compressed_size_mb:.2f}MB")
+        return compressed_base64
+        
+    except Exception as e:
+        logging.error(f"Image compression failed: {e}")
+        # Return original if compression fails
+        return base64_str
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
