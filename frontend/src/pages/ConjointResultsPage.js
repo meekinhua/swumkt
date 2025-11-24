@@ -168,6 +168,59 @@ const ConjointResultsPage = () => {
     }
   };
 
+
+  const handleGenerateProductImage = async () => {
+    setLoadingProductImage(true);
+    try {
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/generate-product-from-results`,
+        {
+          additional_prompt: productImagePrompt || undefined,
+          reference_image_indices: selectedReferenceIndices.length > 0 ? selectedReferenceIndices : undefined
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setProductImage(response.data);
+      toast.success('สร้างภาพผลิตภัณฑ์สำเร็จ!');
+    } catch (error) {
+      console.error('Error generating product image:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพผลิตภัณฑ์ได้');
+    } finally {
+      setLoadingProductImage(false);
+    }
+  };
+
+  const handleGenerateShelfSimulation = async () => {
+    if (!productImage || !productImage.image_url) {
+      toast.error('กรุณาสร้างภาพผลิตภัณฑ์ก่อน');
+      return;
+    }
+    
+    setLoadingShelfImage(true);
+    try {
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/generate-shelf-simulation`,
+        {
+          product_image_url: productImage.image_url,
+          environment_type: environmentType,
+          shelf_style: shelfStyle,
+          additional_prompt: shelfPrompt || undefined
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setShelfImage(response.data);
+      toast.success('สร้างภาพจำลองชั้นวางสำเร็จ!');
+    } catch (error) {
+      console.error('Error generating shelf simulation:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพจำลองได้');
+    } finally {
+      setLoadingShelfImage(false);
+    }
+  };
+
+
   const handleExportCSV = () => {
     if (!results || !results.responses) return;
     
