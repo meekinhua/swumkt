@@ -6604,13 +6604,25 @@ async def get_conjoint_study(
 # List user's studies
 @api_router.get("/conjoint/studies")
 async def list_conjoint_studies(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    status_filter: Optional[str] = None
 ):
-    """List all conjoint studies created by user"""
+    """List conjoint studies - all studies for admin, only owned studies for others"""
+    # Build query
+    query = {}
+    
+    # Admin can see all studies, others only their own
+    if current_user.role != UserRole.ADMIN:
+        query["creator_id"] = current_user.id
+    
+    # Apply status filter if provided
+    if status_filter and status_filter != "all":
+        query["status"] = status_filter
+    
     studies = await db.conjoint_studies.find(
-        {"creator_id": current_user.id},
+        query,
         {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
+    ).sort("created_at", -1).to_list(1000)
     
     return {"studies": studies}
 
