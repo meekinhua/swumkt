@@ -6316,6 +6316,8 @@ async def create_conjoint_study(
     """Create a new conjoint analysis study"""
     study_id = str(uuid.uuid4())
     
+    now = datetime.now(timezone.utc)
+    
     study = {
         "id": study_id,
         "title": request.title,
@@ -6323,12 +6325,21 @@ async def create_conjoint_study(
         "product_category": request.product_category,
         "status": ConjointStudyStatus.DRAFT,
         "creator_id": current_user.id,
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "creator_name": current_user.name,
+        "created_at": now,
+        "updated_at": now,
         "qualitative_data": [],
         "attributes": [],
         "choice_sets": [],
-        "respondent_count": 0
+        "respondent_count": 0,
+        "status_history": [{
+            "from_status": None,
+            "to_status": ConjointStudyStatus.DRAFT,
+            "changed_by": current_user.id,
+            "changed_by_name": current_user.name,
+            "changed_at": now,
+            "reason": "Study created"
+        }]
     }
     
     await db.conjoint_studies.insert_one(study)
