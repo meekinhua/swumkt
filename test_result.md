@@ -551,6 +551,7 @@ test_plan:
     - "Conjoint Analysis AI Image Generation - Image Persistence: ✅ PASSED"
     - "Conjoint Analysis Results - MNL เป็น Default Method: ✅ PASSED"
     - "Conjoint Analysis Results - Relative Importance บนสุด และ Dynamic Formula: ✅ PASSED"
+    - "Conjoint Analysis Status Management Feature - Complete Testing: ✅ PASSED"
 
 frontend:
   - task: "Conjoint Analysis Status Management Feature - Complete Testing"
