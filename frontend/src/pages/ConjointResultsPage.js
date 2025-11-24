@@ -54,6 +54,19 @@ const ConjointResultsPage = () => {
   const [selectedMethod, setSelectedMethod] = useState('mnl'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
   const [currentResults, setCurrentResults] = useState(null); // Results to display (either from counting or statistical)
   const [aiAnalysisMode, setAiAnalysisMode] = useState('single'); // 'single' or 'compare_all'
+  
+  // Product Image Generator states
+  const [productImagePrompt, setProductImagePrompt] = useState('');
+  const [productImage, setProductImage] = useState(null);
+  const [loadingProductImage, setLoadingProductImage] = useState(false);
+  const [selectedReferenceIndices, setSelectedReferenceIndices] = useState([]);
+  
+  // Shelf Simulation states
+  const [environmentType, setEnvironmentType] = useState('auto');
+  const [shelfStyle, setShelfStyle] = useState('eye_level');
+  const [shelfPrompt, setShelfPrompt] = useState('');
+  const [shelfImage, setShelfImage] = useState(null);
+  const [loadingShelfImage, setLoadingShelfImage] = useState(false)
 
   useEffect(() => {
     if (user && token && studyId) {
