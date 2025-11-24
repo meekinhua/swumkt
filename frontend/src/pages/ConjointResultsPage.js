@@ -53,6 +53,7 @@ const ConjointResultsPage = () => {
   const [loadingStatistical, setLoadingStatistical] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState('mnl'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
   const [currentResults, setCurrentResults] = useState(null); // Results to display (either from counting or statistical)
+  const [aiAnalysisMode, setAiAnalysisMode] = useState('single'); // 'single' or 'compare_all'
 
   useEffect(() => {
     if (user && token && studyId) {
