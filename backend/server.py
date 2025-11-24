@@ -8393,7 +8393,7 @@ async def get_ai_interpretation(
     
     # Prepare analysis data based on mode
     if request.compare_all:
-        # Analyze all methods and compare
+        # Analyze all methods and get FULL results
         methods_to_analyze = ['counting', 'linear_regression', 'mnl', 'mixed_logit', 'hierarchical_bayes']
         all_results = {}
         
@@ -8405,38 +8405,13 @@ async def get_ai_interpretation(
                 logging.warning(f"Failed to analyze with {method}: {e}")
                 continue
         
-        # Prepare comprehensive analysis summary
+        # Prepare comprehensive analysis summary with FULL data
         analysis_summary = {
             "study_title": study.get("title"),
             "respondent_count": len(responses),
             "mode": "compare_all",
-            "methods": {}
+            "methods": all_results  # Send COMPLETE results, not filtered
         }
-        
-        for method, method_data in all_results.items():
-            method_summary = {
-                "method_name": method,
-                "attributes": []
-            }
-            
-            for attr_id, scores in method_data['importance_scores'].items():
-                attr_info = {
-                    "name": scores["name"],
-                    "importance": scores["importance"],
-                    "levels": []
-                }
-                
-                if attr_id in method_data['part_worths']:
-                    for level_id, level_data in method_data['part_worths'][attr_id]["levels"].items():
-                        attr_info["levels"].append({
-                            "value": level_data["value"],
-                            "utility": level_data.get("utility", level_data.get("coefficient", 0))
-                        })
-                
-                method_summary["attributes"].append(attr_info)
-            
-            method_summary["attributes"].sort(key=lambda x: x["importance"], reverse=True)
-            analysis_summary["methods"][method] = method_summary
         
     else:
         # Single method analysis
