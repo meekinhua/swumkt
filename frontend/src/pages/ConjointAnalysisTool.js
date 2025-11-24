@@ -336,7 +336,7 @@ const ConjointAnalysisTool = () => {
                         แก้ไข
                       </Button>
                       
-                      {study.respondent_count > 0 && (
+                      {(study.respondent_count > 0 || study.respondent_count === undefined) && (
                         <Button
                           onClick={() => handleStudyAction(study, 'view')}
                           size="sm"
