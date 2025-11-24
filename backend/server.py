@@ -6523,7 +6523,9 @@ async def analyze_qualitative_data(
         }
         
     except Exception as e:
+        import traceback
         logging.error(f"Qualitative analysis error: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 # Update attributes (after reviewing LLM suggestions)
