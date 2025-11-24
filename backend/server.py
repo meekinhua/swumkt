@@ -8358,8 +8358,8 @@ async def get_method_results(study, responses, method):
         return {
             'method': 'counting',
             'part_worths': part_worths,
-            'importance_scores': importance_scores,
-
+            'importance_scores': importance_scores
+        }
 
 # Generate product image based on conjoint analysis results
 @api_router.post("/conjoint/studies/{study_id}/generate-product-from-results")
