@@ -6171,6 +6171,11 @@ class UpdateStudyStatusRequest(BaseModel):
     status: ConjointStudyStatus
     reason: Optional[str] = None  # Optional reason for status change
 
+class AIInterpretationRequest(BaseModel):
+    method: Optional[str] = "counting"  # counting, mnl, linear_regression, mixed_logit, hierarchical_bayes
+    compare_all: bool = False  # If True, analyze and compare all methods
+
+
 
 class GenerateImagesRequest(BaseModel):
     study_id: str
