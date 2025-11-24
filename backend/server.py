@@ -6547,7 +6547,6 @@ async def update_study_attributes(
         {
             "$set": {
                 "attributes": [attr.dict() for attr in request.attributes],
-                "status": ConjointStudyStatus.DESIGN,
                 "updated_at": datetime.now(timezone.utc)
             }
         }
