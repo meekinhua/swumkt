@@ -691,7 +691,7 @@ const ConjointResultsPage = () => {
                 {/* Additional Prompt */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Prompt เพิ่มเติม (ไม่บังคับ)
+                    Prompt เพิ่มเติม (ไม่บังคับ) - จะถูกใส่ไว้ด้านหน้าของ prompt
                   </label>
                   <textarea
                     value={productImagePrompt}
@@ -700,6 +700,9 @@ const ConjointResultsPage = () => {
                     rows={2}
                     className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
                   />
+                  <p className="text-xs text-green-700 mt-1">
+                    💡 Prompt นี้จะถูกเพิ่มไว้ด้านหน้าของ prompt ที่ AI สร้าง
+                  </p>
                 </div>
 
                 <Button
