@@ -8438,46 +8438,63 @@ async def get_ai_interpretation(
 คุณจะต้องอธิบายผลการวิเคราะห์ให้ผู้ใช้ทั่วไปที่ไม่มีความรู้ทางสถิติเข้าใจได้ง่าย
 ใช้ภาษาเรียบง่าย ยกตัวอย่างประกอบ และให้ข้อเสนอแนะเชิงธุรกิจที่นำไปปฏิบัติได้จริง"""
         
-        # Build prompt based on mode
+        # Build prompt based on mode with FULL data
+        import json
+        
         if analysis_summary['mode'] == 'compare_all':
-            # Compare all methods
-            methods_text = []
-            for method_name, method_data in analysis_summary['methods'].items():
-                method_display = {
-                    'counting': 'Counting Method (นับความถี่)',
-                    'linear_regression': 'Linear Regression (OLS)',
-                    'mnl': 'Multinomial Logit (MNL)',
-                    'mixed_logit': 'Mixed Logit',
-                    'hierarchical_bayes': 'Hierarchical Bayes (HB)'
-                }.get(method_name, method_name)
-                
-                attrs_text = []
-                for attr in method_data['attributes'][:3]:  # Top 3 attributes
-                    levels_text = ', '.join([f"{level['value']} ({level['utility']:.1f})" for level in attr['levels']])
-                    attrs_text.append(f"  - {attr['name']}: {attr['importance']:.1f}% (ระดับ: {levels_text})")
-                
-                methods_text.append(f"\n**{method_display}:**\n" + '\n'.join(attrs_text))
+            # Compare all methods - send COMPLETE results data
+            methods_json = json.dumps(analysis_summary['methods'], indent=2, ensure_ascii=False, default=str)
             
-            methods_summary = '\n'.join(methods_text)
-            
-            prompt = f"""วิเคราะห์และเปรียบเทียบผลการวิจัย Conjoint Analysis จากหลายวิธีการวิเคราะห์:
+            prompt = f"""วิเคราะห์และเปรียบเทียบผลการวิจัย Conjoint Analysis จากหลายวิธีการวิเคราะห์อย่างละเอียดและครอบคลุม:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
 
-ผลการวิเคราะห์จากแต่ละวิธี:
-{methods_summary}
+ผลการวิเคราะห์ทั้งหมดจากแต่ละวิธี (ข้อมูลครบถ้วน):
+```json
+{methods_json}
+```
 
-กรุณาเขียนคำอธิบายที่:
-1. **สรุปผลหลัก (3-4 ประโยค):** เปรียบเทียบผลจากทุกวิธี มีความแตกต่างหรือสอดคล้องกันอย่างไร?
-2. **ความสำคัญของคุณลักษณะ (Top 3):** คุณลักษณะไหนที่ทุกวิธีให้ความสำคัญสูง? มีความแตกต่างที่น่าสังเกตหรือไม่?
-3. **การเลือกวิธีที่เหมาะสม:** แต่ละวิธีมีข้อดี-ข้อเสียอย่างไร? ควรใช้วิธีไหนในสถานการณ์ใด?
-4. **ข้อเสนอแนะเชิงธุรกิจ (3-5 ข้อ):** จากผลที่ได้จากหลายวิธี ควรทำอย่างไรกับผลิตภัณฑ์/บริการ
-5. **ข้อควรระวัง:** ความไม่สอดคล้องระหว่างวิธีที่ต้องพิจารณาเพิ่มเติม
+**คำแนะนำในการวิเคราะห์:**
+- คุณจะได้รับข้อมูลทั้งหมดจาก 5 วิธีการวิเคราะห์ รวมถึง:
+  * Part-worth utilities และ importance scores
+  * Model statistics (R², Log-likelihood, AIC, BIC ถ้ามี)
+  * Coefficients, standard errors, p-values (ถ้ามี)
+  * Convergence information และ fit statistics (ถ้ามี)
+  
+กรุณาเขียนคำอธิบายที่วิเคราะห์เชิงลึกและครอบคลุม:
 
-ใช้ภาษาไทยที่เข้าใจง่าย และชี้ให้เห็นข้อดีของการใช้หลายวิธีวิเคราะห์เปรียบเทียบกัน"""
+1. **สรุปผลหลักจากทุกวิธี (4-5 ประโยค):** 
+   - เปรียบเทียบผลจากทุกวิธี มีความแตกต่างหรือสอดคล้องกันอย่างไร?
+   - วิธีไหนให้ผลที่น่าเชื่อถือที่สุด? (พิจารณาจาก model fit statistics)
+
+2. **วิเคราะห์ความสำคัญของคุณลักษณะ (Top 3-5):**
+   - คุณลักษณะไหนที่ทุกวิธีให้ความสำคัญสูง? ranking เปลี่ยนไหมระหว่างวิธี?
+   - มีความแตกต่างที่น่าสังเกตหรือไม่? อธิบายสาเหตุที่อาจเป็นไปได้
+   - ระดับ (levels) ไหนที่ผู้บริโภคชอบที่สุดในแต่ละคุณลักษณะ?
+
+3. **เปรียบเทียบคุณภาพของแต่ละวิธี:**
+   - พิจารณาจาก model statistics (ถ้ามี): R², Log-likelihood, AIC, BIC
+   - วิธีไหนมี goodness-of-fit ที่ดีที่สุด?
+   - ควรเชื่อถือผลจากวิธีไหนมากที่สุด? เพราะอะไร?
+
+4. **ข้อเสนอแนะเชิงธุรกิจที่ชัดเจน (5-7 ข้อ):**
+   - จากผลที่ได้จากหลายวิธี ควรทำอย่างไรกับผลิตภัณฑ์/บริการ
+   - คุณลักษณะไหนควรเน้นในการตลาด? ควรออกแบบ/พัฒนาอย่างไร?
+   - ข้อเสนอแนะเรื่องราคา (ถ้าเป็นคุณลักษณะหนึ่ง)
+   - กลยุทธ์การสื่อสาร/positioning ที่เหมาะสม
+
+5. **ข้อควรระวังและข้อจำกัด:**
+   - ความไม่สอดคล้องระหว่างวิธีที่ต้องพิจารณาเพิ่มเติม
+   - ข้อจำกัดของแต่ละวิธีที่ควรรับทราบ
+   - ข้อแนะนำในการเก็บข้อมูลเพิ่มเติม (ถ้ามี)
+
+ใช้ภาษาไทยที่เข้าใจง่าย แต่ให้รายละเอียดเชิงลึก ยกตัวอย่างประกอบ และชี้ให้เห็นข้อดีของการใช้หลายวิธีวิเคราะห์เปรียบเทียบกัน"""
+        
         else:
-            # Single method
+            # Single method - send COMPLETE results data
+            full_results_json = json.dumps(analysis_summary['full_results'], indent=2, ensure_ascii=False, default=str)
+            
             method_display = {
                 'counting': 'Counting Method (นับความถี่)',
                 'linear_regression': 'Linear Regression (OLS)',
@@ -8486,29 +8503,54 @@ async def get_ai_interpretation(
                 'hierarchical_bayes': 'Hierarchical Bayes (HB)'
             }.get(analysis_summary['method'], analysis_summary['method'])
             
-            attrs_text = []
-            for attr in analysis_summary['attributes']:
-                levels_text = ', '.join([f"{level['value']} ({level['utility']:.1f})" for level in attr['levels']])
-                attrs_text.append(f"- {attr['name']}: {attr['importance']:.1f}% (ระดับ: {levels_text})")
-            
-            attrs_summary = '\n'.join(attrs_text)
-            
-            prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis ต่อไปนี้:
+            prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis อย่างละเอียดและครอบคลุม:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
 วิธีการวิเคราะห์: {method_display}
 
-คุณลักษณะและความสำคัญ:
-{attrs_summary}
+ผลการวิเคราะห์ทั้งหมด (ข้อมูลครบถ้วน):
+```json
+{full_results_json}
+```
 
-กรุณาเขียนคำอธิบายที่:
-1. **สรุปผลหลัก (3-4 ประโยค):** อะไรคือสิ่งที่ผู้บริโภคให้ความสำคัญมากที่สุด?
-2. **คุณลักษณะที่สำคัญที่สุด (Top 3):** อธิบายว่าทำไมแต่ละคุณลักษณะถึงสำคัญ และระดับไหนที่ผู้บริโภคชอบที่สุด
-3. **ข้อเสนอแนะเชิงธุรกิจ (3-5 ข้อ):** ควรทำอย่างไรกับผลิตภัณฑ์/บริการ เช่น ควรเน้นอะไร ตั้งราคาอย่างไร ทำการตลาดอย่างไร
-4. **ข้อควรระวัง:** มีอะไรที่ต้องระมัดระวังหรือพิจารณาเพิ่มเติม
+**คำแนะนำในการวิเคราะห์:**
+- คุณจะได้รับข้อมูลทั้งหมดจากการวิเคราะห์ รวมถึง:
+  * Part-worth utilities และ importance scores
+  * Model statistics (R², Log-likelihood, AIC, BIC ถ้ามี)
+  * Coefficients, standard errors, p-values (ถ้ามี)
+  * Selection counts และ raw data (ถ้ามี)
+  
+กรุณาเขียนคำอธิบายที่วิเคราะห์เชิงลึก:
 
-ใช้ภาษาไทยที่เข้าใจง่าย หลีกเลี่ยงศัพท์เทคนิค และให้ตัวอย่างประกอบ"""
+1. **สรุปผลหลักจาก {method_display} (4-5 ประโยค):**
+   - อะไรคือสิ่งที่ผู้บริโภคให้ความสำคัญมากที่สุด?
+   - คุณภาพของโมเดล (model fit) เป็นอย่างไร? (ถ้ามี statistics)
+   - ผลลัพธ์มีความน่าเชื่อถือหรือไม่? เพราะอะไร?
+
+2. **วิเคราะห์คุณลักษณะที่สำคัญที่สุด (Top 3-5):**
+   - อธิบายว่าทำไมแต่ละคุณลักษณะถึงสำคัญ
+   - ระดับ (level) ไหนที่ผู้บริโภคชอบที่สุด? utility/coefficient มีค่าเท่าไหร่?
+   - มีความแตกต่างที่ชัดเจนระหว่าง levels หรือไม่?
+
+3. **วิเคราะห์เชิงสถิติ (ถ้ามีข้อมูล):**
+   - Model fit statistics บอกอะไรเกี่ยวกับคุณภาพของโมเดล?
+   - Coefficients หรือ utilities มีนัยสำคัญทางสถิติหรือไม่?
+   - มีข้อควรสังเกตจากค่า standard errors หรือ confidence intervals หรือไม่?
+
+4. **ข้อเสนอแนะเชิงธุรกิจที่ชัดเจน (5-7 ข้อ):**
+   - ควรทำอย่างไรกับผลิตภัณฑ์/บริการ
+   - คุณลักษณะไหนควรเน้นในการตลาด?
+   - ข้อเสนอแนะเรื่องการตั้งราคา (ถ้าราคาเป็นคุณลักษณะหนึ่ง)
+   - กลยุทธ์การสื่อสาร/positioning
+   - จุดแข็งที่ควรเน้น และจุดอ่อนที่ควรปรับปรุง
+
+5. **ข้อควรระวังและข้อจำกัด:**
+   - ข้อจำกัดของวิธี {method_display}
+   - สมมติฐานที่ควรรับทราบ
+   - ข้อแนะนำในการตีความผลและการนำไปใช้
+
+ใช้ภาษาไทยที่เข้าใจง่าย แต่ให้รายละเอียดเชิงลึก ยกตัวอย่างประกอบ และให้คำแนะนำที่นำไปปฏิบัติได้จริง"""
         
         chat = LlmChat(
             api_key=api_key,
