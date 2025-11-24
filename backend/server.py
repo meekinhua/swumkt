@@ -8337,6 +8337,33 @@ async def get_statistical_analysis(
         "results": results
     }
 
+
+# Helper function to get statistical analysis results
+async def get_method_results(study, responses, method):
+    """Get analysis results for a specific method"""
+    if method == "counting":
+        part_worths = calculate_part_worths(study, responses)
+        importance_scores = calculate_importance_scores(part_worths, study)
+        return {
+            'part_worths': part_worths,
+            'importance_scores': importance_scores
+        }
+    elif method == "mnl":
+        results = calculate_mnl_analysis(study, responses)
+    elif method == "mixed_logit":
+        results = calculate_mixed_logit_analysis(study, responses)
+    elif method == "hierarchical_bayes":
+        results = calculate_hierarchical_bayes_analysis(study, responses)
+    elif method == "linear_regression":
+        results = calculate_regression_analysis(study, responses)
+    else:
+        raise ValueError(f"Unknown method: {method}")
+    
+    return {
+        'part_worths': results['part_worths'],
+        'importance_scores': results['importance_scores']
+    }
+
 # Get AI interpretation of results
 @api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
 async def get_ai_interpretation(
