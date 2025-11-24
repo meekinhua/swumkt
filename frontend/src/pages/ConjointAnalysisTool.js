@@ -362,16 +362,14 @@ const ConjointAnalysisTool = () => {
                         แก้ไข
                       </Button>
                       
-                      {(study.respondent_count > 0 || study.respondent_count === undefined) && (
-                        <Button
-                          onClick={() => handleStudyAction(study, 'view')}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <BarChart3 className="w-4 h-4 mr-1" />
-                          ดูรายงาน
-                        </Button>
-                      )}
+                      <Button
+                        onClick={() => handleStudyAction(study, 'view')}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <BarChart3 className="w-4 h-4 mr-1" />
+                        ดูรายงาน
+                      </Button>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
