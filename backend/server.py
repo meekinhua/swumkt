@@ -8460,29 +8460,53 @@ Return ONLY the image generation prompt, no explanation."""
             # Add reference image instruction
             generated_prompt = f"Based on the reference images as style guide: {generated_prompt}"
         
-        # Generate image
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+        # Generate image using Gemini (same as level image generation)
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
-        image_gen = OpenAIImageGeneration(api_key=api_key)
-        
-        # Prepare reference images if provided
-        reference_image_urls = None
+        # Prepare reference images in base64 if provided
+        ref_images_base64 = []
         if using_refs:
-            selected_refs = [reference_images[i] for i in request.reference_image_indices if i < len(reference_images)]
-            if selected_refs:
-                reference_image_urls = selected_refs
+            for idx in request.reference_image_indices:
+                if idx < len(reference_images):
+                    img_url = reference_images[idx]
+                    # Extract base64 from data URL
+                    if img_url.startswith('data:image'):
+                        ref_images_base64.append(img_url.split(',')[1])
+                    else:
+                        # Download and convert to base64 if URL
+                        import httpx
+                        async with httpx.AsyncClient() as client:
+                            img_response = await client.get(img_url)
+                            img_base64 = base64.b64encode(img_response.content).decode('utf-8')
+                            ref_images_base64.append(img_base64)
         
-        raw_images = await image_gen.generate_images(
-            prompt=generated_prompt,
-            model=image_model,
-            reference_images=reference_image_urls
-        )
+        # Use Gemini 2.5 flash image preview (nanobanana)
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"product-gen-{study_id}",
+            system_message="You are an AI image generator."
+        ).with_model("gemini", "gemini-2.5-flash-image-preview").with_params(modalities=["image", "text"])
         
-        if not raw_images or len(raw_images) == 0:
+        # Create message with reference images if provided
+        if len(ref_images_base64) > 0:
+            image_contents = [ImageContent(img_data) for img_data in ref_images_base64]
+            msg = UserMessage(text=generated_prompt, file_contents=image_contents)
+        else:
+            msg = UserMessage(text=generated_prompt)
+        
+        text, images = await chat.send_message_multimodal_response(msg)
+        
+        if not images or len(images) == 0:
             raise HTTPException(status_code=500, detail="No images generated")
         
-        # Get the first generated image
-        image_url = raw_images[0]
+        # Get base64 image
+        image_base64 = images[0]['data']
+        
+        # Compress image
+        compressed_base64 = compress_base64_image(image_base64, max_size_kb=150.0, target_dimension=640)
+        
+        # Create data URL
+        image_url = f"data:image/jpeg;base64,{compressed_base64}"
         
         return {
             "image_url": image_url,
