@@ -8437,14 +8437,9 @@ async def get_ai_interpretation(
         
     else:
         # Single method analysis
-        if request.method == 'counting':
-            part_worths = calculate_part_worths(study, responses)
-            importance_scores = calculate_importance_scores(part_worths, study)
-        else:
-            # Use statistical analysis
-            stat_result = await perform_statistical_analysis(study, responses, request.method)
-            part_worths = stat_result['part_worths']
-            importance_scores = stat_result['importance_scores']
+        method_result = await get_method_results(study, responses, request.method)
+        part_worths = method_result['part_worths']
+        importance_scores = method_result['importance_scores']
         
         # Prepare data for AI
         analysis_summary = {
