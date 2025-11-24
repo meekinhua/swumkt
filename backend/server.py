@@ -8340,13 +8340,16 @@ async def get_statistical_analysis(
 
 # Helper function to get statistical analysis results
 async def get_method_results(study, responses, method):
-    """Get analysis results for a specific method"""
+    """Get ALL analysis results for a specific method (not just part_worths and importance_scores)"""
     if method == "counting":
         part_worths = calculate_part_worths(study, responses)
         importance_scores = calculate_importance_scores(part_worths, study)
         return {
+            'method': 'counting',
             'part_worths': part_worths,
-            'importance_scores': importance_scores
+            'importance_scores': importance_scores,
+            'respondent_count': len(responses),
+            'method_name': 'Counting Method (นับความถี่)'
         }
     elif method == "mnl":
         results = calculate_mnl_analysis(study, responses)
@@ -8359,10 +8362,10 @@ async def get_method_results(study, responses, method):
     else:
         raise ValueError(f"Unknown method: {method}")
     
-    return {
-        'part_worths': results['part_worths'],
-        'importance_scores': results['importance_scores']
-    }
+    # Return FULL results object (includes all statistics, not just part_worths)
+    results['method'] = method
+    results['respondent_count'] = len(responses)
+    return results
 
 # Get AI interpretation of results
 @api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
