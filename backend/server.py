@@ -8361,36 +8361,103 @@ async def get_ai_interpretation(
     if len(responses) < 10:
         raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
     
-    # Calculate analysis
-    part_worths = calculate_part_worths(study, responses)
-    importance_scores = calculate_importance_scores(part_worths, study)
-    
-    # Prepare data for AI
-    analysis_summary = {
-        "study_title": study.get("title"),
-        "respondent_count": len(responses),
-        "attributes": []
-    }
-    
-    for attr_id, scores in importance_scores.items():
-        attr_info = {
-            "name": scores["name"],
-            "importance": scores["importance"],
-            "levels": []
+    # Prepare analysis data based on mode
+    if request.compare_all:
+        # Analyze all methods and compare
+        methods_to_analyze = ['counting', 'linear_regression', 'mnl', 'mixed_logit', 'hierarchical_bayes']
+        all_results = {}
+        
+        for method in methods_to_analyze:
+            try:
+                if method == 'counting':
+                    part_worths = calculate_part_worths(study, responses)
+                    importance_scores = calculate_importance_scores(part_worths, study)
+                else:
+                    # Use statistical analysis
+                    stat_result = await perform_statistical_analysis(study, responses, method)
+                    part_worths = stat_result['part_worths']
+                    importance_scores = stat_result['importance_scores']
+                
+                all_results[method] = {
+                    'part_worths': part_worths,
+                    'importance_scores': importance_scores
+                }
+            except Exception as e:
+                logging.warning(f"Failed to analyze with {method}: {e}")
+                continue
+        
+        # Prepare comprehensive analysis summary
+        analysis_summary = {
+            "study_title": study.get("title"),
+            "respondent_count": len(responses),
+            "mode": "compare_all",
+            "methods": {}
         }
         
-        if attr_id in part_worths:
-            for level_id, level_data in part_worths[attr_id]["levels"].items():
-                attr_info["levels"].append({
-                    "value": level_data["value"],
-                    "utility": level_data["utility"],
-                    "selection_count": level_data["selection_count"]
-                })
+        for method, method_data in all_results.items():
+            method_summary = {
+                "method_name": method,
+                "attributes": []
+            }
+            
+            for attr_id, scores in method_data['importance_scores'].items():
+                attr_info = {
+                    "name": scores["name"],
+                    "importance": scores["importance"],
+                    "levels": []
+                }
+                
+                if attr_id in method_data['part_worths']:
+                    for level_id, level_data in method_data['part_worths'][attr_id]["levels"].items():
+                        attr_info["levels"].append({
+                            "value": level_data["value"],
+                            "utility": level_data.get("utility", level_data.get("coefficient", 0))
+                        })
+                
+                method_summary["attributes"].append(attr_info)
+            
+            method_summary["attributes"].sort(key=lambda x: x["importance"], reverse=True)
+            analysis_summary["methods"][method] = method_summary
         
-        analysis_summary["attributes"].append(attr_info)
-    
-    # Sort attributes by importance
-    analysis_summary["attributes"].sort(key=lambda x: x["importance"], reverse=True)
+    else:
+        # Single method analysis
+        if request.method == 'counting':
+            part_worths = calculate_part_worths(study, responses)
+            importance_scores = calculate_importance_scores(part_worths, study)
+        else:
+            # Use statistical analysis
+            stat_result = await perform_statistical_analysis(study, responses, request.method)
+            part_worths = stat_result['part_worths']
+            importance_scores = stat_result['importance_scores']
+        
+        # Prepare data for AI
+        analysis_summary = {
+            "study_title": study.get("title"),
+            "respondent_count": len(responses),
+            "mode": "single",
+            "method": request.method,
+            "attributes": []
+        }
+        
+        for attr_id, scores in importance_scores.items():
+            attr_info = {
+                "name": scores["name"],
+                "importance": scores["importance"],
+                "levels": []
+            }
+            
+            if attr_id in part_worths:
+                for level_id, level_data in part_worths[attr_id]["levels"].items():
+                    attr_info["levels"].append({
+                        "value": level_data["value"],
+                        "utility": level_data.get("utility", level_data.get("coefficient", 0)),
+                        "selection_count": level_data.get("selection_count", 0)
+                    })
+            
+            analysis_summary["attributes"].append(attr_info)
+        
+        # Sort attributes by importance
+        analysis_summary["attributes"].sort(key=lambda x: x["importance"], reverse=True)
     
     # Generate AI interpretation
     api_key = os.environ.get('EMERGENT_LLM_KEY')
