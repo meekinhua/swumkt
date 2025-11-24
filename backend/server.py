@@ -6225,6 +6225,17 @@ class UploadProfileImageRequest(BaseModel):
 class UploadReferenceImagesRequest(BaseModel):
     image_urls: List[str]  # List of base64 image URLs (max 5)
 
+class GenerateProductImageFromResultsRequest(BaseModel):
+    additional_prompt: Optional[str] = None  # User can add extra instructions
+    reference_image_indices: Optional[List[int]] = None  # Select from uploaded reference images (max 5)
+
+class GenerateShelfSimulationRequest(BaseModel):
+    product_image_url: str  # The generated product image from step 1
+    environment_type: str  # "auto", "cosmetics_store", "convenience_store", "supermarket", "mall"
+    shelf_style: str = "eye_level"  # "eye_level", "shelf_view", "aisle_view"
+    additional_prompt: Optional[str] = None  # User can customize environment
+
+
 class SurveyResponse(BaseModel):
     study_id: str
     respondent_id: Optional[str] = None
