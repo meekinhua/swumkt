@@ -2,58 +2,54 @@
 The user's high-level goal is to build a suite of marketing and academic research tools. The current primary objective is to build a new, comprehensive **Choice-Based Conjoint Analysis** tool.
 
 **PRODUCT REQUIREMENTS:**
-1.  **Qualitative Phase:** Use an LLM to analyze unstructured data to discover relevant product/service attributes and their levels. The user must be able to re-run the analysis, edit the data, or skip this phase.
-2.  **Quantitative Phase (Study Design):** Set up a study using a D-Optimal design. Allow generating or uploading images for individual **levels** and composite **profiles**. Image generation should support multiple models.
+1.  **Qualitative Phase:** Use an LLM to analyze unstructured data to discover relevant product/service attributes and their levels.
+2.  **Quantitative Phase (Study Design):** Set up a study using a D-Optimal design. Allow generating or uploading images for individual **levels** and composite **profiles**. Image generation should support multiple models and reference images.
 3.  **Survey & Collection:** Distribute the survey via a shareable link. The survey page must be responsive.
-4.  **Admin Management:** An admin must be able to view and modify all LLM prompts (for qualitative analysis and image generation) and select the models used.
-5.  **Analysis & Reporting (Future):** Collect and analyze responses, providing exports for raw data and analyzed results.
+4.  **Analysis & Reporting:** Collect and analyze responses. The results page should be user-friendly for non-experts (with charts and AI interpretation) but also provide a detailed Academic view with raw statistical outputs from various models. The user must be able to choose the analysis method (e.g., Counting, Linear Regression, Multinomial Logit).
+5.  **Admin Management:** An admin must be able to view and modify all LLM prompts and settings.
 
 **User's preferred language**: Thai
 
 **what currently exists?**
-The application is a full-stack React/FastAPI project with a substantially complete Conjoint Analysis tool. Key functionalities include:
-*   **Backend:** Supports study creation, qualitative analysis, D-optimal design, and multi-model image generation (OpenAI, Gemini). It includes robust admin controls for prompts and a critical image compression feature to prevent database size-limit errors.
-*   **Frontend:** Features dedicated pages for each phase of the conjoint analysis (Qualitative, Design, Survey). A new Start Survey workflow locks the study structure once published, enabling an auto-save mode for minor edits (names, descriptions). The UI also supports uploading reference images for AI generation.
-*   **Key Recent Changes:** A critical bug related to MongoDB's 16MB document size limit was fixed by implementing aggressive backend image compression (), reducing image sizes from ~17MB to ~20-30KB. A Start Survey feature was added to lock the study design and enable a more flexible editing mode for live surveys.
+The application is a mature full-stack Conjoint Analysis tool. The core functionality, from study creation to survey-taking and analysis, is in place.
+
+The most recent work heavily focused on a major overhaul of the **Analysis and Reporting** page (). This page is now fully dynamic and feature-rich:
+*   The analysis method selection dropdown has been moved to the main Overview tab for better visibility.
+*   The dropdown includes all five analysis methods: **Counting, Linear Regression, Multinomial Logit (MNL), Mixed Logit (simplified), and Hierarchical Bayes (simplified)**.
+*   The Overview tab, including the AI-generated summary, Pie Chart (Attribute Importance), and Bar Charts (Level Utilities), now dynamically updates its content based on the user's selected analysis method.
+*   **Multinomial Logit (MNL)** is now the default method displayed when the page loads.
+*   The Academic tab layout has been reorganized, and descriptions for calculation formulas now change dynamically with the selected method to provide context to the user.
+*   All backend analysis endpoints have been unified to return a consistent data structure (, ), simplifying frontend logic.
+
+Additionally, several critical bugs have been resolved, including issues with survey links failing due to data size, surveys not loading based on their status, and data ownership permissions. The Market Research landing page has also been cleaned up.
 
 **Last working item**:
--   **Last item agent was working:** The agent was implementing the logic to use the newly added Reference Images in the AI generation process. When a user selects a reference image, the system should:
-    1.  Switch to a different, specialized prompt template designed for image editing/referencing.
-    2.  Pass both the selected image(s) and the text prompt to the AI model.
--   **Status:** IN PROGRESS
+-   **Last item agent was working:** Debugging an issue where images were not appearing on the conjoint survey page. The agent found that the database stored image URLs in individual fields (, ) rather than a consolidated  object. A fix was implemented in the backend  endpoint to reconstruct the  object in the format the frontend expects.
+-   **Status:** USER VERIFICATION PENDING
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent
+-   **Which testing method agent to use?** screenshot tool
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Implement Reference Image Logic for AI Generation (P0)**
-    -   **Description:** The frontend UI for selecting reference images exists, but the generation logic does not yet use them. The task is to connect the frontend selection to the backend API call, ensuring the selected images and the correct with reference prompt are used.
-    -   **Attempted fixes:** The agent has successfully created separate backend storage and admin UI for with reference prompts. The frontend now displays checkboxes next to uploaded reference images.
+-   **Issue 1: Images not appearing on the survey page (P0)**
+    -   **Description:** The user reported that images are not visible on the survey page. A backend fix was applied to correct the data structure of the API response to match what the frontend expects. This fix needs to be verified.
+    -   **Attempted fixes:** The agent modified  to correctly gather image URLs from  and  fields and place them into an  object within each profile.
     -   **Next debug checklist:**
-        1.  In  and , modify the  function.
-        2.  If reference images are selected, dynamically choose the  prompt template.
-        3.  Update the payload of the generation API call to include the  data of the selected reference images.
-        4.  In , update the image generation endpoints to accept and process these reference images, passing them to the  multimodal call.
-    -   **Why fix this issue and what will be achieved with the fix?** This will complete a key user-requested feature, giving them powerful creative control over AI image generation by providing visual examples.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both
+        1.  Use the  to navigate to a survey page for a study that is known to have images.
+        2.  Visually confirm if the profile and attribute-level images are now displayed correctly.
+        3.  If not, inspect the browser console log from the screenshot output for new frontend errors.
+    -   **Why fix this issue and what will be achieved with the fix?** Images are a critical part of the survey experience for many studies. Fixing this restores essential functionality.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Frontend
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1: Complete Reference Image Generation Logic**
-    -   **Where to resume:** Resume by editing the frontend components ( and ) to send the selected reference image data and use the appropriate prompt when the Generate with AI button is clicked.
-    -   **What will be achieved with this?** A fully functional image generation feature that can leverage user-provided reference images.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** None
+-   None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P1: Conjoint Analysis - Milestone 3 (Analysis & Reporting):**
-        -   Build the UI for the .
-        -   Implement the statistical analysis backend (e.g., using Hierarchical Bayes or logit).
-        -   Create result visualizations and implement data export features.
+    -   **P1: Review Simplified Statistical Models:** The Hierarchical Bayes (HB) and Mixed Logit models are currently simplified implementations. Confirm with the user if these are sufficient or if more statistically rigorous versions are required.
 -   **Future Tasks:**
     -   **P2: Android Push Notification  option:** Implement in .
     -   **P3: Revisit Academic Format Corrector:** This feature was previously abandoned.
@@ -61,94 +57,88 @@ The application is a full-stack React/FastAPI project with a substantially compl
     -   **P5: Survey Analytics & Dashboard:** Implement visualization for the separate, existing Survey Builder tool.
 
 **Completed work in this session**
--   **Fixed Critical Bug: MongoDB 16MB Size Limit:** Implemented aggressive backend image compression using , reducing image sizes to ~20-30 KB and preventing database errors.
--   **Implemented Start Survey & Auto-Save Workflow:**
-    -   Added a Start Survey button that locks the study's attribute/level structure.
-    -   After starting, text fields (names, descriptions) auto-save on blur or Enter key press.
-    -   Irrelevant buttons (, , ) are disabled on live surveys.
--   **Enhanced UI/UX:**
-    -   Added a shareable survey link section that appears after a survey is started.
-    -   Enabled editing of level descriptions.
-    -   Improved status badges on the study list for better clarity (Draft, Designing, Survey Open).
-    -   Added an Edit button to the study list to re-enter the design page.
--   **Began Reference Image Feature:**
-    -   Built the UI and backend APIs to upload, manage, and compress up to 5 reference images per study.
-    -   Created separate admin settings for prompts with and without reference images.
-    -   Added checkboxes in the UI to select which reference images to use for generation.
+-   **Fixed Critical Multinomial Logit (MNL) Analysis:** Switched from an incorrect model () to the correct one for choice data () and fixed all related backend issues.
+-   **Unified All 5 Analysis Methods:** Refactored the backend to ensure Counting, Linear Regression, MNL, Mixed Logit, and HB all return a consistent data structure (, ).
+-   **Major Refactor of Conjoint Results Page:**
+    -   Made the Overview tab fully dynamic, allowing users to switch between all 5 analysis methods and see charts and summaries update in real-time.
+    -   Set MNL as the default method on page load.
+    -   Added dynamic descriptions for calculation formulas to educate the user.
+    -   Reorganized the Academic tab layout for better readability.
+-   **Survey & Data Integrity Bug Fixes:**
+    -   Fixed survey loading failures caused by large data payloads.
+    -   Removed the restrictive status check, allowing surveys to be accessed regardless of their  or  status.
+    -   Corrected the ownership of a study by updating its  in the database.
+-   **UI Cleanup:** Removed a redundant Conjoint Analysis card from the  page.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Add  to Android push notifications.**
-    -   **Debug checklist:** Edit  to include the  option.
+    -   **Debug checklist:** Edit  to include the  option in the notification payload.
     -   **Why to solve this issue and what will be achieved with this?** Fulfills a pending user request and improves the UX for Android users.
     -   **Should Test frontend/backend/both after fix:** Frontend
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
--   None.
+-   None
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend Image Processing:** Using  in Python to resize and compress base64 images to avoid MongoDB's 16MB document limit.
--   **Stateful Frontend Workflow:** Using a  flag to conditionally render UI and lock down features on live surveys.
--   **Auto-Saving UI:** Using  and  events in React to trigger API calls for seamless background saves.
--   **Multimodal AI Prompting:** (In Progress) Designing the system to send both text and image data to an AI model for generation.
+-   **Conditional Logit:** The correct statistical model for choice-based conjoint analysis, implemented using the  library.
+-   **Dynamic Frontend State Management (React):** Extensive use of  and  in  to manage the  state, which holds the data for the selected analysis method and drives the UI.
+-   **API Data Structure Unification:** A key architectural decision to have all backend analysis methods return a consistent JSON structure (, ) to simplify frontend rendering.
 
 **key DB schema**
--   **conjoint_studies:** Added  and . Level objects now also have a  field.
--   **llm_prompts_settings:** Added  and .
+-   **conjoint_studies:** The  field is no longer a blocker for viewing surveys. The  field is used for ownership. Image URLs are stored in  and  fields, not a single  object.
 
 **changes in tech stack**
--   Added  to backend dependencies ().
+-   **Backend:** Added .
 
 **All files**
-*   **Created:**
+*   **Heavily Updated:**
+    -   
     -   
 *   **Updated:**
     -   
     -   
-    -   
-    -   
 
 **Areas that need refactoring**:
--   The business logic within  has become very large. It should be extracted into dedicated service and router files (e.g., , ) for better maintainability.
+-   The root cause of new studies being created with  (it uses  instead) should be investigated and standardized across the application to prevent future permission issues. The fix should be applied in the  function in .
 
 **key api endpoints**
--   : Locks a study and marks it as live.
--   : Uploads reference images for a study.
--   : Deletes a specific reference image.
--   : Modified to handle prompt templates for referenced generation.
+-   : Now supports , , , , and , all returning a unified data structure.
+-   : No longer checks for . The backend logic was updated to correctly package image URLs for the frontend.
 
 **Critical Info for New Agent**
--   The critical **MongoDB 16MB size limit bug is resolved** via aggressive backend image compression. This is stable.
--   Your immediate task is to complete the **generate with reference image** feature. This involves connecting the frontend selections to the backend API and ensuring the backend passes both image(s) and a specialized text prompt to the AI.
--   Be aware of the  state in , which enables a restricted auto-save editing mode and disables structural changes.
+-   Your immediate priority is to **verify the fix for images not showing on the survey page**. The last user message was ไม่มีรูป (No images). The backend has been corrected to send the right data structure, but this needs visual confirmation. Use the  on a survey with images.
+-   The user communicates in **Thai**. All your responses must be in Thai.
+-   The results page () is highly dynamic. The central state is , which is updated when the user selects a different analysis method from the dropdown. All charts and summaries in the Overview tab are driven by this state.
 
 **documents created in this job**
--   
+-   None.
 
 **Last 5 User Messages and any pending user messages**
-1.  **User:** When a reference image is used, the prompt should change, and the model should use an edit mode (image + text). -> **Status:** IN PROGRESS.
-2.  **User:** Also, create separate prompt settings in the admin panel for prompts with and without reference images. -> **Status:** Completed.
-3.  **User:** Create good default prompts for both with and without reference images and save them in the admin settings. -> **Status:** Completed.
-4.  **User:** When a reference image is selected, the displayed AI prompt should change. The generation should use an image edit model with image+text input. -> **Status:** IN PROGRESS (This is the current task).
-5.  **User:** Awaiting the implementation of the above. -> **Status:** Pending.
+1.  **User:** The Overview tab doesn't update with the selected method. Also, add Counting to the dropdown and move it to the first tab. -> **Status:** Completed.
+2.  **User:** The charts are only working for the first two methods. -> **Status:** Completed.
+3.  **User:** For three methods, the Overview tab is empty. -> **Status:** Completed.
+4.  **User:** The page default is wrong, it should be MNL. Also, move the statistical table down on the academic tab. -> **Status:** Completed.
+5.  **User:** The survey page is not showing images anymore. -> **Status:** USER VERIFICATION PENDING.
 
 **Project Health Check:**
--   **Working:** The core Conjoint Analysis tool is robust, including study creation, design, survey distribution, and admin controls. The 16MB database limit is fixed.
--   **Broken:** The final step of the reference image feature is not implemented. Users can upload and select reference images, but the AI generation call does not yet use them.
--   **Mocked:** The  is still a placeholder.
+-   **Working:** The entire Conjoint Analysis tool, including study creation and the dynamic results page with all 5 analysis methods.
+-   **Broken:** The image rendering on the survey page is the primary issue and is pending verification of the latest fix.
+-   **Mocked:** Hierarchical Bayes (HB) and Mixed Logit models are simplified implementations.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO (Agent relied on  and manual  tests).
--   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Testing agent used after significant changes:** YES
+-   **Troubleshoot agent used after agent stuck in loop:** YES
 -   **Test files created:** None
--   **Known regressions:** None
+-   **Known regressions:** The survey page image display broke during a backend optimization. The fix is pending verification.
 
 **Credentials to test flow:**
 -   **Email:** 
 -   **Password:** 
 
 **What agent forgot to execute**
--   The user request to add a  option for Android push notifications, carried over from a previous fork, has still not been implemented.</analysis>
+-   The user request to add a  option for Android push notifications has not been implemented.
+-   The root cause of  being saved as  when creating new studies was identified but not fixed.</analysis>
