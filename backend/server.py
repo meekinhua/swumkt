@@ -8647,7 +8647,7 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
         shelf_image_url = f"data:image/jpeg;base64,{compressed_base64}"
         
         return {
-            "image_url": raw_images[0],
+            "image_url": shelf_image_url,
             "prompt_used": generated_prompt,
             "environment_type": environment_type,
             "shelf_style": request.shelf_style,
