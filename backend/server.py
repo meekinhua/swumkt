@@ -8617,12 +8617,6 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
     except Exception as e:
         logging.error(f"Shelf simulation generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate shelf simulation: {str(e)}")
-
-            'respondent_count': len(responses),
-            'method_name': 'Counting Method (นับความถี่)'
-        }
-    elif method == "mnl":
-        results = calculate_mnl_analysis(study, responses)
     elif method == "mixed_logit":
         results = calculate_mixed_logit_analysis(study, responses)
     elif method == "hierarchical_bayes":
