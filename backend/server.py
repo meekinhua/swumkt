@@ -6440,7 +6440,7 @@ async def analyze_qualitative_data(
     
     # Combine all qualitative inputs
     combined_data = "\n\n".join([
-        f"=== {item.type.upper()} ===\n{item.content}"
+        f"=== {str(item.type).upper()} ===\n{item.content}"
         for item in request.qualitative_data
     ])
     
