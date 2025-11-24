@@ -6135,7 +6135,6 @@ class CreateConjointStudyRequest(BaseModel):
     product_category: Optional[str] = None
 
 class QualitativeAnalysisRequest(BaseModel):
-    study_id: str
     qualitative_data: List[QualitativeInput]
     target_language: str = "th"
 
