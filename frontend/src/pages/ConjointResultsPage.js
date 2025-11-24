@@ -869,7 +869,7 @@ const ConjointResultsPage = () => {
                 {/* Additional Prompt */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ปรับแต่งเพิ่มเติม (ไม่บังคับ)
+                    ปรับแต่งเพิ่มเติม (ไม่บังคับ) - จะถูกใส่ไว้ด้านหน้าของ prompt
                   </label>
                   <textarea
                     value={shelfPrompt}
@@ -878,6 +878,9 @@ const ConjointResultsPage = () => {
                     rows={2}
                     className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:outline-none"
                   />
+                  <p className="text-xs text-amber-700 mt-1">
+                    💡 Prompt นี้จะถูกเพิ่มไว้ด้านหน้าของ prompt ที่ AI สร้าง
+                  </p>
                 </div>
 
                 <Button
