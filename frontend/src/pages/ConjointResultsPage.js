@@ -377,13 +377,44 @@ const ConjointResultsPage = () => {
 
         {/* AI Interpretation Section */}
         <Card className="p-6 mb-8 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                AI ตีความผลและข้อเสนอแนะ
+              </h2>
             </div>
-            <h2 className="text-xl font-bold text-gray-900">
-              AI ตีความผลและข้อเสนอแนะ
-            </h2>
+            
+            {/* AI Analysis Mode Selector */}
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border-2 border-indigo-200">
+              <label className="text-sm font-semibold text-gray-700">โหมดวิเคราะห์:</label>
+              <select
+                value={aiAnalysisMode}
+                onChange={(e) => {
+                  setAiAnalysisMode(e.target.value);
+                  setAiInterpretation(null); // Reset AI interpretation when mode changes
+                }}
+                className="text-sm border-2 border-indigo-300 rounded px-3 py-1 font-medium text-gray-800 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="single">วิธีเดียว ({getMethodName(selectedMethod)})</option>
+                <option value="compare_all">เปรียบเทียบทุกวิธี</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Description based on mode */}
+          <div className="mb-4">
+            {aiAnalysisMode === 'single' ? (
+              <p className="text-sm text-indigo-700 bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200">
+                📊 <strong>วิธีเดียว:</strong> AI จะวิเคราะห์ผลจาก <strong>{getMethodName(selectedMethod)}</strong> ที่กำลังแสดงอยู่บน UI
+              </p>
+            ) : (
+              <p className="text-sm text-purple-700 bg-purple-100 px-4 py-2 rounded-lg border border-purple-200">
+                🔬 <strong>เปรียบเทียบทุกวิธี:</strong> AI จะวิเคราะห์และเปรียบเทียบผลจาก 5 วิธี (Counting, Linear Regression, MNL, Mixed Logit, Hierarchical Bayes) เพื่อให้ข้อมูลที่ครอบคลุมและแม่นยำยิ่งขึ้น
+              </p>
+            )}
           </div>
 
           {!aiInterpretation ? (
@@ -404,27 +435,45 @@ const ConjointResultsPage = () => {
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 mr-2" />
-                    วิเคราะห์ด้วย AI
+                    {aiAnalysisMode === 'compare_all' ? 'วิเคราะห์และเปรียบเทียบทุกวิธี' : 'วิเคราะห์ด้วย AI'}
                   </>
                 )}
               </Button>
             </div>
           ) : (
             <div className="bg-white rounded-lg p-6 border-2 border-indigo-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
+                  <Sparkles className="w-4 h-4" />
+                  {aiInterpretation.summary_data?.mode === 'compare_all' 
+                    ? `ผลการวิเคราะห์จากทุกวิธี (${Object.keys(aiInterpretation.summary_data?.methods || {}).length} วิธี)`
+                    : `ผลการวิเคราะห์จาก ${getMethodName(aiInterpretation.summary_data?.method || selectedMethod)}`
+                  }
+                </div>
+                <Button
+                  onClick={loadAIInterpretation}
+                  disabled={loadingAI}
+                  variant="outline"
+                  size="sm"
+                  className="border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                >
+                  {loadingAI ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
+                      กำลังวิเคราะห์...
+                    </>
+                  ) : (
+                    <>
+                      🔄 วิเคราะห์ใหม่
+                    </>
+                  )}
+                </Button>
+              </div>
               <div className="prose max-w-none">
                 <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
                   {aiInterpretation.interpretation}
                 </div>
               </div>
-              <Button
-                onClick={loadAIInterpretation}
-                disabled={loadingAI}
-                variant="outline"
-                className="mt-4"
-                size="sm"
-              >
-                🔄 วิเคราะห์ใหม่
-              </Button>
             </div>
           )}
         </Card>
