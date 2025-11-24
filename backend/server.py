@@ -8609,26 +8609,42 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
         
         generated_prompt = await chat.send_message(UserMessage(text=base_prompt))
         
-        # Generate image using the product image as reference
-        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
-        if not settings:
-            settings = {"profile_image_model": "gpt-image-1"}
+        # Generate image using Gemini with product image as reference
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
-        image_model = settings.get("profile_image_model", "gpt-image-1")
+        # Get product image in base64
+        product_img_base64 = None
+        if request.product_image_url.startswith('data:image'):
+            product_img_base64 = request.product_image_url.split(',')[1]
+        else:
+            # Download and convert to base64
+            import httpx
+            async with httpx.AsyncClient() as client:
+                img_response = await client.get(request.product_image_url)
+                product_img_base64 = base64.b64encode(img_response.content).decode('utf-8')
         
-        # Add reference instruction
-        final_prompt = f"Using the provided product image as reference, create: {generated_prompt}"
+        # Use Gemini 2.5 flash image preview
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"shelf-sim-{study_id}",
+            system_message="You are an AI image generator specializing in retail product visualization."
+        ).with_model("gemini", "gemini-2.5-flash-image-preview").with_params(modalities=["image", "text"])
         
-        image_gen = OpenAIImageGeneration(api_key=api_key)
+        # Create prompt with reference image
+        final_prompt = f"Using the provided product image as a reference, create: {generated_prompt}"
         
-        raw_images = await image_gen.generate_images(
-            prompt=final_prompt,
-            model=image_model,
-            reference_images=[request.product_image_url]  # Use product image as reference
-        )
+        image_content = ImageContent(product_img_base64)
+        msg = UserMessage(text=final_prompt, file_contents=[image_content])
         
-        if not raw_images or len(raw_images) == 0:
+        text, images = await chat.send_message_multimodal_response(msg)
+        
+        if not images or len(images) == 0:
             raise HTTPException(status_code=500, detail="No images generated")
+        
+        # Get base64 image and compress
+        shelf_image_base64 = images[0]['data']
+        compressed_base64 = compress_base64_image(shelf_image_base64, max_size_kb=150.0, target_dimension=640)
+        shelf_image_url = f"data:image/jpeg;base64,{compressed_base64}"
         
         return {
             "image_url": raw_images[0],
