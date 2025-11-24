@@ -8617,19 +8617,6 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
     except Exception as e:
         logging.error(f"Shelf simulation generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate shelf simulation: {str(e)}")
-    elif method == "mixed_logit":
-        results = calculate_mixed_logit_analysis(study, responses)
-    elif method == "hierarchical_bayes":
-        results = calculate_hierarchical_bayes_analysis(study, responses)
-    elif method == "linear_regression":
-        results = calculate_regression_analysis(study, responses)
-    else:
-        raise ValueError(f"Unknown method: {method}")
-    
-    # Return FULL results object (includes all statistics, not just part_worths)
-    results['method'] = method
-    results['respondent_count'] = len(responses)
-    return results
 
 # Get AI interpretation of results
 @api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
