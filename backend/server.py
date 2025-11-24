@@ -6096,10 +6096,9 @@ async def demote_from_admin(
 # Models
 class ConjointStudyStatus(str, Enum):
     DRAFT = "draft"
-    QUALITATIVE = "qualitative_phase"
-    DESIGN = "design_phase"
     ACTIVE = "active"
-    CLOSED = "closed"
+    COMPLETED = "completed"
+    ARCHIVED = "archived"
 
 class AttributeLevel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
