@@ -6626,6 +6626,60 @@ async def list_conjoint_studies(
     
     return {"studies": studies}
 
+
+# Update study status
+@api_router.put("/conjoint/studies/{study_id}/status")
+async def update_study_status(
+    study_id: str,
+    request: UpdateStudyStatusRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Update study status - accessible by study owner and admin"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Check permission: owner or admin can update
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You don't have permission to update this study")
+    
+    # Create status history entry
+    status_change = {
+        "from_status": study.get("status", ConjointStudyStatus.DRAFT),
+        "to_status": request.status,
+        "changed_by": current_user.id,
+        "changed_by_name": current_user.name,
+        "changed_at": datetime.now(timezone.utc),
+        "reason": request.reason
+    }
+    
+    # Update study
+    update_data = {
+        "status": request.status,
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    # Initialize status_history if it doesn't exist, then append
+    if "status_history" not in study:
+        update_data["status_history"] = [status_change]
+    else:
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {"$push": {"status_history": status_change}}
+        )
+    
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {"$set": update_data}
+    )
+    
+    return {
+        "message": "Status updated successfully",
+        "new_status": request.status,
+        "status_change": status_change
+    }
+
+
 # Admin: Get all LLM prompts
 @api_router.get("/admin/llm-prompts")
 async def get_llm_prompts(
