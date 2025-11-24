@@ -544,6 +544,280 @@ const ConjointResultsPage = () => {
           )}
         </Card>
 
+
+        {/* Product Image Generator - Only show if AI interpretation is available */}
+        {aiInterpretation && (
+          <Card className="p-6 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                🎨 เครื่องมือสร้างภาพผลิตภัณฑ์ตามผลการวิจัย
+              </h2>
+            </div>
+            
+            <p className="text-sm text-green-700 mb-4">
+              สร้างภาพผลิตภัณฑ์ที่เหมาะสมที่สุดตามผลการวิจัย Conjoint Analysis (คุณสมบัติที่ผู้บริโภคต้องการมากที่สุด)
+            </p>
+
+            {!productImage ? (
+              <div className="space-y-4">
+                {/* Reference Images Selection */}
+                {study?.reference_images && study.reference_images.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      เลือกรูปอ้างอิง (Reference Images) - ไม่บังคับ
+                    </label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {study.reference_images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setSelectedReferenceIndices(prev =>
+                              prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                            );
+                          }}
+                          className={`cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
+                            selectedReferenceIndices.includes(idx)
+                              ? 'border-green-500 ring-2 ring-green-300'
+                              : 'border-gray-300 hover:border-green-400'
+                          }`}
+                        >
+                          <img
+                            src={img}
+                            alt={`Reference ${idx + 1}`}
+                            className="w-full h-20 object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Prompt */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Prompt เพิ่มเติม (ไม่บังคับ)
+                  </label>
+                  <textarea
+                    value={productImagePrompt}
+                    onChange={(e) => setProductImagePrompt(e.target.value)}
+                    placeholder="เช่น: สไตล์โมเดิร์น, โทนสีอบอุ่น, แพคเกจสีฟ้า..."
+                    rows={2}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleGenerateProductImage}
+                  disabled={loadingProductImage}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
+                >
+                  {loadingProductImage ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      กำลังสร้างภาพ...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      สร้างภาพผลิตภัณฑ์
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg p-4 border-2 border-green-200">
+                  <img
+                    src={productImage.image_url}
+                    alt="Generated Product"
+                    className="w-full max-w-md mx-auto rounded-lg shadow-lg"
+                  />
+                  
+                  {productImage.optimal_features && (
+                    <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                      <h4 className="font-semibold text-green-900 mb-2">คุณสมบัติที่แนะนำ:</h4>
+                      <ul className="text-sm text-green-800 space-y-1">
+                        {productImage.optimal_features.map((feature, idx) => (
+                          <li key={idx}>• {feature}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {productImage.prompt_used && (
+                    <div className="mt-3 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                      <strong>Prompt ที่ใช้:</strong> {productImage.prompt_used}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setProductImage(null)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    🔄 สร้างใหม่
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = productImage.image_url;
+                      link.download = `product-${studyId}.png`;
+                      link.click();
+                      toast.success('ดาวน์โหลดรูปภาพสำเร็จ');
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    📥 ดาวน์โหลด
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Shelf Simulation - Only show if product image is generated */}
+        {productImage && (
+          <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                🏪 จำลองภาพสินค้าบนชั้นวาง (On-Shelf Simulation)
+              </h2>
+            </div>
+            
+            <p className="text-sm text-amber-700 mb-4">
+              สร้างภาพจำลองสินค้าของคุณในสภาพแวดล้อมจริง เพื่อดูว่าจะดึงดูดความสนใจในตลาดได้มากแค่ไหน
+            </p>
+
+            {!shelfImage ? (
+              <div className="space-y-4">
+                {/* Environment Type */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    ประเภทสภาพแวดล้อม
+                  </label>
+                  <select
+                    value={environmentType}
+                    onChange={(e) => setEnvironmentType(e.target.value)}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="auto">🤖 ให้ AI เลือกอัตโนมัติ (จากประเภทสินค้า)</option>
+                    <option value="cosmetics_store">💄 ร้านเครื่องสำอาง (Boots, Watson)</option>
+                    <option value="convenience_store">🏪 ร้านสะดวกซื้อ (7-11, ตู้แช่)</option>
+                    <option value="supermarket">🛒 ซูเปอร์มาร์เก็ต (Lotus's, Big C)</option>
+                    <option value="mall">🏬 ห้างสรรพสินค้า (Mall)</option>
+                  </select>
+                </div>
+
+                {/* Shelf Style */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    สไตล์การจัดวาง
+                  </label>
+                  <select
+                    value={shelfStyle}
+                    onChange={(e) => setShelfStyle(e.target.value)}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="eye_level">👁️ ระดับสายตา (Eye Level) - เด่นชัด</option>
+                    <option value="shelf_view">📦 มุมชั้นวาง (Shelf View) - กับสินค้าอื่น</option>
+                    <option value="aisle_view">🛤️ มุมทางเดิน (Aisle View) - บริบทร้านค้า</option>
+                  </select>
+                </div>
+
+                {/* Additional Prompt */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    ปรับแต่งเพิ่มเติม (ไม่บังคับ)
+                  </label>
+                  <textarea
+                    value={shelfPrompt}
+                    onChange={(e) => setShelfPrompt(e.target.value)}
+                    placeholder="เช่น: แสงสว่างมาก, มีป้ายโปรโมชั่น, สินค้าคู่แข่งเยอะ..."
+                    rows={2}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleGenerateShelfSimulation}
+                  disabled={loadingShelfImage}
+                  className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold"
+                >
+                  {loadingShelfImage ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      กำลังสร้างภาพจำลอง...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      สร้างภาพจำลองชั้นวาง
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg p-4 border-2 border-amber-200">
+                  <img
+                    src={shelfImage.image_url}
+                    alt="Shelf Simulation"
+                    className="w-full rounded-lg shadow-lg"
+                  />
+                  
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                    <div className="p-2 bg-amber-50 rounded">
+                      <strong className="text-amber-900">สภาพแวดล้อม:</strong>
+                      <p className="text-amber-700">{shelfImage.environment_type?.replace('_', ' ')}</p>
+                    </div>
+                    <div className="p-2 bg-amber-50 rounded">
+                      <strong className="text-amber-900">สไตล์:</strong>
+                      <p className="text-amber-700">{shelfImage.shelf_style?.replace('_', ' ')}</p>
+                    </div>
+                  </div>
+                  
+                  {shelfImage.prompt_used && (
+                    <div className="mt-3 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                      <strong>Prompt ที่ใช้:</strong> {shelfImage.prompt_used}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShelfImage(null)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    🔄 สร้างใหม่
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = shelfImage.image_url;
+                      link.download = `shelf-simulation-${studyId}.png`;
+                      link.click();
+                      toast.success('ดาวน์โหลดรูปภาพสำเร็จ');
+                    }}
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    📥 ดาวน์โหลด
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+
         {/* Pie Chart */}
         <Card className="p-6 mb-8">
           <div className="flex items-center gap-3 mb-6">
