@@ -6231,8 +6231,10 @@ class GenerateProductImageFromResultsRequest(BaseModel):
 
 class GenerateShelfSimulationRequest(BaseModel):
     product_image_url: str  # The generated product image from step 1
-    environment_type: str  # "auto", "cosmetics_store", "convenience_store", "supermarket", "mall"
-    shelf_style: str = "eye_level"  # "eye_level", "shelf_view", "aisle_view"
+    environment_type: str  # "auto", "cosmetics_store", "convenience_store", "supermarket", "mall", "custom"
+    custom_environment: Optional[str] = None  # Custom environment description if environment_type is "custom"
+    shelf_style: str = "eye_level"  # "eye_level", "shelf_view", "aisle_view", "custom"
+    custom_shelf_style: Optional[str] = None  # Custom shelf style description if shelf_style is "custom"
     additional_prompt: Optional[str] = None  # User can customize environment
 
 
