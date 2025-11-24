@@ -8617,7 +8617,7 @@ Requirements:
 Keep the prompt concise (2-3 sentences max). Return ONLY the image generation prompt."""
 
         if request.additional_prompt:
-            base_prompt += f"\n\nAdditional requirements: {request.additional_prompt}"
+            base_prompt += f"\n\nAdditional requirements (to be placed at the BEGINNING of the final prompt): {request.additional_prompt}"
         
         chat = LlmChat(
             api_key=api_key,
@@ -8626,6 +8626,10 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
         ).with_model("openai", "gpt-4o-mini")
         
         generated_prompt = await chat.send_message(UserMessage(text=base_prompt))
+        
+        # Prepend user's additional prompt if provided
+        if request.additional_prompt:
+            generated_prompt = f"{request.additional_prompt.strip()}. {generated_prompt}"
         
         # Generate image using Gemini with product image as reference
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
