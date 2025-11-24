@@ -6510,7 +6510,6 @@ async def analyze_qualitative_data(
                     "qualitative_data": [item.dict() for item in request.qualitative_data],
                     "suggested_attributes": [attr.dict() for attr in suggested_attributes],
                     "llm_analysis": analysis_result,
-                    "status": ConjointStudyStatus.QUALITATIVE,
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
