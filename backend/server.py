@@ -8396,19 +8396,8 @@ async def get_ai_interpretation(
         
         for method in methods_to_analyze:
             try:
-                if method == 'counting':
-                    part_worths = calculate_part_worths(study, responses)
-                    importance_scores = calculate_importance_scores(part_worths, study)
-                else:
-                    # Use statistical analysis
-                    stat_result = await perform_statistical_analysis(study, responses, method)
-                    part_worths = stat_result['part_worths']
-                    importance_scores = stat_result['importance_scores']
-                
-                all_results[method] = {
-                    'part_worths': part_worths,
-                    'importance_scores': importance_scores
-                }
+                method_result = await get_method_results(study, responses, method)
+                all_results[method] = method_result
             except Exception as e:
                 logging.warning(f"Failed to analyze with {method}: {e}")
                 continue
