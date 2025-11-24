@@ -63,7 +63,9 @@ const ConjointResultsPage = () => {
   
   // Shelf Simulation states
   const [environmentType, setEnvironmentType] = useState('auto');
+  const [customEnvironment, setCustomEnvironment] = useState('');
   const [shelfStyle, setShelfStyle] = useState('eye_level');
+  const [customShelfStyle, setCustomShelfStyle] = useState('');
   const [shelfPrompt, setShelfPrompt] = useState('');
   const [shelfImage, setShelfImage] = useState(null);
   const [loadingShelfImage, setLoadingShelfImage] = useState(false)
