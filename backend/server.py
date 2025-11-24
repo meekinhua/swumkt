@@ -8471,18 +8471,66 @@ async def get_ai_interpretation(
 คุณจะต้องอธิบายผลการวิเคราะห์ให้ผู้ใช้ทั่วไปที่ไม่มีความรู้ทางสถิติเข้าใจได้ง่าย
 ใช้ภาษาเรียบง่าย ยกตัวอย่างประกอบ และให้ข้อเสนอแนะเชิงธุรกิจที่นำไปปฏิบัติได้จริง"""
         
-        # Build attributes summary
-        attrs_text = []
-        for attr in analysis_summary['attributes']:
-            levels_text = ', '.join([f"{level['value']} ({level['utility']:.1f})" for level in attr['levels']])
-            attrs_text.append(f"- {attr['name']}: {attr['importance']:.1f}% (ระดับ: {levels_text})")
-        
-        attrs_summary = '\n'.join(attrs_text)
-        
-        prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis ต่อไปนี้:
+        # Build prompt based on mode
+        if analysis_summary['mode'] == 'compare_all':
+            # Compare all methods
+            methods_text = []
+            for method_name, method_data in analysis_summary['methods'].items():
+                method_display = {
+                    'counting': 'Counting Method (นับความถี่)',
+                    'linear_regression': 'Linear Regression (OLS)',
+                    'mnl': 'Multinomial Logit (MNL)',
+                    'mixed_logit': 'Mixed Logit',
+                    'hierarchical_bayes': 'Hierarchical Bayes (HB)'
+                }.get(method_name, method_name)
+                
+                attrs_text = []
+                for attr in method_data['attributes'][:3]:  # Top 3 attributes
+                    levels_text = ', '.join([f"{level['value']} ({level['utility']:.1f})" for level in attr['levels']])
+                    attrs_text.append(f"  - {attr['name']}: {attr['importance']:.1f}% (ระดับ: {levels_text})")
+                
+                methods_text.append(f"\n**{method_display}:**\n" + '\n'.join(attrs_text))
+            
+            methods_summary = '\n'.join(methods_text)
+            
+            prompt = f"""วิเคราะห์และเปรียบเทียบผลการวิจัย Conjoint Analysis จากหลายวิธีการวิเคราะห์:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
+
+ผลการวิเคราะห์จากแต่ละวิธี:
+{methods_summary}
+
+กรุณาเขียนคำอธิบายที่:
+1. **สรุปผลหลัก (3-4 ประโยค):** เปรียบเทียบผลจากทุกวิธี มีความแตกต่างหรือสอดคล้องกันอย่างไร?
+2. **ความสำคัญของคุณลักษณะ (Top 3):** คุณลักษณะไหนที่ทุกวิธีให้ความสำคัญสูง? มีความแตกต่างที่น่าสังเกตหรือไม่?
+3. **การเลือกวิธีที่เหมาะสม:** แต่ละวิธีมีข้อดี-ข้อเสียอย่างไร? ควรใช้วิธีไหนในสถานการณ์ใด?
+4. **ข้อเสนอแนะเชิงธุรกิจ (3-5 ข้อ):** จากผลที่ได้จากหลายวิธี ควรทำอย่างไรกับผลิตภัณฑ์/บริการ
+5. **ข้อควรระวัง:** ความไม่สอดคล้องระหว่างวิธีที่ต้องพิจารณาเพิ่มเติม
+
+ใช้ภาษาไทยที่เข้าใจง่าย และชี้ให้เห็นข้อดีของการใช้หลายวิธีวิเคราะห์เปรียบเทียบกัน"""
+        else:
+            # Single method
+            method_display = {
+                'counting': 'Counting Method (นับความถี่)',
+                'linear_regression': 'Linear Regression (OLS)',
+                'mnl': 'Multinomial Logit (MNL)',
+                'mixed_logit': 'Mixed Logit',
+                'hierarchical_bayes': 'Hierarchical Bayes (HB)'
+            }.get(analysis_summary['method'], analysis_summary['method'])
+            
+            attrs_text = []
+            for attr in analysis_summary['attributes']:
+                levels_text = ', '.join([f"{level['value']} ({level['utility']:.1f})" for level in attr['levels']])
+                attrs_text.append(f"- {attr['name']}: {attr['importance']:.1f}% (ระดับ: {levels_text})")
+            
+            attrs_summary = '\n'.join(attrs_text)
+            
+            prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis ต่อไปนี้:
+
+การศึกษา: {analysis_summary['study_title']}
+จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
+วิธีการวิเคราะห์: {method_display}
 
 คุณลักษณะและความสำคัญ:
 {attrs_summary}
