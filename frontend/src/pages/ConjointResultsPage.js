@@ -130,13 +130,23 @@ const ConjointResultsPage = () => {
   const loadAIInterpretation = async () => {
     setLoadingAI(true);
     try {
+      const requestBody = {
+        method: selectedMethod,
+        compare_all: aiAnalysisMode === 'compare_all'
+      };
+      
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/ai-interpretation`,
-        {},
+        requestBody,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAiInterpretation(response.data);
-      toast.success('วิเคราะห์ด้วย AI สำเร็จ!');
+      
+      if (aiAnalysisMode === 'compare_all') {
+        toast.success('วิเคราะห์และเปรียบเทียบทุกวิธีด้วย AI สำเร็จ!');
+      } else {
+        toast.success(`วิเคราะห์ด้วย AI (${getMethodName(selectedMethod)}) สำเร็จ!`);
+      }
     } catch (error) {
       console.error('Error generating AI interpretation:', error);
       toast.error('ไม่สามารถสร้างคำแนะนำด้วย AI ได้');
