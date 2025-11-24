@@ -244,21 +244,47 @@ const ConjointAnalysisTool = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-gray-900">การศึกษาของคุณ</h2>
             
-            {/* Status Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-600">กรอง:</span>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="ทุกสถานะ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">ทุกสถานะ</SelectItem>
-                  <SelectItem value="draft">⚪ ฉบับร่าง</SelectItem>
-                  <SelectItem value="active">🟢 เปิดใช้งาน</SelectItem>
-                  <SelectItem value="completed">🔵 เสร็จสิ้น</SelectItem>
-                  <SelectItem value="archived">⚫ เก็บถาวร</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-3">
+              {/* Status Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-600">กรอง:</span>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="ทุกสถานะ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกสถานะ</SelectItem>
+                    <SelectItem value="draft">⚪ ฉบับร่าง</SelectItem>
+                    <SelectItem value="active">🟢 เปิดใช้งาน</SelectItem>
+                    <SelectItem value="completed">🔵 เสร็จสิ้น</SelectItem>
+                    <SelectItem value="archived">⚫ เก็บถาวร</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Sync Button for Admin */}
+              {user?.role === 'admin' && (
+                <Button
+                  onClick={async () => {
+                    try {
+                      const response = await axios.post(
+                        `${API}/conjoint/admin/sync-all-respondent-counts`,
+                        {},
+                        { headers: { Authorization: `Bearer ${token}` } }
+                      );
+                      toast.success(`ซิงค์สำเร็จ: ${response.data.synced_count} รายการ`);
+                      loadStudies();
+                    } catch (error) {
+                      toast.error('ไม่สามารถซิงค์ได้');
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="border-2 border-blue-500 text-blue-700 hover:bg-blue-50"
+                >
+                  🔄 ซิงค์จำนวนผู้ตอบ
+                </Button>
+              )}
             </div>
           </div>
 
