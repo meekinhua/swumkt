@@ -4,6 +4,20 @@ import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { API } from '@/App';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -14,9 +28,11 @@ import {
   Settings,
   Users,
   BarChart3,
-  ArrowRight,
   Calendar,
-  Tag
+  Tag,
+  MoreVertical,
+  Clock,
+  History
 } from 'lucide-react';
 
 const ConjointAnalysisTool = () => {
@@ -25,6 +41,9 @@ const ConjointAnalysisTool = () => {
   const [studies, setStudies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showStatusHistoryModal, setShowStatusHistoryModal] = useState(false);
+  const [selectedStudyHistory, setSelectedStudyHistory] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
   const [newStudy, setNewStudy] = useState({
     title: '',
     description: '',
@@ -35,11 +54,13 @@ const ConjointAnalysisTool = () => {
     if (user && token) {
       loadStudies();
     }
-  }, [user, token]);
+  }, [user, token, statusFilter]);
 
   const loadStudies = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get(`${API}/conjoint/studies`, {
+      const params = statusFilter !== 'all' ? `?status_filter=${statusFilter}` : '';
+      const response = await axios.get(`${API}/conjoint/studies${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStudies(response.data.studies);
@@ -76,46 +97,71 @@ const ConjointAnalysisTool = () => {
     }
   };
 
-  const getStatusBadge = (study) => {
-    // Determine status based on actual state, not just status field
-    let label, color;
-
-    if (study.survey_started) {
-      // Survey is published and collecting responses
-      if (study.respondent_count > 0) {
-        label = '🟢 เก็บข้อมูลแล้ว';
-        color = 'bg-green-100 text-green-700 border border-green-300';
-      } else {
-        label = '🟢 สำรวจเปิด';
-        color = 'bg-green-100 text-green-700 border border-green-300';
-      }
-    } else if (study.choice_sets && study.choice_sets.length > 0) {
-      // Design generated but not published yet
-      label = '🟣 Phase 2: ออกแบบ';
-      color = 'bg-purple-100 text-purple-700 border border-purple-300';
-    } else if (study.attributes && study.attributes.length > 0) {
-      // Has attributes but no design yet
-      label = '🔵 Phase 1: วิเคราะห์';
-      color = 'bg-blue-100 text-blue-700 border border-blue-300';
-    } else {
-      // Just created, no data yet
-      label = '⚪ ฉบับร่าง';
-      color = 'bg-gray-100 text-gray-700 border border-gray-300';
+  const handleStatusChange = async (studyId, newStatus) => {
+    try {
+      await axios.put(
+        `${API}/conjoint/studies/${studyId}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success('อัปเดตสถานะสำเร็จ!');
+      loadStudies();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถอัปเดตสถานะได้');
     }
+  };
 
+  const getStatusConfig = (status) => {
+    const configs = {
+      'draft': {
+        label: '⚪ ฉบับร่าง',
+        color: 'bg-gray-100 text-gray-700 border-gray-300',
+        description: 'กำลังสร้าง/แก้ไข ยังไม่เปิดให้ตอบ Survey'
+      },
+      'active': {
+        label: '🟢 เปิดใช้งาน',
+        color: 'bg-green-100 text-green-700 border-green-300',
+        description: 'เปิดให้ตอบ Survey ได้ แก้ไขการตั้งค่าไม่ได้'
+      },
+      'completed': {
+        label: '🔵 เสร็จสิ้น',
+        color: 'bg-blue-100 text-blue-700 border-blue-300',
+        description: 'ปิดรับคำตอบแล้ว ดูผลวิเคราะห์ได้'
+      },
+      'archived': {
+        label: '⚫ เก็บถาวร',
+        color: 'bg-slate-100 text-slate-700 border-slate-300',
+        description: 'เก็บถาวร แสดงแยกต่างหาก'
+      }
+    };
+    return configs[status] || configs['draft'];
+  };
+
+  const getStatusBadge = (study) => {
+    const statusConfig = getStatusConfig(study.status);
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-bold ${color}`}>
-        {label}
+      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusConfig.color}`}>
+        {statusConfig.label}
       </span>
     );
   };
 
+  const canChangeStatus = (study) => {
+    // Owner or admin can change status
+    return study.creator_id === user?.id || user?.role === 'admin';
+  };
+
+  const showStatusHistory = (study) => {
+    setSelectedStudyHistory(study);
+    setShowStatusHistoryModal(true);
+  };
+
   const handleStudyAction = (study, action) => {
     if (action === 'edit') {
-      // Always go to design page for editing
       navigate(`/research/conjoint/${study.id}/design`);
     } else if (action === 'view') {
-      // View results
       navigate(`/research/conjoint/${study.id}/results`);
     }
   };
@@ -195,20 +241,43 @@ const ConjointAnalysisTool = () => {
 
         {/* Studies List */}
         <Card className="p-6 bg-white/95 border-2 border-gray-300 shadow-xl">
-          <h2 className="text-2xl font-black text-gray-900 mb-6">การศึกษาของคุณ</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-gray-900">การศึกษาของคุณ</h2>
+            
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-600">กรอง:</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="ทุกสถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทุกสถานะ</SelectItem>
+                  <SelectItem value="draft">⚪ ฉบับร่าง</SelectItem>
+                  <SelectItem value="active">🟢 เปิดใช้งาน</SelectItem>
+                  <SelectItem value="completed">🔵 เสร็จสิ้น</SelectItem>
+                  <SelectItem value="archived">⚫ เก็บถาวร</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           {studies.length === 0 ? (
             <div className="text-center py-12">
               <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 font-semibold mb-4">ยังไม่มีการศึกษา</p>
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                variant="outline"
-                className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                สร้างการศึกษาแรก
-              </Button>
+              <p className="text-gray-500 font-semibold mb-4">
+                {statusFilter === 'all' ? 'ยังไม่มีการศึกษา' : 'ไม่พบการศึกษาที่มีสถานะนี้'}
+              </p>
+              {statusFilter === 'all' && (
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  variant="outline"
+                  className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  สร้างการศึกษาแรก
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -222,6 +291,11 @@ const ConjointAnalysisTool = () => {
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-bold text-gray-900">{study.title}</h3>
                         {getStatusBadge(study)}
+                        {user?.role === 'admin' && study.creator_id !== user?.id && (
+                          <span className="px-2 py-1 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300">
+                            👤 {study.creator_name || 'Unknown'}
+                          </span>
+                        )}
                       </div>
                       
                       {study.description && (
@@ -250,13 +324,10 @@ const ConjointAnalysisTool = () => {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-2 min-w-[120px]">
+                    {/* Action Menu */}
+                    <div className="flex gap-2">
                       <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStudyAction(study, 'edit');
-                        }}
+                        onClick={() => handleStudyAction(study, 'edit')}
                         variant="outline"
                         size="sm"
                         className="border-2 border-blue-500 text-blue-700 hover:bg-blue-50"
@@ -267,10 +338,7 @@ const ConjointAnalysisTool = () => {
                       
                       {study.respondent_count > 0 && (
                         <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStudyAction(study, 'view');
-                          }}
+                          onClick={() => handleStudyAction(study, 'view')}
                           size="sm"
                           className="bg-green-600 hover:bg-green-700 text-white"
                         >
@@ -278,6 +346,45 @@ const ConjointAnalysisTool = () => {
                           ดูรายงาน
                         </Button>
                       )}
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          {canChangeStatus(study) && (
+                            <>
+                              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">
+                                เปลี่ยนสถานะเป็น:
+                              </div>
+                              {['draft', 'active', 'completed', 'archived']
+                                .filter(status => status !== study.status)
+                                .map((status) => {
+                                  const config = getStatusConfig(status);
+                                  return (
+                                    <DropdownMenuItem
+                                      key={status}
+                                      onClick={() => handleStatusChange(study.id, status)}
+                                      className="cursor-pointer"
+                                    >
+                                      {config.label}
+                                    </DropdownMenuItem>
+                                  );
+                                })}
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => showStatusHistory(study)}
+                            className="cursor-pointer"
+                          >
+                            <History className="w-4 h-4 mr-2" />
+                            ประวัติการเปลี่ยนสถานะ
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </div>
@@ -347,6 +454,87 @@ const ConjointAnalysisTool = () => {
                 className="flex-1 bg-gradient-to-r from-[#007B9A] to-[#00A9CE] hover:from-[#005A73] hover:to-[#008FB5] text-white font-bold"
               >
                 สร้างและเริ่มต้น
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Status History Modal */}
+      {showStatusHistoryModal && selectedStudyHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-3xl w-full p-6 bg-white max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-gray-900">ประวัติการเปลี่ยนสถานะ</h2>
+              <Button
+                onClick={() => setShowStatusHistoryModal(false)}
+                variant="ghost"
+                size="sm"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="font-bold text-lg text-gray-800">{selectedStudyHistory.title}</h3>
+              <p className="text-sm text-gray-600">ID: {selectedStudyHistory.id}</p>
+            </div>
+
+            {selectedStudyHistory.status_history && selectedStudyHistory.status_history.length > 0 ? (
+              <div className="space-y-3">
+                {selectedStudyHistory.status_history.map((entry, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {entry.from_status && (
+                            <>
+                              <span className="text-sm font-semibold text-gray-600">
+                                {getStatusConfig(entry.from_status).label}
+                              </span>
+                              <span className="text-gray-400">→</span>
+                            </>
+                          )}
+                          <span className="text-sm font-semibold">
+                            {getStatusConfig(entry.to_status).label}
+                          </span>
+                        </div>
+                        
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{new Date(entry.changed_at).toLocaleString('th-TH')}</span>
+                          </div>
+                          <div>
+                            โดย: <span className="font-semibold">{entry.changed_by_name}</span>
+                          </div>
+                          {entry.reason && (
+                            <div className="mt-2 text-gray-700">
+                              เหตุผล: {entry.reason}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                ไม่มีประวัติการเปลี่ยนสถานะ
+              </div>
+            )}
+
+            <div className="mt-6">
+              <Button
+                onClick={() => setShowStatusHistoryModal(false)}
+                className="w-full"
+                variant="outline"
+              >
+                ปิด
               </Button>
             </div>
           </Card>
