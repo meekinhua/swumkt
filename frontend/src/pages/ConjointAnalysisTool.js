@@ -409,6 +409,29 @@ const ConjointAnalysisTool = () => {
                             <History className="w-4 h-4 mr-2" />
                             ประวัติการเปลี่ยนสถานะ
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const response = await axios.post(
+                                  `${API}/conjoint/studies/${study.id}/sync-respondent-count`,
+                                  {},
+                                  { headers: { Authorization: `Bearer ${token}` } }
+                                );
+                                if (response.data.synced) {
+                                  toast.success(`ซิงค์สำเร็จ: ${response.data.old_count} → ${response.data.new_count}`);
+                                } else {
+                                  toast.info('จำนวนผู้ตอบถูกต้องแล้ว');
+                                }
+                                loadStudies();
+                              } catch (error) {
+                                toast.error('ไม่สามารถซิงค์ได้');
+                              }
+                            }}
+                            className="cursor-pointer"
+                          >
+                            🔄 ซิงค์จำนวนผู้ตอบ
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
