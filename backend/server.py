@@ -6167,6 +6167,11 @@ class UpdateLLMPromptRequest(BaseModel):
     model_provider: Optional[str] = None
     model_name: Optional[str] = None
 
+class UpdateStudyStatusRequest(BaseModel):
+    status: ConjointStudyStatus
+    reason: Optional[str] = None  # Optional reason for status change
+
+
 class GenerateImagesRequest(BaseModel):
     study_id: str
 
