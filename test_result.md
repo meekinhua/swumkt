@@ -553,6 +553,21 @@ test_plan:
     - "Conjoint Analysis Results - Relative Importance บนสุด และ Dynamic Formula: ✅ PASSED"
 
 frontend:
+  - task: "Conjoint Analysis Status Management Feature - Complete Testing"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/ConjointAnalysisTool.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing Conjoint Analysis status management feature as requested: Login with admin@swu.ac.th/admin123, navigate to /market-research/conjoint-analysis, verify studies list with 'Test Study - Status Management' having completed status, test status filter dropdown with all 5 options, test study action menu (three dots) with status change and history options, verify status history modal functionality"
+      - working: true
+        agent: "testing"
+        comment: "🎯 CONJOINT ANALYSIS STATUS MANAGEMENT TESTING COMPLETE! ✅ COMPREHENSIVE END-TO-END TESTING SUCCESSFUL: Tested the complete status management feature as requested in the review. 🔐 LOGIN & NAVIGATION: ✅ Successfully logged in with admin@swu.ac.th/admin123 credentials and navigated to /market-research/conjoint-analysis page. 📊 STUDIES LIST VERIFICATION: ✅ CRITICAL - Found 12 total studies displayed correctly including 'Test Study - Status Management' with '🔵 เสร็จสิ้น' (completed) status as required. All studies show proper status badges with correct colors and emojis. 🎛️ STATUS FILTER TESTING: ✅ CRITICAL - Status filter dropdown working perfectly with all 5 expected options: 'ทุกสถานะ', '⚪ ฉบับร่าง', '🟢 เปิดใช้งาน', '🔵 เสร็จสิ้น', '⚫ เก็บถาวร'. Successfully tested filtering by '🔵 เสร็จสิ้น' which correctly showed only completed studies. ⚙️ ACTION MENU TESTING: ✅ CRITICAL - Three dots menu button found and functional on study cards. Menu contains proper options including status change options ('⚪ ฉบับร่าง', '🟢 เปิดใช้งาน', '⚫ เก็บถาวร') and 'ประวัติการเปลี่ยนสถานะ' (Status History). 📋 STATUS HISTORY MODAL: ✅ CRITICAL - Status History modal opens correctly showing 'ประวัติการเปลี่ยนสถานะ' title with 3 status change entries displaying timestamps, user names, and status transitions (ฉบับร่าง → เปิดใช้งาน → เสร็จสิ้น). Modal closes properly with 'ปิด' button. 📸 SCREENSHOTS CAPTURED: All 6 requested screenshots taken successfully - main page, status filter dropdown, action menu, status history modal, and final state. 🎉 OVERALL RESULT: 6/6 critical requirements met. Status management feature is fully functional with proper UI elements, filtering, status changes, and history tracking. All expected functionality working as designed."
+
   - task: "Conjoint Analysis Results - Relative Importance บนสุด และ Dynamic Formula"
     implemented: true
     working: true
