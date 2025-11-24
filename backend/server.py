@@ -8567,17 +8567,29 @@ async def generate_shelf_simulation(
             "cosmetics_store": "Boots or Watson cosmetics store shelf, bright lighting, organized beauty products display, premium retail environment",
             "convenience_store": "7-Eleven refrigerator or shelf display, convenience store setting, consumer products in organized rows",
             "supermarket": "Lotus's or Big C supermarket aisle, retail shelf display, organized product arrangement",
-            "mall": "Shopping mall retail display, premium store environment, attractive product presentation"
+            "mall": "Shopping mall retail display, premium store environment, attractive product presentation",
+            "custom": request.custom_environment or "retail environment"
         }
         
         shelf_style_descriptions = {
             "eye_level": "at eye level position, centered in frame, prominent placement",
             "shelf_view": "on retail shelf with other competing products, realistic shelf arrangement",
-            "aisle_view": "in store aisle perspective, showing product context in retail environment"
+            "aisle_view": "in store aisle perspective, showing product context in retail environment",
+            "custom": request.custom_shelf_style or "product display"
         }
         
         environment_desc = environment_descriptions.get(environment_type, environment_descriptions["supermarket"])
         shelf_desc = shelf_style_descriptions.get(request.shelf_style, shelf_style_descriptions["eye_level"])
+        
+        # If custom, use AI to interpret and enhance the description
+        if environment_type == "custom" or request.shelf_style == "custom":
+            custom_context = []
+            if environment_type == "custom":
+                custom_context.append(f"Environment: {request.custom_environment}")
+            if request.shelf_style == "custom":
+                custom_context.append(f"Display style: {request.custom_shelf_style}")
+            
+            environment_desc = ", ".join(custom_context) if custom_context else environment_desc
         
         # Use AI to create detailed environment prompt
         system_message = """You are an expert in retail merchandising and product photography.
