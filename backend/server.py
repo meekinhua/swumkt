@@ -8359,6 +8359,265 @@ async def get_method_results(study, responses, method):
             'method': 'counting',
             'part_worths': part_worths,
             'importance_scores': importance_scores,
+
+
+# Generate product image based on conjoint analysis results
+@api_router.post("/conjoint/studies/{study_id}/generate-product-from-results")
+async def generate_product_image_from_results(
+    study_id: str,
+    request: GenerateProductImageFromResultsRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate optimal product image based on AI interpretation of conjoint results"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get responses for analysis
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if len(responses) < 10:
+        raise HTTPException(status_code=400, detail="Need at least 10 responses for product generation")
+    
+    # Calculate part-worths to get optimal product configuration
+    part_worths = calculate_part_worths(study, responses)
+    importance_scores = calculate_importance_scores(part_worths, study)
+    
+    # Build optimal product description from top utilities
+    product_features = []
+    for attr_id, scores in importance_scores.items():
+        attr_name = scores["name"]
+        
+        # Find level with highest utility
+        if attr_id in part_worths:
+            levels = part_worths[attr_id]["levels"]
+            best_level = max(levels.items(), key=lambda x: x[1]["utility"])
+            level_value = best_level[1]["value"]
+            product_features.append(f"{attr_name}: {level_value}")
+    
+    # Use AI to create image generation prompt
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        system_message = """You are an expert product designer and image generation prompt engineer.
+Create detailed, professional prompts for generating product visualization images."""
+        
+        product_category = study.get("product_category", "product")
+        study_title = study.get("title", "Product")
+        features_text = "\n".join([f"- {feat}" for feat in product_features])
+        
+        prompt = f"""Based on conjoint analysis results, create an image generation prompt for the optimal product configuration:
+
+Study: {study_title}
+Product Category: {product_category}
+
+Optimal Product Features (from research):
+{features_text}
+
+Create a detailed image generation prompt that:
+1. Describes the product with all key features mentioned
+2. Specifies professional product photography style
+3. Includes clean white background for product-focused composition
+4. Mentions high quality, sharp details, and good lighting
+5. Keeps the prompt concise but descriptive (2-3 sentences max)
+
+Return ONLY the image generation prompt, no explanation."""
+
+        if request.additional_prompt:
+            prompt += f"\n\nUser's additional requirements: {request.additional_prompt}"
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"product-gen-{study_id}",
+            system_message=system_message
+        ).with_model("openai", "gpt-4o-mini")
+        
+        generated_prompt = await chat.send_message(UserMessage(text=prompt))
+        
+        # Now generate the image using the prompt
+        # Get image generation settings
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
+        if not settings:
+            settings = {"level_image_model": "gpt-image-1"}
+        
+        image_model = settings.get("level_image_model", "gpt-image-1")
+        
+        # Check if using reference images
+        reference_images = study.get("reference_images", [])
+        using_refs = request.reference_image_indices and len(request.reference_image_indices) > 0 and len(reference_images) > 0
+        
+        if using_refs:
+            # Add reference image instruction
+            generated_prompt = f"Based on the reference images as style guide: {generated_prompt}"
+        
+        # Generate image
+        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+        
+        image_gen = OpenAIImageGeneration(api_key=api_key)
+        
+        # Prepare reference images if provided
+        reference_image_urls = None
+        if using_refs:
+            selected_refs = [reference_images[i] for i in request.reference_image_indices if i < len(reference_images)]
+            if selected_refs:
+                reference_image_urls = selected_refs
+        
+        raw_images = await image_gen.generate_images(
+            prompt=generated_prompt,
+            model=image_model,
+            reference_images=reference_image_urls
+        )
+        
+        if not raw_images or len(raw_images) == 0:
+            raise HTTPException(status_code=500, detail="No images generated")
+        
+        # Get the first generated image
+        image_url = raw_images[0]
+        
+        return {
+            "image_url": image_url,
+            "prompt_used": generated_prompt,
+            "optimal_features": product_features,
+            "message": "Product image generated successfully based on research insights"
+        }
+        
+    except Exception as e:
+        logging.error(f"Product image generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate product image: {str(e)}")
+
+
+# Generate shelf simulation (on-shelf environment)
+@api_router.post("/conjoint/studies/{study_id}/generate-shelf-simulation")
+async def generate_shelf_simulation(
+    study_id: str,
+    request: GenerateShelfSimulationRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate realistic on-shelf product visualization in competitive environment"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if study["creator_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+        
+        # Determine environment based on product category
+        product_category = study.get("product_category", "").lower()
+        environment_type = request.environment_type
+        
+        # Auto-detect environment if set to "auto"
+        if environment_type == "auto":
+            if any(word in product_category for word in ["cream", "cosmetic", "skincare", "makeup", "beauty"]):
+                environment_type = "cosmetics_store"
+            elif any(word in product_category for word in ["drink", "beverage", "snack", "food", "water"]):
+                environment_type = "convenience_store"
+            elif any(word in product_category for word in ["grocery", "supermarket"]):
+                environment_type = "supermarket"
+            elif any(word in product_category for word in ["fashion", "clothing", "apparel"]):
+                environment_type = "mall"
+            else:
+                environment_type = "supermarket"  # Default
+        
+        # Build environment-specific descriptions
+        environment_descriptions = {
+            "cosmetics_store": "Boots or Watson cosmetics store shelf, bright lighting, organized beauty products display, premium retail environment",
+            "convenience_store": "7-Eleven refrigerator or shelf display, convenience store setting, consumer products in organized rows",
+            "supermarket": "Lotus's or Big C supermarket aisle, retail shelf display, organized product arrangement",
+            "mall": "Shopping mall retail display, premium store environment, attractive product presentation"
+        }
+        
+        shelf_style_descriptions = {
+            "eye_level": "at eye level position, centered in frame, prominent placement",
+            "shelf_view": "on retail shelf with other competing products, realistic shelf arrangement",
+            "aisle_view": "in store aisle perspective, showing product context in retail environment"
+        }
+        
+        environment_desc = environment_descriptions.get(environment_type, environment_descriptions["supermarket"])
+        shelf_desc = shelf_style_descriptions.get(request.shelf_style, shelf_style_descriptions["eye_level"])
+        
+        # Use AI to create detailed environment prompt
+        system_message = """You are an expert in retail merchandising and product photography.
+Create realistic prompts for on-shelf product visualization in competitive retail environments."""
+        
+        study_title = study.get("title", "Product")
+        
+        base_prompt = f"""Create a photorealistic on-shelf visualization for: {study_title}
+
+Environment Setting: {environment_desc}
+Shelf Position: {shelf_desc}
+
+Requirements:
+1. Show the product {shelf_desc}
+2. Include competing products from the same category (blurred or generic if needed)
+3. Realistic retail lighting and atmosphere
+4. Professional product photography quality
+5. Show authentic {environment_type.replace('_', ' ')} environment
+6. Make the featured product stand out while maintaining realistic context
+
+Keep the prompt concise (2-3 sentences max). Return ONLY the image generation prompt."""
+
+        if request.additional_prompt:
+            base_prompt += f"\n\nAdditional requirements: {request.additional_prompt}"
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"shelf-sim-{study_id}",
+            system_message=system_message
+        ).with_model("openai", "gpt-4o-mini")
+        
+        generated_prompt = await chat.send_message(UserMessage(text=base_prompt))
+        
+        # Generate image using the product image as reference
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
+        if not settings:
+            settings = {"profile_image_model": "gpt-image-1"}
+        
+        image_model = settings.get("profile_image_model", "gpt-image-1")
+        
+        # Add reference instruction
+        final_prompt = f"Using the provided product image as reference, create: {generated_prompt}"
+        
+        image_gen = OpenAIImageGeneration(api_key=api_key)
+        
+        raw_images = await image_gen.generate_images(
+            prompt=final_prompt,
+            model=image_model,
+            reference_images=[request.product_image_url]  # Use product image as reference
+        )
+        
+        if not raw_images or len(raw_images) == 0:
+            raise HTTPException(status_code=500, detail="No images generated")
+        
+        return {
+            "image_url": raw_images[0],
+            "prompt_used": generated_prompt,
+            "environment_type": environment_type,
+            "shelf_style": request.shelf_style,
+            "message": "Shelf simulation generated successfully"
+        }
+        
+    except Exception as e:
+        logging.error(f"Shelf simulation generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate shelf simulation: {str(e)}")
+
             'respondent_count': len(responses),
             'method_name': 'Counting Method (นับความถี่)'
         }
