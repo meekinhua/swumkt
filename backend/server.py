@@ -6139,11 +6139,9 @@ class QualitativeAnalysisRequest(BaseModel):
     target_language: str = "th"
 
 class UpdateAttributesRequest(BaseModel):
-    study_id: str
     attributes: List[ConjointAttribute]
 
 class GenerateDesignRequest(BaseModel):
-    study_id: str
     alternatives_per_set: int = 3
     number_of_sets: Optional[int] = None  # Auto-calculate if not provided
     design_method: str = "d-optimal"
