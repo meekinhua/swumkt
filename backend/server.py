@@ -8414,39 +8414,17 @@ async def get_ai_interpretation(
         }
         
     else:
-        # Single method analysis
+        # Single method analysis - get FULL results
         method_result = await get_method_results(study, responses, request.method)
-        part_worths = method_result['part_worths']
-        importance_scores = method_result['importance_scores']
         
-        # Prepare data for AI
+        # Prepare data for AI with COMPLETE results
         analysis_summary = {
             "study_title": study.get("title"),
             "respondent_count": len(responses),
             "mode": "single",
             "method": request.method,
-            "attributes": []
+            "full_results": method_result  # Send COMPLETE results object
         }
-        
-        for attr_id, scores in importance_scores.items():
-            attr_info = {
-                "name": scores["name"],
-                "importance": scores["importance"],
-                "levels": []
-            }
-            
-            if attr_id in part_worths:
-                for level_id, level_data in part_worths[attr_id]["levels"].items():
-                    attr_info["levels"].append({
-                        "value": level_data["value"],
-                        "utility": level_data.get("utility", level_data.get("coefficient", 0)),
-                        "selection_count": level_data.get("selection_count", 0)
-                    })
-            
-            analysis_summary["attributes"].append(attr_info)
-        
-        # Sort attributes by importance
-        analysis_summary["attributes"].sort(key=lambda x: x["importance"], reverse=True)
     
     # Generate AI interpretation
     api_key = os.environ.get('EMERGENT_LLM_KEY')
