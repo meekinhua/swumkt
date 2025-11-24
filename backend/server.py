@@ -6659,7 +6659,7 @@ async def update_study_status(
         "from_status": study.get("status", ConjointStudyStatus.DRAFT),
         "to_status": request.status,
         "changed_by": current_user.id,
-        "changed_by_name": current_user.name,
+        "changed_by_name": current_user.full_name,
         "changed_at": datetime.now(timezone.utc),
         "reason": request.reason
     }
