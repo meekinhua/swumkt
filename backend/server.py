@@ -8436,7 +8436,7 @@ Create a detailed image generation prompt that:
 Return ONLY the image generation prompt, no explanation."""
 
         if request.additional_prompt:
-            prompt += f"\n\nUser's additional requirements: {request.additional_prompt}"
+            prompt += f"\n\nUser's additional requirements (to be placed at the BEGINNING of the final prompt): {request.additional_prompt}"
         
         chat = LlmChat(
             api_key=api_key,
@@ -8445,6 +8445,10 @@ Return ONLY the image generation prompt, no explanation."""
         ).with_model("openai", "gpt-4o-mini")
         
         generated_prompt = await chat.send_message(UserMessage(text=prompt))
+        
+        # Prepend user's additional prompt if provided
+        if request.additional_prompt:
+            generated_prompt = f"{request.additional_prompt.strip()}. {generated_prompt}"
         
         # Now generate the image using the prompt
         # Get image generation settings
