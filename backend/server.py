@@ -6325,7 +6325,7 @@ async def create_conjoint_study(
         "product_category": request.product_category,
         "status": ConjointStudyStatus.DRAFT,
         "creator_id": current_user.id,
-        "creator_name": current_user.name,
+        "creator_name": current_user.full_name,
         "created_at": now,
         "updated_at": now,
         "qualitative_data": [],
@@ -6336,7 +6336,7 @@ async def create_conjoint_study(
             "from_status": None,
             "to_status": ConjointStudyStatus.DRAFT,
             "changed_by": current_user.id,
-            "changed_by_name": current_user.name,
+            "changed_by_name": current_user.full_name,
             "changed_at": now,
             "reason": "Study created"
         }]
