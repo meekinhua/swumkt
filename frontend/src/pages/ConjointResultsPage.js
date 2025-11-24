@@ -798,7 +798,10 @@ const ConjointResultsPage = () => {
                   </label>
                   <select
                     value={environmentType}
-                    onChange={(e) => setEnvironmentType(e.target.value)}
+                    onChange={(e) => {
+                      setEnvironmentType(e.target.value);
+                      if (e.target.value !== 'custom') setCustomEnvironment('');
+                    }}
                     className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:outline-none"
                   >
                     <option value="auto">🤖 ให้ AI เลือกอัตโนมัติ (จากประเภทสินค้า)</option>
@@ -806,7 +809,23 @@ const ConjointResultsPage = () => {
                     <option value="convenience_store">🏪 ร้านสะดวกซื้อ (7-11, ตู้แช่)</option>
                     <option value="supermarket">🛒 ซูเปอร์มาร์เก็ต (Lotus's, Big C)</option>
                     <option value="mall">🏬 ห้างสรรพสินค้า (Mall)</option>
+                    <option value="custom">✏️ กำหนดเอง (Custom)</option>
                   </select>
+                  
+                  {environmentType === 'custom' && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        value={customEnvironment}
+                        onChange={(e) => setCustomEnvironment(e.target.value)}
+                        placeholder="เช่น: ร้านกาแฟสไตล์โมเดิร์น, ตลาดนัด, ออนไลน์มาร์เก็ตเพลส..."
+                        className="w-full p-3 border-2 border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none bg-amber-50"
+                      />
+                      <p className="text-xs text-amber-700 mt-1">
+                        💡 AI จะสร้าง prompt ตามคำอธิบายของคุณ
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Shelf Style */}
@@ -816,13 +835,32 @@ const ConjointResultsPage = () => {
                   </label>
                   <select
                     value={shelfStyle}
-                    onChange={(e) => setShelfStyle(e.target.value)}
+                    onChange={(e) => {
+                      setShelfStyle(e.target.value);
+                      if (e.target.value !== 'custom') setCustomShelfStyle('');
+                    }}
                     className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:outline-none"
                   >
                     <option value="eye_level">👁️ ระดับสายตา (Eye Level) - เด่นชัด</option>
                     <option value="shelf_view">📦 มุมชั้นวาง (Shelf View) - กับสินค้าอื่น</option>
                     <option value="aisle_view">🛤️ มุมทางเดิน (Aisle View) - บริบทร้านค้า</option>
+                    <option value="custom">✏️ กำหนดเอง (Custom)</option>
                   </select>
+                  
+                  {shelfStyle === 'custom' && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        value={customShelfStyle}
+                        onChange={(e) => setCustomShelfStyle(e.target.value)}
+                        placeholder="เช่น: มุมบนโต๊ะกาแฟ, ในตะกร้าสินค้า, บนมือลูกค้า..."
+                        className="w-full p-3 border-2 border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none bg-amber-50"
+                      />
+                      <p className="text-xs text-amber-700 mt-1">
+                        💡 AI จะสร้าง prompt ตามคำอธิบายของคุณ
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Additional Prompt */}
