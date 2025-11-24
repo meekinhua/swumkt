@@ -563,37 +563,115 @@ const ConjointResultsPage = () => {
 
             {!productImage ? (
               <div className="space-y-4">
-                {/* Reference Images Selection */}
-                {study?.reference_images && study.reference_images.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      เลือกรูปอ้างอิง (Reference Images) - ไม่บังคับ
-                    </label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {study.reference_images.map((img, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => {
-                            setSelectedReferenceIndices(prev =>
-                              prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
-                            );
-                          }}
-                          className={`cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                            selectedReferenceIndices.includes(idx)
-                              ? 'border-green-500 ring-2 ring-green-300'
-                              : 'border-gray-300 hover:border-green-400'
-                          }`}
-                        >
-                          <img
-                            src={img}
-                            alt={`Reference ${idx + 1}`}
-                            className="w-full h-20 object-cover"
-                          />
-                        </div>
-                      ))}
+                {/* Reference Images Management */}
+                <div className="p-4 bg-white rounded-lg border-2 border-green-200">
+                  <h3 className="font-bold text-gray-900 mb-3">📷 รูปอ้างอิง (Reference Images)</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    อัพโหลดรูปภาพเพื่อเป็นแนวทางในการสร้างภาพผลิตภัณฑ์ (สูงสุด 5 รูป)
+                  </p>
+                  
+                  {study?.reference_images && study.reference_images.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-5 gap-2">
+                        {study.reference_images.map((img, idx) => (
+                          <div key={idx} className="relative group">
+                            <div
+                              onClick={() => {
+                                setSelectedReferenceIndices(prev =>
+                                  prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                                );
+                              }}
+                              className={`cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
+                                selectedReferenceIndices.includes(idx)
+                                  ? 'border-green-500 ring-2 ring-green-300'
+                                  : 'border-gray-300 hover:border-green-400'
+                              }`}
+                            >
+                              <img
+                                src={img}
+                                alt={`Reference ${idx + 1}`}
+                                className="w-full h-20 object-cover"
+                              />
+                              {selectedReferenceIndices.includes(idx) && (
+                                <div className="absolute top-1 right-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                  ✓
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await axios.delete(
+                                    `${API}/conjoint/studies/${studyId}/reference-images/${idx}`,
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                  );
+                                  loadResults();
+                                  toast.success('ลบรูปอ้างอิงสำเร็จ');
+                                } catch (error) {
+                                  toast.error('ไม่สามารถลบรูปได้');
+                                }
+                              }}
+                              className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-green-700">
+                        คลิกเพื่อเลือกรูปที่ต้องการใช้อ้างอิง (เลือกได้หลายรูป)
+                      </p>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">ยังไม่มีรูปอ้างอิง</p>
+                  )}
+                  
+                  {(!study?.reference_images || study.reference_images.length < 5) && (
+                    <div className="mt-3">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length === 0) return;
+                          
+                          const currentCount = study?.reference_images?.length || 0;
+                          if (currentCount + files.length > 5) {
+                            toast.error(`สามารถอัพโหลดได้สูงสุด 5 รูป (ปัจจุบันมี ${currentCount} รูป)`);
+                            return;
+                          }
+                          
+                          try {
+                            const imageUrls = await Promise.all(
+                              files.map(file => {
+                                return new Promise((resolve) => {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => resolve(reader.result);
+                                  reader.readAsDataURL(file);
+                                });
+                              })
+                            );
+                            
+                            const existingImages = study?.reference_images || [];
+                            await axios.post(
+                              `${API}/conjoint/studies/${studyId}/reference-images`,
+                              { image_urls: [...existingImages, ...imageUrls] },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            
+                            loadResults();
+                            toast.success(`อัพโหลด ${files.length} รูปสำเร็จ`);
+                            e.target.value = '';
+                          } catch (error) {
+                            toast.error('ไม่สามารถอัพโหลดรูปได้');
+                          }
+                        }}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                      />
+                    </div>
+                  )}
+                </div>
 
                 {/* Additional Prompt */}
                 <div>
