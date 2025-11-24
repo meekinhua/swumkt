@@ -315,10 +315,10 @@ const ConjointAnalysisTool = () => {
                           <span>{new Date(study.created_at).toLocaleDateString('th-TH')}</span>
                         </div>
 
-                        {study.respondent_count > 0 && (
+                        {(study.respondent_count > 0 || study.respondent_count === undefined) && (
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            <span>{study.respondent_count} ผู้ตอบ</span>
+                            <span>{study.respondent_count || 0} ผู้ตอบ</span>
                           </div>
                         )}
                       </div>
