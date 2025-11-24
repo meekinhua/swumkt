@@ -8341,6 +8341,7 @@ async def get_statistical_analysis(
 @api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
 async def get_ai_interpretation(
     study_id: str,
+    request: AIInterpretationRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Generate AI interpretation of conjoint analysis results"""
