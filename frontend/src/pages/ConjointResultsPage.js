@@ -199,6 +199,17 @@ const ConjointResultsPage = () => {
       return;
     }
     
+    // Validate custom inputs
+    if (environmentType === 'custom' && !customEnvironment.trim()) {
+      toast.error('กรุณากรอกคำอธิบายสภาพแวดล้อมแบบกำหนดเอง');
+      return;
+    }
+    
+    if (shelfStyle === 'custom' && !customShelfStyle.trim()) {
+      toast.error('กรุณากรอกคำอธิบายสไตล์การจัดวางแบบกำหนดเอง');
+      return;
+    }
+    
     setLoadingShelfImage(true);
     try {
       const response = await axios.post(
@@ -206,7 +217,9 @@ const ConjointResultsPage = () => {
         {
           product_image_url: productImage.image_url,
           environment_type: environmentType,
+          custom_environment: environmentType === 'custom' ? customEnvironment : undefined,
           shelf_style: shelfStyle,
+          custom_shelf_style: shelfStyle === 'custom' ? customShelfStyle : undefined,
           additional_prompt: shelfPrompt || undefined
         },
         { headers: { Authorization: `Bearer ${token}` } }
