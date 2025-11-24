@@ -7661,6 +7661,91 @@ async def submit_survey_response(
     
     return {"message": "Response submitted successfully", "response_id": response_doc["id"]}
 
+
+# Sync respondent count for a study (admin only)
+@api_router.post("/conjoint/studies/{study_id}/sync-respondent-count")
+async def sync_respondent_count(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Sync respondent count with actual response count"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Check permission
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Count actual responses
+    actual_count = await db.conjoint_responses.count_documents({"study_id": study_id})
+    stored_count = study.get("respondent_count", 0)
+    
+    if actual_count != stored_count:
+        # Update the count
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {
+                "$set": {
+                    "respondent_count": actual_count,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "message": "Respondent count synced successfully",
+            "old_count": stored_count,
+            "new_count": actual_count,
+            "synced": True
+        }
+    else:
+        return {
+            "message": "Respondent count is already correct",
+            "count": actual_count,
+            "synced": False
+        }
+
+# Sync all studies' respondent counts (admin only)
+@api_router.post("/conjoint/admin/sync-all-respondent-counts")
+async def sync_all_respondent_counts(
+    current_user: User = Depends(get_current_user)
+):
+    """Sync respondent counts for all studies (admin only)"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    studies = await db.conjoint_studies.find({}, {"_id": 0, "id": 1, "respondent_count": 1}).to_list(1000)
+    
+    synced_count = 0
+    total_fixed = 0
+    
+    for study in studies:
+        study_id = study["id"]
+        stored_count = study.get("respondent_count", 0)
+        actual_count = await db.conjoint_responses.count_documents({"study_id": study_id})
+        
+        if actual_count != stored_count:
+            await db.conjoint_studies.update_one(
+                {"id": study_id},
+                {
+                    "$set": {
+                        "respondent_count": actual_count,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+            synced_count += 1
+            total_fixed += abs(actual_count - stored_count)
+    
+    return {
+        "message": f"Synced {synced_count} studies",
+        "total_studies": len(studies),
+        "synced_count": synced_count,
+        "total_fixed": total_fixed
+    }
+
+
 # Get study results and analysis
 @api_router.get("/conjoint/studies/{study_id}/results")
 async def get_study_results(
