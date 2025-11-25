@@ -492,6 +492,14 @@ const ConjointResultsPage = () => {
               )}
               
               <Button
+                onClick={() => setShowShareModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                แชร์เป็นเนื้อหา
+              </Button>
+              
+              <Button
                 onClick={handleExportCSV}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
