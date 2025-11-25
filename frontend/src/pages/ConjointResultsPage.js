@@ -675,11 +675,14 @@ const ConjointResultsPage = () => {
 
             {!productImage ? (
               <div className="space-y-4">
-                {/* Reference Images Management */}
+                {/* Reference Images Management (Owner/Admin only for upload/delete) */}
                 <div className="p-4 bg-white rounded-lg border-2 border-green-200">
                   <h3 className="font-bold text-gray-900 mb-3">📷 รูปอ้างอิง (Reference Images)</h3>
                   <p className="text-sm text-gray-600 mb-3">
-                    อัพโหลดรูปภาพเพื่อเป็นแนวทางในการสร้างภาพผลิตภัณฑ์ (สูงสุด 5 รูป)
+                    {isOwnerOrAdmin 
+                      ? 'อัพโหลดรูปภาพเพื่อเป็นแนวทางในการสร้างภาพผลิตภัณฑ์ (สูงสุด 5 รูป)'
+                      : 'รูปภาพอ้างอิงที่ใช้ในการสร้างผลิตภัณฑ์'
+                    }
                   </p>
                   
                   {study?.reference_images && study.reference_images.length > 0 ? (
@@ -689,11 +692,13 @@ const ConjointResultsPage = () => {
                           <div key={idx} className="relative group">
                             <div
                               onClick={() => {
-                                setSelectedReferenceIndices(prev =>
-                                  prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
-                                );
+                                if (isOwnerOrAdmin) {
+                                  setSelectedReferenceIndices(prev =>
+                                    prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                                  );
+                                }
                               }}
-                              className={`cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
+                              className={`${isOwnerOrAdmin ? 'cursor-pointer' : ''} border-2 rounded-lg overflow-hidden transition-all ${
                                 selectedReferenceIndices.includes(idx)
                                   ? 'border-green-500 ring-2 ring-green-300'
                                   : 'border-gray-300 hover:border-green-400'
@@ -710,35 +715,39 @@ const ConjointResultsPage = () => {
                                 </div>
                               )}
                             </div>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await axios.delete(
-                                    `${API}/conjoint/studies/${studyId}/reference-images/${idx}`,
-                                    { headers: { Authorization: `Bearer ${token}` } }
-                                  );
-                                  loadResults();
-                                  toast.success('ลบรูปอ้างอิงสำเร็จ');
-                                } catch (error) {
-                                  toast.error('ไม่สามารถลบรูปได้');
-                                }
-                              }}
-                              className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs"
-                            >
-                              ✕
-                            </button>
+                            {isOwnerOrAdmin && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await axios.delete(
+                                      `${API}/conjoint/studies/${studyId}/reference-images/${idx}`,
+                                      { headers: { Authorization: `Bearer ${token}` } }
+                                    );
+                                    loadResults();
+                                    toast.success('ลบรูปอ้างอิงสำเร็จ');
+                                  } catch (error) {
+                                    toast.error('ไม่สามารถลบรูปได้');
+                                  }
+                                }}
+                                className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
-                      <p className="text-xs text-green-700">
-                        คลิกเพื่อเลือกรูปที่ต้องการใช้อ้างอิง (เลือกได้หลายรูป)
-                      </p>
+                      {isOwnerOrAdmin && (
+                        <p className="text-xs text-green-700">
+                          คลิกเพื่อเลือกรูปที่ต้องการใช้อ้างอิง (เลือกได้หลายรูป)
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500 italic">ยังไม่มีรูปอ้างอิง</p>
                   )}
                   
-                  {(!study?.reference_images || study.reference_images.length < 5) && (
+                  {isOwnerOrAdmin && (!study?.reference_images || study.reference_images.length < 5) && (
                     <div className="mt-3">
                       <input
                         type="file"
