@@ -8854,6 +8854,132 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
         logging.error(f"Shelf simulation generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate shelf simulation: {str(e)}")
 
+
+
+# Share Conjoint Study Results as Content
+@api_router.post("/conjoint/studies/{study_id}/share-content")
+async def share_conjoint_as_content(
+    study_id: str,
+    data: ConjointContentShareRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Share conjoint analysis results as research content"""
+    try:
+        # Verify study exists and user has permission
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        
+        # Build content body with research details and results
+        content_body = f"""## เทคนิคการวิจัย
+Choice-Based Conjoint Analysis
+
+## ประเภทการวิจัย
+{data.research_type}
+
+## รายละเอียดการวิจัย
+- **การศึกษา:** {data.title}
+- **จำนวนผู้ตอบ:** {data.respondent_count} คน
+- **วิธีวิเคราะห์:** {data.statistical_method}
+"""
+        
+        # Add optional research details
+        if data.sample_size:
+            content_body += f"- **ขนาดกลุ่มตัวอย่าง:** {data.sample_size}\n"
+        if data.data_source:
+            content_body += f"- **แหล่งข้อมูล:** {data.data_source}\n"
+        if data.collection_method:
+            content_body += f"- **วิธีการเก็บข้อมูล:** {data.collection_method}\n"
+        if data.research_date:
+            content_body += f"- **วันที่ทำการวิจัย:** {data.research_date}\n"
+        
+        # Add importance scores summary
+        content_body += f"\n## ผลการวิเคราะห์ความสำคัญของคุณลักษณะ\n\n"
+        
+        # Sort importance scores
+        sorted_importance = sorted(
+            data.importance_scores.items(),
+            key=lambda x: x[1].get('importance', 0),
+            reverse=True
+        )
+        
+        for rank, (attr_id, attr_data) in enumerate(sorted_importance, 1):
+            attr_name = attr_data.get('name', 'Unknown')
+            importance = attr_data.get('importance', 0)
+            content_body += f"{rank}. **{attr_name}**: {importance:.1f}%\n"
+        
+        # Add part-worths details
+        content_body += f"\n## ค่า Utility ของระดับคุณลักษณะแต่ละอัน\n\n"
+        
+        for attr_id, attr_data in sorted_importance:
+            attr_name = attr_data.get('name', 'Unknown')
+            content_body += f"### {attr_name}\n\n"
+            
+            # Get levels from part_worths
+            if attr_id in data.part_worths:
+                levels_data = data.part_worths[attr_id].get('levels', {})
+                # Sort by utility
+                sorted_levels = sorted(
+                    levels_data.items(),
+                    key=lambda x: x[1].get('utility', 0),
+                    reverse=True
+                )
+                
+                for level_id, level_data in sorted_levels:
+                    level_name = level_data.get('name', 'Unknown')
+                    utility = level_data.get('utility', 0)
+                    content_body += f"- **{level_name}**: {utility:.3f}\n"
+            
+            content_body += "\n"
+        
+        # Add AI interpretation if available
+        if data.ai_interpretation:
+            content_body += f"\n## การตีความผลด้วย AI\n\n{data.ai_interpretation}\n"
+        
+        # Add optional notes
+        if data.additional_notes:
+            content_body += f"\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}\n"
+        
+        # Create content document
+        content_dict = {
+            "id": str(uuid.uuid4()),
+            "title": data.title,
+            "content": content_body,
+            "content_type": "research",
+            "category": "Conjoint Analysis",
+            "tags": ["conjoint-analysis", data.research_type.lower(), data.statistical_method.lower()],
+            "status": "published",
+            "contributors": [{
+                "user_id": current_user.id,
+                "user_name": current_user.full_name,
+                "role": "author"
+            }],
+            "created_by": current_user.id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "views": 0,
+            # Store metadata
+            "conjoint_metadata": {
+                "study_id": study_id,
+                "research_type": data.research_type,
+                "sample_size": data.sample_size,
+                "respondent_count": data.respondent_count,
+                "statistical_method": data.statistical_method,
+                "research_date": data.research_date
+            }
+        }
+        
+        await db.contents.insert_one(content_dict)
+        
+        return {
+            "message": "Conjoint study shared as content successfully",
+            "content_id": content_dict["id"]
+        }
+        
+    except Exception as e:
+        logging.error(f"Error sharing conjoint as content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
+
 # Get AI interpretation of results
 @api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
 async def get_ai_interpretation(
