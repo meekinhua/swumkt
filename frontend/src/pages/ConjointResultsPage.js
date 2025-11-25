@@ -80,7 +80,8 @@ const ConjointResultsPage = () => {
   const [togglingPublic, setTogglingPublic] = useState(false);
 
   useEffect(() => {
-    if (user && token && studyId) {
+    // Load results for both authenticated and public access
+    if (studyId) {
       loadResults();
     }
   }, [user, token, studyId]);
