@@ -8817,15 +8817,20 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
 async def get_ai_interpretation(
     study_id: str,
     request: AIInterpretationRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Generate AI interpretation of conjoint analysis results"""
+    """Generate AI interpretation of conjoint analysis results (public if is_public_result is True)"""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
-    if study["creator_id"] != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Check permission: allow if public OR if user is creator/admin
+    is_public = study.get("is_public_result", False)
+    if not is_public:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
     
     # Get responses
     responses = await db.conjoint_responses.find(
