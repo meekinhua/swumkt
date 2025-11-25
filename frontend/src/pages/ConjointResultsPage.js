@@ -248,6 +248,36 @@ const ConjointResultsPage = () => {
     }
   };
 
+  const handleTogglePublicResult = async () => {
+    setTogglingPublic(true);
+    try {
+      const response = await axios.put(
+        `${API}/conjoint/studies/${studyId}/public-result`,
+        { is_public: !isPublicResult },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setIsPublicResult(response.data.is_public_result);
+      toast.success(
+        response.data.is_public_result 
+          ? '✅ เปิดแชร์ผลการวิจัยสำเร็จ - ทุกคนสามารถดูได้แล้ว!' 
+          : '🔒 ปิดแชร์ผลการวิจัยสำเร็จ - เฉพาะเจ้าของเท่านั้นที่ดูได้'
+      );
+    } catch (error) {
+      console.error('Error toggling public result:', error);
+      toast.error('ไม่สามารถเปลี่ยนสถานะการแชร์ได้');
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    const shareUrl = `${window.location.origin}/conjoint/results/${studyId}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('📋 คัดลอกลิงก์แชร์สำเร็จ!');
+  };
+
+
 
   const handleExportCSV = () => {
     if (!results || !results.responses) return;
