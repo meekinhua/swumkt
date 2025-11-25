@@ -127,6 +127,12 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Public Conjoint Results - No authentication required */}
+            <Route
+              path="/conjoint/results/:studyId"
+              element={<ConjointResultsPage />}
+            />
+
             <Route
               path="/survey/conjoint/:studyId"
               element={<ConjointSurveyPage />}
