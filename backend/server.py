@@ -8431,15 +8431,20 @@ def calculate_importance_scores(part_worths: Dict, study: Dict) -> Dict[str, flo
 async def get_statistical_analysis(
     study_id: str,
     method: str = "mnl",  # mnl, mixed_logit, hierarchical_bayes, linear_regression
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get statistical analysis results with selected method"""
+    """Get statistical analysis results with selected method (public if is_public_result is True)"""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
-    if study["creator_id"] != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Check permission: allow if public OR if user is creator/admin
+    is_public = study.get("is_public_result", False)
+    if not is_public:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
     
     # Get responses
     responses = await db.conjoint_responses.find(
