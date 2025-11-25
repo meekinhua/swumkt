@@ -72,7 +72,12 @@ const ConjointResultsPage = () => {
   const [customShelfStyle, setCustomShelfStyle] = useState('');
   const [shelfPrompt, setShelfPrompt] = useState('');
   const [shelfImage, setShelfImage] = useState(null);
-  const [loadingShelfImage, setLoadingShelfImage] = useState(false)
+  const [loadingShelfImage, setLoadingShelfImage] = useState(false);
+  
+  // Public sharing states
+  const [isPublicResult, setIsPublicResult] = useState(false);
+  const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(false);
+  const [togglingPublic, setTogglingPublic] = useState(false);
 
   useEffect(() => {
     if (user && token && studyId) {
