@@ -6347,6 +6347,7 @@ async def create_conjoint_study(
         "attributes": [],
         "choice_sets": [],
         "respondent_count": 0,
+        "is_public_result": False,
         "status_history": [{
             "from_status": None,
             "to_status": ConjointStudyStatus.DRAFT,
