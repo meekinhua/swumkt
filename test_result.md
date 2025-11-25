@@ -538,11 +538,13 @@ frontend:
 
 test_plan:
   current_focus:
+    - "Conjoint Analysis Public Sharing Feature - Missing Frontend Route"
     - "Phase 1B E2E Testing: ทดสอบ full survey workflow (create → publish → take → view responses)"
     - "Phase 1B Frontend: ทดสอบ Survey Builder UI"
     - "Phase 1B Frontend: ทดสอบ Survey Taking flow"
     - "Phase 1B Frontend: ทดสอบ Response Dashboard & Export"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Conjoint Analysis Public Sharing Feature - Missing Frontend Route"
   test_all: false
   test_priority: "high_first"
   completed_tests:
