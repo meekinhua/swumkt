@@ -6626,6 +6626,11 @@ async def get_conjoint_study(
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
+    # Add permission info for frontend
+    is_owner = study.get("creator_id") == current_user.id
+    is_admin = current_user.role == UserRole.ADMIN
+    study["is_owner_or_admin"] = is_owner or is_admin
+    
     return study
 
 # List user's studies
