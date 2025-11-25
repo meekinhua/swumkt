@@ -6173,6 +6173,23 @@ class AIInterpretationRequest(BaseModel):
     compare_all: bool = False  # If True, analyze and compare all methods
 
 
+class ConjointContentShareRequest(BaseModel):
+    title: str
+    research_type: str  # e.g., "quantitative", "qualitative", "mixed"
+    sample_size: Optional[str] = None
+    data_source: Optional[str] = None
+    collection_method: Optional[str] = None
+    research_date: Optional[str] = None
+    additional_notes: Optional[str] = None
+    study_id: str
+    # Include results data
+    respondent_count: int
+    statistical_method: str
+    importance_scores: Dict[str, Any]
+    part_worths: Dict[str, Any]
+    ai_interpretation: Optional[str] = None
+
+
 
 class GenerateImagesRequest(BaseModel):
     study_id: str
