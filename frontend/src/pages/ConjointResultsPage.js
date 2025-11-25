@@ -106,6 +106,10 @@ const ConjointResultsPage = () => {
       setStudy(studyRes.data);
       setResults(resultsRes.data);
       setCurrentResults(resultsRes.data); // Set initial results as counting method
+      
+      // Set public sharing states
+      setIsPublicResult(studyRes.data.is_public_result || false);
+      setIsOwnerOrAdmin(studyRes.data.is_owner_or_admin || false);
     } catch (error) {
       console.error('Error loading results:', error);
       toast.error('ไม่สามารถโหลดผลการวิเคราะห์ได้');
