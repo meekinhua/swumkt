@@ -1904,6 +1904,20 @@ const ConjointResultsPage = () => {
           </>
         )}
       </div>
+      
+      {/* Share as Content Modal */}
+      <ShareConjointModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onShare={handleShareAsContent}
+        conjointData={{
+          study: study,
+          respondent_count: results?.respondent_count || 0,
+          current_results: currentResults,
+          ai_interpretation: aiInterpretation
+        }}
+        loading={sharingContent}
+      />
     </div>
   );
 };
