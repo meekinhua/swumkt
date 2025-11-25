@@ -8945,7 +8945,7 @@ async def share_conjoint_as_content(
                     
                     # Call AI
                     from emergentintegrations.llm.chat import LlmChat, UserMessage
-                    chat = LlmChat(model="gemini-2.0-flash-exp", temperature=0.7)
+                    chat = LlmChat()
                     ai_interpretation = await chat.send_message_async(UserMessage(prompt))
                     logging.info("AI interpretation generated successfully")
                     
