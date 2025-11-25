@@ -8863,12 +8863,95 @@ async def share_conjoint_as_content(
     data: ConjointContentShareRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Share conjoint analysis results as research content"""
+    """Share conjoint analysis results as research content with charts and AI analysis"""
     try:
+        import matplotlib
+        matplotlib.use('Agg')  # Non-GUI backend
+        import matplotlib.pyplot as plt
+        import io
+        
         # Verify study exists and user has permission
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
+        
+        # Generate AI interpretation if not provided
+        ai_interpretation = data.ai_interpretation
+        if not ai_interpretation:
+            logging.info("Generating AI interpretation automatically...")
+            try:
+                # Get responses for AI analysis
+                responses = await db.conjoint_responses.find(
+                    {"study_id": study_id},
+                    {"_id": 0}
+                ).to_list(1000)
+                
+                if len(responses) >= 30:
+                    # Prepare data for AI
+                    analysis_data = {
+                        "importance_scores": data.importance_scores,
+                        "part_worths": data.part_worths,
+                        "respondent_count": data.respondent_count,
+                        "statistical_method": data.statistical_method
+                    }
+                    
+                    # Build AI prompt
+                    prompt = f"""คุณเป็นนักวิเคราะห์การวิจัยตลาด กรุณาวิเคราะห์ผลการวิจัย Conjoint Analysis ต่อไปนี้:
+
+การศึกษา: {data.title}
+จำนวนผู้ตอบ: {data.respondent_count} คน
+วิธีวิเคราะห์: {data.statistical_method}
+
+## ความสำคัญของคุณลักษณะ (Importance Scores)
+"""
+                    sorted_importance = sorted(
+                        data.importance_scores.items(),
+                        key=lambda x: x[1].get('importance', 0),
+                        reverse=True
+                    )
+                    
+                    for rank, (attr_id, attr_data) in enumerate(sorted_importance, 1):
+                        attr_name = attr_data.get('name', 'Unknown')
+                        importance = attr_data.get('importance', 0)
+                        prompt += f"{rank}. {attr_name}: {importance:.1f}%\n"
+                    
+                    prompt += "\n## ค่า Utility ของแต่ละระดับ\n"
+                    for attr_id, attr_data in sorted_importance:
+                        attr_name = attr_data.get('name', 'Unknown')
+                        prompt += f"\n### {attr_name}\n"
+                        
+                        if attr_id in data.part_worths:
+                            levels_data = data.part_worths[attr_id].get('levels', {})
+                            sorted_levels = sorted(
+                                levels_data.items(),
+                                key=lambda x: x[1].get('utility', 0),
+                                reverse=True
+                            )
+                            
+                            for level_id, level_data in sorted_levels:
+                                level_name = level_data.get('name', 'Unknown')
+                                utility = level_data.get('utility', 0)
+                                prompt += f"- {level_name}: {utility:.3f}\n"
+                    
+                    prompt += """
+
+กรุณาให้การตีความผลที่ครอบคลุม:
+1. คุณลักษณะใดสำคัญที่สุดและทำไม?
+2. ระดับใดของแต่ละคุณลักษณะที่ผู้บริโภคชื่นชอบ?
+3. ข้อเสนอแนะเชิงธุรกิจ (3-5 ข้อ)
+4. กลยุทธ์การตลาดที่แนะนำ
+
+ใช้ภาษาไทยที่เข้าใจง่าย ชัดเจน และเป็นมืออาชีพ"""
+                    
+                    # Call AI
+                    from emergentintegrations.llm.chat import LlmChat, UserMessage
+                    chat = LlmChat(model="gemini-2.0-flash-exp", temperature=0.7)
+                    ai_interpretation = await chat.send_message_async(UserMessage(prompt))
+                    logging.info("AI interpretation generated successfully")
+                    
+            except Exception as e:
+                logging.error(f"Error generating AI interpretation: {e}")
+                ai_interpretation = None
         
         # Build content body with research details and results
         content_body = f"""## เทคนิคการวิจัย
