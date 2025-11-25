@@ -295,6 +295,32 @@ const ConjointResultsPage = () => {
   const handleShareAsContent = async (formData) => {
     setSharingContent(true);
     try {
+      // Check if AI interpretation exists, if not generate it first
+      let interpretationText = aiInterpretation?.interpretation || null;
+      
+      if (!interpretationText && results?.respondent_count >= 30) {
+        toast.info('⏳ กำลังสร้างการวิเคราะห์ด้วย AI...');
+        
+        try {
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          const aiResponse = await axios.post(
+            `${API}/conjoint/studies/${studyId}/ai-interpretation`,
+            {
+              method: selectedMethod,
+              compare_all: false
+            },
+            { headers }
+          );
+          
+          interpretationText = aiResponse.data.interpretation;
+          setAiInterpretation(aiResponse.data);
+          toast.success('✅ สร้างการวิเคราะห์ด้วย AI สำเร็จ!');
+        } catch (aiError) {
+          console.error('Error generating AI interpretation:', aiError);
+          toast.warning('⚠️ ไม่สามารถสร้างการวิเคราะห์ AI ได้ แต่จะดำเนินการแชร์ต่อ');
+        }
+      }
+      
       // Prepare data for sharing
       const shareData = {
         title: formData.title,
@@ -309,16 +335,18 @@ const ConjointResultsPage = () => {
         statistical_method: selectedMethod === 'counting' ? 'Counting Method' : getMethodName(selectedMethod),
         importance_scores: currentResults?.importance_scores || {},
         part_worths: currentResults?.part_worths || {},
-        ai_interpretation: aiInterpretation?.interpretation || null
+        ai_interpretation: interpretationText
       };
 
+      toast.info('📊 กำลังสร้าง charts และเนื้อหา...');
+      
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/share-content`,
         shareData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success('✅ แชร์เป็นเนื้อหาสำเร็จ!');
+      toast.success('✅ แชร์เป็นเนื้อหาสำเร็จ! พร้อมกราฟและการวิเคราะห์ AI');
       setShowShareModal(false);
       
       // Optional: redirect to content page
