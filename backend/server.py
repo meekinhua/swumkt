@@ -6707,6 +6707,39 @@ async def update_study_status(
     }
 
 
+# Toggle public result sharing
+@api_router.put("/conjoint/studies/{study_id}/public-result")
+async def toggle_public_result(
+    study_id: str,
+    is_public: bool = Body(..., embed=True),
+    current_user: User = Depends(get_current_user)
+):
+    """Toggle public sharing for study results - accessible by study owner and admin only"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Check permission: owner or admin can toggle
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You don't have permission to modify this study")
+    
+    # Update study
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {"$set": {
+            "is_public_result": is_public,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+    
+    return {
+        "message": "Public result setting updated successfully",
+        "is_public_result": is_public,
+        "study_id": study_id
+    }
+
+
+
 # Admin: Get all LLM prompts
 @api_router.get("/admin/llm-prompts")
 async def get_llm_prompts(
