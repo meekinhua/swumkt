@@ -9010,10 +9010,16 @@ Choice-Based Conjoint Analysis
                 buffer = io.BytesIO()
                 plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
                 buffer.seek(0)
-                importance_img_base64 = base64.b64encode(buffer.read()).decode()
+                img_bytes = buffer.read()
+                importance_img_base64 = base64.b64encode(img_bytes).decode()
                 chart_images.append({
+                    "id": str(uuid.uuid4()),
                     "type": "importance",
                     "title": "ความสำคัญของคุณลักษณะ",
+                    "filename": "importance_chart.png",
+                    "file_type": "image/png",
+                    "file_size_kb": round(len(img_bytes) / 1024, 2),
+                    "url": f"data:image/png;base64,{importance_img_base64}",
                     "data": f"data:image/png;base64,{importance_img_base64}"
                 })
                 plt.close()
