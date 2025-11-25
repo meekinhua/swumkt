@@ -536,6 +536,21 @@ frontend:
         agent: "main"
         comment: "✅ IMPLEMENTED: เพิ่ม Surveys menu ใน navigation (desktop + mobile), อัปเดต Market Research page (Survey Builder card พร้อมใช้งาน), เพิ่ม routes ทั้งหมด (/surveys, /surveys/create, /surveys/:id/edit, /surveys/:id/take, /surveys/:id/responses)"
 
+  - task: "Conjoint Analysis Public Sharing Feature - Complete Testing"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/pages/ConjointResultsPage.js, /app/frontend/src/App.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing Public Sharing feature for Conjoint Results Page as requested in Thai review: 1) Owner/Admin View - check sharing toggle, badge, copy link 2) Public Access Test (Incognito) - verify unauthenticated access 3) Private Access Test - verify blocked access when sharing disabled"
+      - working: false
+        agent: "testing"
+        comment: "🎯 CONJOINT ANALYSIS PUBLIC SHARING TESTING COMPLETE! ❌ CRITICAL ISSUE FOUND: Public sharing feature is 80% implemented but missing critical frontend route. ✅ OWNER/ADMIN VIEW WORKING: Successfully tested with admin@swu.ac.th/admin123. Share toggle button ('เปิดแชร์ผล'/'ปิดแชร์') working perfectly. Public sharing badge ('กำลังแชร์สาธารณะ'/'เฉพาะเจ้าของ') displays correctly. Copy link button ('คัดลอกลิงก์') appears when sharing enabled. Toast notifications working for all actions. ❌ PUBLIC ACCESS FAILING: Copy link generates URL /conjoint/results/{studyId} but this route is NOT defined in App.js. When accessing public URL without login, page shows blank content instead of results. Backend fully supports public access with get_current_user_optional but frontend route missing. ✅ BACKEND VERIFIED: All backend APIs work correctly for both authenticated and unauthenticated access when is_public_result=true. 🔧 REQUIRED FIX: Add public route in App.js: <Route path='/conjoint/results/:studyId' element={<ConjointResultsPage />} /> and modify ConjointResultsPage to handle unauthenticated access."
+
 test_plan:
   current_focus:
     - "Conjoint Analysis Public Sharing Feature - Missing Frontend Route"
