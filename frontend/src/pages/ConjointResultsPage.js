@@ -21,7 +21,11 @@ import {
   CheckCircle,
   PieChart as PieChartIcon,
   BarChart3,
-  GraduationCap
+  GraduationCap,
+  Share2,
+  Lock,
+  Unlock,
+  Copy
 } from 'lucide-react';
 import {
   PieChart,
