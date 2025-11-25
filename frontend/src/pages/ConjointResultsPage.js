@@ -80,6 +80,10 @@ const ConjointResultsPage = () => {
   const [isPublicResult, setIsPublicResult] = useState(false);
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(false);
   const [togglingPublic, setTogglingPublic] = useState(false);
+  
+  // Content sharing states
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharingContent, setSharingContent] = useState(false);
 
   useEffect(() => {
     // Load results for both authenticated and public access
