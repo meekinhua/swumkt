@@ -1,144 +1,168 @@
 <analysis>**original_problem_statement:**
-The user's high-level goal is to build a suite of marketing and academic research tools. The current primary objective is to build a new, comprehensive **Choice-Based Conjoint Analysis** tool.
+The user's high-level goal is to build a suite of marketing and academic research tools, with the current focus on a comprehensive **Choice-Based Conjoint Analysis** tool.
 
 **PRODUCT REQUIREMENTS:**
 1.  **Qualitative Phase:** Use an LLM to analyze unstructured data to discover relevant product/service attributes and their levels.
-2.  **Quantitative Phase (Study Design):** Set up a study using a D-Optimal design. Allow generating or uploading images for individual **levels** and composite **profiles**. Image generation should support multiple models and reference images.
+2.  **Quantitative Phase (Study Design):** Set up a study using a D-Optimal design. Allow generating or uploading images for individual **levels** and composite **profiles**.
 3.  **Survey & Collection:** Distribute the survey via a shareable link. The survey page must be responsive.
-4.  **Analysis & Reporting:** Collect and analyze responses. The results page should be user-friendly for non-experts (with charts and AI interpretation) but also provide a detailed Academic view with raw statistical outputs from various models. The user must be able to choose the analysis method (e.g., Counting, Linear Regression, Multinomial Logit).
+4.  **Analysis & Reporting:** A results page with user-friendly charts, AI-driven interpretation, and a detailed Academic view. The user must be able to choose the analysis method.
 5.  **Admin Management:** An admin must be able to view and modify all LLM prompts and settings.
+6.  **Status Management:** Admins and study owners must be able to manage the lifecycle of a study (e.g., Draft, Active, Completed).
+7.  **Post-Analysis Tools:** After AI analysis, provide tools to generate a product image based on the results and simulate that product on a retail shelf.
+8.  **Shareable Results:** Allow users to generate a public, read-only link to share their study results.
+9.  **Bug Fixes:** Address various issues, including permission errors, incorrect respondent counts, and failures in the AI analysis pipeline.
 
 **User's preferred language**: Thai
 
 **what currently exists?**
-The application is a mature full-stack Conjoint Analysis tool. The core functionality, from study creation to survey-taking and analysis, is in place.
+The application is a mature full-stack Conjoint Analysis tool. A comprehensive status management system (, , , ) has been successfully integrated into both the backend and frontend, allowing admins and owners to control study lifecycles. The  page was completely rewritten to support this new system.
 
-The most recent work heavily focused on a major overhaul of the **Analysis and Reporting** page (). This page is now fully dynamic and feature-rich:
-*   The analysis method selection dropdown has been moved to the main Overview tab for better visibility.
-*   The dropdown includes all five analysis methods: **Counting, Linear Regression, Multinomial Logit (MNL), Mixed Logit (simplified), and Hierarchical Bayes (simplified)**.
-*   The Overview tab, including the AI-generated summary, Pie Chart (Attribute Importance), and Bar Charts (Level Utilities), now dynamically updates its content based on the user's selected analysis method.
-*   **Multinomial Logit (MNL)** is now the default method displayed when the page loads.
-*   The Academic tab layout has been reorganized, and descriptions for calculation formulas now change dynamically with the selected method to provide context to the user.
-*   All backend analysis endpoints have been unified to return a consistent data structure (, ), simplifying frontend logic.
+The  has been significantly enhanced with two new major features:
+1.  **AI-Powered Product Image Generator:** Generates a product image based on the AI analysis summary. It uses Gemini 2.5, supports custom prompts, and allows management of reference images.
+2.  **On-Shelf Simulation Tool:** Creates a simulation of the generated product in a realistic retail environment, also powered by Gemini, with options for custom contexts.
 
-Additionally, several critical bugs have been resolved, including issues with survey links failing due to data size, surveys not loading based on their status, and data ownership permissions. The Market Research landing page has also been cleaned up.
+The AI analysis feature itself was improved to allow a choice between analyzing a single statistical method's results or comparing all available methods. The backend was updated to send the full, raw statistical data to the LLM for a more in-depth analysis.
+
+Several critical bugs have been resolved, including a persistent failure in the Qualitative AI analysis, an issue preventing attributes from being saved, and incorrect respondent counts hiding the View Report button.
 
 **Last working item**:
--   **Last item agent was working:** Debugging an issue where images were not appearing on the conjoint survey page. The agent found that the database stored image URLs in individual fields (, ) rather than a consolidated  object. A fix was implemented in the backend  endpoint to reconstruct the  object in the format the frontend expects.
--   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** screenshot tool
--   **User Testing Done:** N
+-   **Last item agent was working:** The user requested the ability to make Conjoint research results shareable as a read-only content page for viewers without an account.
+-   **Status:** NOT STARTED
+-   **Agent Testing Done:** N/A
+-   **Which testing method agent to use?** both
+-   **User Testing Done:** N/A
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Images not appearing on the survey page (P0)**
-    -   **Description:** The user reported that images are not visible on the survey page. A backend fix was applied to correct the data structure of the API response to match what the frontend expects. This fix needs to be verified.
-    -   **Attempted fixes:** The agent modified  to correctly gather image URLs from  and  fields and place them into an  object within each profile.
-    -   **Next debug checklist:**
-        1.  Use the  to navigate to a survey page for a study that is known to have images.
-        2.  Visually confirm if the profile and attribute-level images are now displayed correctly.
-        3.  If not, inspect the browser console log from the screenshot output for new frontend errors.
-    -   **Why fix this issue and what will be achieved with the fix?** Images are a critical part of the survey experience for many studies. Fixing this restores essential functionality.
-    -   **Status:** USER VERIFICATION PENDING
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on other issue:** None
+-   None. All reported issues in this session were resolved.
 
 **In progress Task List**:
--   None
+-   **Task 1: Implement Read-Only Sharable Results Page (P0)**
+    -   **Description:** Create a system to generate a unique, public, read-only link for a Conjoint study's results page. Anyone with the link can view the results but cannot edit anything.
+    -   **Where to resume:**
+        1.  **Backend:** Create a new API endpoint (e.g., ) to generate and store a unique share token. Create a public endpoint (e.g., ) to fetch results without authentication.
+        2.  **Frontend:** Add a Share button to . On click, call the backend to get the share link and display it to the user. Create a new public React route and component (e.g., ) to render the read-only results.
+    -   **What will be achieved with this?** Allows users to easily share their research findings with stakeholders who don't have accounts.
+    -   **Status:** NOT STARTED
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P1: Review Simplified Statistical Models:** The Hierarchical Bayes (HB) and Mixed Logit models are currently simplified implementations. Confirm with the user if these are sufficient or if more statistically rigorous versions are required.
+    -   **P1: Verify Survey Image Display Fix:** The fix for images not appearing on the survey page (from the previous fork) was never visually verified. Use the  to confirm this is working as expected.
+    -   **P2: Review Simplified Statistical Models:** Confirm with the user if the simplified Hierarchical Bayes (HB) and Mixed Logit models are sufficient or need more rigorous implementations.
 -   **Future Tasks:**
-    -   **P2: Android Push Notification  option:** Implement in .
-    -   **P3: Revisit Academic Format Corrector:** This feature was previously abandoned.
-    -   **P4: Implement Customer Behavior Analysis (Quantitative):** Build functionality for the disabled Quantitative tab.
-    -   **P5: Survey Analytics & Dashboard:** Implement visualization for the separate, existing Survey Builder tool.
+    -   **P3: Android Push Notification  option:** Implement in .
+    -   **P4: Revisit Academic Format Corrector:** This feature was previously abandoned.
+    -   **P5: Implement Customer Behavior Analysis (Quantitative):** Build functionality for the disabled Quantitative tab.
+    -   **P6: Survey Analytics & Dashboard:** Implement visualization for the separate, existing Survey Builder tool.
+    -   **P7: Refactor  issue:** Investigate and fix the root cause of new studies being created with  instead of  in the  function in .
 
 **Completed work in this session**
--   **Fixed Critical Multinomial Logit (MNL) Analysis:** Switched from an incorrect model () to the correct one for choice data () and fixed all related backend issues.
--   **Unified All 5 Analysis Methods:** Refactored the backend to ensure Counting, Linear Regression, MNL, Mixed Logit, and HB all return a consistent data structure (, ).
--   **Major Refactor of Conjoint Results Page:**
-    -   Made the Overview tab fully dynamic, allowing users to switch between all 5 analysis methods and see charts and summaries update in real-time.
-    -   Set MNL as the default method on page load.
-    -   Added dynamic descriptions for calculation formulas to educate the user.
-    -   Reorganized the Academic tab layout for better readability.
--   **Survey & Data Integrity Bug Fixes:**
-    -   Fixed survey loading failures caused by large data payloads.
-    -   Removed the restrictive status check, allowing surveys to be accessed regardless of their  or  status.
-    -   Corrected the ownership of a study by updating its  in the database.
--   **UI Cleanup:** Removed a redundant Conjoint Analysis card from the  page.
+-   **Implemented Full Status Management System:** Added backend APIs and a completely new frontend UI in  for managing study statuses (, , , ).
+-   **Developed Post-Analysis Image Generation Suite:**
+    -   Created backend endpoints and frontend UI on  for an **AI Product Image Generator** and an **On-Shelf Simulator**, both using Gemini 2.5.
+    -   Implemented UI for custom prompts and reference image management.
+-   **Enhanced AI Analysis on Results Page:**
+    -   Modified the backend to support analysis of a single method or a comparison of all methods.
+    -   Updated the backend to send full statistical data to the LLM for richer insights.
+    -   Added a frontend toggle for the user to select the analysis mode.
+-   **Fixed Critical AI & Data Integrity Bugs:**
+    -   Resolved a persistent QUALITATIVE error that blocked the Phase 1 AI analysis.
+    -   Fixed a subsequent bug that prevented saving attributes after the analysis.
+    -   Corrected an issue where the View Report button was hidden due to incorrect respondent counts and added a manual sync feature.
+-   **Backend Stability:** Fixed an  on the User model and multiple syntax/indentation errors.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Add  to Android push notifications.**
-    -   **Debug checklist:** Edit  to include the  option in the notification payload.
-    -   **Why to solve this issue and what will be achieved with this?** Fulfills a pending user request and improves the UX for Android users.
+    -   **Debug checklist:** Edit  to include the  option.
+    -   **Why to solve this issue and what will be achieved with this?** Fulfills a pending user request and improves UX.
     -   **Should Test frontend/backend/both after fix:** Frontend
+    -   **Is recurring issue?** Y
+-   **Issue 2: Root cause of  on study creation.**
+    -   **Debug checklist:** Investigate the  function in  to standardize on .
+    -   **Why to solve this issue and what will be achieved with this?** Prevents potential future permission issues.
+    -   **Should Test frontend/backend/both after fix:** Backend
     -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
--   None
+-   **Issue recurrence in previous fork:** Images not appearing on the survey page.
+-   **Recurrence count:** 1
+-   **Status:** BLOCKED
+-   **Note:** A fix was implemented in the previous fork, but it was **never visually verified** in this session. This verification is pending and is listed as an upcoming task (P1).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Conditional Logit:** The correct statistical model for choice-based conjoint analysis, implemented using the  library.
--   **Dynamic Frontend State Management (React):** Extensive use of  and  in  to manage the  state, which holds the data for the selected analysis method and drives the UI.
--   **API Data Structure Unification:** A key architectural decision to have all backend analysis methods return a consistent JSON structure (, ) to simplify frontend rendering.
+-   **Enum-based Status Management:** Using FastAPI's  for defining and validating study statuses (, , , ).
+-   **Role-Based Access Control (RBAC):** Differentiating logic for  vs. regular users in backend endpoints.
+-   **Dynamic AI Prompt Engineering:** Modifying LLM prompts on the fly based on user input for both text analysis and image generation.
+-   **Image Generation with Gemini:** Using  for image editing and generation, leveraging base64 encoded reference images.
+-   **Complex Frontend State Management:** Managing numerous states in  for AI results, multi-step forms, loading states, and error handling.
 
 **key DB schema**
--   **conjoint_studies:** The  field is no longer a blocker for viewing surveys. The  field is used for ownership. Image URLs are stored in  and  fields, not a single  object.
+-   **conjoint_studies:**
+    -   : Now an enum (, , , ).
+    -   : New array field to track all status changes.
+    -   : An API endpoint was added to manually sync this value.
 
 **changes in tech stack**
--   **Backend:** Added .
+-   No new dependencies were installed. The agent switched from using OpenAI's image generation to Gemini's image editing capabilities within the existing  library.
 
 **All files**
-*   **Heavily Updated:**
+-   **Created:**
+    -    (and renamed to ).
+-   **Heavily Updated:**
     -   
-    -   
-*   **Updated:**
     -   
     -   
 
 **Areas that need refactoring**:
--   The root cause of new studies being created with  (it uses  instead) should be investigated and standardized across the application to prevent future permission issues. The fix should be applied in the  function in .
+-   The API design requiring  in both the path and request body caused several bugs. A full audit of all endpoints for this anti-pattern is recommended.
+-   The  vs.  inconsistency during study creation remains unfixed and should be addressed to prevent permission issues.
 
 **key api endpoints**
--   : Now supports , , , , and , all returning a unified data structure.
--   : No longer checks for . The backend logic was updated to correctly package image URLs for the frontend.
+-   
+-   
+-    (modified)
+-    (new)
+-    (new)
+-    (fixed)
+-    (fixed)
 
 **Critical Info for New Agent**
--   Your immediate priority is to **verify the fix for images not showing on the survey page**. The last user message was ไม่มีรูป (No images). The backend has been corrected to send the right data structure, but this needs visual confirmation. Use the  on a survey with images.
--   The user communicates in **Thai**. All your responses must be in Thai.
--   The results page () is highly dynamic. The central state is , which is updated when the user selects a different analysis method from the dropdown. All charts and summaries in the Overview tab are driven by this state.
+-   Your immediate priority is to implement the **read-only shareable results page**. This was the last user request and is outlined in the In progress Task List.
+-   The user communicates exclusively in **Thai**. All your responses must be in Thai.
+-   Before starting new work, it is highly recommended to perform the **P1 Upcoming Task**: quickly verify that the fix for images not displaying on the survey page is working. This was a critical issue from the last fork that was never visually confirmed.
+-   The image generation features on the results page now use Gemini 2.5 for image editing, not OpenAI. The backend logic reflects this change.
+-   The study status system is now based on a new  enum (, , , ). Any remaining code referencing old statuses like  or  will cause bugs.
 
 **documents created in this job**
 -   None.
 
 **Last 5 User Messages and any pending user messages**
-1.  **User:** The Overview tab doesn't update with the selected method. Also, add Counting to the dropdown and move it to the first tab. -> **Status:** Completed.
-2.  **User:** The charts are only working for the first two methods. -> **Status:** Completed.
-3.  **User:** For three methods, the Overview tab is empty. -> **Status:** Completed.
-4.  **User:** The page default is wrong, it should be MNL. Also, move the statistical table down on the academic tab. -> **Status:** Completed.
-5.  **User:** The survey page is not showing images anymore. -> **Status:** USER VERIFICATION PENDING.
+1.  **User:** The AI analysis in Phase 1 is failing constantly. -> **Status:** Completed.
+2.  **User:** I can't save attributes after the AI analysis. -> **Status:** Completed.
+3.  **User:** I want to share the conjoint results as read-only content. -> **Status:** NOT STARTED. This is the next primary task.
+4.  **User:** Respondent counts are wrong and the View Report button is missing. -> **Status:** Completed.
+5.  **User:** How do I fix the View Report button that's not showing up? -> **Status:** Completed.
 
 **Project Health Check:**
--   **Working:** The entire Conjoint Analysis tool, including study creation and the dynamic results page with all 5 analysis methods.
--   **Broken:** The image rendering on the survey page is the primary issue and is pending verification of the latest fix.
+-   **Working:** The core conjoint analysis tool, the new status management system, the enhanced AI analysis, and the new image generation tools.
+-   **Broken:** Nothing is confirmed broken, but the read-only sharing feature is a missing requirement.
 -   **Mocked:** Hierarchical Bayes (HB) and Mixed Logit models are simplified implementations.
 
 **Testing status**
 -   **Testing agent used after significant changes:** YES
--   **Troubleshoot agent used after agent stuck in loop:** YES
+-   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** The survey page image display broke during a backend optimization. The fix is pending verification.
+-   **Known regressions:** None confirmed, but the survey image display fix from the previous fork is pending verification.
 
 **Credentials to test flow:**
 -   **Email:** 
 -   **Password:** 
 
 **What agent forgot to execute**
--   The user request to add a  option for Android push notifications has not been implemented.
--   The root cause of  being saved as  when creating new studies was identified but not fixed.</analysis>
+-   Visually verifying the fix for images not showing on the survey page (a P0 issue from the previous fork).
+-   Implementing the  option for Android push notifications.
+-   Refactoring the  bug during study creation.</analysis>
