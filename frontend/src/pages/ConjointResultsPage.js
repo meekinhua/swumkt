@@ -233,6 +233,7 @@ const ConjointResultsPage = () => {
     
     setLoadingShelfImage(true);
     try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/generate-shelf-simulation`,
         {
@@ -243,7 +244,7 @@ const ConjointResultsPage = () => {
           custom_shelf_style: shelfStyle === 'custom' ? customShelfStyle : undefined,
           additional_prompt: shelfPrompt || undefined
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers }
       );
       
       setShelfImage(response.data);
