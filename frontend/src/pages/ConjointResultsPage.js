@@ -194,13 +194,14 @@ const ConjointResultsPage = () => {
   const handleGenerateProductImage = async () => {
     setLoadingProductImage(true);
     try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/generate-product-from-results`,
         {
           additional_prompt: productImagePrompt || undefined,
           reference_image_indices: selectedReferenceIndices.length > 0 ? selectedReferenceIndices : undefined
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers }
       );
       
       setProductImage(response.data);
