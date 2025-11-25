@@ -95,13 +95,12 @@ const ConjointResultsPage = () => {
 
   const loadResults = async () => {
     try {
+      // Prepare headers (with token if authenticated, without if public)
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
       const [studyRes, resultsRes] = await Promise.all([
-        axios.get(`${API}/conjoint/studies/${studyId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API}/conjoint/studies/${studyId}/results`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        axios.get(`${API}/conjoint/studies/${studyId}`, { headers }),
+        axios.get(`${API}/conjoint/studies/${studyId}/results`, { headers })
       ]);
       
       setStudy(studyRes.data);
@@ -113,7 +112,12 @@ const ConjointResultsPage = () => {
       setIsOwnerOrAdmin(studyRes.data.is_owner_or_admin || false);
     } catch (error) {
       console.error('Error loading results:', error);
-      toast.error('ไม่สามารถโหลดผลการวิเคราะห์ได้');
+      if (error.response?.status === 401) {
+        toast.error('กรุณา login เพื่อดูผลการวิจัยนี้');
+        navigate('/login');
+      } else {
+        toast.error('ไม่สามารถโหลดผลการวิเคราะห์ได้');
+      }
     } finally {
       setLoading(false);
     }
