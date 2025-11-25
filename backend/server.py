@@ -7748,7 +7748,7 @@ async def sync_all_respondent_counts(
 @api_router.get("/conjoint/studies/{study_id}/results")
 async def get_study_results(
     study_id: str,
-    current_user: Optional[User] = Depends(get_optional_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Get analysis results for a study (public if is_public_result is True)"""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
