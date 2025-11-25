@@ -6619,17 +6619,32 @@ async def generate_conjoint_design(
 @api_router.get("/conjoint/studies/{study_id}")
 async def get_conjoint_study(
     study_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get conjoint study details"""
+    """Get conjoint study details (public if is_public_result is True)"""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
+    # Check if study results are public
+    is_public_result = study.get("is_public_result", False)
+    
+    # If not public, require authentication and ownership
+    if not is_public_result:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        is_owner = study.get("creator_id") == current_user.id
+        is_admin = current_user.role == UserRole.ADMIN
+        if not (is_owner or is_admin):
+            raise HTTPException(status_code=403, detail="Not authorized")
+    
     # Add permission info for frontend
-    is_owner = study.get("creator_id") == current_user.id
-    is_admin = current_user.role == UserRole.ADMIN
-    study["is_owner_or_admin"] = is_owner or is_admin
+    if current_user:
+        is_owner = study.get("creator_id") == current_user.id
+        is_admin = current_user.role == UserRole.ADMIN
+        study["is_owner_or_admin"] = is_owner or is_admin
+    else:
+        study["is_owner_or_admin"] = False
     
     return study
 
