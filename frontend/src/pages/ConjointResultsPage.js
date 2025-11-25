@@ -25,8 +25,10 @@ import {
   Share2,
   Lock,
   Unlock,
-  Copy
+  Copy,
+  FileText
 } from 'lucide-react';
+import ShareConjointModal from '@/components/ShareConjointModal';
 import {
   PieChart,
   Pie,
