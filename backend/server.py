@@ -9102,12 +9102,18 @@ Choice-Based Conjoint Analysis
             content_body += "\n"
         
         # Add AI interpretation if available
-        if data.ai_interpretation:
-            content_body += f"\n## การตีความผลด้วย AI\n\n{data.ai_interpretation}\n"
+        if ai_interpretation:
+            content_body += f"\n## การตีความผลด้วย AI\n\n{ai_interpretation}\n"
         
         # Add optional notes
         if data.additional_notes:
             content_body += f"\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}\n"
+        
+        # Add link to view full results
+        # Determine the base URL from environment or request
+        base_url = os.environ.get('FRONTEND_URL', 'https://survey-wizard-11.preview.emergentagent.com')
+        results_link = f"{base_url}/research/conjoint/{study_id}/results"
+        content_body += f"\n## 🔗 ดูผลการวิจัยแบบเต็ม\n\n[คลิกที่นี่เพื่อดูผลการวิจัยแบบโต้ตอบ]({results_link})\n"
         
         # Create content document
         content_dict = {
@@ -9127,6 +9133,8 @@ Choice-Based Conjoint Analysis
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "views": 0,
+            # Store chart images
+            "attachments": chart_images,
             # Store metadata
             "conjoint_metadata": {
                 "study_id": study_id,
@@ -9134,7 +9142,8 @@ Choice-Based Conjoint Analysis
                 "sample_size": data.sample_size,
                 "respondent_count": data.respondent_count,
                 "statistical_method": data.statistical_method,
-                "research_date": data.research_date
+                "research_date": data.research_date,
+                "results_link": results_link
             }
         }
         
