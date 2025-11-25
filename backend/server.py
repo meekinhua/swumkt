@@ -8976,15 +8976,101 @@ Choice-Based Conjoint Analysis
         if data.research_date:
             content_body += f"- **วันที่ทำการวิจัย:** {data.research_date}\n"
         
+        # Create charts
+        chart_images = []
+        
+        # 1. Importance Chart
+        try:
+            sorted_importance = sorted(
+                data.importance_scores.items(),
+                key=lambda x: x[1].get('importance', 0),
+                reverse=True
+            )
+            
+            if sorted_importance:
+                # Prepare data
+                attr_names = [attr_data.get('name', 'Unknown') for _, attr_data in sorted_importance]
+                importances = [attr_data.get('importance', 0) for _, attr_data in sorted_importance]
+                
+                # Create bar chart
+                plt.figure(figsize=(10, 6))
+                colors = plt.cm.viridis([i/len(attr_names) for i in range(len(attr_names))])
+                bars = plt.barh(attr_names, importances, color=colors)
+                plt.xlabel('ความสำคัญ (%)', fontsize=12, fontweight='bold')
+                plt.title('ความสำคัญของคุณลักษณะ (Attribute Importance)', fontsize=14, fontweight='bold', pad=20)
+                plt.xlim(0, max(importances) * 1.1)
+                
+                # Add value labels
+                for i, (bar, val) in enumerate(zip(bars, importances)):
+                    plt.text(val + 1, i, f'{val:.1f}%', va='center', fontsize=10, fontweight='bold')
+                
+                plt.tight_layout()
+                
+                # Save to base64
+                buffer = io.BytesIO()
+                plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+                buffer.seek(0)
+                importance_img_base64 = base64.b64encode(buffer.read()).decode()
+                chart_images.append({
+                    "type": "importance",
+                    "title": "ความสำคัญของคุณลักษณะ",
+                    "data": f"data:image/png;base64,{importance_img_base64}"
+                })
+                plt.close()
+                logging.info("Importance chart created successfully")
+        except Exception as e:
+            logging.error(f"Error creating importance chart: {e}")
+        
+        # 2. Utility Charts (for each attribute)
+        for attr_id, attr_data in sorted_importance[:3]:  # Top 3 attributes
+            try:
+                attr_name = attr_data.get('name', 'Unknown')
+                
+                if attr_id in data.part_worths:
+                    levels_data = data.part_worths[attr_id].get('levels', {})
+                    sorted_levels = sorted(
+                        levels_data.items(),
+                        key=lambda x: x[1].get('utility', 0),
+                        reverse=True
+                    )
+                    
+                    if sorted_levels:
+                        level_names = [level_data.get('name', 'Unknown') for _, level_data in sorted_levels]
+                        utilities = [level_data.get('utility', 0) for _, level_data in sorted_levels]
+                        
+                        # Create bar chart
+                        plt.figure(figsize=(10, 5))
+                        colors = ['#2ecc71' if u > 0 else '#e74c3c' for u in utilities]
+                        bars = plt.barh(level_names, utilities, color=colors)
+                        plt.xlabel('ค่า Utility', fontsize=12, fontweight='bold')
+                        plt.title(f'ค่า Utility ของ {attr_name}', fontsize=14, fontweight='bold', pad=20)
+                        plt.axvline(x=0, color='black', linestyle='-', linewidth=0.5)
+                        
+                        # Add value labels
+                        for i, (bar, val) in enumerate(zip(bars, utilities)):
+                            x_pos = val + (0.02 if val > 0 else -0.02)
+                            ha = 'left' if val > 0 else 'right'
+                            plt.text(x_pos, i, f'{val:.3f}', va='center', ha=ha, fontsize=10, fontweight='bold')
+                        
+                        plt.tight_layout()
+                        
+                        # Save to base64
+                        buffer = io.BytesIO()
+                        plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+                        buffer.seek(0)
+                        utility_img_base64 = base64.b64encode(buffer.read()).decode()
+                        chart_images.append({
+                            "type": "utility",
+                            "title": f"ค่า Utility ของ {attr_name}",
+                            "data": f"data:image/png;base64,{utility_img_base64}"
+                        })
+                        plt.close()
+                        logging.info(f"Utility chart for {attr_name} created successfully")
+            except Exception as e:
+                logging.error(f"Error creating utility chart for {attr_name}: {e}")
+        
         # Add importance scores summary
         content_body += f"\n## ผลการวิเคราะห์ความสำคัญของคุณลักษณะ\n\n"
-        
-        # Sort importance scores
-        sorted_importance = sorted(
-            data.importance_scores.items(),
-            key=lambda x: x[1].get('importance', 0),
-            reverse=True
-        )
         
         for rank, (attr_id, attr_data) in enumerate(sorted_importance, 1):
             attr_name = attr_data.get('name', 'Unknown')
