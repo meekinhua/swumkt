@@ -383,14 +383,68 @@ const ConjointResultsPage = () => {
                 📊 ผลการวิเคราะห์
               </h1>
               <p className="text-lg text-gray-600">{study?.title}</p>
+              
+              {/* Public Share Status Badge */}
+              {isOwnerOrAdmin && (
+                <div className="mt-2 flex items-center gap-2">
+                  {isPublicResult ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-green-100 text-green-700 border border-green-300">
+                      <Unlock className="w-3 h-3" />
+                      กำลังแชร์สาธารณะ
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 border border-gray-300">
+                      <Lock className="w-3 h-3" />
+                      เฉพาะเจ้าของ
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <Button
-              onClick={handleExportCSV}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              ดาวน์โหลดข้อมูล
-            </Button>
+            
+            <div className="flex gap-2">
+              {/* Public Share Toggle Button (Owner/Admin only) */}
+              {isOwnerOrAdmin && (
+                <>
+                  <Button
+                    onClick={handleTogglePublicResult}
+                    disabled={togglingPublic}
+                    variant="outline"
+                    className={`${
+                      isPublicResult 
+                        ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100' 
+                        : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {togglingPublic ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    ) : (
+                      <Share2 className="w-4 h-4 mr-2" />
+                    )}
+                    {isPublicResult ? 'ปิดแชร์' : 'เปิดแชร์ผล'}
+                  </Button>
+                  
+                  {isPublicResult && (
+                    <Button
+                      onClick={handleCopyShareLink}
+                      variant="outline"
+                      className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      คัดลอกลิงก์
+                    </Button>
+                  )}
+                </>
+              )}
+              
+              <Button
+                onClick={handleExportCSV}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                ดาวน์โหลดข้อมูล
+              </Button>
+            </div>
           </div>
         </div>
 
