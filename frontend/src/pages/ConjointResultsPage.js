@@ -169,10 +169,11 @@ const ConjointResultsPage = () => {
         compare_all: aiAnalysisMode === 'compare_all'
       };
       
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post(
         `${API}/conjoint/studies/${studyId}/ai-interpretation`,
         requestBody,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers }
       );
       setAiInterpretation(response.data);
       
