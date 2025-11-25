@@ -292,6 +292,45 @@ const ConjointResultsPage = () => {
     toast.success('📋 คัดลอกลิงก์แชร์สำเร็จ!');
   };
 
+  const handleShareAsContent = async (formData) => {
+    setSharingContent(true);
+    try {
+      // Prepare data for sharing
+      const shareData = {
+        title: formData.title,
+        research_type: formData.researchType,
+        sample_size: formData.sampleSize || null,
+        data_source: formData.dataSource,
+        collection_method: formData.collectionMethod,
+        research_date: formData.researchDate || null,
+        additional_notes: formData.additionalNotes || null,
+        study_id: studyId,
+        respondent_count: results?.respondent_count || 0,
+        statistical_method: selectedMethod === 'counting' ? 'Counting Method' : getMethodName(selectedMethod),
+        importance_scores: currentResults?.importance_scores || {},
+        part_worths: currentResults?.part_worths || {},
+        ai_interpretation: aiInterpretation?.interpretation || null
+      };
+
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/share-content`,
+        shareData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('✅ แชร์เป็นเนื้อหาสำเร็จ!');
+      setShowShareModal(false);
+      
+      // Optional: redirect to content page
+      // navigate(`/content/${response.data.content_id}`);
+    } catch (error) {
+      console.error('Error sharing as content:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถแชร์เป็นเนื้อหาได้');
+    } finally {
+      setSharingContent(false);
+    }
+  };
+
 
 
   const handleExportCSV = () => {
