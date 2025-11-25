@@ -132,10 +132,11 @@ const ConjointResultsPage = () => {
         setStatisticalData(null);
         toast.success('แสดงผลแบบ Counting Method');
       } else {
-        // Load statistical analysis
+        // Load statistical analysis (with or without auth)
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const response = await axios.get(
           `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers }
         );
         setStatisticalData(response.data);
         setCurrentResults(response.data.results);
