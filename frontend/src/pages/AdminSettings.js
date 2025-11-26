@@ -191,6 +191,16 @@ const AdminSettings = () => {
       } catch (err) {
         console.log('Format editor model not set, using default');
       }
+
+      // Fetch AI Rearrange Settings
+      try {
+        const rearrangeResponse = await axios.get(`${API}/admin/ai-settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setRearrangeSettings(rearrangeResponse.data);
+      } catch (err) {
+        console.log('AI Rearrange settings not set, using default');
+      }
     } catch (error) {
       console.error('Error fetching settings:', error);
       toast.error('Failed to load settings');
