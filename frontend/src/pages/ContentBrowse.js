@@ -120,9 +120,28 @@ const ContentBrowse = () => {
                 data-testid={`content-card-${index}`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                {/* Show featured_image or first image attachment */}
+                {/* Show cover image, featured_image, or first image attachment */}
                 {(() => {
-                  // Check if there's a featured_image
+                  // Check if there's a cover_image_id (selected from attachments)
+                  if (content.cover_image_id && content.attachments) {
+                    const coverImage = content.attachments.find(att => att.id === content.cover_image_id);
+                    if (coverImage && coverImage.file_data) {
+                      return (
+                        <div className="mb-4 rounded-lg overflow-hidden relative">
+                          <img
+                            src={coverImage.file_data}
+                            alt={content.title}
+                            className="w-full h-48 object-cover"
+                          />
+                          <span className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded shadow">
+                            📌 ภาพปก
+                          </span>
+                        </div>
+                      );
+                    }
+                  }
+                  
+                  // Check if there's a featured_image (legacy support)
                   if (content.featured_image) {
                     return (
                       <div className="mb-4 rounded-lg overflow-hidden">
