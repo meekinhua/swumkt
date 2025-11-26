@@ -1717,8 +1717,15 @@ async def create_content(
     content_data: ContentCreate,
     current_user: User = Depends(get_current_user)
 ):
+    # Convert empty string to None for optional fields
+    content_dict = content_data.model_dump()
+    if content_dict.get('zbs04_assignment_type') == '':
+        content_dict['zbs04_assignment_type'] = None
+    if content_dict.get('category') == '':
+        content_dict['category'] = None
+    
     content = Content(
-        **content_data.model_dump(),
+        **content_dict,
         created_by=current_user.id,
         contributors=[
             ContentContributor(
