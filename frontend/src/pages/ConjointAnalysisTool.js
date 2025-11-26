@@ -454,6 +454,22 @@ const ConjointAnalysisTool = () => {
                           >
                             🔄 ซิงค์จำนวนผู้ตอบ
                           </DropdownMenuItem>
+                          
+                          {(study.creator_id === user?.id || user?.role === 'admin') && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setStudyToDelete(study);
+                                  setShowDeleteConfirm(true);
+                                }}
+                                className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                ลบการศึกษา
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
