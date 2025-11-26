@@ -245,6 +245,18 @@ const ContentEditor = () => {
     toast.success('ลบไฟล์แนบสำเร็จ');
   };
 
+  const handleInsertImage = (attachment) => {
+    if (editorRef.current && attachment.file_data) {
+      editorRef.current.insertImage(
+        attachment.file_data,
+        attachment.filename || attachment.title || 'Image'
+      );
+      toast.success(`แทรกรูป "${attachment.filename || 'รูปภาพ'}" เข้าบทความแล้ว`);
+    } else {
+      toast.error('ไม่สามารถแทรกรูปภาพได้');
+    }
+  };
+
   const handleAiRearrange = async () => {
     if (!id) {
       toast.error('กรุณาบันทึกเนื้อหาก่อนใช้ AI Rearrange');
@@ -258,7 +270,7 @@ const ContentEditor = () => {
 
     setAiRearranging(true);
     try {
-      toast.info('กำลังใช้ AI จัดเรียงเนื้อหา กรุณารอสักครู่...');
+      toast.info('🤖 กำลังใช้ AI วิเคราะห์และจัดเรียงเนื้อหา รวมถึงตีความรูปภาพและจัดวางตำแหน่ง กรุณารอสักครู่...');
       
       const response = await axios.post(
         `${API}/content/${id}/ai-rearrange`,
