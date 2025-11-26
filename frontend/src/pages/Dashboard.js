@@ -181,12 +181,14 @@ const Dashboard = () => {
                   {myContents.map((content, index) => (
                     <Card
                       key={content.id}
-                      className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-2 border-gray-300 hover:border-[#00A9CE] bg-white"
-                      onClick={() => navigate(`/content/${content.id}`)}
+                      className="p-4 hover:shadow-lg transition-shadow border-2 border-gray-300 hover:border-[#00A9CE] bg-white"
                       data-testid={`my-content-item-${index}`}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
+                      <div className="flex justify-between items-start gap-4">
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => navigate(`/content/${content.id}`)}
+                        >
                           <h3 className="text-lg font-bold text-gray-900 mb-1">{content.title}</h3>
                           <p className="text-sm text-gray-700 mb-2 line-clamp-2 font-medium">
                             {content.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
@@ -201,6 +203,18 @@ const Dashboard = () => {
                             </span>
                           </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setContentToDelete(content);
+                            setShowDeleteConfirm(true);
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </Card>
                   ))}
