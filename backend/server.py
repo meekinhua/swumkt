@@ -1786,7 +1786,77 @@ async def get_contents(
     if category:
         query["category"] = category
     
-    contents = await db.contents.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    # Get total count for pagination
+    total = await db.contents.count_documents(query)
+    
+    # Exclude large fields (attachments, full content) for list view performance
+    # Only get necessary fields for preview/cards
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "title": 1,
+        "content_type": 1,
+        "category": 1,
+        "tags": 1,
+        "status": 1,
+        "created_by": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "views": 1,
+        "cover_image_id": 1,
+        # Get content summary (first 200 chars) instead of full content
+        "content": {"$substr": ["$content", 0, 200]},
+        # Only get minimal attachment info for cover image
+        "attachments": {
+            "$filter": {
+                "input": "$attachments",
+                "as": "att",
+                "cond": {"$eq": ["$$att.id", "$cover_image_id"]}
+            }
+        }
+    }
+    
+    # For performance, use aggregation pipeline to truncate content
+    pipeline = [
+        {"$match": query},
+        {"$sort": {"created_at": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+        {
+            "$project": {
+                "_id": 0,
+                "id": 1,
+                "title": 1,
+                "content_type": 1,
+                "category": 1,
+                "tags": 1,
+                "status": 1,
+                "created_by": 1,
+                "created_at": 1,
+                "updated_at": 1,
+                "views": 1,
+                "cover_image_id": 1,
+                # Truncate content to 200 chars for preview
+                "content": {"$substr": ["$content", 0, 200]},
+                # Only include cover image attachment if exists
+                "attachments": {
+                    "$cond": {
+                        "if": {"$ne": ["$cover_image_id", None]},
+                        "then": {
+                            "$filter": {
+                                "input": {"$ifNull": ["$attachments", []]},
+                                "as": "att",
+                                "cond": {"$eq": ["$$att.id", "$cover_image_id"]}
+                            }
+                        },
+                        "else": []
+                    }
+                }
+            }
+        }
+    ]
+    
+    contents = await db.contents.aggregate(pipeline).to_list(limit)
     
     for content in contents:
         if isinstance(content.get('created_at'), str):
@@ -1794,7 +1864,13 @@ async def get_contents(
         if isinstance(content.get('updated_at'), str):
             content['updated_at'] = datetime.fromisoformat(content['updated_at'])
     
-    return contents
+    return {
+        "items": contents,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_more": (skip + limit) < total
+    }
 
 @api_router.get("/content/{content_id}")
 async def get_content(content_id: str):
