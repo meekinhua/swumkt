@@ -356,18 +356,25 @@ const ContentDetail = () => {
                               </div>
                             </div>
                           </div>
-                          {attachment.file_data && (
-                            <div className="rounded-lg overflow-hidden border-2 border-gray-200">
-                              <img
-                                src={attachment.file_data}
-                                alt={attachment.filename}
-                                className="w-full h-auto max-h-96 object-contain bg-gray-50"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          )}
+                          {(() => {
+                            const imgSrc = attachment.url || attachment.data || attachment.file_data;
+                            if (imgSrc) {
+                              return (
+                                <div className="rounded-lg overflow-hidden border-2 border-gray-200">
+                                  <img
+                                    src={imgSrc}
+                                    alt={attachment.filename || attachment.title}
+                                    className="w-full h-auto max-h-96 object-contain bg-gray-50"
+                                    onError={(e) => {
+                                      console.error('Attachment image failed to load:', attachment.title);
+                                      e.target.style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
