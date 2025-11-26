@@ -126,7 +126,7 @@ security = HTTPBearer()
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://market-analysis-27.preview.emergentagent.com/auth/google/callback')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://richtext-editor-2.preview.emergentagent.com/auth/google/callback')
 
 # Create the main app
 app = FastAPI(title="SWUMKT API")
@@ -9519,7 +9519,7 @@ Choice-Based Conjoint Analysis
         
         # Add link to view full results
         # Determine the base URL from environment or request
-        base_url = os.environ.get('FRONTEND_URL', 'https://market-analysis-27.preview.emergentagent.com')
+        base_url = os.environ.get('FRONTEND_URL', 'https://richtext-editor-2.preview.emergentagent.com')
         results_link = f"{base_url}/research/conjoint/{study_id}/results"
         content_body += f"\n## 🔗 ดูผลการวิจัยแบบเต็ม\n\n[คลิกที่นี่เพื่อดูผลการวิจัยแบบโต้ตอบ]({results_link})\n"
         

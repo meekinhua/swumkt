@@ -11,7 +11,7 @@ import DemographicsForm from '@/components/DemographicsForm';
 import { ArrowLeft, ArrowRight, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://market-analysis-27.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://richtext-editor-2.preview.emergentagent.com';
 
 const SurveyTakingPage = () => {
   const { surveyId } = useParams();
