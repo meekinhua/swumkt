@@ -589,51 +589,100 @@ const ContentEditor = () => {
                       </p>
                       {formData.attachments.map((attachment) => {
                         const isImage = attachment.file_type && attachment.file_type.startsWith('image/');
+                        const isCoverImage = formData.cover_image_id === attachment.id;
                         return (
                           <div
                             key={attachment.id}
                             className={`flex items-center justify-between p-3 rounded-lg border ${
-                              isImage 
-                                ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors' 
-                                : 'bg-gray-50 border-gray-200'
+                              isCoverImage
+                                ? 'bg-green-50 border-green-400 border-2'
+                                : isImage 
+                                  ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors' 
+                                  : 'bg-gray-50 border-gray-200'
                             }`}
-                            onClick={() => isImage && handleInsertImage(attachment)}
+                            onClick={() => isImage && !isCoverImage && handleInsertImage(attachment)}
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-1">
                               {isImage ? (
                                 <div className="flex items-center gap-2">
-                                  <ImageIcon className="w-5 h-5 text-blue-500" />
+                                  <ImageIcon className={`w-5 h-5 ${isCoverImage ? 'text-green-600' : 'text-blue-500'}`} />
                                   {attachment.file_data && (
                                     <img 
                                       src={attachment.file_data} 
                                       alt={attachment.filename} 
-                                      className="w-12 h-12 object-cover rounded border border-blue-300"
+                                      className={`w-12 h-12 object-cover rounded border ${
+                                        isCoverImage ? 'border-green-500 border-2' : 'border-blue-300'
+                                      }`}
                                     />
                                   )}
                                 </div>
                               ) : (
                                 <Upload className="w-5 h-5 text-gray-500" />
                               )}
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {attachment.filename || attachment.title || 'Unknown'}
-                                  {isImage && <span className="ml-2 text-xs text-blue-600">← คลิกเพื่อแทรก</span>}
-                                </p>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {attachment.filename || attachment.title || 'Unknown'}
+                                  </p>
+                                  {isCoverImage && (
+                                    <span className="px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded">
+                                      📌 ภาพปก
+                                    </span>
+                                  )}
+                                  {isImage && !isCoverImage && (
+                                    <span className="text-xs text-blue-600">← คลิกเพื่อแทรก</span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-gray-500">{attachment.file_size_kb || 'N/A'} KB</p>
                               </div>
                             </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveAttachment(attachment.id);
-                              }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {isImage && (
+                                <>
+                                  {isCoverImage ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveCoverImage();
+                                      }}
+                                      className="text-orange-600 hover:text-orange-700 border-orange-300 hover:bg-orange-50"
+                                    >
+                                      <X className="w-4 h-4 mr-1" />
+                                      ยกเลิกภาพปก
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSetCoverImage(attachment.id);
+                                      }}
+                                      className="text-green-600 hover:text-green-700 border-green-300 hover:bg-green-50"
+                                    >
+                                      <ImageIcon className="w-4 h-4 mr-1" />
+                                      ตั้งเป็นภาพปก
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveAttachment(attachment.id);
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}
