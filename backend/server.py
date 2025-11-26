@@ -1846,26 +1846,12 @@ async def ai_rearrange_content(
         estimated_tokens = len(html_content) // 4
         logging.info(f"[AI_REARRANGE] Content length: {len(html_content)} chars, estimated {estimated_tokens} tokens")
         
-        # If content is too large, summarize it first
-        if estimated_tokens > 20000:  # Leave room for prompt and images
-            logging.warning(f"[AI_REARRANGE] Content too large ({estimated_tokens} tokens), summarizing...")
-            
-            # Create summary
-            summary_chat = LlmChat(
-                api_key=emergent_key,
-                session_id=f"summarize_{content_id}_{datetime.now().timestamp()}",
-                system_message="คุณเป็นผู้เชี่ยวชาญในการสรุปเนื้อหา"
-            )
-            
-            summary_prompt = f"สรุปเนื้อหาต่อไปนี้ให้สั้นลง เน้นประเด็นสำคัญและโครงสร้างหลักเท่านั้น:\n\n{html_content[:50000]}"
-            
-            try:
-                html_content = await summary_chat.send_message(UserMessage(summary_prompt))
-                logging.info(f"[AI_REARRANGE] Content summarized to {len(html_content)} chars")
-            except Exception as e:
-                logging.error(f"[AI_REARRANGE] Summarization failed: {str(e)}")
-                # Use truncated version as fallback
-                html_content = html_content[:20000] + "\n\n[...เนื้อหาถูกตัดเพื่อความกระชับ...]"
+        # If content is too large, truncate it
+        if estimated_tokens > 20000:  # Leave room for prompt and images (max ~25k tokens total)
+            logging.warning(f"[AI_REARRANGE] Content too large ({estimated_tokens} tokens), truncating...")
+            # Keep first 15000 chars (~3750 tokens) for context
+            html_content = html_content[:15000] + "\n\n<p><em>[...เนื้อหาถูกตัดเพื่อความกระชับ...]</em></p>"
+            logging.info(f"[AI_REARRANGE] Content truncated to {len(html_content)} chars")
         
         # Extract images from attachments
         attachments = content.get('attachments', [])
