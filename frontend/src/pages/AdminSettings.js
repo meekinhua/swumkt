@@ -71,6 +71,15 @@ const AdminSettings = () => {
   const [formatEditorModelMetadata, setFormatEditorModelMetadata] = useState(null);
   const [savingFormatEditorModel, setSavingFormatEditorModel] = useState(false);
   
+  // AI Rearrange Settings
+  const [rearrangeSettings, setRearrangeSettings] = useState({
+    model: 'gpt-4o',
+    prompt_template: '',
+    max_tokens: 4000,
+    temperature: 0.7
+  });
+  const [savingRearrange, setSavingRearrange] = useState(false);
+  
   // Image Playground
   const [testPrompt, setTestPrompt] = useState('');
   const [testImage, setTestImage] = useState(null);
