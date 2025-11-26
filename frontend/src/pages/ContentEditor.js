@@ -42,6 +42,8 @@ const ContentEditor = () => {
   const [addingMember, setAddingMember] = useState(false);
   const [memberDetails, setMemberDetails] = useState([]);
   const [aiRearranging, setAiRearranging] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const editorRef = React.useRef(null);
 
   useEffect(() => {
