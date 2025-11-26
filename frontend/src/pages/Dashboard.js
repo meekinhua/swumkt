@@ -19,6 +19,9 @@ const Dashboard = () => {
   const [myContents, setMyContents] = useState([]);
   const [stats, setStats] = useState({ totalViews: 0, totalContent: 0 });
   const [loading, setLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [contentToDelete, setContentToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchMyContents();
