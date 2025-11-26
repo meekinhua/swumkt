@@ -281,6 +281,8 @@ const RichTextEditor = React.forwardRef(({ content, onChange, placeholder = 'เ
       )}
     </div>
   );
-};
+});
+
+RichTextEditor.displayName = 'RichTextEditor';
 
 export default RichTextEditor;
