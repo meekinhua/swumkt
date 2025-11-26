@@ -235,19 +235,25 @@ const ContentDetail = () => {
               att => att.file_type && att.file_type.startsWith('image/')
             ) || [];
             
-            if (imageAttachments.length > 0 && imageAttachments[0].file_data) {
-              return (
-                <div className="mb-6 rounded-lg overflow-hidden border-2 border-gray-200">
-                  <img
-                    src={imageAttachments[0].file_data}
-                    alt={content.title}
-                    className="w-full h-auto"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                </div>
-              );
+            if (imageAttachments.length > 0) {
+              const firstImage = imageAttachments[0];
+              const imageSrc = firstImage.url || firstImage.data || firstImage.file_data;
+              
+              if (imageSrc) {
+                return (
+                  <div className="mb-6 rounded-lg overflow-hidden border-2 border-gray-200">
+                    <img
+                      src={imageSrc}
+                      alt={content.title}
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        console.error('Image failed to load:', firstImage.title);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                );
+              }
             }
             
             return null;
