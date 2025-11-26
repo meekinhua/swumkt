@@ -6,6 +6,7 @@ import LandingPage from '@/pages/LandingPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import Dashboard from '@/pages/Dashboard';
+import AdminAISettings from '@/pages/AdminAISettings';
 import ContentBrowse from '@/pages/ContentBrowse';
 import ContentDetail from '@/pages/ContentDetail';
 import ContentEditor from '@/pages/ContentEditor';
