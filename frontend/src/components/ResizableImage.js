@@ -2,7 +2,7 @@ import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import React, { useState, useRef } from 'react';
 
-const ResizableImageComponent = ({ node, updateAttributes, selected }) => {
+const ResizableImageComponent = ({ node, updateAttributes, selected, deleteNode }) => {
   const [isResizing, setIsResizing] = useState(false);
   const [width, setWidth] = useState(node.attrs.width || 'auto');
   const imgRef = useRef(null);
