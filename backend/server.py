@@ -1765,7 +1765,7 @@ async def get_contents(
     
     return contents
 
-@api_router.get("/content/{content_id}", response_model=Content)
+@api_router.get("/content/{content_id}")
 async def get_content(content_id: str):
     content = await db.contents.find_one({"id": content_id}, {"_id": 0})
     if not content:
