@@ -1895,7 +1895,16 @@ async def ai_rearrange_content(
         
         # Call AI
         from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat()
+        import os
+        
+        # Get Emergent LLM key
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-8C9010bB74cCfAc069')
+        
+        chat = LlmChat(
+            api_key=emergent_key,
+            session_id=f"ai_rearrange_{content_id}_{datetime.now().timestamp()}",
+            system_message="คุณเป็นนักเขียนมืออาชีพที่เชี่ยวชาญในการจัดเรียงและปรับปรุงบทความให้สวยงาม เป็นระเบียบ และอ่านง่าย"
+        )
         logging.info(f"[AI_REARRANGE] Calling AI with prompt length: {len(prompt)} characters")
         
         ai_rearranged_html = await chat.send_message_async(UserMessage(prompt))
