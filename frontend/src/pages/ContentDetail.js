@@ -224,15 +224,12 @@ const ContentDetail = () => {
                 const imageSrc = coverImage.file_data || coverImage.url || coverImage.data;
                 if (imageSrc) {
                   return (
-                    <div className="mb-6 rounded-lg overflow-hidden border-2 border-green-400 relative">
+                    <div className="mb-6 rounded-lg overflow-hidden border-2 border-gray-200">
                       <img
                         src={imageSrc}
                         alt={content.title}
                         className="w-full h-auto"
                       />
-                      <span className="absolute top-4 right-4 px-3 py-1.5 bg-green-500 text-white text-sm font-bold rounded shadow-lg">
-                        📌 ภาพปก
-                      </span>
                     </div>
                   );
                 }
