@@ -2463,6 +2463,82 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
         logging.error(f"Journey Map generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate journey map: {str(e)}")
 
+# AI Settings (Admin Only)
+@api_router.get("/admin/ai-settings")
+async def get_ai_settings(current_user: User = Depends(get_current_user)):
+    """Get current AI rearrange settings (Admin only)"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    settings = await db.ai_settings.find_one({"id": "default"}, {"_id": 0})
+    
+    if not settings:
+        # Return default settings
+        default_prompt = """คุณเป็นนักเขียนมืออาชีพและนักออกแบบเนื้อหา กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
+
+**หัวข้อบทความ:** {title}
+
+**เนื้อหาเดิม:**
+{content}
+{images}
+
+**คำแนะนำสำคัญ:**
+1. จัดโครงสร้างเนื้อหาใหม่ให้เป็นหมวดหมู่ชัดเจน
+2. เพิ่ม headings (h2, h3) ให้เหมาะสม
+3. แบ่ง paragraphs ให้อ่านง่าย
+4. เน้นจุดสำคัญด้วย bold/italic (ใช้ <strong> และ <em> tags)
+5. เพิ่ม bullet points หรือ numbered lists ถ้าเหมาะสม
+6. วิเคราะห์รูปภาพและแทรก [รูปภาพที่ X] ในตำแหน่งที่เหมาะสม
+7. เพิ่ม introduction และ conclusion ถ้าจำเป็น
+
+**กรุณาเริ่มจัดเรียงเนื้อหาเลย (output HTML โดยตรง):**"""
+        
+        return {
+            "id": "default",
+            "model": "gpt-4o",
+            "prompt_template": default_prompt,
+            "max_tokens": 4000,
+            "temperature": 0.7
+        }
+    
+    return settings
+
+@api_router.put("/admin/ai-settings")
+async def update_ai_settings(
+    settings_update: AISettingsUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update AI rearrange settings (Admin only)"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get current settings or create new
+    current_settings = await db.ai_settings.find_one({"id": "default"})
+    
+    if current_settings:
+        # Update existing
+        update_data = settings_update.model_dump(exclude_unset=True)
+        update_data["updated_at"] = datetime.now(timezone.utc)
+        update_data["updated_by"] = current_user.id
+        
+        await db.ai_settings.update_one(
+            {"id": "default"},
+            {"$set": update_data}
+        )
+    else:
+        # Create new
+        new_settings = AISettings(
+            id="default",
+            model=settings_update.model or AIModel.GPT_4O,
+            prompt_template=settings_update.prompt_template or "",
+            max_tokens=settings_update.max_tokens or 4000,
+            temperature=settings_update.temperature or 0.7,
+            updated_by=current_user.id
+        )
+        await db.ai_settings.insert_one(new_settings.model_dump())
+    
+    return {"message": "AI settings updated successfully"}
+
 # Journey Map: Share as Content
 @api_router.post("/journey-map/share-content")
 async def share_journey_map_as_content(
