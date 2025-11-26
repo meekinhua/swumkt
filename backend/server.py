@@ -9518,8 +9518,10 @@ Choice-Based Conjoint Analysis
             content_body += f"\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}\n"
         
         # Add link to view full results
-        # Determine the base URL from environment or request
-        base_url = os.environ.get('FRONTEND_URL', 'https://richtext-editor-2.preview.emergentagent.com')
+        # Get frontend URL from environment variable
+        frontend_url = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:3000')
+        # Remove /api suffix if present for frontend URL
+        base_url = frontend_url.replace('/api', '').rstrip('/')
         results_link = f"{base_url}/research/conjoint/{study_id}/results"
         content_body += f"\n## 🔗 ดูผลการวิจัยแบบเต็ม\n\n[คลิกที่นี่เพื่อดูผลการวิจัยแบบโต้ตอบ]({results_link})\n"
         
