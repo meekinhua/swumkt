@@ -9254,7 +9254,14 @@ async def share_conjoint_as_content(
         import matplotlib
         matplotlib.use('Agg')  # Non-GUI backend
         import matplotlib.pyplot as plt
+        import matplotlib.font_manager as fm
         import io
+        
+        # Configure matplotlib to support Thai and other languages
+        plt.rcParams['font.family'] = 'DejaVu Sans'
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica', 'sans-serif']
+        # Enable unicode minus to prevent font warnings
+        plt.rcParams['axes.unicode_minus'] = False
         
         # Verify study exists and user has permission
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
