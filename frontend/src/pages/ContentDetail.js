@@ -301,9 +301,10 @@ const ContentDetail = () => {
               </div>
             </div>
             
-            <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-lg font-medium">
-              {content.content}
-            </p>
+            <div 
+              className="prose prose-lg max-w-none text-gray-800 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: content.content }}
+            />
           </div>
 
           {/* Translated Content */}
