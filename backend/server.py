@@ -2023,7 +2023,7 @@ async def ai_rearrange_content(
             images=image_context
         )
         
-        # Call AI
+        # Call AI with custom model settings
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         import os
         
@@ -2033,7 +2033,10 @@ async def ai_rearrange_content(
         chat = LlmChat(
             api_key=emergent_key,
             session_id=f"ai_rearrange_{content_id}_{datetime.now().timestamp()}",
-            system_message="คุณเป็นนักเขียนมืออาชีพที่เชี่ยวชาญในการจัดเรียงและปรับปรุงบทความให้สวยงาม เป็นระเบียบ และอ่านง่าย"
+            system_message="คุณเป็นนักเขียนมืออาชีพที่เชี่ยวชาญในการจัดเรียงและปรับปรุงบทความให้สวยงาม เป็นระเบียบ และอ่านง่าย",
+            model=model_name,
+            temperature=temperature,
+            max_tokens=max_tokens
         )
         logging.info(f"[AI_REARRANGE] Calling AI with prompt length: {len(prompt)} characters")
         
