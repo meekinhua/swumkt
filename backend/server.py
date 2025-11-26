@@ -9125,7 +9125,10 @@ Choice-Based Conjoint Analysis
         
         # Add AI interpretation if available
         if ai_interpretation:
+            logging.info(f"[SHARE_CONTENT] Adding AI interpretation to content body (length: {len(ai_interpretation)})")
             content_body += f"\n## การตีความผลด้วย AI\n\n{ai_interpretation}\n"
+        else:
+            logging.warning(f"[SHARE_CONTENT] No AI interpretation available - content will not include AI analysis section")
         
         # Add optional notes
         if data.additional_notes:
