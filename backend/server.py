@@ -9498,7 +9498,7 @@ Choice-Based Conjoint Analysis
             content_body += f"{rank}. **{attr_name}**: {importance:.1f}%\n"
         
         # Add part-worths details
-        content_body += f"\n## ค่า Utility ของระดับคุณลักษณะแต่ละอัน\n\n"
+        content_body += "\n## ค่า Utility ของระดับคุณลักษณะแต่ละอัน\n\n"
         
         for attr_id, attr_data in sorted_importance:
             attr_name = attr_data.get('name', 'Unknown')
