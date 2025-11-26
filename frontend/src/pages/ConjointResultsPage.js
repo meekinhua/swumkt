@@ -26,7 +26,8 @@ import {
   Lock,
   Unlock,
   Copy,
-  FileText
+  FileText,
+  Trash2
 } from 'lucide-react';
 import ShareConjointModal from '@/components/ShareConjointModal';
 import {
