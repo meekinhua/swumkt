@@ -555,34 +555,60 @@ const ContentEditor = () => {
 
                   {formData.attachments.length > 0 && (
                     <div className="mt-4 space-y-2">
-                      <p className="text-sm text-gray-600 font-medium">ไฟล์ที่แนบ:</p>
-                      {formData.attachments.map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                        >
-                          <div className="flex items-center gap-3">
-                            {attachment.file_type && attachment.file_type.startsWith('image/') ? (
-                              <ImageIcon className="w-5 h-5 text-blue-500" />
-                            ) : (
-                              <Upload className="w-5 h-5 text-gray-500" />
-                            )}
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{attachment.filename || attachment.title || 'Unknown'}</p>
-                              <p className="text-xs text-gray-500">{attachment.file_size_kb || 'N/A'} KB</p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveAttachment(attachment.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      <p className="text-sm text-gray-600 font-medium">
+                        ไฟล์ที่แนบ: 
+                        <span className="ml-2 text-xs text-blue-600">💡 คลิกที่รูปภาพเพื่อแทรกเข้าบทความ</span>
+                      </p>
+                      {formData.attachments.map((attachment) => {
+                        const isImage = attachment.file_type && attachment.file_type.startsWith('image/');
+                        return (
+                          <div
+                            key={attachment.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border ${
+                              isImage 
+                                ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors' 
+                                : 'bg-gray-50 border-gray-200'
+                            }`}
+                            onClick={() => isImage && handleInsertImage(attachment)}
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-3">
+                              {isImage ? (
+                                <div className="flex items-center gap-2">
+                                  <ImageIcon className="w-5 h-5 text-blue-500" />
+                                  {attachment.file_data && (
+                                    <img 
+                                      src={attachment.file_data} 
+                                      alt={attachment.filename} 
+                                      className="w-12 h-12 object-cover rounded border border-blue-300"
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <Upload className="w-5 h-5 text-gray-500" />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {attachment.filename || attachment.title || 'Unknown'}
+                                  {isImage && <span className="ml-2 text-xs text-blue-600">← คลิกเพื่อแทรก</span>}
+                                </p>
+                                <p className="text-xs text-gray-500">{attachment.file_size_kb || 'N/A'} KB</p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveAttachment(attachment.id);
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
