@@ -68,6 +68,7 @@ const ContentEditor = () => {
         category: content.category || '',
         tags: content.tags || [],
         featured_image: content.featured_image || '',
+        cover_image_id: content.cover_image_id || null,
         status: content.status,
         attachments: content.attachments || [],
         is_zbs04_assignment: content.is_zbs04_assignment || false,
