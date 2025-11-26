@@ -9521,10 +9521,10 @@ Choice-Based Conjoint Analysis
             content_body += f"\n## หมายเหตุเพิ่มเติม\n{data.additional_notes}\n"
         
         # Add link to view full results
-        # REACT_APP_BACKEND_URL is actually the frontend base URL (not backend API URL)
-        # In production: https://richtext-editor-2.preview.emergentagent.com
-        # In dev: http://localhost:3000
-        frontend_base_url = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:3000')
+        # Convert backend URL to frontend URL by removing 'backend' from domain
+        backend_base_url = os.environ.get('base_url', 'http://localhost:3000')
+        # Replace 'demobackend' or 'backend' with 'demo' or remove it for frontend URL
+        frontend_base_url = backend_base_url.replace('demobackend.', '').replace('backend.', '')
         results_link = f"{frontend_base_url}/research/conjoint/{study_id}/results"
         content_body += f"\n## 🔗 ดูผลการวิจัยแบบเต็ม\n\n[คลิกที่นี่เพื่อดูผลการวิจัยแบบโต้ตอบ]({results_link})\n"
         
