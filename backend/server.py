@@ -1907,7 +1907,7 @@ async def ai_rearrange_content(
         )
         logging.info(f"[AI_REARRANGE] Calling AI with prompt length: {len(prompt)} characters")
         
-        ai_rearranged_html = await chat.send_message_async(UserMessage(prompt))
+        ai_rearranged_html = chat.send_message(UserMessage(prompt))
         
         logging.info(f"[AI_REARRANGE] AI returned content length: {len(ai_rearranged_html)} characters")
         
