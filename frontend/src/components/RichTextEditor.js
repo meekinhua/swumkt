@@ -224,7 +224,7 @@ const MenuBar = ({ editor }) => {
   );
 };
 
-const RichTextEditor = ({ content, onChange, placeholder = 'เขียนเนื้อหาของคุณที่นี่...', className = '' }) => {
+const RichTextEditor = React.forwardRef(({ content, onChange, placeholder = 'เขียนเนื้อหาของคุณที่นี่...', className = '' }, ref) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -250,6 +250,16 @@ const RichTextEditor = ({ content, onChange, placeholder = 'เขียนเ�
       },
     },
   });
+
+  // Expose insertImage method via ref
+  React.useImperativeHandle(ref, () => ({
+    insertImage: (imageUrl, altText = '') => {
+      if (editor) {
+        const imageHtml = `<p><img src="${imageUrl}" alt="${altText}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0;" /></p>`;
+        editor.commands.insertContent(imageHtml);
+      }
+    }
+  }));
 
   // Update editor content when prop changes (for edit mode)
   React.useEffect(() => {
