@@ -101,6 +101,26 @@ const ConjointAnalysisTool = () => {
     }
   };
 
+  const handleDeleteStudy = async () => {
+    if (!studyToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/conjoint/studies/${studyToDelete.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('ลบการศึกษาสำเร็จ');
+      loadStudies(); // Reload list
+    } catch (error) {
+      console.error('Error deleting study:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถลบการศึกษาได้');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      setStudyToDelete(null);
+    }
+  };
+
   const handleStatusChange = async (studyId, newStatus) => {
     try {
       await axios.put(
