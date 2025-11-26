@@ -482,14 +482,14 @@ const ContentEditor = () => {
                           className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                         >
                           <div className="flex items-center gap-3">
-                            {attachment.file_type.startsWith('image/') ? (
+                            {attachment.file_type && attachment.file_type.startsWith('image/') ? (
                               <ImageIcon className="w-5 h-5 text-blue-500" />
                             ) : (
                               <Upload className="w-5 h-5 text-gray-500" />
                             )}
                             <div>
-                              <p className="text-sm font-medium text-gray-900">{attachment.filename}</p>
-                              <p className="text-xs text-gray-500">{attachment.file_size_kb} KB</p>
+                              <p className="text-sm font-medium text-gray-900">{attachment.filename || attachment.title || 'Unknown'}</p>
+                              <p className="text-xs text-gray-500">{attachment.file_size_kb || 'N/A'} KB</p>
                             </div>
                           </div>
                           <Button
