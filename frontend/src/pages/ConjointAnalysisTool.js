@@ -50,6 +50,9 @@ const ConjointAnalysisTool = () => {
     description: '',
     product_category: ''
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [studyToDelete, setStudyToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user && token) {
