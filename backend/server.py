@@ -2030,14 +2030,35 @@ async def ai_rearrange_content(
         # Get Emergent LLM key
         emergent_key = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-8C9010bB74cCfAc069')
         
+        # Parse model name to provider and model
+        if model_name == 'gpt-4o' or model_name == 'gpt-4-turbo':
+            provider = 'openai'
+            model = model_name
+        elif model_name.startswith('claude'):
+            provider = 'anthropic'
+            model = model_name
+        elif model_name.startswith('gemini'):
+            provider = 'google'
+            model = model_name
+        else:
+            provider = 'openai'
+            model = 'gpt-4o'
+        
+        # Create chat instance
         chat = LlmChat(
             api_key=emergent_key,
             session_id=f"ai_rearrange_{content_id}_{datetime.now().timestamp()}",
-            system_message="คุณเป็นนักเขียนมืออาชีพที่เชี่ยวชาญในการจัดเรียงและปรับปรุงบทความให้สวยงาม เป็นระเบียบ และอ่านง่าย",
-            model=model_name,
+            system_message="คุณเป็นนักเขียนมืออาชีพที่เชี่ยวชาญในการจัดเรียงและปรับปรุงบทความให้สวยงาม เป็นระเบียบ และอ่านง่าย"
+        )
+        
+        # Set model and parameters
+        chat = chat.with_model(provider=provider, model=model)
+        chat = chat.with_params(
             temperature=temperature,
             max_tokens=max_tokens
         )
+        
+        logging.info(f"[AI_REARRANGE] Using model: {provider}/{model}, temp={temperature}, max_tokens={max_tokens}")
         logging.info(f"[AI_REARRANGE] Calling AI with prompt length: {len(prompt)} characters")
         
         ai_rearranged_html = await chat.send_message(UserMessage(prompt))
