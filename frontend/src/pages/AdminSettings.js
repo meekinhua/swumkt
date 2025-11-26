@@ -723,7 +723,7 @@ const AdminSettings = () => {
                   {/* Note about Image Settings */}
                   <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
                     <p className="text-sm text-gray-700 font-medium">
-                      💡 <strong>Image generation settings</strong> (model selection, prompt) have been moved to the <strong>"Image Generation"</strong> tab and apply to all tools.
+                      💡 <strong>Image generation settings</strong> (model selection, prompt) have been moved to the <strong>&quot;Image Generation&quot;</strong> tab and apply to all tools.
                     </p>
                   </div>
 
