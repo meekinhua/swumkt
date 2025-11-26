@@ -1999,17 +1999,16 @@ async def ai_rearrange_content(
         
         logging.info(f"[AI_REARRANGE] AI returned content length: {len(ai_rearranged_html)} characters")
         
-        # Clean up markdown code blocks if present
+        # Clean up only ```html at the beginning if present
         if ai_rearranged_html.startswith('```html'):
             ai_rearranged_html = ai_rearranged_html[7:]  # Remove ```html
+            logging.info(f"[AI_REARRANGE] Removed ```html prefix")
         elif ai_rearranged_html.startswith('```'):
             ai_rearranged_html = ai_rearranged_html[3:]  # Remove ```
+            logging.info(f"[AI_REARRANGE] Removed ``` prefix")
         
-        if ai_rearranged_html.endswith('```'):
-            ai_rearranged_html = ai_rearranged_html[:-3]  # Remove trailing ```
-        
-        # Strip leading/trailing whitespace
-        ai_rearranged_html = ai_rearranged_html.strip()
+        # Strip only leading whitespace
+        ai_rearranged_html = ai_rearranged_html.lstrip()
         
         logging.info(f"[AI_REARRANGE] Cleaned content length: {len(ai_rearranged_html)} characters")
         
