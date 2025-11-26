@@ -9490,7 +9490,7 @@ Choice-Based Conjoint Analysis
                 logging.error(f"Error creating utility chart for {attr_name}: {e}")
         
         # Add importance scores summary
-        content_body += f"\n## ผลการวิเคราะห์ความสำคัญของคุณลักษณะ\n\n"
+        content_body += "\n## ผลการวิเคราะห์ความสำคัญของคุณลักษณะ\n\n"
         
         for rank, (attr_id, attr_data) in enumerate(sorted_importance, 1):
             attr_name = attr_data.get('name', 'Unknown')
