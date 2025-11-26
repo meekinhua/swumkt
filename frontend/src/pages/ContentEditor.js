@@ -470,7 +470,7 @@ const ContentEditor = () => {
                 </div>
                 {id && (
                   <p className="text-xs text-gray-500 mt-2">
-                    💡 เคล็ดลับ: ปุ่ม "AI Rearrange" จะช่วยจัดเรียงเนื้อหาและรูปภาพให้สวยงามอัตโนมัติ
+                    💡 เคล็ดลับ: ปุ่ม &quot;AI Rearrange&quot; จะช่วยจัดเรียงเนื้อหาและรูปภาพให้สวยงามอัตโนมัติ
                   </p>
                 )}
               </div>
