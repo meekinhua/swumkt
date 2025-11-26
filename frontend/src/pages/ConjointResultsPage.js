@@ -556,6 +556,16 @@ const ConjointResultsPage = () => {
                 <Download className="w-4 h-4 mr-2" />
                 ดาวน์โหลดข้อมูล
               </Button>
+              
+              {isOwnerOrAdmin && (
+                <Button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  ลบการศึกษา
+                </Button>
+              )}
             </div>
           </div>
         </div>
