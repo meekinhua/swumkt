@@ -127,15 +127,12 @@ const ContentBrowse = () => {
                     const coverImage = content.attachments.find(att => att.id === content.cover_image_id);
                     if (coverImage && coverImage.file_data) {
                       return (
-                        <div className="mb-4 rounded-lg overflow-hidden relative">
+                        <div className="mb-4 rounded-lg overflow-hidden">
                           <img
                             src={coverImage.file_data}
                             alt={content.title}
                             className="w-full h-48 object-cover"
                           />
-                          <span className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded shadow">
-                            📌 ภาพปก
-                          </span>
                         </div>
                       );
                     }
