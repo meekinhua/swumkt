@@ -1782,7 +1782,7 @@ async def get_content(content_id: str):
     
     return content
 
-@api_router.put("/content/{content_id}", response_model=Content)
+@api_router.put("/content/{content_id}")
 async def update_content(
     content_id: str,
     update_data: ContentUpdate,
@@ -1810,7 +1810,7 @@ async def update_content(
     if isinstance(updated_content.get('updated_at'), str):
         updated_content['updated_at'] = datetime.fromisoformat(updated_content['updated_at'])
     
-    return Content(**updated_content)
+    return updated_content
 
 @api_router.delete("/content/{content_id}")
 async def delete_content(
