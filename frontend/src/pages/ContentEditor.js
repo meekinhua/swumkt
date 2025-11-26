@@ -28,6 +28,7 @@ const ContentEditor = () => {
     category: '',
     tags: [],
     featured_image: '',
+    cover_image_id: null,
     status: 'draft',
     attachments: [],
     is_zbs04_assignment: false,
