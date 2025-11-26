@@ -1816,47 +1816,40 @@ async def get_contents(
         }
     }
     
-    # For performance, use aggregation pipeline to truncate content
-    pipeline = [
-        {"$match": query},
-        {"$sort": {"created_at": -1}},
-        {"$skip": skip},
-        {"$limit": limit},
-        {
-            "$project": {
-                "_id": 0,
-                "id": 1,
-                "title": 1,
-                "content_type": 1,
-                "category": 1,
-                "tags": 1,
-                "status": 1,
-                "created_by": 1,
-                "created_at": 1,
-                "updated_at": 1,
-                "views": 1,
-                "cover_image_id": 1,
-                # Truncate content to 200 chars for preview
-                "content": {"$substr": ["$content", 0, 200]},
-                # Only include cover image attachment if exists
-                "attachments": {
-                    "$cond": {
-                        "if": {"$ne": ["$cover_image_id", None]},
-                        "then": {
-                            "$filter": {
-                                "input": {"$ifNull": ["$attachments", []]},
-                                "as": "att",
-                                "cond": {"$eq": ["$$att.id", "$cover_image_id"]}
-                            }
-                        },
-                        "else": []
-                    }
-                }
-            }
-        }
-    ]
+    # Projection to exclude large fields for performance
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "title": 1,
+        "content_type": 1,
+        "category": 1,
+        "tags": 1,
+        "status": 1,
+        "created_by": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "views": 1,
+        "cover_image_id": 1,
+        "content": 1,  # Will truncate in Python to avoid UTF-8 issues
+        "attachments": 1  # Will filter in Python
+    }
     
-    contents = await db.contents.aggregate(pipeline).to_list(limit)
+    contents = await db.contents.find(query, projection).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Process contents: truncate content and filter attachments in Python
+    for content in contents:
+        # Truncate content to 200 chars (safe for UTF-8)
+        if content.get('content'):
+            content['content'] = content['content'][:200] + ('...' if len(content['content']) > 200 else '')
+        
+        # Only keep cover image attachment if exists
+        if content.get('attachments') and content.get('cover_image_id'):
+            content['attachments'] = [
+                att for att in content['attachments'] 
+                if att.get('id') == content['cover_image_id']
+            ]
+        else:
+            content['attachments'] = []
     
     for content in contents:
         if isinstance(content.get('created_at'), str):
