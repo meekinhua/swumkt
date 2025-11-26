@@ -413,6 +413,7 @@ class Content(BaseModel):
     category: Optional[str] = None
     tags: List[str] = []
     featured_image: Optional[str] = None
+    cover_image_id: Optional[str] = None
     status: ContentStatus
     contributors: List[ContentContributor] = []
     created_by: str
