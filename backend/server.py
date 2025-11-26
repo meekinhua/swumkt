@@ -1848,8 +1848,53 @@ async def ai_rearrange_content(
         
         logging.info(f"[AI_REARRANGE] Found {len(image_attachments)} images in attachments")
         
+        # Analyze images with AI if available
+        image_descriptions = []
+        if len(image_attachments) > 0:
+            logging.info(f"[AI_REARRANGE] Analyzing {len(image_attachments)} images with Vision AI...")
+            
+            from emergentintegrations.llm.vision import analyze_image
+            
+            for idx, img_att in enumerate(image_attachments, 1):
+                try:
+                    # Get image data
+                    img_data = img_att.get('file_data', '')
+                    if img_data and img_data.startswith('data:image'):
+                        # Analyze image
+                        description = await analyze_image(
+                            image_source=img_data,
+                            prompt="อธิบายรูปนี้โดยละเอียด ว่ามีอะไรบ้าง เหมาะสมกับเนื้อหาประเภทใด และควรใช้ประกอบบทความในหัวข้ออะไร (ตอบเป็นภาษาไทย 2-3 ประโยค)",
+                            api_key=emergent_key
+                        )
+                        image_descriptions.append({
+                            'index': idx,
+                            'filename': img_att.get('filename', f'รูปที่ {idx}'),
+                            'description': description
+                        })
+                        logging.info(f"[AI_REARRANGE] Image {idx} analyzed: {description[:100]}...")
+                    else:
+                        image_descriptions.append({
+                            'index': idx,
+                            'filename': img_att.get('filename', f'รูปที่ {idx}'),
+                            'description': 'ไม่สามารถวิเคราะห์รูปภาพได้'
+                        })
+                except Exception as e:
+                    logging.error(f"[AI_REARRANGE] Error analyzing image {idx}: {str(e)}")
+                    image_descriptions.append({
+                        'index': idx,
+                        'filename': img_att.get('filename', f'รูปที่ {idx}'),
+                        'description': 'ไม่สามารถวิเคราะห์รูปภาพได้'
+                    })
+        
+        # Build image context for prompt
+        image_context = ""
+        if image_descriptions:
+            image_context = "\n\n**รูปภาพที่มีพร้อมคำอธิบาย:**\n"
+            for img_desc in image_descriptions:
+                image_context += f"\n{img_desc['index']}. {img_desc['filename']}\n   คำอธิบาย: {img_desc['description']}\n"
+        
         # Build prompt for AI
-        prompt = f"""คุณเป็นนักเขียนมืออาชีพ กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
+        prompt = f"""คุณเป็นนักเขียนมืออาชีพและนักออกแบบเนื้อหา กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
 
 **หัวข้อบทความ:** {content.get('title', 'ไม่มีหัวข้อ')}
 
