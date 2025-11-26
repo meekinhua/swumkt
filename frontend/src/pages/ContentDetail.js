@@ -302,81 +302,13 @@ const ContentDetail = () => {
             </div>
             
             <div 
-              className="prose prose-lg max-w-none text-gray-800 leading-relaxed rich-text-content"
+              className="text-gray-800 leading-relaxed"
               style={{
                 lineHeight: '1.8',
                 fontSize: '1.125rem'
               }}
               dangerouslySetInnerHTML={{ __html: content.content }}
             />
-            <style jsx>{`
-              .rich-text-content h1 {
-                font-size: 2em;
-                font-weight: bold;
-                margin-top: 0.67em;
-                margin-bottom: 0.67em;
-              }
-              .rich-text-content h2 {
-                font-size: 1.5em;
-                font-weight: bold;
-                margin-top: 0.83em;
-                margin-bottom: 0.83em;
-              }
-              .rich-text-content h3 {
-                font-size: 1.17em;
-                font-weight: bold;
-                margin-top: 1em;
-                margin-bottom: 1em;
-              }
-              .rich-text-content p {
-                margin-top: 1em;
-                margin-bottom: 1em;
-              }
-              .rich-text-content strong {
-                font-weight: bold;
-              }
-              .rich-text-content em {
-                font-style: italic;
-              }
-              .rich-text-content ul, .rich-text-content ol {
-                margin-left: 2em;
-                margin-top: 1em;
-                margin-bottom: 1em;
-              }
-              .rich-text-content ul {
-                list-style-type: disc;
-              }
-              .rich-text-content ol {
-                list-style-type: decimal;
-              }
-              .rich-text-content li {
-                margin-top: 0.5em;
-                margin-bottom: 0.5em;
-              }
-              .rich-text-content blockquote {
-                border-left: 4px solid #00A9CE;
-                padding-left: 1em;
-                margin-left: 0;
-                font-style: italic;
-                color: #555;
-              }
-              .rich-text-content code {
-                background: #f4f4f4;
-                padding: 0.2em 0.4em;
-                border-radius: 3px;
-                font-family: monospace;
-              }
-              .rich-text-content pre {
-                background: #f4f4f4;
-                padding: 1em;
-                border-radius: 5px;
-                overflow-x: auto;
-              }
-              .rich-text-content a {
-                color: #00A9CE;
-                text-decoration: underline;
-              }
-            `}</style>
           </div>
 
           {/* Translated Content */}
