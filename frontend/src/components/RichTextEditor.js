@@ -263,8 +263,11 @@ const RichTextEditor = React.forwardRef(({ content, onChange, placeholder = 'เ
   React.useImperativeHandle(ref, () => ({
     insertImage: (imageUrl, altText = '') => {
       if (editor) {
-        const imageHtml = `<p><img src="${imageUrl}" alt="${altText}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0;" /></p>`;
-        editor.commands.insertContent(imageHtml);
+        editor.chain().focus().setImage({ 
+          src: imageUrl, 
+          alt: altText,
+          title: altText
+        }).run();
       }
     }
   }));
