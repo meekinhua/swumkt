@@ -41,6 +41,7 @@ const ContentEditor = () => {
   const [addingMember, setAddingMember] = useState(false);
   const [memberDetails, setMemberDetails] = useState([]);
   const [aiRearranging, setAiRearranging] = useState(false);
+  const editorRef = React.useRef(null);
 
   useEffect(() => {
     if (id) {
