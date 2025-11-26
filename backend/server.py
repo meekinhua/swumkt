@@ -9258,8 +9258,9 @@ async def share_conjoint_as_content(
         import io
         
         # Configure matplotlib to support Thai and other languages
-        plt.rcParams['font.family'] = 'DejaVu Sans'
-        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica', 'sans-serif']
+        # Use fonts that support Unicode including Thai characters
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.sans-serif'] = ['Loma', 'FreeSerif', 'DejaVu Sans', 'Arial Unicode MS', 'sans-serif']
         # Enable unicode minus to prevent font warnings
         plt.rcParams['axes.unicode_minus'] = False
         
