@@ -282,7 +282,7 @@ const RichTextEditor = React.forwardRef(({ content, onChange, placeholder = 'เ
   return (
     <div className={`border-2 border-gray-300 rounded-lg overflow-hidden focus-within:border-[#00A9CE] ${className}`}>
       <MenuBar editor={editor} />
-      <div className="prose max-w-none">
+      <div className="prose max-w-none rich-text-editor-content">
         <EditorContent editor={editor} className="min-h-[300px]" />
       </div>
       {editor?.isEmpty && (
@@ -290,6 +290,32 @@ const RichTextEditor = React.forwardRef(({ content, onChange, placeholder = 'เ
           {placeholder}
         </div>
       )}
+      <style jsx>{`
+        .rich-text-editor-content img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 20px auto;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .rich-text-editor-content img:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          transform: scale(1.01);
+        }
+        
+        .rich-text-editor-content img.ProseMirror-selectednode {
+          outline: 3px solid #00A9CE;
+          outline-offset: 2px;
+        }
+        
+        /* Image resize handles */
+        .rich-text-editor-content .ProseMirror-selectednode {
+          position: relative;
+        }
+      `}</style>
     </div>
   );
 });
