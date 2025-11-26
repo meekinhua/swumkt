@@ -1768,6 +1768,65 @@ async def create_content(
     await db.contents.insert_one(doc)
     return content
 
+@api_router.get("/content/my")
+async def get_my_contents(
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get current user's content (optimized for dashboard)"""
+    query = {"created_by": current_user.id}
+    
+    # Get total count
+    total = await db.contents.count_documents(query)
+    
+    # Projection for minimal data
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "title": 1,
+        "content_type": 1,
+        "category": 1,
+        "tags": 1,
+        "status": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "views": 1,
+        "cover_image_id": 1,
+        "content": 1,  # Will truncate in Python
+        "attachments": 1  # Will filter in Python
+    }
+    
+    contents = await db.contents.find(query, projection).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Process contents
+    for content in contents:
+        # Truncate content to 150 chars for dashboard preview
+        if content.get('content'):
+            content['content'] = content['content'][:150] + ('...' if len(content['content']) > 150 else '')
+        
+        # Only keep cover image attachment if exists
+        if content.get('attachments') and content.get('cover_image_id'):
+            content['attachments'] = [
+                att for att in content['attachments'] 
+                if att.get('id') == content['cover_image_id']
+            ]
+        else:
+            content['attachments'] = []
+        
+        # Convert datetime
+        if isinstance(content.get('created_at'), str):
+            content['created_at'] = datetime.fromisoformat(content['created_at'])
+        if isinstance(content.get('updated_at'), str):
+            content['updated_at'] = datetime.fromisoformat(content['updated_at'])
+    
+    return {
+        "items": contents,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
 @api_router.get("/content")
 async def get_contents(
     content_type: Optional[ContentType] = None,
