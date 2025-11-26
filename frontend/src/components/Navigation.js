@@ -69,14 +69,23 @@ const Navigation = () => {
                   {t('nav.profile')}
                 </Button>
                 {user.role === 'admin' && (
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate('/admin/settings')} 
-                    className="text-purple-700 font-semibold hover:text-purple-600 hover:bg-purple-50 border-2 border-transparent hover:border-purple-300"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Admin
-                  </Button>
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => navigate('/admin/settings')} 
+                      className="text-purple-700 font-semibold hover:text-purple-600 hover:bg-purple-50 border-2 border-transparent hover:border-purple-300"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Admin
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => navigate('/admin/ai-settings')} 
+                      className="text-pink-700 font-semibold hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent hover:border-pink-300"
+                    >
+                      ✨ AI Settings
+                    </Button>
+                  </>
                 )}
               </>
             )}
