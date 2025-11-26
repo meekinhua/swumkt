@@ -166,7 +166,7 @@ const Dashboard = () => {
                         <div className="flex-1">
                           <h3 className="text-lg font-bold text-gray-900 mb-1">{content.title}</h3>
                           <p className="text-sm text-gray-700 mb-2 line-clamp-2 font-medium">
-                            {content.content.substring(0, 150)}...
+                            {content.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
                           </p>
                           <div className="flex items-center gap-4 text-xs text-gray-600 font-semibold">
                             <span className="badge-success px-2 py-1 rounded-full">{t('content.type')}: {content.content_type}</span>
