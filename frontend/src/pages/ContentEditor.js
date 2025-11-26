@@ -240,11 +240,37 @@ const ContentEditor = () => {
   };
 
   const handleRemoveAttachment = (attachmentId) => {
+    // If removing the cover image, clear cover_image_id
+    if (formData.cover_image_id === attachmentId) {
+      setFormData({
+        ...formData,
+        cover_image_id: null,
+        attachments: formData.attachments.filter(att => att.id !== attachmentId)
+      });
+      toast.success('ลบไฟล์แนบและภาพปกสำเร็จ');
+    } else {
+      setFormData({
+        ...formData,
+        attachments: formData.attachments.filter(att => att.id !== attachmentId)
+      });
+      toast.success('ลบไฟล์แนบสำเร็จ');
+    }
+  };
+
+  const handleSetCoverImage = (attachmentId) => {
     setFormData({
       ...formData,
-      attachments: formData.attachments.filter(att => att.id !== attachmentId)
+      cover_image_id: attachmentId
     });
-    toast.success('ลบไฟล์แนบสำเร็จ');
+    toast.success('ตั้งเป็นภาพปกสำเร็จ!');
+  };
+
+  const handleRemoveCoverImage = () => {
+    setFormData({
+      ...formData,
+      cover_image_id: null
+    });
+    toast.success('ยกเลิกภาพปกแล้ว');
   };
 
   const handleInsertImage = (attachment) => {
