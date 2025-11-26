@@ -9523,7 +9523,7 @@ Choice-Based Conjoint Analysis
         # Add link to view full results
         # Use FRONTEND_URL from environment (set in backend/.env)
         frontend_base_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        results_link = f"{frontend_base_url}/research/conjoint/{study_id}/results"
+        results_link = f"{frontend_base_url}/research/conjoint/{study_id}"
         content_body += f"\n## 🔗 ดูผลการวิจัยแบบเต็ม\n\n[คลิกที่นี่เพื่อดูผลการวิจัยแบบโต้ตอบ]({results_link})\n"
         
         # Create content document
