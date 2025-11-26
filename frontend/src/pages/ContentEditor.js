@@ -869,6 +869,20 @@ const ContentEditor = () => {
                     </span>
                   )}
                 </Button>
+                
+                {canDelete && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={loading || deleting}
+                    className="border-2 border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600 font-bold"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    ลบเนื้อหา
+                  </Button>
+                )}
+                
                 <Button
                   type="button"
                   variant="outline"
