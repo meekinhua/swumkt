@@ -85,15 +85,16 @@ const ResizableImageComponent = ({ node, updateAttributes, selected }) => {
               onMouseDown={(e) => handleMouseDown(e, 'left')}
               style={{
                 position: 'absolute',
-                left: '-5px',
+                left: '-8px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: '10px',
-                height: '40px',
-                background: '#00A9CE',
-                borderRadius: '3px',
+                width: '16px',
+                height: '60px',
+                background: 'linear-gradient(90deg, transparent 0%, #00A9CE 50%, #00A9CE 100%)',
+                borderRadius: '8px 0 0 8px',
                 cursor: 'ew-resize',
-                zIndex: 10,
+                zIndex: 5,
+                opacity: 0.9,
               }}
             />
             <div
@@ -101,15 +102,16 @@ const ResizableImageComponent = ({ node, updateAttributes, selected }) => {
               onMouseDown={(e) => handleMouseDown(e, 'right')}
               style={{
                 position: 'absolute',
-                right: '-5px',
+                right: '-8px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: '10px',
-                height: '40px',
-                background: '#00A9CE',
-                borderRadius: '3px',
+                width: '16px',
+                height: '60px',
+                background: 'linear-gradient(90deg, #00A9CE 0%, #00A9CE 50%, transparent 100%)',
+                borderRadius: '0 8px 8px 0',
                 cursor: 'ew-resize',
-                zIndex: 10,
+                zIndex: 5,
+                opacity: 0.9,
               }}
             />
             
