@@ -8878,13 +8878,15 @@ async def share_conjoint_as_content(
         # Generate AI interpretation if not provided
         ai_interpretation = data.ai_interpretation
         if not ai_interpretation:
-            logging.info("Generating AI interpretation automatically...")
+            logging.info(f"[SHARE_CONTENT] No AI interpretation provided. Generating automatically for study {study_id}...")
             try:
                 # Get responses for AI analysis
                 responses = await db.conjoint_responses.find(
                     {"study_id": study_id},
                     {"_id": 0}
                 ).to_list(1000)
+                
+                logging.info(f"[SHARE_CONTENT] Found {len(responses)} responses for study {study_id}")
                 
                 if len(responses) >= 30:
                     # Prepare data for AI
