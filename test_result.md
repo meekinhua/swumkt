@@ -398,15 +398,18 @@ frontend:
   
   - task: "Phase 1A: Profile Page - Demographics Section"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/ProfilePage.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: Demographics section พร้อม edit mode, แสดงข้อมูลแบบ card grid, ใช้ DemographicsForm component สำหรับ edit"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Demographics section working correctly. Demographics Information section displays properly with Thai language fields (เพศกำเนิด, เพศสภาพ, วันเกิด, การศึกษา). Form shows dropdown selectors and date picker. Edit functionality available through DemographicsForm component. Section integrates well with main profile page layout."
   
   - task: "Phase 1A: Components - GoogleLoginButton, UserTypeBadge, DemographicsForm"
     implemented: true
