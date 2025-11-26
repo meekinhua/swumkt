@@ -381,8 +381,8 @@ const ContentDetail = () => {
                           <div className="flex items-center gap-3">
                             <Paperclip className="w-5 h-5 text-gray-500" />
                             <div>
-                              <p className="text-sm font-bold text-gray-900">{attachment.filename}</p>
-                              <p className="text-xs text-gray-500">{attachment.file_size_kb} KB</p>
+                              <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title}</p>
+                              <p className="text-xs text-gray-500">{attachment.file_size_kb || 'N/A'} KB</p>
                             </div>
                           </div>
                           {attachment.file_data && (
