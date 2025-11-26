@@ -356,16 +356,14 @@ const ContentEditor = () => {
               {/* Content */}
               <div>
                 <Label htmlFor="content" className="text-gray-800 font-bold mb-2">เนื้อหา *</Label>
-                <Textarea
-                  id="content"
-                  data-testid="content-textarea"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="เขียนเนื้อหาของคุณที่นี่..."
-                  required
-                  rows={12}
-                  className="mt-1 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
-                />
+                <div className="mt-1 relative">
+                  <RichTextEditor
+                    content={formData.content}
+                    onChange={(html) => setFormData({ ...formData, content: html })}
+                    placeholder="เขียนเนื้อหาของคุณที่นี่..."
+                    className="bg-white"
+                  />
+                </div>
               </div>
 
               {/* Featured Image URL */}
