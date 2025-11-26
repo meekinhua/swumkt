@@ -9472,6 +9472,7 @@ Choice-Based Conjoint Analysis
                         buffer.seek(0)
                         img_bytes = buffer.read()
                         utility_img_base64 = base64.b64encode(img_bytes).decode()
+                        image_data_url = f"data:image/png;base64,{utility_img_base64}"
                         chart_images.append({
                             "id": str(uuid.uuid4()),
                             "type": "utility",
@@ -9479,8 +9480,9 @@ Choice-Based Conjoint Analysis
                             "filename": f"utility_chart_{attr_name}.png",
                             "file_type": "image/png",
                             "file_size_kb": round(len(img_bytes) / 1024, 2),
-                            "url": f"data:image/png;base64,{utility_img_base64}",
-                            "data": f"data:image/png;base64,{utility_img_base64}"
+                            "url": image_data_url,
+                            "data": image_data_url,
+                            "file_data": image_data_url
                         })
                         plt.close()
                         logging.info(f"Utility chart for {attr_name} created successfully")
