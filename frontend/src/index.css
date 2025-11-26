@@ -126,3 +126,91 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+/* Rich Text Content Styles */
+@layer components {
+    .ProseMirror h1,
+    [dangerouslySetInnerHTML] h1 {
+        @apply text-4xl font-bold my-4;
+    }
+
+    .ProseMirror h2,
+    [dangerouslySetInnerHTML] h2 {
+        @apply text-3xl font-bold my-3;
+    }
+
+    .ProseMirror h3,
+    [dangerouslySetInnerHTML] h3 {
+        @apply text-2xl font-bold my-3;
+    }
+
+    .ProseMirror p,
+    [dangerouslySetInnerHTML] p {
+        @apply my-4;
+    }
+
+    .ProseMirror strong,
+    [dangerouslySetInnerHTML] strong {
+        @apply font-bold;
+    }
+
+    .ProseMirror em,
+    [dangerouslySetInnerHTML] em {
+        @apply italic;
+    }
+
+    .ProseMirror u,
+    [dangerouslySetInnerHTML] u {
+        @apply underline;
+    }
+
+    .ProseMirror s,
+    [dangerouslySetInnerHTML] s {
+        @apply line-through;
+    }
+
+    .ProseMirror ul,
+    [dangerouslySetInnerHTML] ul {
+        @apply list-disc ml-6 my-4;
+    }
+
+    .ProseMirror ol,
+    [dangerouslySetInnerHTML] ol {
+        @apply list-decimal ml-6 my-4;
+    }
+
+    .ProseMirror li,
+    [dangerouslySetInnerHTML] li {
+        @apply my-2;
+    }
+
+    .ProseMirror blockquote,
+    [dangerouslySetInnerHTML] blockquote {
+        @apply border-l-4 border-[#00A9CE] pl-4 my-4 italic text-gray-600;
+    }
+
+    .ProseMirror code,
+    [dangerouslySetInnerHTML] code {
+        @apply bg-gray-100 px-2 py-1 rounded text-sm font-mono;
+    }
+
+    .ProseMirror pre,
+    [dangerouslySetInnerHTML] pre {
+        @apply bg-gray-100 p-4 rounded my-4 overflow-x-auto;
+    }
+
+    .ProseMirror pre code,
+    [dangerouslySetInnerHTML] pre code {
+        @apply bg-transparent p-0;
+    }
+
+    .ProseMirror a,
+    [dangerouslySetInnerHTML] a {
+        @apply text-[#00A9CE] underline hover:text-[#008FB5];
+    }
+
+    .ProseMirror hr,
+    [dangerouslySetInnerHTML] hr {
+        @apply my-6 border-gray-300;
+    }
+}
