@@ -197,6 +197,12 @@ class ContentStatus(str, Enum):
     PUBLISHED = "published"
     ARCHIVED = "archived"
 
+class AIModel(str, Enum):
+    GPT_4O = "gpt-4o"
+    GPT_4_TURBO = "gpt-4-turbo"
+    CLAUDE_SONNET = "claude-sonnet-4-20250514"
+    GEMINI_FLASH = "gemini-2.0-flash-exp"
+
 class SurveyStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
