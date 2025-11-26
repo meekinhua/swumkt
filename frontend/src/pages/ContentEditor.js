@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Save, Plus, X, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
+import RichTextEditor from '@/components/RichTextEditor';
 
 const ContentEditor = () => {
   const { id } = useParams();
