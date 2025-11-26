@@ -174,7 +174,7 @@ const ContentBrowse = () => {
                 </h3>
                 
                 <p className="text-gray-700 mb-4 line-clamp-3 text-sm font-medium">
-                  {content.content.substring(0, 150)}...
+                  {content.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
                 </p>
 
                 {content.tags && content.tags.length > 0 && (
