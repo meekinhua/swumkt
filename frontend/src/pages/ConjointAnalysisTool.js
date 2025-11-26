@@ -627,6 +627,56 @@ const ConjointAnalysisTool = () => {
           </Card>
         </div>
       )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && studyToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-md w-full mx-4 bg-white">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              ⚠️ ยืนยันการลบการศึกษา
+            </h3>
+            <p className="text-gray-700 mb-6">
+              คุณแน่ใจหรือไม่ว่าต้องการลบการศึกษา <strong>&quot;{studyToDelete.name}&quot;</strong>?
+              <br />
+              <span className="text-red-600 font-semibold">
+                การกระทำนี้จะลบทั้งการศึกษาและข้อมูลการตอบทั้งหมด ({studyToDelete.respondent_count || 0} คน)
+              </span>
+              <br />
+              <span className="text-red-600 font-semibold">ไม่สามารถย้อนกลับได้</span>
+            </p>
+            <div className="flex gap-4">
+              <Button
+                onClick={handleDeleteStudy}
+                disabled={deleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold"
+              >
+                {deleting ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    กำลังลบ...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    ยืนยันลบ
+                  </span>
+                )}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setStudyToDelete(null);
+                }}
+                disabled={deleting}
+                variant="outline"
+                className="flex-1 border-2 border-gray-400 hover:bg-gray-100 font-bold"
+              >
+                ยกเลิก
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
