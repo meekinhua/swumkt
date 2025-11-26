@@ -352,6 +352,69 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSaveRearrangeSettings = async () => {
+    if (!rearrangeSettings.prompt_template || rearrangeSettings.prompt_template.trim().length < 50) {
+      toast.error('Prompt Template ต้องมีความยาวอย่างน้อย 50 ตัวอักษร');
+      return;
+    }
+
+    // Check if template has required placeholders
+    const requiredPlaceholders = ['{title}', '{content}', '{images}'];
+    const missingPlaceholders = requiredPlaceholders.filter(
+      placeholder => !rearrangeSettings.prompt_template.includes(placeholder)
+    );
+
+    if (missingPlaceholders.length > 0) {
+      toast.error(`Prompt Template ต้องมี: ${missingPlaceholders.join(', ')}`);
+      return;
+    }
+
+    setSavingRearrange(true);
+    try {
+      await axios.put(
+        `${API}/admin/ai-settings`,
+        rearrangeSettings,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('✅ บันทึกการตั้งค่า AI Rearrange สำเร็จ!');
+      fetchAllSettings();
+    } catch (error) {
+      console.error('Error saving rearrange settings:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถบันทึกการตั้งค่าได้');
+    } finally {
+      setSavingRearrange(false);
+    }
+  };
+
+  const resetRearrangeToDefault = () => {
+    const defaultPrompt = `คุณเป็นนักเขียนมืออาชีพและนักออกแบบเนื้อหา กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
+
+**หัวข้อบทความ:** {title}
+
+**เนื้อหาเดิม:**
+{content}
+{images}
+
+**คำแนะนำสำคัญ:**
+1. จัดโครงสร้างเนื้อหาใหม่ให้เป็นหมวดหมู่ชัดเจน
+2. เพิ่ม headings (h2, h3) ให้เหมาะสม
+3. แบ่ง paragraphs ให้อ่านง่าย
+4. เน้นจุดสำคัญด้วย bold/italic (ใช้ <strong> และ <em> tags)
+5. เพิ่ม bullet points หรือ numbered lists ถ้าเหมาะสม
+6. วิเคราะห์รูปภาพและแทรก [รูปภาพที่ X] ในตำแหน่งที่เหมาะสม
+7. เพิ่ม introduction และ conclusion ถ้าจำเป็น
+
+**กรุณาเริ่มจัดเรียงเนื้อหาเลย (output HTML โดยตรง):**`;
+
+    setRearrangeSettings({
+      model: 'gpt-4o',
+      prompt_template: defaultPrompt,
+      max_tokens: 4000,
+      temperature: 0.7
+    });
+    toast.info('รีเซ็ตเป็นค่าเริ่มต้นแล้ว (กรุณากดบันทึก)');
+  };
+
   const handleSaveConjointQualitative = async () => {
     setSavingConjointQualitative(true);
     try {
