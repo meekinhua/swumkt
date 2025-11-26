@@ -32,7 +32,8 @@ import {
   Tag,
   MoreVertical,
   Clock,
-  History
+  History,
+  Trash2
 } from 'lucide-react';
 
 const ConjointAnalysisTool = () => {
