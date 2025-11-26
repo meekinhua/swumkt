@@ -433,6 +433,7 @@ const ContentEditor = () => {
                 </div>
                 <div className="mt-1 relative">
                   <RichTextEditor
+                    ref={editorRef}
                     content={formData.content}
                     onChange={(html) => setFormData({ ...formData, content: html })}
                     placeholder="เขียนเนื้อหาของคุณที่นี่..."
