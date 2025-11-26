@@ -215,9 +215,31 @@ const ContentDetail = () => {
             </div>
           </div>
 
-          {/* Featured Image - Show featured_image or first image attachment */}
+          {/* Cover Image - Show cover_image_id, featured_image, or first image attachment */}
           {(() => {
-            // Check if there's a featured_image
+            // Check if there's a cover_image_id (selected from attachments)
+            if (content.cover_image_id && content.attachments) {
+              const coverImage = content.attachments.find(att => att.id === content.cover_image_id);
+              if (coverImage) {
+                const imageSrc = coverImage.file_data || coverImage.url || coverImage.data;
+                if (imageSrc) {
+                  return (
+                    <div className="mb-6 rounded-lg overflow-hidden border-2 border-green-400 relative">
+                      <img
+                        src={imageSrc}
+                        alt={content.title}
+                        className="w-full h-auto"
+                      />
+                      <span className="absolute top-4 right-4 px-3 py-1.5 bg-green-500 text-white text-sm font-bold rounded shadow-lg">
+                        📌 ภาพปก
+                      </span>
+                    </div>
+                  );
+                }
+              }
+            }
+            
+            // Check if there's a featured_image (legacy support)
             if (content.featured_image) {
               return (
                 <div className="mb-6 rounded-lg overflow-hidden border-2 border-gray-200">
