@@ -26,11 +26,23 @@ const Dashboard = () => {
 
   const fetchMyContents = async () => {
     try {
-      const response = await axios.get(`${API}/content`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 100 }
-      });
-      const allContents = response.data;
+      // Fetch all statuses (draft, published, archived)
+      const [draftRes, publishedRes, archivedRes] = await Promise.all([
+        axios.get(`${API}/content`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limit: 100, status: 'draft' }
+        }),
+        axios.get(`${API}/content`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limit: 100, status: 'published' }
+        }),
+        axios.get(`${API}/content`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limit: 100, status: 'archived' }
+        })
+      ]);
+      
+      const allContents = [...draftRes.data, ...publishedRes.data, ...archivedRes.data];
       const myContents = allContents.filter(c => c.created_by === user.id);
       setMyContents(myContents);
       
