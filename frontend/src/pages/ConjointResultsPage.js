@@ -391,6 +391,23 @@ const ConjointResultsPage = () => {
     toast.success('ดาวน์โหลด CSV สำเร็จ');
   };
 
+  const handleDeleteStudy = async () => {
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/conjoint/studies/${studyId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('ลบการศึกษาสำเร็จ');
+      navigate('/research/conjoint');
+    } catch (error) {
+      console.error('Error deleting study:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถลบการศึกษาได้');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
