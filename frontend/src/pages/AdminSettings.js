@@ -1356,6 +1356,135 @@ const AdminSettings = () => {
                 </div>
               </TabsContent>
 
+              {/* AI Rearrange Tab */}
+              <TabsContent value="rearrange">
+                <div className="space-y-6">
+                  {/* Model Selection */}
+                  <div>
+                    <Label className="text-gray-800 font-bold mb-2 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-yellow-500" />
+                      AI Model
+                    </Label>
+                    <select
+                      value={rearrangeSettings.model}
+                      onChange={(e) => setRearrangeSettings({ ...rearrangeSettings, model: e.target.value })}
+                      className="w-full mt-1 h-12 border-2 border-gray-300 rounded-lg px-3 focus:border-[#00A9CE] focus:outline-none"
+                    >
+                      <option value="gpt-4o">GPT-4o (แนะนำ) - เร็ว, สมดุล</option>
+                      <option value="gpt-4-turbo">GPT-4 Turbo - คุณภาพสูง</option>
+                      <option value="claude-sonnet-4-20250514">Claude Sonnet 4 - เขียนได้ดี</option>
+                      <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash - เร็วมาก</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Model ที่ใช้สำหรับ AI Rearrange บทความ
+                    </p>
+                  </div>
+
+                  {/* Temperature */}
+                  <div>
+                    <Label className="text-gray-800 font-bold mb-2">
+                      Temperature: {rearrangeSettings.temperature}
+                    </Label>
+                    <Input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={rearrangeSettings.temperature}
+                      onChange={(e) => setRearrangeSettings({ ...rearrangeSettings, temperature: parseFloat(e.target.value) })}
+                      className="w-full mt-1"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>0.0 (แม่นยำ)</span>
+                      <span>0.5 (สมดุล)</span>
+                      <span>1.0 (สร้างสรรค์)</span>
+                    </div>
+                  </div>
+
+                  {/* Max Tokens */}
+                  <div>
+                    <Label className="text-gray-800 font-bold mb-2">
+                      Max Tokens
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1000"
+                      max="16000"
+                      step="500"
+                      value={rearrangeSettings.max_tokens}
+                      onChange={(e) => setRearrangeSettings({ ...rearrangeSettings, max_tokens: parseInt(e.target.value) })}
+                      className="w-full mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      จำนวน tokens สูงสุดสำหรับ response (แนะนำ: 4000-8000)
+                    </p>
+                  </div>
+
+                  {/* Prompt Template */}
+                  <div>
+                    <Label className="text-gray-800 font-bold mb-2">
+                      Prompt Template
+                    </Label>
+                    <Textarea
+                      value={rearrangeSettings.prompt_template}
+                      onChange={(e) => setRearrangeSettings({ ...rearrangeSettings, prompt_template: e.target.value })}
+                      placeholder="ใส่ prompt template ของคุณที่นี่..."
+                      rows={20}
+                      className="w-full mt-1 font-mono text-sm"
+                    />
+                    <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900 mb-1">📝 ตัวแปรที่ต้องมี:</p>
+                      <div className="flex gap-4 text-xs text-blue-700">
+                        <code className="bg-white px-2 py-1 rounded">{'{title}'}</code>
+                        <code className="bg-white px-2 py-1 rounded">{'{content}'}</code>
+                        <code className="bg-white px-2 py-1 rounded">{'{images}'}</code>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-4 pt-4 border-t">
+                    <Button
+                      onClick={handleSaveRearrangeSettings}
+                      disabled={savingRearrange}
+                      className="flex-1 bg-[#00A9CE] hover:bg-[#008FB5] text-white font-bold"
+                    >
+                      {savingRearrange ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          กำลังบันทึก...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Save className="w-4 h-4" />
+                          บันทึกการตั้งค่า
+                        </span>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={resetRearrangeToDefault}
+                      variant="outline"
+                      className="border-2 border-gray-300 hover:bg-gray-50"
+                    >
+                      รีเซ็ตเป็นค่าเริ่มต้น
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Info Card */}
+                <Card className="mt-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
+                  <h3 className="font-bold text-purple-900 mb-2">💡 Tips:</h3>
+                  <ul className="text-sm text-purple-800 space-y-1">
+                    <li>• Prompt ที่ชัดเจนและละเอียด จะให้ผลลัพธ์ที่ดีกว่า</li>
+                    <li>• Temperature ต่ำ (0.3-0.5) เหมาะกับเนื้อหาที่ต้องการความแม่นยำ</li>
+                    <li>• Temperature สูง (0.7-1.0) เหมาะกับเนื้อหาที่ต้องการความสร้างสรรค์</li>
+                    <li>• GPT-4o เหมาะสำหรับการใช้งานทั่วไป (เร็วและสมดุล)</li>
+                    <li>• Claude Sonnet เหมาะสำหรับการเขียนที่ต้องการคุณภาพสูง</li>
+                  </ul>
+                </Card>
+              </TabsContent>
+
               {/* Format Editor Tab */}
               <TabsContent value="format" className="space-y-6">
                 <Card className="p-6 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
