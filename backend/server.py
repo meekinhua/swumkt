@@ -1862,7 +1862,7 @@ async def ai_rearrange_content(
                 try:
                     if img_data and img_data.startswith('data:image'):
                         # Create vision chat for this image
-                        vision_chat = LlmChat(
+                        vision_chat = VisionChat(
                             api_key=emergent_key,
                             session_id=f"vision_{content_id}_{idx}_{datetime.now().timestamp()}",
                             system_message="คุณเป็นผู้เชี่ยวชาญในการวิเคราะห์รูปภาพ"
@@ -1872,7 +1872,7 @@ async def ai_rearrange_content(
                         image_content = ImageContent(image_base64=img_data)
                         
                         # Send message with image
-                        vision_message = UserMessage(
+                        vision_message = VisionUserMessage(
                             text="อธิบายรูปนี้โดยละเอียดว่ามีอะไรบ้าง เหมาะสมกับเนื้อหาประเภทใด และควรใช้ประกอบบทความในหัวข้ออะไร (ตอบเป็นภาษาไทยสั้นๆ 2-3 ประโยค)",
                             file_contents=[image_content]
                         )
