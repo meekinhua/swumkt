@@ -31,6 +31,56 @@ from io import BytesIO
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Image resize utility for thumbnails
+def create_thumbnail_base64(base64_str: str, max_width: int = 300, max_height: int = 200, quality: int = 70) -> str:
+    """
+    Create small thumbnail from base64 image for content preview
+    Target: Small thumbnails for list view (~10-30KB per image)
+    
+    Args:
+        base64_str: Base64 encoded image string (with or without data:image prefix)
+        max_width: Maximum thumbnail width (default 300px)
+        max_height: Maximum thumbnail height (default 200px)
+        quality: JPEG quality 1-100 (default 70)
+    Returns:
+        Thumbnail as base64 data URL string
+    """
+    try:
+        # Remove data URL prefix if present
+        if ',' in base64_str:
+            base64_str = base64_str.split(',', 1)[1]
+        
+        # Decode base64 to bytes
+        img_bytes = base64.b64decode(base64_str)
+        img = Image.open(BytesIO(img_bytes))
+        
+        # Convert to RGB if necessary (for PNG with transparency)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+            img = background
+        
+        # Calculate thumbnail size maintaining aspect ratio
+        img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+        
+        # Save as JPEG with specified quality
+        output = BytesIO()
+        img.save(output, format='JPEG', quality=quality, optimize=True)
+        output.seek(0)
+        
+        # Encode to base64 with data URL
+        thumbnail_base64 = base64.b64encode(output.read()).decode('utf-8')
+        return f"data:image/jpeg;base64,{thumbnail_base64}"
+        
+    except Exception as e:
+        logging.warning(f"Failed to create thumbnail: {e}")
+        # Return original if resize fails
+        if not base64_str.startswith('data:'):
+            return f"data:image/jpeg;base64,{base64_str}"
+        return base64_str
+
 # Image compression utility
 def compress_base64_image(base64_str: str, max_size_kb: float = 150.0, target_dimension: int = 640) -> str:
     """
