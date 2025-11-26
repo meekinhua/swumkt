@@ -9174,9 +9174,13 @@ Choice-Based Conjoint Analysis
         
         await db.contents.insert_one(content_dict)
         
+        logging.info(f"[SHARE_CONTENT] Content created successfully with ID: {content_dict['id']}, has AI interpretation: {bool(ai_interpretation)}, chart images: {len(chart_images)}")
+        
         return {
             "message": "Conjoint study shared as content successfully",
-            "content_id": content_dict["id"]
+            "content_id": content_dict["id"],
+            "has_ai_interpretation": bool(ai_interpretation),
+            "chart_count": len(chart_images)
         }
         
     except Exception as e:
