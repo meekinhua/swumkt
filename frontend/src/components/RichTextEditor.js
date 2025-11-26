@@ -239,13 +239,7 @@ const RichTextEditor = React.forwardRef(({ content, onChange, placeholder = 'เ
           class: 'text-blue-600 underline hover:text-blue-800',
         },
       }),
-      Image.configure({
-        inline: false,
-        allowBase64: true,
-        HTMLAttributes: {
-          class: 'rounded-lg my-4 cursor-move',
-        },
-      }),
+      ResizableImage,
     ],
     content: content || '',
     onUpdate: ({ editor }) => {
