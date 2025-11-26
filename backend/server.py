@@ -1900,10 +1900,9 @@ async def ai_rearrange_content(
 
 **เนื้อหาเดิม:**
 {html_content}
+{image_context}
 
-**รูปภาพที่มี:** {len(image_attachments)} รูป
-
-**คำแนะนำ:**
+**คำแนะนำสำคัญ:**
 1. จัดโครงสร้างเนื้อหาใหม่ให้เป็นหมวดหมู่ชัดเจน
 2. เพิ่ม headings (h2, h3) ให้เหมาะสม
 3. แบ่ง paragraphs ให้อ่านง่าย
