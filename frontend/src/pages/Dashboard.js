@@ -58,6 +58,26 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteContent = async () => {
+    if (!contentToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/content/${contentToDelete.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('ลบเนื้อหาสำเร็จ');
+      fetchMyContents(); // Reload list
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถลบเนื้อหาได้');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      setContentToDelete(null);
+    }
+  };
+
   const getRoleLabel = (role) => {
     const labels = {
       admin: t('auth.roles.admin'),
