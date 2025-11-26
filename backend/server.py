@@ -1848,21 +1848,61 @@ async def ai_rearrange_content(
         
         logging.info(f"[AI_REARRANGE] Found {len(image_attachments)} images in attachments")
         
-        # Prepare image descriptions from filenames
+        # Analyze images with Vision AI
         image_descriptions = []
         if len(image_attachments) > 0:
-            logging.info(f"[AI_REARRANGE] Preparing {len(image_attachments)} images for AI analysis...")
+            logging.info(f"[AI_REARRANGE] Analyzing {len(image_attachments)} images with Vision AI...")
+            
+            from emergentintegrations.llm.chat import ImageContent
             
             for idx, img_att in enumerate(image_attachments, 1):
                 filename = img_att.get('filename', f'รูปที่ {idx}')
-                file_type = img_att.get('file_type', 'image')
+                img_data = img_att.get('file_data', '')
                 
-                image_descriptions.append({
-                    'index': idx,
-                    'filename': filename,
-                    'description': f'รูปภาพ: {filename}'
-                })
-                logging.info(f"[AI_REARRANGE] Image {idx}: {filename}")
+                try:
+                    if img_data and img_data.startswith('data:image'):
+                        # Create vision chat for this image
+                        vision_chat = LlmChat(
+                            api_key=emergent_key,
+                            session_id=f"vision_{content_id}_{idx}_{datetime.now().timestamp()}",
+                            system_message="คุณเป็นผู้เชี่ยวชาญในการวิเคราะห์รูปภาพ"
+                        )
+                        
+                        # Create ImageContent from base64 data
+                        image_content = ImageContent(image_base64=img_data)
+                        
+                        # Send message with image
+                        vision_message = UserMessage(
+                            text="อธิบายรูปนี้โดยละเอียดว่ามีอะไรบ้าง เหมาะสมกับเนื้อหาประเภทใด และควรใช้ประกอบบทความในหัวข้ออะไร (ตอบเป็นภาษาไทยสั้นๆ 2-3 ประโยค)",
+                            file_contents=[image_content]
+                        )
+                        
+                        description = await vision_chat.send_message(vision_message)
+                        
+                        image_descriptions.append({
+                            'index': idx,
+                            'filename': filename,
+                            'description': description
+                        })
+                        logging.info(f"[AI_REARRANGE] Image {idx} ({filename}) analyzed: {description[:100]}...")
+                    else:
+                        # Fallback to filename if no image data
+                        image_descriptions.append({
+                            'index': idx,
+                            'filename': filename,
+                            'description': f'รูปภาพ: {filename}'
+                        })
+                        logging.warning(f"[AI_REARRANGE] Image {idx} has no data, using filename only")
+                        
+                except Exception as e:
+                    logging.error(f"[AI_REARRANGE] Error analyzing image {idx}: {str(e)}")
+                    # Fallback to filename
+                    image_descriptions.append({
+                        'index': idx,
+                        'filename': filename,
+                        'description': f'รูปภาพ: {filename}'
+                    })
+                    logging.warning(f"[AI_REARRANGE] Using filename fallback for image {idx}")
         
         # Build image context for prompt
         image_context = ""
