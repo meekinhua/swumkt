@@ -1819,6 +1819,130 @@ async def update_content(
     
     return updated_content
 
+@api_router.post("/content/{content_id}/ai-rearrange")
+async def ai_rearrange_content(
+    content_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Use AI to rearrange and beautify content with rich text formatting"""
+    try:
+        # Get content
+        content = await db.contents.find_one({"id": content_id}, {"_id": 0})
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+        
+        # Check if user has permission
+        if content['created_by'] != current_user.id and current_user.role != UserRole.ADMIN:
+            is_contributor = any(c['user_id'] == current_user.id for c in content.get('contributors', []))
+            if not is_contributor:
+                raise HTTPException(status_code=403, detail="Not authorized to edit this content")
+        
+        logging.info(f"[AI_REARRANGE] Starting AI rearrange for content {content_id}")
+        
+        # Extract current content (strip HTML for analysis but keep for reference)
+        html_content = content.get('content', '')
+        
+        # Extract images from attachments
+        attachments = content.get('attachments', [])
+        image_attachments = [att for att in attachments if att.get('file_type', '').startswith('image/')]
+        
+        logging.info(f"[AI_REARRANGE] Found {len(image_attachments)} images in attachments")
+        
+        # Build prompt for AI
+        prompt = f"""คุณเป็นนักเขียนมืออาชีพ กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
+
+**หัวข้อบทความ:** {content.get('title', 'ไม่มีหัวข้อ')}
+
+**เนื้อหาเดิม:**
+{html_content}
+
+**รูปภาพที่มี:** {len(image_attachments)} รูป
+
+**คำแนะนำ:**
+1. จัดโครงสร้างเนื้อหาใหม่ให้เป็นหมวดหมู่ชัดเจน
+2. เพิ่ม headings (h2, h3) ให้เหมาะสม
+3. แบ่ง paragraphs ให้อ่านง่าย
+4. เน้นจุดสำคัญด้วย **bold** หรือ *italic*
+5. เพิ่ม bullet points หรือ numbered lists ถ้าเหมาะสม
+6. เพิ่ม placeholder สำหรับรูปภาพ เช่น `[รูปภาพที่ 1: คำอธิบาย]` ในตำแหน่งที่เหมาสม
+7. เพิ่ม introduction และ conclusion ถ้าจำเป็น
+
+**ข้อกำหนด:**
+- ใช้ HTML tags: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>
+- ห้ามใช้ markdown (```, ##, **)
+- คงเนื้อหาหลักและข้อมูลสำคัญไว้ทั้งหมด
+- เพิ่มเติมเนื้อหาเล็กน้อยเพื่อให้สมบูรณ์ขึ้นได้
+- ให้ output เป็น HTML โดยตรง ไม่ต้องมี <html>, <body> tags
+
+**ตัวอย่าง output:**
+<h2>บทนำ</h2>
+<p>เนื้อหาบทนำ...</p>
+
+<h2>หัวข้อหลัก</h2>
+<p>เนื้อหาย่อหน้าแรก ที่มี <strong>ข้อความสำคัญ</strong> และ <em>เน้นเพิ่มเติม</em></p>
+
+[รูปภาพที่ 1: คำอธิบายรูป]
+
+<p>เนื้อหาย่อหน้าต่อไป...</p>
+
+<h3>หัวข้อย่อย</h3>
+<ul>
+<li>จุดสำคัญที่ 1</li>
+<li>จุดสำคัญที่ 2</li>
+</ul>
+
+**กรุณาเริ่มจัดเรียงเนื้อหาเลย (output HTML โดยตรง):**"""
+        
+        # Call AI
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat()
+        logging.info(f"[AI_REARRANGE] Calling AI with prompt length: {len(prompt)} characters")
+        
+        ai_rearranged_html = await chat.send_message_async(UserMessage(prompt))
+        
+        logging.info(f"[AI_REARRANGE] AI returned content length: {len(ai_rearranged_html)} characters")
+        
+        # Replace image placeholders with actual images
+        rearranged_with_images = ai_rearranged_html
+        for idx, img_att in enumerate(image_attachments, 1):
+            placeholder_patterns = [
+                f'[รูปภาพที่ {idx}',
+                f'[รูปที่ {idx}',
+                f'[ภาพที่ {idx}',
+                f'[Image {idx}'
+            ]
+            
+            img_html = f'<p><img src="{img_att.get("file_data", "")}" alt="{img_att.get("filename", "")}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0;" /></p>'
+            
+            for pattern in placeholder_patterns:
+                if pattern in rearranged_with_images:
+                    # Find the placeholder line and replace it
+                    lines = rearranged_with_images.split('\n')
+                    new_lines = []
+                    for line in lines:
+                        if pattern in line:
+                            new_lines.append(img_html)
+                        else:
+                            new_lines.append(line)
+                    rearranged_with_images = '\n'.join(new_lines)
+                    break
+        
+        logging.info(f"[AI_REARRANGE] Final content length with images: {len(rearranged_with_images)} characters")
+        
+        return {
+            "success": True,
+            "rearranged_content": rearranged_with_images,
+            "original_length": len(html_content),
+            "new_length": len(rearranged_with_images),
+            "images_included": len(image_attachments)
+        }
+        
+    except Exception as e:
+        logging.error(f"[AI_REARRANGE] Error: {str(e)}")
+        import traceback
+        logging.error(f"[AI_REARRANGE] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"AI rearrange failed: {str(e)}")
+
 @api_router.delete("/content/{content_id}")
 async def delete_content(
     content_id: str,
