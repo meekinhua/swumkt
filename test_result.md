@@ -383,15 +383,18 @@ frontend:
   
   - task: "Phase 1A: Profile Page - User Type Badge & Rating"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/ProfilePage.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: แสดง UserTypeBadge, rating stats (surveys completed, quality score, trust score), auth method indicator"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED & FIXED: Profile Save button functionality fully working! ISSUE FOUND: Frontend was sending empty strings for optional fields (graduation_year), causing 422 validation errors. FIXED: Modified handleSubmit in ProfilePage.js to convert empty strings to null before API call. VERIFICATION: Successfully tested profile updates with Full Name, Student ID, Bio fields. API returns 200 status, success toast appears, data persists correctly. All form elements present and functional (Full Name, Email disabled, Student ID, Graduation Year, Bio, Avatar URL, Save Changes button)."
   
   - task: "Phase 1A: Profile Page - Demographics Section"
     implemented: true
