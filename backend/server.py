@@ -1853,19 +1853,28 @@ async def ai_rearrange_content(
         if len(image_attachments) > 0:
             logging.info(f"[AI_REARRANGE] Analyzing {len(image_attachments)} images with Vision AI...")
             
-            from emergentintegrations.llm.vision import analyze_image
+            from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageMessage
             
             for idx, img_att in enumerate(image_attachments, 1):
                 try:
                     # Get image data
                     img_data = img_att.get('file_data', '')
                     if img_data and img_data.startswith('data:image'):
-                        # Analyze image
-                        description = await analyze_image(
-                            image_source=img_data,
-                            prompt="อธิบายรูปนี้โดยละเอียด ว่ามีอะไรบ้าง เหมาะสมกับเนื้อหาประเภทใด และควรใช้ประกอบบทความในหัวข้ออะไร (ตอบเป็นภาษาไทย 2-3 ประโยค)",
-                            api_key=emergent_key
+                        # Create vision chat session
+                        vision_chat = LlmChat(
+                            api_key=emergent_key,
+                            session_id=f"image_analysis_{content_id}_{idx}",
+                            system_message="คุณเป็นผู้เชี่ยวชาญในการวิเคราะห์รูปภาพและอธิบายเนื้อหา"
                         )
+                        
+                        # Send image with prompt
+                        description = await vision_chat.send_message(
+                            ImageMessage(
+                                image_url=img_data,
+                                prompt="อธิบายรูปนี้โดยละเอียดว่ามีอะไรบ้าง เหมาะสมกับเนื้อหาประเภทใด และควรใช้ประกอบบทความในหัวข้ออะไร (ตอบเป็นภาษาไทยสั้นๆ 2-3 ประโยค)"
+                            )
+                        )
+                        
                         image_descriptions.append({
                             'index': idx,
                             'filename': img_att.get('filename', f'รูปที่ {idx}'),
@@ -1876,14 +1885,14 @@ async def ai_rearrange_content(
                         image_descriptions.append({
                             'index': idx,
                             'filename': img_att.get('filename', f'รูปที่ {idx}'),
-                            'description': 'ไม่สามารถวิเคราะห์รูปภาพได้'
+                            'description': f'รูปภาพ {img_att.get("filename", "")}'
                         })
                 except Exception as e:
                     logging.error(f"[AI_REARRANGE] Error analyzing image {idx}: {str(e)}")
                     image_descriptions.append({
                         'index': idx,
                         'filename': img_att.get('filename', f'รูปที่ {idx}'),
-                        'description': 'ไม่สามารถวิเคราะห์รูปภาพได้'
+                        'description': f'รูปภาพ {img_att.get("filename", "")} (ไม่สามารถวิเคราะห์ได้)'
                     })
         
         # Build image context for prompt
