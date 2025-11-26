@@ -244,6 +244,46 @@ const ContentEditor = () => {
     toast.success('ลบไฟล์แนบสำเร็จ');
   };
 
+  const handleAiRearrange = async () => {
+    if (!id) {
+      toast.error('กรุณาบันทึกเนื้อหาก่อนใช้ AI Rearrange');
+      return;
+    }
+
+    if (!formData.content || formData.content.trim().length < 50) {
+      toast.error('เนื้อหาสั้นเกินไป กรุณาเพิ่มเนื้อหาอย่างน้อย 50 ตัวอักษร');
+      return;
+    }
+
+    setAiRearranging(true);
+    try {
+      toast.info('กำลังใช้ AI จัดเรียงเนื้อหา กรุณารอสักครู่...');
+      
+      const response = await axios.post(
+        `${API}/content/${id}/ai-rearrange`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        setFormData({
+          ...formData,
+          content: response.data.rearranged_content
+        });
+        
+        toast.success(
+          `✨ จัดเรียงเนื้อหาสำเร็จ! รวมรูปภาพ ${response.data.images_included} รูป`,
+          { duration: 5000 }
+        );
+      }
+    } catch (error) {
+      console.error('AI Rearrange error:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถจัดเรียงเนื้อหาได้ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setAiRearranging(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
