@@ -1737,7 +1737,7 @@ async def create_content(
     await db.contents.insert_one(doc)
     return content
 
-@api_router.get("/content", response_model=List[Content])
+@api_router.get("/content")
 async def get_contents(
     content_type: Optional[ContentType] = None,
     status: Optional[ContentStatus] = None,
