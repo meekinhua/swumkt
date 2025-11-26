@@ -1853,7 +1853,7 @@ async def ai_rearrange_content(
         if len(image_attachments) > 0:
             logging.info(f"[AI_REARRANGE] Analyzing {len(image_attachments)} images with Vision AI...")
             
-            from emergentintegrations.llm.chat import ImageContent
+            from emergentintegrations.llm.chat import ImageContent, LlmChat as VisionChat, UserMessage as VisionUserMessage
             
             for idx, img_att in enumerate(image_attachments, 1):
                 filename = img_att.get('filename', f'รูปที่ {idx}')
