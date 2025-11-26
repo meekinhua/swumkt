@@ -1959,6 +1959,20 @@ async def ai_rearrange_content(
         
         logging.info(f"[AI_REARRANGE] AI returned content length: {len(ai_rearranged_html)} characters")
         
+        # Clean up markdown code blocks if present
+        if ai_rearranged_html.startswith('```html'):
+            ai_rearranged_html = ai_rearranged_html[7:]  # Remove ```html
+        elif ai_rearranged_html.startswith('```'):
+            ai_rearranged_html = ai_rearranged_html[3:]  # Remove ```
+        
+        if ai_rearranged_html.endswith('```'):
+            ai_rearranged_html = ai_rearranged_html[:-3]  # Remove trailing ```
+        
+        # Strip leading/trailing whitespace
+        ai_rearranged_html = ai_rearranged_html.strip()
+        
+        logging.info(f"[AI_REARRANGE] Cleaned content length: {len(ai_rearranged_html)} characters")
+        
         # Replace image placeholders with actual images
         rearranged_with_images = ai_rearranged_html
         for idx, img_att in enumerate(image_attachments, 1):
