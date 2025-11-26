@@ -1038,7 +1038,7 @@ const ConjointResultsPage = () => {
                     <option value="auto">🤖 ให้ AI เลือกอัตโนมัติ (จากประเภทสินค้า)</option>
                     <option value="cosmetics_store">💄 ร้านเครื่องสำอาง (Boots, Watson)</option>
                     <option value="convenience_store">🏪 ร้านสะดวกซื้อ (7-11, ตู้แช่)</option>
-                    <option value="supermarket">🛒 ซูเปอร์มาร์เก็ต (Lotus's, Big C)</option>
+                    <option value="supermarket">🛒 ซูเปอร์มาร์เก็ต (Lotus&apos;s, Big C)</option>
                     <option value="mall">🏬 ห้างสรรพสินค้า (Mall)</option>
                     <option value="custom">✏️ กำหนดเอง (Custom)</option>
                   </select>
