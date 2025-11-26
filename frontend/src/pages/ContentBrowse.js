@@ -19,17 +19,36 @@ const ContentBrowse = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const itemsPerPage = 20;
 
   useEffect(() => {
     fetchContents();
-  }, []);
+  }, [currentPage]);
 
   const fetchContents = async () => {
+    setLoading(true);
     try {
+      const skip = (currentPage - 1) * itemsPerPage;
       const response = await axios.get(`${API}/content`, {
-        params: { limit: 50 }
+        params: { 
+          skip: skip,
+          limit: itemsPerPage 
+        }
       });
-      setContents(response.data);
+      
+      // Handle new response format with pagination metadata
+      if (response.data.items) {
+        setContents(response.data.items);
+        setTotalItems(response.data.total);
+        setHasMore(response.data.has_more);
+      } else {
+        // Backward compatibility with old format
+        setContents(response.data);
+        setTotalItems(response.data.length);
+      }
     } catch (error) {
       console.error('Error fetching contents:', error);
     } finally {
