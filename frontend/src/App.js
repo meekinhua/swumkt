@@ -203,14 +203,6 @@ function App() {
               }
             />
             <Route
-              path="/admin/ai-settings"
-              element={
-                <ProtectedRoute>
-                  <AdminAISettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/content/create"
               element={
                 <ProtectedRoute>
