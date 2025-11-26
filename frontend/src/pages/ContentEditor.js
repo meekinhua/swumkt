@@ -396,7 +396,28 @@ const ContentEditor = () => {
 
               {/* Content */}
               <div>
-                <Label htmlFor="content" className="text-gray-800 font-bold mb-2">เนื้อหา *</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="content" className="text-gray-800 font-bold">เนื้อหา *</Label>
+                  {id && (
+                    <Button
+                      type="button"
+                      onClick={handleAiRearrange}
+                      disabled={aiRearranging || !formData.content}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm px-4 py-2"
+                    >
+                      {aiRearranging ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          กำลังจัดเรียง...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          ✨ AI Rearrange
+                        </span>
+                      )}
+                    </Button>
+                  )}
+                </div>
                 <div className="mt-1 relative">
                   <RichTextEditor
                     content={formData.content}
@@ -405,6 +426,11 @@ const ContentEditor = () => {
                     className="bg-white"
                   />
                 </div>
+                {id && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 เคล็ดลับ: ปุ่ม "AI Rearrange" จะช่วยจัดเรียงเนื้อหาและรูปภาพให้สวยงามอัตโนมัติ
+                  </p>
+                )}
               </div>
 
               {/* Featured Image URL */}
