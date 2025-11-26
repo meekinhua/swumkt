@@ -1943,8 +1943,18 @@ async def ai_rearrange_content(
             for img_desc in image_descriptions:
                 image_context += f"\n{img_desc['index']}. {img_desc['filename']}\n   คำอธิบาย: {img_desc['description']}\n"
         
-        # Build detailed prompt for AI
-        prompt = f"""คุณเป็นนักเขียนมืออาชีพและนักออกแบบเนื้อหา กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
+        # Get AI settings from database
+        ai_settings = await db.ai_settings.find_one({"id": "default"}, {"_id": 0})
+        
+        if ai_settings:
+            prompt_template = ai_settings.get('prompt_template', '')
+            model_name = ai_settings.get('model', 'gpt-4o')
+            max_tokens = ai_settings.get('max_tokens', 4000)
+            temperature = ai_settings.get('temperature', 0.7)
+            logging.info(f"[AI_REARRANGE] Using custom settings: model={model_name}, temp={temperature}")
+        else:
+            # Default prompt template
+            prompt_template = """คุณเป็นนักเขียนมืออาชีพและนักออกแบบเนื้อหา กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
 
 **หัวข้อบทความ:** {content.get('title', 'ไม่มีหัวข้อ')}
 
