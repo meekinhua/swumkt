@@ -8948,12 +8948,20 @@ async def share_conjoint_as_content(
                     # Call AI
                     from emergentintegrations.llm.chat import LlmChat, UserMessage
                     chat = LlmChat()
+                    logging.info(f"[SHARE_CONTENT] Calling AI with prompt length: {len(prompt)} characters")
                     ai_interpretation = await chat.send_message_async(UserMessage(prompt))
-                    logging.info("AI interpretation generated successfully")
+                    logging.info(f"[SHARE_CONTENT] AI interpretation generated successfully. Length: {len(ai_interpretation)} characters")
+                else:
+                    logging.warning(f"[SHARE_CONTENT] Insufficient responses ({len(responses)}/30 required) - skipping AI analysis")
+                    ai_interpretation = None
                     
             except Exception as e:
-                logging.error(f"Error generating AI interpretation: {e}")
+                logging.error(f"[SHARE_CONTENT] Error generating AI interpretation: {str(e)}")
+                import traceback
+                logging.error(f"[SHARE_CONTENT] Traceback: {traceback.format_exc()}")
                 ai_interpretation = None
+        else:
+            logging.info(f"[SHARE_CONTENT] AI interpretation provided by user. Length: {len(ai_interpretation)} characters")
         
         # Build content body with research details and results
         content_body = f"""## เทคนิคการวิจัย
