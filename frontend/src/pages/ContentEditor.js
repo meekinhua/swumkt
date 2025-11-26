@@ -40,6 +40,7 @@ const ContentEditor = () => {
   const [memberEmail, setMemberEmail] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [memberDetails, setMemberDetails] = useState([]);
+  const [aiRearranging, setAiRearranging] = useState(false);
 
   useEffect(() => {
     if (id) {
