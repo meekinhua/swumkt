@@ -1780,7 +1780,7 @@ async def get_content(content_id: str):
     if isinstance(content.get('updated_at'), str):
         content['updated_at'] = datetime.fromisoformat(content['updated_at'])
     
-    return Content(**content)
+    return content
 
 @api_router.put("/content/{content_id}", response_model=Content)
 async def update_content(
