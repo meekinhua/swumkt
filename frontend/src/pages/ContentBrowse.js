@@ -237,6 +237,38 @@ const ContentBrowse = () => {
               </Card>
             ))}
           </div>
+          
+          {/* Pagination */}
+          {!loading && totalItems > itemsPerPage && (
+            <div className="mt-8 flex items-center justify-center gap-4">
+              <Button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                variant="outline"
+                className="border-2 border-gray-300 hover:bg-gray-100 font-bold"
+              >
+                ← ก่อนหน้า
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-700">
+                  หน้า {currentPage} / {Math.ceil(totalItems / itemsPerPage)}
+                </span>
+                <span className="text-xs text-gray-500">
+                  ({totalItems} รายการ)
+                </span>
+              </div>
+              
+              <Button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={!hasMore}
+                variant="outline"
+                className="border-2 border-gray-300 hover:bg-gray-100 font-bold"
+              >
+                ถัดไป →
+              </Button>
+            </div>
+          )}
         )}
       </div>
     </div>
