@@ -173,6 +173,28 @@ const ResizableImageComponent = ({ node, updateAttributes, selected }) => {
               >
                 ➡️
               </button>
+              
+              <div style={{ width: '1px', height: '24px', background: '#ddd', margin: '0 4px' }}></div>
+              
+              <button
+                onClick={() => {
+                  if (window.confirm('ต้องการลบรูปนี้ออกจากบทความ?')) {
+                    deleteNode();
+                  }
+                }}
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #ff4d4f',
+                  borderRadius: '4px',
+                  background: 'white',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#ff4d4f',
+                }}
+                title="ลบรูป"
+              >
+                🗑️
+              </button>
             </div>
           </>
         )}
