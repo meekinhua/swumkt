@@ -29,33 +29,18 @@ const Dashboard = () => {
 
   const fetchMyContents = async () => {
     try {
-      // Fetch all statuses (draft, published, archived)
-      const [draftRes, publishedRes, archivedRes] = await Promise.all([
-        axios.get(`${API}/content`, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { limit: 100, status: 'draft' }
-        }),
-        axios.get(`${API}/content`, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { limit: 100, status: 'published' }
-        }),
-        axios.get(`${API}/content`, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { limit: 100, status: 'archived' }
-        })
-      ]);
+      // Use optimized endpoint that fetches only current user's content
+      const response = await axios.get(`${API}/content/my`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limit: 50 } // Only fetch 50 most recent items
+      });
       
-      // Handle new response format with pagination metadata
-      const draftItems = draftRes.data.items || draftRes.data || [];
-      const publishedItems = publishedRes.data.items || publishedRes.data || [];
-      const archivedItems = archivedRes.data.items || archivedRes.data || [];
+      // Handle response format
+      const items = response.data.items || response.data || [];
+      setMyContents(items);
       
-      const allContents = [...draftItems, ...publishedItems, ...archivedItems];
-      const myContents = allContents.filter(c => c.created_by === user.id);
-      setMyContents(myContents);
-      
-      const totalViews = myContents.reduce((sum, c) => sum + (c.views || 0), 0);
-      setStats({ totalViews, totalContent: myContents.length });
+      const totalViews = items.reduce((sum, c) => sum + (c.views || 0), 0);
+      setStats({ totalViews, totalContent: items.length });
     } catch (error) {
       console.error('Error fetching contents:', error);
     } finally {
