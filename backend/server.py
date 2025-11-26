@@ -2011,6 +2011,17 @@ async def ai_rearrange_content(
 - จัดเรียงให้เนื้อหาและรูปภาพสอดคล้องกัน
 
 **กรุณาเริ่มจัดเรียงเนื้อหาเลย (output HTML โดยตรง โดยใส่ [รูปภาพที่ X] ในตำแหน่งที่เหมาะสม):**"""
+            model_name = 'gpt-4o'
+            max_tokens = 4000
+            temperature = 0.7
+            logging.info(f"[AI_REARRANGE] Using default settings")
+        
+        # Build prompt from template
+        prompt = prompt_template.format(
+            title=content.get('title', 'ไม่มีหัวข้อ'),
+            content=html_content,
+            images=image_context
+        )
         
         # Call AI
         from emergentintegrations.llm.chat import LlmChat, UserMessage
