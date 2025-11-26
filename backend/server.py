@@ -1855,12 +1855,20 @@ async def get_my_contents(
         if content.get('content'):
             content['content'] = content['content'][:150] + ('...' if len(content['content']) > 150 else '')
         
-        # Only keep cover image attachment if exists
+        # Only keep cover image attachment if exists and create thumbnail
         if content.get('attachments') and content.get('cover_image_id'):
-            content['attachments'] = [
+            cover_attachments = [
                 att for att in content['attachments'] 
                 if att.get('id') == content['cover_image_id']
             ]
+            
+            # Create thumbnails for cover images
+            for att in cover_attachments:
+                if att.get('file_data') and att.get('file_type', '').startswith('image/'):
+                    # Create small thumbnail (300x200, quality 70)
+                    att['file_data'] = create_thumbnail_base64(att['file_data'], max_width=300, max_height=200, quality=70)
+            
+            content['attachments'] = cover_attachments
         else:
             content['attachments'] = []
         
