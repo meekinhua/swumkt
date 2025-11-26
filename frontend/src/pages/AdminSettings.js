@@ -1575,7 +1575,7 @@ const AdminSettings = () => {
                 Journey Map Guidelines
               </h3>
               <ul className="space-y-2 text-sm text-gray-700 font-medium">
-                <li>• Define AI's role (e.g., "expert customer experience analyst")</li>
+                <li>• Define AI&apos;s role (e.g., &quot;expert customer experience analyst&quot;)</li>
                 <li>• Specify analysis elements: stages, touchpoints, pain points, emotions</li>
                 <li>• Include output format: ANALYSIS + MERMAID sections</li>
                 <li>• Provide Mermaid syntax examples with styling</li>
@@ -1589,7 +1589,7 @@ const AdminSettings = () => {
                 Behavior Analysis Guidelines
               </h3>
               <ul className="space-y-2 text-sm text-gray-700 font-medium">
-                <li>• Define AI's role (e.g., "consumer behavior analyst")</li>
+                <li>• Define AI&apos;s role (e.g., &quot;consumer behavior analyst&quot;)</li>
                 <li>• Specify analysis elements: behavioral patterns, motivations, barriers</li>
                 <li>• Include output format: ANALYSIS + KEY_FINDINGS + RECOMMENDATIONS</li>
                 <li>• Focus on actionable insights</li>
