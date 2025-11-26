@@ -45,7 +45,12 @@ const Dashboard = () => {
         })
       ]);
       
-      const allContents = [...draftRes.data, ...publishedRes.data, ...archivedRes.data];
+      // Handle new response format with pagination metadata
+      const draftItems = draftRes.data.items || draftRes.data || [];
+      const publishedItems = publishedRes.data.items || publishedRes.data || [];
+      const archivedItems = archivedRes.data.items || archivedRes.data || [];
+      
+      const allContents = [...draftItems, ...publishedItems, ...archivedItems];
       const myContents = allContents.filter(c => c.created_by === user.id);
       setMyContents(myContents);
       
