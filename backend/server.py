@@ -7912,6 +7912,30 @@ async def delete_reference_image(
         "remaining_count": len(reference_images)
     }
 
+@api_router.delete("/conjoint/studies/{study_id}")
+async def delete_conjoint_study(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a conjoint study and all its associated data"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Only creator or admin can delete
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this study")
+    
+    # Delete study
+    await db.conjoint_studies.delete_one({"id": study_id})
+    
+    # Delete all associated responses
+    await db.conjoint_responses.delete_many({"study_id": study_id})
+    
+    logging.info(f"[DELETE_STUDY] Study {study_id} deleted by {current_user.id}")
+    
+    return {"message": "Study deleted successfully"}
+
 # Start survey - lock study from structural changes
 @api_router.post("/conjoint/studies/{study_id}/start-survey")
 async def start_survey(
