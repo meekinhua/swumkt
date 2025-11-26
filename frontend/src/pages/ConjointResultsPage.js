@@ -85,6 +85,10 @@ const ConjointResultsPage = () => {
   // Content sharing states
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharingContent, setSharingContent] = useState(false);
+  
+  // Delete states
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     // Load results for both authenticated and public access
