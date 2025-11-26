@@ -56,6 +56,15 @@ const ProfilePage = () => {
 
     try {
       const updateData = { ...formData };
+      
+      // Convert empty strings to null to avoid validation errors
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === '') {
+          updateData[key] = null;
+        }
+      });
+      
+      // Convert graduation_year to integer if it has a value
       if (updateData.graduation_year) {
         updateData.graduation_year = parseInt(updateData.graduation_year);
       }
