@@ -130,8 +130,9 @@ const ContentBrowse = () => {
             <p className="text-gray-700 text-lg font-semibold">{t('content.noResults')}</p>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredContents.map((content, index) => (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredContents.map((content, index) => (
               <Card
                 key={content.id}
                 className="p-6 bg-white/98 hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-gray-300 hover:border-[#00A9CE] card-hover scale-in"
