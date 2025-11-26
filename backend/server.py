@@ -203,6 +203,21 @@ class AIModel(str, Enum):
     CLAUDE_SONNET = "claude-sonnet-4-20250514"
     GEMINI_FLASH = "gemini-2.0-flash-exp"
 
+class AISettings(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    model: AIModel = AIModel.GPT_4O
+    prompt_template: str
+    max_tokens: int = 4000
+    temperature: float = 0.7
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_by: str
+
+class AISettingsUpdate(BaseModel):
+    model: Optional[AIModel] = None
+    prompt_template: Optional[str] = None
+    max_tokens: Optional[int] = None
+    temperature: Optional[float] = None
+
 class SurveyStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
