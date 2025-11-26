@@ -391,6 +391,7 @@ class ContentUpdate(BaseModel):
     category: Optional[str] = None
     tags: Optional[List[str]] = None
     featured_image: Optional[str] = None
+    cover_image_id: Optional[str] = None
     status: Optional[ContentStatus] = None
     attachments: Optional[List[dict]] = None
     is_zbs04_assignment: Optional[bool] = None
