@@ -373,6 +373,27 @@ const ContentEditor = () => {
     }
   };
 
+  const handleDeleteContent = async () => {
+    if (!id) return;
+    
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/content/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('ลบเนื้อหาสำเร็จ');
+      navigate('/content');
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถลบเนื้อหาได้');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const canDelete = id && user && (formData.created_by === user.id || user.role === 'admin');
+
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
