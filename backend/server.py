@@ -378,6 +378,7 @@ class ContentCreate(BaseModel):
     category: Optional[str] = None
     tags: List[str] = []
     featured_image: Optional[str] = None
+    cover_image_id: Optional[str] = None
     status: ContentStatus = ContentStatus.DRAFT
     attachments: Optional[List[dict]] = Field(default_factory=list, description="File attachments")
     is_zbs04_assignment: bool = False
