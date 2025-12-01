@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://richtext-editor-2.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://content-preview-9.preview.emergentagent.com';
 
 const CustomerBehaviorTool = () => {
   const navigate = useNavigate();
