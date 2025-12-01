@@ -314,32 +314,67 @@ const ContentBrowse = () => {
               ))}
             </div>
             
-            {/* Pagination */}
-            {totalItems > itemsPerPage && (
+            {/* Load More Button - auto-triggers on scroll */}
+            {canLoadMore && (
+              <div 
+                ref={loadMoreRef}
+                className="mt-8 flex justify-center"
+              >
+                <Button
+                  onClick={loadMoreContents}
+                  disabled={loadingMore}
+                  className="bg-gradient-to-r from-[#00A9CE] to-[#33BCDA] hover:from-[#008FB5] hover:to-[#00A9CE] text-white font-bold px-8 py-3 shadow-lg"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      กำลังโหลด...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-5 h-5 mr-2" />
+                      โหลดเพิ่ม ({displayedCount}/{Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage)})
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Progress indicator */}
+            <div className="mt-6 flex justify-center">
+              <div className="bg-white/80 rounded-full px-4 py-2 shadow-md border border-gray-200">
+                <span className="text-sm font-semibold text-gray-600">
+                  แสดง {filteredContents.length} จาก {totalItems} รายการ
+                </span>
+              </div>
+            </div>
+            
+            {/* Pagination - shows when page is full OR no more items to load on this page */}
+            {!canLoadMore && totalItems > itemsPerPage && (
               <div className="mt-8 flex items-center justify-center gap-4">
                 <Button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  onClick={goToPrevPage}
+                  disabled={!hasPrevPage}
                   variant="outline"
-                  className="border-2 border-gray-300 hover:bg-gray-100 font-bold"
+                  className="border-2 border-gray-300 hover:bg-gray-100 font-bold disabled:opacity-50"
                 >
                   ← ก่อนหน้า
                 </Button>
                 
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-700">
-                    หน้า {currentPage} / {Math.ceil(totalItems / itemsPerPage)}
+                <div className="flex items-center gap-2 bg-white/80 rounded-lg px-4 py-2 shadow-sm border border-gray-200">
+                  <span className="text-sm font-bold text-gray-900">
+                    หน้า {currentPage} / {totalPages}
                   </span>
                   <span className="text-xs text-gray-500">
-                    ({totalItems} รายการ)
+                    (รายการ {pageStart}-{pageEnd})
                   </span>
                 </div>
                 
                 <Button
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  disabled={!hasMore}
+                  onClick={goToNextPage}
+                  disabled={!hasNextPage}
                   variant="outline"
-                  className="border-2 border-gray-300 hover:bg-gray-100 font-bold"
+                  className="border-2 border-gray-300 hover:bg-gray-100 font-bold disabled:opacity-50"
                 >
                   ถัดไป →
                 </Button>
