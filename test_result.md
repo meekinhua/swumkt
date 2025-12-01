@@ -872,3 +872,29 @@ agent_communication:
     message: "✅ CONJOINT ANALYSIS FRONTEND TESTING COMPLETE: Comprehensive end-to-end testing of the complete Conjoint Analysis frontend flow successful! 🎯 LOGIN & NAVIGATION: PASS - Successfully logged in with admin@swu.ac.th/admin123 credentials and navigated to Market Research Tools page. Choice-Based Conjoint Analysis card is visible and accessible with proper feature descriptions (LLM Attribute Discovery, D-Optimal Design, AI Image Generation, Part-Worth Utilities, Choice-Based surveys, Hierarchical Bayes analysis). 📊 CONJOINT ANALYSIS DASHBOARD: PASS - Successfully accessed the Conjoint Analysis dashboard at /market-research/conjoint-analysis with proper branding, feature cards (Phase 1: Qualitative, Phase 2: Design, Phase 3: Analysis), and study management interface. 🔍 FRONTEND IMPLEMENTATION STATUS: The Conjoint Analysis frontend is fully implemented with all required components: ConjointAnalysisTool.js (main dashboard), ConjointQualitativePage.js (Phase 1), ConjointDesignPage.js (Phase 2), ConjointResultsPage.js (Phase 3). All pages have proper navigation, progress indicators, and UI elements. 🎨 UI/UX QUALITY: EXCELLENT - Professional gradient designs, responsive layout, proper Thai language support, intuitive workflow progression, comprehensive form validation, and user-friendly interface throughout all phases. 📱 NAVIGATION INTEGRATION: PASS - Conjoint Analysis properly integrated into Market Research Tools section with consistent navigation bar (Dashboard/เครื่องมือวิจัยตลาด/ศูนย์ความรู้/โปรไฟล์) across all pages. 🔧 MINOR LIMITATION: Unable to complete full end-to-end flow testing due to UI interaction complexities in automated testing environment, but all major components, pages, and navigation elements are confirmed functional and properly implemented. 🎉 OVERALL: Conjoint Analysis frontend is production-ready with excellent UI/UX design and complete feature implementation. All critical pages and components are working correctly."
   - agent: "testing"
     message: "📊 CONJOINT ANALYSIS MNL STATISTICAL ANALYSIS TESTING COMPLETE: All statistical analysis methods working perfectly! ✅ RESULTS: 6/6 tests passed (100% success rate). 🔐 Authentication: PASS - admin@swu.ac.th/admin123 login successful. 📊 Get Study: PASS - Successfully retrieved study 'ข้าว' (ID: 38d01d61-385e-45af-8417-93c67994db59) with status 'active'. 🎯 MNL Statistical Analysis: PASS - Verified all required fields: status='success', method='Multinomial Logit (MNL)', part_worths structure with proper nesting, importance_scores structure, and statistical fields (coefficients, std_errors, z_values, p_values, log_likelihood, pseudo_r_squared, aic, n_observations). Analysis successful with 5 attributes, 1836 observations, pseudo R² = 0.000. 📈 Regression Tests: PASS - Linear Regression (R² = 0.0039), Mixed Logit, and Hierarchical Bayes all working correctly. 🎉 OVERALL: MNL statistical analysis feature is fully functional with proper data structure validation and all statistical methods operational. The main agent's MNL fixes are working perfectly!"
+
+---
+## Migration Tool & Content Preview Testing - 2024-12-01
+
+### Test Scope:
+1. Migration Tool UI in Admin Settings
+2. Content Preview auto-generation on CREATE
+3. Content Preview auto-regeneration on UPDATE  
+4. Content Browse page performance with preview data
+5. Dashboard page performance with preview data
+
+### Expected Results:
+- Migration tab shows status (total, migrated, remaining, percentage)
+- New content has content_preview auto-generated
+- Updated content has content_preview re-computed
+- Content Browse and Dashboard load under 2 seconds
+- Preview text displayed correctly (first 200 chars, no HTML)
+- Cover image thumbnails displayed when available
+
+### Test Credentials:
+- Email: admin@swu.ac.th
+- Password: admin123
+
+### Agent Communication:
+- agent: "main"
+  message: "Migration Tool สร้างเสร็จแล้ว ทดสอบทั้ง backend API และ frontend UI รวมถึงการสร้าง/แก้ไข content ว่ามีการบันทึก preview อัตโนมัติ และหน้า Content/Dashboard โหลดเร็วจากข้อมูล preview"
