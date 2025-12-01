@@ -201,9 +201,18 @@ def compress_base64_image(base64_str: str, max_size_kb: float = 150.0, target_di
         # Return original if compression fails
         return base64_str
 
-# MongoDB connection
+# MongoDB connection with connection pooling for better performance
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    maxPoolSize=50,           # Maximum number of connections in pool
+    minPoolSize=10,           # Minimum connections kept open
+    maxIdleTimeMS=30000,      # Close idle connections after 30 seconds
+    waitQueueTimeoutMS=5000,  # Timeout waiting for connection from pool
+    serverSelectionTimeoutMS=10000,  # Timeout for server selection
+    connectTimeoutMS=10000,   # Timeout for initial connection
+    socketTimeoutMS=30000,    # Timeout for socket operations
+)
 db = client[os.environ['DB_NAME']]
 
 # Create indexes on startup for better performance
