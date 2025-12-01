@@ -544,31 +544,31 @@ const AdminSettings = () => {
   };
 
   // Migration progress tracking
-  const [migrationProgress, setMigrationProgress] = useState({ processed: 0, total: 0 });
+  const [migrationProgress, setMigrationProgress] = useState({ processed: 0, total: 0, currentContent: '' });
 
   const runMigration = async () => {
-    if (!window.confirm('ต้องการ Migrate ข้อมูลเก่าหรือไม่? ระบบจะประมวลผลทีละ 20 รายการจนกว่าจะเสร็จ')) {
+    if (!window.confirm('ต้องการ Migrate ข้อมูลเก่าหรือไม่? ระบบจะประมวลผลทีละ 1 รายการพร้อม retry อัตโนมัติ')) {
       return;
     }
 
     setMigrating(true);
     setMigrationResult(null);
-    setMigrationProgress({ processed: 0, total: 0 });
+    setMigrationProgress({ processed: 0, total: 0, currentContent: '' });
     
     let totalProcessed = 0;
     let totalFailed = 0;
     let totalContent = 0;
-    let batchCount = 0;
-    const maxBatches = 500; // Safety limit
+    let loopCount = 0;
+    const maxLoops = 5000; // Safety limit for very large datasets
     
     try {
-      while (batchCount < maxBatches) {
-        batchCount++;
+      while (loopCount < maxLoops) {
+        loopCount++;
         
         const response = await axios.post(
-          `${API}/admin/migrate-content-previews?batch_size=20`,
+          `${API}/admin/migrate-content-previews`,
           {},
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 60000 } // 60 second timeout
         );
         
         const data = response.data;
@@ -576,17 +576,16 @@ const AdminSettings = () => {
         totalFailed += data.failed || 0;
         totalContent = data.total;
         
-        // Update progress
+        // Update progress with current content name
         setMigrationProgress({ 
           processed: totalContent - data.remaining, 
-          total: totalContent 
+          total: totalContent,
+          currentContent: data.current_content || ''
         });
         
-        // Show batch progress
-        if (data.remaining > 0) {
-          toast.info(`ประมวลผลแล้ว ${data.migrated} รายการ เหลืออีก ${data.remaining} รายการ`, {
-            duration: 1500
-          });
+        // Show error if retry failed
+        if (data.failed > 0 && data.error) {
+          toast.error(`❌ ล้มเหลว: ${data.current_content} - ${data.error}`, { duration: 3000 });
         }
         
         // Check if all complete
@@ -597,12 +596,12 @@ const AdminSettings = () => {
             migrated: totalProcessed,
             failed: totalFailed
           });
-          toast.success(`✅ Migration เสร็จสมบูรณ์! ประมวลผล ${totalProcessed} รายการ`);
+          toast.success(`✅ Migration เสร็จสมบูรณ์! ประมวลผล ${totalProcessed} รายการ${totalFailed > 0 ? `, ล้มเหลว ${totalFailed} รายการ` : ''}`);
           break;
         }
         
-        // Small delay between batches
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Small delay between items
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
       
       // Refresh status
@@ -610,7 +609,8 @@ const AdminSettings = () => {
       
     } catch (error) {
       console.error('Error running migration:', error);
-      toast.error(error.response?.data?.detail || 'Migration failed');
+      const errorMsg = error.response?.data?.detail || error.message || 'Migration failed';
+      toast.error(`Migration error: ${errorMsg}`);
       
       // Show partial result if any
       if (totalProcessed > 0) {
