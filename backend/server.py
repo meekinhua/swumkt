@@ -1842,6 +1842,14 @@ async def create_content(
     if content_dict.get('category') == '':
         content_dict['category'] = None
     
+    # Pre-compute preview and thumbnail for performance
+    precomputed = precompute_content_metadata(
+        content_dict, 
+        content_dict.get('attachments', [])
+    )
+    content_dict['content_preview'] = precomputed['content_preview']
+    content_dict['cover_image_thumbnail'] = precomputed['cover_image_thumbnail']
+    
     content = Content(
         **content_dict,
         created_by=current_user.id,
@@ -1860,6 +1868,7 @@ async def create_content(
     doc['contributors'] = [c.model_dump() if hasattr(c, 'model_dump') else c for c in doc['contributors']]
     
     await db.contents.insert_one(doc)
+    logging.info(f"[CREATE_CONTENT] Pre-computed preview and thumbnail for content {content.id}")
     return content
 
 @api_router.get("/content/my")
