@@ -2383,39 +2383,52 @@ async def ai_rearrange_content(
 
 @api_router.post("/admin/migrate-content-previews")
 async def migrate_content_previews(
+    batch_size: int = 20,
     current_user: User = Depends(get_current_user)
 ):
     """
     Migrate old content to generate pre-computed previews and thumbnails
+    Processes in batches to avoid MongoDB timeout
     Only admins can run this
+    
+    Args:
+        batch_size: Number of items to process per call (default 20)
     """
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     try:
-        # Find content without pre-computed data
+        # Find content without pre-computed data (only get batch_size items)
         query = {
             "$or": [
                 {"content_preview": {"$exists": False}},
-                {"content_preview": None},
-                {"cover_image_thumbnail": {"$exists": False}},
-                {"cover_image_thumbnail": None}
+                {"content_preview": None}
             ]
         }
         
-        contents_to_migrate = await db.contents.find(query).to_list(None)
-        total_count = len(contents_to_migrate)
+        # Get total count first
+        total_remaining = await db.contents.count_documents(query)
+        total_content = await db.contents.count_documents({})
         
-        if total_count == 0:
+        if total_remaining == 0:
             return {
                 "message": "No content needs migration",
                 "total": 0,
-                "migrated": 0
+                "migrated": 0,
+                "remaining": 0,
+                "batch_complete": True,
+                "all_complete": True
             }
         
-        logging.info(f"[MIGRATION] Starting migration for {total_count} content items")
+        # Get only batch_size items to process
+        contents_to_migrate = await db.contents.find(query).limit(batch_size).to_list(batch_size)
+        batch_count = len(contents_to_migrate)
+        
+        logging.info(f"[MIGRATION] Processing batch of {batch_count} items (total remaining: {total_remaining})")
         
         migrated_count = 0
+        failed_count = 0
+        
         for content in contents_to_migrate:
             try:
                 # Pre-compute metadata
@@ -2435,21 +2448,24 @@ async def migrate_content_previews(
                 
                 migrated_count += 1
                 
-                # Log progress every 10 items
-                if migrated_count % 10 == 0:
-                    logging.info(f"[MIGRATION] Progress: {migrated_count}/{total_count}")
-                
             except Exception as e:
                 logging.error(f"[MIGRATION] Failed to migrate content {content.get('id')}: {e}")
+                failed_count += 1
                 continue
         
-        logging.info(f"[MIGRATION] Completed: {migrated_count}/{total_count} content items migrated")
+        new_remaining = total_remaining - migrated_count
+        all_complete = new_remaining <= 0
+        
+        logging.info(f"[MIGRATION] Batch completed: {migrated_count}/{batch_count} items migrated, {new_remaining} remaining")
         
         return {
-            "message": "Migration completed",
-            "total": total_count,
+            "message": "Batch completed" if not all_complete else "Migration completed",
+            "total": total_content,
             "migrated": migrated_count,
-            "failed": total_count - migrated_count
+            "failed": failed_count,
+            "remaining": max(0, new_remaining),
+            "batch_complete": True,
+            "all_complete": all_complete
         }
         
     except Exception as e:
