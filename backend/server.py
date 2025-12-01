@@ -31,6 +31,47 @@ from io import BytesIO
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Helper function to pre-compute content preview and thumbnail
+def precompute_content_metadata(content_data: dict, attachments: List[dict]) -> dict:
+    """
+    Pre-compute preview text and thumbnail for content
+    Called when content is created/updated to avoid runtime computation
+    
+    Returns:
+        dict with 'content_preview' and 'cover_image_thumbnail'
+    """
+    result = {
+        'content_preview': None,
+        'cover_image_thumbnail': None
+    }
+    
+    # Generate content preview (first 200 chars, strip HTML)
+    if content_data.get('content'):
+        # Strip HTML tags for preview
+        import re
+        text = re.sub(r'<[^>]+>', '', content_data['content'])
+        result['content_preview'] = text[:200] + ('...' if len(text) > 200 else '')
+    
+    # Generate cover image thumbnail if exists
+    cover_image_id = content_data.get('cover_image_id')
+    if cover_image_id and attachments:
+        cover_attachment = next((att for att in attachments if att.get('id') == cover_image_id), None)
+        if cover_attachment and cover_attachment.get('file_data'):
+            file_type = cover_attachment.get('file_type', '')
+            if file_type.startswith('image/'):
+                try:
+                    # Create thumbnail (300x200, quality 70)
+                    result['cover_image_thumbnail'] = create_thumbnail_base64(
+                        cover_attachment['file_data'],
+                        max_width=300,
+                        max_height=200,
+                        quality=70
+                    )
+                except Exception as e:
+                    logging.warning(f"Failed to pre-generate thumbnail: {e}")
+    
+    return result
+
 # Image resize utility for thumbnails
 def create_thumbnail_base64(base64_str: str, max_width: int = 300, max_height: int = 200, quality: int = 70) -> str:
     """
