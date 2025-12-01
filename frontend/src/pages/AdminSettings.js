@@ -543,30 +543,87 @@ const AdminSettings = () => {
     }
   };
 
+  // Migration progress tracking
+  const [migrationProgress, setMigrationProgress] = useState({ processed: 0, total: 0 });
+
   const runMigration = async () => {
-    if (!window.confirm('Are you sure you want to migrate old content? This may take a while.')) {
+    if (!window.confirm('ต้องการ Migrate ข้อมูลเก่าหรือไม่? ระบบจะประมวลผลทีละ 20 รายการจนกว่าจะเสร็จ')) {
       return;
     }
 
     setMigrating(true);
     setMigrationResult(null);
+    setMigrationProgress({ processed: 0, total: 0 });
+    
+    let totalProcessed = 0;
+    let totalFailed = 0;
+    let totalContent = 0;
+    let batchCount = 0;
+    const maxBatches = 500; // Safety limit
+    
     try {
-      const response = await axios.post(
-        `${API}/admin/migrate-content-previews`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setMigrationResult(response.data);
-      toast.success(`Migration completed! ${response.data.migrated}/${response.data.total} content items migrated.`);
+      while (batchCount < maxBatches) {
+        batchCount++;
+        
+        const response = await axios.post(
+          `${API}/admin/migrate-content-previews?batch_size=20`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        const data = response.data;
+        totalProcessed += data.migrated;
+        totalFailed += data.failed || 0;
+        totalContent = data.total;
+        
+        // Update progress
+        setMigrationProgress({ 
+          processed: totalContent - data.remaining, 
+          total: totalContent 
+        });
+        
+        // Show batch progress
+        if (data.remaining > 0) {
+          toast.info(`ประมวลผลแล้ว ${data.migrated} รายการ เหลืออีก ${data.remaining} รายการ`, {
+            duration: 1500
+          });
+        }
+        
+        // Check if all complete
+        if (data.all_complete || data.remaining === 0) {
+          setMigrationResult({
+            message: "Migration completed",
+            total: totalContent,
+            migrated: totalProcessed,
+            failed: totalFailed
+          });
+          toast.success(`✅ Migration เสร็จสมบูรณ์! ประมวลผล ${totalProcessed} รายการ`);
+          break;
+        }
+        
+        // Small delay between batches
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       
       // Refresh status
       await fetchMigrationStatus();
+      
     } catch (error) {
       console.error('Error running migration:', error);
       toast.error(error.response?.data?.detail || 'Migration failed');
+      
+      // Show partial result if any
+      if (totalProcessed > 0) {
+        setMigrationResult({
+          message: "Migration partially completed",
+          total: totalContent,
+          migrated: totalProcessed,
+          failed: totalFailed
+        });
+      }
     } finally {
       setMigrating(false);
+      setMigrationProgress({ processed: 0, total: 0 });
     }
   };
 
