@@ -1883,7 +1883,7 @@ async def get_my_contents(
     # Get total count
     total = await db.contents.count_documents(query)
     
-    # Projection for minimal data
+    # Projection for minimal data - use pre-computed fields
     projection = {
         "_id": 0,
         "id": 1,
@@ -1896,32 +1896,30 @@ async def get_my_contents(
         "updated_at": 1,
         "views": 1,
         "cover_image_id": 1,
-        "content": 1,  # Will truncate in Python
-        "attachments": 1  # Will filter in Python
+        "content_preview": 1,  # Use pre-computed preview
+        "cover_image_thumbnail": 1  # Use pre-computed thumbnail
     }
     
     contents = await db.contents.find(query, projection).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    # Process contents
+    # Use pre-computed data - no runtime processing needed!
     for content in contents:
-        # Truncate content to 150 chars for dashboard preview
-        if content.get('content'):
-            content['content'] = content['content'][:150] + ('...' if len(content['content']) > 150 else '')
+        # Use pre-computed preview or fallback
+        if not content.get('content_preview'):
+            # Fallback for old content without preview
+            content['content_preview'] = "No preview available"
         
-        # Only keep cover image attachment if exists and create thumbnail
-        if content.get('attachments') and content.get('cover_image_id'):
-            cover_attachments = [
-                att for att in content['attachments'] 
-                if att.get('id') == content['cover_image_id']
-            ]
-            
-            # Create thumbnails for cover images
-            for att in cover_attachments:
-                if att.get('file_data') and att.get('file_type', '').startswith('image/'):
-                    # Create small thumbnail (300x200, quality 70)
-                    att['file_data'] = create_thumbnail_base64(att['file_data'], max_width=300, max_height=200, quality=70)
-            
-            content['attachments'] = cover_attachments
+        # Map to 'content' field for backward compatibility
+        content['content'] = content.get('content_preview', '')
+        
+        # Use pre-computed thumbnail or empty array
+        if content.get('cover_image_thumbnail'):
+            # Create minimal attachment object with thumbnail
+            content['attachments'] = [{
+                'id': content.get('cover_image_id'),
+                'file_data': content['cover_image_thumbnail'],
+                'file_type': 'image/jpeg'
+            }]
         else:
             content['attachments'] = []
         
