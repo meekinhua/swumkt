@@ -211,46 +211,43 @@ async def create_indexes():
     """Create database indexes for better query performance"""
     try:
         # Content collection indexes
-        await db.contents.create_index("id", unique=True)
-        await db.contents.create_index("created_by")
-        await db.contents.create_index("created_at")
-        await db.contents.create_index("content_type")
-        await db.contents.create_index("status")
-        await db.contents.create_index([("created_at", -1)])  # Descending for recent first
+        await db.contents.create_index("id", unique=True, background=True)
+        await db.contents.create_index("created_by", background=True)
+        await db.contents.create_index("created_at", background=True)
+        await db.contents.create_index("content_type", background=True)
+        await db.contents.create_index("status", background=True)
+        await db.contents.create_index([("created_at", -1)], background=True)  # Descending for recent first
         
         # Users collection indexes
-        await db.users.create_index("id", unique=True)
-        await db.users.create_index("email", unique=True)
+        await db.users.create_index("id", unique=True, background=True)
+        await db.users.create_index("email", unique=True, sparse=True, background=True)
         
         # Conjoint studies indexes
-        await db.conjoint_studies.create_index("id", unique=True)
-        await db.conjoint_studies.create_index("created_by")
-        await db.conjoint_studies.create_index("status")
-        await db.conjoint_studies.create_index([("created_at", -1)])
+        await db.conjoint_studies.create_index("id", unique=True, background=True)
+        await db.conjoint_studies.create_index("created_by", background=True)
+        await db.conjoint_studies.create_index("status", background=True)
+        await db.conjoint_studies.create_index([("created_at", -1)], background=True)
         
         # Conjoint responses indexes
-        await db.conjoint_responses.create_index("study_id")
-        await db.conjoint_responses.create_index([("study_id", 1), ("created_at", -1)])
+        await db.conjoint_responses.create_index("study_id", background=True)
+        await db.conjoint_responses.create_index([("study_id", 1), ("created_at", -1)], background=True)
         
         # Surveys indexes
-        await db.surveys.create_index("id", unique=True)
-        await db.surveys.create_index("creator_id")
-        await db.surveys.create_index("status")
+        await db.surveys.create_index("id", unique=True, background=True)
+        await db.surveys.create_index("creator_id", background=True)
+        await db.surveys.create_index("status", background=True)
         
         # Survey responses indexes
-        await db.survey_responses.create_index("survey_id")
-        await db.survey_responses.create_index([("survey_id", 1), ("submitted_at", -1)])
-        
-        # Admin settings indexes
-        await db.admin_settings.create_index("key", unique=True)
+        await db.survey_responses.create_index("survey_id", background=True)
+        await db.survey_responses.create_index([("survey_id", 1), ("submitted_at", -1)], background=True)
         
         # Notifications indexes
-        await db.notifications.create_index("user_id")
-        await db.notifications.create_index([("created_at", -1)])
+        await db.notifications.create_index("user_id", background=True)
+        await db.notifications.create_index([("created_at", -1)], background=True)
         
         logging.info("[INDEXES] Database indexes created successfully")
     except Exception as e:
-        logging.warning(f"[INDEXES] Error creating indexes (may already exist): {e}")
+        logging.warning(f"[INDEXES] Some indexes may already exist: {e}")
 
 # JWT Configuration
 JWT_SECRET = os.environ.get('JWT_SECRET', 'swumkt-secret-key-change-in-production')
