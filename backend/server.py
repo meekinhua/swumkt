@@ -475,6 +475,9 @@ class Content(BaseModel):
     is_zbs04_assignment: bool = False
     zbs04_assignment_type: Optional[ZBS04AssignmentType] = None
     group_members: List[str] = Field(default_factory=list, description="User IDs of group members")
+    # Pre-computed fields for performance (generated on save)
+    content_preview: Optional[str] = None  # Truncated content for list view (200 chars)
+    cover_image_thumbnail: Optional[str] = None  # Pre-generated thumbnail for cover image
 
 class Comment(BaseModel):
     model_config = ConfigDict(extra="ignore")
