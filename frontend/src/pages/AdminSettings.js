@@ -1704,8 +1704,13 @@ const AdminSettings = () => {
                         ></div>
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        ประมวลผล {migrationProgress.processed} จาก {migrationProgress.total} รายการ (ทีละ 20 รายการ)
+                        ประมวลผล {migrationProgress.processed} จาก {migrationProgress.total} รายการ (ทีละ 1 รายการ + retry 3 ครั้ง)
                       </p>
+                      {migrationProgress.currentContent && (
+                        <p className="text-xs text-orange-600 mt-1 truncate">
+                          📄 กำลังประมวลผล: <strong>{migrationProgress.currentContent}</strong>
+                        </p>
+                      )}
                     </div>
                   )}
                 </Card>
@@ -1717,7 +1722,7 @@ const AdminSettings = () => {
                     <li>• <strong>Preview Text:</strong> สรุปเนื้อหา 200 ตัวอักษรแรก สำหรับแสดงในหน้า Content</li>
                     <li>• <strong>Thumbnail:</strong> ย่อขนาดภาพ Cover เป็น 300x200px เพื่อลดขนาดข้อมูล</li>
                     <li>• <strong>ประโยชน์:</strong> ลดเวลาโหลดหน้า Content และ Dashboard ลง 90%+</li>
-                    <li>• <strong>Batch Processing:</strong> ประมวลผลทีละ 20 รายการเพื่อหลีกเลี่ยง timeout</li>
+                    <li>• <strong>Single Processing:</strong> ประมวลผลทีละ 1 รายการ + retry 3 ครั้งถ้าล้มเหลว</li>
                     <li>• <strong>หมายเหตุ:</strong> Content ใหม่จะถูกประมวลผลอัตโนมัติตอนบันทึก</li>
                   </ul>
                 </Card>
