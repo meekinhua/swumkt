@@ -88,6 +88,11 @@ const AdminSettings = () => {
   const [generatedTestImage, setGeneratedTestImage] = useState(null);
   const [generatingTest, setGeneratingTest] = useState(false);
   
+  // Migration
+  const [migrationStatus, setMigrationStatus] = useState(null);
+  const [migrating, setMigrating] = useState(false);
+  const [migrationResult, setMigrationResult] = useState(null);
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
