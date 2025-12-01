@@ -1671,7 +1671,10 @@ const AdminSettings = () => {
                       {migrating ? (
                         <>
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          กำลังประมวลผล...
+                          {migrationProgress.total > 0 
+                            ? `กำลังประมวลผล ${migrationProgress.processed}/${migrationProgress.total}...`
+                            : 'กำลังเริ่มต้น...'
+                          }
                         </>
                       ) : migrationStatus && migrationStatus.needs_migration === 0 ? (
                         <>
@@ -1686,6 +1689,25 @@ const AdminSettings = () => {
                       )}
                     </Button>
                   </div>
+
+                  {/* Live Progress Bar during migration */}
+                  {migrating && migrationProgress.total > 0 && (
+                    <div className="mt-4 p-4 bg-white rounded-lg border border-orange-200">
+                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                        <span>กำลังประมวลผล...</span>
+                        <span>{Math.round((migrationProgress.processed / migrationProgress.total) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-gradient-to-r from-orange-500 to-amber-500 h-3 rounded-full transition-all duration-300 animate-pulse"
+                          style={{ width: `${(migrationProgress.processed / migrationProgress.total) * 100}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        ประมวลผล {migrationProgress.processed} จาก {migrationProgress.total} รายการ (ทีละ 20 รายการ)
+                      </p>
+                    </div>
+                  )}
                 </Card>
 
                 {/* Info Card */}
@@ -1695,6 +1717,7 @@ const AdminSettings = () => {
                     <li>• <strong>Preview Text:</strong> สรุปเนื้อหา 200 ตัวอักษรแรก สำหรับแสดงในหน้า Content</li>
                     <li>• <strong>Thumbnail:</strong> ย่อขนาดภาพ Cover เป็น 300x200px เพื่อลดขนาดข้อมูล</li>
                     <li>• <strong>ประโยชน์:</strong> ลดเวลาโหลดหน้า Content และ Dashboard ลง 90%+</li>
+                    <li>• <strong>Batch Processing:</strong> ประมวลผลทีละ 20 รายการเพื่อหลีกเลี่ยง timeout</li>
                     <li>• <strong>หมายเหตุ:</strong> Content ใหม่จะถูกประมวลผลอัตโนมัติตอนบันทึก</li>
                   </ul>
                 </Card>
