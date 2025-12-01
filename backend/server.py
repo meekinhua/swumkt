@@ -206,6 +206,52 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# Create indexes on startup for better performance
+async def create_indexes():
+    """Create database indexes for better query performance"""
+    try:
+        # Content collection indexes
+        await db.contents.create_index("id", unique=True)
+        await db.contents.create_index("created_by")
+        await db.contents.create_index("created_at")
+        await db.contents.create_index("content_type")
+        await db.contents.create_index("status")
+        await db.contents.create_index([("created_at", -1)])  # Descending for recent first
+        
+        # Users collection indexes
+        await db.users.create_index("id", unique=True)
+        await db.users.create_index("email", unique=True)
+        
+        # Conjoint studies indexes
+        await db.conjoint_studies.create_index("id", unique=True)
+        await db.conjoint_studies.create_index("created_by")
+        await db.conjoint_studies.create_index("status")
+        await db.conjoint_studies.create_index([("created_at", -1)])
+        
+        # Conjoint responses indexes
+        await db.conjoint_responses.create_index("study_id")
+        await db.conjoint_responses.create_index([("study_id", 1), ("created_at", -1)])
+        
+        # Surveys indexes
+        await db.surveys.create_index("id", unique=True)
+        await db.surveys.create_index("creator_id")
+        await db.surveys.create_index("status")
+        
+        # Survey responses indexes
+        await db.survey_responses.create_index("survey_id")
+        await db.survey_responses.create_index([("survey_id", 1), ("submitted_at", -1)])
+        
+        # Admin settings indexes
+        await db.admin_settings.create_index("key", unique=True)
+        
+        # Notifications indexes
+        await db.notifications.create_index("user_id")
+        await db.notifications.create_index([("created_at", -1)])
+        
+        logging.info("[INDEXES] Database indexes created successfully")
+    except Exception as e:
+        logging.warning(f"[INDEXES] Error creating indexes (may already exist): {e}")
+
 # JWT Configuration
 JWT_SECRET = os.environ.get('JWT_SECRET', 'swumkt-secret-key-change-in-production')
 JWT_ALGORITHM = "HS256"
