@@ -531,6 +531,45 @@ const AdminSettings = () => {
     setTestImagePreview(null);
   };
 
+  const fetchMigrationStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/migration-status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMigrationStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching migration status:', error);
+      toast.error('Failed to fetch migration status');
+    }
+  };
+
+  const runMigration = async () => {
+    if (!window.confirm('Are you sure you want to migrate old content? This may take a while.')) {
+      return;
+    }
+
+    setMigrating(true);
+    setMigrationResult(null);
+    try {
+      const response = await axios.post(
+        `${API}/admin/migrate-content-previews`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setMigrationResult(response.data);
+      toast.success(`Migration completed! ${response.data.migrated}/${response.data.total} content items migrated.`);
+      
+      // Refresh status
+      await fetchMigrationStatus();
+    } catch (error) {
+      console.error('Error running migration:', error);
+      toast.error(error.response?.data?.detail || 'Migration failed');
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
