@@ -2080,6 +2080,17 @@ async def update_content(
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     update_dict['updated_at'] = datetime.now(timezone.utc).isoformat()
     
+    # Pre-compute preview and thumbnail if content/attachments changed
+    if 'content' in update_dict or 'attachments' in update_dict or 'cover_image_id' in update_dict:
+        merged_data = {**content, **update_dict}
+        precomputed = precompute_content_metadata(
+            merged_data,
+            merged_data.get('attachments', [])
+        )
+        update_dict['content_preview'] = precomputed['content_preview']
+        update_dict['cover_image_thumbnail'] = precomputed['cover_image_thumbnail']
+        logging.info(f"[UPDATE_CONTENT] Re-computed preview and thumbnail for content {content_id}")
+    
     await db.contents.update_one({"id": content_id}, {"$set": update_dict})
     
     updated_content = await db.contents.find_one({"id": content_id}, {"_id": 0})
