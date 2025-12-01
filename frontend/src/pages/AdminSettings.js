@@ -1534,6 +1534,115 @@ const AdminSettings = () => {
                 </Card>
               </TabsContent>
 
+              {/* Migration Tab */}
+              <TabsContent value="migration" className="space-y-6">
+                <Card className="p-6 bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200">
+                  <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5 text-orange-600" />
+                    Migration Tool - อัปเดตข้อมูลเก่า
+                  </h3>
+                  
+                  <p className="text-sm text-gray-600 mb-6">
+                    ใช้เครื่องมือนี้เพื่อประมวลผล Content เก่าที่ยังไม่มี Preview และ Thumbnail 
+                    เพื่อให้หน้า Content และ Dashboard โหลดเร็วขึ้น
+                  </p>
+
+                  {/* Status Card */}
+                  {migrationStatus && (
+                    <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                      <h4 className="font-bold text-gray-900 mb-3">📊 สถานะการ Migration:</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <div className="text-2xl font-bold text-gray-900">{migrationStatus.total_content}</div>
+                          <div className="text-xs text-gray-600">Content ทั้งหมด</div>
+                        </div>
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{migrationStatus.already_migrated}</div>
+                          <div className="text-xs text-gray-600">ประมวลผลแล้ว</div>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 rounded-lg">
+                          <div className="text-2xl font-bold text-orange-600">{migrationStatus.needs_migration}</div>
+                          <div className="text-xs text-gray-600">รอประมวลผล</div>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">{migrationStatus.percentage_complete}%</div>
+                          <div className="text-xs text-gray-600">เสร็จสมบูรณ์</div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mt-4">
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div 
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all duration-500"
+                            style={{ width: `${migrationStatus.percentage_complete}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Migration Result */}
+                  {migrationResult && (
+                    <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <h4 className="font-bold text-green-900 mb-2">✅ ผลการ Migration:</h4>
+                      <div className="text-sm text-green-800">
+                        <p>• ประมวลผลสำเร็จ: <strong>{migrationResult.migrated}</strong> / {migrationResult.total} รายการ</p>
+                        {migrationResult.failed > 0 && (
+                          <p className="text-red-600">• ล้มเหลว: <strong>{migrationResult.failed}</strong> รายการ</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={fetchMigrationStatus}
+                      variant="outline"
+                      className="border-2 border-gray-300 hover:bg-gray-50"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      รีเฟรชสถานะ
+                    </Button>
+                    
+                    <Button
+                      onClick={runMigration}
+                      disabled={migrating || (migrationStatus && migrationStatus.needs_migration === 0)}
+                      className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-xl"
+                    >
+                      {migrating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          กำลังประมวลผล...
+                        </>
+                      ) : migrationStatus && migrationStatus.needs_migration === 0 ? (
+                        <>
+                          <Sparkles className="w-5 h-5 mr-2" />
+                          ✅ ประมวลผลครบแล้ว
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5 mr-2" />
+                          เริ่ม Migration
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Info Card */}
+                <Card className="p-6 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200">
+                  <h3 className="font-bold text-blue-900 mb-2">💡 ข้อมูลเพิ่มเติม:</h3>
+                  <ul className="text-sm text-blue-800 space-y-2">
+                    <li>• <strong>Preview Text:</strong> สรุปเนื้อหา 200 ตัวอักษรแรก สำหรับแสดงในหน้า Content</li>
+                    <li>• <strong>Thumbnail:</strong> ย่อขนาดภาพ Cover เป็น 300x200px เพื่อลดขนาดข้อมูล</li>
+                    <li>• <strong>ประโยชน์:</strong> ลดเวลาโหลดหน้า Content และ Dashboard ลง 90%+</li>
+                    <li>• <strong>หมายเหตุ:</strong> Content ใหม่จะถูกประมวลผลอัตโนมัติตอนบันทึก</li>
+                  </ul>
+                </Card>
+              </TabsContent>
+
               {/* Format Editor Tab */}
               <TabsContent value="format" className="space-y-6">
                 <Card className="p-6 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
