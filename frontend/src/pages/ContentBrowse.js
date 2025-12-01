@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Eye, User, ArrowLeft } from 'lucide-react';
+import { Search, Eye, User, ArrowLeft, Loader2, ChevronDown } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 
 const ContentBrowse = () => {
@@ -17,43 +17,114 @@ const ContentBrowse = () => {
   const { user } = useAuth();
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const itemsPerPage = 20;
+  const [displayedCount, setDisplayedCount] = useState(0);
+  const loadMoreRef = useRef(null);
+  
+  const itemsPerBatch = 5;  // Load 5 items at a time
+  const itemsPerPage = 20;  // Max items before going to next page
 
+  // Calculate how many items we can still load on this page
+  const canLoadMore = displayedCount < Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage);
+  const hasNextPage = currentPage * itemsPerPage < totalItems;
+  const hasPrevPage = currentPage > 1;
+
+  // Initial load for the page
   useEffect(() => {
-    fetchContents();
+    fetchInitialContents();
   }, [currentPage]);
 
-  const fetchContents = async () => {
+  // Intersection Observer for "Load More" button
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && canLoadMore && !loadingMore && !loading) {
+          loadMoreContents();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [canLoadMore, loadingMore, loading, displayedCount]);
+
+  const fetchInitialContents = async () => {
     setLoading(true);
+    setContents([]);
+    setDisplayedCount(0);
+    
     try {
       const skip = (currentPage - 1) * itemsPerPage;
       const response = await axios.get(`${API}/content`, {
         params: { 
           skip: skip,
-          limit: itemsPerPage 
+          limit: itemsPerBatch  // Only load first batch
         }
       });
       
-      // Handle new response format with pagination metadata
       if (response.data.items) {
         setContents(response.data.items);
         setTotalItems(response.data.total);
-        setHasMore(response.data.has_more);
+        setDisplayedCount(response.data.items.length);
       } else {
-        // Backward compatibility with old format
         setContents(response.data);
         setTotalItems(response.data.length);
+        setDisplayedCount(response.data.length);
       }
     } catch (error) {
       console.error('Error fetching contents:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMoreContents = async () => {
+    if (loadingMore || !canLoadMore) return;
+    
+    setLoadingMore(true);
+    try {
+      const skip = (currentPage - 1) * itemsPerPage + displayedCount;
+      const remainingOnPage = itemsPerPage - displayedCount;
+      const limit = Math.min(itemsPerBatch, remainingOnPage);
+      
+      const response = await axios.get(`${API}/content`, {
+        params: { 
+          skip: skip,
+          limit: limit
+        }
+      });
+      
+      if (response.data.items) {
+        setContents(prev => [...prev, ...response.data.items]);
+        setDisplayedCount(prev => prev + response.data.items.length);
+        setTotalItems(response.data.total);
+      } else {
+        setContents(prev => [...prev, ...response.data]);
+        setDisplayedCount(prev => prev + response.data.length);
+      }
+    } catch (error) {
+      console.error('Error loading more contents:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage(prev => prev + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goToPrevPage = () => {
+    setCurrentPage(prev => Math.max(1, prev - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const filteredContents = contents.filter(content => {
@@ -72,6 +143,10 @@ const ContentBrowse = () => {
     };
     return labels[type] || type;
   };
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const pageStart = (currentPage - 1) * itemsPerPage + 1;
+  const pageEnd = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
