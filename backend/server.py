@@ -2381,6 +2381,110 @@ async def ai_rearrange_content(
         logging.error(f"[AI_REARRANGE] Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"AI rearrange failed: {str(e)}")
 
+@api_router.post("/admin/migrate-content-previews")
+async def migrate_content_previews(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Migrate old content to generate pre-computed previews and thumbnails
+    Only admins can run this
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        # Find content without pre-computed data
+        query = {
+            "$or": [
+                {"content_preview": {"$exists": False}},
+                {"content_preview": None},
+                {"cover_image_thumbnail": {"$exists": False}},
+                {"cover_image_thumbnail": None}
+            ]
+        }
+        
+        contents_to_migrate = await db.contents.find(query).to_list(None)
+        total_count = len(contents_to_migrate)
+        
+        if total_count == 0:
+            return {
+                "message": "No content needs migration",
+                "total": 0,
+                "migrated": 0
+            }
+        
+        logging.info(f"[MIGRATION] Starting migration for {total_count} content items")
+        
+        migrated_count = 0
+        for content in contents_to_migrate:
+            try:
+                # Pre-compute metadata
+                precomputed = precompute_content_metadata(
+                    content,
+                    content.get('attachments', [])
+                )
+                
+                # Update content
+                await db.contents.update_one(
+                    {"id": content['id']},
+                    {"$set": {
+                        "content_preview": precomputed['content_preview'],
+                        "cover_image_thumbnail": precomputed['cover_image_thumbnail']
+                    }}
+                )
+                
+                migrated_count += 1
+                
+                # Log progress every 10 items
+                if migrated_count % 10 == 0:
+                    logging.info(f"[MIGRATION] Progress: {migrated_count}/{total_count}")
+                
+            except Exception as e:
+                logging.error(f"[MIGRATION] Failed to migrate content {content.get('id')}: {e}")
+                continue
+        
+        logging.info(f"[MIGRATION] Completed: {migrated_count}/{total_count} content items migrated")
+        
+        return {
+            "message": "Migration completed",
+            "total": total_count,
+            "migrated": migrated_count,
+            "failed": total_count - migrated_count
+        }
+        
+    except Exception as e:
+        logging.error(f"[MIGRATION] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
+@api_router.get("/admin/migration-status")
+async def get_migration_status(
+    current_user: User = Depends(get_current_user)
+):
+    """Check how many content items need migration"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Count content without pre-computed data
+    needs_migration = await db.contents.count_documents({
+        "$or": [
+            {"content_preview": {"$exists": False}},
+            {"content_preview": None}
+        ]
+    })
+    
+    # Count total content
+    total_content = await db.contents.count_documents({})
+    
+    # Count with pre-computed data
+    with_preview = total_content - needs_migration
+    
+    return {
+        "total_content": total_content,
+        "needs_migration": needs_migration,
+        "already_migrated": with_preview,
+        "percentage_complete": round((with_preview / total_content * 100) if total_content > 0 else 100, 2)
+    }
+
 @api_router.delete("/content/{content_id}")
 async def delete_content(
     content_id: str,
