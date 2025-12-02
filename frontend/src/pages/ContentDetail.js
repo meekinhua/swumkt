@@ -9,10 +9,88 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages, Paperclip, Download, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages, Paperclip, Download, Image as ImageIcon, X, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import MermaidViewer from '@/components/MermaidViewer';
+
+// Image Lightbox Component
+const ImageLightbox = ({ images, currentIndex, onClose, onNext, onPrev }) => {
+  if (currentIndex < 0 || !images || images.length === 0) return null;
+  
+  const currentImage = images[currentIndex];
+  const imgSrc = currentImage?.file_data || currentImage?.data || currentImage?.url;
+  
+  // Handle keyboard navigation
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') onNext();
+      if (e.key === 'ArrowLeft') onPrev();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, onNext, onPrev]);
+  
+  return (
+    <div 
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-50"
+      >
+        <X className="w-8 h-8 text-white" />
+      </button>
+      
+      {/* Image counter */}
+      <div className="absolute top-4 left-4 px-4 py-2 bg-white/10 rounded-full">
+        <span className="text-white font-bold">{currentIndex + 1} / {images.length}</span>
+      </div>
+      
+      {/* Previous button */}
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+        >
+          <ChevronLeft className="w-8 h-8 text-white" />
+        </button>
+      )}
+      
+      {/* Image */}
+      <div 
+        className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={imgSrc}
+          alt={currentImage?.filename || currentImage?.title || `Image ${currentIndex + 1}`}
+          className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+        />
+      </div>
+      
+      {/* Next button */}
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+        >
+          <ChevronRight className="w-8 h-8 text-white" />
+        </button>
+      )}
+      
+      {/* Image title */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-white/10 rounded-full max-w-[80vw]">
+        <p className="text-white font-medium text-center truncate">
+          {currentImage?.filename || currentImage?.title || `รูปภาพ ${currentIndex + 1}`}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const ContentDetail = () => {
   const { id } = useParams();
@@ -27,6 +105,31 @@ const ContentDetail = () => {
   const [translatedContent, setTranslatedContent] = useState(null);
   const [translating, setTranslating] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState('');
+  
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState([]);
+
+  const openLightbox = (images, index) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  const nextImage = () => {
+    setLightboxIndex((prev) => (prev + 1) % lightboxImages.length);
+  };
+
+  const prevImage = () => {
+    setLightboxIndex((prev) => (prev - 1 + lightboxImages.length) % lightboxImages.length);
+  };
 
   useEffect(() => {
     fetchContent();
