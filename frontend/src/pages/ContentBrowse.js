@@ -248,7 +248,24 @@ const ContentBrowse = () => {
         {loading ? (
           <div className="text-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00A9CE] mx-auto"></div>
+            <p className="mt-4 text-gray-600 font-medium">กำลังโหลดข้อมูล...</p>
           </div>
+        ) : error ? (
+          <Card className="p-8 sm:p-12 text-center bg-white/98 border-2 border-red-200 shadow-lg">
+            <div className="text-red-500 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="text-gray-700 text-base sm:text-lg font-semibold mb-4">{error}</p>
+            <Button 
+              onClick={handleRetry}
+              className="bg-gradient-to-r from-[#00A9CE] to-[#33BCDA] hover:from-[#008FB5] hover:to-[#00A9CE] text-white font-bold"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              ลองใหม่อีกครั้ง
+            </Button>
+          </Card>
         ) : filteredContents.length === 0 ? (
           <Card className="p-8 sm:p-12 text-center bg-white/98 border-2 border-gray-300 shadow-lg">
             <p className="text-gray-700 text-base sm:text-lg font-semibold">{t('content.noResults')}</p>
