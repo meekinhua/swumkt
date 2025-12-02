@@ -16,13 +16,10 @@ import MermaidViewer from '@/components/MermaidViewer';
 
 // Image Lightbox Component
 const ImageLightbox = ({ images, currentIndex, onClose, onNext, onPrev }) => {
-  if (currentIndex < 0 || !images || images.length === 0) return null;
-  
-  const currentImage = images[currentIndex];
-  const imgSrc = currentImage?.file_data || currentImage?.data || currentImage?.url;
-  
-  // Handle keyboard navigation
+  // Handle keyboard navigation - must be before any conditional returns
   useEffect(() => {
+    if (currentIndex < 0 || !images || images.length === 0) return;
+    
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') onNext();
@@ -30,7 +27,13 @@ const ImageLightbox = ({ images, currentIndex, onClose, onNext, onPrev }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, onNext, onPrev]);
+  }, [currentIndex, images, onClose, onNext, onPrev]);
+  
+  // Early returns after hooks
+  if (currentIndex < 0 || !images || images.length === 0) return null;
+  
+  const currentImage = images[currentIndex];
+  const imgSrc = currentImage?.file_data || currentImage?.data || currentImage?.url;
   
   if (!imgSrc) return null;
   
