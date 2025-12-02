@@ -154,20 +154,20 @@ const ContentBrowse = () => {
       <Navigation />
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8 fade-in-up">
+        <div className="mb-6 sm:mb-8 fade-in-up">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
-            className="mb-4 text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10"
+            className="mb-3 sm:mb-4 text-gray-800 font-semibold hover:text-[#00A9CE] hover:bg-[#00A9CE]/10 text-sm sm:text-base"
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> {t('auth.backToHome')}
           </Button>
-          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4" data-testid="browse-title">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-2 sm:mb-4" data-testid="browse-title">
             <span className="gradient-text">{t('content.browse')}</span>
           </h1>
-          <p className="text-lg text-gray-700 font-semibold">{t('landing.description')}</p>
+          <p className="text-sm sm:text-lg text-gray-700 font-semibold">{t('landing.description')}</p>
         </div>
 
         {/* Search and Filter */}
