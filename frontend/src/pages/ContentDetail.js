@@ -443,82 +443,98 @@ const ContentDetail = () => {
             </div>
           )}
 
-          {/* Attachments - Show all attachments except the one used as cover */}
+          {/* Attachments - Show ALL attachments with lightbox for images */}
           {(() => {
             if (!content.attachments || content.attachments.length === 0) return null;
             
-            // Determine which image is used as cover
-            let coverImageId = null;
-            if (content.cover_image_id) {
-              coverImageId = content.cover_image_id;
-            } else if (!content.featured_image) {
-              // First image is used as cover
-              const firstImage = content.attachments.find(
-                att => att.file_type && att.file_type.startsWith('image/')
-              );
-              if (firstImage) {
-                coverImageId = firstImage.id;
-              }
-            }
-            
-            // Filter out the cover image from attachments to show
-            const attachmentsToShow = content.attachments.filter(att => {
-              // Skip the cover image
-              if (coverImageId && att.id === coverImageId) {
-                return false;
-              }
-              return true;
-            });
-            
-            if (attachmentsToShow.length === 0) return null;
+            // Get all image attachments for lightbox navigation
+            const imageAttachments = content.attachments.filter(
+              att => att.file_type && att.file_type.startsWith('image/')
+            );
+            const nonImageAttachments = content.attachments.filter(
+              att => !att.file_type || !att.file_type.startsWith('image/')
+            );
             
             return (
               <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
                 <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
                   <Paperclip className="w-5 h-5 text-[#00A9CE]" />
-                  ไฟล์แนบเพิ่มเติม ({attachmentsToShow.length})
+                  ไฟล์แนบทั้งหมด ({content.attachments.length})
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {attachmentsToShow.map((attachment, idx) => (
-                    <div key={attachment.id || idx} className="bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors">
-                      {attachment.file_type && attachment.file_type.startsWith('image/') ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <ImageIcon className="w-5 h-5 text-blue-500" />
-                              <div>
-                                <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title || `รูปภาพ ${idx + 1}`}</p>
-                                <p className="text-xs text-gray-500">{attachment.file_size_kb ? `${attachment.file_size_kb} KB` : ''}</p>
-                              </div>
-                            </div>
-                          </div>
-                          {(() => {
-                            const imgSrc = attachment.file_data || attachment.data || attachment.url;
-                            if (imgSrc) {
-                              return (
-                                <div className="rounded-lg overflow-hidden border-2 border-gray-200">
-                                  <img
-                                    src={imgSrc}
-                                    alt={attachment.filename || attachment.title || `Attachment ${idx + 1}`}
-                                    className="w-full h-auto max-h-96 object-contain bg-gray-50"
-                                    onError={(e) => {
-                                      console.error('Attachment image failed to load:', attachment.id);
-                                      e.target.parentElement.innerHTML = '<div class="p-4 text-center text-gray-500">ไม่สามารถโหลดรูปภาพได้</div>';
-                                    }}
-                                  />
+                
+                {/* Image Grid */}
+                {imageAttachments.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" />
+                      รูปภาพ ({imageAttachments.length}) - คลิกเพื่อดูขนาดเต็ม
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {imageAttachments.map((attachment, idx) => {
+                        const imgSrc = attachment.file_data || attachment.data || attachment.url;
+                        return (
+                          <div 
+                            key={attachment.id || idx} 
+                            className="group relative bg-white rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-all cursor-pointer overflow-hidden aspect-square"
+                            onClick={() => openLightbox(imageAttachments, idx)}
+                          >
+                            {imgSrc ? (
+                              <>
+                                <img
+                                  src={imgSrc}
+                                  alt={attachment.filename || attachment.title || `รูปภาพ ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">Error</text></svg>';
+                                  }}
+                                />
+                                {/* Hover overlay */}
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                                  <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
-                              );
-                            }
-                            return <div className="p-4 text-center text-gray-500">ไม่มีข้อมูลรูปภาพ</div>;
-                          })()}
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
+                                {/* Image info overlay */}
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                                  <p className="text-white text-xs font-medium truncate">
+                                    {attachment.filename || attachment.title || `รูปภาพ ${idx + 1}`}
+                                  </p>
+                                  {attachment.file_size_kb && (
+                                    <p className="text-white/70 text-xs">{attachment.file_size_kb} KB</p>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <ImageIcon className="w-8 h-8 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Non-Image Files */}
+                {nonImageAttachments.length > 0 && (
+                  <div>
+                    <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+                      <Paperclip className="w-4 h-4" />
+                      ไฟล์อื่นๆ ({nonImageAttachments.length})
+                    </p>
+                    <div className="space-y-2">
+                      {nonImageAttachments.map((attachment, idx) => (
+                        <div 
+                          key={attachment.id || idx} 
+                          className="flex items-center justify-between bg-white p-3 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors"
+                        >
                           <div className="flex items-center gap-3">
                             <Paperclip className="w-5 h-5 text-gray-500" />
                             <div>
                               <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title || 'ไฟล์แนบ'}</p>
-                              <p className="text-xs text-gray-500">{attachment.file_size_kb ? `${attachment.file_size_kb} KB` : ''}</p>
+                              <p className="text-xs text-gray-500">
+                                {attachment.file_type || 'Unknown'} 
+                                {attachment.file_size_kb ? ` • ${attachment.file_size_kb} KB` : ''}
+                              </p>
                             </div>
                           </div>
                           {attachment.file_data && (
@@ -532,13 +548,24 @@ const ContentDetail = () => {
                             </a>
                           )}
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })()}
+          
+          {/* Lightbox */}
+          {lightboxOpen && (
+            <ImageLightbox
+              images={lightboxImages}
+              currentIndex={lightboxIndex}
+              onClose={closeLightbox}
+              onNext={nextImage}
+              onPrev={prevImage}
+            />
+          )}
 
           {/* Tags */}
           {content.tags && content.tags.length > 0 && (
