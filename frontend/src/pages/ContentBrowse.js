@@ -171,9 +171,10 @@ const ContentBrowse = () => {
         </div>
 
         {/* Search and Filter */}
-        <Card className="p-6 mb-8 bg-white/98 border-2 border-gray-300 shadow-lg">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
+        <Card className="p-4 sm:p-6 mb-6 sm:mb-8 bg-white/98 border-2 border-gray-300 shadow-lg">
+          <div className="flex flex-col gap-4">
+            {/* Search Input */}
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
               <Input
                 data-testid="search-input"
@@ -183,15 +184,19 @@ const ContentBrowse = () => {
                 className="pl-10 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
               />
             </div>
-            <Tabs value={filterType} onValueChange={setFilterType} className="w-full md:w-auto">
-              <TabsList className="grid grid-cols-5 w-full md:w-auto bg-gray-100">
-                <TabsTrigger value="all" data-testid="filter-all" className="font-bold">{t('content.allContent')}</TabsTrigger>
-                <TabsTrigger value="research" data-testid="filter-research" className="font-bold">{t('features.marketResearch.title')}</TabsTrigger>
-                <TabsTrigger value="survey" data-testid="filter-survey" className="font-bold">Survey</TabsTrigger>
-                <TabsTrigger value="article" data-testid="filter-article" className="font-bold">Article</TabsTrigger>
-                <TabsTrigger value="news" data-testid="filter-news" className="font-bold">News</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            
+            {/* Filter Tabs - Scrollable on mobile */}
+            <div className="w-full overflow-x-auto scrollbar-hide">
+              <Tabs value={filterType} onValueChange={setFilterType} className="w-full">
+                <TabsList className="inline-flex min-w-max sm:grid sm:grid-cols-5 w-full bg-gray-100 p-1">
+                  <TabsTrigger value="all" data-testid="filter-all" className="font-bold text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap">{t('content.allContent')}</TabsTrigger>
+                  <TabsTrigger value="research" data-testid="filter-research" className="font-bold text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap">{t('features.marketResearch.title')}</TabsTrigger>
+                  <TabsTrigger value="survey" data-testid="filter-survey" className="font-bold text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap">Survey</TabsTrigger>
+                  <TabsTrigger value="article" data-testid="filter-article" className="font-bold text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap">Article</TabsTrigger>
+                  <TabsTrigger value="news" data-testid="filter-news" className="font-bold text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap">News</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
         </Card>
 
