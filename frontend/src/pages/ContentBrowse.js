@@ -206,16 +206,16 @@ const ContentBrowse = () => {
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00A9CE] mx-auto"></div>
           </div>
         ) : filteredContents.length === 0 ? (
-          <Card className="p-12 text-center bg-white/98 border-2 border-gray-300 shadow-lg">
-            <p className="text-gray-700 text-lg font-semibold">{t('content.noResults')}</p>
+          <Card className="p-8 sm:p-12 text-center bg-white/98 border-2 border-gray-300 shadow-lg">
+            <p className="text-gray-700 text-base sm:text-lg font-semibold">{t('content.noResults')}</p>
           </Card>
         ) : (
           <>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredContents.map((content, index) => (
               <Card
                 key={content.id}
-                className="p-6 bg-white/98 hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-gray-300 hover:border-[#00A9CE] card-hover scale-in"
+                className="p-4 sm:p-6 bg-white/98 hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-gray-300 hover:border-[#00A9CE] card-hover scale-in"
                 onClick={() => navigate(`/content/${content.id}`)}
                 data-testid={`content-card-${index}`}
                 style={{ animationDelay: `${index * 0.05}s` }}
