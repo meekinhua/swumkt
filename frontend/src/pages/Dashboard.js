@@ -279,7 +279,7 @@ const Dashboard = () => {
                 <p className="text-gray-600 mb-3 sm:mb-4 font-medium text-sm">
                   {t('features.analytics.description')}
                 </p>
-                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
+                <span className="badge-warning text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                   {t('features.inDevelopment')}
                 </span>
               </Card>
@@ -290,21 +290,21 @@ const Dashboard = () => {
       
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && contentToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md w-full mx-4 bg-white">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="p-4 sm:p-6 max-w-md w-full bg-white">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">
               ⚠️ ยืนยันการลบเนื้อหา
             </h3>
-            <p className="text-gray-700 mb-6">
+            <p className="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6">
               คุณแน่ใจหรือไม่ว่าต้องการลบเนื้อหา <strong>&quot;{contentToDelete.title}&quot;</strong>?
               <br />
               <span className="text-red-600 font-semibold">การกระทำนี้ไม่สามารถย้อนกลับได้</span>
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
                 onClick={handleDeleteContent}
                 disabled={deleting}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold text-sm"
               >
                 {deleting ? (
                   <span className="flex items-center gap-2">
@@ -325,7 +325,7 @@ const Dashboard = () => {
                 }}
                 disabled={deleting}
                 variant="outline"
-                className="flex-1 border-2 border-gray-400 hover:bg-gray-100 font-bold"
+                className="flex-1 border-2 border-gray-400 hover:bg-gray-100 font-bold text-sm"
               >
                 ยกเลิก
               </Button>
