@@ -227,11 +227,11 @@ const ContentBrowse = () => {
                     const coverImage = content.attachments.find(att => att.id === content.cover_image_id);
                     if (coverImage && coverImage.file_data) {
                       return (
-                        <div className="mb-4 rounded-lg overflow-hidden">
+                        <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden">
                           <img
                             src={coverImage.file_data}
                             alt={content.title}
-                            className="w-full h-48 object-cover"
+                            className="w-full h-36 sm:h-48 object-cover"
                           />
                         </div>
                       );
@@ -241,11 +241,11 @@ const ContentBrowse = () => {
                   // Check if there's a featured_image (legacy support)
                   if (content.featured_image) {
                     return (
-                      <div className="mb-4 rounded-lg overflow-hidden">
+                      <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden">
                         <img
                           src={content.featured_image}
                           alt={content.title}
-                          className="w-full h-48 object-cover"
+                          className="w-full h-36 sm:h-48 object-cover"
                         />
                       </div>
                     );
@@ -258,11 +258,11 @@ const ContentBrowse = () => {
                   
                   if (imageAttachments.length > 0 && imageAttachments[0].file_data) {
                     return (
-                      <div className="mb-4 rounded-lg overflow-hidden">
+                      <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden">
                         <img
                           src={imageAttachments[0].file_data}
                           alt={content.title}
-                          className="w-full h-48 object-cover"
+                          className="w-full h-36 sm:h-48 object-cover"
                           onError={(e) => {
                             e.target.style.display = 'none';
                           }}
@@ -274,27 +274,27 @@ const ContentBrowse = () => {
                   return null;
                 })()}
                 
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="badge-success text-xs px-3 py-1.5 rounded-full">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3 flex-wrap">
+                  <span className="badge-success text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                     {getTypeLabel(content.content_type)}
                   </span>
                   {content.category && (
-                    <span className="badge-warning text-xs px-3 py-1.5 rounded-full">
+                    <span className="badge-warning text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                       {content.category}
                     </span>
                   )}
                 </div>
 
-                <h3 className="text-xl font-black text-gray-900 mb-2 line-clamp-2">
+                <h3 className="text-base sm:text-xl font-black text-gray-900 mb-2 line-clamp-2">
                   {content.title}
                 </h3>
                 
-                <p className="text-gray-700 mb-4 line-clamp-3 text-sm font-medium">
+                <p className="text-gray-700 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3 text-xs sm:text-sm font-medium">
                   {content.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
                 </p>
 
                 {content.tags && content.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-1 sm:gap-2 mb-3 sm:mb-4">
                     {content.tags.slice(0, 3).map((tag, idx) => (
                       <span key={idx} className="text-xs px-2 py-1 bg-[#00A9CE]/10 text-[#005A73] rounded font-semibold border border-[#00A9CE]/20">
                         #{tag}
@@ -303,14 +303,14 @@ const ContentBrowse = () => {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between text-sm text-gray-600 font-semibold">
+                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 font-semibold">
                   <div className="flex items-center gap-1">
-                    <Eye className="w-4 h-4 text-[#00A9CE]" />
+                    <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-[#00A9CE]" />
                     <span>{content.views || 0} {t('stats.access')}</span>
                   </div>
                   {content.contributors && content.contributors.length > 0 && (
                     <div className="flex items-center gap-1">
-                      <User className="w-4 h-4 text-[#00A9CE]" />
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 text-[#00A9CE]" />
                       <span>{content.contributors.length}</span>
                     </div>
                   )}
