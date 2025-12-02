@@ -340,23 +340,32 @@ const ContentDetail = () => {
             </div>
           )}
 
-          {/* Attachments - Show only non-image files or additional images (not the first one) */}
+          {/* Attachments - Show all attachments except the one used as cover */}
           {(() => {
             if (!content.attachments || content.attachments.length === 0) return null;
             
-            const imageAttachments = content.attachments.filter(
-              att => att.file_type && att.file_type.startsWith('image/')
-            );
-            const nonImageAttachments = content.attachments.filter(
-              att => !att.file_type || !att.file_type.startsWith('image/')
-            );
+            // Determine which image is used as cover
+            let coverImageId = null;
+            if (content.cover_image_id) {
+              coverImageId = content.cover_image_id;
+            } else if (!content.featured_image) {
+              // First image is used as cover
+              const firstImage = content.attachments.find(
+                att => att.file_type && att.file_type.startsWith('image/')
+              );
+              if (firstImage) {
+                coverImageId = firstImage.id;
+              }
+            }
             
-            // If there's no featured_image, skip the first image (it's shown as cover)
-            const imagesToShow = !content.featured_image && imageAttachments.length > 0
-              ? imageAttachments.slice(1)
-              : imageAttachments;
-            
-            const attachmentsToShow = [...imagesToShow, ...nonImageAttachments];
+            // Filter out the cover image from attachments to show
+            const attachmentsToShow = content.attachments.filter(att => {
+              // Skip the cover image
+              if (coverImageId && att.id === coverImageId) {
+                return false;
+              }
+              return true;
+            });
             
             if (attachmentsToShow.length === 0) return null;
             
@@ -366,7 +375,7 @@ const ContentDetail = () => {
                   <Paperclip className="w-5 h-5 text-[#00A9CE]" />
                   ไฟล์แนบเพิ่มเติม ({attachmentsToShow.length})
                 </h3>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {attachmentsToShow.map((attachment, idx) => (
                     <div key={attachment.id || idx} className="bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors">
                       {attachment.file_type && attachment.file_type.startsWith('image/') ? (
@@ -375,29 +384,29 @@ const ContentDetail = () => {
                             <div className="flex items-center gap-3">
                               <ImageIcon className="w-5 h-5 text-blue-500" />
                               <div>
-                                <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title}</p>
-                                <p className="text-xs text-gray-500">{attachment.file_size_kb || 'N/A'} KB</p>
+                                <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title || `รูปภาพ ${idx + 1}`}</p>
+                                <p className="text-xs text-gray-500">{attachment.file_size_kb ? `${attachment.file_size_kb} KB` : ''}</p>
                               </div>
                             </div>
                           </div>
                           {(() => {
-                            const imgSrc = attachment.url || attachment.data || attachment.file_data;
+                            const imgSrc = attachment.file_data || attachment.data || attachment.url;
                             if (imgSrc) {
                               return (
                                 <div className="rounded-lg overflow-hidden border-2 border-gray-200">
                                   <img
                                     src={imgSrc}
-                                    alt={attachment.filename || attachment.title}
+                                    alt={attachment.filename || attachment.title || `Attachment ${idx + 1}`}
                                     className="w-full h-auto max-h-96 object-contain bg-gray-50"
                                     onError={(e) => {
-                                      console.error('Attachment image failed to load:', attachment.title);
-                                      e.target.style.display = 'none';
+                                      console.error('Attachment image failed to load:', attachment.id);
+                                      e.target.parentElement.innerHTML = '<div class="p-4 text-center text-gray-500">ไม่สามารถโหลดรูปภาพได้</div>';
                                     }}
                                   />
                                 </div>
                               );
                             }
-                            return null;
+                            return <div className="p-4 text-center text-gray-500">ไม่มีข้อมูลรูปภาพ</div>;
                           })()}
                         </div>
                       ) : (
@@ -405,8 +414,8 @@ const ContentDetail = () => {
                           <div className="flex items-center gap-3">
                             <Paperclip className="w-5 h-5 text-gray-500" />
                             <div>
-                              <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title}</p>
-                              <p className="text-xs text-gray-500">{attachment.file_size_kb || 'N/A'} KB</p>
+                              <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title || 'ไฟล์แนบ'}</p>
+                              <p className="text-xs text-gray-500">{attachment.file_size_kb ? `${attachment.file_size_kb} KB` : ''}</p>
                             </div>
                           </div>
                           {attachment.file_data && (
