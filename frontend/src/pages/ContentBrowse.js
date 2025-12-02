@@ -167,6 +167,10 @@ const ContentBrowse = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleRetry = () => {
+    fetchInitialContents();
+  };
+
   const filteredContents = contents.filter(content => {
     const matchesSearch = content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          content.content.toLowerCase().includes(searchQuery.toLowerCase());
