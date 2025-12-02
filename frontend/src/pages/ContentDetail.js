@@ -527,33 +527,40 @@ const ContentDetail = () => {
                       ไฟล์อื่นๆ ({nonImageAttachments.length})
                     </p>
                     <div className="space-y-2">
-                      {nonImageAttachments.map((attachment, idx) => (
-                        <div 
-                          key={attachment.id || idx} 
-                          className="flex items-center justify-between bg-white p-3 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Paperclip className="w-5 h-5 text-gray-500" />
-                            <div>
-                              <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title || 'ไฟล์แนบ'}</p>
-                              <p className="text-xs text-gray-500">
-                                {attachment.file_type || 'Unknown'} 
-                                {attachment.file_size_kb ? ` • ${attachment.file_size_kb} KB` : ''}
-                              </p>
+                      {nonImageAttachments.map((attachment, idx) => {
+                        const downloadUrl = attachment.file_data || attachment.data || attachment.url;
+                        return (
+                          <div 
+                            key={attachment.id || idx} 
+                            className="flex items-center justify-between bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <Paperclip className="w-5 h-5 text-gray-500" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title || 'ไฟล์แนบ'}</p>
+                                <p className="text-xs text-gray-500">
+                                  {attachment.file_type || 'Unknown'} 
+                                  {attachment.file_size_kb ? ` • ${attachment.file_size_kb} KB` : ''}
+                                </p>
+                              </div>
                             </div>
+                            {downloadUrl ? (
+                              <a
+                                href={downloadUrl}
+                                download={attachment.filename || 'download'}
+                                className="flex items-center gap-2 px-4 py-2 bg-[#00A9CE] hover:bg-[#008FB5] text-white rounded-lg font-bold transition-colors shadow-md"
+                              >
+                                <Download className="w-4 h-4" />
+                                ดาวน์โหลด
+                              </a>
+                            ) : (
+                              <span className="text-xs text-gray-400 px-4 py-2">ไม่มีไฟล์</span>
+                            )}
                           </div>
-                          {attachment.file_data && (
-                            <a
-                              href={attachment.file_data}
-                              download={attachment.filename}
-                              className="flex items-center gap-2 px-4 py-2 bg-[#00A9CE] hover:bg-[#008FB5] text-white rounded-lg font-bold transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                              ดาวน์โหลด
-                            </a>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
