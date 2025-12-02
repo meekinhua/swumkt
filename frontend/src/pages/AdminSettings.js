@@ -643,81 +643,89 @@ const AdminSettings = () => {
       </div>
 
       {/* Main Content */}
-      <div className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="pt-24 sm:pt-32 pb-8 sm:pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="mb-12 text-center fade-in-up">
-            <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#E63946]/15 to-[#F25C66]/15 rounded-full border-2 border-[#E63946]/30 mb-6 shadow-lg">
-              <Shield className="w-5 h-5 text-[#E63946]" />
-              <span className="text-sm font-bold text-[#E63946]">Admin Only</span>
+          <div className="mb-8 sm:mb-12 text-center fade-in-up">
+            <div className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-[#E63946]/15 to-[#F25C66]/15 rounded-full border-2 border-[#E63946]/30 mb-4 sm:mb-6 shadow-lg">
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-[#E63946]" />
+              <span className="text-xs sm:text-sm font-bold text-[#E63946]">Admin Only</span>
             </div>
             
-            <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-3 sm:mb-4">
               <span className="gradient-text">Admin Settings</span>
             </h1>
-            <p className="text-lg text-gray-700 max-w-3xl mx-auto font-semibold">
+            <p className="text-sm sm:text-lg text-gray-700 max-w-3xl mx-auto font-semibold">
               Configure AI prompts and system settings
             </p>
             
             {/* Quick Links */}
-            <div className="mt-6 flex gap-3 justify-center flex-wrap">
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
               <Button
                 onClick={() => navigate('/admin/notifications')}
-                className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold shadow-xl hover:shadow-2xl"
+                className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold shadow-xl hover:shadow-2xl text-xs sm:text-sm"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                Manage Push Notifications
+                Push Notifications
               </Button>
               <Button
                 onClick={() => navigate('/admin/users')}
-                className="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold shadow-xl hover:shadow-2xl"
+                className="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold shadow-xl hover:shadow-2xl text-xs sm:text-sm"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                Manage Admin Users
+                Admin Users
               </Button>
             </div>
           </div>
 
           {/* Settings Card with Tabs */}
-          <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
-            <div className="flex items-center gap-3 mb-6">
-              <Settings className="w-8 h-8 text-[#00A9CE]" />
-              <h2 className="text-2xl font-black text-gray-900">
+          <Card className="p-4 sm:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-[#00A9CE]" />
+              <h2 className="text-lg sm:text-2xl font-black text-gray-900">
                 AI Prompt Configuration
               </h2>
             </div>
 
             <Tabs defaultValue="journey" className="w-full">
-              <TabsList className="grid w-full grid-cols-8 mb-6">
-                <TabsTrigger value="journey" className="flex items-center gap-2">
-                  <Map className="w-4 h-4" />
-                  Journey Map
-                </TabsTrigger>
-                <TabsTrigger value="behavior" className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  Behavior Analysis
-                </TabsTrigger>
-                <TabsTrigger value="perception" className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Perception Analysis
-                </TabsTrigger>
-                <TabsTrigger value="conjoint" className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  Conjoint Analysis
-                </TabsTrigger>
-                <TabsTrigger value="rearrange" className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  AI Rearrange
-                </TabsTrigger>
-                <TabsTrigger value="image" className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Image Generation
+              {/* Scrollable Tabs for mobile */}
+              <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-4 sm:mb-6">
+                <TabsList className="inline-flex sm:grid sm:grid-cols-8 min-w-max sm:min-w-0 w-auto sm:w-full">
+                  <TabsTrigger value="journey" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <Map className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Journey Map</span>
+                    <span className="sm:hidden">Journey</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="behavior" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Behavior Analysis</span>
+                    <span className="sm:hidden">Behavior</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="perception" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Perception Analysis</span>
+                    <span className="sm:hidden">Perception</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="conjoint" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Conjoint Analysis</span>
+                    <span className="sm:hidden">Conjoint</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="rearrange" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">AI Rearrange</span>
+                    <span className="sm:hidden">Rearrange</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="image" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="hidden sm:inline">Image Generation</span>
+                    <span className="sm:hidden">Image</span>
                 </TabsTrigger>
                 <TabsTrigger value="format" className="flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
