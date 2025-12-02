@@ -156,14 +156,6 @@ const ContentBrowse = () => {
       isLoadingRef.current = false;
     }
   }, [currentPage, displayedCount, itemsPerPage, itemsPerBatch, canLoadMore, loadingMore]);
-        setDisplayedCount(prev => prev + response.data.length);
-      }
-    } catch (error) {
-      console.error('Error loading more contents:', error);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   const goToNextPage = () => {
     setCurrentPage(prev => prev + 1);
