@@ -22,7 +22,7 @@ const ImageLightbox = ({ images, currentIndex, onClose, onNext, onPrev }) => {
   const imgSrc = currentImage?.file_data || currentImage?.data || currentImage?.url;
   
   // Handle keyboard navigation
-  React.useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') onNext();
@@ -31,6 +31,8 @@ const ImageLightbox = ({ images, currentIndex, onClose, onNext, onPrev }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, onNext, onPrev]);
+  
+  if (!imgSrc) return null;
   
   return (
     <div 
