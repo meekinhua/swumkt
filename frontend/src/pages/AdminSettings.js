@@ -726,35 +726,37 @@ const AdminSettings = () => {
                     </svg>
                     <span className="hidden sm:inline">Image Generation</span>
                     <span className="sm:hidden">Image</span>
-                </TabsTrigger>
-                <TabsTrigger value="format" className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Format Editor
-                </TabsTrigger>
-                <TabsTrigger value="migration" className="flex items-center gap-2" onClick={fetchMigrationStatus}>
-                  <RefreshCw className="w-4 h-4" />
-                  Migration
-                </TabsTrigger>
-              </TabsList>
+                  </TabsTrigger>
+                  <TabsTrigger value="format" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span className="hidden sm:inline">Format Editor</span>
+                    <span className="sm:hidden">Format</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="migration" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap" onClick={fetchMigrationStatus}>
+                    <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Migration
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* Journey Map Prompt Tab */}
               <TabsContent value="journey">
                 {journeyMetadata && journeyMetadata.updated_at && (
-                  <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-gray-700 font-semibold">
+                  <div className="mb-4 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-xs sm:text-sm text-gray-700 font-semibold">
                       <strong>Last Updated:</strong> {new Date(journeyMetadata.updated_at).toLocaleString()} by {journeyMetadata.updated_by}
                     </p>
                   </div>
                 )}
 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   <div>
-                    <Label htmlFor="journey-prompt" className="text-gray-800 font-bold mb-2 text-lg">
+                    <Label htmlFor="journey-prompt" className="text-gray-800 font-bold mb-2 text-base sm:text-lg">
                       System Prompt for Journey Map Generation
                     </Label>
-                    <p className="text-sm text-gray-600 mb-4 font-medium">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 font-medium">
                       This prompt will be used by the AI to analyze qualitative research data and generate customer journey maps. 
                       Include guidelines, output format, and Mermaid diagram examples.
                     </p>
@@ -762,8 +764,8 @@ const AdminSettings = () => {
                       id="journey-prompt"
                       value={journeyPrompt}
                       onChange={(e) => setJourneyPrompt(e.target.value)}
-                      rows={20}
-                      className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                      rows={15}
+                      className="font-mono text-xs sm:text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
                       placeholder="Enter the system prompt for AI..."
                     />
                     <p className="text-xs text-gray-500 mt-2 font-medium">
@@ -771,11 +773,11 @@ const AdminSettings = () => {
                     </p>
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <Button
                       onClick={handleSaveJourney}
                       disabled={savingJourney || !journeyPrompt.trim()}
-                      className="flex-1 h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-lg"
+                      className="flex-1 h-12 sm:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-sm sm:text-lg"
                     >
                       {savingJourney ? (
                         <>
