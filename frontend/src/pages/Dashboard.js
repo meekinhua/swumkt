@@ -216,67 +216,67 @@ const Dashboard = () => {
           <TabsContent value="features" className="mt-4 sm:mt-6" data-testid="features-tab-panel">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <Card 
-                className="p-6 bg-white/98 border-2 border-[#00A9CE]/20 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer"
+                className="p-4 sm:p-6 bg-white/98 border-2 border-[#00A9CE]/20 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer"
                 onClick={() => navigate('/market-research')}
                 data-testid="market-research-card"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-[#005A73] to-[#00A9CE] text-white">
-                      <TrendingUp className="w-8 h-8" />
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-[#005A73] to-[#00A9CE] text-white">
+                      <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900">{t('features.marketResearch.title')}</h3>
+                    <h3 className="text-base sm:text-xl font-bold text-gray-900">{t('features.marketResearch.title')}</h3>
                   </div>
-                  <span className="badge-success text-sm px-3 py-1.5 rounded-full">
+                  <span className="badge-success text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full hidden sm:inline">
                     {t('features.marketResearch.status')}
                   </span>
                 </div>
-                <p className="text-gray-700 mb-4 font-medium">
+                <p className="text-gray-700 mb-3 sm:mb-4 font-medium text-sm">
                   {t('features.marketResearch.description')}
                 </p>
-                <Button className="w-full bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold">
+                <Button className="w-full bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold text-sm">
                   {t('marketResearch.getStarted')}
                 </Button>
               </Card>
 
-              <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
-                    <UsersIcon className="w-8 h-8" />
+              <Card className="p-4 sm:p-6 bg-white/95 border-2 border-gray-300 opacity-70">
+                <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 rounded-xl bg-gray-200 text-gray-500">
+                    <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-700">{t('features.alumniZone.title')}</h3>
+                  <h3 className="text-base sm:text-xl font-bold text-gray-700">{t('features.alumniZone.title')}</h3>
                 </div>
-                <p className="text-gray-600 mb-4 font-medium">
+                <p className="text-gray-600 mb-3 sm:mb-4 font-medium text-sm">
                   {t('features.alumniZone.description')}
                 </p>
-                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
+                <span className="badge-warning text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                   {t('features.inDevelopment')}
                 </span>
               </Card>
 
-              <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
-                    <Settings className="w-8 h-8" />
+              <Card className="p-4 sm:p-6 bg-white/95 border-2 border-gray-300 opacity-70">
+                <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 rounded-xl bg-gray-200 text-gray-500">
+                    <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-700">{t('features.integrations.title')}</h3>
+                  <h3 className="text-base sm:text-xl font-bold text-gray-700">{t('features.integrations.title')}</h3>
                 </div>
-                <p className="text-gray-600 mb-4 font-medium">
+                <p className="text-gray-600 mb-3 sm:mb-4 font-medium text-sm">
                   {t('features.integrations.description')}
                 </p>
-                <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
+                <span className="badge-warning text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                   {t('features.inDevelopment')}
                 </span>
               </Card>
 
-              <Card className="p-6 bg-white/95 border-2 border-gray-300 opacity-70">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-gray-200 text-gray-500">
-                    <FileText className="w-8 h-8" />
+              <Card className="p-4 sm:p-6 bg-white/95 border-2 border-gray-300 opacity-70">
+                <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 rounded-xl bg-gray-200 text-gray-500">
+                    <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-700">{t('features.analytics.title')}</h3>
+                  <h3 className="text-base sm:text-xl font-bold text-gray-700">{t('features.analytics.title')}</h3>
                 </div>
-                <p className="text-gray-600 mb-4 font-medium">
+                <p className="text-gray-600 mb-3 sm:mb-4 font-medium text-sm">
                   {t('features.analytics.description')}
                 </p>
                 <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
