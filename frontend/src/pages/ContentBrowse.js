@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Eye, User, ArrowLeft, Loader2, ChevronDown } from 'lucide-react';
+import { Search, Eye, User, ArrowLeft, Loader2, ChevronDown, RefreshCw } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 
 const ContentBrowse = () => {
@@ -18,56 +18,77 @@ const ContentBrowse = () => {
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [displayedCount, setDisplayedCount] = useState(0);
   const loadMoreRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const isLoadingRef = useRef(false);
   
   const itemsPerBatch = 5;  // Load 5 items at a time
   const itemsPerPage = 20;  // Max items before going to next page
 
   // Calculate how many items we can still load on this page
-  const canLoadMore = displayedCount < Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage);
+  const canLoadMore = displayedCount < Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage) && totalItems > displayedCount;
   const hasNextPage = currentPage * itemsPerPage < totalItems;
   const hasPrevPage = currentPage > 1;
 
   // Initial load for the page
   useEffect(() => {
     fetchInitialContents();
+    
+    // Cleanup on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [currentPage]);
 
-  // Intersection Observer for "Load More" button
+  // Intersection Observer for "Load More" button - simplified
   useEffect(() => {
+    if (!loadMoreRef.current) return;
+    
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && canLoadMore && !loadingMore && !loading) {
+        const entry = entries[0];
+        if (entry.isIntersecting && !isLoadingRef.current) {
           loadMoreContents();
         }
       },
-      { threshold: 0.1, rootMargin: '100px' }
+      { threshold: 0.1, rootMargin: '50px' }
     );
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
+    observer.observe(loadMoreRef.current);
 
     return () => observer.disconnect();
-  }, [canLoadMore, loadingMore, loading, displayedCount]);
+  }, [canLoadMore]); // Only depend on canLoadMore
 
   const fetchInitialContents = async () => {
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     setLoading(true);
+    setError(null);
     setContents([]);
     setDisplayedCount(0);
+    isLoadingRef.current = true;
     
     try {
       const skip = (currentPage - 1) * itemsPerPage;
       const response = await axios.get(`${API}/content`, {
         params: { 
           skip: skip,
-          limit: itemsPerBatch  // Only load first batch
-        }
+          limit: itemsPerBatch
+        },
+        signal: abortControllerRef.current.signal,
+        timeout: 30000 // 30 second timeout
       });
       
       if (response.data.items) {
@@ -79,27 +100,44 @@ const ContentBrowse = () => {
         setTotalItems(response.data.length);
         setDisplayedCount(response.data.length);
       }
+      setError(null);
     } catch (error) {
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled');
+        return;
+      }
       console.error('Error fetching contents:', error);
+      setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
   };
 
-  const loadMoreContents = async () => {
-    if (loadingMore || !canLoadMore) return;
+  const loadMoreContents = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isLoadingRef.current || loadingMore || !canLoadMore) return;
     
+    isLoadingRef.current = true;
     setLoadingMore(true);
+    
     try {
       const skip = (currentPage - 1) * itemsPerPage + displayedCount;
       const remainingOnPage = itemsPerPage - displayedCount;
       const limit = Math.min(itemsPerBatch, remainingOnPage);
       
+      if (limit <= 0) {
+        setLoadingMore(false);
+        isLoadingRef.current = false;
+        return;
+      }
+      
       const response = await axios.get(`${API}/content`, {
         params: { 
           skip: skip,
           limit: limit
-        }
+        },
+        timeout: 30000 // 30 second timeout
       });
       
       if (response.data.items) {
@@ -108,6 +146,16 @@ const ContentBrowse = () => {
         setTotalItems(response.data.total);
       } else {
         setContents(prev => [...prev, ...response.data]);
+        setDisplayedCount(prev => prev + response.data.length);
+      }
+    } catch (error) {
+      console.error('Error loading more contents:', error);
+      // Don't show error for load more, just stop loading
+    } finally {
+      setLoadingMore(false);
+      isLoadingRef.current = false;
+    }
+  }, [currentPage, displayedCount, itemsPerPage, itemsPerBatch, canLoadMore, loadingMore]);
         setDisplayedCount(prev => prev + response.data.length);
       }
     } catch (error) {
