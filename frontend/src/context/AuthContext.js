@@ -162,7 +162,6 @@ export const AuthProvider = ({ children }) => {
       headers: { Authorization: `Bearer ${token}` },
       timeout: 15000
     });
-    });
     // Refresh user data
     await fetchUser();
     return response.data;
@@ -170,14 +169,17 @@ export const AuthProvider = ({ children }) => {
 
   const getDemographics = async () => {
     const response = await axios.get(`${API}/user/demographics`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 15000
     });
     return response.data;
   };
 
   const getUserRating = async () => {
     const response = await axios.get(`${API}/user/rating`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 15000
+    });
     });
     return response.data;
   };
