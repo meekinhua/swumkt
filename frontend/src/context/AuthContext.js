@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API } from '@/App';
 
@@ -17,11 +17,20 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [processingSession, setProcessingSession] = useState(false);
+  const [authError, setAuthError] = useState(null);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     // Check for session_id in URL fragment (from Google OAuth)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const sessionId = hashParams.get('session_id');
+    
+    // Check for session expired flag
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('session_expired') === 'true') {
+      setAuthError('Session หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     
     if (sessionId && !processingSession) {
       processGoogleSession(sessionId);
@@ -33,21 +42,41 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const fetchUser = async () => {
+    // Prevent duplicate fetches
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    
     try {
       const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000 // 15 second timeout for auth
       });
       setUser(response.data);
+      setAuthError(null);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      logout();
+      if (error.response?.status === 401) {
+        // Token is invalid
+        logout();
+        setAuthError('Session หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง');
+      } else if (error.code === 'ECONNABORTED') {
+        // Timeout - don't logout, just show error
+        setAuthError('การเชื่อมต่อหมดเวลา กรุณารีเฟรชหน้า');
+      } else {
+        // Other error - try to keep session if possible
+        setAuthError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
 
   const login = async (email, password) => {
-    const response = await axios.post(`${API}/auth/login`, { email, password });
+    setAuthError(null);
+    const response = await axios.post(`${API}/auth/login`, { email, password }, {
+      timeout: 15000
+    });
     const { access_token, user: userData } = response.data;
     localStorage.setItem('token', access_token);
     setToken(access_token);
@@ -56,7 +85,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    const response = await axios.post(`${API}/auth/register`, userData);
+    setAuthError(null);
+    const response = await axios.post(`${API}/auth/register`, userData, {
+      timeout: 15000
+    });
     const { access_token, user: newUser } = response.data;
     localStorage.setItem('token', access_token);
     setToken(access_token);
@@ -67,10 +99,13 @@ export const AuthProvider = ({ children }) => {
   const processGoogleSession = async (sessionId) => {
     setProcessingSession(true);
     setLoading(true);
+    setAuthError(null);
     
     try {
       const response = await axios.post(`${API}/auth/google/session`, {
         session_id: sessionId
+      }, {
+        timeout: 15000
       });
       
       const { session_token, user: userData } = response.data;
@@ -82,7 +117,7 @@ export const AuthProvider = ({ children }) => {
       window.history.replaceState({}, document.title, window.location.pathname);
     } catch (error) {
       console.error('Failed to process Google session:', error);
-      alert('Google login failed. Please try again.');
+      setAuthError('Google login ล้มเหลว กรุณาลองใหม่อีกครั้ง');
     } finally {
       setProcessingSession(false);
       setLoading(false);
@@ -94,11 +129,13 @@ export const AuthProvider = ({ children }) => {
       // Call backend to delete session
       if (token) {
         await axios.post(`${API}/auth/logout`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 5000 // Short timeout for logout
         });
       }
     } catch (error) {
       console.error('Logout error:', error);
+      // Continue with logout even if backend fails
     } finally {
       localStorage.removeItem('token');
       setToken(null);
@@ -106,9 +143,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const clearAuthError = () => {
+    setAuthError(null);
+  };
+
   const updateProfile = async (profileData) => {
     const response = await axios.put(`${API}/auth/profile`, profileData, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 15000
     });
     // Create new object to force re-render
     setUser({...response.data});
@@ -117,7 +159,9 @@ export const AuthProvider = ({ children }) => {
 
   const updateDemographics = async (demographicsData) => {
     const response = await axios.put(`${API}/user/demographics`, demographicsData, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 15000
+    });
     });
     // Refresh user data
     await fetchUser();
