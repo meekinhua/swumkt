@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [myContents, setMyContents] = useState([]);
   const [stats, setStats] = useState({ totalViews: 0, totalContent: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contentToDelete, setContentToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -28,11 +29,13 @@ const Dashboard = () => {
   }, []);
 
   const fetchMyContents = async () => {
+    setError(null);
     try {
       // Use optimized endpoint that fetches only current user's content
       const response = await axios.get(`${API}/content/my`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 50 } // Only fetch 50 most recent items
+        params: { limit: 50 }, // Only fetch 50 most recent items
+        timeout: 30000 // 30 second timeout
       });
       
       // Handle response format
@@ -43,6 +46,7 @@ const Dashboard = () => {
       setStats({ totalViews, totalContent: items.length });
     } catch (error) {
       console.error('Error fetching contents:', error);
+      setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -54,7 +58,8 @@ const Dashboard = () => {
     setDeleting(true);
     try {
       await axios.delete(`${API}/content/${contentToDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000
       });
       toast.success('ลบเนื้อหาสำเร็จ');
       fetchMyContents(); // Reload list
