@@ -36,6 +36,58 @@ import { Toaster } from '@/components/ui/sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
+// ============ AXIOS GLOBAL CONFIGURATION ============
+// Set default timeout for all requests (30 seconds)
+axios.defaults.timeout = 30000;
+
+// Request interceptor - add timestamp for debugging
+axios.interceptors.request.use(
+  (config) => {
+    config.metadata = { startTime: new Date() };
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor - handle errors globally
+axios.interceptors.response.use(
+  (response) => {
+    // Log slow requests (> 5 seconds)
+    const duration = new Date() - response.config.metadata?.startTime;
+    if (duration > 5000) {
+      console.warn(`Slow request: ${response.config.url} took ${duration}ms`);
+    }
+    return response;
+  },
+  (error) => {
+    // Handle specific error cases
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      console.error('Request timeout:', error.config?.url);
+      error.message = 'การเชื่อมต่อหมดเวลา กรุณาลองใหม่อีกครั้ง';
+    } else if (error.response?.status === 401) {
+      // Token expired or invalid
+      const token = localStorage.getItem('token');
+      if (token && !error.config?.url?.includes('/auth/')) {
+        console.warn('Session expired, logging out...');
+        localStorage.removeItem('token');
+        // Redirect to login if not already there
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login?session_expired=true';
+        }
+      }
+    } else if (error.response?.status === 503) {
+      error.message = 'เซิร์ฟเวอร์ไม่พร้อมให้บริการ กรุณาลองใหม่ในภายหลัง';
+    } else if (!error.response) {
+      // Network error
+      error.message = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
