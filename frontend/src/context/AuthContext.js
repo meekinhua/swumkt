@@ -180,13 +180,15 @@ export const AuthProvider = ({ children }) => {
       headers: { Authorization: `Bearer ${token}` },
       timeout: 15000
     });
-    });
     return response.data;
   };
 
   const googleLogin = async (googleToken) => {
+    setAuthError(null);
     const response = await axios.post(`${API}/auth/google/verify`, {
       credential: googleToken
+    }, {
+      timeout: 15000
     });
     const { access_token, user: userData } = response.data;
     localStorage.setItem('token', access_token);
@@ -199,7 +201,8 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{ 
       user, 
       loading, 
-      token, 
+      token,
+      authError,
       login, 
       register,
       googleLogin, 
@@ -208,7 +211,8 @@ export const AuthProvider = ({ children }) => {
       updateDemographics,
       getDemographics,
       getUserRating,
-      processingSession
+      processingSession,
+      clearAuthError
     }}>
       {children}
     </AuthContext.Provider>
