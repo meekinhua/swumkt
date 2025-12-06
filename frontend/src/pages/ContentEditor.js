@@ -400,13 +400,13 @@ const ContentEditor = () => {
       <Navigation />
 
       {/* Editor */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn" className="mb-4 text-gray-800 hover:text-[#00A9CE]">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn" className="mb-3 sm:mb-4 text-gray-800 hover:text-[#00A9CE] text-sm sm:text-base">
           <ArrowLeft className="w-4 h-4 mr-2" />
           กลับ Dashboard
         </Button>
-        <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up">
-          <h1 className="text-4xl font-black text-gray-900 mb-8" data-testid="editor-title">
+        <Card className="p-4 sm:p-6 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-6 sm:mb-8" data-testid="editor-title">
             {id ? <span className="gradient-text">แก้ไขเนื้อหา</span> : <span className="gradient-text">สร้างเนื้อหาใหม่</span>}
           </h1>
 
