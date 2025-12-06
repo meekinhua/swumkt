@@ -1089,25 +1089,25 @@ const ConjointDesignPage = () => {
               </div>
 
               {/* Survey Link */}
-              <div className="mb-4 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg shadow-md">
+              <div className="mb-4 p-3 sm:p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg shadow-md">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-lg">🔗</span>
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-base sm:text-lg">🔗</span>
                   </div>
-                  <h3 className="text-lg font-bold text-green-900">
+                  <h3 className="text-base sm:text-lg font-bold text-green-900">
                     ลิงก์แบบสอบถาม (พร้อมใช้งาน)
                   </h3>
                 </div>
                 
-                <div className="bg-white rounded-lg p-4 border border-green-300 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 overflow-hidden">
+                <div className="bg-white rounded-lg p-3 sm:p-4 border border-green-300 mb-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="flex-1 overflow-hidden min-w-0">
                       <p className="text-xs text-gray-500 mb-1">ลิงก์สำหรับผู้ตอบแบบสอบถาม:</p>
                       <a
                         href={`${window.location.origin}/survey/conjoint/${studyId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 font-mono text-sm break-all underline"
+                        className="text-blue-600 hover:text-blue-800 font-mono text-xs sm:text-sm break-all underline block"
                       >
                         {`${window.location.origin}/survey/conjoint/${studyId}`}
                       </a>
@@ -1118,7 +1118,7 @@ const ConjointDesignPage = () => {
                         navigator.clipboard.writeText(surveyLink);
                         toast.success('คัดลอกลิงก์แล้ว!');
                       }}
-                      className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap flex-shrink-0"
+                      className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white whitespace-nowrap flex-shrink-0 text-sm"
                     >
                       <Copy className="w-4 h-4 mr-2" />
                       คัดลอกลิงก์
