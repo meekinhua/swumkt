@@ -648,27 +648,27 @@ const ConjointResultsPage = () => {
             </div>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-green-50 to-white border-2 border-green-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-white" />
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-white border-2 border-green-200">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <p className="text-sm text-gray-600">สถานะ</p>
-                <p className="text-xl font-bold text-green-600">พร้อมวิเคราะห์</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-600">สถานะ</p>
+                <p className="text-lg sm:text-xl font-bold text-green-600">พร้อมวิเคราะห์</p>
                 <p className="text-xs text-gray-500">ข้อมูลเพียงพอแล้ว</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-white" />
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <p className="text-sm text-gray-600">คุณลักษณะ</p>
-                <p className="text-3xl font-black text-purple-600">{sortedImportance.length}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-600">คุณลักษณะ</p>
+                <p className="text-2xl sm:text-3xl font-black text-purple-600">{sortedImportance.length}</p>
                 <p className="text-xs text-gray-500">รายการ</p>
               </div>
             </div>
