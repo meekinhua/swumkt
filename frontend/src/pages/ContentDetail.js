@@ -522,8 +522,8 @@ const ContentDetail = () => {
                 {/* Non-Image Files */}
                 {nonImageAttachments.length > 0 && (
                   <div>
-                    <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
-                      <Paperclip className="w-4 h-4" />
+                    <p className="text-xs sm:text-sm font-bold text-gray-600 mb-2 sm:mb-3 flex items-center gap-2">
+                      <Paperclip className="w-3 h-3 sm:w-4 sm:h-4" />
                       ไฟล์อื่นๆ ({nonImageAttachments.length})
                     </p>
                     <div className="space-y-2">
@@ -532,15 +532,15 @@ const ContentDetail = () => {
                         return (
                           <div 
                             key={attachment.id || idx} 
-                            className="flex items-center justify-between bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors"
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] transition-colors"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                <Paperclip className="w-5 h-5 text-gray-500" />
+                            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
                               </div>
-                              <div>
-                                <p className="text-sm font-bold text-gray-900">{attachment.filename || attachment.title || 'ไฟล์แนบ'}</p>
-                                <p className="text-xs text-gray-500">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">{attachment.filename || attachment.title || 'ไฟล์แนบ'}</p>
+                                <p className="text-xs text-gray-500 truncate">
                                   {attachment.file_type || 'Unknown'} 
                                   {attachment.file_size_kb ? ` • ${attachment.file_size_kb} KB` : ''}
                                 </p>
@@ -550,13 +550,13 @@ const ContentDetail = () => {
                               <a
                                 href={downloadUrl}
                                 download={attachment.filename || 'download'}
-                                className="flex items-center gap-2 px-4 py-2 bg-[#00A9CE] hover:bg-[#008FB5] text-white rounded-lg font-bold transition-colors shadow-md"
+                                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[#00A9CE] hover:bg-[#008FB5] text-white rounded-lg font-bold transition-colors shadow-md text-xs sm:text-sm w-full sm:w-auto"
                               >
-                                <Download className="w-4 h-4" />
+                                <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                                 ดาวน์โหลด
                               </a>
                             ) : (
-                              <span className="text-xs text-gray-400 px-4 py-2">ไม่มีไฟล์</span>
+                              <span className="text-xs text-gray-400 px-3 sm:px-4 py-2">ไม่มีไฟล์</span>
                             )}
                           </div>
                         );
