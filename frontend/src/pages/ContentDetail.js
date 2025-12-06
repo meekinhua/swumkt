@@ -718,23 +718,23 @@ const ContentDetail = () => {
           )}
 
           {/* Comments List */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {comments.length === 0 ? (
-              <p className="text-center text-gray-600 py-8 font-semibold">ยังไม่มีความคิดเห็น</p>
+              <p className="text-center text-gray-600 py-6 sm:py-8 font-semibold text-sm sm:text-base">ยังไม่มีความคิดเห็น</p>
             ) : (
               comments.map((comment, idx) => (
-                <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 rounded-lg border-2 border-gray-200" data-testid={`comment-${idx}`}>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#007B9A] to-[#00A9CE] flex items-center justify-center text-white font-bold flex-shrink-0">
+                <div key={comment.id} className="flex gap-2 sm:gap-3 p-3 sm:p-4 bg-gray-50 rounded-lg border-2 border-gray-200" data-testid={`comment-${idx}`}>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#007B9A] to-[#00A9CE] flex items-center justify-center text-white font-bold flex-shrink-0 text-sm sm:text-base">
                     {comment.user_name.charAt(0)}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-gray-900">{comment.user_name}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                      <span className="font-bold text-gray-900 text-sm sm:text-base truncate">{comment.user_name}</span>
                       <span className="text-xs text-gray-600 font-semibold">
                         {new Date(comment.created_at).toLocaleDateString('th-TH')}
                       </span>
                     </div>
-                    <p className="text-gray-800 font-medium">{comment.comment_text}</p>
+                    <p className="text-gray-800 font-medium text-sm sm:text-base break-words">{comment.comment_text}</p>
                   </div>
                 </div>
               ))
