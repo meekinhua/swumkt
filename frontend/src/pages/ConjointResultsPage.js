@@ -601,30 +601,30 @@ const ConjointResultsPage = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 bg-white rounded-lg p-2 shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6 bg-white rounded-lg p-2 shadow-sm">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex-1 px-6 py-3 rounded-md font-bold transition-all ${
+            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'overview'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <div className="flex items-center justify-center gap-2">
-              <PieChartIcon className="w-5 h-5" />
+              <PieChartIcon className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>ภาพรวมและคำแนะนำ</span>
             </div>
           </button>
           <button
             onClick={() => setActiveTab('academic')}
-            className={`flex-1 px-6 py-3 rounded-md font-bold transition-all ${
+            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'academic'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <div className="flex items-center justify-center gap-2">
-              <GraduationCap className="w-5 h-5" />
+              <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>เชิงวิชาการและสถิติ</span>
             </div>
           </button>
