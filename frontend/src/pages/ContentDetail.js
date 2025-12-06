@@ -265,21 +265,21 @@ const ContentDetail = () => {
       <Navigation />
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Button variant="ghost" onClick={() => navigate('/content')} data-testid="back-to-browse-btn" className="mb-4 text-gray-800 hover:text-[#00A9CE]">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <Button variant="ghost" onClick={() => navigate('/content')} data-testid="back-to-browse-btn" className="mb-3 sm:mb-4 text-gray-800 hover:text-[#00A9CE] text-sm sm:text-base">
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('content.back')}
         </Button>
-        <Card className="p-8 mb-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up" data-testid="content-detail-card">
+        <Card className="p-4 sm:p-8 mb-6 sm:mb-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up" data-testid="content-detail-card">
           {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="badge-success text-sm px-3 py-1.5 rounded-full" data-testid="content-type-badge">
+          <div className="mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 sm:mb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="badge-success text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full" data-testid="content-type-badge">
                   {getTypeLabel(content.content_type)}
                 </span>
                 {content.category && (
-                  <span className="badge-warning text-sm px-3 py-1.5 rounded-full">
+                  <span className="badge-warning text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                     {content.category}
                   </span>
                 )}
@@ -289,7 +289,7 @@ const ContentDetail = () => {
                   variant="outline"
                   onClick={() => navigate(`/content/edit/${id}`)}
                   data-testid="edit-content-btn"
-                  className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10 font-bold"
+                  className="w-full sm:w-auto border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10 font-bold text-sm"
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   แก้ไข
@@ -297,25 +297,25 @@ const ContentDetail = () => {
               )}
             </div>
             
-            <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4" data-testid="content-title">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-3 sm:mb-4" data-testid="content-title">
               {content.title}
             </h1>
 
-            <div className="flex items-center gap-4 text-sm text-gray-700 font-semibold">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-700 font-semibold">
               <div className="flex items-center gap-1">
-                <Eye className="w-4 h-4 text-[#00A9CE]" />
+                <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-[#00A9CE]" />
                 <span data-testid="content-views">{content.views || 0} ครั้งที่เข้าชม</span>
               </div>
               {(content.creatorDetails || (content.group_members && content.group_members.length > 0)) && (
                 <div className="flex items-center gap-1">
-                  <Users className="w-4 h-4 text-[#00A9CE]" />
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-[#00A9CE]" />
                   <span>
                     {1 + (content.group_members?.length || 0)} {t('content.creators') || 'ผู้สร้าง'}
                   </span>
                 </div>
               )}
               <div className="flex items-center gap-1">
-                <MessageCircle className="w-4 h-4 text-[#00A9CE]" />
+                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 text-[#00A9CE]" />
                 <span data-testid="content-comments-count">
                   {comments.length} {t('content.comments') || 'ความคิดเห็น'}
                 </span>
