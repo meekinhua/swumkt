@@ -393,11 +393,11 @@ const ContentDetail = () => {
 
           {/* Content Body */}
           <div className="prose max-w-none mb-6" data-testid="content-body">
-            <div className="flex items-center justify-between mb-4 p-4 bg-[#00A9CE]/5 rounded-lg border border-[#00A9CE]/20">
-              <h3 className="text-lg font-black text-gray-900">{t('content.originalText')}</h3>
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 p-3 sm:p-4 bg-[#00A9CE]/5 rounded-lg border border-[#00A9CE]/20">
+              <h3 className="text-base sm:text-lg font-black text-gray-900">{t('content.originalText')}</h3>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                  <SelectTrigger className="w-40 border-2 border-[#00A9CE]">
+                  <SelectTrigger className="w-full sm:w-40 border-2 border-[#00A9CE]">
                     <SelectValue placeholder={t('content.translate')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -414,7 +414,7 @@ const ContentDetail = () => {
                 <Button
                   onClick={handleTranslate}
                   disabled={!targetLanguage || translating}
-                  className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold text-sm sm:text-base"
                 >
                   {translating ? (
                     <>{t('content.translating')}</>
