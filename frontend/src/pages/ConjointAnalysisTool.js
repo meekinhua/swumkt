@@ -334,40 +334,42 @@ const ConjointAnalysisTool = () => {
               {studies.map((study) => (
                 <div
                   key={study.id}
-                  className="p-6 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] hover:shadow-md transition-all"
+                  className="p-4 sm:p-6 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-[#00A9CE] hover:shadow-md transition-all"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold text-gray-900">{study.title}</h3>
-                        {getStatusBadge(study)}
-                        {user?.role === 'admin' && study.creator_id !== user?.id && (
-                          <span className="px-2 py-1 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300">
-                            👤 {study.creator_name || 'Unknown'}
-                          </span>
-                        )}
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words">{study.title}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {getStatusBadge(study)}
+                          {user?.role === 'admin' && study.creator_id !== user?.id && (
+                            <span className="px-2 py-1 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 whitespace-nowrap">
+                              👤 {study.creator_name || 'Unknown'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
                       {study.description && (
-                        <p className="text-gray-600 mb-3">{study.description}</p>
+                        <p className="text-sm sm:text-base text-gray-600 mb-3 break-words">{study.description}</p>
                       )}
 
-                      <div className="flex items-center gap-6 text-sm text-gray-500">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-500">
                         {study.product_category && (
                           <div className="flex items-center gap-1">
-                            <Tag className="w-4 h-4" />
+                            <Tag className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>{study.product_category}</span>
                           </div>
                         )}
                         
                         <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
+                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span>{new Date(study.created_at).toLocaleDateString('th-TH')}</span>
                         </div>
 
                         {(study.respondent_count > 0 || study.respondent_count === undefined) && (
                           <div className="flex items-center gap-1">
-                            <Users className="w-4 h-4" />
+                            <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>{study.respondent_count || 0} ผู้ตอบ</span>
                           </div>
                         )}
@@ -375,29 +377,29 @@ const ConjointAnalysisTool = () => {
                     </div>
 
                     {/* Action Menu */}
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
                       <Button
                         onClick={() => handleStudyAction(study, 'edit')}
                         variant="outline"
                         size="sm"
-                        className="border-2 border-blue-500 text-blue-700 hover:bg-blue-50"
+                        className="w-full sm:w-auto border-2 border-blue-500 text-blue-700 hover:bg-blue-50 text-xs sm:text-sm"
                       >
-                        <Settings className="w-4 h-4 mr-1" />
+                        <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                         แก้ไข
                       </Button>
                       
                       <Button
                         onClick={() => handleStudyAction(study, 'view')}
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
                       >
-                        <BarChart3 className="w-4 h-4 mr-1" />
+                        <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                         ดูรายงาน
                       </Button>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="w-full sm:w-auto">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
