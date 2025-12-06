@@ -718,14 +718,14 @@ const ConjointResultsPage = () => {
           </div>
 
           {!aiInterpretation ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-sm sm:text-base text-gray-600 mb-4">
                 ใช้ AI วิเคราะห์และแปลผลข้อมูลให้เข้าใจง่าย พร้อมข้อเสนอแนะเชิงธุรกิจ
               </p>
               <Button
                 onClick={loadAIInterpretation}
                 disabled={loadingAI}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold"
+                className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm sm:text-base"
               >
                 {loadingAI ? (
                   <>
@@ -741,7 +741,7 @@ const ConjointResultsPage = () => {
               </Button>
             </div>
           ) : (
-            <div className="bg-white rounded-lg p-6 border-2 border-indigo-200">
+            <div className="bg-white rounded-lg p-4 sm:p-6 border-2 border-indigo-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
                   <Sparkles className="w-4 h-4" />
