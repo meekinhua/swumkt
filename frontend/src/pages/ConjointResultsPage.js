@@ -506,7 +506,7 @@ const ConjointResultsPage = () => {
               )}
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
               {/* Public Share Toggle Button (Owner/Admin only) */}
               {isOwnerOrAdmin && (
                 <>
@@ -514,7 +514,7 @@ const ConjointResultsPage = () => {
                     onClick={handleTogglePublicResult}
                     disabled={togglingPublic}
                     variant="outline"
-                    className={`${
+                    className={`w-full sm:w-auto text-sm ${
                       isPublicResult 
                         ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100' 
                         : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
@@ -532,7 +532,7 @@ const ConjointResultsPage = () => {
                     <Button
                       onClick={handleCopyShareLink}
                       variant="outline"
-                      className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                      className="w-full sm:w-auto text-sm bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
                     >
                       <Copy className="w-4 h-4 mr-2" />
                       คัดลอกลิงก์
@@ -543,7 +543,7 @@ const ConjointResultsPage = () => {
               
               <Button
                 onClick={() => setShowShareModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full sm:w-auto text-sm bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <FileText className="w-4 h-4 mr-2" />
                 แชร์เป็นเนื้อหา
