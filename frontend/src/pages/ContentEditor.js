@@ -460,14 +460,14 @@ const ContentEditor = () => {
 
               {/* Content */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="content" className="text-gray-800 font-bold">เนื้อหา *</Label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <Label htmlFor="content" className="text-gray-800 font-bold text-sm sm:text-base">เนื้อหา *</Label>
                   {id && (
                     <Button
                       type="button"
                       onClick={handleAiRearrange}
                       disabled={aiRearranging || !formData.content}
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm px-4 py-2"
+                      className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-xs sm:text-sm px-3 sm:px-4 py-2"
                     >
                       {aiRearranging ? (
                         <span className="flex items-center gap-2">
