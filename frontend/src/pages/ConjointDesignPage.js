@@ -1019,25 +1019,25 @@ const ConjointDesignPage = () => {
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       <Navigation />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Button
             variant="ghost"
             onClick={() => navigate(`/research/conjoint/${studyId}/qualitative`)}
-            className="mb-4"
+            className="mb-3 sm:mb-4 text-sm sm:text-base"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             กลับ Phase 1
           </Button>
 
-          <h1 className="text-4xl font-black text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-2 leading-tight">
             Phase 2: Study Design
           </h1>
-          <p className="text-lg text-gray-600 mb-4">
+          <p className="text-base sm:text-lg text-gray-600 mb-3 sm:mb-4 break-words">
             {study?.title}
           </p>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             แก้ไข Attributes & Levels และสร้าง Choice Sets ด้วย D-Optimal Design
           </p>
         </div>
