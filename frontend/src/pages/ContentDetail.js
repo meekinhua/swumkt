@@ -672,28 +672,28 @@ const ContentDetail = () => {
         </Card>
 
         {/* Comments Section */}
-        <Card className="p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
-          <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
-            <MessageCircle className="w-6 h-6 text-[#00A9CE]" />
+        <Card className="p-3 sm:p-6 md:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">
+          <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#00A9CE]" />
             ความคิดเห็น ({comments.length})
           </h2>
 
           {/* Comment Form */}
           {user ? (
-            <form onSubmit={handleCommentSubmit} className="mb-8" data-testid="comment-form">
+            <form onSubmit={handleCommentSubmit} className="mb-6 sm:mb-8" data-testid="comment-form">
               <Textarea
                 data-testid="comment-input"
                 placeholder="แสดงความคิดเห็นของคุณ..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 rows={3}
-                className="mb-2 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
+                className="mb-2 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium text-sm sm:text-base"
               />
               <Button
                 type="submit"
                 data-testid="submit-comment-btn"
                 disabled={submittingComment || !newComment.trim()}
-                className="bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl"
+                className="w-full sm:w-auto bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-sm sm:text-base"
               >
                 {submittingComment ? (
                   <span className="flex items-center gap-2">
@@ -709,9 +709,9 @@ const ContentDetail = () => {
               </Button>
             </form>
           ) : (
-            <div className="mb-8 p-6 bg-[#00A9CE]/5 rounded-lg text-center border-2 border-[#00A9CE]/20">
-              <p className="text-gray-700 mb-3 font-semibold">กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น</p>
-              <Button onClick={() => navigate('/login')} className="bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold">
+            <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-[#00A9CE]/5 rounded-lg text-center border-2 border-[#00A9CE]/20">
+              <p className="text-gray-700 mb-3 font-semibold text-sm sm:text-base">กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น</p>
+              <Button onClick={() => navigate('/login')} className="w-full sm:w-auto bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white font-bold text-sm sm:text-base">
                 เข้าสู่ระบบ
               </Button>
             </div>
