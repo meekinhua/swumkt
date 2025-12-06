@@ -411,10 +411,10 @@ const ContentEditor = () => {
           </h1>
 
           <form onSubmit={handleSubmit} data-testid="content-editor-form">
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Title */}
               <div>
-                <Label htmlFor="title" className="text-gray-800 font-bold mb-2">หัวข้อ *</Label>
+                <Label htmlFor="title" className="text-gray-800 font-bold mb-2 text-sm sm:text-base">หัวข้อ *</Label>
                 <Input
                   id="title"
                   data-testid="title-input"
@@ -422,7 +422,7 @@ const ContentEditor = () => {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="ใส่หัวข้อเนื้อหา..."
                   required
-                  className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
+                  className="mt-1 h-10 sm:h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium text-sm sm:text-base"
                 />
               </div>
 
