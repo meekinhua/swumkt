@@ -634,15 +634,15 @@ const ConjointResultsPage = () => {
         {activeTab === 'overview' && (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-white" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <p className="text-sm text-gray-600">จำนวนผู้ตอบ</p>
-                <p className="text-3xl font-black text-blue-600">{currentResults?.respondent_count || results?.respondent_count || 0}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-600">จำนวนผู้ตอบ</p>
+                <p className="text-2xl sm:text-3xl font-black text-blue-600">{currentResults?.respondent_count || results?.respondent_count || 0}</p>
                 <p className="text-xs text-gray-500">คน</p>
               </div>
             </div>
