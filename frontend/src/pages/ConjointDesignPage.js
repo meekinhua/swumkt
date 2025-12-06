@@ -1069,7 +1069,7 @@ const ConjointDesignPage = () => {
         </div>
 
         {/* Attributes Section */}
-        <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
+        <Card className="p-4 sm:p-6 mb-4 sm:mb-6 bg-white border-2 border-gray-300">
           {/* Survey Started Notice */}
           {surveyStarted && (
             <>
