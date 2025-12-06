@@ -850,12 +850,12 @@ const ContentEditor = () => {
               )}
 
               {/* Submit Buttons */}
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                 <Button
                   type="submit"
                   data-testid="save-content-btn"
                   disabled={loading}
-                  className="flex-1 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl h-12"
+                  className="flex-1 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl h-10 sm:h-12 text-sm sm:text-base"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
@@ -870,29 +870,31 @@ const ContentEditor = () => {
                   )}
                 </Button>
                 
-                {canDelete && (
+                <div className="flex gap-3 sm:gap-4">
+                  {canDelete && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      disabled={loading || deleting}
+                      className="flex-1 sm:flex-initial border-2 border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600 font-bold h-10 sm:h-12 text-sm sm:text-base"
+                    >
+                      <Trash2 className="w-4 h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">ลบเนื้อหา</span>
+                    </Button>
+                  )}
+                  
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={loading || deleting}
-                    className="border-2 border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600 font-bold"
+                    data-testid="cancel-btn"
+                    onClick={() => navigate('/dashboard')}
+                    disabled={loading}
+                    className="flex-1 sm:flex-initial border-2 border-gray-400 text-gray-700 hover:bg-gray-100 font-bold h-10 sm:h-12 text-sm sm:text-base"
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    ลบเนื้อหา
+                    ยกเลิก
                   </Button>
-                )}
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  data-testid="cancel-btn"
-                  onClick={() => navigate('/dashboard')}
-                  disabled={loading}
-                  className="border-2 border-gray-400 text-gray-700 hover:bg-gray-100 font-bold"
-                >
-                  ยกเลิก
-                </Button>
+                </div>
               </div>
             </div>
           </form>
