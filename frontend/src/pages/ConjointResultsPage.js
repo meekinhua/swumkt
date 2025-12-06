@@ -676,27 +676,27 @@ const ConjointResultsPage = () => {
         </div>
 
         {/* AI Interpretation Section */}
-        <Card className="p-6 mb-8 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+        <Card className="p-4 sm:p-6 mb-6 sm:mb-8 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 mb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 AI ตีความผลและข้อเสนอแนะ
               </h2>
             </div>
             
             {/* AI Analysis Mode Selector */}
-            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border-2 border-indigo-200">
-              <label className="text-sm font-semibold text-gray-700">โหมดวิเคราะห์:</label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white px-3 sm:px-4 py-2 rounded-lg border-2 border-indigo-200">
+              <label className="text-xs sm:text-sm font-semibold text-gray-700">โหมดวิเคราะห์:</label>
               <select
                 value={aiAnalysisMode}
                 onChange={(e) => {
                   setAiAnalysisMode(e.target.value);
                   setAiInterpretation(null); // Reset AI interpretation when mode changes
                 }}
-                className="text-sm border-2 border-indigo-300 rounded px-3 py-1 font-medium text-gray-800 focus:outline-none focus:border-indigo-500"
+                className="text-xs sm:text-sm border-2 border-indigo-300 rounded px-2 sm:px-3 py-1 font-medium text-gray-800 focus:outline-none focus:border-indigo-500"
               >
                 <option value="single">วิธีเดียว ({getMethodName(selectedMethod)})</option>
                 <option value="compare_all">เปรียบเทียบทุกวิธี</option>
