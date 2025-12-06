@@ -207,7 +207,7 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
       {/* Action Buttons */}
       {!showUrlInput ? (
         <>
-          <div className="flex gap-2 mb-2">
+          <div className="flex flex-col sm:flex-row gap-2 mb-2">
             <Button
               onClick={() => setShowUrlInput(true)}
               size="sm"
