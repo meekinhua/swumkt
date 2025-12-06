@@ -270,7 +270,7 @@ const ContentDetail = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('content.back')}
         </Button>
-        <Card className="p-4 sm:p-8 mb-6 sm:mb-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up" data-testid="content-detail-card">
+        <Card className="p-3 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8 bg-white/98 border-2 border-gray-300 shadow-xl fade-in-up" data-testid="content-detail-card">
           {/* Header */}
           <div className="mb-4 sm:mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 sm:mb-4">
@@ -297,11 +297,11 @@ const ContentDetail = () => {
               )}
             </div>
             
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-3 sm:mb-4" data-testid="content-title">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-3 sm:mb-4 leading-tight" data-testid="content-title">
               {content.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-700 font-semibold">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 text-xs sm:text-sm text-gray-700 font-semibold">
               <div className="flex items-center gap-1">
                 <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-[#00A9CE]" />
                 <span data-testid="content-views">{content.views || 0} ครั้งที่เข้าชม</span>
