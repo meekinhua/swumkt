@@ -551,7 +551,7 @@ const ConjointResultsPage = () => {
               
               <Button
                 onClick={handleExportCSV}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="w-full sm:w-auto text-sm bg-green-600 hover:bg-green-700 text-white"
               >
                 <Download className="w-4 h-4 mr-2" />
                 ดาวน์โหลดข้อมูล
@@ -560,7 +560,7 @@ const ConjointResultsPage = () => {
               {isOwnerOrAdmin && (
                 <Button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full sm:w-auto text-sm bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   ลบการศึกษา
