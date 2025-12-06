@@ -525,7 +525,7 @@ const ContentEditor = () => {
 
               {/* Tags */}
               <div>
-                <Label htmlFor="tags" className="text-gray-800 font-bold mb-2">แท็ก</Label>
+                <Label htmlFor="tags" className="text-gray-800 font-bold mb-2 text-sm sm:text-base">แท็ก</Label>
                 <div className="flex gap-2 mt-1">
                   <Input
                     id="tags"
@@ -539,14 +539,14 @@ const ContentEditor = () => {
                       }
                     }}
                     placeholder="เพิ่มแท็ก..."
-                    className="h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
+                    className="h-10 sm:h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium text-sm sm:text-base"
                   />
                   <Button
                     type="button"
                     data-testid="add-tag-btn"
                     onClick={handleAddTag}
                     variant="outline"
-                    className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10 font-bold"
+                    className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10 font-bold h-10 sm:h-12 px-3 sm:px-4"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
