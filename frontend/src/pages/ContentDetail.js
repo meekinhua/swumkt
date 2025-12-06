@@ -594,11 +594,11 @@ const ContentDetail = () => {
           {(content.creatorDetails || 
             (content.contributors && content.contributors.length > 0) || 
             (content.groupMemberDetails && content.groupMemberDetails.length > 0)) && (
-            <div className="border-t-2 border-gray-300 pt-6">
-              <h3 className="text-lg font-black text-gray-900 mb-4">
+            <div className="border-t-2 border-gray-300 pt-4 sm:pt-6">
+              <h3 className="text-base sm:text-lg font-black text-gray-900 mb-3 sm:mb-4">
                 {content.is_zbs04_assignment ? t('content.creators') || 'ผู้สร้าง Content' : t('content.contributors') || 'ผู้มีส่วนร่วม'}
               </h3>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
                 {/* Show creator first for ZBS04 assignments */}
                 {content.is_zbs04_assignment && content.creatorDetails && (
                   <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border-2 border-green-300">
