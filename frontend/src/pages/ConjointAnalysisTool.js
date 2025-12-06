@@ -225,39 +225,39 @@ const ConjointAnalysisTool = () => {
         </div>
 
         {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-blue-500 rounded-lg">
-                <FileText className="w-6 h-6 text-white" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-blue-500 rounded-lg flex-shrink-0">
+                <FileText className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h3 className="font-bold text-blue-900 mb-1">Phase 1: Qualitative</h3>
-                <p className="text-sm text-blue-700">ใช้ LLM วิเคราะห์หา Attributes และ Levels</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-purple-500 rounded-lg">
-                <Settings className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-purple-900 mb-1">Phase 2: Design</h3>
-                <p className="text-sm text-purple-700">D-Optimal Design + AI Image Generation</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-blue-900 mb-1 text-sm sm:text-base">Phase 1: Qualitative</h3>
+                <p className="text-xs sm:text-sm text-blue-700">ใช้ LLM วิเคราะห์หา Attributes และ Levels</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-green-500 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-white" />
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-purple-500 rounded-lg flex-shrink-0">
+                <Settings className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h3 className="font-bold text-green-900 mb-1">Phase 3: Analysis</h3>
-                <p className="text-sm text-green-700">Part-Worth Utilities + Market Simulation</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-purple-900 mb-1 text-sm sm:text-base">Phase 2: Design</h3>
+                <p className="text-xs sm:text-sm text-purple-700">D-Optimal Design + AI Image Generation</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-green-500 rounded-lg flex-shrink-0">
+                <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-green-900 mb-1 text-sm sm:text-base">Phase 3: Analysis</h3>
+                <p className="text-xs sm:text-sm text-green-700">Part-Worth Utilities + Market Simulation</p>
               </div>
             </div>
           </Card>
