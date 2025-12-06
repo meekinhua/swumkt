@@ -202,23 +202,23 @@ const ConjointAnalysisTool = () => {
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       <Navigation />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-2 leading-tight">
                 📊 Choice-Based Conjoint Analysis
               </h1>
-              <p className="text-lg text-gray-600">
+              <p className="text-sm sm:text-base md:text-lg text-gray-600">
                 วิเคราะห์ความสำคัญของคุณสมบัติผลิตภัณฑ์ และจำลองส่วนแบ่งตลาด
               </p>
             </div>
             <Button
               onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] hover:from-[#005A73] hover:to-[#008FB5] text-white font-bold shadow-lg"
+              className="w-full md:w-auto bg-gradient-to-r from-[#007B9A] to-[#00A9CE] hover:from-[#005A73] hover:to-[#008FB5] text-white font-bold shadow-lg text-sm sm:text-base"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               สร้างการศึกษาใหม่
             </Button>
           </div>
