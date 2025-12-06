@@ -1043,27 +1043,27 @@ const ConjointDesignPage = () => {
         </div>
 
         {/* Progress Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">
+        <div className="mb-6 sm:mb-8 overflow-x-auto">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-max">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm sm:text-base">
                 ✓
               </div>
-              <span className="font-bold text-green-600">Qualitative</span>
+              <span className="font-bold text-green-600 text-xs sm:text-base">Qualitative</span>
             </div>
-            <div className="h-1 w-16 bg-[#00A9CE]"></div>
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-[#00A9CE] text-white flex items-center justify-center font-bold">
+            <div className="h-1 w-8 sm:w-16 bg-[#00A9CE]"></div>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#00A9CE] text-white flex items-center justify-center font-bold text-sm sm:text-base">
                 2
               </div>
-              <span className="font-bold text-[#00A9CE]">Design</span>
+              <span className="font-bold text-[#00A9CE] text-xs sm:text-base">Design</span>
             </div>
-            <div className="h-1 w-16 bg-gray-300"></div>
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold">
+            <div className="h-1 w-8 sm:w-16 bg-gray-300"></div>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm sm:text-base">
                 3
               </div>
-              <span className="text-gray-600">Analysis</span>
+              <span className="text-gray-600 text-xs sm:text-base">Analysis</span>
             </div>
           </div>
         </div>
