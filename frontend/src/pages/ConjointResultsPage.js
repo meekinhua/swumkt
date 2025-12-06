@@ -571,11 +571,11 @@ const ConjointResultsPage = () => {
         </div>
 
         {/* Statistical Method Selector */}
-        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border-2 border-blue-200">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
-              <label className="text-sm font-bold text-gray-700">เลือกวิธีการวิเคราะห์:</label>
+        <div className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 shadow-sm border-2 border-blue-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+              <label className="text-xs sm:text-sm font-bold text-gray-700">เลือกวิธีการวิเคราะห์:</label>
             </div>
             <select
               value={selectedMethod}
@@ -583,7 +583,7 @@ const ConjointResultsPage = () => {
                 setSelectedMethod(e.target.value);
                 loadStatisticalAnalysis(e.target.value);
               }}
-              className="px-4 py-2 border-2 border-blue-300 rounded-lg bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[280px]"
+              className="w-full sm:w-auto px-3 sm:px-4 py-2 border-2 border-blue-300 rounded-lg bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
             >
               <option value="counting">📊 Counting Method (นับความถี่)</option>
               <option value="mnl">⭐ Multinomial Logit (MNL)</option>
@@ -594,7 +594,7 @@ const ConjointResultsPage = () => {
             {loadingStatistical && (
               <div className="flex items-center gap-2 text-blue-600">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="text-sm">กำลังคำนวณ...</span>
+                <span className="text-xs sm:text-sm">กำลังคำนวณ...</span>
               </div>
             )}
           </div>
