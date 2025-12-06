@@ -428,12 +428,12 @@ const ContentEditor = () => {
 
               {/* Content Type */}
               <div>
-                <Label htmlFor="content_type" className="text-gray-800 font-bold mb-2">ประเภทเนื้อหา *</Label>
+                <Label htmlFor="content_type" className="text-gray-800 font-bold mb-2 text-sm sm:text-base">ประเภทเนื้อหา *</Label>
                 <Select
                   value={formData.content_type}
                   onValueChange={(value) => setFormData({ ...formData, content_type: value })}
                 >
-                  <SelectTrigger className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium" data-testid="content-type-select">
+                  <SelectTrigger className="mt-1 h-10 sm:h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium text-sm sm:text-base" data-testid="content-type-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -447,14 +447,14 @@ const ContentEditor = () => {
 
               {/* Category */}
               <div>
-                <Label htmlFor="category" className="text-gray-800 font-bold mb-2">หมวดหมู่</Label>
+                <Label htmlFor="category" className="text-gray-800 font-bold mb-2 text-sm sm:text-base">หมวดหมู่</Label>
                 <Input
                   id="category"
                   data-testid="category-input"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   placeholder="เช่น การตลาดดิจิทัล, พฤติกรรมผู้บริโภค..."
-                  className="mt-1 h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium"
+                  className="mt-1 h-10 sm:h-12 border-2 border-gray-300 focus:border-[#00A9CE] text-gray-900 font-medium text-sm sm:text-base"
                 />
               </div>
 
