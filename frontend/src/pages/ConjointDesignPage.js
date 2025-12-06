@@ -165,15 +165,15 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
   };
 
   return (
-    <div className="p-3 bg-white rounded-lg border-2 border-blue-200">
-      <div className="font-bold text-gray-900 mb-2 text-sm">
+    <div className="p-2 sm:p-3 bg-white rounded-lg border-2 border-blue-200">
+      <div className="font-bold text-gray-900 mb-2 text-xs sm:text-sm">
         Profile {String.fromCharCode(65 + profileIndex)}
       </div>
       
       {/* Profile composition */}
-      <div className="text-xs text-gray-600 mb-3 space-y-1">
+      <div className="text-xs text-gray-600 mb-2 sm:mb-3 space-y-1">
         {Object.keys(profile.attribute_levels).map(attrId => (
-          <div key={attrId}>• {getLevelInfo(attrId)}</div>
+          <div key={attrId} className="truncate" title={getLevelInfo(attrId)}>• {getLevelInfo(attrId)}</div>
         ))}
       </div>
 
