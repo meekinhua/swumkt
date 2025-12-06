@@ -264,16 +264,16 @@ const ConjointAnalysisTool = () => {
         </div>
 
         {/* Studies List */}
-        <Card className="p-6 bg-white/95 border-2 border-gray-300 shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black text-gray-900">การศึกษาของคุณ</h2>
+        <Card className="p-4 sm:p-6 bg-white/95 border-2 border-gray-300 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-black text-gray-900">การศึกษาของคุณ</h2>
             
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {/* Status Filter */}
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-gray-600">กรอง:</span>
+                <span className="text-xs sm:text-sm font-semibold text-gray-600">กรอง:</span>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="ทุกสถานะ" />
                   </SelectTrigger>
                   <SelectContent>
