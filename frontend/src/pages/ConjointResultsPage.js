@@ -473,20 +473,20 @@ const ConjointResultsPage = () => {
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
       <Navigation />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Header */}
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+        <div className="mb-4 sm:mb-6">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-3 sm:mb-4 text-sm sm:text-base">
             <ArrowLeft className="w-4 h-4 mr-2" />
             กลับ
           </Button>
 
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-black text-gray-900 mb-2">
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2 leading-tight">
                 📊 ผลการวิเคราะห์
               </h1>
-              <p className="text-lg text-gray-600">{study?.title}</p>
+              <p className="text-base sm:text-lg text-gray-600 break-words">{study?.title}</p>
               
               {/* Public Share Status Badge */}
               {isOwnerOrAdmin && (
