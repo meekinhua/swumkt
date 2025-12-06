@@ -294,7 +294,7 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
           <div className="border-t border-blue-200 pt-2">
             <button
               onClick={() => setShowPrompt(!showPrompt)}
-              className="text-xs text-blue-600 hover:text-blue-900 flex items-center gap-1 w-full font-medium"
+              className="text-xs text-blue-600 hover:text-blue-900 flex items-center gap-1 w-full font-medium cursor-pointer"
             >
               <span>
                 {showPrompt ? '▼' : '▶'} AI Prompt
