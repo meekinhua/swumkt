@@ -461,20 +461,20 @@ const ContentDetail = () => {
             );
             
             return (
-              <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
-                <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
-                  <Paperclip className="w-5 h-5 text-[#00A9CE]" />
+              <div className="mb-6 p-3 sm:p-4 md:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-[#00A9CE]" />
                   ไฟล์แนบทั้งหมด ({content.attachments.length})
                 </h3>
                 
                 {/* Image Grid */}
                 {imageAttachments.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" />
+                    <p className="text-xs sm:text-sm font-bold text-gray-600 mb-2 sm:mb-3 flex items-center gap-2">
+                      <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                       รูปภาพ ({imageAttachments.length}) - คลิกเพื่อดูขนาดเต็ม
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                       {imageAttachments.map((attachment, idx) => {
                         const imgSrc = attachment.file_data || attachment.data || attachment.url;
                         return (
