@@ -34,6 +34,15 @@ from io import BytesIO
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Helper function to generate ETag for caching
+def generate_etag(data: dict) -> str:
+    """
+    Generate ETag (Entity Tag) from response data for cache validation
+    Uses MD5 hash of JSON representation
+    """
+    json_str = json.dumps(data, sort_keys=True, default=str)
+    return hashlib.md5(json_str.encode()).hexdigest()
+
 # Helper function to pre-compute content preview and thumbnail
 def precompute_content_metadata(content_data: dict, attachments: List[dict]) -> dict:
     """
