@@ -2194,7 +2194,9 @@ async def get_my_contents(
         "views": 1,
         "cover_image_id": 1,
         "content_preview": 1,  # Use pre-computed preview
-        "cover_image_thumbnail": 1  # Use pre-computed thumbnail
+        "cover_image_thumbnail": 1,  # Use pre-computed thumbnail
+        "course_id": 1,  # For dashboard assignments summary
+        "group_members": 1  # For group assignment display
     }
     
     contents = await db.contents.find(query, projection).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
