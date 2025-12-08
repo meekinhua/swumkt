@@ -77,61 +77,57 @@ const ContentBrowse = () => {
 
   const loadMoreContents = useCallback(async () => {
     // Prevent multiple simultaneous calls
-    if (isLoadingRef.current || loadingMore) return;
-    
-    // Check if we need to move to next page
-    const currentPageFull = displayedCount >= itemsPerPage;
-    const hasMoreContent = (currentPage * itemsPerPage) < totalItems;
-    
-    if (currentPageFull && hasMoreContent) {
-      // Auto-move to next page
-      isLoadingRef.current = true;
-      setLoadingMore(true);
-      setCurrentPage(prev => prev + 1);
+    if (isLoadingRef.current || loadingMore || !hasMore) {
+      console.log('Load blocked:', { isLoadingRef: isLoadingRef.current, loadingMore, hasMore });
       return;
     }
-    
-    // Load more items on current page
-    if (!canLoadMore) return;
     
     isLoadingRef.current = true;
     setLoadingMore(true);
     
+    const currentCount = contents.length;
+    console.log('Loading more... Current count:', currentCount, 'Total:', totalItems);
+    
     try {
-      const skip = (currentPage - 1) * itemsPerPage + displayedCount;
-      const remainingOnPage = itemsPerPage - displayedCount;
-      const limit = Math.min(itemsPerBatch, remainingOnPage);
-      
-      if (limit <= 0) {
-        setLoadingMore(false);
-        isLoadingRef.current = false;
-        return;
-      }
-      
       const response = await axios.get(`${API}/content`, {
         params: { 
-          skip: skip,
-          limit: limit
+          skip: currentCount,
+          limit: itemsPerBatch
         },
         timeout: 30000 // 30 second timeout
       });
       
-      if (response.data.items) {
-        setContents(prev => [...prev, ...response.data.items]);
-        setDisplayedCount(prev => prev + response.data.items.length);
-        setTotalItems(response.data.total);
+      const newItems = response.data.items || response.data;
+      const total = response.data.total || totalItems;
+      
+      console.log('Fetched:', newItems.length, 'items. New total will be:', currentCount + newItems.length, '/', total);
+      
+      if (newItems.length > 0) {
+        setContents(prev => {
+          const updated = [...prev, ...newItems];
+          console.log('Updated contents to:', updated.length, 'items');
+          return updated;
+        });
+        setTotalItems(total);
+        
+        // Check if we've loaded everything
+        const newTotal = currentCount + newItems.length;
+        if (newTotal >= total) {
+          console.log('All items loaded!');
+          setHasMore(false);
+        }
       } else {
-        setContents(prev => [...prev, ...response.data]);
-        setDisplayedCount(prev => prev + response.data.length);
+        console.log('No more items received');
+        setHasMore(false);
       }
     } catch (error) {
       console.error('Error loading more contents:', error);
-      // Don't show error for load more, just stop loading
+      setHasMore(false); // Stop trying on error
     } finally {
       setLoadingMore(false);
       isLoadingRef.current = false;
     }
-  }, [currentPage, displayedCount, itemsPerPage, itemsPerBatch, canLoadMore, loadingMore]);
+  }, [contents.length, totalItems, hasMore, loadingMore, itemsPerBatch]);
 
   const handleRetry = () => {
     fetchInitialContents();
