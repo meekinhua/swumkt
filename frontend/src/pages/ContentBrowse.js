@@ -371,7 +371,7 @@ const ContentBrowse = () => {
             </div>
             
             {/* Infinite Scroll Trigger - auto-loads on scroll */}
-            {showInfiniteScroll && (
+            {hasMore && (
               <div 
                 ref={loadMoreRef}
                 className="mt-6 sm:mt-8 flex flex-col items-center justify-center gap-3"
@@ -387,7 +387,7 @@ const ContentBrowse = () => {
                     className="bg-gradient-to-r from-[#00A9CE] to-[#33BCDA] hover:from-[#008FB5] hover:to-[#00A9CE] text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 shadow-lg text-sm sm:text-base"
                   >
                     <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    โหลดเพิ่ม ({displayedCount}/{totalItems})
+                    โหลดเพิ่ม ({contents.length}/{totalItems})
                   </Button>
                 )}
                 
@@ -401,7 +401,7 @@ const ContentBrowse = () => {
             )}
             
             {/* End of content message */}
-            {!showInfiniteScroll && filteredContents.length > 0 && (
+            {!hasMore && filteredContents.length > 0 && (
               <div className="mt-8 flex flex-col items-center gap-3">
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg px-6 py-4 shadow-md border-2 border-green-200">
                   <p className="text-center text-gray-700 font-semibold text-sm sm:text-base">
