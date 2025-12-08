@@ -582,7 +582,6 @@ frontend:
 
 test_plan:
   current_focus:
-    - "Conjoint Analysis Public Sharing Feature - Missing Frontend Route"
     - "Phase 1B E2E Testing: ทดสอบ full survey workflow (create → publish → take → view responses)"
     - "Phase 1B Frontend: ทดสอบ Survey Builder UI"
     - "Phase 1B Frontend: ทดสอบ Survey Taking flow"
@@ -592,8 +591,8 @@ test_plan:
   test_all: false
   test_priority: "high_first"
   completed_tests:
+    - "Course Management System - Complete API Testing: ✅ PASSED (13/13 tests)"
     - "Profile Save Button Issue - User Reported Bug: ✅ FIXED & VERIFIED"
-  completed_tests:
     - "Conjoint Analysis AI Image Generation - Level Images: ✅ PASSED"
     - "Conjoint Analysis AI Image Generation - Profile Images: ✅ PASSED"
     - "Conjoint Analysis AI Image Generation - Image Persistence: ✅ PASSED"
