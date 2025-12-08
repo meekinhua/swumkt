@@ -147,12 +147,13 @@ const ContentBrowse = () => {
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
-    if (!loadMoreRef.current || !showInfiniteScroll) return;
+    if (!loadMoreRef.current || !hasMore) return;
     
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (entry.isIntersecting && !isLoadingRef.current && !loadingMore) {
+          console.log('Intersection observed, triggering load more');
           loadMoreContents();
         }
       },
@@ -162,7 +163,7 @@ const ContentBrowse = () => {
     observer.observe(loadMoreRef.current);
 
     return () => observer.disconnect();
-  }, [showInfiniteScroll, loadMoreContents, loadingMore]); // Include all dependencies
+  }, [hasMore, loadMoreContents, loadingMore]); // Include all dependencies
 
   const filteredContents = contents.filter(content => {
     const matchesSearch = content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
