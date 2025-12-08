@@ -116,7 +116,22 @@ const ContentBrowse = () => {
 
   const loadMoreContents = useCallback(async () => {
     // Prevent multiple simultaneous calls
-    if (isLoadingRef.current || loadingMore || !canLoadMore) return;
+    if (isLoadingRef.current || loadingMore) return;
+    
+    // Check if we need to move to next page
+    const currentPageFull = displayedCount >= itemsPerPage;
+    const hasMoreContent = (currentPage * itemsPerPage) < totalItems;
+    
+    if (currentPageFull && hasMoreContent) {
+      // Auto-move to next page
+      isLoadingRef.current = true;
+      setLoadingMore(true);
+      setCurrentPage(prev => prev + 1);
+      return;
+    }
+    
+    // Load more items on current page
+    if (!canLoadMore) return;
     
     isLoadingRef.current = true;
     setLoadingMore(true);
