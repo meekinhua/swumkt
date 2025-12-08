@@ -2136,7 +2136,7 @@ async def get_contents(
     )
 
 @api_router.get("/content/{content_id}")
-async def get_content(content_id: str):
+async def get_content(content_id: str, request: Request):
     content = await db.contents.find_one({"id": content_id}, {"_id": 0})
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
@@ -2150,7 +2150,27 @@ async def get_content(content_id: str):
     if isinstance(content.get('updated_at'), str):
         content['updated_at'] = datetime.fromisoformat(content['updated_at'])
     
-    return content
+    # Generate ETag for this content
+    etag = generate_etag(content)
+    
+    # Check if client has cached version
+    client_etag = request.headers.get("if-none-match")
+    if client_etag and client_etag == etag:
+        # Client has valid cache - return 304 Not Modified
+        return Response(status_code=304, headers={
+            "ETag": etag,
+            "Cache-Control": "public, max-age=600, must-revalidate"  # 10 minutes for detail page
+        })
+    
+    # Return response with cache headers
+    return JSONResponse(
+        content=content,
+        headers={
+            "ETag": etag,
+            "Cache-Control": "public, max-age=600, must-revalidate",  # Cache for 10 minutes
+            "Vary": "Accept-Encoding"
+        }
+    )
 
 @api_router.put("/content/{content_id}")
 async def update_content(
