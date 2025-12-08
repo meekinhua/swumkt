@@ -22,6 +22,7 @@ import ConjointResultsPage from '@/pages/ConjointResultsPage';
 import JournalFinder from '@/pages/JournalFinder';
 import AcademicFormatEditor from '@/pages/AcademicFormatEditor';
 import AdminSettings from '@/pages/AdminSettings';
+import CourseSubmissions from '@/pages/CourseSubmissions';
 import SurveyListPage from '@/pages/SurveyListPage';
 import SurveyBuilderPage from '@/pages/SurveyBuilderPage';
 import SurveyTakingPage from '@/pages/SurveyTakingPage';
