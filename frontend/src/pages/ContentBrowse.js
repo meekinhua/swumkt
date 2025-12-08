@@ -36,37 +36,6 @@ const ContentBrowse = () => {
   const hasMorePages = (currentPage * itemsPerPage) < totalItems;
   const showInfiniteScroll = canLoadMore || hasMorePages;
 
-  // Initial load for the page
-  useEffect(() => {
-    fetchInitialContents();
-    
-    // Cleanup on unmount
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [currentPage]);
-
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    if (!loadMoreRef.current || !showInfiniteScroll) return;
-    
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && !isLoadingRef.current && !loadingMore) {
-          loadMoreContents();
-        }
-      },
-      { threshold: 0.1, rootMargin: '100px' } // Start loading a bit earlier
-    );
-
-    observer.observe(loadMoreRef.current);
-
-    return () => observer.disconnect();
-  }, [showInfiniteScroll, loadMoreContents, loadingMore]); // Include all dependencies
-
   const fetchInitialContents = async () => {
     // Cancel any pending request
     if (abortControllerRef.current) {
