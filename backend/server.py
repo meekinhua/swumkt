@@ -2104,6 +2104,11 @@ async def get_contents(
             content['created_at'] = datetime.fromisoformat(content['created_at'])
         if isinstance(content.get('updated_at'), str):
             content['updated_at'] = datetime.fromisoformat(content['updated_at'])
+        # Convert datetime to ISO string for JSON serialization
+        if isinstance(content.get('created_at'), datetime):
+            content['created_at'] = content['created_at'].isoformat()
+        if isinstance(content.get('updated_at'), datetime):
+            content['updated_at'] = content['updated_at'].isoformat()
     
     response_data = {
         "items": contents,
