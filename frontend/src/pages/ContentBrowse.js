@@ -68,14 +68,27 @@ const ContentBrowse = () => {
         timeout: 30000 // 30 second timeout
       });
       
+      const isFirstPage = currentPage === 1;
+      
       if (response.data.items) {
-        setContents(response.data.items);
+        if (isFirstPage) {
+          setContents(response.data.items);
+          setDisplayedCount(response.data.items.length);
+        } else {
+          // Append to existing contents
+          setContents(prev => [...prev, ...response.data.items]);
+          setDisplayedCount(prev => prev + response.data.items.length);
+        }
         setTotalItems(response.data.total);
-        setDisplayedCount(response.data.items.length);
       } else {
-        setContents(response.data);
+        if (isFirstPage) {
+          setContents(response.data);
+          setDisplayedCount(response.data.length);
+        } else {
+          setContents(prev => [...prev, ...response.data]);
+          setDisplayedCount(prev => prev + response.data.length);
+        }
         setTotalItems(response.data.length);
-        setDisplayedCount(response.data.length);
       }
       setError(null);
     } catch (error) {
@@ -87,6 +100,7 @@ const ContentBrowse = () => {
       setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       isLoadingRef.current = false;
     }
   };
