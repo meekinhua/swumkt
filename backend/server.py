@@ -568,6 +568,46 @@ class ZBS04AssignmentType(str, Enum):
     COMPETITOR_ANALYSIS = "competitor_analysis"
     CUSTOMER_JOURNEY = "customer_journey_map"
 
+class CourseStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+# ============ COURSE MODELS ============
+class Course(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    course_code: str = Field(..., description="รหัสวิชา เช่น ZBS04")
+    course_name: str = Field(..., description="ชื่อวิชา")
+    semester: Optional[str] = Field(None, description="ภาคเรียน เช่น 1/2567")
+    academic_year: Optional[str] = Field(None, description="ปีการศึกษา เช่น 2567")
+    instructor_id: Optional[str] = Field(None, description="User ID ของอาจารย์ผู้สอน")
+    instructor_name: Optional[str] = Field(None, description="ชื่ออาจารย์ผู้สอน")
+    description: Optional[str] = None
+    status: CourseStatus = CourseStatus.ACTIVE
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CourseCreate(BaseModel):
+    course_code: str
+    course_name: str
+    semester: Optional[str] = None
+    academic_year: Optional[str] = None
+    instructor_id: Optional[str] = None
+    instructor_name: Optional[str] = None
+    description: Optional[str] = None
+    status: CourseStatus = CourseStatus.ACTIVE
+
+class CourseUpdate(BaseModel):
+    course_code: Optional[str] = None
+    course_name: Optional[str] = None
+    semester: Optional[str] = None
+    academic_year: Optional[str] = None
+    instructor_id: Optional[str] = None
+    instructor_name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[CourseStatus] = None
+
 class Content(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
