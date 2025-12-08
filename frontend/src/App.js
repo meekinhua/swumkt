@@ -215,6 +215,14 @@ function App() {
               }
             />
             <Route
+              path="/courses/:courseId/submissions"
+              element={
+                <ProtectedRoute>
+                  <CourseSubmissions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/notifications"
               element={
                 <ProtectedRoute>
