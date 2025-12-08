@@ -36,53 +36,31 @@ const ContentBrowse = () => {
     }
     abortControllerRef.current = new AbortController();
     
-    // Only reset if this is truly initial load (page 1)
-    const isFirstPage = currentPage === 1;
-    
-    if (isFirstPage) {
-      setLoading(true);
-      setError(null);
-      setContents([]);
-      setDisplayedCount(0);
-    } else {
-      // For subsequent pages, just append
-      setLoadingMore(true);
-    }
+    setLoading(true);
+    setError(null);
+    setContents([]);
+    setHasMore(true);
     isLoadingRef.current = true;
     
     try {
-      const skip = (currentPage - 1) * itemsPerPage;
       const response = await axios.get(`${API}/content`, {
         params: { 
-          skip: skip,
+          skip: 0,
           limit: itemsPerBatch
         },
         signal: abortControllerRef.current.signal,
         timeout: 30000 // 30 second timeout
       });
       
-      const isFirstPage = currentPage === 1;
+      const items = response.data.items || response.data;
+      const total = response.data.total || items.length;
       
-      if (response.data.items) {
-        if (isFirstPage) {
-          setContents(response.data.items);
-          setDisplayedCount(response.data.items.length);
-        } else {
-          // Append to existing contents
-          setContents(prev => [...prev, ...response.data.items]);
-          setDisplayedCount(prev => prev + response.data.items.length);
-        }
-        setTotalItems(response.data.total);
-      } else {
-        if (isFirstPage) {
-          setContents(response.data);
-          setDisplayedCount(response.data.length);
-        } else {
-          setContents(prev => [...prev, ...response.data]);
-          setDisplayedCount(prev => prev + response.data.length);
-        }
-        setTotalItems(response.data.length);
-      }
+      setContents(items);
+      setTotalItems(total);
+      
+      // Check if there's more content to load
+      setHasMore(items.length < total);
+      
       setError(null);
     } catch (error) {
       if (axios.isCancel(error)) {
@@ -93,7 +71,6 @@ const ContentBrowse = () => {
       setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
-      setLoadingMore(false);
       isLoadingRef.current = false;
     }
   };
