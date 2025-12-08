@@ -133,7 +133,7 @@ const ContentBrowse = () => {
     fetchInitialContents();
   };
 
-  // Initial load for the page
+  // Initial load on mount only
   useEffect(() => {
     fetchInitialContents();
     
@@ -143,7 +143,7 @@ const ContentBrowse = () => {
         abortControllerRef.current.abort();
       }
     };
-  }, [currentPage]);
+  }, []); // Empty dependency array - load only once on mount
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
