@@ -395,69 +395,50 @@ const ContentBrowse = () => {
               ))}
             </div>
             
-            {/* Load More Button - auto-triggers on scroll */}
-            {canLoadMore && (
+            {/* Infinite Scroll Trigger - auto-loads on scroll */}
+            {showInfiniteScroll && (
               <div 
                 ref={loadMoreRef}
-                className="mt-6 sm:mt-8 flex justify-center"
+                className="mt-6 sm:mt-8 flex flex-col items-center justify-center gap-3"
               >
-                <Button
-                  onClick={loadMoreContents}
-                  disabled={loadingMore}
-                  className="bg-gradient-to-r from-[#00A9CE] to-[#33BCDA] hover:from-[#008FB5] hover:to-[#00A9CE] text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 shadow-lg text-sm sm:text-base"
-                >
-                  {loadingMore ? (
-                    <>
-                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-                      กำลังโหลด...
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      โหลดเพิ่ม ({displayedCount}/{Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage)})
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Progress indicator */}
-            <div className="mt-4 sm:mt-6 flex justify-center">
-              <div className="bg-white/80 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-md border border-gray-200">
-                <span className="text-xs sm:text-sm font-semibold text-gray-600">
-                  แสดง {filteredContents.length} จาก {totalItems} รายการ
-                </span>
-              </div>
-            </div>
-            
-            {/* Pagination - shows when page is full OR no more items to load on this page */}
-            {!canLoadMore && totalItems > itemsPerPage && (
-              <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-                <Button
-                  onClick={goToPrevPage}
-                  disabled={!hasPrevPage}
-                  variant="outline"
-                  className="w-full sm:w-auto border-2 border-gray-300 hover:bg-gray-100 font-bold disabled:opacity-50 text-sm"
-                >
-                  ← ก่อนหน้า
-                </Button>
+                {loadingMore ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-[#00A9CE] animate-spin" />
+                    <span className="text-sm sm:text-base text-gray-600 font-semibold">กำลังโหลดเนื้อหาเพิ่มเติม...</span>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={loadMoreContents}
+                    className="bg-gradient-to-r from-[#00A9CE] to-[#33BCDA] hover:from-[#008FB5] hover:to-[#00A9CE] text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 shadow-lg text-sm sm:text-base"
+                  >
+                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    โหลดเพิ่ม ({displayedCount}/{totalItems})
+                  </Button>
+                )}
                 
-                <div className="flex items-center gap-2 bg-white/80 rounded-lg px-3 sm:px-4 py-2 shadow-sm border border-gray-200 order-first sm:order-none">
-                  <span className="text-xs sm:text-sm font-bold text-gray-900">
-                    หน้า {currentPage} / {totalPages}
-                  </span>
-                  <span className="text-xs text-gray-500 hidden sm:inline">
-                    (รายการ {pageStart}-{pageEnd})
+                {/* Progress indicator */}
+                <div className="bg-white/80 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-md border border-gray-200">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-600">
+                    แสดง {filteredContents.length} จาก {totalItems} รายการ
                   </span>
                 </div>
-                
+              </div>
+            )}
+            
+            {/* End of content message */}
+            {!showInfiniteScroll && filteredContents.length > 0 && (
+              <div className="mt-8 flex flex-col items-center gap-3">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg px-6 py-4 shadow-md border-2 border-green-200">
+                  <p className="text-center text-gray-700 font-semibold text-sm sm:text-base">
+                    ✅ แสดงครบทั้งหมด {totalItems} รายการแล้ว
+                  </p>
+                </div>
                 <Button
-                  onClick={goToNextPage}
-                  disabled={!hasNextPage}
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                   variant="outline"
-                  className="w-full sm:w-auto border-2 border-gray-300 hover:bg-gray-100 font-bold disabled:opacity-50 text-sm"
+                  className="border-2 border-[#00A9CE] text-[#00A9CE] hover:bg-[#00A9CE]/10 font-bold text-sm"
                 >
-                  ถัดไป →
+                  ↑ กลับขึ้นด้านบน
                 </Button>
               </div>
             )}
