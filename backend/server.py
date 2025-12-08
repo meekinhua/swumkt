@@ -2011,6 +2011,7 @@ async def get_my_contents(
 
 @api_router.get("/content")
 async def get_contents(
+    request: Request,
     content_type: Optional[ContentType] = None,
     status: Optional[ContentStatus] = None,
     category: Optional[str] = None,
@@ -2104,13 +2105,35 @@ async def get_contents(
         if isinstance(content.get('updated_at'), str):
             content['updated_at'] = datetime.fromisoformat(content['updated_at'])
     
-    return {
+    response_data = {
         "items": contents,
         "total": total,
         "skip": skip,
         "limit": limit,
         "has_more": (skip + limit) < total
     }
+    
+    # Generate ETag for this response
+    etag = generate_etag(response_data)
+    
+    # Check if client has cached version (If-None-Match header)
+    client_etag = request.headers.get("if-none-match")
+    if client_etag and client_etag == etag:
+        # Client has valid cache - return 304 Not Modified
+        return Response(status_code=304, headers={
+            "ETag": etag,
+            "Cache-Control": "public, max-age=300, must-revalidate"  # 5 minutes
+        })
+    
+    # Return response with cache headers
+    return JSONResponse(
+        content=response_data,
+        headers={
+            "ETag": etag,
+            "Cache-Control": "public, max-age=300, must-revalidate",  # Cache for 5 minutes, revalidate
+            "Vary": "Accept-Encoding"  # Vary by encoding for better cache hit rate
+        }
+    )
 
 @api_router.get("/content/{content_id}")
 async def get_content(content_id: str):
