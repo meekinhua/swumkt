@@ -1945,6 +1945,178 @@ sections:
             detail=f"AI generation failed. Please try using templates instead. Error: {str(e)[:100]}"
         )
 
+# ============ COURSE ROUTES ============
+@api_router.post("/admin/courses", response_model=Course)
+async def create_course(
+    course_data: CourseCreate,
+    current_user: User = Depends(get_admin_user)
+):
+    """สร้างวิชาใหม่ (Admin only)"""
+    # Check if course code already exists
+    existing = await db.courses.find_one({"course_code": course_data.course_code})
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Course code {course_data.course_code} already exists")
+    
+    course = Course(
+        **course_data.model_dump(),
+        created_by=current_user.id
+    )
+    
+    course_dict = course.model_dump()
+    course_dict['created_at'] = course_dict['created_at'].isoformat()
+    course_dict['updated_at'] = course_dict['updated_at'].isoformat()
+    
+    await db.courses.insert_one(course_dict)
+    logging.info(f"[COURSE] Created: {course.course_code} by {current_user.email}")
+    return course
+
+@api_router.get("/admin/courses", response_model=List[Course])
+async def list_all_courses(
+    status: Optional[CourseStatus] = None,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_admin_user)
+):
+    """ดูรายการวิชาทั้งหมด (Admin only)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    courses = await db.courses.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for course in courses:
+        if isinstance(course.get('created_at'), str):
+            course['created_at'] = datetime.fromisoformat(course['created_at'])
+        if isinstance(course.get('updated_at'), str):
+            course['updated_at'] = datetime.fromisoformat(course['updated_at'])
+    
+    return courses
+
+@api_router.get("/courses", response_model=List[Course])
+async def list_active_courses():
+    """ดูรายการวิชาที่ active (สำหรับ user เลือก) - Public endpoint"""
+    query = {"status": CourseStatus.ACTIVE}
+    
+    courses = await db.courses.find(query, {"_id": 0}).sort("course_code", 1).to_list(100)
+    
+    for course in courses:
+        if isinstance(course.get('created_at'), str):
+            course['created_at'] = datetime.fromisoformat(course['created_at'])
+        if isinstance(course.get('updated_at'), str):
+            course['updated_at'] = datetime.fromisoformat(course['updated_at'])
+    
+    return courses
+
+@api_router.get("/courses/{course_id}", response_model=Course)
+async def get_course(course_id: str):
+    """ดูรายละเอียดวิชา - Public endpoint"""
+    course = await db.courses.find_one({"id": course_id}, {"_id": 0})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    if isinstance(course.get('created_at'), str):
+        course['created_at'] = datetime.fromisoformat(course['created_at'])
+    if isinstance(course.get('updated_at'), str):
+        course['updated_at'] = datetime.fromisoformat(course['updated_at'])
+    
+    return Course(**course)
+
+@api_router.put("/admin/courses/{course_id}", response_model=Course)
+async def update_course(
+    course_id: str,
+    update_data: CourseUpdate,
+    current_user: User = Depends(get_admin_user)
+):
+    """แก้ไขวิชา (Admin only)"""
+    course = await db.courses.find_one({"id": course_id})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    update_dict = {k: v for k, v in update_data.model_dump(exclude_none=True).items()}
+    update_dict['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.courses.update_one({"id": course_id}, {"$set": update_dict})
+    
+    updated_course = await db.courses.find_one({"id": course_id}, {"_id": 0})
+    if isinstance(updated_course.get('created_at'), str):
+        updated_course['created_at'] = datetime.fromisoformat(updated_course['created_at'])
+    if isinstance(updated_course.get('updated_at'), str):
+        updated_course['updated_at'] = datetime.fromisoformat(updated_course['updated_at'])
+    
+    logging.info(f"[COURSE] Updated: {course_id} by {current_user.email}")
+    return Course(**updated_course)
+
+@api_router.delete("/admin/courses/{course_id}")
+async def delete_course(
+    course_id: str,
+    current_user: User = Depends(get_admin_user)
+):
+    """ลบวิชา (Admin only)"""
+    course = await db.courses.find_one({"id": course_id})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Check if there are any contents linked to this course
+    content_count = await db.contents.count_documents({"course_id": course_id})
+    if content_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete course. {content_count} content(s) are linked to this course. Please archive instead."
+        )
+    
+    await db.courses.delete_one({"id": course_id})
+    logging.info(f"[COURSE] Deleted: {course_id} by {current_user.email}")
+    return {"message": "Course deleted successfully"}
+
+@api_router.get("/courses/{course_id}/submissions")
+async def get_course_submissions(
+    course_id: str,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """ดูงานที่ส่งในวิชานี้ - Admin ดูได้ทั้งหมด, อาจารย์ดูได้เฉพาะวิชาของตัวเอง"""
+    # Check if course exists
+    course = await db.courses.find_one({"id": course_id}, {"_id": 0})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Check permission
+    is_admin = current_user.role == UserRole.ADMIN
+    is_instructor = course.get('instructor_id') == current_user.id
+    
+    if not (is_admin or is_instructor):
+        raise HTTPException(
+            status_code=403, 
+            detail="Only admin or course instructor can view submissions"
+        )
+    
+    # Get submissions
+    query = {"course_id": course_id}
+    total = await db.contents.count_documents(query)
+    
+    contents = await db.contents.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Convert datetime
+    for content in contents:
+        if isinstance(content.get('created_at'), str):
+            content['created_at'] = datetime.fromisoformat(content['created_at'])
+        if isinstance(content.get('updated_at'), str):
+            content['updated_at'] = datetime.fromisoformat(content['updated_at'])
+        
+        # Get creator info
+        creator = await db.users.find_one({"id": content['created_by']}, {"_id": 0, "full_name": 1, "email": 1, "student_id": 1})
+        if creator:
+            content['creator_info'] = creator
+    
+    return {
+        "course": course,
+        "submissions": contents,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
 # ============ CONTENT ROUTES ============
 @api_router.post("/content", response_model=Content)
 async def create_content(
