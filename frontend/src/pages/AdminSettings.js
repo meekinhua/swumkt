@@ -747,8 +747,13 @@ const AdminSettings = () => {
                 </TabsList>
               </div>
 
+              {/* Course Management Tab */}
+              <TabsContent value="courses">
+                <AdminCourseManagement token={token} />
+              </TabsContent>
+
               {/* Journey Map Prompt Tab */}
-              <TabsContent value="journey">
+              <TabsContent value="courses">
                 {journeyMetadata && journeyMetadata.updated_at && (
                   <div className="mb-4 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-xs sm:text-sm text-gray-700 font-semibold">
