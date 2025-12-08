@@ -23,9 +23,12 @@ const Dashboard = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contentToDelete, setContentToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [submittedAssignments, setSubmittedAssignments] = useState([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(true);
 
   useEffect(() => {
     fetchMyContents();
+    fetchSubmittedAssignments();
   }, []);
 
   const fetchMyContents = async () => {
