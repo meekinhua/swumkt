@@ -1533,14 +1533,27 @@ class BackendTester:
             
             if response.status_code == 200:
                 result = response.json()
-                if isinstance(result, list):
-                    # Should find our created content
+                # Check if response has submissions array (new format)
+                if isinstance(result, dict) and "submissions" in result:
+                    submissions = result["submissions"]
+                    if isinstance(submissions, list):
+                        # Should find our created content
+                        content_found = any(content.get("id") == self.content_with_course_id for content in submissions if hasattr(self, 'content_with_course_id'))
+                        total = result.get("total", len(submissions))
+                        self.log_result("Admin Get Course Submissions", True, 
+                                      f"Course submissions retrieved ({total} submissions, our content found: {content_found})")
+                        return True
+                    else:
+                        self.log_result("Admin Get Course Submissions", False, "Submissions is not a list", result)
+                        return False
+                elif isinstance(result, list):
+                    # Old format - direct list
                     content_found = any(content.get("id") == self.content_with_course_id for content in result if hasattr(self, 'content_with_course_id'))
                     self.log_result("Admin Get Course Submissions", True, 
                                   f"Course submissions retrieved ({len(result)} submissions, our content found: {content_found})")
                     return True
                 else:
-                    self.log_result("Admin Get Course Submissions", False, "Response is not a list", result)
+                    self.log_result("Admin Get Course Submissions", False, "Unexpected response format", result)
                     return False
             else:
                 self.log_result("Admin Get Course Submissions", False, f"HTTP {response.status_code}", response.text)
