@@ -43,10 +43,18 @@ const ContentBrowse = () => {
     }
     abortControllerRef.current = new AbortController();
     
-    setLoading(true);
-    setError(null);
-    setContents([]);
-    setDisplayedCount(0);
+    // Only reset if this is truly initial load (page 1)
+    const isFirstPage = currentPage === 1;
+    
+    if (isFirstPage) {
+      setLoading(true);
+      setError(null);
+      setContents([]);
+      setDisplayedCount(0);
+    } else {
+      // For subsequent pages, just append
+      setLoadingMore(true);
+    }
     isLoadingRef.current = true;
     
     try {
