@@ -193,10 +193,6 @@ const ContentBrowse = () => {
     return labels[type] || type;
   };
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const pageStart = (currentPage - 1) * itemsPerPage + 1;
-  const pageEnd = Math.min(currentPage * itemsPerPage, totalItems);
-
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
       {/* Navigation */}
