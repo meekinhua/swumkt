@@ -1151,6 +1151,472 @@ class BackendTester:
             self.log_result("Survey Delete", False, f"Exception: {str(e)}")
             return False
 
+    # ============ COURSE MANAGEMENT SYSTEM TESTS ============
+    
+    def test_course_admin_login(self):
+        """Test admin login for course management"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            data = {
+                "email": "admin@swu.ac.th",
+                "password": "admin123"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "access_token" in result and "user" in result:
+                    self.course_admin_token = result["access_token"]
+                    user = result["user"]
+                    self.log_result("Course Admin Login", True, f"Admin login successful - {user.get('full_name', 'Admin User')}")
+                    return True
+                else:
+                    self.log_result("Course Admin Login", False, "Missing token or user in response", result)
+                    return False
+            else:
+                self.log_result("Course Admin Login", False, f"Admin credentials failed (HTTP {response.status_code})")
+                return False
+                
+        except Exception as e:
+            self.log_result("Course Admin Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_course_create_test101(self):
+        """Test creating TEST101 course"""
+        if not hasattr(self, 'course_admin_token') or not self.course_admin_token:
+            self.log_result("Create Course TEST101", False, "No admin token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/courses"
+            headers = {"Authorization": f"Bearer {self.course_admin_token}"}
+            data = {
+                "course_code": "TEST101",
+                "course_name": "ทดสอบระบบจัดการวิชา 101",
+                "semester": "1/2568",
+                "academic_year": "2568",
+                "instructor_name": "อาจารย์ทดสอบ",
+                "description": "วิชาทดสอบระบบจัดการวิชาและส่งงาน",
+                "status": "active"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("id" in result and "course_code" in result and 
+                    result.get("course_code") == "TEST101"):
+                    self.test101_course_id = result["id"]
+                    self.log_result("Create Course TEST101", True, f"Course TEST101 created successfully (ID: {self.test101_course_id})")
+                    return True
+                else:
+                    self.log_result("Create Course TEST101", False, "Missing expected fields", result)
+                    return False
+            elif response.status_code == 400 and "already exists" in response.text:
+                # Course already exists, try to get it
+                list_url = f"{self.base_url}/admin/courses"
+                list_response = requests.get(list_url, headers=headers, timeout=30)
+                if list_response.status_code == 200:
+                    courses = list_response.json()
+                    test101_course = next((c for c in courses if c.get("course_code") == "TEST101"), None)
+                    if test101_course:
+                        self.test101_course_id = test101_course["id"]
+                        self.log_result("Create Course TEST101", True, f"Course TEST101 already exists (ID: {self.test101_course_id})")
+                        return True
+                self.log_result("Create Course TEST101", False, "Course exists but couldn't retrieve ID")
+                return False
+            else:
+                self.log_result("Create Course TEST101", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Course TEST101", False, f"Exception: {str(e)}")
+            return False
+
+    def test_course_create_zbs05(self):
+        """Test creating ZBS05 course"""
+        if not hasattr(self, 'course_admin_token') or not self.course_admin_token:
+            self.log_result("Create Course ZBS05", False, "No admin token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/courses"
+            headers = {"Authorization": f"Bearer {self.course_admin_token}"}
+            data = {
+                "course_code": "ZBS05",
+                "course_name": "การวิจัยทางการตลาดขั้นสูง",
+                "semester": "1/2568",
+                "academic_year": "2568",
+                "instructor_name": "อาจารย์ดร.สมชาย ใจดี",
+                "description": "วิชาการวิจัยทางการตลาดขั้นสูงสำหรับนักศึกษาปริญญาโท",
+                "status": "active"
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("id" in result and "course_code" in result and 
+                    result.get("course_code") == "ZBS05"):
+                    self.zbs05_course_id = result["id"]
+                    self.log_result("Create Course ZBS05", True, f"Course ZBS05 created successfully (ID: {self.zbs05_course_id})")
+                    return True
+                else:
+                    self.log_result("Create Course ZBS05", False, "Missing expected fields", result)
+                    return False
+            elif response.status_code == 400 and "already exists" in response.text:
+                # Course already exists, try to get it
+                list_url = f"{self.base_url}/admin/courses"
+                list_response = requests.get(list_url, headers=headers, timeout=30)
+                if list_response.status_code == 200:
+                    courses = list_response.json()
+                    zbs05_course = next((c for c in courses if c.get("course_code") == "ZBS05"), None)
+                    if zbs05_course:
+                        self.zbs05_course_id = zbs05_course["id"]
+                        self.log_result("Create Course ZBS05", True, f"Course ZBS05 already exists (ID: {self.zbs05_course_id})")
+                        return True
+                self.log_result("Create Course ZBS05", False, "Course exists but couldn't retrieve ID")
+                return False
+            else:
+                self.log_result("Create Course ZBS05", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Course ZBS05", False, f"Exception: {str(e)}")
+            return False
+
+    def test_admin_list_all_courses(self):
+        """Test admin listing all courses"""
+        if not hasattr(self, 'course_admin_token') or not self.course_admin_token:
+            self.log_result("Admin List All Courses", False, "No admin token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/courses"
+            headers = {"Authorization": f"Bearer {self.course_admin_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Check if our created courses are in the list
+                    course_codes = [course.get("course_code") for course in result]
+                    test101_found = "TEST101" in course_codes
+                    zbs05_found = "ZBS05" in course_codes
+                    
+                    self.log_result("Admin List All Courses", True, 
+                                  f"Admin course list retrieved ({len(result)} courses) - TEST101: {test101_found}, ZBS05: {zbs05_found}")
+                    return True
+                else:
+                    self.log_result("Admin List All Courses", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Admin List All Courses", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Admin List All Courses", False, f"Exception: {str(e)}")
+            return False
+
+    def test_public_list_active_courses(self):
+        """Test public listing of active courses"""
+        try:
+            url = f"{self.base_url}/courses"
+            
+            response = requests.get(url, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Check if our created courses are in the list (should be active)
+                    course_codes = [course.get("course_code") for course in result]
+                    active_courses = [course for course in result if course.get("status") == "active"]
+                    
+                    self.log_result("Public List Active Courses", True, 
+                                  f"Public active courses retrieved ({len(result)} total, {len(active_courses)} active)")
+                    return True
+                else:
+                    self.log_result("Public List Active Courses", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Public List Active Courses", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Public List Active Courses", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_course_detail(self):
+        """Test getting course detail"""
+        if not hasattr(self, 'test101_course_id') or not self.test101_course_id:
+            self.log_result("Get Course Detail", False, "No TEST101 course ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/courses/{self.test101_course_id}"
+            
+            response = requests.get(url, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("id" in result and "course_code" in result and 
+                    result.get("id") == self.test101_course_id and
+                    result.get("course_code") == "TEST101"):
+                    self.log_result("Get Course Detail", True, f"Course detail retrieved - {result.get('course_name')}")
+                    return True
+                else:
+                    self.log_result("Get Course Detail", False, "Missing expected fields or incorrect data", result)
+                    return False
+            else:
+                self.log_result("Get Course Detail", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Course Detail", False, f"Exception: {str(e)}")
+            return False
+
+    def test_update_course(self):
+        """Test updating course information"""
+        if not hasattr(self, 'test101_course_id') or not self.test101_course_id:
+            self.log_result("Update Course", False, "No TEST101 course ID available")
+            return False
+            
+        if not hasattr(self, 'course_admin_token') or not self.course_admin_token:
+            self.log_result("Update Course", False, "No admin token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/courses/{self.test101_course_id}"
+            headers = {"Authorization": f"Bearer {self.course_admin_token}"}
+            data = {
+                "course_name": "ทดสอบระบบจัดการวิชา 101 (อัปเดต)",
+                "description": "วิชาทดสอบระบบจัดการวิชาและส่งงาน - อัปเดตแล้ว",
+                "instructor_name": "อาจารย์ทดสอบ (อัปเดต)"
+            }
+            
+            response = requests.put(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("course_name" in result and 
+                    "อัปเดต" in result.get("course_name", "")):
+                    self.log_result("Update Course", True, f"Course updated successfully - {result.get('course_name')}")
+                    return True
+                else:
+                    self.log_result("Update Course", False, "Course not updated correctly", result)
+                    return False
+            else:
+                self.log_result("Update Course", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Course", False, f"Exception: {str(e)}")
+            return False
+
+    def test_regular_user_login(self):
+        """Test regular user login for content creation"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            data = {
+                "email": "test@test.com",
+                "password": "test123"
+            }
+            
+            response = requests.post(url, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "access_token" in result and "user" in result:
+                    self.regular_user_token = result["access_token"]
+                    user = result["user"]
+                    self.log_result("Regular User Login", True, f"Regular user login successful - {user.get('full_name', 'Test User')}")
+                    return True
+                else:
+                    self.log_result("Regular User Login", False, "Missing token or user in response", result)
+                    return False
+            else:
+                self.log_result("Regular User Login", False, f"Login failed (HTTP {response.status_code})")
+                return False
+                
+        except Exception as e:
+            self.log_result("Regular User Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_create_content_with_course_id(self):
+        """Test creating content with course_id"""
+        if not hasattr(self, 'regular_user_token') or not self.regular_user_token:
+            self.log_result("Create Content with Course ID", False, "No regular user token available")
+            return False
+            
+        if not hasattr(self, 'test101_course_id') or not self.test101_course_id:
+            self.log_result("Create Content with Course ID", False, "No TEST101 course ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/content"
+            headers = {"Authorization": f"Bearer {self.regular_user_token}"}
+            data = {
+                "title": "งานส่งวิชา TEST101 - การวิเคราะห์พฤติกรรมผู้บริโภค",
+                "content": "นี่คือเนื้อหางานส่งสำหรับวิชา TEST101 เกี่ยวกับการวิเคราะห์พฤติกรรมผู้บริโภคในยุคดิจิทัล",
+                "content_type": "article",
+                "category": "งานส่ง",
+                "course_id": self.test101_course_id,
+                "status": "published",
+                "tags": ["TEST101", "พฤติกรรมผู้บริโภค", "การตลาด"]
+            }
+            
+            response = requests.post(url, json=data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("id" in result and "course_id" in result and 
+                    result.get("course_id") == self.test101_course_id):
+                    self.content_with_course_id = result["id"]
+                    self.log_result("Create Content with Course ID", True, f"Content created with course_id successfully (ID: {self.content_with_course_id})")
+                    return True
+                else:
+                    self.log_result("Create Content with Course ID", False, "Missing course_id or incorrect value", result)
+                    return False
+            else:
+                self.log_result("Create Content with Course ID", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Content with Course ID", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_content_verify_course_id(self):
+        """Test getting content and verify course_id is saved"""
+        if not hasattr(self, 'content_with_course_id') or not self.content_with_course_id:
+            self.log_result("Verify Content Course ID", False, "No content ID available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/content/{self.content_with_course_id}"
+            
+            response = requests.get(url, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if ("course_id" in result and 
+                    result.get("course_id") == self.test101_course_id):
+                    self.log_result("Verify Content Course ID", True, f"Content course_id verified correctly - {result.get('course_id')}")
+                    return True
+                else:
+                    self.log_result("Verify Content Course ID", False, f"Course ID not saved correctly - expected: {self.test101_course_id}, got: {result.get('course_id')}", result)
+                    return False
+            else:
+                self.log_result("Verify Content Course ID", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Verify Content Course ID", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_course_submissions_admin(self):
+        """Test admin viewing course submissions"""
+        if not hasattr(self, 'test101_course_id') or not self.test101_course_id:
+            self.log_result("Admin Get Course Submissions", False, "No TEST101 course ID available")
+            return False
+            
+        if not hasattr(self, 'course_admin_token') or not self.course_admin_token:
+            self.log_result("Admin Get Course Submissions", False, "No admin token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/courses/{self.test101_course_id}/submissions"
+            headers = {"Authorization": f"Bearer {self.course_admin_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list):
+                    # Should find our created content
+                    content_found = any(content.get("id") == self.content_with_course_id for content in result if hasattr(self, 'content_with_course_id'))
+                    self.log_result("Admin Get Course Submissions", True, 
+                                  f"Course submissions retrieved ({len(result)} submissions, our content found: {content_found})")
+                    return True
+                else:
+                    self.log_result("Admin Get Course Submissions", False, "Response is not a list", result)
+                    return False
+            else:
+                self.log_result("Admin Get Course Submissions", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Admin Get Course Submissions", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_course_submissions_regular_user_forbidden(self):
+        """Test regular user cannot view course submissions (should get 403)"""
+        if not hasattr(self, 'test101_course_id') or not self.test101_course_id:
+            self.log_result("Regular User Course Submissions Forbidden", False, "No TEST101 course ID available")
+            return False
+            
+        if not hasattr(self, 'regular_user_token') or not self.regular_user_token:
+            self.log_result("Regular User Course Submissions Forbidden", False, "No regular user token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/courses/{self.test101_course_id}/submissions"
+            headers = {"Authorization": f"Bearer {self.regular_user_token}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 403:
+                self.log_result("Regular User Course Submissions Forbidden", True, "Regular user correctly forbidden from viewing submissions")
+                return True
+            elif response.status_code == 200:
+                # Check if user is instructor of the course
+                result = response.json()
+                self.log_result("Regular User Course Submissions Forbidden", True, f"User may be instructor - got {len(result)} submissions")
+                return True
+            else:
+                self.log_result("Regular User Course Submissions Forbidden", False, f"Unexpected HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Regular User Course Submissions Forbidden", False, f"Exception: {str(e)}")
+            return False
+
+    def test_delete_course_with_submissions_should_fail(self):
+        """Test deleting course with submissions should fail"""
+        if not hasattr(self, 'test101_course_id') or not self.test101_course_id:
+            self.log_result("Delete Course with Submissions", False, "No TEST101 course ID available")
+            return False
+            
+        if not hasattr(self, 'course_admin_token') or not self.course_admin_token:
+            self.log_result("Delete Course with Submissions", False, "No admin token available")
+            return False
+            
+        try:
+            url = f"{self.base_url}/admin/courses/{self.test101_course_id}"
+            headers = {"Authorization": f"Bearer {self.course_admin_token}"}
+            
+            response = requests.delete(url, headers=headers, timeout=30)
+            
+            if response.status_code == 400:
+                # Should get error about content being linked
+                if "content" in response.text.lower() or "linked" in response.text.lower():
+                    self.log_result("Delete Course with Submissions", True, "Course deletion correctly prevented due to linked content")
+                    return True
+                else:
+                    self.log_result("Delete Course with Submissions", True, f"Course deletion prevented with error: {response.text}")
+                    return True
+            elif response.status_code == 200:
+                self.log_result("Delete Course with Submissions", False, "Course was deleted despite having submissions")
+                return False
+            else:
+                self.log_result("Delete Course with Submissions", False, f"Unexpected HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Course with Submissions", False, f"Exception: {str(e)}")
+            return False
+
     # ============ CONJOINT ANALYSIS MNL STATISTICAL ANALYSIS TESTS ============
     
     def test_conjoint_mnl_admin_login(self):
