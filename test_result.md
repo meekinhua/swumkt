@@ -120,6 +120,21 @@ user_problem_statement: "ทดสอบระบบจัดการวิช�
 8. ลบวิชาที่มีงานส่ง - ต้อง error (cannot delete)"
 
 backend:
+  - task: "Course Management System - Complete API Testing"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing Course Management System APIs as requested in Thai review"
+      - working: true
+        agent: "testing"
+        comment: "✅ COMPREHENSIVE TESTING COMPLETE! All 13/13 course management tests passed successfully. 🎯 ADMIN COURSE CRUD: ✅ Admin login (admin@swu.ac.th/admin123) working correctly. ✅ POST /api/admin/courses - Created TEST101 and ZBS05 courses successfully with proper validation. ✅ GET /api/admin/courses - Admin can list all courses (2 courses found). ✅ PUT /api/admin/courses/{course_id} - Course updates working correctly. ✅ DELETE /api/admin/courses/{course_id} - Properly prevents deletion when content exists. 🌐 PUBLIC COURSE ACCESS: ✅ GET /api/courses - Public users can view active courses (2 active courses). ✅ GET /api/courses/{course_id} - Course detail retrieval working. 📝 CONTENT WITH COURSE_ID: ✅ POST /api/content - Content creation with course_id working perfectly. ✅ GET /api/content/{content_id} - Course_id properly saved and retrieved. 📊 COURSE SUBMISSIONS: ✅ GET /api/courses/{course_id}/submissions - Admin can view course submissions (2 submissions found). ✅ Permission system working - regular users get 403 forbidden as expected. 🔒 SECURITY & VALIDATION: ✅ Admin-only endpoints properly protected. ✅ Course deletion prevented when submissions exist. ✅ All test scenarios from review request completed successfully."
+
   - task: "Phase 1A: อัปเดต User model เพื่อรองรับ user_type, demographics_profile, user_rating"
     implemented: true
     working: true
