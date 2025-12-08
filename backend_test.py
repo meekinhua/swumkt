@@ -3074,7 +3074,20 @@ class BackendTester:
             ("Journey Map With Context", self.test_journey_map_with_context),
         ]
         
-        print("🔍 MAIN FOCUS: Conjoint Analysis Feature Tests")
+        print("🎯 MAIN FOCUS: Course Management System Tests")
+        print("-" * 50)
+        
+        course_passed = 0
+        course_total = len(course_management_tests)
+        
+        for test_name, test_func in course_management_tests:
+            try:
+                if test_func():
+                    course_passed += 1
+            except Exception as e:
+                self.log_result(test_name, False, f"Unexpected error: {str(e)}")
+        
+        print("\n🔍 REGRESSION: Conjoint Analysis Feature Tests")
         print("-" * 50)
         
         conjoint_passed = 0
