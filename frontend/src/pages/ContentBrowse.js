@@ -33,8 +33,8 @@ const ContentBrowse = () => {
 
   // Calculate how many items we can still load on this page
   const canLoadMore = displayedCount < Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage) && totalItems > displayedCount;
-  const hasNextPage = currentPage * itemsPerPage < totalItems;
-  const hasPrevPage = currentPage > 1;
+  const hasMorePages = (currentPage * itemsPerPage) < totalItems;
+  const showInfiniteScroll = canLoadMore || hasMorePages;
 
   // Initial load for the page
   useEffect(() => {
