@@ -277,6 +277,15 @@ async def create_indexes():
     await safe_create_index(db.notifications, "user_id", background=True)
     await safe_create_index(db.notifications, [("created_at", -1)], background=True)
     
+    # Courses indexes
+    await safe_create_index(db.courses, "id", unique=True, background=True)
+    await safe_create_index(db.courses, "course_code", unique=True, background=True)
+    await safe_create_index(db.courses, "instructor_id", background=True)
+    await safe_create_index(db.courses, "status", background=True)
+    
+    # Content course_id index for filtering by course
+    await safe_create_index(db.contents, "course_id", background=True)
+    
     logging.info(f"[INDEXES] Created: {indexes_created}, Skipped (already exist): {indexes_skipped}")
 
 # JWT Configuration
