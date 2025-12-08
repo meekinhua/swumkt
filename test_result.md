@@ -102,14 +102,22 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "พัฒนา Survey Builder System แบบ comprehensive พร้อม user type system (Anonymous, Regular, Trust User), Google OAuth integration, demographics profile management, และ question templates สำหรับการวิเคราะห์ทางการตลาดแบบต่างๆ
+user_problem_statement: "ทดสอบระบบจัดการวิชาและส่งงาน (Course Management System) ที่เพิ่งพัฒนาเสร็จ:
 
-Phase 1A: Authentication & User System
-- Google OAuth Integration
-- User Type System (Regular/Trust User)  
-- Demographics Profile Management
-- User Rating System
-- Trust User Badge/Rewards placeholder"
+**Backend API Endpoints ที่ต้องทดสอบ:**
+1. Course CRUD APIs: POST/GET/PUT/DELETE /api/admin/courses, GET /api/courses, GET /api/courses/{course_id}
+2. Course Submissions API: GET /api/courses/{course_id}/submissions
+3. Content API with course_id: POST /api/content, GET /api/content/{content_id}
+
+**Test Scenarios:**
+1. Admin สร้างวิชาใหม่ (เช่น TEST101, ZBS05)
+2. ทดสอบว่า course ถูกสร้างและ list ออกมาได้
+3. Public user ดูรายการวิชา active ได้
+4. Admin แก้ไขวิชา
+5. User สร้าง content พร้อม course_id
+6. Admin ดูงานที่ส่งในวิชานั้น
+7. ทดสอบ permission - user ทั่วไปไม่สามารถดู submissions (ต้อง 403)
+8. ลบวิชาที่มีงานส่ง - ต้อง error (cannot delete)"
 
 backend:
   - task: "Phase 1A: อัปเดต User model เพื่อรองรับ user_type, demographics_profile, user_rating"
