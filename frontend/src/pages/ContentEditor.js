@@ -749,10 +749,41 @@ const ContentEditor = () => {
                 </Select>
               </div>
 
-              {/* ZBS04 Assignment Section - Only for enrolled students */}
+              {/* Course Selection - New Universal System */}
+              <Card className="p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  ส่งงานในวิชา (ถ้ามี)
+                </h3>
+                
+                <div>
+                  <Label className="text-gray-800 font-bold mb-2">เลือกวิชา</Label>
+                  <select
+                    value={formData.course_id}
+                    onChange={(e) => setFormData({ ...formData, course_id: e.target.value })}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-gray-900 font-medium"
+                    disabled={loadingCourses}
+                  >
+                    <option value="">-- ไม่ได้ส่งเป็นงานในวิชา --</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.course_code} - {course.course_name}
+                        {course.semester && ` (${course.semester})`}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 เลือกวิชาหากเนื้อหานี้เป็นงานที่ส่งในวิชา ครูอาจารย์จะสามารถดูงานของคุณได้
+                  </p>
+                </div>
+              </Card>
+
+              {/* ZBS04 Assignment Section - Only for enrolled students (Backward Compatibility) */}
               {user?.zbs04_enrolled && (
                 <Card className="p-6 bg-gradient-to-r from-[#00A9CE]/5 to-[#33BCDA]/5 border-2 border-[#00A9CE]/30">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">งาน ZBS04 (ถ้ามี)</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">งาน ZBS04 (ระบบเก่า - ใช้ "เลือกวิชา" ด้านบนแทน)</h3>
                   
                   {/* Checkbox - Is ZBS04 Assignment */}
                   <div className="flex items-center gap-3 mb-4">
