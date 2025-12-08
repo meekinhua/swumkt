@@ -200,6 +200,110 @@ const Dashboard = () => {
         {/* ZBS04 Assignments Section - Only show for enrolled students */}
         {user?.zbs04_enrolled && <ZBS04Assignments />}
 
+        {/* Submitted Assignments Summary */}
+        {!loadingAssignments && submittedAssignments.length > 0 && (
+          <Card className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-300 mb-6 sm:mb-8 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                งานที่ส่งแล้ว
+              </h2>
+              <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-bold">
+                {submittedAssignments.reduce((sum, group) => sum + group.assignments.length, 0)} งาน
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {submittedAssignments.map((group, idx) => (
+                <Card key={idx} className="p-4 bg-white border-2 border-gray-200 hover:shadow-md transition-shadow">
+                  {/* Course Header */}
+                  {group.course && (
+                    <div className="flex items-center justify-between mb-3 pb-3 border-b-2 border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-bold">
+                          {group.course.course_code}
+                        </span>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">{group.course.course_name}</h3>
+                          {(group.course.semester || group.course.instructor_name) && (
+                            <p className="text-sm text-gray-600">
+                              {group.course.semester && <span>{group.course.semester}</span>}
+                              {group.course.semester && group.course.instructor_name && <span> • </span>}
+                              {group.course.instructor_name && <span>{group.course.instructor_name}</span>}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-purple-700">
+                        {group.assignments.length} งาน
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Assignments List */}
+                  <div className="space-y-2">
+                    {group.assignments.slice(0, 3).map((assignment) => (
+                      <div
+                        key={assignment.id}
+                        onClick={() => navigate(`/content/${assignment.id}`)}
+                        className="flex items-center justify-between p-3 bg-gray-50 hover:bg-purple-50 rounded-lg cursor-pointer border border-gray-200 hover:border-purple-300 transition-all"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-gray-900 truncate text-sm sm:text-base">
+                            {assignment.title}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                            <span className={`px-2 py-0.5 rounded ${
+                              assignment.status === 'published' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-yellow-100 text-yellow-700'
+                            } font-semibold`}>
+                              {assignment.status === 'published' ? 'เผยแพร่แล้ว' : 'แบบร่าง'}
+                            </span>
+                            <span>•</span>
+                            <span>{assignment.views || 0} views</span>
+                            {assignment.group_members && assignment.group_members.length > 0 && (
+                              <>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                  </svg>
+                                  {assignment.group_members.length + 1} คน
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <svg className="w-5 h-5 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    ))}
+                    
+                    {/* Show "View All" if more than 3 */}
+                    {group.assignments.length > 3 && (
+                      <Button
+                        variant="ghost"
+                        className="w-full text-purple-600 hover:text-purple-700 hover:bg-purple-100 font-bold text-sm"
+                        onClick={() => {
+                          // Scroll to content tab and filter by course
+                          const contentTab = document.querySelector('[value="content"]');
+                          if (contentTab) contentTab.click();
+                        }}
+                      >
+                        ดูทั้งหมด {group.assignments.length} งาน →
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="content" className="w-full">
           <TabsList className="grid w-full sm:max-w-md grid-cols-2 bg-white/98 border-2 border-gray-300">
