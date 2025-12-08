@@ -21,20 +21,13 @@ const ContentBrowse = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [displayedCount, setDisplayedCount] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef(null);
   const abortControllerRef = useRef(null);
   const isLoadingRef = useRef(false);
   
   const itemsPerBatch = 5;  // Load 5 items at a time
-  const itemsPerPage = 20;  // Max items before going to next page
-
-  // Calculate how many items we can still load on this page
-  const canLoadMore = displayedCount < Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage) && totalItems > displayedCount;
-  const hasMorePages = (currentPage * itemsPerPage) < totalItems;
-  const showInfiniteScroll = canLoadMore || hasMorePages;
 
   const fetchInitialContents = async () => {
     // Cancel any pending request
