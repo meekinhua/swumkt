@@ -172,16 +172,6 @@ const ContentBrowse = () => {
     }
   }, [currentPage, displayedCount, itemsPerPage, itemsPerBatch, canLoadMore, loadingMore]);
 
-  const goToNextPage = () => {
-    setCurrentPage(prev => prev + 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const goToPrevPage = () => {
-    setCurrentPage(prev => Math.max(1, prev - 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const handleRetry = () => {
     fetchInitialContents();
   };
