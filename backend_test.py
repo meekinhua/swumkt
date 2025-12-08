@@ -2981,7 +2981,24 @@ class BackendTester:
         self.generated_level_image_url = None
         self.generated_profile_image_url = None
         
-        # Test sequence - Conjoint Analysis Tests (Main Focus)
+        # Test sequence - Course Management System Tests (MAIN FOCUS)
+        course_management_tests = [
+            ("Course Admin Login", self.test_course_admin_login),
+            ("Create Course TEST101", self.test_course_create_test101),
+            ("Create Course ZBS05", self.test_course_create_zbs05),
+            ("Admin List All Courses", self.test_admin_list_all_courses),
+            ("Public List Active Courses", self.test_public_list_active_courses),
+            ("Get Course Detail", self.test_get_course_detail),
+            ("Update Course", self.test_update_course),
+            ("Regular User Login", self.test_regular_user_login),
+            ("Create Content with Course ID", self.test_create_content_with_course_id),
+            ("Verify Content Course ID", self.test_get_content_verify_course_id),
+            ("Admin Get Course Submissions", self.test_get_course_submissions_admin),
+            ("Regular User Submissions Forbidden", self.test_get_course_submissions_regular_user_forbidden),
+            ("Delete Course with Submissions", self.test_delete_course_with_submissions_should_fail),
+        ]
+        
+        # Test sequence - Conjoint Analysis Tests (Regression)
         conjoint_tests = [
             ("Conjoint Admin Login", self.test_conjoint_admin_login),
             ("Conjoint Create Study", self.test_conjoint_create_study),
