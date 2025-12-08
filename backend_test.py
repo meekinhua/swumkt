@@ -3190,24 +3190,31 @@ class BackendTester:
 if __name__ == "__main__":
     tester = BackendTester()
     
-    # Run MNL Statistical Analysis tests specifically
-    print("📊 TESTING CONJOINT ANALYSIS - MNL STATISTICAL ANALYSIS")
+    # Run Course Management System tests specifically
+    print("🎯 TESTING COURSE MANAGEMENT SYSTEM")
     print("=" * 80)
     
-    # Run MNL and regression tests as requested
-    mnl_tests = [
-        ("MNL Admin Login", tester.test_conjoint_mnl_admin_login),
-        ("Get Study", tester.test_conjoint_get_study),
-        ("MNL Statistical Analysis", tester.test_conjoint_mnl_statistical_analysis),
-        ("Linear Regression Analysis", tester.test_conjoint_linear_regression_analysis),
-        ("Mixed Logit Analysis", tester.test_conjoint_mixed_logit_analysis),
-        ("Hierarchical Bayes Analysis", tester.test_conjoint_hierarchical_bayes_analysis),
+    # Run Course Management tests as requested
+    course_tests = [
+        ("Course Admin Login", tester.test_course_admin_login),
+        ("Create Course TEST101", tester.test_course_create_test101),
+        ("Create Course ZBS05", tester.test_course_create_zbs05),
+        ("Admin List All Courses", tester.test_admin_list_all_courses),
+        ("Public List Active Courses", tester.test_public_list_active_courses),
+        ("Get Course Detail", tester.test_get_course_detail),
+        ("Update Course", tester.test_update_course),
+        ("Regular User Login", tester.test_regular_user_login),
+        ("Create Content with Course ID", tester.test_create_content_with_course_id),
+        ("Verify Content Course ID", tester.test_get_content_verify_course_id),
+        ("Admin Get Course Submissions", tester.test_get_course_submissions_admin),
+        ("Regular User Submissions Forbidden", tester.test_get_course_submissions_regular_user_forbidden),
+        ("Delete Course with Submissions", tester.test_delete_course_with_submissions_should_fail),
     ]
     
     passed = 0
-    total = len(mnl_tests)
+    total = len(course_tests)
     
-    for test_name, test_func in mnl_tests:
+    for test_name, test_func in course_tests:
         try:
             if test_func():
                 passed += 1
@@ -3215,7 +3222,7 @@ if __name__ == "__main__":
             tester.log_result(test_name, False, f"Unexpected error: {str(e)}")
     
     print("=" * 80)
-    print(f"📊 MNL Statistical Analysis Test Results: {passed}/{total} tests passed")
+    print(f"🎯 Course Management System Test Results: {passed}/{total} tests passed")
     
     # Print detailed results
     print("\n📋 DETAILED TEST RESULTS:")
@@ -3228,5 +3235,5 @@ if __name__ == "__main__":
         print(f"\n❌ {total - passed} tests failed")
         sys.exit(1)
     else:
-        print("\n🎉 All MNL tests passed!")
+        print("\n🎉 All Course Management tests passed!")
         sys.exit(0)
