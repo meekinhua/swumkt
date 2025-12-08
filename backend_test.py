@@ -2957,7 +2957,7 @@ class BackendTester:
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print(f"🚀 Starting Backend Tests - Conjoint Analysis Feature Testing")
+        print(f"🚀 Starting Backend Tests - Course Management System Testing")
         print(f"Backend URL: {self.base_url}")
         print("=" * 80)
         
