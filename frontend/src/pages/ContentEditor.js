@@ -50,10 +50,23 @@ const ContentEditor = () => {
   const editorRef = React.useRef(null);
 
   useEffect(() => {
+    fetchCourses();
     if (id) {
       fetchContent();
     }
   }, [id]);
+
+  const fetchCourses = async () => {
+    try {
+      setLoadingCourses(true);
+      const response = await axios.get(`${API}/courses`);
+      setCourses(response.data);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
 
   const fetchContent = async () => {
     try {
