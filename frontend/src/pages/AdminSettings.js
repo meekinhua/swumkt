@@ -695,7 +695,12 @@ const AdminSettings = () => {
             <Tabs defaultValue="journey" className="w-full">
               {/* Scrollable Tabs for mobile */}
               <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-4 sm:mb-6">
-                <TabsList className="inline-flex sm:grid sm:grid-cols-8 min-w-max sm:min-w-0 w-auto sm:w-full">
+                <TabsList className="inline-flex sm:grid sm:grid-cols-9 min-w-max sm:min-w-0 w-auto sm:w-full">
+                  <TabsTrigger value="courses" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                    <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Courses</span>
+                    <span className="sm:hidden">วิชา</span>
+                  </TabsTrigger>
                   <TabsTrigger value="journey" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
                     <Map className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span className="hidden sm:inline">Journey Map</span>
