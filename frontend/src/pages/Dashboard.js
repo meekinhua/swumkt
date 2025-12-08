@@ -55,6 +55,61 @@ const Dashboard = () => {
     }
   };
 
+  const fetchSubmittedAssignments = async () => {
+    try {
+      setLoadingAssignments(true);
+      
+      // Fetch user's contents that have course_id
+      const response = await axios.get(`${API}/content/my`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 30000
+      });
+      
+      const items = response.data.items || response.data || [];
+      
+      // Filter only contents with course_id (submitted assignments)
+      const assignments = items.filter(item => item.course_id);
+      
+      // Fetch course details for each assignment
+      const assignmentsWithCourse = await Promise.all(
+        assignments.map(async (assignment) => {
+          try {
+            const courseResponse = await axios.get(`${API}/courses/${assignment.course_id}`);
+            return {
+              ...assignment,
+              course: courseResponse.data
+            };
+          } catch (error) {
+            console.error(`Error fetching course ${assignment.course_id}:`, error);
+            return {
+              ...assignment,
+              course: null
+            };
+          }
+        })
+      );
+      
+      // Group by course
+      const groupedByCourse = assignmentsWithCourse.reduce((acc, item) => {
+        const courseId = item.course_id;
+        if (!acc[courseId]) {
+          acc[courseId] = {
+            course: item.course,
+            assignments: []
+          };
+        }
+        acc[courseId].assignments.push(item);
+        return acc;
+      }, {});
+      
+      setSubmittedAssignments(Object.values(groupedByCourse));
+    } catch (error) {
+      console.error('Error fetching submitted assignments:', error);
+    } finally {
+      setLoadingAssignments(false);
+    }
+  };
+
   const handleDeleteContent = async () => {
     if (!contentToDelete) return;
     
