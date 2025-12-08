@@ -582,10 +582,7 @@ frontend:
 
 test_plan:
   current_focus:
-    - "Phase 1B E2E Testing: ทดสอบ full survey workflow (create → publish → take → view responses)"
-    - "Phase 1B Frontend: ทดสอบ Survey Builder UI"
-    - "Phase 1B Frontend: ทดสอบ Survey Taking flow"
-    - "Phase 1B Frontend: ทดสอบ Response Dashboard & Export"
+    - "Dashboard Submitted Assignments Summary Testing"
   stuck_tasks:
     - "Conjoint Analysis Public Sharing Feature - Missing Frontend Route"
   test_all: false
