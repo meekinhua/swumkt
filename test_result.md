@@ -810,6 +810,18 @@ frontend:
         agent: "testing"
         comment: "🎯 MIGRATION TOOL & CONTENT PREVIEW SYSTEM TESTING COMPLETE! ✅ ALL 4 CRITICAL TEST SCENARIOS PASSED: 1) Migration Tool UI Test: ✅ Successfully accessed /admin/settings Migration tab with admin@swu.ac.th/admin123. Status card shows 41 total content, 41 already migrated, 0 needs migration, 100% completion. Progress bar displays 100% (green bar). รีเฟรชสถานะ and เริ่ม Migration buttons present and functional. 2) Content Create Test - Preview Auto-generation: ✅ Successfully created content ทดสอบ Preview Auto Test with Article type and test content about preview auto-generation. Rich text editor functional, content saved with published status. Preview auto-generation system working as designed. 3) Dashboard Performance Test: ✅ Load time: 0.80 seconds (under 2-second requirement). เนื้อหาของฉัน section displays correctly with content items showing preview text (not full content). Dashboard optimized endpoint working efficiently. 4) Content Browse Performance Test: ✅ Load time: 0.79 seconds (under 2-second requirement). Found 21 content cards with proper preview text truncation (...). Pagination system working correctly. All performance requirements exceeded with sub-1-second load times. Migration system shows complete 100% status as expected."
 
+  - task: "Dashboard Submitted Assignments Summary Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Dashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing Dashboard submitted assignments summary feature as requested in Thai review: Login with admin@swu.ac.th/admin123, create course TEST101 via Admin Settings, create content linked to course, test dashboard display with course grouping, assignment list, click functionality, and empty state"
+
 agent_communication:
   - agent: "main"
     message: "ได้เพิ่มฟีเจอร์การเลือกภาษาผลลัพธ์ (ไทย/อังกฤษ), Journey Type (A/B), และ Journey Style (Linear/Nonlinear) ให้กับ Customer Journey Map Tool แล้ว รวมถึงการแปลภาษา UI ทั้งหมด Backend ได้รับการอัปเดตให้ส่ง language instruction ไปยัง LLM และแก้ไข ObjectId serialization error แล้ว กรุณาทดสอบทั้ง backend และ frontend อย่างละเอียด โดยเฉพาะการทำงานของ multi-language output และ auto-update context"
