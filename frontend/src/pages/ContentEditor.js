@@ -31,6 +31,7 @@ const ContentEditor = () => {
     cover_image_id: null,
     status: 'draft',
     attachments: [],
+    course_id: '',
     is_zbs04_assignment: false,
     zbs04_assignment_type: '',
     group_members: []
@@ -44,6 +45,8 @@ const ContentEditor = () => {
   const [aiRearranging, setAiRearranging] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   const editorRef = React.useRef(null);
 
   useEffect(() => {
