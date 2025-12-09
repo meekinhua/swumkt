@@ -197,8 +197,8 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* ZBS04 Assignments Section - Only show for enrolled students */}
-        {user?.zbs04_enrolled && <ZBS04Assignments />}
+        {/* ZBS04 Assignments Section */}
+        <ZBS04Assignments />
 
         {/* Submitted Assignments Summary */}
         {!loadingAssignments && submittedAssignments.length > 0 && (
