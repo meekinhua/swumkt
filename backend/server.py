@@ -573,12 +573,6 @@ class ContentUpdate(BaseModel):
     zbs04_assignment_type: Optional[str] = None
     group_members: Optional[List[str]] = None
 
-class ZBS04AssignmentType(str, Enum):
-    CUSTOMER_BEHAVIOR = "customer_behavior_analysis"
-    CUSTOMER_PERCEPTION = "customer_perception_analysis"
-    COMPETITOR_ANALYSIS = "competitor_analysis"
-    CUSTOMER_JOURNEY = "customer_journey_map"
-
 class CourseStatus(str, Enum):
     ACTIVE = "active"
     ARCHIVED = "archived"
