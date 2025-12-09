@@ -132,7 +132,7 @@ const NotificationCenter = () => {
   const getNotificationIcon = (type) => {
     const iconMap = {
       comment: '💬',
-      zbs04_assignment: '📝',
+      assignment: '📝',
       system_announcement: '📢',
       content_update: '🔔',
       custom: '✨'
