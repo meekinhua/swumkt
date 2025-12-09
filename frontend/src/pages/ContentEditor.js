@@ -88,8 +88,6 @@ const ContentEditor = () => {
         status: content.status,
         attachments: content.attachments || [],
         course_id: content.course_id || '',
-        is_zbs04_assignment: content.is_zbs04_assignment || false,
-        zbs04_assignment_type: content.zbs04_assignment_type || '',
         group_members: content.group_members || []
       });
 
