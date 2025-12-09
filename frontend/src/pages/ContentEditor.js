@@ -780,8 +780,7 @@ const ContentEditor = () => {
                 </div>
               </Card>
 
-              {/* ZBS04 Assignment Section - Only for enrolled students (Backward Compatibility) */}
-              {user?.zbs04_enrolled && (
+              {/* ZBS04 Assignment Section (Backward Compatibility) */}
                 <Card className="p-6 bg-gradient-to-r from-[#00A9CE]/5 to-[#33BCDA]/5 border-2 border-[#00A9CE]/30">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">งาน ZBS04 (ระบบเก่า - ใช้ "เลือกวิชา" ด้านบนแทน)</h3>
                   
