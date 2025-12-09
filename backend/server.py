@@ -567,8 +567,6 @@ class ContentUpdate(BaseModel):
     status: Optional[ContentStatus] = None
     attachments: Optional[List[dict]] = None
     course_id: Optional[str] = None
-    is_zbs04_assignment: Optional[bool] = None
-    zbs04_assignment_type: Optional[str] = None
     group_members: Optional[List[str]] = None
 
 class CourseStatus(str, Enum):
