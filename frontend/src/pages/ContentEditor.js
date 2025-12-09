@@ -894,7 +894,6 @@ const ContentEditor = () => {
                     </>
                   )}
                 </Card>
-              )}
 
               {/* Submit Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
