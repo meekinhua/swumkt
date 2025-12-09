@@ -1099,7 +1099,6 @@ class ProfileUpdate(BaseModel):
     avatar_url: Optional[str] = None
     student_id: Optional[str] = None
     graduation_year: Optional[int] = None
-    zbs04_enrolled: Optional[bool] = None
 
 @api_router.put("/auth/profile", response_model=UserProfile)
 async def update_profile(
