@@ -22,7 +22,6 @@ const NotificationSettings = () => {
   const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState({
     comment_notifications: true,
-    zbs04_notifications: true,
     system_notifications: true,
     content_update_notifications: true,
     custom_notifications: true
