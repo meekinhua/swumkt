@@ -478,7 +478,7 @@ class User(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     google_picture: Optional[str] = None
-    zbs04_enrolled: bool = False
+    # removed zbs04_enrolled field
     demographics_profile: Optional[DemographicsProfile] = None
     user_rating: UserRating = Field(default_factory=UserRating)
     promoted_to_trust: Optional[TrustPromotion] = None
@@ -497,7 +497,7 @@ class UserProfile(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     google_picture: Optional[str] = None
-    zbs04_enrolled: bool = False
+    # removed zbs04_enrolled field
     demographics_profile: Optional[DemographicsProfile] = None
     user_rating: Optional[UserRating] = None
     promoted_to_trust: Optional[TrustPromotion] = None
