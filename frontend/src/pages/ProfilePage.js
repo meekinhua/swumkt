@@ -173,8 +173,6 @@ const ProfilePage = () => {
           )}
         </Card>
 
-        {/* ZBS04 enrollment section removed */}
-
         {/* Profile Info Card */}
         <Card className="p-8 bg-white/98 shadow-xl border-2 border-gray-300 mb-6">
           <div className="flex items-center gap-4 mb-6">
