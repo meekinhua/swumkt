@@ -32,8 +32,6 @@ const ContentEditor = () => {
     status: 'draft',
     attachments: [],
     course_id: '',
-    is_zbs04_assignment: false,
-    zbs04_assignment_type: '',
     group_members: []
   });
   const [tagInput, setTagInput] = useState('');
