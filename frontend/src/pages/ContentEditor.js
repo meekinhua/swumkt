@@ -345,23 +345,11 @@ const ContentEditor = () => {
     setLoading(true);
 
     try {
-      // Validate ZBS04 fields
-      if (formData.is_zbs04_assignment && !formData.zbs04_assignment_type) {
-        toast.error('กรุณาเลือกประเภทงาน ZBS04');
-        setLoading(false);
-        return;
-      }
-
       const submitData = { ...formData };
       if (!submitData.category) delete submitData.category;
       if (!submitData.featured_image) delete submitData.featured_image;
 
       console.log('[ContentEditor] Submitting data:', submitData);
-      console.log('[ContentEditor] ZBS04 fields:', {
-        is_zbs04_assignment: submitData.is_zbs04_assignment,
-        zbs04_assignment_type: submitData.zbs04_assignment_type,
-        group_members: submitData.group_members
-      });
 
       if (id) {
         await axios.put(`${API}/content/${id}`, submitData, {
