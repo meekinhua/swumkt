@@ -632,8 +632,6 @@ class Content(BaseModel):
     journey_map_metadata: Optional[dict] = None
     attachments: Optional[List[dict]] = Field(default_factory=list, description="File attachments")
     course_id: Optional[str] = Field(None, description="วิชาที่ส่งงาน (ถ้ามี)")
-    is_zbs04_assignment: bool = False
-    zbs04_assignment_type: Optional[ZBS04AssignmentType] = None
     group_members: List[str] = Field(default_factory=list, description="User IDs of group members")
     # Pre-computed fields for performance (generated on save)
     content_preview: Optional[str] = None  # Truncated content for list view (200 chars)
