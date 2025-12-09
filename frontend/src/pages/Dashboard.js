@@ -196,9 +196,6 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* ZBS04 Assignments Section */}
-        <ZBS04Assignments />
-
         {/* Submitted Assignments Summary */}
         {!loadingAssignments && submittedAssignments.length > 0 && (
           <Card className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-300 mb-6 sm:mb-8 shadow-lg">
