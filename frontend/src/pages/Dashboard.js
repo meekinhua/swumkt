@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LogOut, User, FileText, TrendingUp, Users as UsersIcon, Settings, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
-import ZBS04Assignments from '@/components/ZBS04Assignments';
 
 const Dashboard = () => {
   const navigate = useNavigate();
