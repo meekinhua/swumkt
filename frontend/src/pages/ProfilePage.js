@@ -173,69 +173,7 @@ const ProfilePage = () => {
           )}
         </Card>
 
-        {/* ZBS04 Enrollment Card - NEW VERSION */}
-        <Card className="p-6 bg-gradient-to-r from-[#00A9CE]/10 to-[#33BCDA]/10 border-2 border-[#00A9CE]/30 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-xl transition-all duration-300 ${
-                zbs04Status ? 'bg-green-500 scale-105' : 'bg-gray-400'
-              }`}>
-                <Award className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">วิชาเลือกเสรี ZBS04</h3>
-                <p className="text-sm text-gray-600 font-medium">
-                  {zbs04Status ? '✓ คุณกำลังเรียนวิชานี้' : 'คลิกเพื่อบันทึกว่าคุณเรียนวิชานี้'}
-                </p>
-              </div>
-            </div>
-            <Button
-              data-testid="zbs04-toggle-btn"
-              disabled={zbs04Loading}
-              onClick={async () => {
-                setZbs04Loading(true);
-                const newStatus = !zbs04Status;
-                
-                try {
-                  // Update in backend
-                  await updateProfile({ zbs04_enrolled: newStatus });
-                  
-                  // Update local state
-                  setZbs04Status(newStatus);
-                  
-                  // Show success message
-                  toast.success(
-                    newStatus 
-                      ? '✓ บันทึกว่าคุณเรียน ZBS04 แล้ว!' 
-                      : 'ยกเลิกการบันทึก ZBS04'
-                  );
-                  
-                } catch (error) {
-                  console.error('[ZBS04] Update error:', error);
-                  toast.error('ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่');
-                } finally {
-                  setZbs04Loading(false);
-                }
-              }}
-              className={`min-w-[120px] transition-all duration-300 ${
-                zbs04Status
-                  ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-green-200'
-                  : 'bg-gradient-to-r from-gray-600 to-gray-500 hover:from-gray-700 hover:to-gray-600'
-              } text-white font-bold shadow-xl disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {zbs04Loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  รอสักครู่...
-                </div>
-              ) : (
-                <>
-                  {zbs04Status ? '✓ เรียนอยู่' : '+ บันทึก'}
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
+        {/* ZBS04 enrollment section removed */}
 
         {/* Profile Info Card */}
         <Card className="p-8 bg-white/98 shadow-xl border-2 border-gray-300 mb-6">
