@@ -342,7 +342,6 @@ const NotificationSettings = () => {
             <div className="space-y-4">
               {[
                 { key: 'comment_notifications', label: '💬 ความคิดเห็นใหม่ในเนื้อหาของคุณ' },
-                { key: 'zbs04_notifications', label: '📝 การมอบหมายงาน ZBS04' },
                 { key: 'system_notifications', label: '📢 ประกาศจากระบบ' },
                 { key: 'content_update_notifications', label: '🔔 อัปเดตเนื้อหาที่คุณติดตาม' },
                 { key: 'custom_notifications', label: '✨ ข้อความพิเศษจาก Admin' }
