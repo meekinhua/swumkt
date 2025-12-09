@@ -555,8 +555,6 @@ class ContentCreate(BaseModel):
     status: ContentStatus = ContentStatus.DRAFT
     attachments: Optional[List[dict]] = Field(default_factory=list, description="File attachments")
     course_id: Optional[str] = Field(None, description="วิชาที่ส่งงาน (ถ้ามี)")
-    is_zbs04_assignment: bool = False
-    zbs04_assignment_type: Optional[str] = None
     group_members: List[str] = Field(default_factory=list)
 
 class ContentUpdate(BaseModel):
