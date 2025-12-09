@@ -1117,8 +1117,6 @@ async def update_profile(
         update_data["student_id"] = profile_data.student_id
     if profile_data.graduation_year:
         update_data["graduation_year"] = profile_data.graduation_year
-    if profile_data.zbs04_enrolled is not None:
-        update_data["zbs04_enrolled"] = profile_data.zbs04_enrolled
     
     await db.users.update_one({"id": current_user.id}, {"$set": update_data})
     
