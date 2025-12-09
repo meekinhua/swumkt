@@ -2910,8 +2910,6 @@ async def add_contributor(
 @api_router.get("/zbs04/assignments")
 async def get_zbs04_assignments(current_user: User = Depends(get_current_user)):
     """Get user's ZBS04 assignment status"""
-    if not current_user.zbs04_enrolled:
-        raise HTTPException(status_code=403, detail="User not enrolled in ZBS04")
     
     # Get all assignment types
     assignment_types = [
