@@ -2089,7 +2089,7 @@ async def get_course_submissions(
     
     contents = await db.contents.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    # Convert datetime
+    # Convert datetime and fetch user details
     for content in contents:
         if isinstance(content.get('created_at'), str):
             content['created_at'] = datetime.fromisoformat(content['created_at'])
@@ -2100,6 +2100,18 @@ async def get_course_submissions(
         creator = await db.users.find_one({"id": content['created_by']}, {"_id": 0, "full_name": 1, "email": 1, "student_id": 1})
         if creator:
             content['creator_info'] = creator
+        
+        # Get group members info
+        if content.get('group_members') and len(content['group_members']) > 0:
+            group_member_details = []
+            for member_id in content['group_members']:
+                member = await db.users.find_one(
+                    {"id": member_id}, 
+                    {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1}
+                )
+                if member:
+                    group_member_details.append(member)
+            content['group_member_details'] = group_member_details
     
     return {
         "course": course,
