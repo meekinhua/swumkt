@@ -764,6 +764,98 @@ const ContentEditor = () => {
                 </div>
               </Card>
 
+              {/* Group Members Management - for assignments */}
+              {formData.course_id && (
+                <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    สมาชิกกลุ่ม (ถ้ามี)
+                  </h3>
+
+                  {/* Show Creator First */}
+                  <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border-2 border-green-300">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-900">{user.full_name}</span>
+                      <span className="text-xs text-gray-500">({user.email})</span>
+                      <span className="ml-auto text-xs px-2 py-0.5 bg-green-600 text-white rounded-full font-bold">
+                        ผู้สร้าง
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Member List */}
+                  {memberDetails.filter(m => m.id !== user.id).length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      {memberDetails
+                        .filter(m => m.id !== user.id)
+                        .map((member) => (
+                          <div key={member.id} className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-blue-200">
+                            <div className="flex items-center gap-2">
+                              {member.google_picture || member.avatar_url ? (
+                                <img
+                                  src={member.google_picture || member.avatar_url}
+                                  alt={member.full_name}
+                                  className="w-8 h-8 rounded-full object-cover border-2 border-blue-400"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                                  {member.full_name.charAt(0)}
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-sm font-bold text-gray-900">{member.full_name}</span>
+                                <span className="text-xs text-gray-500 ml-2">({member.email})</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="text-red-600 hover:text-red-800 p-2"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+
+                  {/* Add Member Input */}
+                  <div>
+                    <Label className="text-gray-800 font-bold mb-2">เพิ่มสมาชิกกลุ่ม</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        placeholder="อีเมลสมาชิกกลุ่ม"
+                        value={memberEmail}
+                        onChange={(e) => setMemberEmail(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
+                        className="flex-1 border-2 border-gray-300 focus:border-blue-500"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddMember}
+                        disabled={addingMember || !memberEmail}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold"
+                      >
+                        {addingMember ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-1" />
+                            เพิ่ม
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 เพิ่มสมาชิกกลุ่มโดยใส่อีเมล (สำหรับงานกลุ่ม)
+                    </p>
+                  </div>
+                </Card>
+              )}
+
               {/* Submit Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                 <Button
