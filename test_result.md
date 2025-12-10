@@ -582,7 +582,7 @@ frontend:
 
 test_plan:
   current_focus:
-    - "Dashboard Submitted Assignments Summary Testing"
+    - "Group Members Management Feature Testing - COMPLETED"
   stuck_tasks:
     - "Conjoint Analysis Public Sharing Feature - Missing Frontend Route"
   test_all: false
