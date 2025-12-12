@@ -2200,7 +2200,12 @@ const ConjointResultsPage = () => {
                                       {attr.level}
                                     </span>
                                   </div>
-                                  <p className="text-sm text-gray-700">{attr.interpretation}</p>
+                                  <p className="text-sm text-gray-700 mb-2">{attr.interpretation}</p>
+                                  {attr.recommendation && (
+                                    <p className="text-xs text-gray-600 font-semibold bg-white px-2 py-1 rounded">
+                                      {attr.recommendation}
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="text-right ml-4">
                                   <p className="text-xs text-gray-600">Effect Size</p>
