@@ -184,34 +184,41 @@ def _calculate_effect_size(ceiling_points: List[Tuple[float, float]]) -> float:
 
 def interpret_effect_size(effect_size: float) -> Dict[str, str]:
     """
-    Interpret NCA effect size according to standard thresholds
+    Interpret NCA effect size according to Dul (2016) guidelines
     
-    Thresholds:
-    - 0 < d < 0.1: Small
-    - 0.1 <= d < 0.3: Medium
-    - 0.3 <= d < 0.5: Large
-    - d >= 0.5: Very large
+    NCA Effect Size Interpretation:
+    - 0 < d < 0.1: Small effect (weak necessity)
+    - 0.1 <= d < 0.3: Medium effect (moderate necessity)
+    - 0.3 <= d < 0.5: Large effect (strong necessity)
+    - d >= 0.5: Very large effect (very strong necessity)
+    
+    Note: In NCA, even small effects can be meaningful if consistent
     """
     if effect_size < 0.1:
-        level = "ต่ำ (Small)"
-        interpretation = "คุณลักษณะนี้มีความจำเป็นน้อยมาก อาจไม่ใช่เงื่อนไขที่จำเป็นสำหรับความสำเร็จ"
+        level = "ความจำเป็นต่ำ"
+        interpretation = "คุณลักษณะนี้ไม่ใช่เงื่อนไขที่จำเป็น แต่อาจเป็นปัจจัยเสริม สามารถมีหรือไม่มีก็ได้"
+        recommendation = "💡 พิจารณาเป็นตัวเลือก ไม่จำเป็นต้องลงทุนมาก"
         color = "gray"
     elif effect_size < 0.3:
-        level = "ปานกลาง (Medium)"
-        interpretation = "คุณลักษณะนี้มีความจำเป็นในระดับปานกลาง ควรพิจารณาเป็นปัจจัยสนับสนุน"
+        level = "ความจำเป็นปานกลาง"
+        interpretation = "คุณลักษณะนี้มีบทบาทสนับสนุน มีส่วนช่วยแต่ไม่ได้เป็นตัวกำหนดความสำเร็จ"
+        recommendation = "⚠️ ควรมี แต่ไม่จำเป็นต้องเป็นจุดเด่นหลัก"
         color = "blue"
     elif effect_size < 0.5:
-        level = "สูง (Large)"
-        interpretation = "คุณลักษณะนี้เป็นเงื่อนไขที่จำเป็นในระดับสูง ผลิตภัณฑ์ควรมีคุณลักษณะนี้"
+        level = "ความจำเป็นสูง"
+        interpretation = "คุณลักษณะนี้เป็นเงื่อนไขที่จำเป็น ผลิตภัณฑ์ต้องมีคุณลักษณะนี้ในระดับที่ดี"
+        recommendation = "🎯 ควรให้ความสำคัญสูง เป็นปัจจัยสำคัญต่อความสำเร็จ"
         color = "orange"
     else:
-        level = "สูงมาก (Very Large)"
-        interpretation = "คุณลักษณะนี้เป็นเงื่อนไขที่จำเป็นอย่างยิ่ง ขาดไม่ได้สำหรับความสำเร็จ"
+        level = "ความจำเป็นสูงมาก"
+        interpretation = "คุณลักษณะนี้เป็นเงื่อนไขที่จำเป็นอย่างยิ่ง ขาดไม่ได้! หากไม่มีหรือต่ำกว่ามาตรฐาน ผลิตภัณฑ์จะล้มเหลว"
+        recommendation = "🔴 ลงทุนสูงสุด! เป็นข้อกำหนดขั้นต่ำที่หลีกเลี่ยงไม่ได้"
         color = "red"
     
     return {
         "level": level,
         "interpretation": interpretation,
+        "recommendation": recommendation,
         "color": color
     }
 
