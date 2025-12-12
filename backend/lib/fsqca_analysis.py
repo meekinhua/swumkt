@@ -225,9 +225,13 @@ def find_sufficient_configurations(
     return results
 
 
-def interpret_configuration(config_str: str) -> str:
+def interpret_configuration(config_str: str, condition_names: Dict[str, str] = None) -> str:
     """
     Generate human-readable interpretation of configuration
+    
+    Args:
+        config_str: Boolean expression (e.g., "attr1*~attr2*attr3")
+        condition_names: Mapping of condition IDs to readable names
     """
     parts = config_str.split('*')
     
@@ -236,9 +240,14 @@ def interpret_configuration(config_str: str) -> str:
     
     for part in parts:
         if part.startswith('~'):
-            absent.append(part[1:])
+            attr_id = part[1:]
+            # Use readable name if available
+            attr_name = condition_names.get(attr_id, attr_id) if condition_names else attr_id
+            absent.append(attr_name)
         else:
-            present.append(part)
+            # Use readable name if available
+            attr_name = condition_names.get(part, part) if condition_names else part
+            present.append(attr_name)
     
     interpretation = ""
     if present:
