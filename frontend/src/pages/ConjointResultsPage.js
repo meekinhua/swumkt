@@ -2039,7 +2039,7 @@ const ConjointResultsPage = () => {
                       : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400'
                   }`}
                 >
-                  <div className="text-left opacity-50">
+                  <div className="text-left">
                     <div className="font-bold text-lg mb-1">fsQCA</div>
                     <div className={`text-sm ${advancedTechnique === 'fsqca' ? 'text-white' : 'text-gray-600'}`}>
                       Fuzzy-Set QCA
@@ -2059,7 +2059,7 @@ const ConjointResultsPage = () => {
                   }`}
                   disabled
                 >
-                  <div className="text-left opacity-50">
+                  <div className="text-left">
                     <div className="font-bold text-lg mb-1">IPMA</div>
                     <div className={`text-sm ${advancedTechnique === 'ipma' ? 'text-white' : 'text-gray-600'}`}>
                       Importance-Performance
