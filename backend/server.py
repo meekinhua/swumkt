@@ -8651,24 +8651,28 @@ async def run_nca_analysis(
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
-    # Check if study has results
-    response_count = await db.conjoint_responses.count_documents({"study_id": study_id})
-    if response_count == 0:
+    # Get all responses
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if len(responses) == 0:
         raise HTTPException(status_code=400, detail="No responses available for analysis")
     
-    # Get counting-based results (default method)
-    from lib.conjoint_analysis import calculate_conjoint_results
-    results = await calculate_conjoint_results(study_id, db)
-    
-    if not results or 'part_worths' not in results or 'importance' not in results:
-        raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
-    
-    # Run NCA analysis
+    # Calculate part-worths and importance using existing functions
     try:
+        part_worths = calculate_part_worths(study, responses)
+        importance_scores = calculate_importance_scores(part_worths, study)
+        
+        if not part_worths or not importance_scores:
+            raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
+        
+        # Run NCA analysis
         nca_results = analyze_nca_for_conjoint(
-            part_worths=results['part_worths'],
-            attribute_importance=results['importance'],
-            respondent_count=response_count
+            part_worths=part_worths,
+            attribute_importance=importance_scores,
+            respondent_count=len(responses)
         )
         
         # Store NCA results in database for caching
@@ -8683,6 +8687,8 @@ async def run_nca_analysis(
         
     except Exception as e:
         logging.error(f"[NCA] Error: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"NCA analysis failed: {str(e)}")
 
 # Start survey - lock study from structural changes
