@@ -55,7 +55,10 @@ const ConjointResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingAI, setLoadingAI] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'academic'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'academic', or 'advanced'
+  const [advancedTechnique, setAdvancedTechnique] = useState('nca'); // 'nca', 'fsqca', or 'ipma'
+  const [ncaResults, setNcaResults] = useState(null);
+  const [loadingNCA, setLoadingNCA] = useState(false);
   const [statisticalData, setStatisticalData] = useState(null);
   const [loadingStatistical, setLoadingStatistical] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState('mnl'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
