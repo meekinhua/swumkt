@@ -390,6 +390,25 @@ const ConjointResultsPage = () => {
     }
   };
 
+  const handleRunFsQCA = async () => {
+    setLoadingFsQCA(true);
+    try {
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/fsqca-analysis`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setFsqcaResults(response.data);
+      toast.success('✅ วิเคราะห์ fsQCA เสร็จสมบูรณ์!');
+    } catch (error) {
+      console.error('Error running fsQCA:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ fsQCA ได้');
+    } finally {
+      setLoadingFsQCA(false);
+    }
+  };
+
   const handleExportCSV = () => {
     if (!results || !results.responses) return;
     
