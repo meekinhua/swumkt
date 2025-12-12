@@ -242,13 +242,17 @@ def analyze_nca_for_conjoint(
         if len(levels) < 2:
             continue
         
-        # Extract utilities from nested structure
+        # Extract utilities and selection counts from nested structure
         level_utilities = []
+        selection_counts = []
         for level_id, level_data in levels.items():
-            if isinstance(level_data, dict) and "utility" in level_data:
-                level_utilities.append(level_data["utility"])
+            if isinstance(level_data, dict):
+                if "utility" in level_data:
+                    level_utilities.append(level_data["utility"])
+                    selection_counts.append(level_data.get("selection_count", 0))
             elif isinstance(level_data, (int, float)):
                 level_utilities.append(level_data)
+                selection_counts.append(0)
         
         if len(level_utilities) < 2:
             continue
@@ -260,22 +264,34 @@ def analyze_nca_for_conjoint(
         else:
             base_importance = importance_data
         
-        # Normalize utilities to represent preference strength
         utilities_array = np.array(level_utilities, dtype=float)
-        min_util = utilities_array.min()
-        max_util = utilities_array.max()
+        counts_array = np.array(selection_counts, dtype=float)
         
-        if max_util == min_util:
+        # Check if we have variation
+        if utilities_array.max() == utilities_array.min():
             continue
         
-        # Create X and Y arrays
-        X = utilities_array
+        # For NCA with Conjoint data:
+        # X = Utility (normalized) - represents the "condition" (attribute level quality)
+        # Y = Selection probability (normalized) - represents the "outcome" (actual preference)
         
-        # Y: Simulate preference outcomes based on utility
-        # Higher utility = higher preference probability
-        Y = (utilities_array - min_util) / (max_util - min_util)
-        # Add attribute importance weight
-        Y = Y * (base_importance / 100) if base_importance > 0 else Y * 0.5
+        # Normalize X (utilities) to [0, 1]
+        X = (utilities_array - utilities_array.min()) / (utilities_array.max() - utilities_array.min())
+        
+        # Normalize Y (selection counts) to [0, 1]
+        # If no selection counts, use utilities as proxy
+        if counts_array.sum() > 0:
+            Y = counts_array / counts_array.max()
+        else:
+            # Fallback: Use utilities weighted by importance
+            Y = X.copy()
+            if base_importance > 0:
+                # Scale by importance (more important attributes have higher Y values)
+                Y = Y * (base_importance / 100)
+        
+        # Add small noise to break ties and avoid perfect diagonal
+        np.random.seed(42)  # For reproducibility
+        Y = Y + np.random.uniform(0, 0.05, size=Y.shape)
         
         # Calculate NCA with CE-FDH method
         nca_result = calculate_ceiling_line(X, Y, method='ce_fdh')
