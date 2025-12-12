@@ -202,16 +202,16 @@ def interpret_effect_size(effect_size: float) -> Dict[str, str]:
 
 
 def analyze_nca_for_conjoint(
-    part_worths: Dict[str, Dict[str, float]],
-    attribute_importance: Dict[str, float],
+    part_worths: Dict[str, Dict],
+    attribute_importance: Dict[str, Dict],
     respondent_count: int
 ) -> Dict:
     """
     Perform NCA analysis on conjoint data
     
     Args:
-        part_worths: Dictionary of {attribute_id: {level_id: utility}}
-        attribute_importance: Dictionary of {attribute_id: importance_percentage}
+        part_worths: Dictionary with structure {attr_id: {"name": str, "levels": {level_id: {"utility": float, ...}}}}
+        attribute_importance: Dictionary with structure {attr_id: {"name": str, "importance": float}}
         respondent_count: Number of respondents
     
     Returns:
@@ -219,20 +219,34 @@ def analyze_nca_for_conjoint(
     """
     results = {}
     
-    for attr_id, levels in part_worths.items():
+    for attr_id, attr_data in part_worths.items():
+        # Extract levels data
+        levels = attr_data.get("levels", {})
+        attr_name = attr_data.get("name", attr_id)
+        
         if len(levels) < 2:
             continue
         
-        # Extract utilities (X) and use importance as proxy for preference (Y)
-        level_utilities = list(levels.values())
+        # Extract utilities from nested structure
+        level_utilities = []
+        for level_id, level_data in levels.items():
+            if isinstance(level_data, dict) and "utility" in level_data:
+                level_utilities.append(level_data["utility"])
+            elif isinstance(level_data, (int, float)):
+                level_utilities.append(level_data)
         
-        # Create Y values: Use attribute importance repeated for each level
-        # In real NCA, Y would be actual outcome (e.g., purchase probability)
-        # Here we approximate using importance as a proxy
-        base_importance = attribute_importance.get(attr_id, 0)
+        if len(level_utilities) < 2:
+            continue
+        
+        # Get attribute importance
+        importance_data = attribute_importance.get(attr_id, {})
+        if isinstance(importance_data, dict):
+            base_importance = importance_data.get("importance", 0)
+        else:
+            base_importance = importance_data
         
         # Normalize utilities to represent preference strength
-        utilities_array = np.array(level_utilities)
+        utilities_array = np.array(level_utilities, dtype=float)
         min_util = utilities_array.min()
         max_util = utilities_array.max()
         
@@ -246,7 +260,7 @@ def analyze_nca_for_conjoint(
         # Higher utility = higher preference probability
         Y = (utilities_array - min_util) / (max_util - min_util)
         # Add attribute importance weight
-        Y = Y * (base_importance / 100)
+        Y = Y * (base_importance / 100) if base_importance > 0 else Y * 0.5
         
         # Calculate NCA with CE-FDH method
         nca_result = calculate_ceiling_line(X, Y, method='ce_fdh')
@@ -258,9 +272,10 @@ def analyze_nca_for_conjoint(
             results[attr_id] = {
                 **nca_result,
                 **interpretation,
+                'attribute_name': attr_name,
                 'attribute_importance': base_importance,
                 'n_levels': len(levels),
-                'levels': levels
+                'levels': {k: v for k, v in levels.items()}  # Preserve level details
             }
     
     # Sort by effect size (descending)
