@@ -2038,7 +2038,6 @@ const ConjointResultsPage = () => {
                       ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-600 text-white shadow-lg'
                       : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400'
                   }`}
-                  disabled
                 >
                   <div className="text-left opacity-50">
                     <div className="font-bold text-lg mb-1">fsQCA</div>
