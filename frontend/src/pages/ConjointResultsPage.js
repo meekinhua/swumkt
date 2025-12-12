@@ -631,6 +631,19 @@ const ConjointResultsPage = () => {
               <span>เชิงวิชาการและสถิติ</span>
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab('advanced')}
+            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+              activeTab === 'advanced'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>เทคนิคขั้นสูง</span>
+            </div>
+          </button>
         </div>
 
         {/* Tab Content */}
