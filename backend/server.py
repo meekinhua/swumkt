@@ -8635,6 +8635,56 @@ async def delete_conjoint_study(
     
     return {"message": "Study deleted successfully"}
 
+# NCA Analysis endpoint
+@api_router.post("/conjoint/studies/{study_id}/nca-analysis")
+async def run_nca_analysis(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Run Necessary Condition Analysis (NCA) on conjoint study results
+    """
+    from lib.nca_analysis import analyze_nca_for_conjoint
+    
+    # Get study
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Check if study has results
+    response_count = await db.conjoint_responses.count_documents({"study_id": study_id})
+    if response_count == 0:
+        raise HTTPException(status_code=400, detail="No responses available for analysis")
+    
+    # Get counting-based results (default method)
+    from lib.conjoint_analysis import calculate_conjoint_results
+    results = await calculate_conjoint_results(study_id, db)
+    
+    if not results or 'part_worths' not in results or 'importance' not in results:
+        raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
+    
+    # Run NCA analysis
+    try:
+        nca_results = analyze_nca_for_conjoint(
+            part_worths=results['part_worths'],
+            attribute_importance=results['importance'],
+            respondent_count=response_count
+        )
+        
+        # Store NCA results in database for caching
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {"$set": {"nca_results": nca_results, "nca_updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        logging.info(f"[NCA] Analysis completed for study {study_id}")
+        
+        return nca_results
+        
+    except Exception as e:
+        logging.error(f"[NCA] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"NCA analysis failed: {str(e)}")
+
 # Start survey - lock study from structural changes
 @api_router.post("/conjoint/studies/{study_id}/start-survey")
 async def start_survey(
