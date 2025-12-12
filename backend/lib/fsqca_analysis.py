@@ -361,11 +361,12 @@ def analyze_fsqca_for_conjoint(
     # Create truth table
     truth_table = create_truth_table(conditions, outcome, consistency_threshold)
     
-    # Find sufficient configurations
+    # Find sufficient configurations (pass condition names for readable output)
     sufficient_configs = find_sufficient_configurations(
         truth_table, 
         consistency_threshold, 
-        coverage_threshold
+        coverage_threshold,
+        condition_names
     )
     
     # Calculate overall solution consistency and coverage
