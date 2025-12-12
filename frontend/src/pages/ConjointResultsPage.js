@@ -2553,32 +2553,66 @@ const ConjointResultsPage = () => {
                       </div>
                     </Card>
 
-                    {/* Explanation */}
-                    <Card className="p-6 bg-blue-50 border-2 border-blue-200">
-                      <div className="flex items-start gap-3">
+                    {/* Explanation Guide */}
+                    <Card className="p-6 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200">
+                      <div className="flex items-start gap-3 mb-4">
                         <Lightbulb className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-                        <div>
-                          <h3 className="font-bold text-gray-900 mb-2">
-                            💡 คำอธิบาย fsQCA
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 mb-3 text-lg">
+                            📖 คู่มือการอ่านผล fsQCA
                           </h3>
-                          <ul className="text-sm text-gray-700 space-y-2">
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600">•</span>
-                              <span><strong>Sufficient Configuration:</strong> ชุดคุณลักษณะที่นำไปสู่ความสำเร็จ</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600">•</span>
-                              <span><strong>Consistency:</strong> ความสอดคล้องของเงื่อนไข (≥0.75 = เพียงพอ)</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600">•</span>
-                              <span><strong>Coverage:</strong> ความครอบคลุมของเงื่อนไข (สูง = อธิบายได้มาก)</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600">•</span>
-                              <span><strong>~ (tilde):</strong> หมายถึง "ไม่มี" หรือ "ขาด" คุณลักษณะนั้น</span>
-                            </li>
-                          </ul>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Left Column */}
+                            <div className="space-y-3">
+                              <div className="p-3 bg-white rounded-lg border border-blue-200">
+                                <h4 className="font-bold text-sm text-blue-900 mb-2">🎯 Sufficient Configuration</h4>
+                                <p className="text-xs text-gray-700">
+                                  ชุดคุณลักษณะที่<strong>เพียงพอ</strong>ที่จะทำให้ผลิตภัณฑ์ประสบความสำเร็จ 
+                                  ถ้ามีครบตามสูตร = มีโอกาสสูงที่จะสำเร็จ
+                                </p>
+                              </div>
+                              
+                              <div className="p-3 bg-white rounded-lg border border-indigo-200">
+                                <h4 className="font-bold text-sm text-indigo-900 mb-2">📊 Consistency (ความสอดคล้อง)</h4>
+                                <p className="text-xs text-gray-700 mb-2">
+                                  วัดว่าชุดนี้นำไปสู่ผลลัพธ์บ่อยแค่ไหน
+                                </p>
+                                <ul className="text-xs text-gray-600 space-y-1">
+                                  <li>• ≥0.85 = <strong>สูงมาก</strong> (เชื่อถือได้มาก)</li>
+                                  <li>• ≥0.75 = <strong>เพียงพอ</strong> (ใช้ได้)</li>
+                                  <li>• &lt;0.75 = <strong>ไม่เพียงพอ</strong></li>
+                                </ul>
+                              </div>
+                            </div>
+                            
+                            {/* Right Column */}
+                            <div className="space-y-3">
+                              <div className="p-3 bg-white rounded-lg border border-purple-200">
+                                <h4 className="font-bold text-sm text-purple-900 mb-2">📈 Coverage (ความครอบคลุม)</h4>
+                                <p className="text-xs text-gray-700 mb-2">
+                                  วัดว่าชุดนี้อธิบายความสำเร็จได้เท่าไหร่
+                                </p>
+                                <ul className="text-xs text-gray-600 space-y-1">
+                                  <li>• สูง (≥0.5) = อธิบายได้เยอะ</li>
+                                  <li>• ปานกลาง (0.3-0.5) = อธิบายได้บางส่วน</li>
+                                  <li>• ต่ำ (&lt;0.3) = อธิบายได้น้อย</li>
+                                </ul>
+                              </div>
+                              
+                              <div className="p-3 bg-white rounded-lg border border-pink-200">
+                                <h4 className="font-bold text-sm text-pink-900 mb-2">🔤 สัญลักษณ์</h4>
+                                <ul className="text-xs text-gray-700 space-y-1">
+                                  <li>• <code className="bg-gray-100 px-1 py-0.5 rounded">*</code> = AND (และ)</li>
+                                  <li>• <code className="bg-gray-100 px-1 py-0.5 rounded">+</code> = OR (หรือ)</li>
+                                  <li>• <code className="bg-gray-100 px-1 py-0.5 rounded">~</code> = NOT (ไม่มี/ขาด)</li>
+                                </ul>
+                                <p className="text-xs text-gray-600 mt-2">
+                                  <strong>ตัวอย่าง:</strong> A*~B*C = มี A และ C แต่ไม่มี B
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </Card>
