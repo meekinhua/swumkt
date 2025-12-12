@@ -8691,6 +8691,72 @@ async def run_nca_analysis(
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"NCA analysis failed: {str(e)}")
 
+# fsQCA Analysis endpoint
+@api_router.post("/conjoint/studies/{study_id}/fsqca-analysis")
+async def run_fsqca_analysis(
+    study_id: str,
+    consistency_threshold: float = 0.75,
+    coverage_threshold: float = 0.1,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Run Fuzzy-Set Qualitative Comparative Analysis (fsQCA) on conjoint study results
+    """
+    from lib.fsqca_analysis import analyze_fsqca_for_conjoint
+    
+    # Get study
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Get all responses
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if len(responses) == 0:
+        raise HTTPException(status_code=400, detail="No responses available for analysis")
+    
+    # Calculate part-worths and importance
+    try:
+        part_worths = calculate_part_worths(study, responses)
+        importance_scores = calculate_importance_scores(part_worths, study)
+        
+        if not part_worths or not importance_scores:
+            raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
+        
+        # Run fsQCA analysis
+        fsqca_results = analyze_fsqca_for_conjoint(
+            part_worths=part_worths,
+            attribute_importance=importance_scores,
+            respondent_count=len(responses),
+            consistency_threshold=consistency_threshold,
+            coverage_threshold=coverage_threshold
+        )
+        
+        # Check for errors
+        if 'error' in fsqca_results:
+            raise HTTPException(status_code=400, detail=fsqca_results['error'])
+        
+        # Store results in database
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {"$set": {"fsqca_results": fsqca_results, "fsqca_updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        logging.info(f"[fsQCA] Analysis completed for study {study_id}")
+        
+        return fsqca_results
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[fsQCA] Error: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"fsQCA analysis failed: {str(e)}")
+
 # Start survey - lock study from structural changes
 @api_router.post("/conjoint/studies/{study_id}/start-survey")
 async def start_survey(
