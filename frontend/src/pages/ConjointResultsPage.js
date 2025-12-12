@@ -2503,35 +2503,53 @@ const ConjointResultsPage = () => {
                                 </div>
                               </div>
                             
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="p-3 bg-white rounded-lg border border-indigo-200">
-                                <p className="text-xs text-gray-600 mb-1">Consistency</p>
-                                <p className="text-2xl font-bold text-indigo-600">
-                                  {(config.consistency * 100).toFixed(1)}%
-                                </p>
-                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                  <div
-                                    className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full"
-                                    style={{ width: `${config.consistency * 100}%` }}
-                                  />
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="p-3 bg-white rounded-lg border border-indigo-200">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs text-gray-600 font-semibold">Consistency</p>
+                                    <p className="text-xs text-gray-500">(ความสอดคล้อง)</p>
+                                  </div>
+                                  <p className="text-2xl font-bold text-indigo-600">
+                                    {(config.consistency * 100).toFixed(1)}%
+                                  </p>
+                                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                    <div
+                                      className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all"
+                                      style={{ width: `${config.consistency * 100}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {config.consistency >= 0.85 ? '✅ สูงมาก' : 
+                                     config.consistency >= 0.75 ? '✅ เพียงพอ' : 
+                                     '⚠️ ต่ำ'}
+                                  </p>
+                                </div>
+                                
+                                <div className="p-3 bg-white rounded-lg border border-purple-200">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs text-gray-600 font-semibold">Coverage</p>
+                                    <p className="text-xs text-gray-500">(ความครอบคลุม)</p>
+                                  </div>
+                                  <p className="text-2xl font-bold text-purple-600">
+                                    {(config.coverage * 100).toFixed(1)}%
+                                  </p>
+                                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                    <div
+                                      className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all"
+                                      style={{ width: `${config.coverage * 100}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {config.coverage >= 0.5 ? '📊 สูง' : 
+                                     config.coverage >= 0.3 ? '📊 ปานกลาง' : 
+                                     '📊 ต่ำ'}
+                                  </p>
                                 </div>
                               </div>
-                              
-                              <div className="p-3 bg-white rounded-lg border border-purple-200">
-                                <p className="text-xs text-gray-600 mb-1">Coverage</p>
-                                <p className="text-2xl font-bold text-purple-600">
-                                  {(config.coverage * 100).toFixed(1)}%
-                                </p>
-                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                  <div
-                                    className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"
-                                    style={{ width: `${config.coverage * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
+                            </Card>
+                          ))
+                        )}
+                      </div>
                       </div>
                     </Card>
 
