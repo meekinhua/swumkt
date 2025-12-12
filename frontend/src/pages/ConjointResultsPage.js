@@ -2086,7 +2086,7 @@ const ConjointResultsPage = () => {
                       </p>
                     </div>
                     <Button
-                      onClick={() => {/* TODO: Run NCA */}}
+                      onClick={handleRunNCA}
                       disabled={loadingNCA}
                       className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold px-8 py-3"
                     >
