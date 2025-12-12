@@ -1979,6 +1979,206 @@ const ConjointResultsPage = () => {
             </Card>
           </>
         )}
+
+        {/* Advanced Analytics Tab */}
+        {activeTab === 'advanced' && (
+          <>
+            {/* Technique Selector */}
+            <Card className="p-4 sm:p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Sparkles className="w-6 h-6 text-purple-600" />
+                <h2 className="text-xl font-black text-gray-900">เลือกเทคนิคการวิเคราะห์ขั้นสูง</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button
+                  onClick={() => setAdvancedTechnique('nca')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    advancedTechnique === 'nca'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-600 text-white shadow-lg'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400'
+                  }`}
+                >
+                  <div className="text-left">
+                    <div className="font-bold text-lg mb-1">NCA</div>
+                    <div className={`text-sm ${advancedTechnique === 'nca' ? 'text-white' : 'text-gray-600'}`}>
+                      Necessary Condition Analysis
+                    </div>
+                    <div className={`text-xs mt-2 ${advancedTechnique === 'nca' ? 'text-purple-100' : 'text-gray-500'}`}>
+                      วิเคราะห์เงื่อนไขที่จำเป็น
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setAdvancedTechnique('fsqca')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    advancedTechnique === 'fsqca'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-600 text-white shadow-lg'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400'
+                  }`}
+                  disabled
+                >
+                  <div className="text-left opacity-50">
+                    <div className="font-bold text-lg mb-1">fsQCA</div>
+                    <div className={`text-sm ${advancedTechnique === 'fsqca' ? 'text-white' : 'text-gray-600'}`}>
+                      Fuzzy-Set QCA
+                    </div>
+                    <div className={`text-xs mt-2 ${advancedTechnique === 'fsqca' ? 'text-purple-100' : 'text-gray-500'}`}>
+                      เร็วๆ นี้
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setAdvancedTechnique('ipma')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    advancedTechnique === 'ipma'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-600 text-white shadow-lg'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400'
+                  }`}
+                  disabled
+                >
+                  <div className="text-left opacity-50">
+                    <div className="font-bold text-lg mb-1">IPMA</div>
+                    <div className={`text-sm ${advancedTechnique === 'ipma' ? 'text-white' : 'text-gray-600'}`}>
+                      Importance-Performance
+                    </div>
+                    <div className={`text-xs mt-2 ${advancedTechnique === 'ipma' ? 'text-purple-100' : 'text-gray-500'}`}>
+                      เร็วๆ นี้
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </Card>
+
+            {/* NCA Analysis */}
+            {advancedTechnique === 'nca' && (
+              <>
+                {/* NCA Header */}
+                <Card className="p-6 bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-300 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-purple-600 rounded-xl">
+                      <BarChart3 className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-black text-gray-900 mb-2">
+                        Necessary Condition Analysis (NCA)
+                      </h2>
+                      <p className="text-gray-700 text-sm sm:text-base">
+                        วิเคราะห์เงื่อนไขที่จำเป็น (Necessary Conditions) สำหรับการบรรลุผลลัพธ์ที่ต้องการ
+                        โดยพิจารณาว่าคุณลักษณะใดเป็น "ข้อกำหนดขั้นต่ำ" ที่ผลิตภัณฑ์ต้องมี
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Run NCA Analysis Button */}
+                {!ncaResults && (
+                  <Card className="p-6 text-center border-2 border-purple-200 mb-6">
+                    <div className="mb-4">
+                      <Sparkles className="w-16 h-16 text-purple-600 mx-auto mb-3" />
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        พร้อมวิเคราะห์ NCA
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        คลิกปุ่มด้านล่างเพื่อเริ่มวิเคราะห์เงื่อนไขที่จำเป็นจากข้อมูล Conjoint ของคุณ
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {/* TODO: Run NCA */}}
+                      disabled={loadingNCA}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold px-8 py-3"
+                    >
+                      {loadingNCA ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          กำลังวิเคราะห์...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5" />
+                          เริ่มวิเคราะห์ NCA
+                        </span>
+                      )}
+                    </Button>
+                  </Card>
+                )}
+
+                {/* NCA Results Display - Placeholder */}
+                {ncaResults && (
+                  <Card className="p-6 border-2 border-purple-200">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      📊 ผลการวิเคราะห์ NCA
+                    </h3>
+                    <div className="space-y-4">
+                      {/* Results will be displayed here */}
+                      <p className="text-gray-700">
+                        ผลการวิเคราะห์จะแสดงที่นี่
+                      </p>
+                    </div>
+                  </Card>
+                )}
+
+                {/* NCA Explanation */}
+                <Card className="p-6 bg-blue-50 border-2 border-blue-200 mt-6">
+                  <div className="flex items-start gap-3">
+                    <Lightbulb className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-bold text-gray-900 mb-2">
+                        💡 เกี่ยวกับ NCA
+                      </h3>
+                      <p className="text-sm text-gray-700 mb-3">
+                        NCA (Necessary Condition Analysis) เป็นเทคนิคที่ใช้ระบุว่าคุณลักษณะใดเป็น
+                        "เงื่อนไขที่จำเป็น" สำหรับความสำเร็จของผลิตภัณฑ์
+                      </p>
+                      <ul className="text-sm text-gray-700 space-y-2">
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600">•</span>
+                          <span><strong>Ceiling Line:</strong> แสดงขีดจำกัดบนของความสัมพันธ์</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600">•</span>
+                          <span><strong>Effect Size (d):</strong> ขนาดของเงื่อนไขที่จำเป็น (0-1)</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600">•</span>
+                          <span><strong>Necessity:</strong> ระดับความจำเป็นของแต่ละคุณลักษณะ</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+
+            {/* fsQCA Placeholder */}
+            {advancedTechnique === 'fsqca' && (
+              <Card className="p-12 text-center border-2 border-gray-300">
+                <div className="text-6xl mb-4">🔜</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  fsQCA - เร็วๆ นี้
+                </h3>
+                <p className="text-gray-600">
+                  Fuzzy-Set Qualitative Comparative Analysis จะเปิดให้บริการในอนาคตอันใกล้
+                </p>
+              </Card>
+            )}
+
+            {/* IPMA Placeholder */}
+            {advancedTechnique === 'ipma' && (
+              <Card className="p-12 text-center border-2 border-gray-300">
+                <div className="text-6xl mb-4">🔜</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  IPMA - เร็วๆ นี้
+                </h3>
+                <p className="text-gray-600">
+                  Importance-Performance Map Analysis จะเปิดให้บริการในอนาคตอันใกล้
+                </p>
+              </Card>
+            )}
+          </>
+        )}
       </div>
       
       {/* Share as Content Modal */}
