@@ -369,6 +369,25 @@ const ConjointResultsPage = () => {
 
 
 
+  const handleRunNCA = async () => {
+    setLoadingNCA(true);
+    try {
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/nca-analysis`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setNcaResults(response.data);
+      toast.success('✅ วิเคราะห์ NCA เสร็จสมบูรณ์!');
+    } catch (error) {
+      console.error('Error running NCA:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ NCA ได้');
+    } finally {
+      setLoadingNCA(false);
+    }
+  };
+
   const handleExportCSV = () => {
     if (!results || !results.responses) return;
     
