@@ -8757,6 +8757,64 @@ async def run_fsqca_analysis(
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"fsQCA analysis failed: {str(e)}")
 
+# IPMA Analysis endpoint
+@api_router.post("/conjoint/studies/{study_id}/ipma-analysis")
+async def run_ipma_analysis(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Run Importance-Performance Map Analysis (IPMA) on conjoint study results
+    """
+    from lib.ipma_analysis import analyze_ipma_for_conjoint
+    
+    # Get study
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Get all responses
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if len(responses) == 0:
+        raise HTTPException(status_code=400, detail="No responses available for analysis")
+    
+    # Calculate part-worths and importance
+    try:
+        part_worths = calculate_part_worths(study, responses)
+        importance_scores = calculate_importance_scores(part_worths, study)
+        
+        if not part_worths or not importance_scores:
+            raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
+        
+        # Run IPMA analysis
+        ipma_results = analyze_ipma_for_conjoint(
+            part_worths=part_worths,
+            attribute_importance=importance_scores,
+            respondent_count=len(responses)
+        )
+        
+        # Store results in database
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {"$set": {"ipma_results": ipma_results, "ipma_updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        logging.info(f"[IPMA] Analysis completed for study {study_id}")
+        
+        return ipma_results
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[IPMA] Error: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"IPMA analysis failed: {str(e)}")
+
 # Start survey - lock study from structural changes
 @api_router.post("/conjoint/studies/{study_id}/start-survey")
 async def start_survey(
