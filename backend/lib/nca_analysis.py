@@ -145,12 +145,22 @@ def _cr_fdh_method(X: np.ndarray, Y: np.ndarray) -> Tuple[List[Tuple[float, floa
 
 def _calculate_effect_size(ceiling_points: List[Tuple[float, float]]) -> float:
     """
-    Calculate effect size as the area under the ceiling line divided by total area
+    Calculate NCA effect size (d) as the area between scope line and ceiling line
+    
+    In NCA:
+    - Scope line = upper boundary (diagonal from (0,0) to (1,1) or actual max boundary)
+    - Effect size (d) = Area between ceiling and scope / Total scope area
+    - Higher d = stronger necessity condition
     """
     if len(ceiling_points) < 2:
         return 0.0
     
-    # Calculate area under ceiling using trapezoidal rule
+    # Scope line is typically the diagonal (0,0) to (1,1)
+    # But we adjust based on actual ceiling to get meaningful values
+    
+    # Calculate area ABOVE the ceiling line (this is the "empty space" or necessity zone)
+    # Area above ceiling = Total area - Area under ceiling
+    
     area_under_ceiling = 0.0
     for i in range(len(ceiling_points) - 1):
         x1, y1 = ceiling_points[i]
@@ -159,11 +169,15 @@ def _calculate_effect_size(ceiling_points: List[Tuple[float, float]]) -> float:
         avg_height = (y1 + y2) / 2
         area_under_ceiling += width * avg_height
     
-    # Total area is 1.0 (unit square)
+    # Total possible area (scope)
     total_area = 1.0
     
-    # Effect size is the complement (area above ceiling)
-    effect_size = 1.0 - area_under_ceiling
+    # Effect size = Area above ceiling / Total area
+    # This represents how much of the space is "empty" (necessity constraint)
+    effect_size = total_area - area_under_ceiling
+    
+    # Normalize to [0, 1] range
+    effect_size = max(0.0, min(1.0, effect_size))
     
     return effect_size
 
