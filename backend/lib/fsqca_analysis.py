@@ -201,10 +201,17 @@ def create_truth_table(
 def find_sufficient_configurations(
     truth_table: pd.DataFrame,
     consistency_threshold: float = 0.75,
-    coverage_threshold: float = 0.1
+    coverage_threshold: float = 0.1,
+    condition_names: Dict[str, str] = None
 ) -> List[Dict]:
     """
     Find configurations that are sufficient for the outcome
+    
+    Args:
+        truth_table: DataFrame with configurations and metrics
+        consistency_threshold: Minimum consistency
+        coverage_threshold: Minimum coverage
+        condition_names: Mapping of condition IDs to readable names
     """
     sufficient = truth_table[
         (truth_table['consistency'] >= consistency_threshold) & 
@@ -214,12 +221,31 @@ def find_sufficient_configurations(
     
     results = []
     for _, row in sufficient.iterrows():
+        config_str = row['configuration']
+        
+        # Create readable configuration string
+        if condition_names:
+            parts = config_str.split('*')
+            readable_parts = []
+            for part in parts:
+                if part.startswith('~'):
+                    attr_id = part[1:]
+                    attr_name = condition_names.get(attr_id, attr_id)
+                    readable_parts.append(f"~{attr_name}")
+                else:
+                    attr_name = condition_names.get(part, part)
+                    readable_parts.append(attr_name)
+            readable_config = '*'.join(readable_parts)
+        else:
+            readable_config = config_str
+        
         results.append({
-            'configuration': row['configuration'],
+            'configuration': readable_config,
+            'raw_configuration': config_str,
             'consistency': float(row['consistency']),
             'coverage': float(row['coverage']),
             'n_cases': int(row['n_cases']),
-            'interpretation': interpret_configuration(row['configuration'])
+            'interpretation': interpret_configuration(config_str, condition_names)
         })
     
     return results
