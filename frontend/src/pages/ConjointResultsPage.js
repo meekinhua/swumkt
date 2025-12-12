@@ -2550,7 +2550,6 @@ const ConjointResultsPage = () => {
                           ))
                         )}
                       </div>
-                      </div>
                     </Card>
 
                     {/* Explanation Guide */}
