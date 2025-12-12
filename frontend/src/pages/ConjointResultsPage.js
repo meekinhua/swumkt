@@ -2460,21 +2460,48 @@ const ConjointResultsPage = () => {
                       </h3>
                       
                       <div className="space-y-4">
-                        {fsqcaResults.sufficient_configurations.map((config, idx) => (
-                          <Card key={idx} className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-lg font-bold text-gray-900">
-                                    {idx + 1}. {config.configuration}
-                                  </span>
-                                  <span className="px-2 py-1 rounded text-xs font-bold bg-indigo-600 text-white">
-                                    {config.n_cases} cases
+                        {fsqcaResults.sufficient_configurations.length === 0 ? (
+                          <Card className="p-8 text-center bg-gray-50 border-2 border-gray-300">
+                            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-700 font-semibold">
+                              ไม่พบชุดคุณลักษณะที่เพียงพอ (sufficient configurations)
+                            </p>
+                            <p className="text-sm text-gray-600 mt-2">
+                              ลองปรับเกณฑ์ consistency หรือ coverage threshold
+                            </p>
+                          </Card>
+                        ) : (
+                          fsqcaResults.sufficient_configurations.map((config, idx) => (
+                            <Card key={idx} className="p-5 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200">
+                              <div className="mb-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    {idx + 1}
+                                  </div>
+                                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-600 text-white">
+                                    {config.n_cases} กรณี
                                   </span>
                                 </div>
-                                <p className="text-sm text-gray-700 mb-2">{config.interpretation}</p>
+                                
+                                {/* Configuration Expression */}
+                                <div className="mb-3 p-3 bg-white rounded-lg border border-indigo-300">
+                                  <p className="text-xs text-gray-600 mb-1 font-semibold">สูตรคุณลักษณะ:</p>
+                                  <p className="text-base font-mono font-bold text-indigo-900">
+                                    {config.configuration}
+                                  </p>
+                                </div>
+                                
+                                {/* Human Interpretation */}
+                                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                  <p className="text-xs text-gray-600 mb-1 font-semibold">💡 ความหมาย:</p>
+                                  <p className="text-sm text-gray-900 font-semibold">
+                                    {config.interpretation}
+                                  </p>
+                                  <p className="text-xs text-gray-600 mt-2">
+                                    ชุดนี้เป็นเงื่อนไขที่เพียงพอสำหรับความสำเร็จของผลิตภัณฑ์
+                                  </p>
+                                </div>
                               </div>
-                            </div>
                             
                             <div className="grid grid-cols-2 gap-3">
                               <div className="p-3 bg-white rounded-lg border border-indigo-200">
