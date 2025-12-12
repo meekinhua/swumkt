@@ -2347,17 +2347,198 @@ const ConjointResultsPage = () => {
               </>
             )}
 
-            {/* fsQCA Placeholder */}
+            {/* fsQCA Analysis */}
             {advancedTechnique === 'fsqca' && (
-              <Card className="p-12 text-center border-2 border-gray-300">
-                <div className="text-6xl mb-4">🔜</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  fsQCA - เร็วๆ นี้
-                </h3>
-                <p className="text-gray-600">
-                  Fuzzy-Set Qualitative Comparative Analysis จะเปิดให้บริการในอนาคตอันใกล้
-                </p>
-              </Card>
+              <>
+                {/* fsQCA Header */}
+                <Card className="p-6 bg-gradient-to-r from-indigo-100 to-purple-100 border-2 border-indigo-300 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-indigo-600 rounded-xl">
+                      <Network className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-black text-gray-900 mb-2">
+                        Fuzzy-Set Qualitative Comparative Analysis (fsQCA)
+                      </h2>
+                      <p className="text-gray-700 text-sm sm:text-base">
+                        วิเคราะห์หาชุดคุณลักษณะ (configurations) ที่นำไปสู่ความสำเร็จ 
+                        โดยใช้ fuzzy-set membership และ Boolean algebra
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Run fsQCA Button */}
+                {!fsqcaResults && (
+                  <Card className="p-6 text-center border-2 border-indigo-200 mb-6">
+                    <div className="mb-4">
+                      <Sparkles className="w-16 h-16 text-indigo-600 mx-auto mb-3" />
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        พร้อมวิเคราะห์ fsQCA
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        คลิกปุ่มด้านล่างเพื่อค้นหาชุดคุณลักษณะที่เพียงพอ (sufficient) สำหรับความสำเร็จ
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleRunFsQCA}
+                      disabled={loadingFsQCA}
+                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold px-8 py-3"
+                    >
+                      {loadingFsQCA ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          กำลังวิเคราะห์...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5" />
+                          เริ่มวิเคราะห์ fsQCA
+                        </span>
+                      )}
+                    </Button>
+                  </Card>
+                )}
+
+                {/* fsQCA Results */}
+                {fsqcaResults && fsqcaResults.sufficient_configurations && (
+                  <>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <Card className="p-4 bg-gradient-to-br from-indigo-50 to-white border-2 border-indigo-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">พบ Configurations</p>
+                            <p className="text-2xl font-black text-indigo-600">
+                              {fsqcaResults.n_configurations}
+                            </p>
+                            <p className="text-xs text-gray-500">ชุดที่เพียงพอ</p>
+                          </div>
+                        </div>
+                      </Card>
+                      
+                      <Card className="p-4 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+                            <TrendingUp className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Consistency</p>
+                            <p className="text-2xl font-black text-purple-600">
+                              {(fsqcaResults.solution_consistency * 100).toFixed(1)}%
+                            </p>
+                            <p className="text-xs text-gray-500">ความสอดคล้อง</p>
+                          </div>
+                        </div>
+                      </Card>
+                      
+                      <Card className="p-4 bg-gradient-to-br from-pink-50 to-white border-2 border-pink-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-pink-600 rounded-full flex items-center justify-center">
+                            <PieChartIcon className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Coverage</p>
+                            <p className="text-2xl font-black text-pink-600">
+                              {(fsqcaResults.solution_coverage * 100).toFixed(1)}%
+                            </p>
+                            <p className="text-xs text-gray-500">ความครอบคลุม</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Sufficient Configurations */}
+                    <Card className="p-6 border-2 border-indigo-200 mb-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <Star className="w-5 h-5 text-indigo-600" />
+                        ชุดคุณลักษณะที่เพียงพอ (Sufficient Configurations)
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        {fsqcaResults.sufficient_configurations.map((config, idx) => (
+                          <Card key={idx} className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-lg font-bold text-gray-900">
+                                    {idx + 1}. {config.configuration}
+                                  </span>
+                                  <span className="px-2 py-1 rounded text-xs font-bold bg-indigo-600 text-white">
+                                    {config.n_cases} cases
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-700 mb-2">{config.interpretation}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="p-3 bg-white rounded-lg border border-indigo-200">
+                                <p className="text-xs text-gray-600 mb-1">Consistency</p>
+                                <p className="text-2xl font-bold text-indigo-600">
+                                  {(config.consistency * 100).toFixed(1)}%
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full"
+                                    style={{ width: `${config.consistency * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="p-3 bg-white rounded-lg border border-purple-200">
+                                <p className="text-xs text-gray-600 mb-1">Coverage</p>
+                                <p className="text-2xl font-bold text-purple-600">
+                                  {(config.coverage * 100).toFixed(1)}%
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"
+                                    style={{ width: `${config.coverage * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </Card>
+
+                    {/* Explanation */}
+                    <Card className="p-6 bg-blue-50 border-2 border-blue-200">
+                      <div className="flex items-start gap-3">
+                        <Lightbulb className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                        <div>
+                          <h3 className="font-bold text-gray-900 mb-2">
+                            💡 คำอธิบาย fsQCA
+                          </h3>
+                          <ul className="text-sm text-gray-700 space-y-2">
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600">•</span>
+                              <span><strong>Sufficient Configuration:</strong> ชุดคุณลักษณะที่นำไปสู่ความสำเร็จ</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600">•</span>
+                              <span><strong>Consistency:</strong> ความสอดคล้องของเงื่อนไข (≥0.75 = เพียงพอ)</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600">•</span>
+                              <span><strong>Coverage:</strong> ความครอบคลุมของเงื่อนไข (สูง = อธิบายได้มาก)</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600">•</span>
+                              <span><strong>~ (tilde):</strong> หมายถึง "ไม่มี" หรือ "ขาด" คุณลักษณะนั้น</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </Card>
+                  </>
+                )}
+              </>
             )}
 
             {/* IPMA Placeholder */}
