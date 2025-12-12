@@ -59,6 +59,8 @@ const ConjointResultsPage = () => {
   const [advancedTechnique, setAdvancedTechnique] = useState('nca'); // 'nca', 'fsqca', or 'ipma'
   const [ncaResults, setNcaResults] = useState(null);
   const [loadingNCA, setLoadingNCA] = useState(false);
+  const [fsqcaResults, setFsqcaResults] = useState(null);
+  const [loadingFsQCA, setLoadingFsQCA] = useState(false);
   const [statisticalData, setStatisticalData] = useState(null);
   const [loadingStatistical, setLoadingStatistical] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState('mnl'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
