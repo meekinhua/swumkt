@@ -2124,19 +2124,170 @@ const ConjointResultsPage = () => {
                   </Card>
                 )}
 
-                {/* NCA Results Display - Placeholder */}
-                {ncaResults && (
-                  <Card className="p-6 border-2 border-purple-200">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">
-                      📊 ผลการวิเคราะห์ NCA
-                    </h3>
-                    <div className="space-y-4">
-                      {/* Results will be displayed here */}
-                      <p className="text-gray-700">
-                        ผลการวิเคราะห์จะแสดงที่นี่
-                      </p>
+                {/* NCA Results Display */}
+                {ncaResults && ncaResults.attributes && (
+                  <>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <Card className="p-4 bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+                            <BarChart3 className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">วิเคราะห์แล้ว</p>
+                            <p className="text-2xl font-black text-purple-600">
+                              {Object.keys(ncaResults.attributes).length}
+                            </p>
+                            <p className="text-xs text-gray-500">คุณลักษณะ</p>
+                          </div>
+                        </div>
+                      </Card>
+                      
+                      <Card className="p-4 bg-gradient-to-br from-pink-50 to-white border-2 border-pink-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-pink-600 rounded-full flex items-center justify-center">
+                            <Users className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">ข้อมูลจาก</p>
+                            <p className="text-2xl font-black text-pink-600">
+                              {ncaResults.respondent_count}
+                            </p>
+                            <p className="text-xs text-gray-500">ผู้ตอบ</p>
+                          </div>
+                        </div>
+                      </Card>
+                      
+                      <Card className="p-4 bg-gradient-to-br from-indigo-50 to-white border-2 border-indigo-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center">
+                            <TrendingUp className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">วิธีการ</p>
+                            <p className="text-sm font-bold text-indigo-600">CE-FDH</p>
+                            <p className="text-xs text-gray-500">Method</p>
+                          </div>
+                        </div>
+                      </Card>
                     </div>
-                  </Card>
+
+                    {/* NCA Results Table */}
+                    <Card className="p-6 border-2 border-purple-200 mb-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <Star className="w-5 h-5 text-purple-600" />
+                        Effect Size และระดับความจำเป็น
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        {Object.entries(ncaResults.attributes).map(([attrId, attr], idx) => {
+                          const attribute = study?.attributes?.find(a => a.id === attrId);
+                          const bgColor = attr.color === 'red' ? 'from-red-50 to-pink-50' :
+                                         attr.color === 'orange' ? 'from-orange-50 to-yellow-50' :
+                                         attr.color === 'blue' ? 'from-blue-50 to-cyan-50' :
+                                         'from-gray-50 to-slate-50';
+                          
+                          return (
+                            <Card key={attrId} className={`p-4 bg-gradient-to-r ${bgColor} border-2 border-${attr.color || 'gray'}-200`}>
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-lg font-bold text-gray-900">
+                                      {idx + 1}. {attribute?.name || attrId}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded text-xs font-bold bg-${attr.color || 'gray'}-600 text-white`}>
+                                      {attr.level}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-700">{attr.interpretation}</p>
+                                </div>
+                                <div className="text-right ml-4">
+                                  <p className="text-xs text-gray-600">Effect Size</p>
+                                  <p className="text-3xl font-black text-gray-900">
+                                    {(attr.effect_size * 100).toFixed(1)}%
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Progress Bar */}
+                              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                <div
+                                  className={`h-full bg-gradient-to-r from-${attr.color || 'gray'}-500 to-${attr.color || 'gray'}-600 transition-all duration-500`}
+                                  style={{ width: `${attr.effect_size * 100}%` }}
+                                />
+                              </div>
+                              
+                              {/* Attribute Details */}
+                              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                <div className="p-2 bg-white rounded border border-gray-200">
+                                  <span className="text-gray-600">Importance:</span>
+                                  <span className="ml-1 font-bold">{attr.attribute_importance.toFixed(1)}%</span>
+                                </div>
+                                <div className="p-2 bg-white rounded border border-gray-200">
+                                  <span className="text-gray-600">Levels:</span>
+                                  <span className="ml-1 font-bold">{attr.n_levels}</span>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </Card>
+
+                    {/* Interpretation Guide */}
+                    <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                        <div>
+                          <h3 className="font-bold text-gray-900 mb-3">
+                            📖 คำแนะนำการตีความผล NCA
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-3 bg-white rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <span className="font-bold text-sm">ต่ำ (d &lt; 0.1)</span>
+                              </div>
+                              <p className="text-xs text-gray-600">
+                                ไม่ใช่เงื่อนไขที่จำเป็น อาจเป็นปัจจัยเสริมเท่านั้น
+                              </p>
+                            </div>
+                            
+                            <div className="p-3 bg-white rounded-lg border border-blue-300">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                <span className="font-bold text-sm">ปานกลาง (0.1 ≤ d &lt; 0.3)</span>
+                              </div>
+                              <p className="text-xs text-gray-600">
+                                มีความจำเป็นระดับกลาง ควรพิจารณาเป็นปัจจัยสนับสนุน
+                              </p>
+                            </div>
+                            
+                            <div className="p-3 bg-white rounded-lg border border-orange-300">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                <span className="font-bold text-sm">สูง (0.3 ≤ d &lt; 0.5)</span>
+                              </div>
+                              <p className="text-xs text-gray-600">
+                                เป็นเงื่อนไขที่จำเป็น ผลิตภัณฑ์ควรมีคุณลักษณะนี้
+                              </p>
+                            </div>
+                            
+                            <div className="p-3 bg-white rounded-lg border border-red-300">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span className="font-bold text-sm">สูงมาก (d ≥ 0.5)</span>
+                              </div>
+                              <p className="text-xs text-gray-600">
+                                ขาดไม่ได้! เป็นเงื่อนไขที่จำเป็นอย่างยิ่งสำหรับความสำเร็จ
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </>
                 )}
 
                 {/* NCA Explanation */}
