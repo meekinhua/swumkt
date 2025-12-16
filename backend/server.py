@@ -299,7 +299,7 @@ security = HTTPBearer()
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://research-tools-1.preview.emergentagent.com/auth/google/callback')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://academicat-1.preview.emergentagent.com/auth/google/callback')
 
 # Create the main app
 app = FastAPI(title="SWUMKT API")

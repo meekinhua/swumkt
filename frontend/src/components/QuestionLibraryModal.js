@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { X, Search, Plus, Trash2, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://research-tools-1.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://academicat-1.preview.emergentagent.com';
 
 const QuestionLibraryModal = ({ onClose, onSelectQuestion }) => {
   const { token } = useAuth();
