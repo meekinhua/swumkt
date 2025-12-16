@@ -972,3 +972,27 @@ agent_communication:
 ### Agent Communication:
 - agent: "main"
   message: "Migration Tool สร้างเสร็จแล้ว ทดสอบทั้ง backend API และ frontend UI รวมถึงการสร้าง/แก้ไข content ว่ามีการบันทึก preview อัตโนมัติ และหน้า Content/Dashboard โหลดเร็วจากข้อมูล preview"
+
+---
+## Customer Journey Manual Input & Prompt Display Testing - 2024-12-16
+
+### Test Scope:
+1. Manual Input Mode toggle button (AI สร้างให้ / ใส่เอง Manual)
+2. Manual Mermaid code input and rendering
+3. Example template button functionality  
+4. Prompt display when AI generation fails
+5. Copy prompt functionality
+
+### Implementation:
+- Added inputMode toggle between 'ai' and 'manual' modes
+- Manual mode: Mermaid code input, analysis summary input, render button
+- AI mode: Shows prompt on error with copy button
+- Example template: Thai customer journey map with multiple paths
+
+### Test Credentials:
+- Email: admin@swu.ac.th
+- Password: admin123
+
+### Agent Communication:
+- agent: "main"
+  message: "เพิ่มฟีเจอร์ Manual Input และ Prompt Display ในหน้า Customer Journey: 1) Toggle ระหว่าง AI Generate และ Manual Input 2) Manual mode ใส่ Mermaid code เองได้ 3) ปุ่มตัวอย่าง Thai journey map 4) แสดง Prompt เมื่อ AI สร้างไม่ได้ 5) คัดลอก Prompt ไปใช้กับ ChatGPT/Claude ได้"
