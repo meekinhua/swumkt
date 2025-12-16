@@ -724,34 +724,84 @@ ${userPrompt}`;
 
                       {/* Show Prompt on Error */}
                       {showPromptOnError && lastGeneratedPrompt && (
-                        <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
-                          <div className="flex items-center gap-2 mb-3">
-                            <AlertTriangle className="w-5 h-5 text-amber-600" />
-                            <h4 className="font-bold text-amber-800">
-                              {i18n.language === 'th' 
-                                ? 'การสร้างล้มเหลว - นำ Prompt ไปใช้เองได้' 
-                                : 'Generation Failed - Use Prompt Manually'}
-                            </h4>
+                        <div className="mt-4 space-y-4">
+                          {/* Prompt Section */}
+                          <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
+                            <div className="flex items-center gap-2 mb-3">
+                              <AlertTriangle className="w-5 h-5 text-amber-600" />
+                              <h4 className="font-bold text-amber-800">
+                                {i18n.language === 'th' 
+                                  ? 'การสร้างล้มเหลว - นำ Prompt ไปใช้เองได้' 
+                                  : 'Generation Failed - Use Prompt Manually'}
+                              </h4>
+                            </div>
+                            
+                            {/* User selections summary */}
+                            <div className="mb-3 p-2 bg-amber-100 rounded text-sm">
+                              <span className="font-bold text-amber-800">
+                                {i18n.language === 'th' ? 'ตัวเลือกที่เลือก: ' : 'Selected Options: '}
+                              </span>
+                              <span className="text-amber-700">
+                                Type {journeyType} ({journeyType === 'A' ? 'Simple' : 'Detailed'}) | 
+                                {journeyStyle === 'linear' ? ' Linear' : ' Nonlinear'} | 
+                                {outputLanguage === 'th' ? ' ไทย' : ' English'}
+                              </span>
+                            </div>
+
+                            <p className="text-sm text-amber-700 mb-3">
+                              {i18n.language === 'th'
+                                ? '📋 คัดลอก Prompt ด้านล่างไปใช้กับ ChatGPT หรือ Claude แล้วนำ Mermaid Code ที่ได้มาใส่ในช่องด้านล่าง'
+                                : '📋 Copy the prompt below and use with ChatGPT or Claude, then paste the Mermaid code in the field below'}
+                            </p>
+                            <div className="relative">
+                              <Textarea
+                                value={lastGeneratedPrompt}
+                                readOnly
+                                rows={8}
+                                className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
+                              />
+                              <Button
+                                onClick={handleCopyPrompt}
+                                variant="outline"
+                                size="sm"
+                                className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <p className="text-sm text-amber-700 mb-3">
-                            {i18n.language === 'th'
-                              ? 'คุณสามารถคัดลอก Prompt นี้ไปใช้กับ ChatGPT, Claude หรือ AI อื่นๆ แล้วนำ Mermaid Code ที่ได้มาใส่ในโหมด "ใส่เอง (Manual)"'
-                              : 'You can copy this prompt and use it with ChatGPT, Claude, or other AI tools, then paste the Mermaid code in "Manual Input" mode'}
-                          </p>
-                          <div className="relative">
+
+                          {/* Mermaid Input from AI Output */}
+                          <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Code className="w-5 h-5 text-green-600" />
+                              <h4 className="font-bold text-green-800">
+                                {i18n.language === 'th' 
+                                  ? 'ใส่ Mermaid Code ที่ได้จาก AI' 
+                                  : 'Paste Mermaid Code from AI'}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-green-700 mb-3">
+                              {i18n.language === 'th'
+                                ? 'นำ Mermaid Code ที่ได้จาก ChatGPT/Claude มาใส่ที่นี่ (ไม่ต้องใส่ ```mermaid)'
+                                : 'Paste Mermaid code from ChatGPT/Claude here (without ```mermaid wrapper)'}
+                            </p>
                             <Textarea
-                              value={lastGeneratedPrompt}
-                              readOnly
+                              value={manualMermaidCode}
+                              onChange={(e) => setManualMermaidCode(e.target.value)}
+                              placeholder={i18n.language === 'th' 
+                                ? 'วาง Mermaid Code ที่นี่...\n\nตัวอย่าง:\ngraph TD\n    A[รับรู้] --> B[พิจารณา]\n    B --> C[ซื้อ]'
+                                : 'Paste Mermaid code here...\n\nExample:\ngraph TD\n    A[Awareness] --> B[Consideration]\n    B --> C[Purchase]'}
                               rows={6}
-                              className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
+                              className="font-mono text-sm border-2 border-green-200 focus:border-green-400 mb-3"
                             />
                             <Button
-                              onClick={handleCopyPrompt}
-                              variant="outline"
-                              size="sm"
-                              className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
+                              onClick={handleRenderManual}
+                              disabled={!manualMermaidCode.trim()}
+                              className="w-full h-10 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold"
                             >
-                              <Copy className="w-4 h-4" />
+                              <Map className="w-4 h-4 mr-2" />
+                              {i18n.language === 'th' ? 'แสดง Journey Map' : 'Render Journey Map'}
                             </Button>
                           </div>
                         </div>
