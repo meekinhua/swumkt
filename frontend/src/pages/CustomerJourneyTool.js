@@ -308,12 +308,52 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
       );
 
       setResult(response.data);
+      setShowPromptOnError(false);
       toast.success(t('common.success'));
     } catch (error) {
       console.error('Journey map generation error:', error);
+      // Save the prompt for display
+      const generatedPrompt = buildPromptForDisplay();
+      setLastGeneratedPrompt(generatedPrompt);
+      setShowPromptOnError(true);
       toast.error(error.response?.data?.detail || 'Failed to generate journey map');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle manual mermaid rendering
+  const handleRenderManual = async () => {
+    if (!manualMermaidCode.trim()) {
+      toast.error(i18n.language === 'th' ? 'กรุณาใส่ Mermaid Code' : 'Please enter Mermaid Code');
+      return;
+    }
+
+    try {
+      // Validate mermaid syntax first
+      await mermaid.parse(manualMermaidCode);
+      
+      setResult({
+        mermaid_code: manualMermaidCode,
+        analysis_summary: manualAnalysis || (i18n.language === 'th' ? 'สร้างจาก Manual Input' : 'Created from Manual Input')
+      });
+      setShowPromptOnError(false);
+      toast.success(i18n.language === 'th' ? 'แสดงผล Mermaid สำเร็จ!' : 'Mermaid rendered successfully!');
+    } catch (error) {
+      console.error('Mermaid syntax error:', error);
+      toast.error(i18n.language === 'th' 
+        ? `Mermaid Syntax ไม่ถูกต้อง: ${error.message}` 
+        : `Invalid Mermaid Syntax: ${error.message}`);
+    }
+  };
+
+  // Copy prompt to clipboard
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(lastGeneratedPrompt);
+      toast.success(i18n.language === 'th' ? 'คัดลอก Prompt แล้ว!' : 'Prompt copied!');
+    } catch (error) {
+      toast.error(i18n.language === 'th' ? 'ไม่สามารถคัดลอกได้' : 'Failed to copy');
     }
   };
 
