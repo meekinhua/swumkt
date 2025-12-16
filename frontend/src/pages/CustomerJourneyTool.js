@@ -731,18 +731,6 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
                                   : 'Generation Failed - Use Prompt Manually'}
                               </h4>
                             </div>
-                            
-                            {/* User selections summary */}
-                            <div className="mb-3 p-2 bg-amber-100 rounded text-sm">
-                              <span className="font-bold text-amber-800">
-                                {i18n.language === 'th' ? 'ตัวเลือกที่เลือก: ' : 'Selected Options: '}
-                              </span>
-                              <span className="text-amber-700">
-                                Type {journeyType} ({journeyType === 'A' ? 'Simple' : 'Detailed'}) | 
-                                {journeyStyle === 'linear' ? ' Linear' : ' Nonlinear'} | 
-                                {outputLanguage === 'th' ? ' ไทย' : ' English'}
-                              </span>
-                            </div>
 
                             <p className="text-sm text-amber-700 mb-3">
                               {i18n.language === 'th'
@@ -753,7 +741,7 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
                               <Textarea
                                 value={lastGeneratedPrompt}
                                 readOnly
-                                rows={8}
+                                rows={12}
                                 className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
                               />
                               <Button
