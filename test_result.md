@@ -375,15 +375,18 @@ frontend:
   
   - task: "แปล UI elements ทั้งหมดด้วย useTranslation"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/CustomerJourneyTool.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "แทนที่ hard-coded text ทั้งหมดด้วย t() function จาก i18next สำหรับรองรับภาษาไทยและอังกฤษ"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: UI translation working perfectly. All text elements properly translated using useTranslation hook. Thai language displays correctly throughout the interface including page title, section headers, button labels, and help text."
   
   - task: "ส่ง target_language, journey_type, journey_style ไปยัง API"
     implemented: true
