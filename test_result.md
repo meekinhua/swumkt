@@ -360,15 +360,18 @@ frontend:
   
   - task: "เพิ่ม auto-update Additional Context ตาม journey type และ style"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/CustomerJourneyTool.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "เพิ่ม useEffect ที่อัปเดต researchContext อัตโนมัติเมื่อ journeyType, journeyStyle, หรือ i18n.language เปลี่ยน"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Auto-update Additional Context working correctly. useEffect properly updates researchContext when journey type, style, or language changes. Context textarea shows appropriate text based on selected options."
   
   - task: "แปล UI elements ทั้งหมดด้วย useTranslation"
     implemented: true
