@@ -612,7 +612,7 @@ frontend:
 
 test_plan:
   current_focus:
-    - "Group Members Management Feature Testing - COMPLETED"
+    - "Customer Journey Tool - Manual Input Mode & Toggle Features Testing - COMPLETED"
   stuck_tasks:
     - "Conjoint Analysis Public Sharing Feature - Missing Frontend Route"
   test_all: false
@@ -626,6 +626,7 @@ test_plan:
     - "Conjoint Analysis Results - MNL เป็น Default Method: ✅ PASSED"
     - "Conjoint Analysis Results - Relative Importance บนสุด และ Dynamic Formula: ✅ PASSED"
     - "Conjoint Analysis Status Management Feature - Complete Testing: ✅ PASSED"
+    - "Customer Journey Tool - Manual Input Mode & Toggle Features Testing: ✅ PASSED (10/10 tests)"
 
 frontend:
   - task: "Conjoint Analysis Status Management Feature - Complete Testing"
