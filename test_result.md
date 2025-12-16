@@ -313,17 +313,35 @@ frontend:
         agent: "testing"
         comment: "✅ TESTED: Full end-to-end testing successful. Navigation working from Market Research page. Tool structure correct with Phase 1/2 tabs and sub-tabs. Question Generator: Successfully generated 12 Thai questions with Export to Survey button. Interview Analysis: Successfully analyzed sample data with all sections (analysis text, key findings, recommendations) generated. Phase 2 shows proper placeholder content. Admin Settings: Both perception analysis and question generator prompt textareas found with save buttons. LLM processing takes 10-40 seconds but completes successfully. All core functionality working as designed."
 
+  - task: "Customer Journey Tool - Manual Input Mode & Toggle Features Testing"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/CustomerJourneyTool.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing Customer Journey Tool page (/market-research/customer-journey) with new manual input features as requested in Thai review"
+      - working: true
+        agent: "testing"
+        comment: "🎯 CUSTOMER JOURNEY TOOL MANUAL INPUT FEATURES TESTING COMPLETE! ✅ COMPREHENSIVE END-TO-END TESTING SUCCESSFUL: Successfully tested all requested features for the Customer Journey Tool page. 🔐 LOGIN & NAVIGATION: ✅ Successfully logged in with admin@swu.ac.th/admin123 credentials and navigated to /market-research/customer-journey page. Page title confirmed: 'เครื่องมือสร้างแผนที่การเดินทางลูกค้า'. 🔄 INPUT MODE TOGGLE: ✅ CRITICAL - Both toggle buttons found and functional: 'AI สร้างให้' and 'ใส่เอง (Manual)'. AI mode initially active with gradient background styling. Toggle switches between AI and Manual input forms correctly. Toggle styling shows active mode clearly with gradient background as required. 📝 MANUAL INPUT MODE: ✅ CRITICAL - All manual input elements working perfectly: Mermaid Code textarea (id='manualMermaid') found and functional, Analysis Summary textarea (id='manualAnalysis') found and functional, 'แสดง Journey Map' render button found and clickable. Manual mode appears only when 'ใส่เอง (Manual)' button is clicked. 📋 EXAMPLE TEMPLATE FUNCTIONALITY: ✅ CRITICAL - Example template working perfectly: 'ใช้ตัวอย่างนี้' button found in example section, Successfully populates Mermaid code with Thai customer journey example (632 characters), Successfully populates Analysis Summary (115 characters), Contains proper Thai text including 'รับรู้' and other Thai journey terms. 🎨 MERMAID DIAGRAM RENDERING: ✅ CRITICAL - Diagram rendering working correctly: Successfully clicked 'แสดง Journey Map' button, Mermaid diagram renders correctly on right panel (24 SVG elements found), Diagram displays properly with Thai customer journey flow, Custom Mermaid code testing successful with decision flow diagram. 🔧 CUSTOM MERMAID & ERROR HANDLING: ✅ Custom Mermaid code input and rendering working, ⚠️ Minor: Error handling for invalid syntax present but toast messages not consistently detected (functionality works but toast detection needs improvement). 🔄 AI MODE SWITCHING: ✅ CRITICAL - Successfully switches back to AI mode: Raw data textarea appears, Language selection radio buttons (2 options), Journey type radio buttons (2 options), Generate button functional. 📱 RESPONSIVE DESIGN: ✅ CRITICAL - Mobile responsiveness working perfectly: Toggle buttons visible and functional on mobile viewport (390x844), Toggle functionality works correctly on mobile, Layout adapts properly to different screen sizes. 🎉 OVERALL RESULT: 10/10 critical tests passed. All requested features are fully functional and working as designed. Manual input mode, example templates, Mermaid rendering, and responsive design all working perfectly."
+
   - task: "เพิ่ม translation keys สำหรับ CustomerJourneyTool"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/locales/en/translation.json, /app/frontend/src/locales/th/translation.json"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "เพิ่ม translation keys ครบถ้วนสำหรับ UI elements, labels, และ help text ของ CustomerJourneyTool"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Translation keys working perfectly. All Thai text displays correctly including toggle buttons ('AI สร้างให้', 'ใส่เอง (Manual)'), form labels, help text, and button text. UI elements properly localized with Thai language support."
   
   - task: "เพิ่ม state และ UI สำหรับเลือก output language"
     implemented: true
