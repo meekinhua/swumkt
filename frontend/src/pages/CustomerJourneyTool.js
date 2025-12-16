@@ -34,6 +34,12 @@ const CustomerJourneyTool = () => {
   const [isExpandedModal, setIsExpandedModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharing, setSharing] = useState(false);
+  // New states for manual input and prompt display
+  const [inputMode, setInputMode] = useState('ai'); // 'ai' or 'manual'
+  const [manualMermaidCode, setManualMermaidCode] = useState('');
+  const [manualAnalysis, setManualAnalysis] = useState('');
+  const [showPromptOnError, setShowPromptOnError] = useState(false);
+  const [lastGeneratedPrompt, setLastGeneratedPrompt] = useState('');
   const mermaidRef = useRef(null);
   const containerRef = useRef(null);
   const fullscreenRef = useRef(null);
