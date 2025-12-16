@@ -217,8 +217,8 @@ const CustomerJourneyTool = () => {
     const typeDesc = journeyType === 'A' ? 'simple and straightforward' : 'detailed and comprehensive';
     const styleDesc = journeyStyle === 'linear' ? 'linear sequential path' : 'nonlinear with multiple paths and decision points';
     
-    // System Prompt - ตรงกับ get_default_journey_map_prompt() ใน backend
-    const systemPrompt = `You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
+    // Prompt เดียวกันกับที่ backend ส่งไป AI (System + User รวมกัน)
+    const fullPrompt = `You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
 
 Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
 
@@ -263,10 +263,11 @@ ANALYSIS:
 MERMAID:
 \`\`\`mermaid
 [Your mermaid code]
-\`\`\``;
+\`\`\`
 
-    // User Prompt - ตรงกับ user_prompt ใน backend
-    const userPrompt = `Please analyze the following qualitative research data and create a Customer Journey Map:
+---
+
+Please analyze the following qualitative research data and create a Customer Journey Map:
 
 Research Data:
 ${rawData}
@@ -283,12 +284,7 @@ Please provide:
 
 IMPORTANT: All text in both the analysis summary and the mermaid diagram must be written in ${languageName}.`;
 
-    // Format for easy copy-paste to ChatGPT/Claude
-    return `=== SYSTEM PROMPT (ใส่ใน System/Custom Instructions) ===
-${systemPrompt}
-
-=== USER PROMPT (ใส่ใน Chat) ===
-${userPrompt}`;
+    return fullPrompt;
   };
 
   const handleGenerate = async () => {
