@@ -538,156 +538,328 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
                     <span className="hidden sm:inline">{t('customerJourney.inputTitle')}</span>
                     <span className="sm:hidden">{t('customerJourney.inputTitleShort')}</span>
                   </h2>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <Label htmlFor="rawData" className="text-gray-800 font-bold mb-2">
-                        {t('customerJourney.dataLabel')}
-                      </Label>
-                      <p className="text-sm text-gray-600 mb-2 font-medium">
-                        {t('customerJourney.dataHelp')}
-                      </p>
-                      <Textarea
-                        id="rawData"
-                        value={rawData}
-                        onChange={(e) => setRawData(e.target.value)}
-                        placeholder={t('customerJourney.dataPlaceholder')}
-                        rows={8}
-                        className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
-                      />
-                    </div>
 
-                    {/* Output Language Selection */}
-                    <div>
-                      <Label className="text-gray-800 font-bold mb-2 block">
-                        {t('customerJourney.outputLanguageLabel')}
-                      </Label>
-                      <p className="text-sm text-gray-600 mb-2 font-medium">
-                        {t('customerJourney.outputLanguageHelp')}
-                      </p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="outputLanguage"
-                            value="th"
-                            checked={outputLanguage === 'th'}
-                            onChange={(e) => setOutputLanguage(e.target.value)}
-                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
-                          />
-                          <span className="text-gray-700 font-medium">{t('customerJourney.outputLanguageThai')}</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="outputLanguage"
-                            value="en"
-                            checked={outputLanguage === 'en'}
-                            onChange={(e) => setOutputLanguage(e.target.value)}
-                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
-                          />
-                          <span className="text-gray-700 font-medium">{t('customerJourney.outputLanguageEnglish')}</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Journey Type Selection */}
-                    <div>
-                      <Label className="text-gray-800 font-bold mb-2 block">
-                        {t('customerJourney.journeyTypeLabel')}
-                      </Label>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="journeyType"
-                            value="A"
-                            checked={journeyType === 'A'}
-                            onChange={(e) => setJourneyType(e.target.value)}
-                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
-                          />
-                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyTypeA')}</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="journeyType"
-                            value="B"
-                            checked={journeyType === 'B'}
-                            onChange={(e) => setJourneyType(e.target.value)}
-                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
-                          />
-                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyTypeB')}</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Journey Style Selection */}
-                    <div>
-                      <Label className="text-gray-800 font-bold mb-2 block">
-                        {t('customerJourney.journeyStyleLabel')}
-                      </Label>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="journeyStyle"
-                            value="linear"
-                            checked={journeyStyle === 'linear'}
-                            onChange={(e) => setJourneyStyle(e.target.value)}
-                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
-                          />
-                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyStyleLinear')}</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="journeyStyle"
-                            value="nonlinear"
-                            checked={journeyStyle === 'nonlinear'}
-                            onChange={(e) => setJourneyStyle(e.target.value)}
-                            className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
-                          />
-                          <span className="text-gray-700 font-medium">{t('customerJourney.journeyStyleNonlinear')}</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Additional Context */}
-                    <div>
-                      <Label htmlFor="context" className="text-gray-800 font-bold mb-2">
-                        {t('customerJourney.contextLabel')}
-                      </Label>
-                      <Textarea
-                        id="context"
-                        value={researchContext}
-                        onChange={(e) => setResearchContext(e.target.value)}
-                        placeholder={t('customerJourney.contextPlaceholder')}
-                        rows={3}
-                        className="border-2 border-gray-300 focus:border-[#00A9CE]"
-                      />
-                    </div>
-
-                    <Button
-                      onClick={handleGenerate}
-                      disabled={loading || !rawData.trim()}
-                      className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
+                  {/* Input Mode Toggle */}
+                  <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg">
+                    <button
+                      onClick={() => setInputMode('ai')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md font-bold transition-all ${
+                        inputMode === 'ai'
+                          ? 'bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-200'
+                      }`}
                     >
-                      {loading ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
-                          <span className="hidden sm:inline">{t('customerJourney.generating')}</span>
-                          <span className="sm:hidden">{t('customerJourney.generatingShort')}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                          <span className="hidden sm:inline">{t('customerJourney.generate')}</span>
-                          <span className="sm:hidden">{t('customerJourney.generateShort')}</span>
-                        </>
-                      )}
-                    </Button>
+                      <Sparkles className="w-4 h-4" />
+                      <span className="text-sm">{i18n.language === 'th' ? 'AI สร้างให้' : 'AI Generate'}</span>
+                    </button>
+                    <button
+                      onClick={() => setInputMode('manual')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md font-bold transition-all ${
+                        inputMode === 'manual'
+                          ? 'bg-gradient-to-r from-[#005A73] to-[#00A9CE] text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span className="text-sm">{i18n.language === 'th' ? 'ใส่เอง (Manual)' : 'Manual Input'}</span>
+                    </button>
                   </div>
+                  
+                  {/* AI Mode */}
+                  {inputMode === 'ai' && (
+                    <div className="space-y-6">
+                      <div>
+                        <Label htmlFor="rawData" className="text-gray-800 font-bold mb-2">
+                          {t('customerJourney.dataLabel')}
+                        </Label>
+                        <p className="text-sm text-gray-600 mb-2 font-medium">
+                          {t('customerJourney.dataHelp')}
+                        </p>
+                        <Textarea
+                          id="rawData"
+                          value={rawData}
+                          onChange={(e) => setRawData(e.target.value)}
+                          placeholder={t('customerJourney.dataPlaceholder')}
+                          rows={8}
+                          className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                        />
+                      </div>
+
+                      {/* Output Language Selection */}
+                      <div>
+                        <Label className="text-gray-800 font-bold mb-2 block">
+                          {t('customerJourney.outputLanguageLabel')}
+                        </Label>
+                        <p className="text-sm text-gray-600 mb-2 font-medium">
+                          {t('customerJourney.outputLanguageHelp')}
+                        </p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="outputLanguage"
+                              value="th"
+                              checked={outputLanguage === 'th'}
+                              onChange={(e) => setOutputLanguage(e.target.value)}
+                              className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                            />
+                            <span className="text-gray-700 font-medium">{t('customerJourney.outputLanguageThai')}</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="outputLanguage"
+                              value="en"
+                              checked={outputLanguage === 'en'}
+                              onChange={(e) => setOutputLanguage(e.target.value)}
+                              className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                            />
+                            <span className="text-gray-700 font-medium">{t('customerJourney.outputLanguageEnglish')}</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Journey Type Selection */}
+                      <div>
+                        <Label className="text-gray-800 font-bold mb-2 block">
+                          {t('customerJourney.journeyTypeLabel')}
+                        </Label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="journeyType"
+                              value="A"
+                              checked={journeyType === 'A'}
+                              onChange={(e) => setJourneyType(e.target.value)}
+                              className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                            />
+                            <span className="text-gray-700 font-medium">{t('customerJourney.journeyTypeA')}</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="journeyType"
+                              value="B"
+                              checked={journeyType === 'B'}
+                              onChange={(e) => setJourneyType(e.target.value)}
+                              className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                            />
+                            <span className="text-gray-700 font-medium">{t('customerJourney.journeyTypeB')}</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Journey Style Selection */}
+                      <div>
+                        <Label className="text-gray-800 font-bold mb-2 block">
+                          {t('customerJourney.journeyStyleLabel')}
+                        </Label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="journeyStyle"
+                              value="linear"
+                              checked={journeyStyle === 'linear'}
+                              onChange={(e) => setJourneyStyle(e.target.value)}
+                              className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                            />
+                            <span className="text-gray-700 font-medium">{t('customerJourney.journeyStyleLinear')}</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="journeyStyle"
+                              value="nonlinear"
+                              checked={journeyStyle === 'nonlinear'}
+                              onChange={(e) => setJourneyStyle(e.target.value)}
+                              className="w-4 h-4 text-[#00A9CE] focus:ring-[#00A9CE]"
+                            />
+                            <span className="text-gray-700 font-medium">{t('customerJourney.journeyStyleNonlinear')}</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Additional Context */}
+                      <div>
+                        <Label htmlFor="context" className="text-gray-800 font-bold mb-2">
+                          {t('customerJourney.contextLabel')}
+                        </Label>
+                        <Textarea
+                          id="context"
+                          value={researchContext}
+                          onChange={(e) => setResearchContext(e.target.value)}
+                          placeholder={t('customerJourney.contextPlaceholder')}
+                          rows={3}
+                          className="border-2 border-gray-300 focus:border-[#00A9CE]"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleGenerate}
+                        disabled={loading || !rawData.trim()}
+                        className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
+                      >
+                        {loading ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
+                            <span className="hidden sm:inline">{t('customerJourney.generating')}</span>
+                            <span className="sm:hidden">{t('customerJourney.generatingShort')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                            <span className="hidden sm:inline">{t('customerJourney.generate')}</span>
+                            <span className="sm:hidden">{t('customerJourney.generateShort')}</span>
+                          </>
+                        )}
+                      </Button>
+
+                      {/* Show Prompt on Error */}
+                      {showPromptOnError && lastGeneratedPrompt && (
+                        <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <AlertTriangle className="w-5 h-5 text-amber-600" />
+                            <h4 className="font-bold text-amber-800">
+                              {i18n.language === 'th' 
+                                ? 'การสร้างล้มเหลว - นำ Prompt ไปใช้เองได้' 
+                                : 'Generation Failed - Use Prompt Manually'}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-amber-700 mb-3">
+                            {i18n.language === 'th'
+                              ? 'คุณสามารถคัดลอก Prompt นี้ไปใช้กับ ChatGPT, Claude หรือ AI อื่นๆ แล้วนำ Mermaid Code ที่ได้มาใส่ในโหมด "ใส่เอง (Manual)"'
+                              : 'You can copy this prompt and use it with ChatGPT, Claude, or other AI tools, then paste the Mermaid code in "Manual Input" mode'}
+                          </p>
+                          <div className="relative">
+                            <Textarea
+                              value={lastGeneratedPrompt}
+                              readOnly
+                              rows={6}
+                              className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
+                            />
+                            <Button
+                              onClick={handleCopyPrompt}
+                              variant="outline"
+                              size="sm"
+                              className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual Mode */}
+                  {inputMode === 'manual' && (
+                    <div className="space-y-6">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-700 font-medium">
+                          {i18n.language === 'th'
+                            ? '💡 ใส่ Mermaid Code ที่คุณสร้างเองหรือได้จาก AI อื่นๆ เช่น ChatGPT, Claude'
+                            : '💡 Enter Mermaid code that you created yourself or obtained from other AI tools like ChatGPT, Claude'}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="manualMermaid" className="text-gray-800 font-bold mb-2 flex items-center gap-2">
+                          <Code className="w-4 h-4" />
+                          {i18n.language === 'th' ? 'Mermaid Code' : 'Mermaid Code'}
+                        </Label>
+                        <p className="text-sm text-gray-600 mb-2 font-medium">
+                          {i18n.language === 'th'
+                            ? 'ใส่โค้ด Mermaid สำหรับสร้าง Journey Map (ไม่ต้องใส่ ```mermaid)'
+                            : 'Enter Mermaid code for Journey Map (without ```mermaid wrapper)'}
+                        </p>
+                        <Textarea
+                          id="manualMermaid"
+                          value={manualMermaidCode}
+                          onChange={(e) => setManualMermaidCode(e.target.value)}
+                          placeholder={`graph TD
+    A[🔍 Awareness] -->|Search| B[🌐 Website Visit]
+    B -->|Browse| C[📦 Product View]
+    C -->|Compare| D[🤔 Consideration]
+    D -->|Add to Cart| E[🛒 Purchase]
+    E -->|Receive| F[📬 Post-Purchase]
+    
+    style A fill:#00A9CE,stroke:#005A73,color:#fff
+    style E fill:#28a745,stroke:#1e7e34,color:#fff`}
+                          rows={12}
+                          className="font-mono text-sm border-2 border-gray-300 focus:border-[#00A9CE]"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="manualAnalysis" className="text-gray-800 font-bold mb-2">
+                          {i18n.language === 'th' ? 'สรุปการวิเคราะห์ (ไม่บังคับ)' : 'Analysis Summary (Optional)'}
+                        </Label>
+                        <Textarea
+                          id="manualAnalysis"
+                          value={manualAnalysis}
+                          onChange={(e) => setManualAnalysis(e.target.value)}
+                          placeholder={i18n.language === 'th' 
+                            ? 'ใส่คำอธิบายหรือสรุปการวิเคราะห์ Journey Map...'
+                            : 'Enter description or analysis summary...'}
+                          rows={4}
+                          className="border-2 border-gray-300 focus:border-[#00A9CE]"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleRenderManual}
+                        disabled={!manualMermaidCode.trim()}
+                        className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
+                      >
+                        <Map className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                        {i18n.language === 'th' ? 'แสดง Journey Map' : 'Render Journey Map'}
+                      </Button>
+
+                      {/* Example Template */}
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-gray-800 text-sm">
+                            {i18n.language === 'th' ? '📝 ตัวอย่าง Mermaid Code' : '📝 Mermaid Code Example'}
+                          </h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => {
+                              setManualMermaidCode(`graph TD
+    A[🔍 รับรู้ Awareness] -->|ค้นหาออนไลน์| B[🌐 เข้าชมเว็บไซต์]
+    B -->|ดูสินค้า| C[📦 เปรียบเทียบสินค้า]
+    C -->|พิจารณา| D[🤔 ตัดสินใจ]
+    D -->|หยิบใส่ตะกร้า| E[🛒 ซื้อสินค้า]
+    E -->|รับสินค้า| F[📬 หลังการซื้อ]
+    F -->|พอใจ| G[⭐ ลูกค้าภักดี]
+    
+    C -->|ไม่ชอบ| H[❌ ออกจากเว็บ]
+    D -->|แพงไป| I[💰 รอโปรโมชั่น]
+    I -->|มีส่วนลด| E
+    
+    style A fill:#00A9CE,stroke:#005A73,stroke-width:2px,color:#fff
+    style E fill:#28a745,stroke:#1e7e34,stroke-width:2px,color:#fff
+    style G fill:#ffc107,stroke:#e0a800,stroke-width:2px,color:#000
+    style H fill:#dc3545,stroke:#c82333,stroke-width:2px,color:#fff`);
+                              setManualAnalysis(i18n.language === 'th' 
+                                ? 'แผนที่การเดินทางลูกค้าแสดงขั้นตอนตั้งแต่การรับรู้ถึงความภักดี โดยมีจุดตัดสินใจที่สำคัญในขั้นตอนการพิจารณาและการซื้อ'
+                                : 'Customer journey map showing steps from awareness to loyalty, with key decision points at consideration and purchase stages.');
+                            }}
+                          >
+                            {i18n.language === 'th' ? 'ใช้ตัวอย่างนี้' : 'Use this example'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {i18n.language === 'th'
+                            ? 'คลิก "ใช้ตัวอย่างนี้" เพื่อเริ่มต้นใช้งานอย่างรวดเร็ว แล้วแก้ไขตามต้องการ'
+                            : 'Click "Use this example" for a quick start, then customize as needed'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </Card>
 
                 {/* Result Section */}
