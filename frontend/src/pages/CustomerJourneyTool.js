@@ -211,6 +211,80 @@ const CustomerJourneyTool = () => {
     };
   }, []);
 
+  // Function to build the prompt for display
+  const buildPromptForDisplay = () => {
+    const languageName = outputLanguage === 'th' ? 'Thai' : 'English';
+    const typeDesc = journeyType === 'A' ? 'simple and straightforward' : 'detailed and comprehensive';
+    const styleDesc = journeyStyle === 'linear' ? 'linear sequential path' : 'nonlinear with multiple paths and decision points';
+    
+    const systemPrompt = `You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
+
+Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
+
+Guidelines:
+1. Identify key stages in the customer journey (e.g., Awareness, Consideration, Purchase, Post-Purchase, Loyalty)
+2. For each stage, identify:
+   - Touchpoints (where customer interacts with brand)
+   - Customer Actions
+   - Pain Points (frustrations, challenges)
+   - Emotions (feelings at each stage)
+   - Opportunities for improvement
+
+3. Output Format:
+   - First, provide a brief analysis summary (2-3 paragraphs)
+   - Then, generate Mermaid code for a flowchart-style journey map
+   - Use clear node labels and connections
+   - Include pain points and opportunities as annotations
+
+4. Mermaid Syntax Guidelines:
+   - Use graph TD or graph LR for direction
+   - Use meaningful node IDs
+   - Use descriptive labels
+   - Include colors for different types of nodes (stages, touchpoints, pain points)
+
+Example Mermaid structure:
+\`\`\`mermaid
+graph TD
+    A[Awareness Stage] -->|Search Online| B[Website Visit]
+    B -->|Browse Products| C[Product Comparison]
+    C -->|Pain Point: Confusing Navigation| D[Consideration Stage]
+    D -->|Add to Cart| E[Purchase Stage]
+    
+    style A fill:#00A9CE,stroke:#005A73,stroke-width:3px,color:#fff
+    style D fill:#E63946,stroke:#C62E38,stroke-width:2px,color:#fff
+    style E fill:#28a745,stroke:#1e7e34,stroke-width:2px,color:#fff
+\`\`\`
+
+Respond in this exact format:
+ANALYSIS:
+[Your analysis summary]
+
+MERMAID:
+\`\`\`mermaid
+[Your mermaid code]
+\`\`\``;
+
+    const userPrompt = `Please analyze the following qualitative research data and create a Customer Journey Map:
+
+Research Data:
+${rawData}
+
+${researchContext ? `Additional Context: ${researchContext}` : ''}
+
+Journey Requirements:
+- Type: ${journeyType} (${typeDesc})
+- Style: ${journeyStyle} (${styleDesc})
+- Output Language: ${languageName}
+
+Please provide:
+1. Analysis summary of the customer journey in ${languageName}
+2. Mermaid diagram code for visualization with labels in ${languageName}
+
+IMPORTANT: All text in both the analysis summary and the mermaid diagram must be written in ${languageName}.`;
+
+    return `=== SYSTEM PROMPT ===\n${systemPrompt}\n\n=== USER PROMPT ===\n${userPrompt}`;
+  };
+
   const handleGenerate = async () => {
     if (!rawData.trim()) {
       toast.error(t('common.error') + ': ' + t('customerJourney.dataHelp'));
