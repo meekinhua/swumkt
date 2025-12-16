@@ -345,15 +345,18 @@ frontend:
   
   - task: "เพิ่ม state และ UI สำหรับเลือก output language"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/CustomerJourneyTool.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "เพิ่ม state: outputLanguage (default: en), journeyType (default: B), journeyStyle (default: nonlinear) และ radio buttons สำหรับเลือก"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Output language selection working correctly. Found 2 language radio buttons (Thai/English) in AI mode. Journey type selection (2 options: A/B) and journey style selection (linear/nonlinear) all functional. State management working properly."
   
   - task: "เพิ่ม auto-update Additional Context ตาม journey type และ style"
     implemented: true
