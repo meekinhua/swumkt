@@ -3299,7 +3299,7 @@ async def share_journey_map_as_content(
 ):
     """Share journey map as research content"""
     try:
-        # Create content body with research details and journey map output ONLY (no input data)
+        # Create content body with research details, input data, and journey map output
         content_body = f"""## เทคนิคการวิจัย
 Customer Journey Map
 
@@ -3316,6 +3316,12 @@ Customer Journey Map
 - **ประเภท:** {data.journey_type}
 - **รูปแบบ:** {data.journey_style}
 - **ภาษา:** {data.output_language}
+
+## ข้อมูลที่ใช้วิเคราะห์ (Input Data)
+{data.raw_data}
+{f'''
+## บริบทเพิ่มเติม (Research Context)
+{data.research_context}''' if data.research_context else ''}
 
 ## สรุปการวิเคราะห์
 {data.analysis_summary}
@@ -3345,7 +3351,7 @@ Customer Journey Map
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "views": 0,
-            # Store metadata for journey map
+            # Store metadata for journey map (including input data)
             "journey_map_metadata": {
                 "research_type": data.research_type,
                 "sample_size": data.sample_size,
@@ -3355,7 +3361,9 @@ Customer Journey Map
                 "journey_type": data.journey_type,
                 "journey_style": data.journey_style,
                 "output_language": data.output_language,
-                "mermaid_code": data.mermaid_code
+                "mermaid_code": data.mermaid_code,
+                "raw_data": data.raw_data,
+                "research_context": data.research_context
             }
         }
         
