@@ -304,6 +304,67 @@ const ContentEditor = () => {
     }
   };
 
+  // Function to build AI Rearrange prompt (matches backend)
+  const buildRearrangePrompt = () => {
+    const imageContext = formData.attachments
+      .filter(att => att.file_type?.startsWith('image/'))
+      .map((att, idx) => `${idx + 1}. ${att.filename}`)
+      .join('\n');
+
+    const prompt = `คุณเป็นนักเขียนมืออาชีพและนักออกแบบเนื้อหา กรุณาจัดเรียงและปรับปรุงบทความต่อไปนี้ให้สวยงาม เป็นระเบียบ และอ่านง่ายขึ้น
+
+**หัวข้อบทความ:** ${formData.title || 'ไม่มีหัวข้อ'}
+
+**เนื้อหาเดิม:**
+${formData.content}
+${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` : ''}
+
+**คำแนะนำสำคัญ:**
+1. จัดโครงสร้างเนื้อหาใหม่ให้เป็นหมวดหมู่ชัดเจน
+2. เพิ่ม headings (h2, h3) ให้เหมาะสม
+3. แบ่ง paragraphs ให้อ่านง่าย
+4. เน้นจุดสำคัญด้วย bold/italic (ใช้ <strong> และ <em> tags)
+5. เพิ่ม bullet points หรือ numbered lists ถ้าเหมาะสม (ใช้ <ul>, <ol>, <li>)
+6. **สำคัญมาก:** ใช้ placeholder [รูปภาพที่ X] (X = หมายเลขรูป) ในตำแหน่งที่เหมาะสม
+7. เพิ่ม introduction และ conclusion ถ้าจำเป็น
+
+**ข้อกำหนด:**
+- ใช้ HTML tags: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>
+- ห้ามใช้ markdown (\`\`\`, ##, **)
+- คงเนื้อหาหลักและข้อมูลสำคัญไว้ทั้งหมด
+- ให้ output เป็น HTML โดยตรง ไม่ต้องมี <html>, <body> tags
+
+**กรุณาเริ่มจัดเรียงเนื้อหาเลย (output HTML โดยตรง):**`;
+
+    return prompt;
+  };
+
+  // Copy prompt to clipboard
+  const handleCopyRearrangePrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(rearrangePrompt);
+      toast.success('คัดลอก Prompt แล้ว!');
+    } catch (error) {
+      toast.error('ไม่สามารถคัดลอกได้');
+    }
+  };
+
+  // Apply manual HTML input
+  const handleApplyManualHtml = () => {
+    if (!manualHtmlInput.trim()) {
+      toast.error('กรุณาใส่ HTML ที่ได้จาก AI');
+      return;
+    }
+    
+    setFormData({
+      ...formData,
+      content: manualHtmlInput
+    });
+    setShowRearrangePrompt(false);
+    setManualHtmlInput('');
+    toast.success('✨ ใส่เนื้อหาที่จัดเรียงแล้วสำเร็จ!');
+  };
+
   const handleAiRearrange = async () => {
     if (!id) {
       toast.error('กรุณาบันทึกเนื้อหาก่อนใช้ AI Rearrange');
