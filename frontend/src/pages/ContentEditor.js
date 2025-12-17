@@ -566,6 +566,85 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
                     💡 เคล็ดลับ: ปุ่ม &quot;AI Rearrange&quot; จะช่วยจัดเรียงเนื้อหาและรูปภาพให้สวยงามอัตโนมัติ
                   </p>
                 )}
+
+                {/* AI Rearrange Fallback - Show when failed */}
+                {showRearrangePrompt && rearrangePrompt && (
+                  <div className="mt-4 space-y-4">
+                    {/* Prompt Section */}
+                    <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <h4 className="font-bold text-amber-800">
+                          AI Rearrange ล้มเหลว - นำ Prompt ไปใช้เองได้
+                        </h4>
+                        <button
+                          onClick={() => setShowRearrangePrompt(false)}
+                          className="ml-auto text-amber-600 hover:text-amber-800"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <p className="text-sm text-amber-700 mb-3">
+                        📋 คัดลอก Prompt ด้านล่างไปใช้กับ ChatGPT หรือ Claude แล้วนำ HTML ที่ได้มาใส่ในช่องด้านล่าง
+                      </p>
+                      <div className="relative">
+                        <Textarea
+                          value={rearrangePrompt}
+                          readOnly
+                          rows={8}
+                          className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleCopyRearrangePrompt}
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Manual HTML Input */}
+                    <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Code className="w-5 h-5 text-green-600" />
+                        <h4 className="font-bold text-green-800">
+                          ใส่ HTML ที่ได้จาก AI
+                        </h4>
+                      </div>
+                      <p className="text-sm text-green-700 mb-3">
+                        นำ HTML ที่ได้จาก ChatGPT/Claude มาใส่ที่นี่
+                      </p>
+                      <Textarea
+                        value={manualHtmlInput}
+                        onChange={(e) => setManualHtmlInput(e.target.value)}
+                        placeholder={`<h2>บทนำ</h2>
+<p>เนื้อหาที่จัดเรียงแล้ว...</p>
+
+<h2>หัวข้อหลัก</h2>
+<p>รายละเอียด...</p>
+
+[รูปภาพที่ 1]
+
+<h2>สรุป</h2>
+<p>บทสรุป...</p>`}
+                        rows={8}
+                        className="font-mono text-sm border-2 border-green-200 focus:border-green-400 mb-3"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleApplyManualHtml}
+                        disabled={!manualHtmlInput.trim()}
+                        className="w-full h-10 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold"
+                      >
+                        ✨ ใช้เนื้อหานี้
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Featured Image URL */}
