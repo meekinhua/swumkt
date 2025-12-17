@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Plus, X, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Plus, X, Upload, Trash2, Image as ImageIcon, Copy, AlertTriangle, Code } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import RichTextEditor from '@/components/RichTextEditor';
