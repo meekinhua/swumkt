@@ -435,6 +435,85 @@ ${userPrompt}`;
                   </>
                 )}
               </Button>
+
+              {/* Fallback: Show prompt when AI fails */}
+              {showPromptFallback && generatedPrompt && (
+                <div className="mt-4 space-y-4">
+                  {/* Prompt Section */}
+                  <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-600" />
+                      <h4 className="font-bold text-amber-800">
+                        AI Analysis ล้มเหลว - นำ Prompt ไปใช้เองได้
+                      </h4>
+                      <button
+                        onClick={() => setShowPromptFallback(false)}
+                        className="ml-auto text-amber-600 hover:text-amber-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <p className="text-sm text-amber-700 mb-3">
+                      📋 คัดลอก Prompt ด้านล่างไปใช้กับ ChatGPT หรือ Claude แล้วนำผลลัพธ์มาใส่ในช่องด้านล่าง
+                    </p>
+                    <div className="relative">
+                      <Textarea
+                        value={generatedPrompt}
+                        readOnly
+                        rows={8}
+                        className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
+                      />
+                      <Button
+                        onClick={handleCopyPrompt}
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Manual Analysis Input */}
+                  <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Code className="w-5 h-5 text-green-600" />
+                      <h4 className="font-bold text-green-800">
+                        ใส่ผลการวิเคราะห์จาก AI
+                      </h4>
+                    </div>
+                    <p className="text-sm text-green-700 mb-3">
+                      นำผลลัพธ์ที่ได้จาก ChatGPT/Claude มาใส่ที่นี่ (ใช้ format ANALYSIS: / KEY_FINDINGS: / RECOMMENDATIONS:)
+                    </p>
+                    <Textarea
+                      value={manualAnalysisInput}
+                      onChange={(e) => setManualAnalysisInput(e.target.value)}
+                      placeholder={`ANALYSIS:
+การวิเคราะห์พฤติกรรมลูกค้าพบว่า...
+
+KEY_FINDINGS:
+- ข้อค้นพบที่ 1
+- ข้อค้นพบที่ 2
+- ข้อค้นพบที่ 3
+
+RECOMMENDATIONS:
+- ข้อแนะนำที่ 1
+- ข้อแนะนำที่ 2
+- ข้อแนะนำที่ 3`}
+                      rows={10}
+                      className="font-mono text-sm border-2 border-green-200 focus:border-green-400 mb-3"
+                    />
+                    <Button
+                      onClick={handleApplyManualAnalysis}
+                      disabled={!manualAnalysisInput.trim()}
+                      className="w-full h-10 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold"
+                    >
+                      ✨ ใช้ผลการวิเคราะห์นี้
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
