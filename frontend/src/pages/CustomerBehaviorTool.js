@@ -60,6 +60,148 @@ const CustomerBehaviorTool = () => {
   });
   const [saving, setSaving] = useState(false);
 
+  // Fallback states for when AI fails
+  const [showPromptFallback, setShowPromptFallback] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState('');
+  const [manualAnalysisInput, setManualAnalysisInput] = useState('');
+
+  // Function to build prompt for display (matches backend)
+  const buildAnalysisPrompt = () => {
+    const languageName = targetLanguage === 'th' ? 'Thai' : 'English';
+    
+    const systemPrompt = `You are an expert consumer behavior analyst and market researcher.
+
+Your task is to analyze qualitative research data about customer behavior and provide insights.
+
+Guidelines:
+1. Identify key behavioral patterns:
+   - Purchase behaviors
+   - Usage patterns
+   - Decision-making processes
+   - Motivations and drivers
+   - Barriers and obstacles
+
+2. Analyze customer segments if applicable:
+   - Different behavior groups
+   - Characteristics of each segment
+   - Behavioral differences
+
+3. Identify psychological factors:
+   - Emotional triggers
+   - Cognitive biases
+   - Social influences
+   - Cultural factors
+
+4. Provide actionable insights:
+   - What behaviors to encourage
+   - What barriers to remove
+   - How to influence positive behaviors
+
+5. Output Structure:
+   - Main Analysis (comprehensive text analysis)
+   - Key Findings (3-5 bullet points)
+   - Recommendations (3-5 actionable items)
+
+Respond in this exact format:
+ANALYSIS:
+[Your comprehensive analysis text]
+
+KEY_FINDINGS:
+- [Finding 1]
+- [Finding 2]
+- [Finding 3]
+
+RECOMMENDATIONS:
+- [Recommendation 1]
+- [Recommendation 2]
+- [Recommendation 3]`;
+
+    const userPrompt = `Please analyze the following customer behavior research data:
+
+Research Data:
+${rawData}
+${researchContext ? `\nAdditional Context: ${researchContext}` : ''}
+
+Output Language: ${languageName}
+
+Please provide a comprehensive analysis with key findings and actionable recommendations in ${languageName}.`;
+
+    return `=== Prompt ===
+${systemPrompt}
+
+=== User Input ===
+- Output Language: ${languageName}
+
+=== Research Data ===
+${rawData}
+${researchContext ? `\n=== Additional Context ===\n${researchContext}` : ''}
+
+=== User Message (ส่งไปยัง AI) ===
+${userPrompt}`;
+  };
+
+  // Copy prompt to clipboard
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedPrompt);
+      toast.success('คัดลอก Prompt แล้ว!');
+    } catch (error) {
+      toast.error('ไม่สามารถคัดลอกได้');
+    }
+  };
+
+  // Parse and apply manual analysis input
+  const handleApplyManualAnalysis = () => {
+    if (!manualAnalysisInput.trim()) {
+      toast.error('กรุณาใส่ผลการวิเคราะห์จาก AI');
+      return;
+    }
+
+    // Try to parse the structured format
+    let analysis_text = '';
+    let key_findings = [];
+    let recommendations = [];
+
+    const text = manualAnalysisInput;
+
+    if (text.includes('ANALYSIS:')) {
+      const parts = text.split('KEY_FINDINGS:');
+      analysis_text = parts[0].replace('ANALYSIS:', '').trim();
+      
+      if (parts.length > 1) {
+        const findingsPart = parts[1].split('RECOMMENDATIONS:')[0].trim();
+        for (const line of findingsPart.split('\n')) {
+          const trimmed = line.trim();
+          if (trimmed && (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*'))) {
+            key_findings.push(trimmed.replace(/^[-•*]\s*/, '').trim());
+          }
+        }
+        
+        if (parts[1].includes('RECOMMENDATIONS:')) {
+          const recsPart = parts[1].split('RECOMMENDATIONS:')[1].trim();
+          for (const line of recsPart.split('\n')) {
+            const trimmed = line.trim();
+            if (trimmed && (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*'))) {
+              recommendations.push(trimmed.replace(/^[-•*]\s*/, '').trim());
+            }
+          }
+        }
+      }
+    } else {
+      // Fallback: use entire text as analysis
+      analysis_text = text.trim();
+    }
+
+    setAnalysisResult({
+      analysis_text,
+      key_findings,
+      recommendations
+    });
+    setShowPromptFallback(false);
+    setManualAnalysisInput('');
+    toast.success('✨ ใส่ผลการวิเคราะห์สำเร็จ!');
+  };
+
   const handleGenerateAnalysis = async () => {
     if (!rawData.trim()) {
       toast.error('Please enter research data');
