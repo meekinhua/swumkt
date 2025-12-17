@@ -399,7 +399,11 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
       }
     } catch (error) {
       console.error('AI Rearrange error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถจัดเรียงเนื้อหาได้ กรุณาลองใหม่อีกครั้ง');
+      // Build and show prompt for manual use
+      const prompt = buildRearrangePrompt();
+      setRearrangePrompt(prompt);
+      setShowRearrangePrompt(true);
+      toast.error('AI Rearrange ล้มเหลว - สามารถใช้ Prompt ไปทำเองได้');
     } finally {
       setAiRearranging(false);
     }
