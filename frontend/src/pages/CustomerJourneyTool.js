@@ -231,14 +231,14 @@ const CustomerJourneyTool = () => {
     };
   }, []);
 
-  // Function to build the prompt for display (matches backend exactly)
+  // Function to build the prompt for display (uses Admin Config prompt)
   const buildPromptForDisplay = () => {
     const languageName = outputLanguage === 'th' ? 'Thai' : 'English';
     const typeDesc = journeyType === 'A' ? 'simple and straightforward' : 'detailed and comprehensive';
     const styleDesc = journeyStyle === 'linear' ? 'linear sequential path' : 'nonlinear with multiple paths and decision points';
     
-    // Prompt เดียวกันกับที่ backend ส่งไป AI (System + User รวมกัน)
-    const fullPrompt = `You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
+    // Use Admin Prompt or default
+    const systemPrompt = adminPrompt || `You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
 
 Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
 
@@ -283,26 +283,21 @@ ANALYSIS:
 MERMAID:
 \`\`\`mermaid
 [Your mermaid code]
-\`\`\`
+\`\`\``;
 
----
+    // Format: Prompt + User Input Option + User Input Data
+    const fullPrompt = `=== Prompt ===
+${systemPrompt}
 
-Please analyze the following qualitative research data and create a Customer Journey Map:
-
-Research Data:
-${rawData}
-${researchContext ? `\nAdditional Context: ${researchContext}` : ''}
-
-Journey Requirements:
+=== User Input Option ===
 - Type: ${journeyType} (${typeDesc})
 - Style: ${journeyStyle} (${styleDesc})
 - Output Language: ${languageName}
 
-Please provide:
-1. Analysis summary of the customer journey in ${languageName}
-2. Mermaid diagram code for visualization with labels in ${languageName}
-
-IMPORTANT: All text in both the analysis summary and the mermaid diagram must be written in ${languageName}.`;
+=== User Input Data ===
+Research Data:
+${rawData}
+${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
 
     return fullPrompt;
   };
