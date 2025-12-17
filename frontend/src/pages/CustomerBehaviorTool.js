@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock } from 'lucide-react';
+import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, Copy, AlertTriangle, Code, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://academicat-1.preview.emergentagent.com';
