@@ -40,6 +40,7 @@ const CustomerJourneyTool = () => {
   const [manualAnalysis, setManualAnalysis] = useState('');
   const [showPromptOnError, setShowPromptOnError] = useState(false);
   const [lastGeneratedPrompt, setLastGeneratedPrompt] = useState('');
+  const [adminPrompt, setAdminPrompt] = useState(''); // Prompt from Admin Config
   const mermaidRef = useRef(null);
   const containerRef = useRef(null);
   const fullscreenRef = useRef(null);
