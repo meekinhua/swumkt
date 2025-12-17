@@ -45,6 +45,10 @@ const ContentEditor = () => {
   const [deleting, setDeleting] = useState(false);
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
+  // New states for AI Rearrange fallback
+  const [showRearrangePrompt, setShowRearrangePrompt] = useState(false);
+  const [rearrangePrompt, setRearrangePrompt] = useState('');
+  const [manualHtmlInput, setManualHtmlInput] = useState('');
   const editorRef = React.useRef(null);
 
   useEffect(() => {
