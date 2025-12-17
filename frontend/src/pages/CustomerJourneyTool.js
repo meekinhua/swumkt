@@ -60,6 +60,25 @@ const CustomerJourneyTool = () => {
     });
   }, []);
 
+  // Fetch Admin Prompt on component mount
+  useEffect(() => {
+    const fetchAdminPrompt = async () => {
+      try {
+        const response = await axios.get(`${API}/admin/journey-map-prompt`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data && response.data.journey_map_prompt) {
+          setAdminPrompt(response.data.journey_map_prompt);
+        }
+      } catch (error) {
+        console.log('Could not fetch admin prompt, will use default');
+      }
+    };
+    if (token) {
+      fetchAdminPrompt();
+    }
+  }, [token]);
+
   // Auto-update Additional Context based on journey type and style
   useEffect(() => {
     const typeText = journeyType === 'A' 
