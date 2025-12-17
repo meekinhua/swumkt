@@ -223,10 +223,15 @@ ${userPrompt}`;
       );
 
       setAnalysisResult(response.data);
+      setShowPromptFallback(false);
       toast.success('Analysis generated successfully!');
     } catch (error) {
       console.error('Analysis generation error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to generate analysis');
+      // Build and show prompt for manual use
+      const prompt = buildAnalysisPrompt();
+      setGeneratedPrompt(prompt);
+      setShowPromptFallback(true);
+      toast.error('AI Analysis ล้มเหลว - สามารถใช้ Prompt ไปทำเองได้');
     } finally {
       setGeneratingAnalysis(false);
     }
