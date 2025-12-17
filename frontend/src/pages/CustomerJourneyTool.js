@@ -21,7 +21,7 @@ const CustomerJourneyTool = () => {
   const { user, token, logout } = useAuth();
   const [rawData, setRawData] = useState('');
   const [researchContext, setResearchContext] = useState('');
-  const [outputLanguage, setOutputLanguage] = useState('en');
+  const [outputLanguage, setOutputLanguage] = useState('th');
   const [journeyType, setJourneyType] = useState('B');
   const [journeyStyle, setJourneyStyle] = useState('nonlinear');
   const [loading, setLoading] = useState(false);
