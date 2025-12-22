@@ -361,6 +361,20 @@ const AdminCourseManagement = ({ token }) => {
                   {!isCreating && !editingCourse && (
                     <>
                       <Button
+                        onClick={() => handleExportSubmissions(course.id, course.course_code)}
+                        disabled={exportingCourseId === course.id}
+                        variant="outline"
+                        size="sm"
+                        className="border-2 border-purple-500 text-purple-600 hover:bg-purple-50"
+                        title="Export รายชื่อส่งงาน"
+                      >
+                        {exportingCourseId === course.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                      </Button>
+                      <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           window.open(`/courses/${course.id}/submissions`, '_blank');
