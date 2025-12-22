@@ -139,6 +139,40 @@ const AdminCourseManagement = ({ token }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Export submissions as CSV
+  const handleExportSubmissions = async (courseId, courseCode) => {
+    try {
+      setExportingCourseId(courseId);
+      toast.info('กำลังสร้างไฟล์ CSV...');
+      
+      const response = await axios.get(
+        `${API}/courses/${courseId}/export-submissions`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        }
+      );
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${courseCode}_submissions.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('✅ ดาวน์โหลด CSV สำเร็จ!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถ Export ได้');
+    } finally {
+      setExportingCourseId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
