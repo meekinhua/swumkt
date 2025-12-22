@@ -2121,6 +2121,111 @@ async def get_course_submissions(
         "limit": limit
     }
 
+@api_router.get("/courses/{course_id}/export-submissions")
+async def export_course_submissions(
+    course_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Export CSV รายชื่อนิสิตพร้อมสถานะการส่งงาน
+    ทำแบบ chunked query เพื่อรองรับข้อมูลจำนวนมาก
+    """
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+    
+    # Check if course exists
+    course = await db.courses.find_one({"id": course_id}, {"_id": 0})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Check permission - admin only
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    logging.info(f"[EXPORT] Starting export for course {course_id} ({course.get('course_code')})")
+    
+    # Step 1: Get all student IDs who submitted (as creator or group member)
+    # Query in chunks to avoid memory issues
+    submitted_user_ids = set()
+    
+    # 1a. Get creators
+    cursor = db.contents.find(
+        {"course_id": course_id},
+        {"created_by": 1, "group_members": 1, "_id": 0}
+    )
+    
+    async for content in cursor:
+        # Add creator
+        if content.get('created_by'):
+            submitted_user_ids.add(content['created_by'])
+        # Add group members
+        for member_id in content.get('group_members', []):
+            submitted_user_ids.add(member_id)
+    
+    logging.info(f"[EXPORT] Found {len(submitted_user_ids)} users who submitted")
+    
+    # Step 2: Get all students (users with student_id) in chunks
+    all_students = []
+    batch_size = 100
+    skip = 0
+    
+    while True:
+        students_batch = await db.users.find(
+            {"student_id": {"$ne": None, "$exists": True}},
+            {"_id": 0, "id": 1, "full_name": 1, "student_id": 1}
+        ).sort("student_id", 1).skip(skip).limit(batch_size).to_list(batch_size)
+        
+        if not students_batch:
+            break
+        
+        all_students.extend(students_batch)
+        skip += batch_size
+        
+        if len(students_batch) < batch_size:
+            break
+    
+    logging.info(f"[EXPORT] Found {len(all_students)} total students")
+    
+    # Step 3: Build CSV data
+    def generate_csv():
+        output = io.StringIO()
+        # Add BOM for Excel UTF-8 compatibility
+        output.write('\ufeff')
+        
+        writer = csv.writer(output)
+        # Header
+        writer.writerow(['รหัสนิสิต', 'ชื่อ-นามสกุล', 'ส่งงานแล้วหรือไม่'])
+        
+        for student in all_students:
+            student_id = student.get('student_id', '')
+            full_name = student.get('full_name', '')
+            user_id = student.get('id', '')
+            
+            # Check if submitted
+            has_submitted = 'ส่งแล้ว' if user_id in submitted_user_ids else 'ยังไม่ส่ง'
+            
+            writer.writerow([student_id, full_name, has_submitted])
+        
+        return output.getvalue()
+    
+    csv_content = generate_csv()
+    
+    # Create streaming response
+    course_code = course.get('course_code', 'course')
+    filename = f"{course_code}_submissions.csv"
+    
+    logging.info(f"[EXPORT] Generated CSV with {len(all_students)} rows")
+    
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode('utf-8')),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "text/csv; charset=utf-8"
+        }
+    )
+
 # ============ CONTENT ROUTES ============
 @api_router.post("/content", response_model=Content)
 async def create_content(
