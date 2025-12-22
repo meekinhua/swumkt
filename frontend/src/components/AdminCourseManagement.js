@@ -14,6 +14,7 @@ const AdminCourseManagement = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [editingCourse, setEditingCourse] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [exportingCourseId, setExportingCourseId] = useState(null);
   const [formData, setFormData] = useState({
     course_code: '',
     course_name: '',
