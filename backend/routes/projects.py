@@ -268,7 +268,9 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         await db.projects.insert_one(doc)
         logging.info(f"[PROJECT] Created: {project.id} by {current_user.email}")
         
-        return doc
+        # Remove _id from response
+        result = await db.projects.find_one({"id": doc["id"]}, {"_id": 0})
+        return result
     
     @project_router.get("/templates")
     async def get_column_templates():
