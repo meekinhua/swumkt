@@ -601,16 +601,19 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         
         await db.project_cards.insert_one(doc)
         
+        # Get the created card without _id
+        created_card = await db.project_cards.find_one({"id": doc["id"]}, {"_id": 0})
+        
         # Get assignee details
         assignee_details = []
         for user_id in data.assignees:
             user = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1, "full_name": 1, "email": 1})
             if user:
                 assignee_details.append(user)
-        doc["assignee_details"] = assignee_details
+        created_card["assignee_details"] = assignee_details
         
         logging.info(f"[PROJECT_CARD] Created: {card.id} in project {project_id}")
-        return doc
+        return created_card
     
     @project_router.get("/{project_id}/cards/{card_id}")
     async def get_card(
