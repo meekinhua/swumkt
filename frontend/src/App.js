@@ -321,6 +321,24 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            
+            {/* Project Management Routes */}
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <ProjectsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/:projectId"
+              element={
+                <ProtectedRoute>
+                  <KanbanBoard />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
           <Toaster position="top-right" richColors />
         </div>
