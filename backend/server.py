@@ -10814,6 +10814,13 @@ async def get_ai_interpretation(
         raise HTTPException(status_code=500, detail=f"Failed to generate interpretation: {str(e)}")
 
 
+# ============ PROJECT MANAGEMENT (KANBAN) ============
+from routes.projects import get_project_routes, project_router
+
+# Register project routes with dependencies
+project_routes = get_project_routes(db, get_current_user, get_current_user, UserRole)
+api_router.include_router(project_router)
+
 app.include_router(api_router)
 
 app.add_middleware(
