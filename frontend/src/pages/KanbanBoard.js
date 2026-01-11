@@ -50,6 +50,10 @@ const KanbanBoard = () => {
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverImageInputRef = useRef(null);
   
+  // Assignee Management states
+  const [assigneeSearch, setAssigneeSearch] = useState('');
+  const [assigneeResults, setAssigneeResults] = useState([]);
+  
   // Member Management states
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [members, setMembers] = useState([]);
