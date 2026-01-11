@@ -352,21 +352,39 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         if not (is_admin or is_member or is_public):
             raise HTTPException(status_code=403, detail="Access denied")
         
+        # Get user's role in project
+        user_member = next((m for m in project.get("members", []) if m["user_id"] == current_user.id), None)
+        user_project_role = user_member["role"] if user_member else None
+        
         # Get cards
         cards = await db.project_cards.find({"project_id": project_id}, {"_id": 0}).sort("order", 1).to_list(1000)
         
-        # Get assignee details for cards
+        # Get assignee details for cards (including profile_image)
         for card in cards:
             assignee_details = []
             for user_id in card.get("assignees", []):
-                user = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1})
+                user = await db.users.find_one(
+                    {"id": user_id}, 
+                    {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1, "profile_image": 1}
+                )
                 if user:
                     assignee_details.append(user)
             card["assignee_details"] = assignee_details
+            
+            # Add permission info for this card
+            can_edit = is_admin or user_project_role in ["owner", "manager", "editor"]
+            if user_project_role == "card_owner":
+                can_edit = card.get("created_by") == current_user.id or current_user.id in card.get("assignees", [])
+            card["can_edit"] = can_edit
         
         # Get creator info
         creator = await db.users.find_one({"id": project["created_by"]}, {"_id": 0, "full_name": 1, "email": 1})
         project["creator_info"] = creator
+        
+        # Add user's permission level
+        project["user_role"] = user_project_role
+        project["can_manage"] = is_admin or user_project_role in ["owner", "manager"]
+        project["can_edit_cards"] = is_admin or user_project_role in ["owner", "manager", "editor"]
         
         return {"project": project, "cards": cards}
     
