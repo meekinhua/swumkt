@@ -49,6 +49,17 @@ const KanbanBoard = () => {
   // Cover Image states
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverImageInputRef = useRef(null);
+  
+  // Member Management states
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  
+  // Edit Project states
+  const [showEditProject, setShowEditProject] = useState(false);
+  const [editProjectForm, setEditProjectForm] = useState({});
 
   const fetchProject = useCallback(async () => {
     try {
