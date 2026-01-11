@@ -771,9 +771,15 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         if not card:
             raise HTTPException(status_code=404, detail="Card not found")
         
+        # Get sub_column_id - default to first column if not provided
+        sub_column_id = data.sub_column_id
+        if not sub_column_id and card.get("sub_columns"):
+            sub_column_id = card["sub_columns"][0]["id"]
+        
         subtask = Subtask(
             title=data.title,
             status=data.status,
+            sub_column_id=sub_column_id,
             order=len(card.get("subtasks", []))
         ).model_dump()
         subtask["created_at"] = subtask["created_at"].isoformat()
@@ -806,6 +812,8 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
             if st["id"] == subtask_id:
                 st["title"] = data.title
                 st["status"] = data.status
+                if data.sub_column_id:
+                    st["sub_column_id"] = data.sub_column_id
                 break
         
         await db.project_cards.update_one(
@@ -814,6 +822,43 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         )
         
         return {"message": "Subtask updated"}
+    
+    @project_router.put("/{project_id}/cards/{card_id}/subtasks/{subtask_id}/move")
+    async def move_subtask_to_column(
+        project_id: str,
+        card_id: str,
+        subtask_id: str,
+        sub_column_id: str,
+        order: int = 0,
+        current_user = Depends(get_current_user)
+    ):
+        """Move subtask to different sub-column (mini kanban)"""
+        card = await db.project_cards.find_one({"id": card_id, "project_id": project_id})
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        subtasks = card.get("subtasks", [])
+        for st in subtasks:
+            if st["id"] == subtask_id:
+                st["sub_column_id"] = sub_column_id
+                st["order"] = order
+                # Auto-update status based on column
+                sub_cols = card.get("sub_columns", [])
+                col_idx = next((i for i, c in enumerate(sub_cols) if c["id"] == sub_column_id), -1)
+                if col_idx == 0:
+                    st["status"] = "pending"
+                elif col_idx == len(sub_cols) - 1:
+                    st["status"] = "done"
+                else:
+                    st["status"] = "in_progress"
+                break
+        
+        await db.project_cards.update_one(
+            {"id": card_id},
+            {"$set": {"subtasks": subtasks, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"message": "Subtask moved"}
     
     @project_router.delete("/{project_id}/cards/{card_id}/subtasks/{subtask_id}")
     async def delete_subtask(
