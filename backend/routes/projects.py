@@ -590,12 +590,23 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         )
         new_order = (max_order.get("order", 0) + 1) if max_order else 0
         
-        # Create subtasks
+        # Create default sub-columns for mini kanban
+        sub_columns = []
+        for sc in DEFAULT_SUB_COLUMNS:
+            sub_columns.append(SubColumn(
+                name=sc["name"],
+                color=sc["color"],
+                order=sc["order"]
+            ).model_dump())
+        
+        # Create subtasks with sub_column_id (default to first column)
+        first_sub_col_id = sub_columns[0]["id"] if sub_columns else None
         subtasks = []
         for i, st in enumerate(data.subtasks):
             subtasks.append(Subtask(
                 title=st.title,
                 status=st.status,
+                sub_column_id=st.sub_column_id or first_sub_col_id,
                 order=i
             ).model_dump())
         
@@ -609,6 +620,7 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
             due_date=data.due_date,
             priority=data.priority,
             labels=data.labels,
+            sub_columns=sub_columns,
             subtasks=subtasks,
             created_by=current_user.id
         )
