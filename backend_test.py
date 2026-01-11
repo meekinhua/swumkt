@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Get backend URL from frontend .env
-BACKEND_URL = "https://academicat-1.preview.emergentagent.com/api"
+BACKEND_URL = "https://taskflow-hub-193.preview.emergentagent.com/api"
 
 class BackendTester:
     def __init__(self):

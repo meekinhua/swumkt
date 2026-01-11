@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import SurveyTemplateModal from '@/components/SurveyTemplateModal';
 import AISurveyGeneratorModal from '@/components/AISurveyGeneratorModal';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://academicat-1.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://taskflow-hub-193.preview.emergentagent.com';
 
 const SurveyListPage = () => {
   const navigate = useNavigate();
