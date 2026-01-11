@@ -831,53 +831,58 @@ const KanbanBoard = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navigation />
       
-      {/* Header */}
+      {/* Header - Responsive */}
       <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-full mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/projects')}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                กลับ
+        <div className="max-w-full mx-auto px-2 sm:px-4 py-2 sm:py-4">
+          {/* Mobile: Stack vertically, Desktop: Side by side */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+            {/* Left Section */}
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/projects')} className="p-2 sm:px-3">
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">กลับ</span>
               </Button>
-              <div className="flex items-center gap-2">
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">{project.name}</h1>
                   {project.description && (
-                    <p className="text-sm text-gray-500">{project.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate hidden sm:block">{project.description}</p>
                   )}
                 </div>
                 {project.can_manage && (
                   <button
                     onClick={openEditProject}
-                    className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 flex-shrink-0"
                     title="แก้ไข Project"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                 )}
               </div>
-              {/* User role badge */}
+              {/* User role badge - hide on very small screens */}
               {project.user_role && (
-                <span className={`text-xs px-2 py-1 rounded-full ${roleColors[project.user_role] || 'bg-gray-100'}`}>
+                <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap ${roleColors[project.user_role] || 'bg-gray-100'}`}>
                   {roleLabels[project.user_role] || project.user_role}
                 </span>
               )}
             </div>
             
-            <div className="flex items-center gap-2">
+            {/* Right Section - Buttons */}
+            <div className="flex items-center gap-1 sm:gap-2 justify-end">
               {project.share_token && (
                 <Button
                   variant="outline"
                   size="sm"
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => {
                     const url = `${window.location.origin}/projects/public/${project.share_token}`;
                     navigator.clipboard.writeText(url);
                     toast.success('คัดลอก Public Link แล้ว!');
                   }}
                 >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
+                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Share</span>
+                </Button>
                 </Button>
               )}
               <Button 
