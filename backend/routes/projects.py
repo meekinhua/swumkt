@@ -84,14 +84,34 @@ class ProjectColumn(BaseModel):
     color: str = "#3B82F6"
     order: int = 0
 
+class SubColumnCreate(BaseModel):
+    name: str
+    color: str = "#3B82F6"
+    order: int = 0
+
+class SubColumn(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    color: str = "#3B82F6"
+    order: int = 0
+
+# Default sub-columns for cards (mini kanban)
+DEFAULT_SUB_COLUMNS = [
+    {"name": "รอทำ", "color": "#6B7280", "order": 0},
+    {"name": "กำลังทำ", "color": "#F59E0B", "order": 1},
+    {"name": "เสร็จแล้ว", "color": "#10B981", "order": 2}
+]
+
 class SubtaskCreate(BaseModel):
     title: str
     status: str = "pending"  # pending, in_progress, done
+    sub_column_id: Optional[str] = None  # For mini kanban
 
 class Subtask(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     status: str = "pending"
+    sub_column_id: Optional[str] = None  # For mini kanban
     order: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
