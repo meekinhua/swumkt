@@ -723,6 +723,51 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         await db.project_cards.delete_one({"id": card_id})
         return {"message": "Card deleted"}
     
+    @project_router.post("/{project_id}/cards/{card_id}/init-sub-columns")
+    async def init_card_sub_columns(
+        project_id: str,
+        card_id: str,
+        current_user = Depends(get_current_user)
+    ):
+        """Initialize sub-columns for existing card that doesn't have them"""
+        card = await db.project_cards.find_one({"id": card_id, "project_id": project_id})
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        # Only initialize if not already present
+        if card.get("sub_columns") and len(card.get("sub_columns", [])) > 0:
+            return {"message": "Sub-columns already initialized", "sub_columns": card["sub_columns"]}
+        
+        # Create default sub-columns
+        sub_columns = []
+        for sc in DEFAULT_SUB_COLUMNS:
+            sub_columns.append(SubColumn(
+                name=sc["name"],
+                color=sc["color"],
+                order=sc["order"]
+            ).model_dump())
+        
+        # Assign existing subtasks to first column
+        subtasks = card.get("subtasks", [])
+        first_col_id = sub_columns[0]["id"] if sub_columns else None
+        for st in subtasks:
+            if not st.get("sub_column_id"):
+                st["sub_column_id"] = first_col_id
+        
+        await db.project_cards.update_one(
+            {"id": card_id},
+            {
+                "$set": {
+                    "sub_columns": sub_columns,
+                    "subtasks": subtasks,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        updated = await db.project_cards.find_one({"id": card_id}, {"_id": 0})
+        return updated
+    
     @project_router.put("/{project_id}/cards/{card_id}/move")
     async def move_card(
         project_id: str,
