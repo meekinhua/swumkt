@@ -883,39 +883,40 @@ const KanbanBoard = () => {
                   <Share2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Share</span>
                 </Button>
-                </Button>
               )}
               <Button 
                 variant="outline" 
                 size="sm"
+                className="text-xs sm:text-sm px-2 sm:px-3"
                 onClick={openMemberModal}
               >
-                <Users className="w-4 h-4 mr-2" />
-                {project.members?.length || 1} สมาชิก
+                <Users className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="sm:hidden">{project.members?.length || 1}</span>
+                <span className="hidden sm:inline">{project.members?.length || 1} สมาชิก</span>
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <div className="overflow-x-auto p-4">
-        <div className="flex gap-4 min-w-max">
+      {/* Kanban Board - Responsive */}
+      <div className="overflow-x-auto p-2 sm:p-4">
+        <div className="flex gap-2 sm:gap-4 min-w-max pb-4">
           {project.columns?.sort((a, b) => a.order - b.order).map((column) => (
             <div
               key={column.id}
-              className="w-80 flex-shrink-0"
+              className="w-64 sm:w-80 flex-shrink-0"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
               {/* Column Header */}
               <div 
-                className="flex items-center justify-between p-3 rounded-t-lg text-white font-bold"
+                className="flex items-center justify-between p-2 sm:p-3 rounded-t-lg text-white font-bold text-sm sm:text-base"
                 style={{ backgroundColor: column.color }}
               >
                 <div className="flex items-center gap-2">
-                  <span>{column.name}</span>
-                  <span className="bg-white/20 px-2 py-0.5 rounded text-sm">
+                  <span className="truncate max-w-[120px] sm:max-w-none">{column.name}</span>
+                  <span className="bg-white/20 px-1.5 sm:px-2 py-0.5 rounded text-xs sm:text-sm">
                     {getColumnCards(column.id).length}
                   </span>
                 </div>
