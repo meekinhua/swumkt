@@ -1207,12 +1207,12 @@ const KanbanBoard = () => {
               )}
             </div>
             
-            {/* Modal Content */}
-            <div className="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 sm:space-y-6">
               {/* Description */}
               <div>
-                <Label className="font-bold flex items-center gap-2 mb-2">
-                  <Edit className="w-4 h-4" />
+                <Label className="font-bold flex items-center gap-2 mb-2 text-sm sm:text-base">
+                  <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                   รายละเอียด
                 </Label>
                 {isEditingCard ? (
@@ -1220,25 +1220,26 @@ const KanbanBoard = () => {
                     value={editCardForm.description}
                     onChange={(e) => setEditCardForm({...editCardForm, description: e.target.value})}
                     placeholder="รายละเอียด Card..."
-                    rows={4}
+                    rows={3}
+                    className="text-sm"
                   />
                 ) : (
-                  <p className="text-gray-600 bg-gray-50 p-3 rounded min-h-[60px]">
+                  <p className="text-gray-600 bg-gray-50 p-2 sm:p-3 rounded min-h-[50px] text-sm sm:text-base">
                     {selectedCard.description || 'ไม่มีรายละเอียด (คลิก Edit เพื่อเพิ่ม)'}
                   </p>
                 )}
               </div>
               
-              {/* Priority & Due Date */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Priority & Due Date - Stack on mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <Label className="font-bold mb-2 block">Priority</Label>
+                  <Label className="font-bold mb-2 block text-sm sm:text-base">Priority</Label>
                   {isEditingCard ? (
                     <Select
                       value={editCardForm.priority}
                       onValueChange={(value) => setEditCardForm({...editCardForm, priority: value})}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
