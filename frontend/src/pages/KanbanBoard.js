@@ -836,6 +836,62 @@ const KanbanBoard = () => {
               </div>
             </div>
             
+            {/* Cover Image Section */}
+            <div className="relative">
+              {selectedCard.cover_image ? (
+                <div className="relative group">
+                  <img 
+                    src={selectedCard.cover_image} 
+                    alt={selectedCard.title}
+                    className="w-full h-40 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <label className="cursor-pointer">
+                      <input
+                        ref={coverImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleCoverImageUpload}
+                      />
+                      <Button size="sm" variant="secondary" asChild disabled={uploadingCover}>
+                        <span>
+                          {uploadingCover ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Image className="w-4 h-4 mr-1" />}
+                          เปลี่ยนรูป
+                        </span>
+                      </Button>
+                    </label>
+                    <Button size="sm" variant="destructive" onClick={handleRemoveCoverImage}>
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      ลบรูป
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-b">
+                  <label className="cursor-pointer block">
+                    <input
+                      ref={coverImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleCoverImageUpload}
+                    />
+                    <div className="flex items-center justify-center gap-2 py-3 text-gray-500 hover:text-[#00A9CE] hover:bg-gray-50 transition-colors">
+                      {uploadingCover ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <UserCircle className="w-5 h-5" />
+                          <span className="text-sm">เพิ่มรูปภาพหน้าปก (เช่น รูปนิสิต)</span>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              )}
+            </div>
+            
             {/* Modal Content */}
             <div className="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
               {/* Description */}
