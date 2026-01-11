@@ -702,6 +702,17 @@ const KanbanBoard = () => {
                       </div>
                     )}
                     
+                    {/* Show Assignee profile image if no cover image */}
+                    {!card.cover_image && card.assignee_details?.length > 0 && card.assignee_details[0]?.profile_image && (
+                      <div className="w-full h-24 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex items-center justify-center">
+                        <img 
+                          src={card.assignee_details[0].profile_image} 
+                          alt={card.assignee_details[0].full_name}
+                          className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
+                        />
+                      </div>
+                    )}
+                    
                     <div className="p-3">
                       <div className="flex items-center justify-between mb-2">
                         <span className={`text-xs px-2 py-0.5 rounded ${priorityColors[card.priority]}`}>
