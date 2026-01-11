@@ -1458,6 +1458,201 @@ const KanbanBoard = () => {
           </Card>
         </div>
       )}
+
+      {/* Member Management Modal */}
+      {showMemberModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b bg-[#00A9CE] text-white">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                จัดการสมาชิก
+              </h2>
+              <button onClick={() => setShowMemberModal(false)} className="p-1 hover:bg-white/20 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Add Member Section - only for managers */}
+            {project?.can_manage && (
+              <div className="p-4 border-b bg-gray-50">
+                <Label className="text-sm font-medium mb-2 block">เพิ่มสมาชิกใหม่</Label>
+                <div className="relative">
+                  <Input
+                    value={memberSearch}
+                    onChange={(e) => {
+                      setMemberSearch(e.target.value);
+                      if (e.target.value.length >= 2) {
+                        searchAvailableUsers(e.target.value);
+                      } else {
+                        setAvailableUsers([]);
+                      }
+                    }}
+                    placeholder="ค้นหาด้วยชื่อ, อีเมล, หรือรหัสนิสิต..."
+                  />
+                  {availableUsers.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 bg-white border rounded-b shadow-lg z-10 max-h-48 overflow-y-auto">
+                      {availableUsers.map((u) => (
+                        <div
+                          key={u.id}
+                          className="p-3 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
+                          onClick={() => handleAddMember(u.id, 'card_owner')}
+                        >
+                          <div className="flex items-center gap-2">
+                            {u.profile_image ? (
+                              <img src={u.profile_image} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-[#00A9CE] text-white flex items-center justify-center text-sm">
+                                {u.full_name?.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium text-sm">{u.full_name}</p>
+                              <p className="text-xs text-gray-500">{u.email} {u.student_id && `(${u.student_id})`}</p>
+                            </div>
+                          </div>
+                          <Plus className="w-4 h-4 text-[#00A9CE]" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Members List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {loadingMembers ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#00A9CE]" />
+                </div>
+              ) : members.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">ยังไม่มีสมาชิก</p>
+              ) : (
+                members.map((member) => (
+                  <div key={member.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {member.user_info?.profile_image ? (
+                        <img src={member.user_info.profile_image} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-[#00A9CE] text-white flex items-center justify-center font-medium">
+                          {member.user_info?.full_name?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium">{member.user_info?.full_name}</p>
+                        <p className="text-sm text-gray-500">{member.user_info?.email}</p>
+                        {member.user_info?.student_id && (
+                          <p className="text-xs text-gray-400">รหัสนิสิต: {member.user_info.student_id}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {project?.can_manage && member.role !== 'owner' ? (
+                        <>
+                          <Select
+                            value={member.role}
+                            onValueChange={(value) => handleUpdateMemberRole(member.user_id, value)}
+                          >
+                            <SelectTrigger className="w-36 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manager">ผู้จัดการ/อาจารย์</SelectItem>
+                              <SelectItem value="editor">แก้ไขทั้งหมด</SelectItem>
+                              <SelectItem value="card_owner">จัดการ Card ตัวเอง</SelectItem>
+                              <SelectItem value="viewer">ดูเท่านั้น</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <button
+                            onClick={() => handleRemoveMember(member.user_id)}
+                            className="p-1.5 hover:bg-red-100 rounded text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <span className={`text-xs px-2 py-1 rounded-full ${roleColors[member.role]}`}>
+                          {roleLabels[member.role]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="p-4 border-t bg-gray-50">
+              <Button className="w-full" onClick={() => setShowMemberModal(false)}>
+                ปิด
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditProject && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b bg-[#00A9CE] text-white">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <Edit className="w-5 h-5" />
+                แก้ไข Project
+              </h2>
+              <button onClick={() => setShowEditProject(false)} className="p-1 hover:bg-white/20 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div>
+                <Label>ชื่อ Project</Label>
+                <Input
+                  value={editProjectForm.name}
+                  onChange={(e) => setEditProjectForm({...editProjectForm, name: e.target.value})}
+                  placeholder="ชื่อ Project"
+                />
+              </div>
+              <div>
+                <Label>คำอธิบาย</Label>
+                <Textarea
+                  value={editProjectForm.description}
+                  onChange={(e) => setEditProjectForm({...editProjectForm, description: e.target.value})}
+                  placeholder="คำอธิบาย Project"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label>การมองเห็น</Label>
+                <Select
+                  value={editProjectForm.visibility}
+                  onValueChange={(value) => setEditProjectForm({...editProjectForm, visibility: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">ส่วนตัว (เฉพาะสมาชิก)</SelectItem>
+                    <SelectItem value="public">สาธารณะ (ทุกคนดูได้)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 p-4 border-t bg-gray-50">
+              <Button variant="outline" onClick={() => setShowEditProject(false)} className="flex-1">
+                ยกเลิก
+              </Button>
+              <Button onClick={handleEditProject} className="flex-1 bg-[#00A9CE] hover:bg-[#008FB5]">
+                บันทึก
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
