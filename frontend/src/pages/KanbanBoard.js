@@ -1167,6 +1167,86 @@ const KanbanBoard = () => {
                 </div>
               </div>
               
+              {/* Assignees Section */}
+              <div>
+                <Label className="font-bold mb-2 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  ผู้รับผิดชอบ ({selectedCard.assignees?.length || 0})
+                </Label>
+                
+                {/* Current Assignees */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedCard.assignee_details?.map((assignee) => (
+                    <div 
+                      key={assignee.id}
+                      className="flex items-center gap-2 bg-gray-100 px-2 py-1 rounded-full text-sm"
+                    >
+                      {assignee.profile_image ? (
+                        <img src={assignee.profile_image} alt="" className="w-5 h-5 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-[#00A9CE] text-white text-xs flex items-center justify-center">
+                          {assignee.full_name?.charAt(0)}
+                        </div>
+                      )}
+                      <span className="text-gray-700">{assignee.full_name}</span>
+                      {selectedCard.can_edit && (
+                        <button
+                          onClick={() => handleRemoveAssignee(assignee.id)}
+                          className="p-0.5 hover:bg-red-100 rounded-full text-gray-400 hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {(!selectedCard.assignee_details || selectedCard.assignee_details.length === 0) && (
+                    <p className="text-gray-400 text-sm">ยังไม่มีผู้รับผิดชอบ</p>
+                  )}
+                </div>
+                
+                {/* Add Assignee - only for users who can edit */}
+                {(project?.can_manage || selectedCard.can_edit) && (
+                  <div className="relative">
+                    <Input
+                      value={assigneeSearch}
+                      onChange={(e) => {
+                        setAssigneeSearch(e.target.value);
+                        if (e.target.value.length >= 1) {
+                          searchAssignees(e.target.value);
+                        } else {
+                          setAssigneeResults([]);
+                        }
+                      }}
+                      placeholder="ค้นหาสมาชิกเพื่อเพิ่ม..."
+                      className="text-sm"
+                    />
+                    {assigneeResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 bg-white border rounded shadow-lg z-20 max-h-40 overflow-y-auto mt-1">
+                        {assigneeResults.map((u) => (
+                          <div
+                            key={u.id}
+                            className="p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-sm"
+                            onClick={() => handleAddAssignee(u.id)}
+                          >
+                            {u.profile_image ? (
+                              <img src={u.profile_image} alt="" className="w-6 h-6 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-[#00A9CE] text-white text-xs flex items-center justify-center">
+                                {u.full_name?.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium">{u.full_name}</p>
+                              <p className="text-xs text-gray-500">{u.email}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               {/* Subtasks / Sub-Kanban */}
               <div>
                 <div className="flex items-center justify-between mb-3">
