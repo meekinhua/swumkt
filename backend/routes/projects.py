@@ -385,6 +385,8 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         project["user_role"] = user_project_role
         project["can_manage"] = is_admin or user_project_role in ["owner", "manager"]
         project["can_edit_cards"] = is_admin or user_project_role in ["owner", "manager", "editor"]
+        # card_owner can create cards but can only edit their own
+        project["can_create_cards"] = is_admin or user_project_role in ["owner", "manager", "editor", "card_owner"]
         
         return {"project": project, "cards": cards}
     
