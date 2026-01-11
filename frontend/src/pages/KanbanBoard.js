@@ -1050,10 +1050,11 @@ const KanbanBoard = () => {
                 {project?.can_create_cards && (
                   <button
                     onClick={() => handleCreateCard(column.id)}
-                    className="w-full p-2 text-gray-500 hover:bg-gray-200 rounded flex items-center justify-center gap-2 text-sm"
+                    className="w-full p-2 text-gray-500 hover:bg-gray-200 rounded flex items-center justify-center gap-2 text-xs sm:text-sm"
                   >
-                    <Plus className="w-4 h-4" />
-                    เพิ่ม Card
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">เพิ่ม Card</span>
+                    <span className="sm:hidden">เพิ่ม</span>
                   </button>
                 )}
               </div>
@@ -1062,22 +1063,22 @@ const KanbanBoard = () => {
 
           {/* Add Column - only if user can manage */}
           {project?.can_manage && (
-            <div className="w-80 flex-shrink-0">
+            <div className="w-64 sm:w-80 flex-shrink-0">
               {showAddColumn ? (
-                <div className="bg-gray-100 rounded-lg p-3">
+                <div className="bg-gray-100 rounded-lg p-2 sm:p-3">
                   <Input
                     value={newColumnName}
                     onChange={(e) => setNewColumnName(e.target.value)}
                     placeholder="ชื่อ Column"
-                    className="mb-2"
+                    className="mb-2 text-sm"
                     autoFocus
                     onKeyPress={(e) => e.key === 'Enter' && handleAddColumn()}
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleAddColumn} className="bg-[#00A9CE]">
+                    <Button size="sm" onClick={handleAddColumn} className="bg-[#00A9CE] text-xs sm:text-sm">
                       เพิ่ม
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setShowAddColumn(false)}>
+                    <Button size="sm" variant="outline" onClick={() => setShowAddColumn(false)} className="text-xs sm:text-sm">
                       ยกเลิก
                     </Button>
                   </div>
@@ -1085,9 +1086,9 @@ const KanbanBoard = () => {
               ) : (
                 <button
                   onClick={() => setShowAddColumn(true)}
-                  className="w-full p-4 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center gap-2 text-gray-600"
+                  className="w-full p-3 sm:p-4 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center gap-2 text-gray-600 text-sm sm:text-base"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                   เพิ่ม Column
                 </button>
               )}
@@ -1096,7 +1097,7 @@ const KanbanBoard = () => {
         </div>
       </div>
 
-      {/* Card Detail Modal */}
+      {/* Card Detail Modal - Responsive */}
       {showCardModal && selectedCard && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
           <Card className="w-full max-w-2xl bg-white my-8">
