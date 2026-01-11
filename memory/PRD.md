@@ -20,7 +20,23 @@
   - Toggle button to switch between List view and Kanban view
   - Auto-status update when subtask is moved (pending → in_progress → done)
 
-- **Test Results:** 15/15 backend tests passed, all frontend flows verified
+### ✅ Card Cover Image Feature (NEW)
+**เสร็จสมบูรณ์**
+
+- **Backend APIs:**
+  - `POST /api/projects/{id}/cards/{card_id}/cover-image` - Upload cover image (base64 or URL)
+  - `DELETE /api/projects/{id}/cards/{card_id}/cover-image` - Remove cover image
+  - Extended card model with `cover_image` field
+
+- **Frontend:**
+  - Cover image displayed on Card in Kanban Board
+  - Cover image displayed full-width in Card Modal
+  - Hover overlay with "เปลี่ยนรูป" and "ลบรูป" buttons
+  - "เพิ่มรูปภาพหน้าปก (เช่น รูปนิสิต)" for cards without cover
+  - Image icon indicator on cards with covers
+  - File validation (image types only, max 5MB)
+
+- **Test Results:** Backend APIs verified, Frontend UI working
 
 ### Previous Features (Still Working)
 - ✅ Course Management System
@@ -30,15 +46,7 @@
 - ✅ Course Export CSV
 - ✅ Project Management (Kanban) MVP
 
-## Core User Personas
-- **Admin/Instructor:** สร้างและจัดการ Projects, Courses
-- **Student:** เข้าร่วม Projects, ทำ assignments
-- **Researcher:** ใช้เครื่องมือวิเคราะห์ตลาด
-
 ## Prioritized Backlog
-
-### P0 (Critical) - ✅ DONE
-- Sub-Kanban feature inside cards
 
 ### P1 (High Priority) - Pending
 - File Attachments via Google Drive (placeholder ready)
@@ -59,13 +67,13 @@
 ## Technical Architecture
 
 ### Key Files
-- `/app/backend/routes/projects.py` - Project Management APIs
-- `/app/frontend/src/pages/KanbanBoard.js` - Kanban Board with Sub-Kanban
+- `/app/backend/routes/projects.py` - Project Management APIs (Cards, Subtasks, Cover Image)
+- `/app/frontend/src/pages/KanbanBoard.js` - Kanban Board with Sub-Kanban & Cover Image
 - `/app/frontend/src/pages/ProjectsPage.js` - Projects list
 
 ### Database Collections
 - `projects` - Project documents with columns
-- `project_cards` - Cards with sub_columns and subtasks
+- `project_cards` - Cards with sub_columns, subtasks, and cover_image
 - `users` - User accounts
 
 ### Test Coverage
