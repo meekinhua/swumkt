@@ -6,43 +6,50 @@
 ## What's Been Implemented (Latest Session - Jan 11, 2026)
 
 ### ✅ Sub-Kanban (Mini Kanban Board) Feature
-**เสร็จสมบูรณ์และทดสอบแล้ว**
+- Mini Kanban Board UI inside Card Modal
+- 3 Columns: รอทำ, กำลังทำ, เสร็จแล้ว
+- Drag & drop subtasks between sub-columns
+- Auto-status update
 
-- **Backend APIs:**
-  - `POST /api/projects/{id}/cards/{card_id}/init-sub-columns` - Initialize sub-columns for existing cards
-  - `PUT /api/projects/{id}/cards/{card_id}/subtasks/{subtask_id}/move` - Move subtask between sub-columns
-  - Extended subtask model with `sub_column_id` field
-  - Default sub-columns: รอทำ (gray), กำลังทำ (orange), เสร็จแล้ว (green)
+### ✅ Card Cover Image Feature
+- Cover image displayed on Card in Kanban Board
+- Cover image in Card Modal with hover controls
+- "เพิ่มรูปภาพหน้าปก" for cards without cover
 
-- **Frontend:**
-  - Mini Kanban Board UI inside Card Modal
-  - Drag & drop support for subtasks between sub-columns
-  - Toggle button to switch between List view and Kanban view
-  - Auto-status update when subtask is moved (pending → in_progress → done)
+### ✅ Auto Assignee Profile Image (NEW)
+- **Automatically show assignee's profile image** on Card when no cover image
+- Profile image displayed as circular avatar in center of card
+- Small avatar badges in bottom-right showing all assignees
 
-### ✅ Card Cover Image Feature (NEW)
-**เสร็จสมบูรณ์**
+### ✅ Edit Project Feature (NEW)
+- Edit Project Modal (name, description, visibility)
+- Pencil icon next to project name in header
 
-- **Backend APIs:**
-  - `POST /api/projects/{id}/cards/{card_id}/cover-image` - Upload cover image (base64 or URL)
-  - `DELETE /api/projects/{id}/cards/{card_id}/cover-image` - Remove cover image
-  - Extended card model with `cover_image` field
+### ✅ Member Management Feature (NEW)
+- **Member Management Modal** with role management
+- Search and add members by name/email/student_id
+- Role-based access control:
+  - **owner**: เจ้าของ Project (จัดการทุกอย่าง)
+  - **manager**: ผู้จัดการ/อาจารย์ (จัดการได้ทั้งหมด)
+  - **editor**: แก้ไข Cards ทุกใบได้
+  - **card_owner**: นิสิต (จัดการได้เฉพาะ Card ตัวเองสร้าง/รับผิดชอบ)
+  - **viewer**: ดูได้อย่างเดียว
+- Update/Remove member roles
+- Permission-based UI (hide/show buttons based on role)
 
-- **Frontend:**
-  - Cover image displayed on Card in Kanban Board
-  - Cover image displayed full-width in Card Modal
-  - Hover overlay with "เปลี่ยนรูป" and "ลบรูป" buttons
-  - "เพิ่มรูปภาพหน้าปก (เช่น รูปนิสิต)" for cards without cover
-  - Image icon indicator on cards with covers
-  - File validation (image types only, max 5MB)
-
-- **Test Results:** Backend APIs verified, Frontend UI working
+### Backend APIs Added
+- `GET /api/projects/{id}/members` - Get project members
+- `POST /api/projects/{id}/members` - Add member
+- `PUT /api/projects/{id}/members/{user_id}` - Update role
+- `DELETE /api/projects/{id}/members/{user_id}` - Remove member
+- `GET /api/projects/{id}/available-users` - Search users to add
+- Project API now includes `user_role`, `can_manage`, `can_edit_cards`
+- Card API now includes `can_edit` per card
 
 ### Previous Features (Still Working)
 - ✅ Course Management System
-- ✅ Advanced Conjoint Analysis (NCA, fsQCA, IPMA)
+- ✅ Advanced Conjoint Analysis
 - ✅ Customer Journey Tool with AI fallback
-- ✅ AI Rearrange & Behavior Analysis with fallback
 - ✅ Course Export CSV
 - ✅ Project Management (Kanban) MVP
 
@@ -50,35 +57,21 @@
 
 ### P1 (High Priority) - Pending
 - File Attachments via Google Drive (placeholder ready)
-- Verify Survey Image Display Fix
 
 ### P2 (Medium Priority) - Pending
 - Phase 2 Caching (Image Endpoint)
-- Verify Auto AI Analysis in "Share as Content"
 
 ### P3+ (Future/Backlog)
-- Role-based access for Kanban boards
 - Different board templates (thesis, client work)
 - Custom fields for cards
-- Android Push Notification vibrate option
 - Customer Behavior Analysis (Quantitative tab)
 - Survey Analytics & Dashboard
 
 ## Technical Architecture
 
 ### Key Files
-- `/app/backend/routes/projects.py` - Project Management APIs (Cards, Subtasks, Cover Image)
-- `/app/frontend/src/pages/KanbanBoard.js` - Kanban Board with Sub-Kanban & Cover Image
-- `/app/frontend/src/pages/ProjectsPage.js` - Projects list
-
-### Database Collections
-- `projects` - Project documents with columns
-- `project_cards` - Cards with sub_columns, subtasks, and cover_image
-- `users` - User accounts
-
-### Test Coverage
-- Backend: pytest tests at `/app/tests/test_projects_api.py`
-- Test reports: `/app/test_reports/`
+- `/app/backend/routes/projects.py` - Project Management APIs with Member Management
+- `/app/frontend/src/pages/KanbanBoard.js` - Kanban Board with all features
 
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
