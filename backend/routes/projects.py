@@ -172,8 +172,20 @@ class ProjectCard(BaseModel):
 
 class ProjectMember(BaseModel):
     user_id: str
-    role: str = "member"  # owner, admin, member, viewer
+    role: str = "member"  # owner, manager, editor, card_owner, viewer
+    # owner = เจ้าของ Project (จัดการทุกอย่าง)
+    # manager = เจ้าหน้าที่/อาจารย์ (จัดการได้ทั้งหมด)
+    # editor = แก้ไข Cards ทุกใบได้
+    # card_owner = นิสิต (จัดการได้เฉพาะ Card ที่ตัวเองสร้าง/รับผิดชอบ)
+    # viewer = ดูได้อย่างเดียว
     added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class MemberAdd(BaseModel):
+    user_id: str
+    role: str = "card_owner"  # Default role for students
+
+class MemberUpdate(BaseModel):
+    role: str
 
 class ProjectCreate(BaseModel):
     name: str
