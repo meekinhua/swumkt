@@ -816,7 +816,7 @@ const KanbanBoard = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {project?.can_edit_cards && (
+                  {project?.can_create_cards && (
                     <button
                       onClick={() => handleCreateCard(column.id)}
                       className="p-1 hover:bg-white/20 rounded"
