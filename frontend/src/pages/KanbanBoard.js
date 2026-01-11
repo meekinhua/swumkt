@@ -741,12 +741,29 @@ const KanbanBoard = () => {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 กลับ
               </Button>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
-                {project.description && (
-                  <p className="text-sm text-gray-500">{project.description}</p>
+              <div className="flex items-center gap-2">
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+                  {project.description && (
+                    <p className="text-sm text-gray-500">{project.description}</p>
+                  )}
+                </div>
+                {project.can_manage && (
+                  <button
+                    onClick={openEditProject}
+                    className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    title="แก้ไข Project"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
                 )}
               </div>
+              {/* User role badge */}
+              {project.user_role && (
+                <span className={`text-xs px-2 py-1 rounded-full ${roleColors[project.user_role] || 'bg-gray-100'}`}>
+                  {roleLabels[project.user_role] || project.user_role}
+                </span>
+              )}
             </div>
             
             <div className="flex items-center gap-2">
@@ -764,7 +781,11 @@ const KanbanBoard = () => {
                   Share
                 </Button>
               )}
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={openMemberModal}
+              >
                 <Users className="w-4 h-4 mr-2" />
                 {project.members?.length || 1} สมาชิก
               </Button>
