@@ -5,62 +5,51 @@
 
 ## What's Been Implemented (Latest Session - Jan 11, 2026)
 
-### ✅ Sub-Kanban (Mini Kanban Board) Feature
+### ✅ Sub-Kanban (Mini Kanban Board)
 - Mini Kanban Board UI inside Card Modal
 - 3 Columns: รอทำ, กำลังทำ, เสร็จแล้ว
 - Drag & drop subtasks between sub-columns
 
-### ✅ Card Cover Image Feature
-- Cover image displayed on Card in Kanban Board
-- Cover image in Card Modal with hover controls
+### ✅ Card Cover Image & Auto Assignee Profile
+- Cover image on Card in Kanban Board
+- Auto-show assignee's profile image when no cover
 
-### ✅ Auto Assignee Profile Image
-- Automatically show assignee's profile image on Card when no cover image
-- Profile image displayed as circular avatar
-- Small avatar badges showing all assignees
+### ✅ Project & Member Management
+- Edit Project Modal
+- Member Management with role-based access
 
-### ✅ Edit Project Feature
-- Edit Project Modal (name, description, visibility)
-- Pencil icon next to project name in header
+### ✅ Role-Based Permission System
+- **owner/manager**: จัดการทุกอย่าง
+- **editor**: แก้ไข Cards ทุกใบ
+- **card_owner**: จัดการได้เฉพาะ Card ตัวเอง + ที่ถูก Assign
+- **viewer**: ดูเท่านั้น
 
-### ✅ Member Management Feature
-- Member Management Modal with role management
-- Search and add members by name/email/student_id
+### ✅ Assign Card Feature (NEW)
+- **Manager สามารถ Assign Card ให้นิสิตได้**
+- **นิสิตที่ถูก Assign สามารถแก้ไข Card ได้** (แม้ไม่ได้สร้างเอง)
+- Assignee section ใน Card Modal พร้อมค้นหาและเพิ่ม/ลบ
+- แสดง Avatar ของ Assignees บน Card
 
-### ✅ Role-Based Permission System (NEW - COMPLETE)
-**Roles:**
-- **owner**: เจ้าของ Project (จัดการทุกอย่าง)
-- **manager**: ผู้จัดการ/อาจารย์ (จัดการได้ทั้งหมด)
-- **editor**: แก้ไข Cards ทุกใบได้
-- **card_owner**: นิสิต (จัดการได้เฉพาะ Card ที่ตัวเองสร้างหรือได้รับมอบหมาย)
-- **viewer**: ดูได้อย่างเดียว
+### ✅ Responsive Design (NEW)
+- **Mobile-first responsive layout**
+- Header: ปุ่มย่อลง แสดงเฉพาะไอคอนบน mobile
+- Kanban Board: Columns แคบลง scroll แนวนอน
+- Card Modal: เต็มจอบน mobile, sticky header
+- All components รองรับ touch และ scroll
+- Tested on iPhone SE (375px) และ Desktop (1920px)
 
-**Permission Checking:**
-- Backend validates permissions on create/update/delete operations
-- Cards return `can_edit` flag per card based on user's role
-- Project returns `can_manage`, `can_edit_cards`, `can_create_cards` flags
-
-**UI Behavior:**
-- Edit/Delete buttons hidden for cards user cannot edit
-- Lock icon + warning message shown on cards user cannot edit
-- "เพิ่ม Card" button visible only for users who can create cards
-- Edit Project button visible only for managers/owners
-
-**Test Results:**
-- Student (card_owner) can create new cards ✅
-- Student can edit/delete their own cards ✅
-- Student CANNOT edit cards created by others ✅
-- Backend returns proper error message when permission denied ✅
+## Test Results
+- ✅ Student creates Card → can_edit=True
+- ✅ Student edits own Card → Success
+- ✅ Manager assigns Student to other Card → can_edit=True
+- ✅ Student edits assigned Card → Success
+- ✅ Student cannot edit unassigned Cards → 403 Error
+- ✅ Mobile/Desktop views → Working
 
 ## Prioritized Backlog
-
-### P1 (High Priority) - Pending
-- File Attachments via Google Drive
-
-### P2+ (Future/Backlog)
-- Different board templates (thesis, client work)
-- Custom fields for cards
-- Notifications when assigned to card
+- P1: File Attachments via Google Drive
+- P2: Board templates (thesis, client work)
+- P3: Notifications when assigned
 
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
