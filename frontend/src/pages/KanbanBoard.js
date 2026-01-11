@@ -328,6 +328,107 @@ const KanbanBoard = () => {
     }
   };
 
+  // ============ SUB-KANBAN (MINI KANBAN) ============
+  
+  // Initialize sub-columns for card
+  const initializeSubKanban = async () => {
+    if (!selectedCard || (selectedCard.sub_columns && selectedCard.sub_columns.length > 0)) return;
+    
+    try {
+      setInitializingSubKanban(true);
+      const response = await axios.post(
+        `${API}/projects/${projectId}/cards/${selectedCard.id}/init-sub-columns`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const updatedCard = response.data;
+      setSelectedCard(updatedCard);
+      setCards(cards.map(c => c.id === selectedCard.id ? updatedCard : c));
+      toast.success('เปิดใช้งาน Sub-Kanban สำเร็จ!');
+    } catch (error) {
+      toast.error('ไม่สามารถเปิดใช้งาน Sub-Kanban ได้');
+    } finally {
+      setInitializingSubKanban(false);
+    }
+  };
+
+  // Get subtasks for a sub-column
+  const getSubColumnSubtasks = (subColumnId) => {
+    if (!selectedCard?.subtasks) return [];
+    return selectedCard.subtasks
+      .filter(st => st.sub_column_id === subColumnId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  };
+
+  // Handle subtask drag start
+  const handleSubtaskDragStart = (e, subtask) => {
+    setDraggedSubtask(subtask);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // Handle subtask drag over
+  const handleSubtaskDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  // Handle subtask drop to new sub-column
+  const handleSubtaskDrop = async (e, targetSubColumnId) => {
+    e.preventDefault();
+    if (!draggedSubtask || draggedSubtask.sub_column_id === targetSubColumnId) {
+      setDraggedSubtask(null);
+      return;
+    }
+
+    try {
+      await axios.put(
+        `${API}/projects/${projectId}/cards/${selectedCard.id}/subtasks/${draggedSubtask.id}/move`,
+        null,
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          params: { sub_column_id: targetSubColumnId, order: 0 }
+        }
+      );
+      
+      // Update local state
+      const updatedSubtasks = selectedCard.subtasks.map(st => 
+        st.id === draggedSubtask.id 
+          ? { ...st, sub_column_id: targetSubColumnId }
+          : st
+      );
+      const updatedCard = { ...selectedCard, subtasks: updatedSubtasks };
+      setSelectedCard(updatedCard);
+      setCards(cards.map(c => c.id === selectedCard.id ? updatedCard : c));
+      toast.success('ย้าย Subtask สำเร็จ!');
+    } catch (error) {
+      toast.error('ไม่สามารถย้าย Subtask ได้');
+    }
+    setDraggedSubtask(null);
+  };
+
+  // Add subtask to specific sub-column
+  const handleAddSubtaskToColumn = async (subColumnId) => {
+    const title = prompt('ชื่อ Subtask:');
+    if (!title?.trim()) return;
+
+    try {
+      const response = await axios.post(
+        `${API}/projects/${projectId}/cards/${selectedCard.id}/subtasks`,
+        { title, status: 'pending', sub_column_id: subColumnId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const updatedSubtasks = [...(selectedCard.subtasks || []), response.data];
+      const updatedCard = { ...selectedCard, subtasks: updatedSubtasks };
+      setSelectedCard(updatedCard);
+      setCards(cards.map(c => c.id === selectedCard.id ? updatedCard : c));
+      toast.success('เพิ่ม Subtask สำเร็จ!');
+    } catch (error) {
+      toast.error('ไม่สามารถเพิ่ม Subtask ได้');
+    }
+  };
+
   // ============ COMMENTS ============
   
   const handleAddComment = async () => {
