@@ -1005,13 +1005,27 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         
         project = await db.projects.find_one({"id": project_id})
         
-        # Check permission
+        # Check permission - role-based
         is_admin = current_user.role == UserRole.ADMIN
-        is_owner = card.get("created_by") == current_user.id
-        is_project_admin = any(m["user_id"] == current_user.id and m["role"] in ["owner", "admin"] for m in project.get("members", []))
+        member = next((m for m in project.get("members", []) if m["user_id"] == current_user.id), None)
+        member_role = member["role"] if member else None
         
-        if not (is_admin or is_owner or is_project_admin):
-            raise HTTPException(status_code=403, detail="Permission denied")
+        # Permission check
+        can_delete = False
+        if is_admin:
+            can_delete = True
+        elif member_role in ["owner", "manager"]:
+            can_delete = True  # Owner/Manager can delete any card
+        elif member_role == "editor":
+            can_delete = True  # Editor can delete any card they can edit
+        elif member_role == "card_owner":
+            # Can only delete cards they created
+            is_creator = card.get("created_by") == current_user.id
+            can_delete = is_creator
+        # viewer cannot delete
+        
+        if not can_delete:
+            raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์ลบ Card นี้ (จัดการได้เฉพาะ Card ที่คุณสร้าง)")
         
         await db.project_cards.delete_one({"id": card_id})
         return {"message": "Card deleted"}
