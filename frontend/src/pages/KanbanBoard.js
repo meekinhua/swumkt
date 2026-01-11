@@ -45,6 +45,10 @@ const KanbanBoard = () => {
   const [draggedSubtask, setDraggedSubtask] = useState(null);
   const [showSubKanban, setShowSubKanban] = useState(true);
   const [initializingSubKanban, setInitializingSubKanban] = useState(false);
+  
+  // Cover Image states
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverImageInputRef = useRef(null);
 
   const fetchProject = useCallback(async () => {
     try {
