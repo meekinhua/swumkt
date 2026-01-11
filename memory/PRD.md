@@ -9,69 +9,59 @@
 - Mini Kanban Board UI inside Card Modal
 - 3 Columns: รอทำ, กำลังทำ, เสร็จแล้ว
 - Drag & drop subtasks between sub-columns
-- Auto-status update
 
 ### ✅ Card Cover Image Feature
 - Cover image displayed on Card in Kanban Board
 - Cover image in Card Modal with hover controls
-- "เพิ่มรูปภาพหน้าปก" for cards without cover
 
-### ✅ Auto Assignee Profile Image (NEW)
-- **Automatically show assignee's profile image** on Card when no cover image
-- Profile image displayed as circular avatar in center of card
-- Small avatar badges in bottom-right showing all assignees
+### ✅ Auto Assignee Profile Image
+- Automatically show assignee's profile image on Card when no cover image
+- Profile image displayed as circular avatar
+- Small avatar badges showing all assignees
 
-### ✅ Edit Project Feature (NEW)
+### ✅ Edit Project Feature
 - Edit Project Modal (name, description, visibility)
 - Pencil icon next to project name in header
 
-### ✅ Member Management Feature (NEW)
-- **Member Management Modal** with role management
+### ✅ Member Management Feature
+- Member Management Modal with role management
 - Search and add members by name/email/student_id
-- Role-based access control:
-  - **owner**: เจ้าของ Project (จัดการทุกอย่าง)
-  - **manager**: ผู้จัดการ/อาจารย์ (จัดการได้ทั้งหมด)
-  - **editor**: แก้ไข Cards ทุกใบได้
-  - **card_owner**: นิสิต (จัดการได้เฉพาะ Card ตัวเองสร้าง/รับผิดชอบ)
-  - **viewer**: ดูได้อย่างเดียว
-- Update/Remove member roles
-- Permission-based UI (hide/show buttons based on role)
 
-### Backend APIs Added
-- `GET /api/projects/{id}/members` - Get project members
-- `POST /api/projects/{id}/members` - Add member
-- `PUT /api/projects/{id}/members/{user_id}` - Update role
-- `DELETE /api/projects/{id}/members/{user_id}` - Remove member
-- `GET /api/projects/{id}/available-users` - Search users to add
-- Project API now includes `user_role`, `can_manage`, `can_edit_cards`
-- Card API now includes `can_edit` per card
+### ✅ Role-Based Permission System (NEW - COMPLETE)
+**Roles:**
+- **owner**: เจ้าของ Project (จัดการทุกอย่าง)
+- **manager**: ผู้จัดการ/อาจารย์ (จัดการได้ทั้งหมด)
+- **editor**: แก้ไข Cards ทุกใบได้
+- **card_owner**: นิสิต (จัดการได้เฉพาะ Card ที่ตัวเองสร้างหรือได้รับมอบหมาย)
+- **viewer**: ดูได้อย่างเดียว
 
-### Previous Features (Still Working)
-- ✅ Course Management System
-- ✅ Advanced Conjoint Analysis
-- ✅ Customer Journey Tool with AI fallback
-- ✅ Course Export CSV
-- ✅ Project Management (Kanban) MVP
+**Permission Checking:**
+- Backend validates permissions on create/update/delete operations
+- Cards return `can_edit` flag per card based on user's role
+- Project returns `can_manage`, `can_edit_cards`, `can_create_cards` flags
+
+**UI Behavior:**
+- Edit/Delete buttons hidden for cards user cannot edit
+- Lock icon + warning message shown on cards user cannot edit
+- "เพิ่ม Card" button visible only for users who can create cards
+- Edit Project button visible only for managers/owners
+
+**Test Results:**
+- Student (card_owner) can create new cards ✅
+- Student can edit/delete their own cards ✅
+- Student CANNOT edit cards created by others ✅
+- Backend returns proper error message when permission denied ✅
 
 ## Prioritized Backlog
 
 ### P1 (High Priority) - Pending
-- File Attachments via Google Drive (placeholder ready)
+- File Attachments via Google Drive
 
-### P2 (Medium Priority) - Pending
-- Phase 2 Caching (Image Endpoint)
-
-### P3+ (Future/Backlog)
+### P2+ (Future/Backlog)
 - Different board templates (thesis, client work)
 - Custom fields for cards
-- Customer Behavior Analysis (Quantitative tab)
-- Survey Analytics & Dashboard
-
-## Technical Architecture
-
-### Key Files
-- `/app/backend/routes/projects.py` - Project Management APIs with Member Management
-- `/app/frontend/src/pages/KanbanBoard.js` - Kanban Board with all features
+- Notifications when assigned to card
 
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
+- Student: student1@swu.ac.th / student123
