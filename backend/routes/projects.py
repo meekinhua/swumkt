@@ -136,6 +136,7 @@ class ProjectCardCreate(BaseModel):
     priority: str = "medium"  # low, medium, high, urgent
     labels: List[str] = []
     subtasks: List[SubtaskCreate] = []
+    cover_image: Optional[str] = None  # URL or base64 image for card preview
 
 class ProjectCardUpdate(BaseModel):
     title: Optional[str] = None
@@ -146,6 +147,7 @@ class ProjectCardUpdate(BaseModel):
     priority: Optional[str] = None
     labels: Optional[List[str]] = None
     order: Optional[int] = None
+    cover_image: Optional[str] = None  # URL or base64 image for card preview
 
 class ProjectCard(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -159,6 +161,7 @@ class ProjectCard(BaseModel):
     due_date: Optional[str] = None
     priority: str = "medium"
     labels: List[str] = []
+    cover_image: Optional[str] = None  # URL or base64 image for card preview
     sub_columns: List[SubColumn] = []  # Mini kanban columns
     subtasks: List[Subtask] = []
     comments: List[CardComment] = []
