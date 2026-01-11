@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Plus, Trash2, Edit, Users, Calendar,
   CheckSquare, MessageSquare, Paperclip, Clock, Loader2,
-  Share2, X, Check, Save, Upload
+  Share2, X, Check, Save, Upload, LayoutGrid, GripVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,6 +39,11 @@ const KanbanBoard = () => {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newCommentText, setNewCommentText] = useState('');
   const [savingCard, setSavingCard] = useState(false);
+  
+  // Sub-Kanban states
+  const [draggedSubtask, setDraggedSubtask] = useState(null);
+  const [showSubKanban, setShowSubKanban] = useState(true);
+  const [initializingSubKanban, setInitializingSubKanban] = useState(false);
 
   const fetchProject = useCallback(async () => {
     try {
