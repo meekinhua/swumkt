@@ -783,13 +783,16 @@ const KanbanBoard = () => {
                   </Card>
                 ))}
                 
-                <button
-                  onClick={() => handleCreateCard(column.id)}
-                  className="w-full p-2 text-gray-500 hover:bg-gray-200 rounded flex items-center justify-center gap-2 text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  เพิ่ม Card
-                </button>
+                {/* Only show Add Card if user can edit */}
+                {project?.can_edit_cards && (
+                  <button
+                    onClick={() => handleCreateCard(column.id)}
+                    className="w-full p-2 text-gray-500 hover:bg-gray-200 rounded flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    เพิ่ม Card
+                  </button>
+                )}
               </div>
             </div>
           ))}
