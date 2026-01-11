@@ -703,6 +703,50 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         updated = await db.project_cards.find_one({"id": card_id}, {"_id": 0})
         return updated
     
+    @project_router.post("/{project_id}/cards/{card_id}/cover-image")
+    async def upload_card_cover_image(
+        project_id: str,
+        card_id: str,
+        image_data: Dict[str, Any],
+        current_user = Depends(get_current_user)
+    ):
+        """Upload cover image for card (base64 or URL)"""
+        card = await db.project_cards.find_one({"id": card_id, "project_id": project_id})
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        cover_image = image_data.get("cover_image")
+        if not cover_image:
+            raise HTTPException(status_code=400, detail="cover_image is required")
+        
+        # Validate base64 or URL
+        if cover_image.startswith("data:image/") or cover_image.startswith("http"):
+            await db.project_cards.update_one(
+                {"id": card_id},
+                {"$set": {"cover_image": cover_image, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            updated = await db.project_cards.find_one({"id": card_id}, {"_id": 0})
+            return updated
+        else:
+            raise HTTPException(status_code=400, detail="Invalid image format. Use base64 data URL or HTTP URL")
+    
+    @project_router.delete("/{project_id}/cards/{card_id}/cover-image")
+    async def delete_card_cover_image(
+        project_id: str,
+        card_id: str,
+        current_user = Depends(get_current_user)
+    ):
+        """Remove cover image from card"""
+        card = await db.project_cards.find_one({"id": card_id, "project_id": project_id})
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        await db.project_cards.update_one(
+            {"id": card_id},
+            {"$set": {"cover_image": None, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"message": "Cover image removed"}
+    
     @project_router.delete("/{project_id}/cards/{card_id}")
     async def delete_card(
         project_id: str,
