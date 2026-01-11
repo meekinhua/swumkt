@@ -665,6 +665,101 @@ const KanbanBoard = () => {
     setShowEditProject(true);
   };
 
+  // ============ ASSIGNEE MANAGEMENT ============
+  
+  const searchAssignees = async (search) => {
+    if (!search.trim()) {
+      setAssigneeResults([]);
+      return;
+    }
+    try {
+      // Get project members to assign
+      const response = await axios.get(
+        `${API}/projects/${projectId}/members`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Filter by search and exclude already assigned
+      const currentAssignees = selectedCard?.assignees || [];
+      const filtered = response.data.members
+        ?.filter(m => {
+          const user = m.user_info;
+          if (currentAssignees.includes(m.user_id)) return false;
+          const searchLower = search.toLowerCase();
+          return user?.full_name?.toLowerCase().includes(searchLower) ||
+                 user?.email?.toLowerCase().includes(searchLower) ||
+                 user?.student_id?.includes(search);
+        })
+        .map(m => m.user_info) || [];
+      
+      setAssigneeResults(filtered);
+    } catch (error) {
+      console.error('Error searching assignees:', error);
+    }
+  };
+
+  const handleAddAssignee = async (userId) => {
+    if (!selectedCard) return;
+    
+    try {
+      const newAssignees = [...(selectedCard.assignees || []), userId];
+      
+      const response = await axios.put(
+        `${API}/projects/${projectId}/cards/${selectedCard.id}`,
+        { assignees: newAssignees },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Refresh card data to get assignee_details
+      const cardResponse = await axios.get(
+        `${API}/projects/${projectId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const updatedCard = cardResponse.data.cards?.find(c => c.id === selectedCard.id);
+      if (updatedCard) {
+        setSelectedCard(updatedCard);
+        setCards(cards.map(c => c.id === selectedCard.id ? updatedCard : c));
+      }
+      
+      setAssigneeSearch('');
+      setAssigneeResults([]);
+      toast.success('เพิ่มผู้รับผิดชอบสำเร็จ!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'ไม่สามารถเพิ่มผู้รับผิดชอบได้');
+    }
+  };
+
+  const handleRemoveAssignee = async (userId) => {
+    if (!selectedCard) return;
+    
+    try {
+      const newAssignees = (selectedCard.assignees || []).filter(id => id !== userId);
+      
+      await axios.put(
+        `${API}/projects/${projectId}/cards/${selectedCard.id}`,
+        { assignees: newAssignees },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Refresh card data
+      const cardResponse = await axios.get(
+        `${API}/projects/${projectId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const updatedCard = cardResponse.data.cards?.find(c => c.id === selectedCard.id);
+      if (updatedCard) {
+        setSelectedCard(updatedCard);
+        setCards(cards.map(c => c.id === selectedCard.id ? updatedCard : c));
+      }
+      
+      toast.success('ลบผู้รับผิดชอบสำเร็จ');
+    } catch (error) {
+      toast.error('ไม่สามารถลบผู้รับผิดชอบได้');
+    }
+  };
+
   // ============ FILE ATTACHMENTS ============
   
   const handleFileUpload = async (e) => {
