@@ -811,12 +811,16 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         
-        # Check permission
+        # Check permission - role-based
         is_admin = current_user.role == UserRole.ADMIN
-        is_member = any(m["user_id"] == current_user.id for m in project.get("members", []))
+        member = next((m for m in project.get("members", []) if m["user_id"] == current_user.id), None)
+        member_role = member["role"] if member else None
         
-        if not (is_admin or is_member):
-            raise HTTPException(status_code=403, detail="Permission denied")
+        # viewer cannot create cards
+        can_create = is_admin or member_role in ["owner", "manager", "editor", "card_owner"]
+        
+        if not can_create:
+            raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์สร้าง Card ใหม่")
         
         # Get max order in column
         max_order = await db.project_cards.find_one(
