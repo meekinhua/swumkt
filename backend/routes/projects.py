@@ -424,6 +424,208 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         logging.info(f"[PROJECT] Deleted: {project_id} by {current_user.email}")
         return {"message": "Project deleted"}
     
+    # ============ MEMBER MANAGEMENT ============
+    
+    @project_router.get("/{project_id}/members")
+    async def get_project_members(
+        project_id: str,
+        current_user = Depends(get_current_user)
+    ):
+        """Get project members with user details"""
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        members_with_details = []
+        for member in project.get("members", []):
+            user = await db.users.find_one(
+                {"id": member["user_id"]}, 
+                {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1, "profile_image": 1}
+            )
+            if user:
+                members_with_details.append({
+                    **member,
+                    "user_info": user
+                })
+        
+        return {"members": members_with_details}
+    
+    @project_router.post("/{project_id}/members")
+    async def add_project_member(
+        project_id: str,
+        data: MemberAdd,
+        current_user = Depends(get_current_user)
+    ):
+        """Add member to project"""
+        project = await db.projects.find_one({"id": project_id})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Check permission (owner or manager can add members)
+        is_admin = current_user.role == UserRole.ADMIN
+        member_role = next((m["role"] for m in project.get("members", []) if m["user_id"] == current_user.id), None)
+        
+        if not (is_admin or member_role in ["owner", "manager"]):
+            raise HTTPException(status_code=403, detail="Only owner or manager can add members")
+        
+        # Check if user exists
+        user = await db.users.find_one({"id": data.user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check if already member
+        if any(m["user_id"] == data.user_id for m in project.get("members", [])):
+            raise HTTPException(status_code=400, detail="User is already a member")
+        
+        new_member = {
+            "user_id": data.user_id,
+            "role": data.role,
+            "added_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.projects.update_one(
+            {"id": project_id},
+            {
+                "$push": {"members": new_member},
+                "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        
+        # Get user info for response
+        user_info = await db.users.find_one(
+            {"id": data.user_id}, 
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1, "profile_image": 1}
+        )
+        
+        return {"message": "Member added", "member": {**new_member, "user_info": user_info}}
+    
+    @project_router.put("/{project_id}/members/{user_id}")
+    async def update_member_role(
+        project_id: str,
+        user_id: str,
+        data: MemberUpdate,
+        current_user = Depends(get_current_user)
+    ):
+        """Update member role"""
+        project = await db.projects.find_one({"id": project_id})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Check permission
+        is_admin = current_user.role == UserRole.ADMIN
+        member_role = next((m["role"] for m in project.get("members", []) if m["user_id"] == current_user.id), None)
+        
+        if not (is_admin or member_role in ["owner", "manager"]):
+            raise HTTPException(status_code=403, detail="Only owner or manager can update members")
+        
+        # Prevent changing owner role unless you're admin
+        target_member = next((m for m in project.get("members", []) if m["user_id"] == user_id), None)
+        if target_member and target_member["role"] == "owner" and not is_admin:
+            raise HTTPException(status_code=403, detail="Cannot change owner role")
+        
+        # Update member role
+        members = project.get("members", [])
+        for m in members:
+            if m["user_id"] == user_id:
+                m["role"] = data.role
+                break
+        
+        await db.projects.update_one(
+            {"id": project_id},
+            {"$set": {"members": members, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"message": "Member role updated"}
+    
+    @project_router.delete("/{project_id}/members/{user_id}")
+    async def remove_project_member(
+        project_id: str,
+        user_id: str,
+        current_user = Depends(get_current_user)
+    ):
+        """Remove member from project"""
+        project = await db.projects.find_one({"id": project_id})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Check permission
+        is_admin = current_user.role == UserRole.ADMIN
+        member_role = next((m["role"] for m in project.get("members", []) if m["user_id"] == current_user.id), None)
+        
+        if not (is_admin or member_role in ["owner", "manager"]):
+            raise HTTPException(status_code=403, detail="Only owner or manager can remove members")
+        
+        # Cannot remove owner
+        target_member = next((m for m in project.get("members", []) if m["user_id"] == user_id), None)
+        if target_member and target_member["role"] == "owner":
+            raise HTTPException(status_code=403, detail="Cannot remove project owner")
+        
+        # Remove member
+        members = [m for m in project.get("members", []) if m["user_id"] != user_id]
+        
+        await db.projects.update_one(
+            {"id": project_id},
+            {"$set": {"members": members, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"message": "Member removed"}
+    
+    @project_router.get("/{project_id}/available-users")
+    async def get_available_users(
+        project_id: str,
+        search: str = "",
+        current_user = Depends(get_current_user)
+    ):
+        """Get users that can be added to project (not already members)"""
+        project = await db.projects.find_one({"id": project_id})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Get current member IDs
+        member_ids = [m["user_id"] for m in project.get("members", [])]
+        
+        # Build search query
+        query = {"id": {"$nin": member_ids}}
+        if search:
+            query["$or"] = [
+                {"full_name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+                {"student_id": {"$regex": search, "$options": "i"}}
+            ]
+        
+        users = await db.users.find(
+            query, 
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1, "profile_image": 1}
+        ).limit(20).to_list(20)
+        
+        return {"users": users}
+    
+    # ============ PERMISSION HELPER ============
+    
+    def get_member_permission(project: dict, user_id: str, is_admin: bool, card: dict = None):
+        """Get user's permission level for a card"""
+        if is_admin:
+            return "full"  # Admin can do everything
+        
+        member = next((m for m in project.get("members", []) if m["user_id"] == user_id), None)
+        if not member:
+            return "none"
+        
+        role = member["role"]
+        
+        if role in ["owner", "manager"]:
+            return "full"  # Can manage everything
+        elif role == "editor":
+            return "edit"  # Can edit all cards
+        elif role == "card_owner":
+            if card:
+                # Can only edit cards they created or are assigned to
+                if card.get("created_by") == user_id or user_id in card.get("assignees", []):
+                    return "edit"
+            return "own_only"  # Can only manage own cards
+        else:  # viewer
+            return "view"
+    
     # ============ COLUMN MANAGEMENT ============
     
     @project_router.post("/{project_id}/columns")
