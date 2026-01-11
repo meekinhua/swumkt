@@ -809,88 +809,211 @@ const KanbanBoard = () => {
                 </div>
               </div>
               
-              {/* Subtasks */}
+              {/* Subtasks / Sub-Kanban */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <Label className="font-bold flex items-center gap-2">
                     <CheckSquare className="w-4 h-4" />
                     Subtasks ({selectedCard.subtasks?.filter(s => s.status === 'done').length || 0}/{selectedCard.subtasks?.length || 0})
                   </Label>
-                </div>
-                
-                {/* Add new subtask */}
-                <div className="flex gap-2 mb-3">
-                  <Input
-                    value={newSubtaskTitle}
-                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    placeholder="เพิ่ม Subtask ใหม่..."
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
-                  />
-                  <Button size="sm" onClick={handleAddSubtask} disabled={!newSubtaskTitle.trim()}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  {selectedCard.subtasks?.map((subtask) => (
-                    <div
-                      key={subtask.id}
-                      className="flex items-center gap-3 p-2 bg-gray-50 rounded group"
+                  <div className="flex items-center gap-2">
+                    {/* Toggle between List and Kanban view */}
+                    <Button
+                      size="sm"
+                      variant={showSubKanban ? "default" : "outline"}
+                      onClick={() => setShowSubKanban(!showSubKanban)}
+                      className={showSubKanban ? "bg-[#00A9CE] hover:bg-[#008FB5]" : ""}
                     >
-                      <button
-                        onClick={() => handleToggleSubtask(subtask.id, subtask.status)}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                          subtask.status === 'done' 
-                            ? 'bg-green-500 border-green-500 text-white' 
-                            : 'border-gray-300 hover:border-green-500'
-                        }`}
+                      <LayoutGrid className="w-3 h-3 mr-1" />
+                      Kanban
+                    </Button>
+                    {/* Initialize Sub-Kanban if not present */}
+                    {(!selectedCard.sub_columns || selectedCard.sub_columns.length === 0) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={initializeSubKanban}
+                        disabled={initializingSubKanban}
                       >
-                        {subtask.status === 'done' && <Check className="w-3 h-3" />}
-                      </button>
-                      
-                      {editingSubtaskId === subtask.id ? (
-                        <div className="flex-1 flex gap-2">
-                          <Input
-                            value={editSubtaskTitle}
-                            onChange={(e) => setEditSubtaskTitle(e.target.value)}
-                            className="flex-1"
-                            autoFocus
-                            onKeyPress={(e) => e.key === 'Enter' && handleSaveSubtask(subtask.id)}
-                          />
-                          <Button size="sm" onClick={() => handleSaveSubtask(subtask.id)}>
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingSubtaskId(null)}>
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className={`flex-1 ${subtask.status === 'done' ? 'line-through text-gray-500' : ''}`}>
-                            {subtask.title}
-                          </span>
-                          <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                        {initializingSubKanban ? (
+                          <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                        ) : (
+                          <Plus className="w-3 h-3 mr-1" />
+                        )}
+                        เปิดใช้ Sub-Board
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sub-Kanban View (Mini Kanban Board) */}
+                {showSubKanban && selectedCard.sub_columns && selectedCard.sub_columns.length > 0 ? (
+                  <div className="bg-gray-100 rounded-lg p-3">
+                    <div className="flex gap-2 overflow-x-auto">
+                      {selectedCard.sub_columns?.sort((a, b) => a.order - b.order).map((subCol) => (
+                        <div
+                          key={subCol.id}
+                          className="flex-1 min-w-[150px] max-w-[200px]"
+                          onDragOver={handleSubtaskDragOver}
+                          onDrop={(e) => handleSubtaskDrop(e, subCol.id)}
+                        >
+                          {/* Sub-Column Header */}
+                          <div 
+                            className="flex items-center justify-between px-2 py-1.5 rounded-t text-white text-xs font-bold"
+                            style={{ backgroundColor: subCol.color }}
+                          >
+                            <span>{subCol.name}</span>
+                            <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">
+                              {getSubColumnSubtasks(subCol.id).length}
+                            </span>
+                          </div>
+                          
+                          {/* Sub-Column Content */}
+                          <div className="bg-white rounded-b min-h-[100px] p-1.5 space-y-1.5">
+                            {getSubColumnSubtasks(subCol.id).map((subtask) => (
+                              <div
+                                key={subtask.id}
+                                draggable
+                                onDragStart={(e) => handleSubtaskDragStart(e, subtask)}
+                                className={`p-2 bg-gray-50 rounded border border-gray-200 cursor-move hover:shadow-sm transition-all group text-xs ${
+                                  draggedSubtask?.id === subtask.id ? 'opacity-50' : ''
+                                }`}
+                              >
+                                <div className="flex items-start gap-1.5">
+                                  <GripVertical className="w-3 h-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1 min-w-0">
+                                    {editingSubtaskId === subtask.id ? (
+                                      <div className="flex gap-1">
+                                        <Input
+                                          value={editSubtaskTitle}
+                                          onChange={(e) => setEditSubtaskTitle(e.target.value)}
+                                          className="h-6 text-xs flex-1"
+                                          autoFocus
+                                          onKeyPress={(e) => e.key === 'Enter' && handleSaveSubtask(subtask.id)}
+                                        />
+                                        <button onClick={() => handleSaveSubtask(subtask.id)} className="p-1 hover:bg-green-100 rounded">
+                                          <Check className="w-3 h-3 text-green-600" />
+                                        </button>
+                                        <button onClick={() => setEditingSubtaskId(null)} className="p-1 hover:bg-gray-200 rounded">
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <span className={`block truncate ${subtask.status === 'done' ? 'line-through text-gray-400' : ''}`}>
+                                          {subtask.title}
+                                        </span>
+                                        <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100">
+                                          <button
+                                            onClick={() => startEditSubtask(subtask)}
+                                            className="p-0.5 hover:bg-gray-200 rounded"
+                                          >
+                                            <Edit className="w-2.5 h-2.5 text-gray-500" />
+                                          </button>
+                                          <button
+                                            onClick={() => handleDeleteSubtask(subtask.id)}
+                                            className="p-0.5 hover:bg-red-100 rounded"
+                                          >
+                                            <Trash2 className="w-2.5 h-2.5 text-red-500" />
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            
+                            {/* Add subtask button */}
                             <button
-                              onClick={() => startEditSubtask(subtask)}
-                              className="p-1 hover:bg-gray-200 rounded"
+                              onClick={() => handleAddSubtaskToColumn(subCol.id)}
+                              className="w-full p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded flex items-center justify-center gap-1 text-xs"
                             >
-                              <Edit className="w-3 h-3 text-gray-500" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSubtask(subtask.id)}
-                              className="p-1 hover:bg-red-100 rounded"
-                            >
-                              <Trash2 className="w-3 h-3 text-red-500" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
-                        </>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* List View (Original) */
+                  <>
+                    {/* Add new subtask */}
+                    <div className="flex gap-2 mb-3">
+                      <Input
+                        value={newSubtaskTitle}
+                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                        placeholder="เพิ่ม Subtask ใหม่..."
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
+                      />
+                      <Button size="sm" onClick={handleAddSubtask} disabled={!newSubtaskTitle.trim()}>
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {selectedCard.subtasks?.map((subtask) => (
+                        <div
+                          key={subtask.id}
+                          className="flex items-center gap-3 p-2 bg-gray-50 rounded group"
+                        >
+                          <button
+                            onClick={() => handleToggleSubtask(subtask.id, subtask.status)}
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                              subtask.status === 'done' 
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : 'border-gray-300 hover:border-green-500'
+                            }`}
+                          >
+                            {subtask.status === 'done' && <Check className="w-3 h-3" />}
+                          </button>
+                          
+                          {editingSubtaskId === subtask.id ? (
+                            <div className="flex-1 flex gap-2">
+                              <Input
+                                value={editSubtaskTitle}
+                                onChange={(e) => setEditSubtaskTitle(e.target.value)}
+                                className="flex-1"
+                                autoFocus
+                                onKeyPress={(e) => e.key === 'Enter' && handleSaveSubtask(subtask.id)}
+                              />
+                              <Button size="sm" onClick={() => handleSaveSubtask(subtask.id)}>
+                                <Check className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingSubtaskId(null)}>
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className={`flex-1 ${subtask.status === 'done' ? 'line-through text-gray-500' : ''}`}>
+                                {subtask.title}
+                              </span>
+                              <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                                <button
+                                  onClick={() => startEditSubtask(subtask)}
+                                  className="p-1 hover:bg-gray-200 rounded"
+                                >
+                                  <Edit className="w-3 h-3 text-gray-500" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSubtask(subtask.id)}
+                                  className="p-1 hover:bg-red-100 rounded"
+                                >
+                                  <Trash2 className="w-3 h-3 text-red-500" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                      {(!selectedCard.subtasks || selectedCard.subtasks.length === 0) && (
+                        <p className="text-gray-500 text-sm text-center py-2">ยังไม่มี Subtask</p>
                       )}
                     </div>
-                  ))}
-                  {(!selectedCard.subtasks || selectedCard.subtasks.length === 0) && (
-                    <p className="text-gray-500 text-sm text-center py-2">ยังไม่มี Subtask</p>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
               
               {/* Attachments */}
