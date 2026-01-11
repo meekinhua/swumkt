@@ -728,29 +728,55 @@ const KanbanBoard = () => {
                       
                       <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{card.title}</h4>
                       
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        {card.cover_image && (
-                          <span className="flex items-center gap-1 text-[#00A9CE]">
-                            <Image className="w-3 h-3" />
-                          </span>
-                        )}
-                        {card.subtasks?.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <CheckSquare className="w-3 h-3" />
-                            {card.subtasks.filter(s => s.status === 'done').length}/{card.subtasks.length}
-                          </span>
-                        )}
-                        {card.comments?.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <MessageSquare className="w-3 h-3" />
-                            {card.comments.length}
-                          </span>
-                        )}
-                        {card.attachments?.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Paperclip className="w-3 h-3" />
-                            {card.attachments.length}
-                          </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          {card.cover_image && (
+                            <span className="flex items-center gap-1 text-[#00A9CE]">
+                              <Image className="w-3 h-3" />
+                            </span>
+                          )}
+                          {card.subtasks?.length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <CheckSquare className="w-3 h-3" />
+                              {card.subtasks.filter(s => s.status === 'done').length}/{card.subtasks.length}
+                            </span>
+                          )}
+                          {card.comments?.length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3" />
+                              {card.comments.length}
+                            </span>
+                          )}
+                          {card.attachments?.length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Paperclip className="w-3 h-3" />
+                              {card.attachments.length}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Assignee avatars */}
+                        {card.assignee_details?.length > 0 && (
+                          <div className="flex -space-x-1">
+                            {card.assignee_details.slice(0, 3).map((assignee, idx) => (
+                              <div 
+                                key={idx}
+                                className="w-6 h-6 rounded-full bg-[#00A9CE] text-white text-xs flex items-center justify-center border border-white overflow-hidden"
+                                title={assignee.full_name}
+                              >
+                                {assignee.profile_image ? (
+                                  <img src={assignee.profile_image} alt={assignee.full_name} className="w-full h-full object-cover" />
+                                ) : (
+                                  assignee.full_name?.charAt(0)?.toUpperCase() || '?'
+                                )}
+                              </div>
+                            ))}
+                            {card.assignee_details.length > 3 && (
+                              <div className="w-6 h-6 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center border border-white">
+                                +{card.assignee_details.length - 3}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
