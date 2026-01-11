@@ -537,6 +537,130 @@ const KanbanBoard = () => {
     }
   };
 
+  // ============ MEMBER MANAGEMENT ============
+  
+  const roleLabels = {
+    owner: 'เจ้าของ',
+    manager: 'ผู้จัดการ/อาจารย์',
+    editor: 'แก้ไขทั้งหมด',
+    card_owner: 'จัดการ Card ตัวเอง',
+    viewer: 'ดูเท่านั้น'
+  };
+  
+  const roleColors = {
+    owner: 'bg-purple-100 text-purple-800',
+    manager: 'bg-blue-100 text-blue-800',
+    editor: 'bg-green-100 text-green-800',
+    card_owner: 'bg-yellow-100 text-yellow-800',
+    viewer: 'bg-gray-100 text-gray-600'
+  };
+
+  const fetchMembers = async () => {
+    try {
+      setLoadingMembers(true);
+      const response = await axios.get(
+        `${API}/projects/${projectId}/members`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMembers(response.data.members || []);
+    } catch (error) {
+      toast.error('ไม่สามารถโหลดรายชื่อสมาชิกได้');
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  const searchAvailableUsers = async (search) => {
+    try {
+      const response = await axios.get(
+        `${API}/projects/${projectId}/available-users`,
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          params: { search }
+        }
+      );
+      setAvailableUsers(response.data.users || []);
+    } catch (error) {
+      console.error('Error searching users:', error);
+    }
+  };
+
+  const handleAddMember = async (userId, role = 'card_owner') => {
+    try {
+      await axios.post(
+        `${API}/projects/${projectId}/members`,
+        { user_id: userId, role },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('เพิ่มสมาชิกสำเร็จ!');
+      fetchMembers();
+      setMemberSearch('');
+      setAvailableUsers([]);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'ไม่สามารถเพิ่มสมาชิกได้');
+    }
+  };
+
+  const handleUpdateMemberRole = async (userId, newRole) => {
+    try {
+      await axios.put(
+        `${API}/projects/${projectId}/members/${userId}`,
+        { role: newRole },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('อัพเดท Role สำเร็จ!');
+      fetchMembers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'ไม่สามารถอัพเดท Role ได้');
+    }
+  };
+
+  const handleRemoveMember = async (userId) => {
+    if (!window.confirm('ต้องการลบสมาชิกนี้ออกจาก Project หรือไม่?')) return;
+    
+    try {
+      await axios.delete(
+        `${API}/projects/${projectId}/members/${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('ลบสมาชิกสำเร็จ');
+      fetchMembers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'ไม่สามารถลบสมาชิกได้');
+    }
+  };
+
+  const openMemberModal = () => {
+    setShowMemberModal(true);
+    fetchMembers();
+  };
+
+  // ============ EDIT PROJECT ============
+  
+  const handleEditProject = async () => {
+    try {
+      await axios.put(
+        `${API}/projects/${projectId}`,
+        editProjectForm,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('อัพเดท Project สำเร็จ!');
+      setShowEditProject(false);
+      fetchProject();
+    } catch (error) {
+      toast.error('ไม่สามารถอัพเดท Project ได้');
+    }
+  };
+
+  const openEditProject = () => {
+    setEditProjectForm({
+      name: project.name,
+      description: project.description || '',
+      visibility: project.visibility
+    });
+    setShowEditProject(true);
+  };
+
   // ============ FILE ATTACHMENTS ============
   
   const handleFileUpload = async (e) => {
