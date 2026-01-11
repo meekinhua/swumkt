@@ -623,6 +623,7 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
             due_date=data.due_date,
             priority=data.priority,
             labels=data.labels,
+            cover_image=data.cover_image,
             sub_columns=sub_columns,
             subtasks=subtasks,
             created_by=current_user.id
