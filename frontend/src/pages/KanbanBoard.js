@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Plus, Trash2, Edit, Users, Calendar,
   CheckSquare, MessageSquare, Paperclip, Clock, Loader2,
-  Share2, X, Check, Save, Upload, LayoutGrid, GripVertical
+  Share2, X, Check, Save, Upload, LayoutGrid, GripVertical,
+  Image, UserCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
