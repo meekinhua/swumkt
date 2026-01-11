@@ -1099,30 +1099,30 @@ const KanbanBoard = () => {
 
       {/* Card Detail Modal - Responsive */}
       {showCardModal && selectedCard && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <Card className="w-full max-w-2xl bg-white my-8">
+        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+          <Card className="w-full sm:max-w-2xl bg-white sm:my-8 sm:rounded-lg rounded-none min-h-screen sm:min-h-0 sm:max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-start justify-between p-4 border-b">
-              <div className="flex-1">
+            <div className="flex items-start justify-between p-3 sm:p-4 border-b sticky top-0 bg-white z-10">
+              <div className="flex-1 min-w-0 mr-2">
                 {isEditingCard ? (
                   <Input
                     value={editCardForm.title}
                     onChange={(e) => setEditCardForm({...editCardForm, title: e.target.value})}
-                    className="text-xl font-bold"
+                    className="text-base sm:text-xl font-bold"
                     placeholder="ชื่อ Card"
                   />
                 ) : (
-                  <h2 className="text-xl font-bold text-gray-900">{selectedCard.title}</h2>
+                  <h2 className="text-base sm:text-xl font-bold text-gray-900 truncate">{selectedCard.title}</h2>
                 )}
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">
                   ใน {project.columns.find(c => c.id === selectedCard.column_id)?.name}
                 </p>
                 {/* Show permission badge */}
                 {!selectedCard.can_edit && (
-                  <p className="text-xs text-orange-500 mt-1">🔒 คุณสามารถดูได้เท่านั้น (ไม่มีสิทธิ์แก้ไข Card นี้)</p>
+                  <p className="text-[10px] sm:text-xs text-orange-500 mt-1">🔒 ดูได้เท่านั้น (ไม่มีสิทธิ์แก้ไข)</p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 {/* Only show Edit button if user can edit this card */}
                 {selectedCard.can_edit && (
                   <>
