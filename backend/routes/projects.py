@@ -159,6 +159,7 @@ class ProjectCard(BaseModel):
     due_date: Optional[str] = None
     priority: str = "medium"
     labels: List[str] = []
+    sub_columns: List[SubColumn] = []  # Mini kanban columns
     subtasks: List[Subtask] = []
     comments: List[CardComment] = []
     attachments: List[Dict[str, Any]] = []
