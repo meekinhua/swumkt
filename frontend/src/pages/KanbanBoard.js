@@ -456,6 +456,76 @@ const KanbanBoard = () => {
     }
   };
 
+  // ============ COVER IMAGE ============
+  
+  const handleCoverImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('กรุณาเลือกไฟล์รูปภาพ');
+      return;
+    }
+
+    // Max size 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('ขนาดไฟล์ต้องไม่เกิน 5MB');
+      return;
+    }
+
+    try {
+      setUploadingCover(true);
+      
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Image = event.target.result;
+        
+        try {
+          const response = await axios.post(
+            `${API}/projects/${projectId}/cards/${selectedCard.id}/cover-image`,
+            { cover_image: base64Image },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          const updatedCard = response.data;
+          setSelectedCard(updatedCard);
+          setCards(cards.map(c => c.id === selectedCard.id ? updatedCard : c));
+          toast.success('อัพโหลดรูปภาพสำเร็จ!');
+        } catch (error) {
+          toast.error('ไม่สามารถอัพโหลดรูปภาพได้');
+        } finally {
+          setUploadingCover(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      setUploadingCover(false);
+      toast.error('เกิดข้อผิดพลาดในการอ่านไฟล์');
+    }
+  };
+
+  const handleRemoveCoverImage = async () => {
+    if (!selectedCard?.cover_image) return;
+    
+    if (!window.confirm('ต้องการลบรูปภาพหน้าปกนี้หรือไม่?')) return;
+
+    try {
+      await axios.delete(
+        `${API}/projects/${projectId}/cards/${selectedCard.id}/cover-image`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const updatedCard = { ...selectedCard, cover_image: null };
+      setSelectedCard(updatedCard);
+      setCards(cards.map(c => c.id === selectedCard.id ? updatedCard : c));
+      toast.success('ลบรูปภาพสำเร็จ');
+    } catch (error) {
+      toast.error('ไม่สามารถลบรูปภาพได้');
+    }
+  };
+
   // ============ FILE ATTACHMENTS ============
   
   const handleFileUpload = async (e) => {
