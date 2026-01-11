@@ -660,14 +660,16 @@ const KanbanBoard = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleCreateCard(column.id)}
-                    className="p-1 hover:bg-white/20 rounded"
-                    title="เพิ่ม Card"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                  {project.columns.length > 1 && (
+                  {project?.can_edit_cards && (
+                    <button
+                      onClick={() => handleCreateCard(column.id)}
+                      className="p-1 hover:bg-white/20 rounded"
+                      title="เพิ่ม Card"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  )}
+                  {project?.can_manage && project.columns.length > 1 && (
                     <button
                       onClick={() => handleDeleteColumn(column.id)}
                       className="p-1 hover:bg-white/20 rounded"
