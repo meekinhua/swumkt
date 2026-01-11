@@ -684,46 +684,64 @@ const KanbanBoard = () => {
                 {getColumnCards(column.id).map((card) => (
                   <Card
                     key={card.id}
-                    className={`p-3 bg-white cursor-pointer hover:shadow-md transition-shadow ${
+                    className={`bg-white cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${
                       draggedCard?.id === card.id ? 'opacity-50' : ''
                     }`}
                     draggable
                     onDragStart={(e) => handleDragStart(e, card)}
                     onClick={() => openCardDetail(card)}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-xs px-2 py-0.5 rounded ${priorityColors[card.priority]}`}>
-                        {priorityLabels[card.priority]}
-                      </span>
-                      {card.due_date && (
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(card.due_date).toLocaleDateString('th-TH')}
-                        </span>
-                      )}
-                    </div>
+                    {/* Cover Image Preview */}
+                    {card.cover_image && (
+                      <div className="w-full h-24 bg-gray-100 overflow-hidden">
+                        <img 
+                          src={card.cover_image} 
+                          alt={card.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
                     
-                    <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{card.title}</h4>
-                    
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      {card.subtasks?.length > 0 && (
-                        <span className="flex items-center gap-1">
-                          <CheckSquare className="w-3 h-3" />
-                          {card.subtasks.filter(s => s.status === 'done').length}/{card.subtasks.length}
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs px-2 py-0.5 rounded ${priorityColors[card.priority]}`}>
+                          {priorityLabels[card.priority]}
                         </span>
-                      )}
-                      {card.comments?.length > 0 && (
-                        <span className="flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3" />
-                          {card.comments.length}
-                        </span>
-                      )}
-                      {card.attachments?.length > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Paperclip className="w-3 h-3" />
-                          {card.attachments.length}
-                        </span>
-                      )}
+                        {card.due_date && (
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(card.due_date).toLocaleDateString('th-TH')}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{card.title}</h4>
+                      
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        {card.cover_image && (
+                          <span className="flex items-center gap-1 text-[#00A9CE]">
+                            <Image className="w-3 h-3" />
+                          </span>
+                        )}
+                        {card.subtasks?.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <CheckSquare className="w-3 h-3" />
+                            {card.subtasks.filter(s => s.status === 'done').length}/{card.subtasks.length}
+                          </span>
+                        )}
+                        {card.comments?.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3" />
+                            {card.comments.length}
+                          </span>
+                        )}
+                        {card.attachments?.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Paperclip className="w-3 h-3" />
+                            {card.attachments.length}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 ))}
