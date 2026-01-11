@@ -1452,14 +1452,19 @@ const KanbanBoard = () => {
             
             {/* Modal Footer */}
             <div className="flex justify-between p-4 border-t bg-gray-50">
-              <Button
-                variant="outline"
-                className="text-red-500 hover:bg-red-50"
-                onClick={() => handleDeleteCard(selectedCard.id)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                ลบ Card
-              </Button>
+              {/* Only show Delete button if user can edit this card */}
+              {selectedCard.can_edit ? (
+                <Button
+                  variant="outline"
+                  className="text-red-500 hover:bg-red-50"
+                  onClick={() => handleDeleteCard(selectedCard.id)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  ลบ Card
+                </Button>
+              ) : (
+                <div></div>
+              )}
               <Button onClick={() => { setShowCardModal(false); setSelectedCard(null); }}>
                 ปิด
               </Button>
