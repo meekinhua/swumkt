@@ -797,37 +797,39 @@ const KanbanBoard = () => {
             </div>
           ))}
 
-          {/* Add Column */}
-          <div className="w-80 flex-shrink-0">
-            {showAddColumn ? (
-              <div className="bg-gray-100 rounded-lg p-3">
-                <Input
-                  value={newColumnName}
-                  onChange={(e) => setNewColumnName(e.target.value)}
-                  placeholder="ชื่อ Column"
-                  className="mb-2"
-                  autoFocus
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddColumn()}
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleAddColumn} className="bg-[#00A9CE]">
-                    เพิ่ม
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setShowAddColumn(false)}>
-                    ยกเลิก
-                  </Button>
+          {/* Add Column - only if user can manage */}
+          {project?.can_manage && (
+            <div className="w-80 flex-shrink-0">
+              {showAddColumn ? (
+                <div className="bg-gray-100 rounded-lg p-3">
+                  <Input
+                    value={newColumnName}
+                    onChange={(e) => setNewColumnName(e.target.value)}
+                    placeholder="ชื่อ Column"
+                    className="mb-2"
+                    autoFocus
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddColumn()}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddColumn} className="bg-[#00A9CE]">
+                      เพิ่ม
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowAddColumn(false)}>
+                      ยกเลิก
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowAddColumn(true)}
-                className="w-full p-4 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center gap-2 text-gray-600"
-              >
-                <Plus className="w-5 h-5" />
-                เพิ่ม Column
-              </button>
-            )}
-          </div>
+              ) : (
+                <button
+                  onClick={() => setShowAddColumn(true)}
+                  className="w-full p-4 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center gap-2 text-gray-600"
+                >
+                  <Plus className="w-5 h-5" />
+                  เพิ่ม Column
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
