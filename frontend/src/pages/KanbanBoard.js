@@ -1011,21 +1011,30 @@ const KanbanBoard = () => {
                 <p className="text-sm text-gray-500 mt-1">
                   ใน {project.columns.find(c => c.id === selectedCard.column_id)?.name}
                 </p>
+                {/* Show permission badge */}
+                {!selectedCard.can_edit && (
+                  <p className="text-xs text-orange-500 mt-1">🔒 คุณสามารถดูได้เท่านั้น (ไม่มีสิทธิ์แก้ไข Card นี้)</p>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                {isEditingCard ? (
+                {/* Only show Edit button if user can edit this card */}
+                {selectedCard.can_edit && (
                   <>
-                    <Button size="sm" onClick={handleSaveCard} disabled={savingCard} className="bg-green-500 hover:bg-green-600">
-                      {savingCard ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setIsEditingCard(false)}>
-                      <X className="w-4 h-4" />
-                    </Button>
+                    {isEditingCard ? (
+                      <>
+                        <Button size="sm" onClick={handleSaveCard} disabled={savingCard} className="bg-green-500 hover:bg-green-600">
+                          {savingCard ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setIsEditingCard(false)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => setIsEditingCard(true)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    )}
                   </>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => setIsEditingCard(true)}>
-                    <Edit className="w-4 h-4" />
-                  </Button>
                 )}
                 <button
                   onClick={() => { setShowCardModal(false); setSelectedCard(null); }}
