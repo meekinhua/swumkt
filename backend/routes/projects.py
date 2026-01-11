@@ -919,13 +919,26 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         
         project = await db.projects.find_one({"id": project_id})
         
-        # Check permission
+        # Check permission - role-based
         is_admin = current_user.role == UserRole.ADMIN
-        is_member = any(m["user_id"] == current_user.id for m in project.get("members", []))
-        is_public = project.get("visibility") == "public"
+        member = next((m for m in project.get("members", []) if m["user_id"] == current_user.id), None)
+        member_role = member["role"] if member else None
         
-        if not (is_admin or is_member or is_public):
-            raise HTTPException(status_code=403, detail="Permission denied")
+        # Permission check
+        can_edit = False
+        if is_admin:
+            can_edit = True
+        elif member_role in ["owner", "manager", "editor"]:
+            can_edit = True
+        elif member_role == "card_owner":
+            # Can only edit cards they created or are assigned to
+            is_creator = card.get("created_by") == current_user.id
+            is_assignee = current_user.id in card.get("assignees", [])
+            can_edit = is_creator or is_assignee
+        # viewer cannot edit
+        
+        if not can_edit:
+            raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์แก้ไข Card นี้ (จัดการได้เฉพาะ Card ที่คุณสร้างหรือได้รับมอบหมาย)")
         
         update_data = {k: v for k, v in data.model_dump().items() if v is not None}
         update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
