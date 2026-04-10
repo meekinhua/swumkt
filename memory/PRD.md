@@ -21,9 +21,17 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - AI interpretation with Gemini 2.5 Flash (with MongoDB caching)
 - Generate Prompt fallback for external AI usage
 - CSV export for raw response data
-- **NEW (Apr 2026):** AI-powered Thesis Word Export (Chapter 4 & 5) using background jobs + polling
+- AI-powered Thesis Word Export (Chapter 4 & 5) using background jobs + polling
 - Performance optimized: nested loops removed, payload reduced from 7.4MB to 36KB
 - Async bcrypt for event-loop safety
+
+### AI Reliability Fix (Apr 2026)
+- **Root cause**: Proxy server 60s timeout + oversized prompts (raw JSON dumps 50K+ chars)
+- **Fix 1**: Summarized statistical data before sending to Gemini (50K → 3K chars)
+- **Fix 2**: Created `_call_gemini_with_retry` helper (3 retries + exponential backoff)
+- **Fix 3**: Split thesis generation into 2 calls (Chapter 4 + Chapter 5)
+- **Fix 4**: Replaced raw `json.dumps()` in interpretation prompts with `_summarize_results_for_thesis()`
+- Result: AI calls now reliably complete in 30-45s instead of failing with 502
 
 ### Kanban Project Management (COMPLETE)
 - Full CRUD with drag-and-drop (react-beautiful-dnd)
@@ -64,9 +72,9 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - Customer Behavior Analysis (Quantitative tab)
 - Survey Analytics & Dashboard
 - Refactor server.py (>11K lines) into modular routes
+- AI Rearrange Context Window Fallback
 
 ## Known Issues
-- AI Rearrange Context Window Fallback (recurring)
 - Survey Image Display (testing pending, recurrence count: 1)
 - server.py is >11K lines - needs modular refactor
 

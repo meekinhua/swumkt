@@ -10646,10 +10646,8 @@ Choice-Based Conjoint Analysis
 # --- Shared prompt builder for AI interpretation ---
 def _build_interpretation_prompt(analysis_summary: dict) -> tuple:
     """Build (system_message, prompt) for conjoint AI interpretation.
-    Returns (system_message: str, prompt: str)
+    Uses summarized data instead of raw JSON to keep prompt small and fast.
     """
-    import json
-
     system_message = (
         "คุณเป็นผู้เชี่ยวชาญด้านการวิเคราะห์ตลาดและพฤติกรรมผู้บริโภค โดยเฉพาะ Conjoint Analysis\n"
         "คุณจะต้องอธิบายผลการวิเคราะห์ให้ผู้ใช้ทั่วไปที่ไม่มีความรู้ทางสถิติเข้าใจได้ง่าย\n"
@@ -10657,111 +10655,53 @@ def _build_interpretation_prompt(analysis_summary: dict) -> tuple:
     )
 
     if analysis_summary["mode"] == "compare_all":
-        methods_json = json.dumps(analysis_summary["methods"], indent=2, ensure_ascii=False, default=str)
-        prompt = f"""วิเคราะห์และเปรียบเทียบผลการวิจัย Conjoint Analysis จากหลายวิธีการวิเคราะห์อย่างละเอียดและครอบคลุม:
+        summary_text = _summarize_results_for_thesis(analysis_summary.get("methods", {}))
+        prompt = f"""วิเคราะห์และเปรียบเทียบผลการวิจัย Conjoint Analysis จากหลายวิธี:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
 
-ผลการวิเคราะห์ทั้งหมดจากแต่ละวิธี (ข้อมูลครบถ้วน):
-```json
-{methods_json}
-```
+ผลวิเคราะห์สรุป:
+{summary_text}
 
-**คำแนะนำในการวิเคราะห์:**
-- คุณจะได้รับข้อมูลทั้งหมดจาก 5 วิธีการวิเคราะห์ รวมถึง:
-  * Part-worth utilities และ importance scores
-  * Model statistics (R², Log-likelihood, AIC, BIC ถ้ามี)
-  * Coefficients, standard errors, p-values (ถ้ามี)
-  * Convergence information และ fit statistics (ถ้ามี)
+กรุณาเขียนคำอธิบายเชิงลึก:
+1. สรุปผลหลักจากทุกวิธี (4-5 ประโยค) — วิธีไหนให้ผลสอดคล้อง/แตกต่าง? วิธีไหนน่าเชื่อถือที่สุด?
+2. วิเคราะห์คุณลักษณะสำคัญ Top 3-5 — ทำไมถึงสำคัญ? ระดับไหนที่ชอบที่สุด?
+3. เปรียบเทียบคุณภาพแต่ละวิธี — Model fit statistics, goodness-of-fit
+4. ข้อเสนอแนะเชิงธุรกิจ (5-7 ข้อ) — ผลิตภัณฑ์? การตลาด? ราคา?
+5. ข้อควรระวังและข้อจำกัด
 
-กรุณาเขียนคำอธิบายที่วิเคราะห์เชิงลึกและครอบคลุม:
-
-1. **สรุปผลหลักจากทุกวิธี (4-5 ประโยค):**
-   - เปรียบเทียบผลจากทุกวิธี มีความแตกต่างหรือสอดคล้องกันอย่างไร?
-   - วิธีไหนให้ผลที่น่าเชื่อถือที่สุด? (พิจารณาจาก model fit statistics)
-
-2. **วิเคราะห์ความสำคัญของคุณลักษณะ (Top 3-5):**
-   - คุณลักษณะไหนที่ทุกวิธีให้ความสำคัญสูง? ranking เปลี่ยนไหมระหว่างวิธี?
-   - มีความแตกต่างที่น่าสังเกตหรือไม่? อธิบายสาเหตุที่อาจเป็นไปได้
-   - ระดับ (levels) ไหนที่ผู้บริโภคชอบที่สุดในแต่ละคุณลักษณะ?
-
-3. **เปรียบเทียบคุณภาพของแต่ละวิธี:**
-   - พิจารณาจาก model statistics (ถ้ามี): R², Log-likelihood, AIC, BIC
-   - วิธีไหนมี goodness-of-fit ที่ดีที่สุด?
-   - ควรเชื่อถือผลจากวิธีไหนมากที่สุด? เพราะอะไร?
-
-4. **ข้อเสนอแนะเชิงธุรกิจที่ชัดเจน (5-7 ข้อ):**
-   - จากผลที่ได้จากหลายวิธี ควรทำอย่างไรกับผลิตภัณฑ์/บริการ
-   - คุณลักษณะไหนควรเน้นในการตลาด? ควรออกแบบ/พัฒนาอย่างไร?
-   - ข้อเสนอแนะเรื่องราคา (ถ้าเป็นคุณลักษณะหนึ่ง)
-   - กลยุทธ์การสื่อสาร/positioning ที่เหมาะสม
-
-5. **ข้อควรระวังและข้อจำกัด:**
-   - ความไม่สอดคล้องระหว่างวิธีที่ต้องพิจารณาเพิ่มเติม
-   - ข้อจำกัดของแต่ละวิธีที่ควรรับทราบ
-   - ข้อแนะนำในการเก็บข้อมูลเพิ่มเติม (ถ้ามี)
-
-ใช้ภาษาไทยที่เข้าใจง่าย แต่ให้รายละเอียดเชิงลึก ยกตัวอย่างประกอบ และชี้ให้เห็นข้อดีของการใช้หลายวิธีวิเคราะห์เปรียบเทียบกัน"""
+ใช้ภาษาไทยเข้าใจง่าย ยกตัวอย่างประกอบ ให้คำแนะนำที่นำไปปฏิบัติได้จริง"""
 
     else:
-        full_results_json = json.dumps(analysis_summary["full_results"], indent=2, ensure_ascii=False, default=str)
+        method = analysis_summary.get("method", "unknown")
+        full_results = analysis_summary.get("full_results", {})
+        summary_text = _summarize_results_for_thesis({method: full_results})
         method_display = {
             "counting": "Counting Method (นับความถี่)",
             "linear_regression": "Linear Regression (OLS)",
             "mnl": "Multinomial Logit (MNL)",
             "mixed_logit": "Mixed Logit",
             "hierarchical_bayes": "Hierarchical Bayes (HB)",
-        }.get(analysis_summary["method"], analysis_summary["method"])
+        }.get(method, method)
 
-        prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis อย่างละเอียดและครอบคลุม:
+        prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
 วิธีการวิเคราะห์: {method_display}
 
-ผลการวิเคราะห์ทั้งหมด (ข้อมูลครบถ้วน):
-```json
-{full_results_json}
-```
+ผลวิเคราะห์สรุป:
+{summary_text}
 
-**คำแนะนำในการวิเคราะห์:**
-- คุณจะได้รับข้อมูลทั้งหมดจากการวิเคราะห์ รวมถึง:
-  * Part-worth utilities และ importance scores
-  * Model statistics (R², Log-likelihood, AIC, BIC ถ้ามี)
-  * Coefficients, standard errors, p-values (ถ้ามี)
-  * Selection counts และ raw data (ถ้ามี)
+กรุณาเขียนคำอธิบายเชิงลึก:
+1. สรุปผลหลักจาก {method_display} (4-5 ประโยค) — อะไรสำคัญที่สุด? Model fit ดีไหม?
+2. วิเคราะห์คุณลักษณะสำคัญ Top 3-5 — ทำไมสำคัญ? ระดับไหนชอบที่สุด?
+3. วิเคราะห์เชิงสถิติ — นัยสำคัญ? Standard errors?
+4. ข้อเสนอแนะเชิงธุรกิจ (5-7 ข้อ) — ผลิตภัณฑ์? การตลาด? ราคา?
+5. ข้อควรระวังและข้อจำกัดของวิธี {method_display}
 
-กรุณาเขียนคำอธิบายที่วิเคราะห์เชิงลึก:
-
-1. **สรุปผลหลักจาก {method_display} (4-5 ประโยค):**
-   - อะไรคือสิ่งที่ผู้บริโภคให้ความสำคัญมากที่สุด?
-   - คุณภาพของโมเดล (model fit) เป็นอย่างไร? (ถ้ามี statistics)
-   - ผลลัพธ์มีความน่าเชื่อถือหรือไม่? เพราะอะไร?
-
-2. **วิเคราะห์คุณลักษณะที่สำคัญที่สุด (Top 3-5):**
-   - อธิบายว่าทำไมแต่ละคุณลักษณะถึงสำคัญ
-   - ระดับ (level) ไหนที่ผู้บริโภคชอบที่สุด? utility/coefficient มีค่าเท่าไหร่?
-   - มีความแตกต่างที่ชัดเจนระหว่าง levels หรือไม่?
-
-3. **วิเคราะห์เชิงสถิติ (ถ้ามีข้อมูล):**
-   - Model fit statistics บอกอะไรเกี่ยวกับคุณภาพของโมเดล?
-   - Coefficients หรือ utilities มีนัยสำคัญทางสถิติหรือไม่?
-   - มีข้อควรสังเกตจากค่า standard errors หรือ confidence intervals หรือไม่?
-
-4. **ข้อเสนอแนะเชิงธุรกิจที่ชัดเจน (5-7 ข้อ):**
-   - ควรทำอย่างไรกับผลิตภัณฑ์/บริการ
-   - คุณลักษณะไหนควรเน้นในการตลาด?
-   - ข้อเสนอแนะเรื่องการตั้งราคา (ถ้าราคาเป็นคุณลักษณะหนึ่ง)
-   - กลยุทธ์การสื่อสาร/positioning
-   - จุดแข็งที่ควรเน้น และจุดอ่อนที่ควรปรับปรุง
-
-5. **ข้อควรระวังและข้อจำกัด:**
-   - ข้อจำกัดของวิธี {method_display}
-   - สมมติฐานที่ควรรับทราบ
-   - ข้อแนะนำในการตีความผลและการนำไปใช้
-
-ใช้ภาษาไทยที่เข้าใจง่าย แต่ให้รายละเอียดเชิงลึก ยกตัวอย่างประกอบ และให้คำแนะนำที่นำไปปฏิบัติได้จริง"""
+ใช้ภาษาไทยเข้าใจง่าย ยกตัวอย่างประกอบ ให้คำแนะนำที่นำไปปฏิบัติได้จริง"""
 
     return system_message, prompt
 
@@ -10839,23 +10779,11 @@ async def get_ai_interpretation(
     analysis_summary = await _prepare_analysis_summary(full_study, responses, request.method, request.compare_all)
     system_message, prompt = _build_interpretation_prompt(analysis_summary)
 
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
-    if not api_key:
-        raise HTTPException(status_code=500, detail="AI service not configured")
-
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"conjoint-interpret-{study_id}",
-            system_message=system_message
-        ).with_model("gemini", "gemini-2.5-flash")
-
-        # Wrap with timeout (45 seconds)
-        response = await asyncio.wait_for(
-            chat.send_message(UserMessage(text=prompt)),
-            timeout=45
+        response = await _call_gemini_with_retry(
+            system_msg=system_message,
+            prompt=prompt,
+            session_id=f"conjoint-interpret-{study_id}"
         )
 
         result_data = {
@@ -10918,6 +10846,44 @@ async def generate_interpretation_prompt(
         "prompt": full_prompt,
         "summary_data": analysis_summary,
     }
+
+
+# ============ AI HELPER WITH RETRY ============
+
+async def _call_gemini_with_retry(system_msg: str, prompt: str, session_id: str, max_retries: int = 3) -> str:
+    """Call Gemini 2.5 Flash with retry + exponential backoff to handle 502 errors."""
+    import asyncio
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise Exception("AI service not configured (EMERGENT_LLM_KEY missing)")
+
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"{session_id}-{attempt}",
+                system_message=system_msg
+            ).with_model("gemini", "gemini-2.5-flash").with_params(timeout=120, num_retries=0)
+
+            response = await asyncio.wait_for(
+                chat.send_message(UserMessage(text=prompt)),
+                timeout=90
+            )
+            return response
+        except Exception as e:
+            last_error = e
+            error_str = str(e).lower()
+            is_retryable = any(k in error_str for k in ['502', 'bad gateway', 'timeout', 'timed out', 'connection'])
+            if not is_retryable or attempt == max_retries - 1:
+                raise
+            wait_time = (attempt + 1) * 5
+            logging.warning(f"AI call attempt {attempt+1} failed ({e}), retrying in {wait_time}s...")
+            await asyncio.sleep(wait_time)
+
+    raise last_error
 
 
 # ============ THESIS EXPORT (Word .docx) ============
@@ -11019,43 +10985,51 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
 
 
 def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict) -> tuple:
-    """Build compact prompt for generating Chapter 4 & 5 thesis content."""
+    """Build split prompts for Chapter 4 and Chapter 5 separately (to fit within proxy timeout)."""
     system_msg = (
         "คุณเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ MBA ที่มีความเชี่ยวชาญด้าน Conjoint Analysis "
-        "เขียนเนื้อหาบทที่ 4 และ 5 ของวิทยานิพนธ์อย่างเป็นทางการ ภาษาไทยวิชาการ อ้างอิงค่าสถิติถูกต้อง"
+        "เขียนเนื้อหาวิทยานิพนธ์อย่างเป็นทางการ ภาษาไทยวิชาการ อ้างอิงค่าสถิติถูกต้อง"
     )
 
     summary = _summarize_results_for_thesis(all_method_results)
 
-    prompt = f"""เขียนวิทยานิพนธ์ MBA บทที่ 4 (ผลการศึกษา) และบทที่ 5 (สรุป/อภิปราย) จาก Conjoint Analysis:
+    ch4_prompt = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 4 ผลการศึกษา** จาก Conjoint Analysis:
 
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
 
 ผลวิเคราะห์สรุป:
 {summary}
 
-โครงสร้างที่ต้องเขียน:
-
+โครงสร้าง:
 ## บทที่ 4 ผลการศึกษา
 ### 4.1 ข้อมูลทั่วไปของผู้ตอบ (จำนวน วิธีเก็บ)
 ### 4.2 Counting Method (Part-worths, Importance Scores, คุณลักษณะสำคัญ)
 ### 4.3 MNL (Logit Coefficients, SE, z, p-value, Pseudo R², LL, AIC)
 ### 4.4 Linear Regression (R², Coefficients, เปรียบเทียบกับ MNL)
-### 4.5 Mixed Logit (Mean/SD Coefficients, Preference Heterogeneity) - ถ้ามี
-### 4.6 Hierarchical Bayes (Population estimates) - ถ้ามี
-### 4.7 ตารางเปรียบเทียบ Importance Scores ทุกวิธี
-### 4.8 สรุปผล
-
-## บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ
-### 5.1 สรุปผลการวิจัย
-### 5.2 อภิปรายผลเปรียบเทียบทฤษฎี
-### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ)
-### 5.4 ข้อจำกัดการวิจัย
-### 5.5 ข้อเสนอแนะวิจัยอนาคต
+### 4.5 Mixed Logit / Hierarchical Bayes (ถ้ามีข้อมูล)
+### 4.6 ตารางเปรียบเทียบ Importance Scores ทุกวิธี
+### 4.7 สรุปผลบทที่ 4
 
 ข้อกำหนด: ภาษาไทยวิชาการ, อ้างสถิติเสมอ เช่น (β=0.245, p<0.05), ทุกหัวข้อ 2-3 ย่อหน้า, ใช้ [ตาราง X.X: ชื่อ] แล้วแสดงตาราง Markdown"""
 
-    return system_msg, prompt
+    ch5_prompt = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ** จาก Conjoint Analysis:
+
+ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
+
+ผลวิเคราะห์สรุป:
+{summary}
+
+โครงสร้าง:
+## บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ
+### 5.1 สรุปผลการวิจัย (ตอบวัตถุประสงค์และคำถามวิจัย)
+### 5.2 อภิปรายผลเปรียบเทียบทฤษฎีและงานวิจัยที่เกี่ยวข้อง
+### 5.3 ข้อเสนอแนะเชิงกลยุทธ์และนโยบาย (5-7 ข้อ)
+### 5.4 ข้อจำกัดการวิจัย
+### 5.5 ข้อเสนอแนะวิจัยอนาคต (3-5 ข้อ)
+
+ข้อกำหนด: ภาษาไทยวิชาการ, อ้างสถิติเสมอ, ทุกหัวข้อ 2-3 ย่อหน้า"""
+
+    return system_msg, ch4_prompt, ch5_prompt
 
 
 def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str) -> bytes:
@@ -11330,27 +11304,24 @@ async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str, res
             except Exception:
                 pass
 
-        api_key = os.environ.get('EMERGENT_LLM_KEY')
-        if not api_key:
-            await db.thesis_jobs.update_one(
-                {"job_id": job_id},
-                {"$set": {"status": "failed", "error": "AI service not configured"}}
-            )
-            return
+        system_msg, ch4_prompt, ch5_prompt = _build_thesis_prompt(study_title, respondent_count, all_results)
 
-        system_msg, prompt = _build_thesis_prompt(study_title, respondent_count, all_results)
-
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"thesis-{study_id}-{job_id}",
-            system_message=system_msg
-        ).with_model("gemini", "gemini-2.5-flash")
-
-        ai_content = await asyncio.wait_for(
-            chat.send_message(UserMessage(text=prompt)),
-            timeout=180
+        # Split into 2 calls: Chapter 4 then Chapter 5 (each ~30s instead of one 60s+ call)
+        logging.info(f"Thesis job {job_id}: Generating Chapter 4...")
+        ch4_content = await _call_gemini_with_retry(
+            system_msg=system_msg,
+            prompt=ch4_prompt,
+            session_id=f"thesis-ch4-{study_id}-{job_id}"
         )
+
+        logging.info(f"Thesis job {job_id}: Generating Chapter 5...")
+        ch5_content = await _call_gemini_with_retry(
+            system_msg=system_msg,
+            prompt=ch5_prompt,
+            session_id=f"thesis-ch5-{study_id}-{job_id}"
+        )
+
+        ai_content = ch4_content + "\n\n---\n\n" + ch5_content
 
         # Cache AI content
         await db.analysis_cache.update_one(
