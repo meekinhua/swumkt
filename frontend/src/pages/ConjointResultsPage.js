@@ -1728,40 +1728,135 @@ const ConjointResultsPage = () => {
               {!statisticalData ? (
                 <div className="text-center py-8 bg-indigo-50 rounded-lg border-2 border-indigo-200">
                   <p className="text-gray-600 mb-4">
-                    คลิกปุ่มด้านบนเพื่อคำนวณผลการวิเคราะห์ความถดถอยเชิงเส้น
+                    คลิกปุ่มด้านบนเพื่อคำนวณผลการวิเคราะห์ทางสถิติ
                   </p>
                   <p className="text-xs text-gray-500">
-                    ใช้ Ordinary Least Squares (OLS) Regression
+                    เลือกวิธีที่ต้องการแล้วกดปุ่ม "คำนวณ"
                   </p>
                 </div>
               ) : (
                 <>
-                  {/* Model Summary */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-200">
-                      <p className="text-sm text-gray-600 mb-1">R² (Coefficient of Determination)</p>
-                      <p className="text-3xl font-black text-indigo-600">
-                        {(statisticalData.results?.r_squared * 100 || statisticalData.results?.pseudo_r_squared * 100 || 0).toFixed(2)}%
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">Model fit quality</p>
-                    </div>
+                  {/* ===== METHOD-SPECIFIC MODEL SUMMARY ===== */}
 
-                    <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
-                      <p className="text-sm text-gray-600 mb-1">Observations</p>
-                      <p className="text-3xl font-black text-green-600">
-                        {statisticalData.results?.n_observations}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">Total data points</p>
+                  {/* --- MNL Summary --- */}
+                  {statisticalData.method === 'mnl' && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                      <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-200">
+                        <p className="text-xs text-gray-600 mb-1">Pseudo R² (McFadden)</p>
+                        <p className="text-2xl font-black text-indigo-600">
+                          {((statisticalData.results?.pseudo_r_squared || 0) * 100).toFixed(2)}%
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          {(statisticalData.results?.pseudo_r_squared || 0) > 0.2 ? 'Good fit' :
+                           (statisticalData.results?.pseudo_r_squared || 0) > 0.1 ? 'Acceptable' : 'Low fit'}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg border-2 border-emerald-200">
+                        <p className="text-xs text-gray-600 mb-1">Log-Likelihood</p>
+                        <p className="text-2xl font-black text-emerald-600">
+                          {(statisticalData.results?.log_likelihood || 0).toFixed(1)}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">ยิ่งใกล้ 0 ยิ่งดี</p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-200">
+                        <p className="text-xs text-gray-600 mb-1">AIC</p>
+                        <p className="text-2xl font-black text-amber-600">
+                          {(statisticalData.results?.aic || 0).toFixed(1)}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">ยิ่งต่ำยิ่งดี (เทียบระหว่างโมเดล)</p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg border-2 border-slate-200">
+                        <p className="text-xs text-gray-600 mb-1">Observations</p>
+                        <p className="text-2xl font-black text-slate-600">
+                          {statisticalData.results?.n_observations?.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">{statisticalData.respondent_count} respondents</p>
+                      </div>
                     </div>
+                  )}
 
-                    <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200">
-                      <p className="text-sm text-gray-600 mb-1">Intercept (β₀)</p>
-                      <p className="text-3xl font-black text-purple-600">
-                        {(statisticalData.results?.intercept || 0).toFixed(4)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">Baseline probability</p>
+                  {/* --- Mixed Logit Summary --- */}
+                  {statisticalData.method === 'mixed_logit' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                      <div className="p-4 bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-lg border-2 border-purple-200">
+                        <p className="text-xs text-gray-600 mb-1">Respondents Analyzed</p>
+                        <p className="text-2xl font-black text-purple-600">
+                          {statisticalData.results?.n_respondents?.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Individual-level analysis</p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg border-2 border-slate-200">
+                        <p className="text-xs text-gray-600 mb-1">Observations</p>
+                        <p className="text-2xl font-black text-slate-600">
+                          {statisticalData.results?.n_observations?.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Total choice records</p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-rose-50 to-pink-50 rounded-lg border-2 border-rose-200">
+                        <p className="text-xs text-gray-600 mb-1">Preference Heterogeneity</p>
+                        <p className="text-2xl font-black text-rose-600">
+                          {Object.keys(statisticalData.results?.std_coefficients || {}).length > 0 ? 'Detected' : 'Low'}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Variation across respondents</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* --- HB Summary --- */}
+                  {statisticalData.method === 'hierarchical_bayes' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                      <div className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg border-2 border-pink-200">
+                        <p className="text-xs text-gray-600 mb-1">Respondents Estimated</p>
+                        <p className="text-2xl font-black text-pink-600">
+                          {statisticalData.results?.n_respondents?.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Empirical Bayes estimates</p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg border-2 border-slate-200">
+                        <p className="text-xs text-gray-600 mb-1">Observations</p>
+                        <p className="text-2xl font-black text-slate-600">
+                          {statisticalData.results?.n_observations?.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Total data points</p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-lg border-2 border-teal-200">
+                        <p className="text-xs text-gray-600 mb-1">Utility Scale</p>
+                        <p className="text-2xl font-black text-teal-600">
+                          Proportion
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Choice probability (0-1)</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* --- OLS Summary --- */}
+                  {statisticalData.method === 'linear_regression' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                        <p className="text-xs text-gray-600 mb-1">R² (Coefficient of Determination)</p>
+                        <p className="text-2xl font-black text-blue-600">
+                          {((statisticalData.results?.r_squared || 0) * 100).toFixed(2)}%
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          {(statisticalData.results?.r_squared || 0) > 0.3 ? 'Good fit' : 'Moderate fit'}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-violet-50 to-purple-50 rounded-lg border-2 border-violet-200">
+                        <p className="text-xs text-gray-600 mb-1">Intercept (β₀)</p>
+                        <p className="text-2xl font-black text-violet-600">
+                          {(statisticalData.results?.intercept || 0).toFixed(4)}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Baseline probability</p>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg border-2 border-slate-200">
+                        <p className="text-xs text-gray-600 mb-1">Observations</p>
+                        <p className="text-2xl font-black text-slate-600">
+                          {statisticalData.results?.n_observations?.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Total data points</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Utility Scale Info */}
                   {statisticalData.results?.utility_interpretation && (
@@ -1770,19 +1865,24 @@ const ConjointResultsPage = () => {
                         <Lightbulb className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="text-xs font-bold text-blue-900 mb-1">
-                            📊 วิธีการคำนวณ Utility:
+                            วิธีการคำนวณ Utility ({statisticalData.results?.method || getMethodName(statisticalData.method)}):
                           </p>
                           <p className="text-xs text-gray-700">
                             {statisticalData.results.utility_interpretation}
                           </p>
+                          {statisticalData.results?.note && (
+                            <p className="text-xs text-gray-500 mt-1 italic">
+                              {statisticalData.results.note}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Regression Coefficients Table */}
+                  {/* ===== COEFFICIENTS TABLE (adaptive columns) ===== */}
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                    <table className="w-full border-collapse" data-testid="statistical-coefficients-table">
                       <thead>
                         <tr className="bg-gradient-to-r from-indigo-100 to-purple-100">
                           <th className="border-2 border-indigo-300 px-4 py-3 text-left font-bold text-gray-900">
@@ -1792,147 +1892,205 @@ const ConjointResultsPage = () => {
                             ระดับ
                           </th>
                           <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900">
-                            Coefficient (β)
+                            {statisticalData.method === 'linear_regression' ? 'Coefficient (β)' :
+                             statisticalData.method === 'mnl' ? 'Logit Coef.' :
+                             'Utility'}
                           </th>
+                          {/* MNL: show p-value column */}
+                          {statisticalData.method === 'mnl' && statisticalData.results?.p_values && (
+                            <>
+                              <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900">
+                                Std. Error
+                              </th>
+                              <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900">
+                                z-value
+                              </th>
+                              <th className="border-2 border-indigo-300 px-4 py-3 text-center font-bold text-gray-900">
+                                p-value
+                              </th>
+                            </>
+                          )}
+                          {/* Mixed Logit: show Std Dev column */}
+                          {statisticalData.method === 'mixed_logit' && (
+                            <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900">
+                              Std. Dev.
+                            </th>
+                          )}
+                          {/* HB: show Population Std column */}
+                          {statisticalData.method === 'hierarchical_bayes' && (
+                            <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900">
+                              Population Std.
+                            </th>
+                          )}
                           <th className="border-2 border-indigo-300 px-4 py-3 text-center font-bold text-gray-900">
                             สถานะ
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {statisticalData.results?.part_worths ? (
-                          // Use part_worths structure for MNL analysis
-                          Object.entries(statisticalData.results.part_worths).map(([attrId, attrData]) => {
-                            const levels = Object.values(attrData.levels || {});
-                            return levels.map((level, levelIdx) => (
+                        {Object.entries(statisticalData.results?.part_worths || {}).map(([attrId, attrData]) => {
+                          const levels = Object.values(attrData.levels || {});
+                          const pValues = statisticalData.results?.p_values || {};
+                          const stdErrors = statisticalData.results?.std_errors || {};
+                          const zValues = statisticalData.results?.z_values || {};
+                          const stdCoefs = statisticalData.results?.std_coefficients || {};
+                          const popStd = statisticalData.results?.population_std || {};
+
+                          return levels.map((level, levelIdx) => {
+                            const colKey = `${attrData.name}_${level.value}`;
+                            const pVal = pValues[colKey];
+                            const seVal = stdErrors[colKey];
+                            const zVal = zValues[colKey];
+                            const sdVal = stdCoefs[colKey];
+                            const popSdVal = popStd[colKey];
+                            const utilVal = level.utility ?? level.coefficient ?? 0;
+                            const isRef = utilVal === 0 && !pVal;
+
+                            return (
                               <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
                                 {levelIdx === 0 && (
-                                  <td
-                                    className="border-2 border-indigo-200 px-4 py-3 font-bold text-gray-900 bg-indigo-50"
-                                    rowSpan={levels.length}
-                                  >
+                                  <td className="border-2 border-indigo-200 px-4 py-3 font-bold text-gray-900 bg-indigo-50" rowSpan={levels.length}>
                                     {attrData.name}
                                   </td>
                                 )}
-                                <td className="border-2 border-indigo-200 px-4 py-3 text-gray-700">
-                                  {level.value}
-                                </td>
+                                <td className="border-2 border-indigo-200 px-4 py-3 text-gray-700">{level.value}</td>
                                 <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
-                                  level.utility === 0 ? 'text-gray-400' :
-                                  level.utility > 0 ? 'text-green-600' : 'text-red-600'
+                                  isRef ? 'text-gray-400' : utilVal > 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
-                                  {level.utility === 0 ? '0.0000 (ref)' : 
-                                    (level.utility > 0 ? '+' : '') + level.utility.toFixed(4)}
+                                  {isRef ? '0.0000 (ref)' : (utilVal > 0 ? '+' : '') + utilVal.toFixed(4)}
                                 </td>
-                                <td className="border-2 border-indigo-200 px-4 py-3 text-center">
-                                  {level.utility === 0 ? (
-                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
-                                      Reference
-                                    </span>
-                                  ) : Math.abs(level.utility) > 0.01 ? (
-                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
-                                      Significant
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">
-                                      Low
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            ));
-                          })
-                        ) : (
-                          // Fallback for other analysis methods that might use coefficients structure
-                          Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
-                            const levels = Object.values(attrData?.levels || {});
-                            return levels.map((level, levelIdx) => (
-                              <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
-                                {levelIdx === 0 && (
-                                  <td
-                                    className="border-2 border-indigo-200 px-4 py-3 font-bold text-gray-900 bg-indigo-50"
-                                    rowSpan={levels.length}
-                                  >
-                                    {attrData?.name || attrId}
+
+                                {/* MNL extra columns */}
+                                {statisticalData.method === 'mnl' && statisticalData.results?.p_values && (
+                                  <>
+                                    <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-sm text-gray-600">
+                                      {isRef ? '-' : (seVal != null ? seVal.toFixed(4) : '-')}
+                                    </td>
+                                    <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-sm text-gray-600">
+                                      {isRef ? '-' : (zVal != null ? zVal.toFixed(3) : '-')}
+                                    </td>
+                                    <td className="border-2 border-indigo-200 px-4 py-3 text-center">
+                                      {isRef ? (
+                                        <span className="text-gray-400">-</span>
+                                      ) : pVal != null ? (
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                          pVal < 0.001 ? 'bg-green-100 text-green-800' :
+                                          pVal < 0.01 ? 'bg-green-50 text-green-700' :
+                                          pVal < 0.05 ? 'bg-yellow-50 text-yellow-700' :
+                                          'bg-red-50 text-red-600'
+                                        }`}>
+                                          {pVal < 0.001 ? '< 0.001 ***' :
+                                           pVal < 0.01 ? `${pVal.toFixed(3)} **` :
+                                           pVal < 0.05 ? `${pVal.toFixed(3)} *` :
+                                           pVal.toFixed(3)}
+                                        </span>
+                                      ) : '-'}
+                                    </td>
+                                  </>
+                                )}
+
+                                {/* Mixed Logit: Std Dev */}
+                                {statisticalData.method === 'mixed_logit' && (
+                                  <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-sm text-gray-600">
+                                    {isRef ? '-' : (sdVal != null ? `\u00B1 ${sdVal.toFixed(4)}` : '-')}
                                   </td>
                                 )}
-                                <td className="border-2 border-indigo-200 px-4 py-3 text-gray-700">
-                                  {level?.value || 'N/A'}
-                                </td>
-                                <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
-                                  level?.is_reference ? 'text-gray-400' :
-                                  (level?.coefficient || 0) > 0 ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {level?.is_reference ? '0.0000 (ref)' : 
-                                    ((level?.coefficient || 0) > 0 ? '+' : '') + (level?.coefficient || 0).toFixed(4)}
-                                </td>
+
+                                {/* HB: Population Std */}
+                                {statisticalData.method === 'hierarchical_bayes' && (
+                                  <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-sm text-gray-600">
+                                    {isRef ? '-' : (popSdVal != null ? `\u00B1 ${popSdVal.toFixed(4)}` : '-')}
+                                  </td>
+                                )}
+
                                 <td className="border-2 border-indigo-200 px-4 py-3 text-center">
-                                  {level?.is_reference ? (
-                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
-                                      Reference
-                                    </span>
-                                  ) : Math.abs(level?.coefficient || 0) > 0.01 ? (
-                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
-                                      Significant
-                                    </span>
+                                  {isRef ? (
+                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">Reference</span>
+                                  ) : statisticalData.method === 'mnl' && pVal != null ? (
+                                    pVal < 0.05 ? (
+                                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Sig.</span>
+                                    ) : (
+                                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">N.S.</span>
+                                    )
+                                  ) : Math.abs(utilVal) > 0.01 ? (
+                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Active</span>
                                   ) : (
-                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">
-                                      Low
-                                    </span>
+                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">Low</span>
                                   )}
                                 </td>
                               </tr>
-                            ));
-                          })
-                        )}
+                            );
+                          });
+                        })}
                       </tbody>
                     </table>
                   </div>
 
-                  {/* Interpretation */}
+                  {/* ===== METHOD-SPECIFIC INTERPRETATION ===== */}
                   <div className="mt-4 p-4 bg-indigo-50 rounded-lg border-2 border-indigo-200">
-                    <p className="text-sm text-gray-700 mb-2">
-                      <strong>💡 คำอธิบาย:</strong>
-                    </p>
+                    <p className="text-sm text-gray-700 mb-2"><strong>คำอธิบาย ({getMethodName(statisticalData.method)}):</strong></p>
                     <ul className="text-sm text-gray-700 space-y-1 ml-4">
-                      <li>• <strong>Coefficient (β):</strong> ค่าสัมประสิทธิ์ บวก = เพิ่มโอกาสถูกเลือก, ลบ = ลดโอกาส</li>
-                      <li>• <strong>Reference Level:</strong> ระดับอ้างอิง (β=0) ใช้เปรียบเทียบกับระดับอื่น</li>
-                      <li>• <strong>R²:</strong> อธิบายความแปรปรวนได้ {((statisticalData.results?.r_squared || statisticalData.results?.pseudo_r_squared || 0) * 100).toFixed(1)}% 
-                        ({(statisticalData.results?.r_squared || statisticalData.results?.pseudo_r_squared || 0) > 0.3 ? 'ดี' : 'ปานกลาง'})</li>
+                      {statisticalData.method === 'mnl' && (
+                        <>
+                          <li>• <strong>Logit Coef.:</strong> ค่าสัมประสิทธิ์จาก Conditional Logit — บวก = เพิ่มโอกาสถูกเลือก, ลบ = ลดโอกาส</li>
+                          <li>• <strong>p-value:</strong> *** = p{'<'}0.001, ** = p{'<'}0.01, * = p{'<'}0.05 (มีนัยสำคัญทางสถิติ)</li>
+                          <li>• <strong>Pseudo R²:</strong> {((statisticalData.results?.pseudo_r_squared || 0) * 100).toFixed(1)}% — McFadden's R² ({'>'}20% = Good fit for choice models)</li>
+                          <li>• <strong>AIC:</strong> {(statisticalData.results?.aic || 0).toFixed(1)} — ใช้เปรียบเทียบระหว่างโมเดล (ยิ่งต่ำยิ่งดี)</li>
+                        </>
+                      )}
+                      {statisticalData.method === 'mixed_logit' && (
+                        <>
+                          <li>• <strong>Utility (Mean):</strong> ค่าเฉลี่ยความชอบจากผู้ตอบทุกคน</li>
+                          <li>• <strong>Std. Dev.:</strong> ค่าเบี่ยงเบน — ยิ่งสูง = ผู้ตอบมีความเห็นแตกต่างกันมาก</li>
+                          <li>• ใช้ตรวจสอบว่าตลาดมี segment ที่ชอบต่างกันหรือไม่</li>
+                        </>
+                      )}
+                      {statisticalData.method === 'hierarchical_bayes' && (
+                        <>
+                          <li>• <strong>Utility:</strong> ค่าเฉลี่ยสัดส่วนการเลือกระดับประชากร (Population Mean)</li>
+                          <li>• <strong>Population Std.:</strong> ค่าเบี่ยงเบนระดับประชากร — สะท้อนความหลากหลายของผู้บริโภค</li>
+                          <li>• วิเคราะห์ทั้งระดับบุคคลและภาพรวม (Empirical Bayes approach)</li>
+                        </>
+                      )}
+                      {statisticalData.method === 'linear_regression' && (
+                        <>
+                          <li>• <strong>Coefficient (β):</strong> ค่าสัมประสิทธิ์ OLS — บวก = เพิ่มโอกาสถูกเลือก, ลบ = ลดโอกาส</li>
+                          <li>• <strong>Reference Level:</strong> ระดับอ้างอิง (β=0) ใช้เปรียบเทียบกับระดับอื่น</li>
+                          <li>• <strong>R²:</strong> อธิบายความแปรปรวนได้ {((statisticalData.results?.r_squared || 0) * 100).toFixed(1)}%
+                            ({(statisticalData.results?.r_squared || 0) > 0.3 ? 'Good' : 'Moderate'})</li>
+                        </>
+                      )}
                     </ul>
                   </div>
 
-                  <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-                    <p className="text-sm font-bold text-gray-900 mb-2">📐 สมการ Regression Model:</p>
-                    <div className="font-mono text-xs bg-white p-3 rounded border border-purple-300 overflow-x-auto">
-                      <p>P(Choice) = {(statisticalData.results?.intercept || 0).toFixed(4)}</p>
-                      {statisticalData.results?.part_worths ? (
-                        // Use part_worths structure for MNL analysis
-                        Object.entries(statisticalData.results.part_worths).map(([attrId, attrData]) => {
+                  {/* Model Equation — only for OLS & MNL */}
+                  {(statisticalData.method === 'linear_regression' || statisticalData.method === 'mnl') && (
+                    <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                      <p className="text-sm font-bold text-gray-900 mb-2">
+                        {statisticalData.method === 'mnl' ? 'Logit Model (V = \u03A3 \u03B2\u2099X\u2099):' : 'OLS Regression Model:'}
+                      </p>
+                      <div className="font-mono text-xs bg-white p-3 rounded border border-purple-300 overflow-x-auto">
+                        {statisticalData.method === 'linear_regression' && (
+                          <p>P(Choice) = {(statisticalData.results?.intercept || 0).toFixed(4)}</p>
+                        )}
+                        {statisticalData.method === 'mnl' && (
+                          <p>V(alternative) =</p>
+                        )}
+                        {Object.entries(statisticalData.results?.part_worths || {}).map(([attrId, attrData]) => {
                           return Object.values(attrData.levels || {})
-                            .filter(level => level.utility !== 0)
-                            .map((level, idx) => (
-                              <p key={idx}>
-                                &nbsp;&nbsp;&nbsp;&nbsp;{level.utility > 0 ? '+' : ''} 
-                                {level.utility.toFixed(4)} × [{attrData.name}_{level.value}]
-                              </p>
-                            ));
-                        })
-                      ) : (
-                        // Fallback for other analysis methods
-                        Object.entries(statisticalData.results?.coefficients || {}).map(([attrId, attrData]) => {
-                          return Object.values(attrData?.levels || {})
-                            .filter(level => !level?.is_reference)
-                            .map((level, idx) => (
-                              <p key={idx}>
-                                &nbsp;&nbsp;&nbsp;&nbsp;{(level?.coefficient || 0) > 0 ? '+' : ''} 
-                                {(level?.coefficient || 0).toFixed(4)} × [{attrData?.name || attrId}_{level?.value}]
-                              </p>
-                            ));
-                        })
-                      )}
+                            .filter(level => (level.utility ?? level.coefficient ?? 0) !== 0)
+                            .map((level, idx) => {
+                              const val = level.utility ?? level.coefficient ?? 0;
+                              return (
+                                <p key={`eq-${attrId}-${idx}`}>
+                                  &nbsp;&nbsp;&nbsp;&nbsp;{val > 0 ? '+' : ''}{val.toFixed(4)} × [{attrData.name}_{level.value}]
+                                </p>
+                              );
+                            });
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </Card>

@@ -5,6 +5,14 @@
 
 ## What's Been Implemented
 
+### Conjoint Statistical UI — Method-Specific Output (Apr 10, 2026)
+- Fixed frontend to show method-appropriate statistics instead of one static R²/Intercept template
+- MNL: Pseudo R², Log-Likelihood, AIC, p-values, z-values, Std.Error
+- Mixed Logit: Respondents, Preference Heterogeneity, Std.Dev per level
+- HB: Respondents, Population Std, Individual-level estimates
+- OLS: R², Intercept, Coefficient (β)
+- Interpretation section adapts per method (Thai language)
+
 ### Conjoint Analysis Performance Optimization (Apr 10, 2026)
 - Fixed O(n³-n⁴) nested loops in ALL analysis functions (MNL, Mixed Logit, HB, Regression, Counting)
 - Replaced linear choice_set search with dict lookup (`_build_conjoint_data_rows` shared helper)
@@ -12,20 +20,17 @@
 - Added ThreadPoolExecutor + 120s timeout for `/statistical-analysis` endpoint
 - Benchmark: `calculate_part_worths` 12x faster, MNL handles 620 responses in 4.2s (was failing)
 
-### Kanban Board Features (Jan 11, 2026)
+### Kanban Board Features (Previous Sessions)
 - Sub-Kanban (Mini Kanban Board) inside Card Modal
 - Card Cover Image & Auto Assignee Avatar
 - RBAC & Member Management (owner, manager, editor, card_owner, viewer)
 - Assign Card to students with permission enforcement
 - Mobile & Desktop Responsive Design
 
-## Test Results
-- MNL 120 responses: 1.8s (success)
-- MNL 420 responses: 3.0s (success)
-- MNL 620 responses: 4.2s (success)
-- Mixed Logit 620 responses: 0.5s (success)
-- HB 620 responses: 0.8s (success)
-- All Kanban RBAC tests: passed
+## Key Files
+- `/app/frontend/src/pages/ConjointResultsPage.js` — Method-specific stat display
+- `/app/backend/server.py` — Optimized analysis functions + timeout protection
+- `/app/frontend/src/pages/KanbanBoard.js` — Kanban with RBAC
 
 ## Prioritized Backlog
 - P1: File Attachments via Google Drive (Kanban)
