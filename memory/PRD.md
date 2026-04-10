@@ -5,33 +5,28 @@
 
 ## What's Been Implemented
 
+### Performance & Scalability Fix (Apr 10, 2026)
+- Async bcrypt (login/register no longer blocks event loop)
+- JWT-first auth check + in-memory user cache (TTL 5min)
+- Conjoint studies list projection: 20MB → 1.3KB
+- GZip middleware for all responses >500 bytes
+- MongoDB connection pool already configured (50 max, 10 min)
+- Tested: 20 concurrent logins OK, 20 concurrent API calls OK
+
 ### Service Worker Cache Fix (Apr 10, 2026)
-- Changed from aggressive cache-first to proper strategies: network-only for API, network-first for HTML, stale-while-revalidate for static assets
-- Added SW updatefound auto-reload in index.html
-- Cache version bumped v2→v3 to clear stale cache
+- Network-only for API, network-first for HTML, stale-while-revalidate for assets
+- Auto-reload on SW update
 
-### Generate Prompt Fallback for AI Interpretation (Apr 10, 2026)
-- `POST /api/conjoint/studies/{id}/generate-prompt` — returns prompt with real data
-- Fixed `get_method_results` to support all 5 methods
-- Auto-generates prompt on AI failure + always-available button
+### Generate Prompt Fallback (Apr 10, 2026)
+- POST /api/conjoint/studies/{id}/generate-prompt
+- Auto-generates on AI failure + always-available button
 
-### Conjoint Statistical UI — Method-Specific Output (Apr 10, 2026)
-- MNL: Pseudo R², Log-Likelihood, AIC, p-values
-- Mixed Logit: Respondents, Heterogeneity, Std.Dev
-- HB: Population Std, Individual estimates
-- OLS: R², Intercept, Coefficient
+### Conjoint Statistical UI + Performance (Apr 10, 2026)
+- Method-specific stats display (MNL/Mixed Logit/HB/OLS)
+- O(n³) nested loop fix → 12x faster, handles 620+ responses
 
-### Conjoint Performance Optimization (Apr 10, 2026)
-- Fixed O(n³-n⁴) nested loops → 12x faster, handles 620+ responses
-
-### Kanban Board Features (Previous Sessions)
+### Kanban Board (Previous Sessions)
 - Sub-Kanban, Cover Image, RBAC, Assign Card, Responsive Design
-
-## Key Files
-- `/app/frontend/public/service-worker.js` — SW with proper cache strategies
-- `/app/frontend/public/index.html` — SW registration with update handling
-- `/app/frontend/src/pages/ConjointResultsPage.js`
-- `/app/backend/server.py`
 
 ## Prioritized Backlog
 - P1: File Attachments via Google Drive (Kanban)
@@ -39,7 +34,7 @@
 - P2: Phase 2 Image Caching endpoint
 - P3: Board templates, Refactor KanbanBoard.js
 - P4: Academic Format Corrector
-- P5: Customer Behavior Analysis (Quantitative tab)
+- P5: Customer Behavior Analysis
 - P6: Survey Analytics & Dashboard
 
 ## Credentials

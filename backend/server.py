@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -792,6 +793,16 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
+async def hash_password_async(password: str) -> str:
+    """Non-blocking bcrypt hash"""
+    import asyncio
+    return await asyncio.to_thread(hash_password, password)
+
+async def verify_password_async(password: str, hashed: str) -> bool:
+    """Non-blocking bcrypt verify — prevents event loop blocking under load"""
+    import asyncio
+    return await asyncio.to_thread(verify_password, password, hashed)
+
 def create_access_token(user_id: str, email: str, role: str) -> str:
     payload = {
         "user_id": user_id,
@@ -808,6 +819,27 @@ def decode_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+# In-memory user cache (TTL 5 min) to avoid DB hit on every request
+import time as _time
+_user_cache = {}       # user_id -> (User, expire_timestamp)
+_USER_CACHE_TTL = 300  # 5 minutes
+
+def _get_cached_user(user_id: str):
+    entry = _user_cache.get(user_id)
+    if entry and entry[1] > _time.time():
+        return entry[0]
+    return None
+
+def _set_cached_user(user_id: str, user: "User"):
+    _user_cache[user_id] = (user, _time.time() + _USER_CACHE_TTL)
+    # Evict old entries periodically (keep cache bounded)
+    if len(_user_cache) > 500:
+        now = _time.time()
+        expired = [k for k, v in _user_cache.items() if v[1] < now]
+        for k in expired:
+            del _user_cache[k]
+
 
 async def get_current_user_from_session(session_token: str):
     """Get user from session token"""
@@ -829,17 +861,31 @@ async def get_current_user_from_session(session_token: str):
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     
-    # Try session token first (for Google OAuth)
+    # Try JWT first (most common path — avoids unnecessary session DB query)
+    try:
+        payload = decode_token(token)
+        user_id = payload["user_id"]
+
+        # Check in-memory cache first
+        cached = _get_cached_user(user_id)
+        if cached:
+            return cached
+
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if user_doc:
+            user_obj = User(**user_doc)
+            _set_cached_user(user_id, user_obj)
+            return user_obj
+    except Exception:
+        pass  # Not a valid JWT — try session token
+    
+    # Fallback to session token (Google OAuth)
     user = await get_current_user_from_session(token)
     if user:
+        _set_cached_user(user.id, user)
         return user
     
-    # Fallback to JWT
-    payload = decode_token(token)
-    user_doc = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
-    if not user_doc:
-        raise HTTPException(status_code=401, detail="User not found")
-    return User(**user_doc)
+    raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 async def get_admin_user(current_user: User = Depends(get_current_user)):
     # Hard-coded admin emails
@@ -953,7 +999,7 @@ async def register(user_data: UserRegister):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Create user
-    hashed_pw = hash_password(user_data.password)
+    hashed_pw = await hash_password_async(user_data.password)
     user = User(
         email=user_data.email,
         full_name=user_data.full_name,
@@ -983,7 +1029,7 @@ async def login(credentials: UserLogin):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    if not verify_password(credentials.password, user['password']):
+    if not await verify_password_async(credentials.password, user['password']):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Remove MongoDB _id field if it exists
@@ -1394,17 +1440,27 @@ async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCrede
     try:
         token = credentials.credentials
         
-        # Try session token first (for Google OAuth)
+        # Try JWT first (most common)
+        try:
+            payload = decode_token(token)
+            user_id = payload["user_id"]
+            cached = _get_cached_user(user_id)
+            if cached:
+                return cached
+            user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+            if user_doc:
+                user_obj = User(**user_doc)
+                _set_cached_user(user_id, user_obj)
+                return user_obj
+        except Exception:
+            pass
+        
+        # Fallback to session token
         user = await get_current_user_from_session(token)
         if user:
+            _set_cached_user(user.id, user)
             return user
-        
-        # Fallback to JWT
-        payload = decode_token(token)
-        user_doc = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
-        if not user_doc:
-            return None
-        return User(**user_doc)
+        return None
     except:
         return None
 
@@ -7886,10 +7942,32 @@ async def list_conjoint_studies(
     if status_filter and status_filter != "all":
         query["status"] = status_filter
     
+    # Return only fields needed for list view (NOT full choice_sets/attributes/profiles)
+    list_projection = {
+        "_id": 0,
+        "id": 1,
+        "title": 1,
+        "description": 1,
+        "status": 1,
+        "respondent_count": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "creator_id": 1,
+        "creator_name": 1,
+        "is_public_result": 1,
+        "share_token": 1,
+        "num_choice_sets": 1,
+    }
+    
     studies = await db.conjoint_studies.find(
         query,
-        {"_id": 0}
+        list_projection
     ).sort("created_at", -1).to_list(1000)
+    
+    # Compute num_attributes/num_choice_sets if not stored
+    for s in studies:
+        if "num_choice_sets" not in s:
+            s["num_choice_sets"] = 0
     
     return {"studies": studies}
 
@@ -10752,6 +10830,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip compression — reduces response size significantly for JSON/text
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 logging.basicConfig(
     level=logging.INFO,
