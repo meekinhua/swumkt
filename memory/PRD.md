@@ -5,31 +5,30 @@
 
 ## What's Been Implemented
 
-### Conjoint Results Page Optimization (Apr 10, 2026)
-- Study detail: ?view=summary skips choice_sets (7.2MB→33KB, 212x smaller)
-- Results: removed raw responses from payload (200KB→2.8KB)
-- Added /export-responses endpoint for CSV export on-demand
-- Total page load: 7.4MB→36KB (205x reduction)
+### Analysis Caching System (Apr 10, 2026)
+- Statistical analysis results cached in MongoDB (analysis_cache collection)
+- AI interpretation results cached separately
+- Auto-invalidate on new response submission
+- Switching between methods is instant from cache (1.76s→0.12s)
+- AI timeout set to 45s with proper error message
 
-### Performance & Scalability Fix (Apr 10, 2026)
-- Async bcrypt (login/register no longer blocks event loop)
-- JWT-first auth check + in-memory user cache (TTL 5min)
-- Conjoint studies list projection: 20MB→1.3KB
-- GZip middleware for all responses >500 bytes
-- Tested: 20 concurrent logins OK
+### Results Page Optimization (Apr 10, 2026)
+- Study detail: ?view=summary (7.2MB→33KB)
+- Results: no raw responses (200KB→2.8KB)
+- /export-responses endpoint for CSV on-demand
+
+### Performance & Scalability (Apr 10, 2026)
+- Async bcrypt, JWT-first auth, user cache, GZip
+- Studies list projection: 20MB→1.3KB
 
 ### Service Worker Cache Fix (Apr 10, 2026)
-- Network-only for API, network-first for HTML, stale-while-revalidate for assets
-
-### Generate Prompt Fallback (Apr 10, 2026)
-- POST /api/conjoint/studies/{id}/generate-prompt
+- Proper caching strategies per request type
 
 ### Conjoint Statistical UI + Performance (Apr 10, 2026)
-- Method-specific stats display (MNL/Mixed Logit/HB/OLS)
-- O(n³) nested loop fix → 12x faster
+- Method-specific stats, O(n³) fix, Prompt fallback
 
 ### Kanban Board (Previous Sessions)
-- Sub-Kanban, Cover Image, RBAC, Assign Card, Responsive Design
+- Sub-Kanban, Cover Image, RBAC, Assign Card, Responsive
 
 ## Prioritized Backlog
 - P1: File Attachments via Google Drive (Kanban)

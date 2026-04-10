@@ -287,6 +287,10 @@ async def create_indexes():
     # Content course_id index for filtering by course
     await safe_create_index(db.contents, "course_id", background=True)
     
+    # Analysis cache indexes
+    await safe_create_index(db.analysis_cache, [("study_id", 1), ("method", 1)], unique=True, background=True)
+    await safe_create_index(db.analysis_cache, "created_at", background=True)
+    
     logging.info(f"[INDEXES] Created: {indexes_created}, Skipped (already exist): {indexes_skipped}")
 
 # JWT Configuration
@@ -9223,6 +9227,9 @@ async def submit_survey_response(
         }
     )
     
+    # Invalidate analysis cache (new data = old results stale)
+    await db.analysis_cache.delete_many({"study_id": study_id})
+    
     return {"message": "Response submitted successfully", "response_id": response_doc["id"]}
 
 
@@ -9825,29 +9832,47 @@ def calculate_importance_scores(part_worths: Dict, study: Dict) -> Dict[str, flo
 @api_router.get("/conjoint/studies/{study_id}/statistical-analysis")
 async def get_statistical_analysis(
     study_id: str,
-    method: str = "mnl",  # mnl, mixed_logit, hierarchical_bayes, linear_regression
+    method: str = "mnl",
+    force: bool = False,  # force=true to bypass cache
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get statistical analysis results with selected method (public if is_public_result is True)"""
+    """Get statistical analysis results with selected method (cached in DB)"""
     import asyncio
     import concurrent.futures
 
-    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
-    # Check permission: allow if public OR if user is creator/admin
     is_public = study.get("is_public_result", False)
     if not is_public:
         if not current_user:
             raise HTTPException(status_code=401, detail="Authentication required")
         if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Get responses
+
+    respondent_count = study.get("respondent_count", 0)
+
+    # Check cache first (unless force refresh)
+    if not force:
+        cached = await db.analysis_cache.find_one(
+            {"study_id": study_id, "method": method, "respondent_count": respondent_count},
+            {"_id": 0}
+        )
+        if cached and cached.get("results"):
+            return {
+                "status": "success",
+                "method": method,
+                "respondent_count": respondent_count,
+                "results": cached["results"],
+                "cached": True
+            }
+
+    # Need full study with choice_sets for computation
+    full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+
     responses = await db.conjoint_responses.find(
-        {"study_id": study_id},
-        {"_id": 0}
+        {"study_id": study_id}, {"_id": 0}
     ).to_list(10000)
     
     if len(responses) < 30:
@@ -9857,7 +9882,6 @@ async def get_statistical_analysis(
             "respondent_count": len(responses)
         }
     
-    # Run CPU-heavy analysis in a thread pool with timeout
     method_map = {
         "mnl": calculate_mnl_analysis,
         "mixed_logit": calculate_mixed_logit_analysis,
@@ -9874,15 +9898,11 @@ async def get_statistical_analysis(
     try:
         with concurrent.futures.ThreadPoolExecutor() as pool:
             results = await asyncio.wait_for(
-                loop.run_in_executor(pool, analysis_fn, study, responses),
-                timeout=120  # 120 second timeout
+                loop.run_in_executor(pool, analysis_fn, full_study, responses),
+                timeout=120
             )
     except asyncio.TimeoutError:
-        logging.error(f"Statistical analysis timed out: method={method}, responses={len(responses)}")
-        raise HTTPException(
-            status_code=504,
-            detail=f"Analysis timed out with {len(responses)} responses. Try reducing the dataset or using a simpler method (e.g., counting or linear_regression)."
-        )
+        raise HTTPException(status_code=504, detail=f"Analysis timed out with {len(responses)} responses.")
     except Exception as e:
         logging.error(f"Statistical analysis error: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
@@ -9890,11 +9910,25 @@ async def get_statistical_analysis(
     if not results:
         raise HTTPException(status_code=500, detail=f"Failed to perform {method} analysis")
     
+    # Save to cache
+    await db.analysis_cache.update_one(
+        {"study_id": study_id, "method": method},
+        {"$set": {
+            "study_id": study_id,
+            "method": method,
+            "respondent_count": len(responses),
+            "results": results,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
     return {
         "status": "success",
         "method": method,
         "respondent_count": len(responses),
-        "results": results
+        "results": results,
+        "cached": False
     }
 
 
@@ -10766,8 +10800,10 @@ async def get_ai_interpretation(
     request: AIInterpretationRequest,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Generate AI interpretation of conjoint analysis results (public if is_public_result is True)"""
-    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    """Generate AI interpretation — cached in DB. Returns cached if exists."""
+    import asyncio
+
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
 
@@ -10778,11 +10814,29 @@ async def get_ai_interpretation(
         if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Not authorized")
 
+    respondent_count = study.get("respondent_count", 0)
+    cache_key = f"ai_{request.method}_{'all' if request.compare_all else 'single'}"
+
+    # Check cache first
+    cached = await db.analysis_cache.find_one(
+        {"study_id": study_id, "method": cache_key, "respondent_count": respondent_count},
+        {"_id": 0}
+    )
+    if cached and cached.get("results"):
+        return {
+            "interpretation": cached["results"]["interpretation"],
+            "summary_data": cached["results"].get("summary_data"),
+            "cached": True
+        }
+
+    # Need to compute — load full study + responses
+    full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+
     if len(responses) < 10:
         raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
 
-    analysis_summary = await _prepare_analysis_summary(study, responses, request.method, request.compare_all)
+    analysis_summary = await _prepare_analysis_summary(full_study, responses, request.method, request.compare_all)
     system_message, prompt = _build_interpretation_prompt(analysis_summary)
 
     api_key = os.environ.get('EMERGENT_LLM_KEY')
@@ -10798,16 +10852,38 @@ async def get_ai_interpretation(
             system_message=system_message
         ).with_model("openai", "gpt-4o-mini")
 
-        response = await chat.send_message(UserMessage(text=prompt))
+        # Wrap with timeout (45 seconds)
+        response = await asyncio.wait_for(
+            chat.send_message(UserMessage(text=prompt)),
+            timeout=45
+        )
 
-        return {
+        result_data = {
             "interpretation": response,
             "summary_data": analysis_summary
         }
 
+        # Cache the result
+        await db.analysis_cache.update_one(
+            {"study_id": study_id, "method": cache_key},
+            {"$set": {
+                "study_id": study_id,
+                "method": cache_key,
+                "respondent_count": respondent_count,
+                "results": result_data,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+
+        return {**result_data, "cached": False}
+
+    except asyncio.TimeoutError:
+        logging.error(f"AI interpretation timed out for study {study_id}")
+        raise HTTPException(status_code=504, detail="AI วิเคราะห์ใช้เวลานานเกินไป กรุณาใช้ปุ่ม 'สร้าง Prompt' แทน")
     except Exception as e:
         logging.error(f"AI interpretation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate interpretation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI วิเคราะห์ไม่สำเร็จ: {str(e)}")
 
 
 # Generate prompt template (no AI call) for user to copy

@@ -147,12 +147,10 @@ const ConjointResultsPage = () => {
     setLoadingStatistical(true);
     try {
       if (method === 'counting') {
-        // Use original results for counting method
         setCurrentResults(results);
         setStatisticalData(null);
         toast.success('แสดงผลแบบ Counting Method');
       } else {
-        // Load statistical analysis (with or without auth)
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const response = await axios.get(
           `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}`,
@@ -160,7 +158,8 @@ const ConjointResultsPage = () => {
         );
         setStatisticalData(response.data);
         setCurrentResults(response.data.results);
-        toast.success(`วิเคราะห์ด้วย ${getMethodName(method)} สำเร็จ!`);
+        const wasCached = response.data.cached;
+        toast.success(`${getMethodName(method)} ${wasCached ? '(จาก cache)' : 'คำนวณสำเร็จ!'}`);
       }
     } catch (error) {
       console.error('Error loading statistical analysis:', error);
@@ -196,12 +195,13 @@ const ConjointResultsPage = () => {
         { headers }
       );
       setAiInterpretation(response.data);
-      setGeneratedPrompt(null); // clear prompt if AI succeeded
+      setGeneratedPrompt(null);
       
+      const wasCached = response.data.cached;
       if (aiAnalysisMode === 'compare_all') {
-        toast.success('วิเคราะห์และเปรียบเทียบทุกวิธีด้วย AI สำเร็จ!');
+        toast.success(`วิเคราะห์ทุกวิธีสำเร็จ${wasCached ? ' (จาก cache)' : ''}!`);
       } else {
-        toast.success(`วิเคราะห์ด้วย AI (${getMethodName(selectedMethod)}) สำเร็จ!`);
+        toast.success(`${getMethodName(selectedMethod)} ${wasCached ? '(จาก cache)' : 'สำเร็จ'}!`);
       }
     } catch (error) {
       console.error('Error generating AI interpretation:', error);
