@@ -9793,6 +9793,9 @@ async def get_statistical_analysis(
 # Helper function to get statistical analysis results
 async def get_method_results(study, responses, method):
     """Get ALL analysis results for a specific method (not just part_worths and importance_scores)"""
+    import asyncio
+    import concurrent.futures
+
     if method == "counting":
         part_worths = calculate_part_worths(study, responses)
         importance_scores = calculate_importance_scores(part_worths, study)
@@ -9801,6 +9804,30 @@ async def get_method_results(study, responses, method):
             'part_worths': part_worths,
             'importance_scores': importance_scores
         }
+
+    method_fn_map = {
+        "mnl": calculate_mnl_analysis,
+        "mixed_logit": calculate_mixed_logit_analysis,
+        "hierarchical_bayes": calculate_hierarchical_bayes_analysis,
+        "linear_regression": calculate_regression_analysis,
+    }
+
+    fn = method_fn_map.get(method)
+    if not fn:
+        return None
+
+    loop = asyncio.get_event_loop()
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            result = await asyncio.wait_for(
+                loop.run_in_executor(pool, fn, study, responses),
+                timeout=120
+            )
+    except Exception as e:
+        logging.error(f"get_method_results error ({method}): {e}")
+        return None
+
+    return result
 
 # Generate product image based on conjoint analysis results
 @api_router.post("/conjoint/studies/{study_id}/generate-product-from-results")
@@ -10474,90 +10501,22 @@ Choice-Based Conjoint Analysis
         logging.error(f"Error sharing conjoint as content: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
 
-# Get AI interpretation of results
-@api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
-async def get_ai_interpretation(
-    study_id: str,
-    request: AIInterpretationRequest,
-    current_user: Optional[User] = Depends(get_current_user_optional)
-):
-    """Generate AI interpretation of conjoint analysis results (public if is_public_result is True)"""
-    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
-    
-    # Check permission: allow if public OR if user is creator/admin
-    is_public = study.get("is_public_result", False)
-    if not is_public:
-        if not current_user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-            raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Get responses
-    responses = await db.conjoint_responses.find(
-        {"study_id": study_id},
-        {"_id": 0}
-    ).to_list(10000)
-    
-    if len(responses) < 10:
-        raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
-    
-    # Prepare analysis data based on mode
-    if request.compare_all:
-        # Analyze all methods and get FULL results
-        methods_to_analyze = ['counting', 'linear_regression', 'mnl', 'mixed_logit', 'hierarchical_bayes']
-        all_results = {}
-        
-        for method in methods_to_analyze:
-            try:
-                method_result = await get_method_results(study, responses, method)
-                all_results[method] = method_result
-            except Exception as e:
-                logging.warning(f"Failed to analyze with {method}: {e}")
-                continue
-        
-        # Prepare comprehensive analysis summary with FULL data
-        analysis_summary = {
-            "study_title": study.get("title"),
-            "respondent_count": len(responses),
-            "mode": "compare_all",
-            "methods": all_results  # Send COMPLETE results, not filtered
-        }
-        
-    else:
-        # Single method analysis - get FULL results
-        method_result = await get_method_results(study, responses, request.method)
-        
-        # Prepare data for AI with COMPLETE results
-        analysis_summary = {
-            "study_title": study.get("title"),
-            "respondent_count": len(responses),
-            "mode": "single",
-            "method": request.method,
-            "full_results": method_result  # Send COMPLETE results object
-        }
-    
-    # Generate AI interpretation
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
-    if not api_key:
-        raise HTTPException(status_code=500, detail="AI service not configured")
-    
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-        system_message = """คุณเป็นผู้เชี่ยวชาญด้านการวิเคราะห์ตลาดและพฤติกรรมผู้บริโภค โดยเฉพาะ Conjoint Analysis 
-คุณจะต้องอธิบายผลการวิเคราะห์ให้ผู้ใช้ทั่วไปที่ไม่มีความรู้ทางสถิติเข้าใจได้ง่าย
-ใช้ภาษาเรียบง่าย ยกตัวอย่างประกอบ และให้ข้อเสนอแนะเชิงธุรกิจที่นำไปปฏิบัติได้จริง"""
-        
-        # Build prompt based on mode with FULL data
-        import json
-        
-        if analysis_summary['mode'] == 'compare_all':
-            # Compare all methods - send COMPLETE results data
-            methods_json = json.dumps(analysis_summary['methods'], indent=2, ensure_ascii=False, default=str)
-            
-            prompt = f"""วิเคราะห์และเปรียบเทียบผลการวิจัย Conjoint Analysis จากหลายวิธีการวิเคราะห์อย่างละเอียดและครอบคลุม:
+# --- Shared prompt builder for AI interpretation ---
+def _build_interpretation_prompt(analysis_summary: dict) -> tuple:
+    """Build (system_message, prompt) for conjoint AI interpretation.
+    Returns (system_message: str, prompt: str)
+    """
+    import json
+
+    system_message = (
+        "คุณเป็นผู้เชี่ยวชาญด้านการวิเคราะห์ตลาดและพฤติกรรมผู้บริโภค โดยเฉพาะ Conjoint Analysis\n"
+        "คุณจะต้องอธิบายผลการวิเคราะห์ให้ผู้ใช้ทั่วไปที่ไม่มีความรู้ทางสถิติเข้าใจได้ง่าย\n"
+        "ใช้ภาษาเรียบง่าย ยกตัวอย่างประกอบ และให้ข้อเสนอแนะเชิงธุรกิจที่นำไปปฏิบัติได้จริง"
+    )
+
+    if analysis_summary["mode"] == "compare_all":
+        methods_json = json.dumps(analysis_summary["methods"], indent=2, ensure_ascii=False, default=str)
+        prompt = f"""วิเคราะห์และเปรียบเทียบผลการวิจัย Conjoint Analysis จากหลายวิธีการวิเคราะห์อย่างละเอียดและครอบคลุม:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
@@ -10573,10 +10532,10 @@ async def get_ai_interpretation(
   * Model statistics (R², Log-likelihood, AIC, BIC ถ้ามี)
   * Coefficients, standard errors, p-values (ถ้ามี)
   * Convergence information และ fit statistics (ถ้ามี)
-  
+
 กรุณาเขียนคำอธิบายที่วิเคราะห์เชิงลึกและครอบคลุม:
 
-1. **สรุปผลหลักจากทุกวิธี (4-5 ประโยค):** 
+1. **สรุปผลหลักจากทุกวิธี (4-5 ประโยค):**
    - เปรียบเทียบผลจากทุกวิธี มีความแตกต่างหรือสอดคล้องกันอย่างไร?
    - วิธีไหนให้ผลที่น่าเชื่อถือที่สุด? (พิจารณาจาก model fit statistics)
 
@@ -10602,20 +10561,18 @@ async def get_ai_interpretation(
    - ข้อแนะนำในการเก็บข้อมูลเพิ่มเติม (ถ้ามี)
 
 ใช้ภาษาไทยที่เข้าใจง่าย แต่ให้รายละเอียดเชิงลึก ยกตัวอย่างประกอบ และชี้ให้เห็นข้อดีของการใช้หลายวิธีวิเคราะห์เปรียบเทียบกัน"""
-        
-        else:
-            # Single method - send COMPLETE results data
-            full_results_json = json.dumps(analysis_summary['full_results'], indent=2, ensure_ascii=False, default=str)
-            
-            method_display = {
-                'counting': 'Counting Method (นับความถี่)',
-                'linear_regression': 'Linear Regression (OLS)',
-                'mnl': 'Multinomial Logit (MNL)',
-                'mixed_logit': 'Mixed Logit',
-                'hierarchical_bayes': 'Hierarchical Bayes (HB)'
-            }.get(analysis_summary['method'], analysis_summary['method'])
-            
-            prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis อย่างละเอียดและครอบคลุม:
+
+    else:
+        full_results_json = json.dumps(analysis_summary["full_results"], indent=2, ensure_ascii=False, default=str)
+        method_display = {
+            "counting": "Counting Method (นับความถี่)",
+            "linear_regression": "Linear Regression (OLS)",
+            "mnl": "Multinomial Logit (MNL)",
+            "mixed_logit": "Mixed Logit",
+            "hierarchical_bayes": "Hierarchical Bayes (HB)",
+        }.get(analysis_summary["method"], analysis_summary["method"])
+
+        prompt = f"""วิเคราะห์และตีความผลการวิจัย Conjoint Analysis อย่างละเอียดและครอบคลุม:
 
 การศึกษา: {analysis_summary['study_title']}
 จำนวนผู้ตอบ: {analysis_summary['respondent_count']} คน
@@ -10632,7 +10589,7 @@ async def get_ai_interpretation(
   * Model statistics (R², Log-likelihood, AIC, BIC ถ้ามี)
   * Coefficients, standard errors, p-values (ถ้ามี)
   * Selection counts และ raw data (ถ้ามี)
-  
+
 กรุณาเขียนคำอธิบายที่วิเคราะห์เชิงลึก:
 
 1. **สรุปผลหลักจาก {method_display} (4-5 ประโยค):**
@@ -10663,23 +10620,120 @@ async def get_ai_interpretation(
    - ข้อแนะนำในการตีความผลและการนำไปใช้
 
 ใช้ภาษาไทยที่เข้าใจง่าย แต่ให้รายละเอียดเชิงลึก ยกตัวอย่างประกอบ และให้คำแนะนำที่นำไปปฏิบัติได้จริง"""
-        
+
+    return system_message, prompt
+
+
+async def _prepare_analysis_summary(study, responses, method: str, compare_all: bool) -> dict:
+    """Shared helper to prepare analysis_summary dict."""
+    if compare_all:
+        methods_to_analyze = ["counting", "linear_regression", "mnl", "mixed_logit", "hierarchical_bayes"]
+        all_results = {}
+        for m in methods_to_analyze:
+            try:
+                all_results[m] = await get_method_results(study, responses, m)
+            except Exception as e:
+                logging.warning(f"Failed to analyze with {m}: {e}")
+        return {
+            "study_title": study.get("title"),
+            "respondent_count": len(responses),
+            "mode": "compare_all",
+            "methods": all_results,
+        }
+    else:
+        method_result = await get_method_results(study, responses, method)
+        return {
+            "study_title": study.get("title"),
+            "respondent_count": len(responses),
+            "mode": "single",
+            "method": method,
+            "full_results": method_result,
+        }
+
+
+# Get AI interpretation of results
+@api_router.post("/conjoint/studies/{study_id}/ai-interpretation")
+async def get_ai_interpretation(
+    study_id: str,
+    request: AIInterpretationRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Generate AI interpretation of conjoint analysis results (public if is_public_result is True)"""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    is_public = study.get("is_public_result", False)
+    if not is_public:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+    responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+    if len(responses) < 10:
+        raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
+
+    analysis_summary = await _prepare_analysis_summary(study, responses, request.method, request.compare_all)
+    system_message, prompt = _build_interpretation_prompt(analysis_summary)
+
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+
         chat = LlmChat(
             api_key=api_key,
             session_id=f"conjoint-interpret-{study_id}",
             system_message=system_message
         ).with_model("openai", "gpt-4o-mini")
-        
+
         response = await chat.send_message(UserMessage(text=prompt))
-        
+
         return {
             "interpretation": response,
             "summary_data": analysis_summary
         }
-        
+
     except Exception as e:
         logging.error(f"AI interpretation error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate interpretation: {str(e)}")
+
+
+# Generate prompt template (no AI call) for user to copy
+@api_router.post("/conjoint/studies/{study_id}/generate-prompt")
+async def generate_interpretation_prompt(
+    study_id: str,
+    request: AIInterpretationRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Generate the prompt text with real data — user can copy and use with their own AI."""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    is_public = study.get("is_public_result", False)
+    if not is_public:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+    responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+    if len(responses) < 10:
+        raise HTTPException(status_code=400, detail="Need at least 10 responses")
+
+    analysis_summary = await _prepare_analysis_summary(study, responses, request.method, request.compare_all)
+    system_message, prompt = _build_interpretation_prompt(analysis_summary)
+
+    full_prompt = f"""[System Instructions]\n{system_message}\n\n[Analysis Request]\n{prompt}"""
+
+    return {
+        "prompt": full_prompt,
+        "summary_data": analysis_summary,
+    }
 
 
 # ============ PROJECT MANAGEMENT (KANBAN) ============

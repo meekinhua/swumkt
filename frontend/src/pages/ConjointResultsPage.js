@@ -53,6 +53,9 @@ const ConjointResultsPage = () => {
   const [study, setStudy] = useState(null);
   const [results, setResults] = useState(null);
   const [aiInterpretation, setAiInterpretation] = useState(null);
+  const [generatedPrompt, setGeneratedPrompt] = useState(null);
+  const [loadingPrompt, setLoadingPrompt] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingAI, setLoadingAI] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(true);
@@ -193,6 +196,7 @@ const ConjointResultsPage = () => {
         { headers }
       );
       setAiInterpretation(response.data);
+      setGeneratedPrompt(null); // clear prompt if AI succeeded
       
       if (aiAnalysisMode === 'compare_all') {
         toast.success('วิเคราะห์และเปรียบเทียบทุกวิธีด้วย AI สำเร็จ!');
@@ -201,9 +205,61 @@ const ConjointResultsPage = () => {
       }
     } catch (error) {
       console.error('Error generating AI interpretation:', error);
-      toast.error('ไม่สามารถสร้างคำแนะนำด้วย AI ได้');
+      toast.error('AI วิเคราะห์ไม่สำเร็จ — กำลังสร้าง Prompt ให้คัดลอกไปใช้เอง...');
+      // Auto-generate prompt as fallback
+      await loadGeneratedPrompt();
     } finally {
       setLoadingAI(false);
+    }
+  };
+
+  const loadGeneratedPrompt = async () => {
+    setLoadingPrompt(true);
+    try {
+      const requestBody = {
+        method: selectedMethod,
+        compare_all: aiAnalysisMode === 'compare_all'
+      };
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.post(
+        `${API}/conjoint/studies/${studyId}/generate-prompt`,
+        requestBody,
+        { headers }
+      );
+      setGeneratedPrompt(response.data.prompt);
+      setPromptCopied(false);
+    } catch (err) {
+      console.error('Error generating prompt:', err);
+      toast.error('ไม่สามารถสร้าง Prompt ได้');
+    } finally {
+      setLoadingPrompt(false);
+    }
+  };
+
+  const handleCopyPrompt = () => {
+    if (generatedPrompt) {
+      // Fallback for environments without clipboard API
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = generatedPrompt;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setPromptCopied(true);
+        toast.success('คัดลอก Prompt แล้ว! นำไปวางใน ChatGPT / Claude / Gemini ได้เลย');
+      } catch (err) {
+        // If even execCommand fails, try modern API
+        navigator.clipboard?.writeText(generatedPrompt).then(() => {
+          setPromptCopied(true);
+          toast.success('คัดลอก Prompt แล้ว!');
+        }).catch(() => {
+          toast.error('ไม่สามารถคัดลอกได้ กรุณาเลือกข้อความแล้ว Ctrl+C เอง');
+        });
+      }
+      setTimeout(() => setPromptCopied(false), 3000);
     }
   };
 
@@ -779,27 +835,83 @@ const ConjointResultsPage = () => {
               <p className="text-sm sm:text-base text-gray-600 mb-4">
                 ใช้ AI วิเคราะห์และแปลผลข้อมูลให้เข้าใจง่าย พร้อมข้อเสนอแนะเชิงธุรกิจ
               </p>
-              <Button
-                onClick={loadAIInterpretation}
-                disabled={loadingAI}
-                className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm sm:text-base"
-              >
-                {loadingAI ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    กำลังวิเคราะห์...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    {aiAnalysisMode === 'compare_all' ? 'วิเคราะห์และเปรียบเทียบทุกวิธี' : 'วิเคราะห์ด้วย AI'}
-                  </>
-                )}
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button
+                  onClick={loadAIInterpretation}
+                  disabled={loadingAI || loadingPrompt}
+                  className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm sm:text-base"
+                  data-testid="ai-interpret-btn"
+                >
+                  {loadingAI ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      กำลังวิเคราะห์...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      {aiAnalysisMode === 'compare_all' ? 'วิเคราะห์และเปรียบเทียบทุกวิธี' : 'วิเคราะห์ด้วย AI'}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={loadGeneratedPrompt}
+                  disabled={loadingPrompt || loadingAI}
+                  variant="outline"
+                  className="w-full sm:w-auto border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-bold text-sm sm:text-base"
+                  data-testid="generate-prompt-btn"
+                >
+                  {loadingPrompt ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
+                      กำลังสร้าง Prompt...
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      สร้าง Prompt (ใช้กับ AI ภายนอก)
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Generated Prompt Display (fallback or manual) */}
+              {generatedPrompt && !aiInterpretation && (
+                <div className="mt-6 text-left" data-testid="generated-prompt-section">
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lightbulb className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                      <p className="text-sm font-bold text-amber-800">
+                        Prompt พร้อมข้อมูลจริง — คัดลอกไปใช้กับ AI ของคุณ
+                      </p>
+                    </div>
+                    <p className="text-xs text-amber-700 mb-3">
+                      คัดลอก Prompt ด้านล่างไปวางใน ChatGPT, Claude, Gemini หรือ AI อื่นๆ เพื่อให้วิเคราะห์ผลให้
+                    </p>
+                    <Button
+                      onClick={handleCopyPrompt}
+                      className={`w-full sm:w-auto font-bold text-sm ${
+                        promptCopied
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-amber-600 hover:bg-amber-700 text-white'
+                      }`}
+                      data-testid="copy-prompt-btn"
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      {promptCopied ? 'คัดลอกแล้ว!' : 'คัดลอก Prompt'}
+                    </Button>
+                  </div>
+                  <div className="bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
+                      {generatedPrompt}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-lg p-4 sm:p-6 border-2 border-indigo-200">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
                   <Sparkles className="w-4 h-4" />
                   {aiInterpretation.summary_data?.mode === 'compare_all' 
@@ -807,30 +919,78 @@ const ConjointResultsPage = () => {
                     : `ผลการวิเคราะห์จาก ${getMethodName(aiInterpretation.summary_data?.method || selectedMethod)}`
                   }
                 </div>
-                <Button
-                  onClick={loadAIInterpretation}
-                  disabled={loadingAI}
-                  variant="outline"
-                  size="sm"
-                  className="border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                >
-                  {loadingAI ? (
-                    <>
-                      <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
-                      กำลังวิเคราะห์...
-                    </>
-                  ) : (
-                    <>
-                      🔄 วิเคราะห์ใหม่
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={async () => {
+                      await loadGeneratedPrompt();
+                    }}
+                    disabled={loadingPrompt}
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                    data-testid="copy-prompt-after-ai-btn"
+                  >
+                    <Copy className="w-3 h-3 mr-1" />
+                    {loadingPrompt ? 'กำลังสร้าง...' : 'สร้าง Prompt'}
+                  </Button>
+                  <Button
+                    onClick={loadAIInterpretation}
+                    disabled={loadingAI}
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  >
+                    {loadingAI ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
+                        กำลังวิเคราะห์...
+                      </>
+                    ) : (
+                      <>
+                        วิเคราะห์ใหม่
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
               <div className="prose max-w-none">
                 <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
                   {aiInterpretation.interpretation}
                 </div>
               </div>
+
+              {/* Show prompt section if generated */}
+              {generatedPrompt && (
+                <div className="mt-4 border-t-2 border-amber-200 pt-4" data-testid="prompt-after-ai-section">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-bold text-amber-800 flex items-center gap-2">
+                      <Copy className="w-4 h-4" />
+                      Prompt พร้อมข้อมูลจริง
+                    </p>
+                    <Button
+                      onClick={handleCopyPrompt}
+                      size="sm"
+                      className={`font-bold text-xs ${
+                        promptCopied
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-amber-600 hover:bg-amber-700 text-white'
+                      }`}
+                      data-testid="copy-prompt-btn-2"
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      {promptCopied ? 'คัดลอกแล้ว!' : 'คัดลอก Prompt'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-amber-700 mb-2">
+                    คัดลอกไปวางใน ChatGPT, Claude, Gemini หรือ AI ตัวอื่นได้เลย
+                  </p>
+                  <div className="bg-gray-900 rounded-lg p-3 max-h-64 overflow-y-auto">
+                    <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
+                      {generatedPrompt}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Card>
