@@ -9270,124 +9270,123 @@ async def get_study_results(
         "responses": responses
     }
 
+def _build_conjoint_data_rows(study: Dict, responses: List[Dict]):
+    """Shared optimized data preparation for all conjoint analysis methods.
+    Returns (data_rows, attributes, level_value_map) or (None, None, None) if no data.
+    """
+    attributes = study.get("attributes", [])
+
+    # Pre-build lookups once
+    cs_map = {cs["id"]: cs for cs in study.get("choice_sets", [])}
+    # (attr_id, level_id) -> level_value
+    level_value_map = {}
+    for attr in attributes:
+        for level in attr.get("levels", []):
+            level_value_map[(attr["id"], level["id"])] = level["value"]
+
+    data_rows = []
+    for resp_idx, response in enumerate(responses):
+        for choice in response.get("responses", []):
+            cs = cs_map.get(choice.get("choice_set_id"))
+            if not cs:
+                continue
+            selected_pid = choice.get("selected_profile_id")
+            for alt_idx, profile in enumerate(cs.get("profiles", [])):
+                row = {
+                    "respondent": resp_idx,
+                    "choice_set": cs["id"],
+                    "alternative": alt_idx,
+                    "choice": 1 if profile["id"] == selected_pid else 0,
+                }
+                for attr in attributes:
+                    attr_id = attr["id"]
+                    lvl_id = profile.get("attribute_levels", {}).get(attr_id)
+                    val = level_value_map.get((attr_id, lvl_id))
+                    if val is not None:
+                        row[attr["name"]] = val
+                data_rows.append(row)
+
+    if not data_rows:
+        return None, None, None
+    return data_rows, attributes, level_value_map
+
+
+def _calc_importance_from_part_worths(part_worths: Dict) -> Dict:
+    """Shared importance score calculation from part_worths dict."""
+    ranges = {}
+    total_range = 0
+    for attr_id, pw_data in part_worths.items():
+        utilities = [level["utility"] for level in pw_data["levels"].values()]
+        if utilities:
+            r = max(utilities) - min(utilities)
+            ranges[attr_id] = r
+            total_range += r
+    importance_scores = {}
+    if total_range > 0:
+        for attr_id, r in ranges.items():
+            importance_scores[attr_id] = {
+                "name": part_worths[attr_id]["name"],
+                "importance": round((r / total_range) * 100, 2),
+            }
+    return importance_scores
+
+
 def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
-    """Perform Multinomial Logit (MNL) analysis using Conditional Logit"""
+    """Perform Multinomial Logit (MNL) analysis using Conditional Logit (optimized)"""
     import pandas as pd
     import numpy as np
     from statsmodels.discrete.conditional_models import ConditionalLogit
-    
-    # Prepare data in long format for Conditional Logit
-    data_rows = []
-    attributes = study.get("attributes", [])
-    
-    for resp_idx, response in enumerate(responses):
-        for choice in response.get("responses", []):
-            choice_set_id = choice.get("choice_set_id")
-            selected_profile_id = choice.get("selected_profile_id")
-            
-            # Find choice set
-            for choice_set in study.get("choice_sets", []):
-                if choice_set["id"] == choice_set_id:
-                    for alt_idx, profile in enumerate(choice_set.get("profiles", [])):
-                        row = {
-                            "respondent": resp_idx,
-                            "choice_set": choice_set_id,
-                            "alternative": alt_idx,
-                            "choice": 1 if profile["id"] == selected_profile_id else 0
-                        }
-                        
-                        # Add attribute levels as features
-                        for attr in attributes:
-                            attr_id = attr["id"]
-                            level_id = profile["attribute_levels"].get(attr_id)
-                            level_obj = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
-                            if level_obj:
-                                row[f"{attr['name']}"] = level_obj["value"]
-                        
-                        data_rows.append(row)
-    
-    if not data_rows:
+
+    data_rows, attributes, level_value_map = _build_conjoint_data_rows(study, responses)
+    if data_rows is None:
         return None
-    
+
     df = pd.DataFrame(data_rows)
-    
-    # Create dummy variables for all categorical attributes
-    feature_cols = [col for col in df.columns if col not in ["respondent", "choice_set", "alternative", "choice"]]
+
+    feature_cols = [col for col in df.columns if col not in ("respondent", "choice_set", "alternative", "choice")]
     X = pd.get_dummies(df[feature_cols], drop_first=True)
     y = df["choice"]
-    groups = df["respondent"].astype(str) + "_" + df["choice_set"].astype(str)
-    
-    # Fit Conditional Logit model
+    # Use integer group codes instead of string concatenation for speed
+    groups = df["respondent"] * 1000000 + pd.factorize(df["choice_set"])[0]
+
     try:
         model = ConditionalLogit(y, X, groups=groups)
-        result = model.fit(disp=False, maxiter=1000, method='bfgs')
-        
-        # Calculate utilities/part-worths by attribute in the format expected by frontend
+        result = model.fit(disp=False, maxiter=500, method='lbfgs')
+
+        # Pre-count level selections in one pass
+        selected_rows = df[df["choice"] == 1]
+        level_counts_all = {}
+        for attr in attributes:
+            name = attr["name"]
+            if name in selected_rows.columns:
+                level_counts_all[name] = selected_rows[name].value_counts().to_dict()
+
         part_worths = {}
-        
         for attr in attributes:
             attr_id = attr["id"]
             attr_name = attr["name"]
-            
-            # Initialize levels dict for this attribute
             levels_dict = {}
-            
-            # Count selections for each level
-            level_counts = {}
-            for row in data_rows:
-                if row["choice"] == 1:
-                    level_value = row.get(attr_name)
-                    if level_value:
-                        level_counts[level_value] = level_counts.get(level_value, 0) + 1
-            
-            # Process each level
+            counts_for_attr = level_counts_all.get(attr_name, {})
+
             for level in attr.get("levels", []):
                 level_value = level["value"]
-                level_id = level["id"]
-                
-                # Get utility from coefficients (0 for reference level)
                 col_name = f"{attr_name}_{level_value}"
                 utility = float(result.params.get(col_name, 0.0))
-                
-                levels_dict[level_id] = {
+                levels_dict[level["id"]] = {
                     "value": level_value,
                     "utility": utility,
-                    "selection_count": level_counts.get(level_value, 0)
+                    "selection_count": int(counts_for_attr.get(level_value, 0)),
                 }
-            
-            part_worths[attr_id] = {
-                "name": attr_name,
-                "levels": levels_dict
-            }
-        
-        # Calculate importance scores (range of utilities for each attribute)
-        importance_scores = {}
-        total_range = 0
-        ranges = {}
-        
-        for attr_id, pw_data in part_worths.items():
-            utilities = [level["utility"] for level in pw_data["levels"].values()]
-            if utilities:
-                attr_range = max(utilities) - min(utilities)
-                ranges[attr_id] = attr_range
-                total_range += attr_range
-        
-        if total_range > 0:
-            for attr_id, attr_range in ranges.items():
-                importance_scores[attr_id] = {
-                    "name": part_worths[attr_id]["name"],
-                    "importance": round((attr_range / total_range) * 100, 2)
-                }
-        
-        # Calculate McFadden's pseudo R-squared manually
+            part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
+
+        importance_scores = _calc_importance_from_part_worths(part_worths)
+
         llf = result.llf
-        llnull = result.llnull if hasattr(result, 'llnull') else None
+        llnull = result.llnull if hasattr(result, "llnull") else None
         pseudo_r2 = 1 - (llf / llnull) if llnull else 0.0
-        
-        # Calculate AIC manually: AIC = -2*llf + 2*k (where k is number of parameters)
         k = len(result.params)
         aic = -2 * llf + 2 * k
-        
+
         return {
             "method": "Multinomial Logit (MNL)",
             "part_worths": part_worths,
@@ -9396,12 +9395,12 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "std_errors": {name: float(se) for name, se in result.bse.items()},
             "z_values": {name: float(z) for name, z in result.tvalues.items()},
             "p_values": {name: float(p) for name, p in result.pvalues.items()},
-            "log_likelihood": float(result.llf),
+            "log_likelihood": float(llf),
             "pseudo_r_squared": float(pseudo_r2),
             "aic": float(aic),
             "n_observations": int(len(y)),
             "utility_scale": "logit",
-            "utility_interpretation": "Logit coefficients (reference level = 0). Positive = preferred, Negative = less preferred"
+            "utility_interpretation": "Logit coefficients (reference level = 0). Positive = preferred, Negative = less preferred",
         }
     except Exception as e:
         logging.error(f"MNL analysis error: {e}")
@@ -9410,315 +9409,194 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         return None
 
 def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
-    """Perform Mixed Logit (Random Parameters) analysis"""
-    # Simplified version - full implementation would use pylogit
+    """Perform Mixed Logit (Random Parameters) analysis (optimized)"""
     import pandas as pd
     import numpy as np
-    
+
     try:
-        # Prepare basic data structure
-        data_rows = []
-        attributes = study.get("attributes", [])
-        
-        for resp_idx, response in enumerate(responses):
-            for choice in response.get("responses", []):
-                choice_set_id = choice.get("choice_set_id")
-                selected_profile_id = choice.get("selected_profile_id")
-                
-                for choice_set in study.get("choice_sets", []):
-                    if choice_set["id"] == choice_set_id:
-                        for profile in choice_set.get("profiles", []):
-                            row = {
-                                "respondent": resp_idx,
-                                "choice": 1 if profile["id"] == selected_profile_id else 0
-                            }
-                            
-                            for attr in attributes:
-                                attr_id = attr["id"]
-                                level_id = profile["attribute_levels"].get(attr_id)
-                                level_obj = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
-                                if level_obj:
-                                    row[attr['name']] = level_obj["value"]
-                            
-                            data_rows.append(row)
-        
+        data_rows, attributes, _ = _build_conjoint_data_rows(study, responses)
+        if data_rows is None:
+            return None
+
         df = pd.DataFrame(data_rows)
-        
-        # Simplified: Use standard deviation of coefficients as proxy for heterogeneity
-        feature_cols = [col for col in df.columns if col not in ["respondent", "choice"]]
-        X = pd.get_dummies(df[feature_cols], drop_first=True)
-        
-        # Calculate per-respondent coefficients
+        feature_cols = [col for col in df.columns if col not in ("respondent", "choice_set", "alternative", "choice")]
+
+        # Vectorized per-respondent coefficients using groupby
+        X_full = pd.get_dummies(df[feature_cols], drop_first=True)
+        X_full["choice"] = df["choice"].values
+        X_full["respondent"] = df["respondent"].values
+
+        dummy_cols = [c for c in X_full.columns if c not in ("choice", "respondent")]
+
+        # Batch correlation per respondent using groupby
         respondent_coefs = []
-        for resp_id in df["respondent"].unique():
-            resp_data = df[df["respondent"] == resp_id]
-            if len(resp_data) > 5:  # Need enough data
-                resp_X = pd.get_dummies(resp_data[feature_cols], drop_first=True)
-                resp_y = resp_data["choice"]
-                
-                # Simple correlation as proxy
-                coefs = {}
-                for col in resp_X.columns:
-                    if resp_X[col].var() > 0:
-                        coefs[col] = np.corrcoef(resp_X[col], resp_y)[0, 1]
+        for resp_id, group in X_full.groupby("respondent"):
+            if len(group) <= 5:
+                continue
+            coefs = {}
+            y_vals = group["choice"].values
+            if y_vals.std() == 0:
+                continue
+            for col in dummy_cols:
+                x_vals = group[col].values
+                if x_vals.std() > 0:
+                    coefs[col] = float(np.corrcoef(x_vals, y_vals)[0, 1])
+            if coefs:
                 respondent_coefs.append(coefs)
-        
-        # Calculate mean and std of coefficients
+
         mean_coefs = {}
         std_coefs = {}
-        
         if respondent_coefs:
             all_vars = set()
-            for coef_dict in respondent_coefs:
-                all_vars.update(coef_dict.keys())
-            
+            for cd in respondent_coefs:
+                all_vars.update(cd.keys())
             for var in all_vars:
                 values = [c.get(var, 0) for c in respondent_coefs]
                 mean_coefs[var] = float(np.nanmean(values))
                 std_coefs[var] = float(np.nanstd(values))
-        
-        # Create part_worths format for frontend
+
         part_worths = {}
         for attr in attributes:
             attr_id = attr["id"]
             attr_name = attr["name"]
-            
             levels_dict = {}
             for level in attr.get("levels", []):
-                level_value = level["value"]
-                level_id = level["id"]
-                
-                # Get mean coefficient for this level
-                col_name = f"{attr_name}_{level_value}"
-                utility = mean_coefs.get(col_name, 0.0)
-                
-                levels_dict[level_id] = {
-                    "value": level_value,
-                    "utility": utility,
-                    "selection_count": 0  # Not applicable for Mixed Logit
+                col_name = f"{attr_name}_{level['value']}"
+                levels_dict[level["id"]] = {
+                    "value": level["value"],
+                    "utility": mean_coefs.get(col_name, 0.0),
+                    "selection_count": 0,
                 }
-            
-            part_worths[attr_id] = {
-                "name": attr_name,
-                "levels": levels_dict
-            }
-        
-        # Calculate importance scores
-        importance_scores = {}
-        total_range = 0
-        ranges = {}
-        
-        for attr_id, pw_data in part_worths.items():
-            utilities = [level["utility"] for level in pw_data["levels"].values()]
-            if utilities:
-                attr_range = max(utilities) - min(utilities)
-                ranges[attr_id] = attr_range
-                total_range += attr_range
-        
-        if total_range > 0:
-            for attr_id, attr_range in ranges.items():
-                importance_scores[attr_id] = {
-                    "name": part_worths[attr_id]["name"],
-                    "importance": round((attr_range / total_range) * 100, 2)
-                }
-        
+            part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
+
+        importance_scores = _calc_importance_from_part_worths(part_worths)
+
         return {
             "method": "Mixed Logit (Simplified)",
             "part_worths": part_worths,
             "importance_scores": importance_scores,
             "mean_coefficients": mean_coefs,
             "std_coefficients": std_coefs,
-            "n_respondents": len(df["respondent"].unique()),
+            "n_respondents": int(df["respondent"].nunique()),
             "n_observations": len(df),
             "utility_scale": "correlation",
-            "utility_interpretation": "Correlation coefficients showing heterogeneity across respondents (mean ± std)",
-            "note": "Simplified implementation - shows preference heterogeneity across respondents"
+            "utility_interpretation": "Correlation coefficients showing heterogeneity across respondents (mean +/- std)",
+            "note": "Simplified implementation - shows preference heterogeneity across respondents",
         }
     except Exception as e:
         logging.error(f"Mixed logit error: {e}")
         return None
 
 def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) -> Dict:
-    """Perform Hierarchical Bayes analysis (simplified)"""
+    """Perform Hierarchical Bayes analysis (simplified, optimized)"""
     import numpy as np
     import pandas as pd
-    
+
     try:
-        # Simplified HB: Use empirical Bayes approach
-        data_rows = []
-        attributes = study.get("attributes", [])
-        
-        for resp_idx, response in enumerate(responses):
-            for choice in response.get("responses", []):
-                choice_set_id = choice.get("choice_set_id")
-                selected_profile_id = choice.get("selected_profile_id")
-                
-                for choice_set in study.get("choice_sets", []):
-                    if choice_set["id"] == choice_set_id:
-                        for profile in choice_set.get("profiles", []):
-                            row = {
-                                "respondent": resp_idx,
-                                "choice": 1 if profile["id"] == selected_profile_id else 0
-                            }
-                            
-                            for attr in attributes:
-                                attr_id = attr["id"]
-                                level_id = profile["attribute_levels"].get(attr_id)
-                                level_obj = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
-                                if level_obj:
-                                    row[attr['name']] = level_obj["value"]
-                            
-                            data_rows.append(row)
-        
+        data_rows, attributes, _ = _build_conjoint_data_rows(study, responses)
+        if data_rows is None:
+            return None
+
         df = pd.DataFrame(data_rows)
-        feature_cols = [col for col in df.columns if col not in ["respondent", "choice"]]
-        
-        # Calculate individual-level estimates (empirical Bayes)
-        individual_utilities = {}
-        
-        for resp_id in df["respondent"].unique():
-            resp_data = df[df["respondent"] == resp_id]
-            utilities = {}
-            
+        feature_cols = [col for col in df.columns if col not in ("respondent", "choice_set", "alternative", "choice")]
+
+        # Vectorized individual-level estimates using groupby
+        all_utilities = {}  # col_key -> list of per-respondent means
+
+        for resp_id, group in df.groupby("respondent"):
             for attr in attributes:
                 attr_name = attr["name"]
-                if attr_name in resp_data.columns:
-                    for level in attr.get("levels", []):
-                        level_data = resp_data[resp_data[attr_name] == level["value"]]
-                        if len(level_data) > 0:
-                            utility = level_data["choice"].mean()
-                            utilities[f"{attr_name}_{level['value']}"] = utility
-            
-            individual_utilities[f"respondent_{resp_id}"] = utilities
-        
-        # Calculate population-level parameters
-        all_utilities = {}
-        for utilities in individual_utilities.values():
-            for key, value in utilities.items():
-                if key not in all_utilities:
-                    all_utilities[key] = []
-                all_utilities[key].append(value)
-        
+                if attr_name not in group.columns:
+                    continue
+                for level in attr.get("levels", []):
+                    level_data = group[group[attr_name] == level["value"]]
+                    if len(level_data) > 0:
+                        key = f"{attr_name}_{level['value']}"
+                        utility = float(level_data["choice"].mean())
+                        if key not in all_utilities:
+                            all_utilities[key] = []
+                        all_utilities[key].append(utility)
+
         population_mean = {k: float(np.mean(v)) for k, v in all_utilities.items()}
         population_std = {k: float(np.std(v)) for k, v in all_utilities.items()}
-        
-        # Create part_worths format for frontend
+
         part_worths = {}
         for attr in attributes:
             attr_id = attr["id"]
             attr_name = attr["name"]
-            
             levels_dict = {}
             for level in attr.get("levels", []):
-                level_value = level["value"]
-                level_id = level["id"]
-                
-                # Get population mean for this level
-                col_name = f"{attr_name}_{level_value}"
-                utility = population_mean.get(col_name, 0.0)
-                
-                levels_dict[level_id] = {
-                    "value": level_value,
-                    "utility": utility,
-                    "selection_count": 0  # Not applicable for HB
+                col_name = f"{attr_name}_{level['value']}"
+                levels_dict[level["id"]] = {
+                    "value": level["value"],
+                    "utility": population_mean.get(col_name, 0.0),
+                    "selection_count": 0,
                 }
-            
-            part_worths[attr_id] = {
-                "name": attr_name,
-                "levels": levels_dict
-            }
-        
-        # Calculate importance scores
-        importance_scores = {}
-        total_range = 0
-        ranges = {}
-        
-        for attr_id, pw_data in part_worths.items():
-            utilities = [level["utility"] for level in pw_data["levels"].values()]
-            if utilities:
-                attr_range = max(utilities) - min(utilities)
-                ranges[attr_id] = attr_range
-                total_range += attr_range
-        
-        if total_range > 0:
-            for attr_id, attr_range in ranges.items():
-                importance_scores[attr_id] = {
-                    "name": part_worths[attr_id]["name"],
-                    "importance": round((attr_range / total_range) * 100, 2)
-                }
-        
+            part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
+
+        importance_scores = _calc_importance_from_part_worths(part_worths)
+
         return {
             "method": "Hierarchical Bayes (Simplified)",
             "part_worths": part_worths,
             "importance_scores": importance_scores,
             "population_mean": population_mean,
             "population_std": population_std,
-            "n_respondents": len(individual_utilities),
+            "n_respondents": int(df["respondent"].nunique()),
             "n_observations": len(df),
             "utility_scale": "proportion",
-            "utility_interpretation": "Individual-level choice proportions aggregated at population level (mean ± std)",
-            "note": "Simplified empirical Bayes approach - full HB requires MCMC sampling"
+            "utility_interpretation": "Individual-level choice proportions aggregated at population level (mean +/- std)",
+            "note": "Simplified empirical Bayes approach - full HB requires MCMC sampling",
         }
     except Exception as e:
         logging.error(f"HB analysis error: {e}")
         return None
 
 def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
-    """Perform linear regression analysis on conjoint data"""
+    """Perform linear regression analysis on conjoint data (optimized)"""
     from sklearn.linear_model import LinearRegression
     import numpy as np
-    
-    # Prepare data for regression
-    X = []  # Feature matrix (dummy coded attributes)
-    y = []  # Target (1 if selected, 0 if not)
-    
+
     attributes = study.get("attributes", [])
-    attr_levels_map = {}  # Map attribute_id -> list of level_ids
-    
-    # Build attribute levels map
+    attr_levels_map = {}
     for attr in attributes:
         attr_levels_map[attr["id"]] = [level["id"] for level in attr.get("levels", [])]
-    
-    # Create training data
+
+    # Pre-build choice_set lookup
+    cs_map = {cs["id"]: cs for cs in study.get("choice_sets", [])}
+
+    X = []
+    y = []
     for response in responses:
         for choice in response.get("responses", []):
-            choice_set_id = choice.get("choice_set_id")
-            selected_profile_id = choice.get("selected_profile_id")
-            
-            # Find the choice set
-            for choice_set in study.get("choice_sets", []):
-                if choice_set["id"] == choice_set_id:
-                    for profile in choice_set.get("profiles", []):
-                        # Create dummy variables for this profile
-                        dummy_vars = []
-                        for attr in attributes:
-                            attr_id = attr["id"]
-                            level_ids = attr_levels_map[attr_id]
-                            profile_level = profile["attribute_levels"].get(attr_id)
-                            
-                            # Dummy coding (all zeros except the selected level)
-                            for i, level_id in enumerate(level_ids[:-1]):  # Drop last for reference
-                                dummy_vars.append(1 if profile_level == level_id else 0)
-                        
-                        X.append(dummy_vars)
-                        y.append(1 if profile["id"] == selected_profile_id else 0)
-    
-    if len(X) == 0 or len(y) == 0:
+            cs = cs_map.get(choice.get("choice_set_id"))
+            if not cs:
+                continue
+            selected_pid = choice.get("selected_profile_id")
+            for profile in cs.get("profiles", []):
+                dummy_vars = []
+                for attr in attributes:
+                    attr_id = attr["id"]
+                    level_ids = attr_levels_map[attr_id]
+                    profile_level = profile["attribute_levels"].get(attr_id)
+                    for level_id in level_ids[:-1]:
+                        dummy_vars.append(1 if profile_level == level_id else 0)
+                X.append(dummy_vars)
+                y.append(1 if profile["id"] == selected_pid else 0)
+
+    if not X or not y:
         return None
-    
+
     X = np.array(X)
     y = np.array(y)
-    
-    # Fit linear regression
+
     model = LinearRegression()
     model.fit(X, y)
-    
-    # Get coefficients
+
     coefficients = model.coef_
     intercept = model.intercept_
     r_squared = model.score(X, y)
-    
-    # Map coefficients back to levels
+
     regression_results = {
         "method": "Linear Regression (OLS)",
         "intercept": float(intercept),
@@ -9726,122 +9604,92 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
         "n_observations": len(y),
         "coefficients": {},
         "utility_scale": "coefficient",
-        "utility_interpretation": "OLS regression coefficients (reference level = 0). Positive = increases choice probability"
+        "utility_interpretation": "OLS regression coefficients (reference level = 0). Positive = increases choice probability",
     }
-    
+
     coef_idx = 0
     for attr in attributes:
         attr_id = attr["id"]
         levels = attr.get("levels", [])
-        
-        regression_results["coefficients"][attr_id] = {
-            "name": attr["name"],
-            "levels": {}
-        }
-        
-        # Add coefficients for each level (except reference)
-        for i, level in enumerate(levels[:-1]):
+        regression_results["coefficients"][attr_id] = {"name": attr["name"], "levels": {}}
+        for level in levels[:-1]:
             regression_results["coefficients"][attr_id]["levels"][level["id"]] = {
                 "value": level["value"],
                 "coefficient": float(coefficients[coef_idx]),
-                "is_reference": False
+                "is_reference": False,
             }
             coef_idx += 1
-        
-        # Last level is reference (coefficient = 0)
         if levels:
             last_level = levels[-1]
             regression_results["coefficients"][attr_id]["levels"][last_level["id"]] = {
                 "value": last_level["value"],
                 "coefficient": 0.0,
-                "is_reference": True
+                "is_reference": True,
             }
-    
-    # Also create part_worths format for consistency with other methods
+
+    # Build part_worths + count selections once
+    total_selected = int(y.sum())
     part_worths = {}
     for attr_id, attr_data in regression_results["coefficients"].items():
-        part_worths[attr_id] = {
-            "name": attr_data["name"],
-            "levels": {}
-        }
+        part_worths[attr_id] = {"name": attr_data["name"], "levels": {}}
+        n_levels = len(attr_data["levels"])
         for level_id, level_data in attr_data["levels"].items():
-            # Count selections for this level
-            selection_count = 0
-            for i, x_row in enumerate(X):
-                if y[i] == 1:
-                    # Check if this level was in the selected profile
-                    # This is approximate since we don't track exact level assignments
-                    selection_count += 1
-            
             part_worths[attr_id]["levels"][level_id] = {
                 "value": level_data["value"],
                 "utility": level_data["coefficient"],
-                "selection_count": selection_count // len(part_worths)  # Rough estimate
+                "selection_count": total_selected // max(n_levels, 1),
             }
-    
-    # Calculate importance scores (range of coefficients for each attribute)
-    importance_scores = {}
-    total_range = 0
-    ranges = {}
-    
-    for attr_id, pw_data in part_worths.items():
-        utilities = [level["utility"] for level in pw_data["levels"].values()]
-        if utilities:
-            attr_range = max(utilities) - min(utilities)
-            ranges[attr_id] = attr_range
-            total_range += attr_range
-    
-    if total_range > 0:
-        for attr_id, attr_range in ranges.items():
-            importance_scores[attr_id] = {
-                "name": part_worths[attr_id]["name"],
-                "importance": round((attr_range / total_range) * 100, 2)
-            }
-    
+
+    importance_scores = _calc_importance_from_part_worths(part_worths)
+
     regression_results["part_worths"] = part_worths
     regression_results["importance_scores"] = importance_scores
-    
+
     return regression_results
 
 def calculate_part_worths(study: Dict, responses: List[Dict]) -> Dict[str, Dict[str, float]]:
-    """Calculate part-worth utilities for each attribute level"""
-    # Simplified aggregation method - count preferences
+    """Calculate part-worth utilities for each attribute level (optimized)"""
+    # Pre-build lookup: choice_set_id -> {profile_id -> profile}
+    cs_profile_map = {}
+    for cs in study.get("choice_sets", []):
+        profile_map = {p["id"]: p for p in cs.get("profiles", [])}
+        cs_profile_map[cs["id"]] = profile_map
+
+    # Count selections per (attr_id, level_id) in ONE pass
+    selection_counts = {}  # (attr_id, level_id) -> count
+    for response in responses:
+        for choice in response.get("responses", []):
+            cs_id = choice.get("choice_set_id")
+            sel_pid = choice.get("selected_profile_id")
+            profile_map = cs_profile_map.get(cs_id)
+            if not profile_map:
+                continue
+            profile = profile_map.get(sel_pid)
+            if not profile:
+                continue
+            for attr_id, level_id in profile.get("attribute_levels", {}).items():
+                key = (attr_id, level_id)
+                selection_counts[key] = selection_counts.get(key, 0) + 1
+
+    total_choices = sum(len(r.get("responses", [])) for r in responses)
+    if total_choices == 0:
+        total_choices = 1
+
     part_worths = {}
-    
     for attr in study.get("attributes", []):
         attr_id = attr["id"]
-        part_worths[attr_id] = {
-            "name": attr["name"],
-            "levels": {}
-        }
-        
+        levels_dict = {}
         for level in attr.get("levels", []):
             level_id = level["id"]
-            selection_count = 0
-            
-            # Count how many times this level was in the selected profile
-            for response in responses:
-                for choice in response.get("responses", []):
-                    selected_profile_id = choice.get("selected_profile_id")
-                    
-                    # Find the selected profile in choice sets
-                    for choice_set in study.get("choice_sets", []):
-                        if choice_set["id"] == choice.get("choice_set_id"):
-                            for profile in choice_set.get("profiles", []):
-                                if profile["id"] == selected_profile_id:
-                                    if profile["attribute_levels"].get(attr_id) == level_id:
-                                        selection_count += 1
-            
-            # Normalize to utility score
-            total_choices = len(responses) * len(study.get("choice_sets", []))
-            utility = (selection_count / total_choices) * 100 if total_choices > 0 else 0
-            
-            part_worths[attr_id]["levels"][level_id] = {
+            count = selection_counts.get((attr_id, level_id), 0)
+            utility = (count / total_choices) * 100
+            levels_dict[level_id] = {
                 "value": level["value"],
                 "utility": round(utility, 2),
-                "selection_count": selection_count
+                "selection_count": count
             }
-    
+        part_worths[attr_id] = {"name": attr["name"], "levels": levels_dict}
+
     return part_worths
 
 def calculate_importance_scores(part_worths: Dict, study: Dict) -> Dict[str, float]:
@@ -9873,6 +9721,9 @@ async def get_statistical_analysis(
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Get statistical analysis results with selected method (public if is_public_result is True)"""
+    import asyncio
+    import concurrent.futures
+
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
@@ -9898,18 +9749,35 @@ async def get_statistical_analysis(
             "respondent_count": len(responses)
         }
     
-    # Calculate based on method
-    results = None
-    if method == "mnl":
-        results = calculate_mnl_analysis(study, responses)
-    elif method == "mixed_logit":
-        results = calculate_mixed_logit_analysis(study, responses)
-    elif method == "hierarchical_bayes":
-        results = calculate_hierarchical_bayes_analysis(study, responses)
-    elif method == "linear_regression":
-        results = calculate_regression_analysis(study, responses)
-    else:
+    # Run CPU-heavy analysis in a thread pool with timeout
+    method_map = {
+        "mnl": calculate_mnl_analysis,
+        "mixed_logit": calculate_mixed_logit_analysis,
+        "hierarchical_bayes": calculate_hierarchical_bayes_analysis,
+        "linear_regression": calculate_regression_analysis,
+    }
+    
+    if method not in method_map:
         raise HTTPException(status_code=400, detail="Invalid method")
+    
+    analysis_fn = method_map[method]
+    loop = asyncio.get_event_loop()
+    
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            results = await asyncio.wait_for(
+                loop.run_in_executor(pool, analysis_fn, study, responses),
+                timeout=120  # 120 second timeout
+            )
+    except asyncio.TimeoutError:
+        logging.error(f"Statistical analysis timed out: method={method}, responses={len(responses)}")
+        raise HTTPException(
+            status_code=504,
+            detail=f"Analysis timed out with {len(responses)} responses. Try reducing the dataset or using a simpler method (e.g., counting or linear_regression)."
+        )
+    except Exception as e:
+        logging.error(f"Statistical analysis error: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
     
     if not results:
         raise HTTPException(status_code=500, detail=f"Failed to perform {method} analysis")
