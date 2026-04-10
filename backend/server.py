@@ -7895,10 +7895,21 @@ async def generate_conjoint_design(
 @api_router.get("/conjoint/studies/{study_id}")
 async def get_conjoint_study(
     study_id: str,
+    view: Optional[str] = None,  # "summary" = lightweight (no choice_sets), default = full
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Get conjoint study details (public if is_public_result is True)"""
-    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    # Use projection for summary view (results page) — skip heavy choice_sets
+    if view == "summary":
+        projection = {
+            "_id": 0,
+            "choice_sets": 0,  # This is the 7MB field
+            "status_history": 0,
+        }
+    else:
+        projection = {"_id": 0}
+
+    study = await db.conjoint_studies.find_one({"id": study_id}, projection)
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
@@ -9344,9 +9355,28 @@ async def get_study_results(
         "respondent_count": len(responses),
         "status": "complete",
         "part_worths": part_worths,
-        "importance_scores": importance_scores,
-        "responses": responses
+        "importance_scores": importance_scores
     }
+
+
+@api_router.get("/conjoint/studies/{study_id}/export-responses")
+async def export_conjoint_responses(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Export raw responses for CSV download (on-demand, not loaded with results)."""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    responses = await db.conjoint_responses.find(
+        {"study_id": study_id},
+        {"_id": 0}
+    ).to_list(10000)
+
+    return {"responses": responses}
 
 def _build_conjoint_data_rows(study: Dict, responses: List[Dict]):
     """Shared optimized data preparation for all conjoint analysis methods.

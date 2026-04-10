@@ -119,7 +119,7 @@ const ConjointResultsPage = () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
       const [studyRes, resultsRes] = await Promise.all([
-        axios.get(`${API}/conjoint/studies/${studyId}`, { headers }),
+        axios.get(`${API}/conjoint/studies/${studyId}?view=summary`, { headers }),
         axios.get(`${API}/conjoint/studies/${studyId}/results`, { headers })
       ]);
       
@@ -466,19 +466,28 @@ const ConjointResultsPage = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    if (!results || !results.responses) return;
-    
-    const headers = ['Respondent ID', 'Email', 'Submitted At', 'Choices'];
-    const rows = results.responses.map(resp => [
-      resp.respondent_id,
-      resp.respondent_email || 'N/A',
-      new Date(resp.submitted_at).toLocaleString('th-TH'),
-      JSON.stringify(resp.responses)
-    ]);
+  const handleExportCSV = async () => {
+    try {
+      toast.info('กำลังดาวน์โหลดข้อมูล...');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/conjoint/studies/${studyId}/export-responses`, { headers });
+      const responses = res.data?.responses || [];
+      
+      if (!responses.length) {
+        toast.error('ไม่มีข้อมูลสำหรับ export');
+        return;
+      }
+      
+      const csvHeaders = ['Respondent ID', 'Email', 'Submitted At', 'Choices'];
+      const rows = responses.map(resp => [
+        resp.respondent_id,
+        resp.respondent_email || 'N/A',
+        new Date(resp.submitted_at).toLocaleString('th-TH'),
+        JSON.stringify(resp.responses)
+      ]);
     
     const csvContent = [
-      headers.join(','),
+      csvHeaders.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
     
@@ -489,6 +498,10 @@ const ConjointResultsPage = () => {
     link.click();
     
     toast.success('ดาวน์โหลด CSV สำเร็จ');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('ไม่สามารถ export ได้');
+    }
   };
 
   const handleDeleteStudy = async () => {

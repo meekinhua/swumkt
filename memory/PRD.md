@@ -5,25 +5,28 @@
 
 ## What's Been Implemented
 
+### Conjoint Results Page Optimization (Apr 10, 2026)
+- Study detail: ?view=summary skips choice_sets (7.2MB→33KB, 212x smaller)
+- Results: removed raw responses from payload (200KB→2.8KB)
+- Added /export-responses endpoint for CSV export on-demand
+- Total page load: 7.4MB→36KB (205x reduction)
+
 ### Performance & Scalability Fix (Apr 10, 2026)
 - Async bcrypt (login/register no longer blocks event loop)
 - JWT-first auth check + in-memory user cache (TTL 5min)
-- Conjoint studies list projection: 20MB → 1.3KB
+- Conjoint studies list projection: 20MB→1.3KB
 - GZip middleware for all responses >500 bytes
-- MongoDB connection pool already configured (50 max, 10 min)
-- Tested: 20 concurrent logins OK, 20 concurrent API calls OK
+- Tested: 20 concurrent logins OK
 
 ### Service Worker Cache Fix (Apr 10, 2026)
 - Network-only for API, network-first for HTML, stale-while-revalidate for assets
-- Auto-reload on SW update
 
 ### Generate Prompt Fallback (Apr 10, 2026)
 - POST /api/conjoint/studies/{id}/generate-prompt
-- Auto-generates on AI failure + always-available button
 
 ### Conjoint Statistical UI + Performance (Apr 10, 2026)
 - Method-specific stats display (MNL/Mixed Logit/HB/OLS)
-- O(n³) nested loop fix → 12x faster, handles 620+ responses
+- O(n³) nested loop fix → 12x faster
 
 ### Kanban Board (Previous Sessions)
 - Sub-Kanban, Cover Image, RBAC, Assign Card, Responsive Design
