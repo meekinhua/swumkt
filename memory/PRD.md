@@ -3,37 +3,35 @@
 ## Original Problem Statement
 ระบบ SWUMKT Portal สำหรับมหาวิทยาลัย ศรีนครินทรวิโรฒ (SWU) ประกอบด้วยเครื่องมือวิจัยตลาด, Course Management, Conjoint Analysis และ Project Management
 
-## What's Been Implemented
+## What's Been Implemented (Apr 10, 2026)
 
-### Analysis Caching System (Apr 10, 2026)
-- Statistical analysis results cached in MongoDB (analysis_cache collection)
-- AI interpretation results cached separately
-- Auto-invalidate on new response submission
-- Switching between methods is instant from cache (1.76s→0.12s)
-- AI timeout set to 45s with proper error message
+### AI switched to Gemini
+- Changed from openai/gpt-4o-mini (502 errors) to gemini/gemini-2.5-flash
+- AI interpretation works: 13K chars Thai response, cached after first call
 
-### Results Page Optimization (Apr 10, 2026)
-- Study detail: ?view=summary (7.2MB→33KB)
-- Results: no raw responses (200KB→2.8KB)
-- /export-responses endpoint for CSV on-demand
+### Analysis Caching System
+- Statistical + AI results cached in MongoDB (analysis_cache collection)
+- Auto-invalidate on new response, switch methods instantly
+- First MNL: 1.76s → cached: 0.12s | First AI: 45s → cached: 0.12s
 
-### Performance & Scalability (Apr 10, 2026)
+### Performance Optimizations
 - Async bcrypt, JWT-first auth, user cache, GZip
-- Studies list projection: 20MB→1.3KB
+- Studies list: 20MB→1.3KB | Results page: 7.4MB→36KB
+- O(n³) analysis fix: 12x faster
 
-### Service Worker Cache Fix (Apr 10, 2026)
-- Proper caching strategies per request type
+### Service Worker Cache Fix
+- Proper strategies per request type, auto-reload on update
 
-### Conjoint Statistical UI + Performance (Apr 10, 2026)
-- Method-specific stats, O(n³) fix, Prompt fallback
+### Conjoint Features
+- Method-specific stats display, Prompt fallback for AI
 
-### Kanban Board (Previous Sessions)
+### Kanban Board (Previous)
 - Sub-Kanban, Cover Image, RBAC, Assign Card, Responsive
 
 ## Prioritized Backlog
 - P1: File Attachments via Google Drive (Kanban)
-- P2: Verify Auto AI Analysis in "Share as Content"
-- P2: Phase 2 Image Caching endpoint
+- P2: Verify AI "Share as Content" flow
+- P2: Phase 2 Image Caching
 - P3: Board templates, Refactor KanbanBoard.js
 - P4: Academic Format Corrector
 - P5: Customer Behavior Analysis

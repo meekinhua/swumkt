@@ -10850,7 +10850,7 @@ async def get_ai_interpretation(
             api_key=api_key,
             session_id=f"conjoint-interpret-{study_id}",
             system_message=system_message
-        ).with_model("openai", "gpt-4o-mini")
+        ).with_model("gemini", "gemini-2.5-flash")
 
         # Wrap with timeout (45 seconds)
         response = await asyncio.wait_for(
