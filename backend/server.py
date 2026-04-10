@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Header, Body, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Header, Body, Request, Response, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
@@ -10918,6 +10918,520 @@ async def generate_interpretation_prompt(
         "prompt": full_prompt,
         "summary_data": analysis_summary,
     }
+
+
+# ============ THESIS EXPORT (Word .docx) ============
+
+def _summarize_results_for_thesis(all_method_results: dict) -> str:
+    """Summarize method results into compact text for AI prompt (reduce token usage)."""
+    lines = []
+    for method, data in all_method_results.items():
+        if not data:
+            continue
+        lines.append(f"\n=== {method.upper()} ===")
+
+        # Extract importance scores (use names, not UUIDs)
+        imp = data.get('importance_scores', {})
+        if imp:
+            lines.append("Importance Scores:")
+            for attr_id, attr_info in imp.items():
+                if isinstance(attr_info, dict):
+                    name = attr_info.get('name', attr_id)
+                    val = attr_info.get('importance', 0)
+                    lines.append(f"  {name}: {val:.2f}%")
+                elif isinstance(attr_info, (int, float)):
+                    lines.append(f"  {attr_id}: {attr_info:.2f}%")
+
+        # Extract part-worths (use attribute/level names)
+        pw = data.get('part_worths', {})
+        if pw:
+            lines.append("Part-worth Utilities:")
+            for attr_id, attr_data in pw.items():
+                if isinstance(attr_data, dict) and 'name' in attr_data:
+                    attr_name = attr_data['name']
+                    levels = attr_data.get('levels', {})
+                    for lvl_id, lvl_data in levels.items():
+                        if isinstance(lvl_data, dict):
+                            lines.append(f"  {attr_name}/{lvl_data.get('value','?')}: utility={lvl_data.get('utility',0):.2f}")
+                        else:
+                            lines.append(f"  {attr_name}/{lvl_id}: {lvl_data}")
+
+        # MNL-specific stats
+        if method == 'mnl':
+            for key in ['pseudo_r_squared', 'log_likelihood', 'aic', 'n_observations', 'utility_scale']:
+                val = data.get(key)
+                if val is not None:
+                    lines.append(f"{key}: {val}")
+            coeffs = data.get('coefficients', {})
+            std_errs = data.get('std_errors', {})
+            z_vals = data.get('z_values', {})
+            p_vals = data.get('p_values', {})
+            if coeffs:
+                lines.append("Coefficients:")
+                for name in list(coeffs.keys()):
+                    c = coeffs.get(name, '?')
+                    se = std_errs.get(name, '?')
+                    z = z_vals.get(name, '?')
+                    p = p_vals.get(name, '?')
+                    c_f = f"{c:.4f}" if isinstance(c, (int, float)) else str(c)
+                    se_f = f"{se:.4f}" if isinstance(se, (int, float)) else str(se)
+                    z_f = f"{z:.4f}" if isinstance(z, (int, float)) else str(z)
+                    p_f = f"{p:.6f}" if isinstance(p, (int, float)) else str(p)
+                    lines.append(f"  {name}: β={c_f}, SE={se_f}, z={z_f}, p={p_f}")
+
+        # Linear regression-specific
+        if method == 'linear_regression':
+            for key in ['r_squared', 'adj_r_squared', 'intercept', 'f_statistic', 'f_p_value']:
+                val = data.get(key)
+                if val is not None:
+                    lines.append(f"{key}: {val}")
+            coeffs = data.get('coefficients', {})
+            if coeffs:
+                lines.append("Coefficients:")
+                for attr_key, attr_info in list(coeffs.items()):
+                    if isinstance(attr_info, dict) and 'name' in attr_info:
+                        attr_name = attr_info['name']
+                        levels = attr_info.get('levels', {})
+                        for lvl_id, lvl_data in levels.items():
+                            if isinstance(lvl_data, dict):
+                                val = lvl_data.get('coefficient', 0)
+                                ref = " (ref)" if lvl_data.get('is_reference') else ""
+                                v = f"{val:.4f}" if isinstance(val, (int, float)) else str(val)
+                                lines.append(f"  {attr_name}/{lvl_data.get('value','?')}: {v}{ref}")
+                    elif isinstance(attr_info, (int, float)):
+                        lines.append(f"  {attr_key}: {attr_info:.4f}")
+
+        # Mixed logit-specific
+        if method == 'mixed_logit':
+            for key in ['preference_heterogeneity', 'log_likelihood', 'aic']:
+                val = data.get(key)
+                if val is not None:
+                    lines.append(f"{key}: {val}")
+
+        # HB-specific
+        if method == 'hierarchical_bayes':
+            for key in ['convergence', 'n_iterations']:
+                val = data.get(key)
+                if val is not None:
+                    lines.append(f"{key}: {val}")
+
+    return "\n".join(lines)
+
+
+def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict) -> tuple:
+    """Build compact prompt for generating Chapter 4 & 5 thesis content."""
+    system_msg = (
+        "คุณเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ MBA ที่มีความเชี่ยวชาญด้าน Conjoint Analysis "
+        "เขียนเนื้อหาบทที่ 4 และ 5 ของวิทยานิพนธ์อย่างเป็นทางการ ภาษาไทยวิชาการ อ้างอิงค่าสถิติถูกต้อง"
+    )
+
+    summary = _summarize_results_for_thesis(all_method_results)
+
+    prompt = f"""เขียนวิทยานิพนธ์ MBA บทที่ 4 (ผลการศึกษา) และบทที่ 5 (สรุป/อภิปราย) จาก Conjoint Analysis:
+
+ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
+
+ผลวิเคราะห์สรุป:
+{summary}
+
+โครงสร้างที่ต้องเขียน:
+
+## บทที่ 4 ผลการศึกษา
+### 4.1 ข้อมูลทั่วไปของผู้ตอบ (จำนวน วิธีเก็บ)
+### 4.2 Counting Method (Part-worths, Importance Scores, คุณลักษณะสำคัญ)
+### 4.3 MNL (Logit Coefficients, SE, z, p-value, Pseudo R², LL, AIC)
+### 4.4 Linear Regression (R², Coefficients, เปรียบเทียบกับ MNL)
+### 4.5 Mixed Logit (Mean/SD Coefficients, Preference Heterogeneity) - ถ้ามี
+### 4.6 Hierarchical Bayes (Population estimates) - ถ้ามี
+### 4.7 ตารางเปรียบเทียบ Importance Scores ทุกวิธี
+### 4.8 สรุปผล
+
+## บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ
+### 5.1 สรุปผลการวิจัย
+### 5.2 อภิปรายผลเปรียบเทียบทฤษฎี
+### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ)
+### 5.4 ข้อจำกัดการวิจัย
+### 5.5 ข้อเสนอแนะวิจัยอนาคต
+
+ข้อกำหนด: ภาษาไทยวิชาการ, อ้างสถิติเสมอ เช่น (β=0.245, p<0.05), ทุกหัวข้อ 2-3 ย่อหน้า, ใช้ [ตาราง X.X: ชื่อ] แล้วแสดงตาราง Markdown"""
+
+    return system_msg, prompt
+
+
+def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str) -> bytes:
+    """Create a .docx file with thesis formatting from AI content."""
+    from docx import Document
+    from docx.shared import Pt, Inches, Cm, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    import io
+    import re
+
+    doc = Document()
+
+    # Page margins
+    for section in doc.sections:
+        section.top_margin = Cm(2.54)
+        section.bottom_margin = Cm(2.54)
+        section.left_margin = Cm(3.81)
+        section.right_margin = Cm(2.54)
+
+    # Styles
+    style_normal = doc.styles['Normal']
+    style_normal.font.name = 'TH SarabunPSK'
+    style_normal.font.size = Pt(16)
+    style_normal.paragraph_format.line_spacing = 1.5
+    style_normal.paragraph_format.space_after = Pt(6)
+
+    # Parse AI content into sections
+    lines = ai_content.split('\n')
+    current_table_data = []
+    in_table = False
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if in_table and current_table_data:
+                _add_table_to_doc(doc, current_table_data)
+                current_table_data = []
+                in_table = False
+            continue
+
+        # Detect table rows (lines with | separators)
+        if '|' in stripped and stripped.startswith('|'):
+            in_table = True
+            # Skip separator rows like |---|---|
+            if re.match(r'^\|[\s\-:]+\|', stripped):
+                continue
+            cells = [c.strip() for c in stripped.split('|')[1:-1]]
+            if cells:
+                current_table_data.append(cells)
+            continue
+
+        if in_table and current_table_data:
+            _add_table_to_doc(doc, current_table_data)
+            current_table_data = []
+            in_table = False
+
+        # Chapter headings (## บทที่)
+        if stripped.startswith('## บทที่') or stripped.startswith('## '):
+            heading_text = stripped.lstrip('#').strip()
+            p = doc.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = p.add_run(heading_text)
+            run.font.size = Pt(18)
+            run.font.bold = True
+            p.paragraph_format.space_before = Pt(24)
+            p.paragraph_format.space_after = Pt(12)
+
+        # Sub-headings (### 4.1, ### 5.1)
+        elif stripped.startswith('### '):
+            heading_text = stripped.lstrip('#').strip()
+            p = doc.add_paragraph()
+            run = p.add_run(heading_text)
+            run.font.size = Pt(16)
+            run.font.bold = True
+            p.paragraph_format.space_before = Pt(12)
+            p.paragraph_format.space_after = Pt(6)
+
+        # Sub-sub headings (#### )
+        elif stripped.startswith('#### '):
+            heading_text = stripped.lstrip('#').strip()
+            p = doc.add_paragraph()
+            run = p.add_run(heading_text)
+            run.font.size = Pt(16)
+            run.font.bold = True
+            run.font.italic = True
+            p.paragraph_format.space_before = Pt(8)
+
+        # Bold lines (**text**)
+        elif stripped.startswith('**') and stripped.endswith('**'):
+            text = stripped.strip('*').strip()
+            p = doc.add_paragraph()
+            run = p.add_run(text)
+            run.font.bold = True
+            run.font.size = Pt(16)
+
+        # Bullet points
+        elif stripped.startswith('- ') or stripped.startswith('• '):
+            text = stripped[2:].strip()
+            p = doc.add_paragraph(style='List Bullet')
+            _add_formatted_text(p, text)
+
+        # Numbered list
+        elif re.match(r'^\d+\.', stripped):
+            p = doc.add_paragraph(style='List Number')
+            _add_formatted_text(p, stripped)
+
+        # Table label [ตาราง X.X: ...]
+        elif stripped.startswith('[ตาราง'):
+            text = stripped.strip('[]')
+            p = doc.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = p.add_run(text)
+            run.font.bold = True
+            run.font.size = Pt(16)
+
+        # Horizontal rule
+        elif stripped == '---':
+            doc.add_page_break()
+
+        # Regular paragraph
+        else:
+            p = doc.add_paragraph()
+            p.paragraph_format.first_line_indent = Cm(1.27)
+            _add_formatted_text(p, stripped)
+
+    # Flush remaining table
+    if current_table_data:
+        _add_table_to_doc(doc, current_table_data)
+
+    # Save to bytes
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def _add_formatted_text(paragraph, text: str):
+    """Add text with inline formatting (**bold**, *italic*) to a paragraph."""
+    import re
+    parts = re.split(r'(\*\*.*?\*\*|\*.*?\*)', text)
+    for part in parts:
+        if part.startswith('**') and part.endswith('**'):
+            run = paragraph.add_run(part[2:-2])
+            run.font.bold = True
+            run.font.size = Pt(16)
+        elif part.startswith('*') and part.endswith('*'):
+            run = paragraph.add_run(part[1:-1])
+            run.font.italic = True
+            run.font.size = Pt(16)
+        else:
+            run = paragraph.add_run(part)
+            run.font.size = Pt(16)
+
+
+def _add_table_to_doc(doc, table_data):
+    """Add a table to the document from parsed data."""
+    from docx.shared import Pt, Cm, RGBColor
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    if not table_data or len(table_data) < 1:
+        return
+
+    rows = len(table_data)
+    cols = max(len(row) for row in table_data)
+
+    table = doc.add_table(rows=rows, cols=cols)
+    table.style = 'Table Grid'
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    for i, row_data in enumerate(table_data):
+        for j, cell_text in enumerate(row_data):
+            if j < cols:
+                cell = table.cell(i, j)
+                cell.text = ''
+                p = cell.paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = p.add_run(cell_text.strip())
+                run.font.size = Pt(14)
+                if i == 0:
+                    run.font.bold = True
+
+    doc.add_paragraph()  # spacing after table
+
+
+@api_router.post("/conjoint/studies/{study_id}/export-thesis")
+async def export_thesis_start(
+    study_id: str,
+    request: AIInterpretationRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """Start thesis generation as background job. Returns job_id for polling."""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    respondent_count = study.get("respondent_count", 0)
+    cache_key = f"thesis_{request.method}_{'all' if request.compare_all else 'single'}"
+
+    # Check cache — if AI content already exists, return ready immediately
+    cached = await db.analysis_cache.find_one(
+        {"study_id": study_id, "method": cache_key, "respondent_count": respondent_count},
+        {"_id": 0}
+    )
+    if cached and cached.get("results", {}).get("ai_content"):
+        return {"status": "ready", "job_id": cache_key, "cached": True}
+
+    # Check minimum responses
+    resp_count = await db.conjoint_responses.count_documents({"study_id": study_id})
+    if resp_count < 10:
+        raise HTTPException(status_code=400, detail="ต้องมีผู้ตอบอย่างน้อย 10 คน")
+
+    # Create job record
+    job_id = f"thesis_{study_id}_{uuid.uuid4().hex[:8]}"
+    await db.thesis_jobs.update_one(
+        {"job_id": job_id},
+        {"$set": {
+            "job_id": job_id,
+            "study_id": study_id,
+            "cache_key": cache_key,
+            "status": "processing",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+
+    # Run generation in background
+    background_tasks.add_task(
+        _run_thesis_generation,
+        study_id, cache_key, job_id, respondent_count, study.get("title", "")
+    )
+
+    return {"status": "processing", "job_id": job_id}
+
+
+async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str, respondent_count: int, study_title: str):
+    """Background task to generate thesis content via AI and cache it."""
+    import asyncio
+    try:
+        full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+
+        # Use only core methods (counting + mnl + linear_regression) to keep prompt small
+        methods = ["counting", "mnl", "linear_regression"]
+        all_results = {}
+        for m in methods:
+            try:
+                cached_method = await db.analysis_cache.find_one(
+                    {"study_id": study_id, "method": m, "respondent_count": respondent_count},
+                    {"_id": 0}
+                )
+                if cached_method and cached_method.get("results"):
+                    all_results[m] = cached_method["results"]
+                else:
+                    all_results[m] = await get_method_results(full_study, responses, m)
+            except Exception as e:
+                logging.warning(f"Thesis bg - method {m} failed: {e}")
+
+        # Also try mixed_logit/HB if cached (don't compute fresh - too slow)
+        for m in ["mixed_logit", "hierarchical_bayes"]:
+            try:
+                cached_method = await db.analysis_cache.find_one(
+                    {"study_id": study_id, "method": m, "respondent_count": respondent_count},
+                    {"_id": 0}
+                )
+                if cached_method and cached_method.get("results"):
+                    all_results[m] = cached_method["results"]
+            except Exception:
+                pass
+
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            await db.thesis_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {"status": "failed", "error": "AI service not configured"}}
+            )
+            return
+
+        system_msg, prompt = _build_thesis_prompt(study_title, respondent_count, all_results)
+
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"thesis-{study_id}-{job_id}",
+            system_message=system_msg
+        ).with_model("gemini", "gemini-2.5-flash")
+
+        ai_content = await asyncio.wait_for(
+            chat.send_message(UserMessage(text=prompt)),
+            timeout=180
+        )
+
+        # Cache AI content
+        await db.analysis_cache.update_one(
+            {"study_id": study_id, "method": cache_key},
+            {"$set": {
+                "study_id": study_id,
+                "method": cache_key,
+                "respondent_count": respondent_count,
+                "results": {"ai_content": ai_content},
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+
+        await db.thesis_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "ready"}}
+        )
+        logging.info(f"Thesis generation completed for job {job_id}")
+
+    except asyncio.TimeoutError:
+        logging.error(f"Thesis generation timed out for job {job_id}")
+        await db.thesis_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "failed", "error": "AI ใช้เวลานานเกินไป กรุณาลองใหม่"}}
+        )
+    except Exception as e:
+        logging.error(f"Thesis generation failed for job {job_id}: {e}")
+        await db.thesis_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "failed", "error": str(e)}}
+        )
+
+
+@api_router.get("/conjoint/studies/{study_id}/export-thesis-status/{job_id}")
+async def export_thesis_status(
+    study_id: str,
+    job_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Poll thesis generation status."""
+    job = await db.thesis_jobs.find_one({"job_id": job_id}, {"_id": 0})
+    if not job:
+        return {"status": "not_found"}
+    return {"status": job.get("status", "unknown"), "error": job.get("error")}
+
+
+@api_router.get("/conjoint/studies/{study_id}/export-thesis-download")
+async def export_thesis_download(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Download the generated thesis .docx from cached AI content."""
+    from fastapi.responses import Response
+
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    respondent_count = study.get("respondent_count", 0)
+
+    # Find any thesis cache for this study
+    cached = await db.analysis_cache.find_one(
+        {"study_id": study_id, "method": {"$regex": "^thesis_"}, "respondent_count": respondent_count},
+        {"_id": 0}
+    )
+    if not cached or not cached.get("results", {}).get("ai_content"):
+        raise HTTPException(status_code=404, detail="ยังไม่มีเนื้อหาวิทยานิพนธ์ กรุณาสร้างก่อน")
+
+    ai_content = cached["results"]["ai_content"]
+    docx_bytes = _create_thesis_docx(study.get("title", ""), respondent_count, ai_content)
+
+    filename = f"Conjoint_Thesis_Ch4_Ch5_{study_id[:8]}.docx"
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 
 
 # ============ PROJECT MANAGEMENT (KANBAN) ============

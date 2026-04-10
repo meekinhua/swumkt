@@ -98,6 +98,10 @@ const ConjointResultsPage = () => {
   // Delete states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Thesis export states
+  const [loadingThesis, setLoadingThesis] = useState(false);
+  const [thesisProgress, setThesisProgress] = useState(''); // '', 'generating', 'downloading'
 
   useEffect(() => {
     // Load results for both authenticated and public access
@@ -504,6 +508,99 @@ const ConjointResultsPage = () => {
     }
   };
 
+  const handleExportThesis = async () => {
+    if (!token) {
+      toast.error('กรุณาเข้าสู่ระบบก่อน');
+      return;
+    }
+    setLoadingThesis(true);
+    setThesisProgress('generating');
+    const headers = { Authorization: `Bearer ${token}` };
+    
+    try {
+      // Step 1: Start generation
+      const startRes = await axios.post(
+        `${API}/conjoint/studies/${studyId}/export-thesis`,
+        { method: selectedMethod, compare_all: true },
+        { headers }
+      );
+      
+      const { status, job_id } = startRes.data;
+      
+      if (status === 'ready') {
+        // Already cached, download directly
+        setThesisProgress('downloading');
+        await downloadThesisFile(headers);
+        return;
+      }
+      
+      // Step 2: Poll for completion
+      toast.info('AI กำลังสร้างเนื้อหาวิทยานิพนธ์... อาจใช้เวลา 1-2 นาที');
+      let attempts = 0;
+      const maxAttempts = 40; // ~2 minutes at 3s intervals
+      
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        try {
+          const pollRes = await axios.get(
+            `${API}/conjoint/studies/${studyId}/export-thesis-status/${job_id}`,
+            { headers }
+          );
+          
+          if (pollRes.data.status === 'ready') {
+            clearInterval(pollInterval);
+            setThesisProgress('downloading');
+            await downloadThesisFile(headers);
+          } else if (pollRes.data.status === 'failed') {
+            clearInterval(pollInterval);
+            setLoadingThesis(false);
+            setThesisProgress('');
+            toast.error(pollRes.data.error || 'ไม่สามารถสร้างเนื้อหาได้ กรุณาลองใหม่');
+          } else if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            setLoadingThesis(false);
+            setThesisProgress('');
+            toast.error('ใช้เวลานานเกินไป กรุณาลองใหม่');
+          }
+        } catch (pollErr) {
+          console.error('Poll error:', pollErr);
+        }
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Thesis export error:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างเอกสารได้');
+      setLoadingThesis(false);
+      setThesisProgress('');
+    }
+  };
+  
+  const downloadThesisFile = async (headers) => {
+    try {
+      const dlRes = await axios.get(
+        `${API}/conjoint/studies/${studyId}/export-thesis-download`,
+        { headers, responseType: 'blob' }
+      );
+      
+      const blob = new Blob([dlRes.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Conjoint_Thesis_Ch4_Ch5_${studyId.slice(0, 8)}.docx`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      toast.success('ดาวน์โหลดเอกสารวิทยานิพนธ์สำเร็จ!');
+    } catch (dlError) {
+      console.error('Download error:', dlError);
+      toast.error('ดาวน์โหลดไม่สำเร็จ');
+    } finally {
+      setLoadingThesis(false);
+      setThesisProgress('');
+    }
+  };
+
   const handleDeleteStudy = async () => {
     setDeleting(true);
     try {
@@ -886,9 +983,25 @@ const ConjointResultsPage = () => {
                     </>
                   )}
                 </Button>
+                <Button
+                  onClick={handleExportThesis}
+                  disabled={loadingThesis || loadingAI || loadingPrompt}
+                  className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm sm:text-base"
+                  data-testid="export-thesis-btn"
+                >
+                  {loadingThesis ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      {thesisProgress === 'downloading' ? 'กำลังดาวน์โหลด...' : 'AI กำลังเขียน...'}
+                    </>
+                  ) : (
+                    <>
+                      <GraduationCap className="w-4 h-4 mr-2" />
+                      Export วิทยานิพนธ์ (Word)
+                    </>
+                  )}
+                </Button>
               </div>
-
-              {/* Generated Prompt Display (fallback or manual) */}
               {generatedPrompt && !aiInterpretation && (
                 <div className="mt-6 text-left" data-testid="generated-prompt-section">
                   <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 mb-3">
@@ -961,6 +1074,25 @@ const ConjointResultsPage = () => {
                     ) : (
                       <>
                         วิเคราะห์ใหม่
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleExportThesis}
+                    disabled={loadingThesis}
+                    size="sm"
+                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                    data-testid="export-thesis-after-ai-btn"
+                  >
+                    {loadingThesis ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                        {thesisProgress === 'downloading' ? 'ดาวน์โหลด...' : 'กำลังสร้าง...'}
+                      </>
+                    ) : (
+                      <>
+                        <GraduationCap className="w-3 h-3 mr-1" />
+                        Export วิทยานิพนธ์
                       </>
                     )}
                   </Button>
