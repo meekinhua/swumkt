@@ -1,18 +1,15 @@
 /* eslint-disable no-restricted-globals */
 
-// Service Worker version
-const CACHE_VERSION = 'v2';
+// Service Worker version - bump this to force cache refresh
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `swumkt-cache-${CACHE_VERSION}`;
 
-// Assets to cache on install
+// Only cache truly static assets (logo)
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
   'https://customer-assets.emergentagent.com/job_swumkt-journey-map/artifacts/1psb2wj1_SWU_MKT%20Stacked%20Logo%20-%20Edited.png'
 ];
 
-// Install event - cache assets
+// Install event - cache static assets only
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -24,10 +21,11 @@ self.addEventListener('install', (event) => {
         console.log('Cache install error:', error);
       })
   );
+  // Activate immediately, don't wait for old SW to stop
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up ALL old caches and take control
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,46 +37,63 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+    }).then(() => {
+      // Take control of all open tabs immediately
+      return self.clients.claim();
     })
   );
-  self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - strategy depends on request type
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
+  const url = new URL(event.request.url);
+
+  // 1) API calls → network-only, never cache
+  if (url.pathname.startsWith('/api')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // 2) Navigation requests (HTML pages) → network-first
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache the fresh HTML for offline fallback
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
-        }
+        })
+        .catch(() => {
+          // Offline → serve cached HTML
+          return caches.match(event.request).then((cached) => cached || caches.match('/'));
+        })
+    );
+    return;
+  }
 
-        // Clone the request
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then((response) => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
+  // 3) Static assets (JS/CSS/images with hash in filename) → stale-while-revalidate
+  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|woff2?|ico)$/)) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        const networkFetch = fetch(event.request).then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          // Cache the new response
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
           return response;
-        }).catch((error) => {
-          console.log('Fetch error:', error);
-          // Return offline page if available
-          return caches.match('/index.html');
-        });
+        }).catch(() => cached);
+
+        // Return cached immediately if available, otherwise wait for network
+        return cached || networkFetch;
       })
+    );
+    return;
+  }
+
+  // 4) Everything else → network-first
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
 

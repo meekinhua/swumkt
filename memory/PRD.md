@@ -5,17 +5,21 @@
 
 ## What's Been Implemented
 
+### Service Worker Cache Fix (Apr 10, 2026)
+- Changed from aggressive cache-first to proper strategies: network-only for API, network-first for HTML, stale-while-revalidate for static assets
+- Added SW updatefound auto-reload in index.html
+- Cache version bumped v2→v3 to clear stale cache
+
 ### Generate Prompt Fallback for AI Interpretation (Apr 10, 2026)
-- Added `POST /api/conjoint/studies/{id}/generate-prompt` endpoint (returns prompt text with real statistical data, no AI call)
-- Fixed `get_method_results` to support MNL/Mixed Logit/HB/OLS (was only counting)
-- Frontend: auto-generates prompt on AI failure + always-available "สร้าง Prompt" button
-- Prompt includes System Instructions + full analysis data in JSON for each method or compare all 5
+- `POST /api/conjoint/studies/{id}/generate-prompt` — returns prompt with real data
+- Fixed `get_method_results` to support all 5 methods
+- Auto-generates prompt on AI failure + always-available button
 
 ### Conjoint Statistical UI — Method-Specific Output (Apr 10, 2026)
-- MNL: Pseudo R², Log-Likelihood, AIC, p-values, z-values, Std.Error
-- Mixed Logit: Respondents, Preference Heterogeneity, Std.Dev per level
-- HB: Respondents, Population Std, Individual-level estimates
-- OLS: R², Intercept, Coefficient (β)
+- MNL: Pseudo R², Log-Likelihood, AIC, p-values
+- Mixed Logit: Respondents, Heterogeneity, Std.Dev
+- HB: Population Std, Individual estimates
+- OLS: R², Intercept, Coefficient
 
 ### Conjoint Performance Optimization (Apr 10, 2026)
 - Fixed O(n³-n⁴) nested loops → 12x faster, handles 620+ responses
@@ -24,6 +28,8 @@
 - Sub-Kanban, Cover Image, RBAC, Assign Card, Responsive Design
 
 ## Key Files
+- `/app/frontend/public/service-worker.js` — SW with proper cache strategies
+- `/app/frontend/public/index.html` — SW registration with update handling
 - `/app/frontend/src/pages/ConjointResultsPage.js`
 - `/app/backend/server.py`
 
