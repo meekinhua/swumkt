@@ -1,41 +1,74 @@
-# SWUMKT Portal - Product Requirements Document
+# PRD - SWU Marketing Research Tool
 
 ## Original Problem Statement
-ระบบ SWUMKT Portal สำหรับมหาวิทยาลัย ศรีนครินทรวิโรฒ (SWU) ประกอบด้วยเครื่องมือวิจัยตลาด, Course Management, Conjoint Analysis และ Project Management
+A comprehensive marketing research and academic tool for Srinakharinwirot University (SWU). Features include Conjoint Analysis, Survey Management, Customer Journey Mapping, Kanban Project Management with RBAC, and AI-powered content generation.
 
-## What's Been Implemented (Apr 10, 2026)
+## Core Requirements
+- Conjoint Analysis with multiple statistical methods (Counting, MNL, Mixed Logit, HB, Linear Regression)
+- AI interpretation of results via Gemini 2.5 Flash
+- Export capabilities (CSV, Word thesis format)
+- Kanban Project Management with sub-kanban, RBAC, member management
+- Survey creation and response collection
+- Customer Journey mapping
+- Content sharing system
 
-### AI switched to Gemini
-- Changed from openai/gpt-4o-mini (502 errors) to gemini/gemini-2.5-flash
-- AI interpretation works: 13K chars Thai response, cached after first call
+## What's Been Implemented
 
-### Analysis Caching System
-- Statistical + AI results cached in MongoDB (analysis_cache collection)
-- Auto-invalidate on new response, switch methods instantly
-- First MNL: 1.76s → cached: 0.12s | First AI: 45s → cached: 0.12s
+### Conjoint Analysis (COMPLETE)
+- Full conjoint study creation and response collection
+- 5 statistical analysis methods: Counting, MNL, Mixed Logit, Hierarchical Bayes, Linear Regression
+- Method-specific UI metrics (Pseudo R², Utility Scale, etc.)
+- AI interpretation with Gemini 2.5 Flash (with MongoDB caching)
+- Generate Prompt fallback for external AI usage
+- CSV export for raw response data
+- **NEW (Apr 2026):** AI-powered Thesis Word Export (Chapter 4 & 5) using background jobs + polling
+- Performance optimized: nested loops removed, payload reduced from 7.4MB to 36KB
+- Async bcrypt for event-loop safety
 
-### Performance Optimizations
-- Async bcrypt, JWT-first auth, user cache, GZip
-- Studies list: 20MB→1.3KB | Results page: 7.4MB→36KB
-- O(n³) analysis fix: 12x faster
+### Kanban Project Management (COMPLETE)
+- Full CRUD with drag-and-drop (react-beautiful-dnd)
+- Sub-Kanban (Mini Kanban) inside each card
+- Cover Images & Assignee auto-avatar display
+- RBAC: Owner, Manager, Editor, Card Owner (Student), Viewer
+- Mobile & Desktop responsive design
+- Member Management Modal
 
-### Service Worker Cache Fix
-- Proper strategies per request type, auto-reload on update
+### Service Worker & Caching (COMPLETE)
+- Network-first strategy for API calls
+- Cache-first for static assets
+- Fixed Ctrl+F5 freeze issue
 
-### Conjoint Features
-- Method-specific stats display, Prompt fallback for AI
-
-### Kanban Board (Previous)
-- Sub-Kanban, Cover Image, RBAC, Assign Card, Responsive
+## Architecture
+- Frontend: React + TailwindCSS + Shadcn/UI
+- Backend: FastAPI + Python + MongoDB
+- AI: Gemini 2.5 Flash via emergentintegrations
+- Word generation: python-docx
 
 ## Prioritized Backlog
-- P1: File Attachments via Google Drive (Kanban)
-- P2: Verify AI "Share as Content" flow
-- P2: Phase 2 Image Caching
-- P3: Board templates, Refactor KanbanBoard.js
-- P4: Academic Format Corrector
-- P5: Customer Behavior Analysis
-- P6: Survey Analytics & Dashboard
+
+### P1
+- Google Drive Integration for Kanban card attachments
+- Verify Survey Image Display Fix
+
+### P2
+- Phase 2 Caching (Image Endpoint)
+- Verify Auto AI Analysis in "Share as Content" Flow
+
+### P3
+- Expand Kanban Board features (templates, custom fields)
+- Verify raw data storage in Customer Journey "Share as Content"
+- Android Push Notification vibrate option
+
+### P4+
+- Revisit Academic Format Corrector
+- Customer Behavior Analysis (Quantitative tab)
+- Survey Analytics & Dashboard
+- Refactor server.py (>11K lines) into modular routes
+
+## Known Issues
+- AI Rearrange Context Window Fallback (recurring)
+- Survey Image Display (testing pending, recurrence count: 1)
+- server.py is >11K lines - needs modular refactor
 
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
