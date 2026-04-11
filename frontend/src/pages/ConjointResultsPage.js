@@ -106,6 +106,7 @@ const ConjointResultsPage = () => {
   const [thesisProgress, setThesisProgress] = useState(''); // '', 'generating', 'downloading'
   const [showThesisModal, setShowThesisModal] = useState(false);
   const [thesisMethod, setThesisMethod] = useState('mnl');
+  const [thesisMethods, setThesisMethods] = useState(['mnl']);
   const [thesisChapters, setThesisChapters] = useState([3, 4, 5]);
 
   useEffect(() => {
@@ -527,6 +528,16 @@ const ConjointResultsPage = () => {
     );
   };
 
+  const toggleThesisMethod = (m) => {
+    setThesisMethods(prev => {
+      if (prev.includes(m)) {
+        if (prev.length === 1) return prev; // keep at least 1
+        return prev.filter(x => x !== m);
+      }
+      return [...prev, m];
+    });
+  };
+
   const handleStartThesisExport = async () => {
     if (thesisChapters.length === 0) {
       toast.error('กรุณาเลือกอย่างน้อย 1 บท');
@@ -541,7 +552,7 @@ const ConjointResultsPage = () => {
       // Step 1: Start generation
       const startRes = await axios.post(
         `${API}/conjoint/studies/${studyId}/export-thesis`,
-        { method: thesisMethod, chapters: thesisChapters },
+        { methods: thesisMethods, chapters: thesisChapters },
         { headers }
       );
       
@@ -718,25 +729,43 @@ const ConjointResultsPage = () => {
           </DialogHeader>
 
           <div className="space-y-6 py-2">
-            {/* Method Selection */}
+            {/* Method Selection - Multi-select */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                วิธีวิเคราะห์หลัก (Statistical Method)
+                วิธีวิเคราะห์ (เลือกได้หลายวิธี)
               </label>
-              <select
-                value={thesisMethod}
-                onChange={(e) => setThesisMethod(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                data-testid="thesis-method-select"
-              >
-                <option value="counting">Counting Method (นับความถี่)</option>
-                <option value="mnl">Multinomial Logit (MNL)</option>
-                <option value="linear_regression">Linear Regression (OLS)</option>
-                <option value="mixed_logit">Mixed Logit</option>
-                <option value="hierarchical_bayes">Hierarchical Bayes (HB)</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                สมการและค่าสถิติจะถูกเขียนตามวิธีที่เลือก
+              <div className="space-y-2">
+                {[
+                  { id: 'counting', name: 'Counting Method', desc: 'นับความถี่ Part-worth Utilities' },
+                  { id: 'mnl', name: 'Multinomial Logit (MNL)', desc: 'Maximum Likelihood, Pseudo R², AIC' },
+                  { id: 'linear_regression', name: 'Linear Regression (OLS)', desc: 'R², F-test, t-test' },
+                  { id: 'mixed_logit', name: 'Mixed Logit', desc: 'Random Parameters, Preference Heterogeneity' },
+                  { id: 'hierarchical_bayes', name: 'Hierarchical Bayes (HB)', desc: 'MCMC, Individual-level Estimates' }
+                ].map(({ id, name, desc }) => (
+                  <label
+                    key={id}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                      thesisMethods.includes(id)
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                    data-testid={`thesis-method-${id}`}
+                  >
+                    <Checkbox
+                      checked={thesisMethods.includes(id)}
+                      onCheckedChange={() => toggleThesisMethod(id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm text-gray-800">{name}</span>
+                      <span className="text-xs text-gray-500 ml-2">{desc}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-gray-500">
+                {thesisMethods.length > 1
+                  ? `เลือก ${thesisMethods.length} วิธี — บทที่ 4 จะเปรียบเทียบผลทุกวิธี`
+                  : 'เลือก 1 วิธี — สมการและสถิติจะเขียนตามวิธีนี้'}
               </p>
             </div>
 
@@ -781,12 +810,12 @@ const ConjointResultsPage = () => {
             </Button>
             <Button
               onClick={handleStartThesisExport}
-              disabled={thesisChapters.length === 0}
+              disabled={thesisChapters.length === 0 || thesisMethods.length === 0}
               className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
               data-testid="thesis-confirm-export-btn"
             >
               <GraduationCap className="w-4 h-4 mr-2" />
-              สร้างเอกสาร ({thesisChapters.length} บท)
+              สร้างเอกสาร ({thesisMethods.length} วิธี, {thesisChapters.length} บท)
             </Button>
           </DialogFooter>
         </DialogContent>

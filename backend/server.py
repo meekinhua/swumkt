@@ -7437,7 +7437,7 @@ class AIInterpretationRequest(BaseModel):
 
 
 class ThesisExportRequest(BaseModel):
-    method: str = "mnl"  # counting, mnl, linear_regression, mixed_logit, hierarchical_bayes
+    methods: List[str] = ["mnl"]  # counting, mnl, linear_regression, mixed_logit, hierarchical_bayes
     chapters: List[int] = [3, 4, 5]  # Which chapters to generate
 
 
@@ -11060,12 +11060,22 @@ def _get_method_equations(method: str) -> str:
 
 
 def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict,
-                         method: str = "mnl", chapters: list = None) -> tuple:
+                         methods: list = None, chapters: list = None) -> tuple:
     """Build per-chapter prompts with detailed method-specific equations.
     Returns (system_msg, dict_of_chapter_prompts)
     """
     if chapters is None:
         chapters = [3, 4, 5]
+    if methods is None:
+        methods = ["mnl"]
+
+    METHOD_NAMES = {
+        "counting": "Counting Method (นับความถี่)",
+        "mnl": "Multinomial Logit Model (MNL)",
+        "linear_regression": "Linear Regression (OLS)",
+        "mixed_logit": "Mixed Logit (Random Parameters Logit)",
+        "hierarchical_bayes": "Hierarchical Bayes (HB)"
+    }
 
     system_msg = (
         "คุณเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ MBA ที่มีความเชี่ยวชาญด้าน Conjoint Analysis "
@@ -11073,16 +11083,36 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
         "แสดงสูตรสมการทุกจุดที่เกี่ยวข้อง"
     )
 
-    method_display = {
-        "counting": "Counting Method (นับความถี่)",
-        "mnl": "Multinomial Logit Model (MNL)",
-        "linear_regression": "Linear Regression (OLS)",
-        "mixed_logit": "Mixed Logit (Random Parameters Logit)",
-        "hierarchical_bayes": "Hierarchical Bayes (HB)"
-    }.get(method, method)
-
+    methods_display = ", ".join(METHOD_NAMES.get(m, m) for m in methods)
+    all_equations = "\n".join(_get_method_equations(m) for m in methods)
     summary = _summarize_results_for_thesis(all_method_results)
-    equations = _get_method_equations(method)
+
+    # Build per-method result sections for Ch4
+    method_sections_ch4 = ""
+    for i, m in enumerate(methods, start=2):
+        md = METHOD_NAMES.get(m, m)
+        method_sections_ch4 += f"""
+### 4.{i} ผลการวิเคราะห์ด้วย {md}
+- แสดงสมการที่ใช้ + แทนค่าจริงลงในสมการ
+- แสดงค่า Coefficients/Part-worths ทุกตัว พร้อม SE, test statistic, p-value
+- แสดง Model fit statistics ทั้งหมดตามวิธี
+- ใช้ [ตาราง 4.X: ชื่อ] แล้วแสดง Markdown table
+- อธิบายนัยสำคัญทางสถิติ: *** p<0.001, ** p<0.01, * p<0.05, ns
+"""
+    next_section = len(methods) + 2
+
+    # Build per-method methodology sections for Ch3
+    method_sections_ch3 = ""
+    for i, m in enumerate(methods, start=4):
+        md = METHOD_NAMES.get(m, m)
+        method_sections_ch3 += f"""
+### 3.{i} วิธีการวิเคราะห์ข้อมูล — {md}
+- **เขียนสูตรสมการทุกสูตร** ที่ใช้ในวิธีนี้ อย่างละเอียด
+- อธิบายทุกตัวแปรในสมการ
+- อธิบาย estimation method
+- เกณฑ์การทดสอบตามวิธี
+- Model fit criteria ตามวิธี
+"""
 
     chapter_prompts = {}
 
@@ -11090,46 +11120,44 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
         chapter_prompts[3] = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 3 ระเบียบวิธีวิจัย (Research Methodology)** สำหรับ Conjoint Analysis:
 
 ชื่อการศึกษา: {study_title} | ผู้ตอบ: {respondent_count} คน
-วิธีวิเคราะห์หลัก: {method_display}
+วิธีวิเคราะห์: {methods_display}
 
-{equations}
+{all_equations}
 
 โครงสร้างบทที่ 3:
 ## บทที่ 3 ระเบียบวิธีวิจัย
 ### 3.1 รูปแบบการวิจัย
 - อธิบาย Choice-Based Conjoint (CBC) design
 - Experimental design: Full-profile, random assignment
-- จำนวน choice sets, alternatives per set, attributes and levels
 
 ### 3.2 ประชากรและกลุ่มตัวอย่าง
 - วิธีการกำหนดขนาดตัวอย่าง (n={respondent_count})
-- Sampling method (convenience/purposive/random)
 
 ### 3.3 เครื่องมือที่ใช้ในการวิจัย
 - แบบสอบถาม Conjoint Analysis
-- การออกแบบ choice sets (orthogonal/balanced overlap/random)
-
-### 3.4 วิธีการวิเคราะห์ข้อมูล — {method_display}
-- **เขียนสูตรสมการทุกสูตร** ที่ใช้ในวิธีนี้ อย่างละเอียด
-- อธิบายทุกตัวแปรในสมการ
-- อธิบาย estimation method (MLE, OLS, MCMC ตามวิธี)
-- เกณฑ์การทดสอบ: Wald test, t-test, F-test, Chi-square ตามวิธี
-- Model fit criteria: R², Pseudo R², AIC, BIC, Log-Likelihood ตามวิธี
-- ระดับนัยสำคัญ: α = 0.05
-
-### 3.5 สมมติฐานของแบบจำลอง
+{method_sections_ch3}
+### 3.{len(methods)+4} สมมติฐานของแบบจำลอง
 - สมมติฐานทางทฤษฎี (Random Utility Theory, IIA, etc.)
-- วิธีการตรวจสอบสมมติฐาน
 
 ข้อกำหนด: ภาษาไทยวิชาการ, แสดงสูตรคณิตศาสตร์ทุกสมการ, อธิบายตัวแปรทุกตัว, อย่างน้อย 3 ย่อหน้าต่อหัวข้อ"""
 
     if 4 in chapters:
+        compare_section = ""
+        if len(methods) > 1:
+            compare_section = f"""
+### 4.{next_section} ตารางเปรียบเทียบผลจากทุกวิธี
+- เปรียบเทียบ Importance Scores, Part-worths, Model fit จากทุกวิธี
+- แสดงเป็นตาราง Markdown
+- วิเคราะห์ความสอดคล้องและแตกต่าง
+"""
+            next_section += 1
+
         chapter_prompts[4] = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 4 ผลการศึกษา (Results)** จาก Conjoint Analysis:
 
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
-วิธีวิเคราะห์หลัก: {method_display}
+วิธีวิเคราะห์: {methods_display}
 
-{equations}
+{all_equations}
 
 ผลวิเคราะห์สรุป:
 {summary}
@@ -11137,29 +11165,9 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 โครงสร้างบทที่ 4:
 ## บทที่ 4 ผลการศึกษา
 ### 4.1 ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม
-- จำนวนผู้ตอบ, วิธีเก็บข้อมูล, ระยะเวลา
-
-### 4.2 ผลการวิเคราะห์ด้วย {method_display}
-- แสดงสมการที่ใช้ + แทนค่าจริงลงในสมการ
-- แสดงค่า Coefficients/Part-worths ทุกตัว พร้อม SE, test statistic, p-value
-- แสดง Model fit statistics ทั้งหมด (R², Pseudo R², LL, AIC ตามวิธี)
-- ใช้ [ตาราง 4.X: ชื่อ] แล้วแสดง Markdown table
-- อธิบายนัยสำคัญทางสถิติ: *** p<0.001, ** p<0.01, * p<0.05, ns
-
-### 4.3 Importance Scores ของคุณลักษณะ
-- จัดลำดับความสำคัญ
-- อธิบายความหมายเชิงธุรกิจ
-
-### 4.4 Part-worth Utilities แต่ละระดับ
-- แสดงค่า utility ทุกระดับของทุกคุณลักษณะ
-- เปรียบเทียบ: ระดับไหนมี utility สูงสุด/ต่ำสุด
-- แสดงเป็นตาราง
-
-### 4.5 การทดสอบสมมติฐาน
-- อ้างอิงสมการทดสอบ (Wald/t/F/LR test)
-- ผลการทดสอบ + สรุป
-
-### 4.6 สรุปผลบทที่ 4
+{method_sections_ch4}
+{compare_section}
+### 4.{next_section} สรุปผลบทที่ 4
 
 ข้อกำหนด: ภาษาไทยวิชาการ, อ้างค่าสถิติจริงทุกจุด เช่น (β=0.245, SE=0.032, z=7.66, p<0.001), แสดงสมการ, ใช้ตาราง Markdown"""
 
@@ -11167,32 +11175,17 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
         chapter_prompts[5] = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ (Discussion & Conclusion)** จาก Conjoint Analysis:
 
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
-วิธีวิเคราะห์หลัก: {method_display}
+วิธีวิเคราะห์: {methods_display}
 
 ผลวิเคราะห์สรุป:
 {summary}
 
 โครงสร้างบทที่ 5:
 ## บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ
-### 5.1 สรุปผลการวิจัย
-- ตอบวัตถุประสงค์การวิจัย
-- สรุปผลหลัก: คุณลักษณะที่สำคัญที่สุด, ระดับที่ชอบที่สุด
-- อ้างค่าสถิติจริง
-
-### 5.2 อภิปรายผล
-- เปรียบเทียบกับทฤษฎี (Consumer Behavior, Random Utility Theory)
-- เปรียบเทียบกับงานวิจัยที่เกี่ยวข้อง
-- อธิบายเหตุผลที่ผลเป็นแบบนี้
-
-### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ)
-- ข้อเสนอแนะด้านผลิตภัณฑ์
-- ข้อเสนอแนะด้านราคา (ถ้าเป็น attribute)
-- ข้อเสนอแนะด้านการตลาดและ positioning
-- ข้อเสนอแนะด้านการสื่อสาร
-
+### 5.1 สรุปผลการวิจัย (ตอบวัตถุประสงค์, สรุปผลหลัก, อ้างสถิติ)
+### 5.2 อภิปรายผล (เปรียบเทียบทฤษฎี, งานวิจัยที่เกี่ยวข้อง)
+### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ: ผลิตภัณฑ์, ราคา, การตลาด, positioning)
 ### 5.4 ข้อจำกัดของการวิจัย
-- ด้านระเบียบวิธี, ขนาดตัวอย่าง, ขอบเขต
-
 ### 5.5 ข้อเสนอแนะสำหรับการวิจัยในอนาคต (3-5 ข้อ)
 
 ข้อกำหนด: ภาษาไทยวิชาการ, อ้างค่าสถิติจริง, ทุกหัวข้อ 2-3 ย่อหน้า"""
@@ -11399,8 +11392,9 @@ async def export_thesis_start(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     respondent_count = study.get("respondent_count", 0)
+    methods_key = "_".join(sorted(request.methods))
     chapters_key = "_".join(str(c) for c in sorted(request.chapters))
-    cache_key = f"thesis_{request.method}_{chapters_key}"
+    cache_key = f"thesis_{methods_key}_{chapters_key}"
 
     # Check cache — if AI content already exists, return ready immediately
     cached = await db.analysis_cache.find_one(
@@ -11433,7 +11427,7 @@ async def export_thesis_start(
     background_tasks.add_task(
         _run_thesis_generation,
         study_id, cache_key, job_id, respondent_count, study.get("title", ""),
-        request.method, request.chapters
+        request.methods, request.chapters
     )
 
     return {"status": "processing", "job_id": job_id}
@@ -11441,19 +11435,19 @@ async def export_thesis_start(
 
 async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str,
                                 respondent_count: int, study_title: str,
-                                method: str = "mnl", chapters: list = None):
+                                methods: list = None, chapters: list = None):
     """Background task to generate thesis content via AI and cache it."""
     import asyncio
     if chapters is None:
         chapters = [3, 4, 5]
+    if methods is None:
+        methods = ["mnl"]
     try:
         full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
 
-        # Compute the chosen method + counting as baseline
-        methods_to_compute = ["counting"]
-        if method != "counting":
-            methods_to_compute.append(method)
+        # Always include counting as baseline + selected methods
+        methods_to_compute = list(set(["counting"] + methods))
 
         all_results = {}
         for m in methods_to_compute:
@@ -11470,7 +11464,7 @@ async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str,
                 logging.warning(f"Thesis bg - method {m} failed: {e}")
 
         system_msg, chapter_prompts = _build_thesis_prompt(
-            study_title, respondent_count, all_results, method, chapters
+            study_title, respondent_count, all_results, methods, chapters
         )
 
         # Generate each chapter separately (to stay within proxy timeout)
