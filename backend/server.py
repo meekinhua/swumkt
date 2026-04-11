@@ -7436,6 +7436,11 @@ class AIInterpretationRequest(BaseModel):
     compare_all: bool = False  # If True, analyze and compare all methods
 
 
+class ThesisExportRequest(BaseModel):
+    method: str = "mnl"  # counting, mnl, linear_regression, mixed_logit, hierarchical_bayes
+    chapters: List[int] = [3, 4, 5]  # Which chapters to generate
+
+
 class ConjointContentShareRequest(BaseModel):
     title: str
     research_type: str  # e.g., "quantitative", "qualitative", "mixed"
@@ -10984,52 +10989,215 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
     return "\n".join(lines)
 
 
-def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict) -> tuple:
-    """Build split prompts for Chapter 4 and Chapter 5 separately (to fit within proxy timeout)."""
+def _get_method_equations(method: str) -> str:
+    """Return detailed statistical equations and test criteria for the given method."""
+    equations = {
+        "counting": """
+สูตรและสมการทางสถิติ (Counting/Part-worth Method):
+- Part-worth Utility: U(level_j) = (จำนวนครั้งที่ level_j ถูกเลือก) / (จำนวนครั้งทั้งหมดที่ level_j ปรากฏ)
+- Importance Score: I(attribute_k) = [max(U_k) - min(U_k)] / Σ[max(U_i) - min(U_i)] × 100%
+- ค่า Part-worth Utility ที่สูงกว่า = ผู้บริโภคให้ความชอบมากกว่า
+- Importance Score รวมทุก Attribute = 100%
+- ทดสอบนัยสำคัญ: Chi-square test for independence""",
+
+        "mnl": """
+สูตรและสมการทางสถิติ (Multinomial Logit Model - MNL):
+- Utility Function: V_j = β₁X₁ⱼ + β₂X₂ⱼ + ... + βₖXₖⱼ
+  โดย V_j = deterministic utility ของทางเลือก j, β = estimated coefficients, X = attribute levels (dummy coded)
+- Random Utility Model: U_j = V_j + ε_j โดย ε ~ iid Extreme Value Type I (Gumbel distribution)
+- Choice Probability: P(j) = exp(V_j) / Σₖ exp(V_k)  (Softmax function)
+- Log-Likelihood: LL = Σᵢ Σⱼ yᵢⱼ × ln(P_ij) โดย yᵢⱼ = 1 ถ้าผู้ตอบ i เลือกทางเลือก j
+- Null Log-Likelihood: LL₀ = N × ln(1/J) โดย N = จำนวนสถานการณ์, J = จำนวนทางเลือก
+- McFadden's Pseudo R²: ρ² = 1 - (LL/LL₀) — ค่า 0.2-0.4 ถือว่า fit ดีมาก
+- AIC = -2LL + 2k โดย k = จำนวน parameters
+- BIC = -2LL + k×ln(N)
+- Wald Test: z = β̂/SE(β̂) — ทดสอบ H₀: β = 0, ปฏิเสธ H₀ เมื่อ |z| > 1.96 (α=0.05)
+- IIA Assumption: Independence of Irrelevant Alternatives (Hausman test)
+- Likelihood Ratio Test: LR = -2(LL_restricted - LL_unrestricted) ~ χ²(df)""",
+
+        "linear_regression": """
+สูตรและสมการทางสถิติ (Linear Regression / OLS):
+- Regression Model: Y = β₀ + β₁X₁ + β₂X₂ + ... + βₖXₖ + ε
+  โดย Y = preference/choice score, β₀ = intercept, βₖ = regression coefficients, ε ~ N(0, σ²)
+- OLS Estimation: β̂ = (X'X)⁻¹X'Y (minimize sum of squared residuals)
+- R² = 1 - (SS_res/SS_tot) = 1 - [Σ(yᵢ-ŷᵢ)²/Σ(yᵢ-ȳ)²] — สัดส่วนความแปรปรวนที่อธิบายได้
+- Adjusted R² = 1 - [(1-R²)(n-1)/(n-k-1)] — ปรับตามจำนวนตัวแปร
+- F-statistic: F = (R²/k)/[(1-R²)/(n-k-1)] ~ F(k, n-k-1)  ทดสอบ H₀: β₁=β₂=...=βₖ=0
+- t-test: t = β̂ⱼ/SE(β̂ⱼ) — ทดสอบนัยสำคัญของแต่ละ coefficient
+- Standard Error: SE(β̂) = √[MSE × (X'X)⁻¹ⱼⱼ]
+- Multicollinearity: VIF = 1/(1-R²ⱼ) — VIF > 10 อาจเป็นปัญหา
+- Assumptions: Normality, Homoscedasticity, No autocorrelation (Durbin-Watson test)""",
+
+        "mixed_logit": """
+สูตรและสมการทางสถิติ (Mixed Logit / Random Parameters Logit):
+- Random Coefficients: βₙ = β̄ + Lωₙ โดย β̄ = mean coefficients, L = Cholesky factor, ωₙ ~ N(0,I)
+- Choice Probability: P(j|n) = ∫ [exp(β'ₙx_j) / Σₖ exp(β'ₙx_k)] f(β|θ) dβ
+- Simulated Log-Likelihood: SLL = Σₙ ln[(1/R) Σᵣ Πₜ P(jₙₜ|βⁿʳ)]
+  โดย R = จำนวน Halton draws, βⁿʳ = random draw r สำหรับบุคคล n
+- Preference Heterogeneity: วัดจาก SD ของ random coefficients
+  — SD สูง = ความชอบแตกต่างกันมากระหว่างผู้ตอบ
+- Distribution Assumptions: Normal, Lognormal, Triangular, Uniform
+- WTP (Willingness to Pay): WTP_k = -β_k/β_price
+  — SD(WTP) สะท้อนความแตกต่างของ WTP ระหว่างบุคคล
+- IIA Relaxation: Mixed Logit ผ่อนคลายสมมติฐาน IIA ของ MNL""",
+
+        "hierarchical_bayes": """
+สูตรและสมการทางสถิติ (Hierarchical Bayes - HB):
+- Population Prior: βₙ ~ N(μ, Σ) โดย μ = population mean, Σ = covariance matrix
+- Likelihood: P(data_n|βₙ) = Πₜ [exp(β'ₙx_jt) / Σₖ exp(β'ₙx_kt)]
+- Posterior: P(βₙ|data_n, μ, Σ) ∝ P(data_n|βₙ) × P(βₙ|μ, Σ)
+- Hyperpriors: μ ~ N(μ₀, Σ₀), Σ⁻¹ ~ Wishart(ν₀, V₀)
+- MCMC (Gibbs Sampling):
+  Step 1: Draw βₙ|data, μ, Σ (Metropolis-Hastings within Gibbs)
+  Step 2: Draw μ|{βₙ}, Σ
+  Step 3: Draw Σ|{βₙ}, μ
+- Convergence Diagnostics: Gelman-Rubin statistic (R̂ < 1.1), trace plots
+- Burn-in: ทิ้ง iterations แรก (ก่อน convergence)
+- Individual-level estimates: E[βₙ|data] — ค่าเฉลี่ยจาก posterior draws
+- HB ให้ individual-level part-worths ที่น่าเชื่อถือแม้ข้อมูลต่อคนน้อย"""
+    }
+    return equations.get(method, equations["counting"])
+
+
+def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict,
+                         method: str = "mnl", chapters: list = None) -> tuple:
+    """Build per-chapter prompts with detailed method-specific equations.
+    Returns (system_msg, dict_of_chapter_prompts)
+    """
+    if chapters is None:
+        chapters = [3, 4, 5]
+
     system_msg = (
         "คุณเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ MBA ที่มีความเชี่ยวชาญด้าน Conjoint Analysis "
-        "เขียนเนื้อหาวิทยานิพนธ์อย่างเป็นทางการ ภาษาไทยวิชาการ อ้างอิงค่าสถิติถูกต้อง"
+        "เขียนเนื้อหาวิทยานิพนธ์อย่างเป็นทางการ ภาษาไทยวิชาการ อ้างอิงค่าสถิติถูกต้อง "
+        "แสดงสูตรสมการทุกจุดที่เกี่ยวข้อง"
     )
 
+    method_display = {
+        "counting": "Counting Method (นับความถี่)",
+        "mnl": "Multinomial Logit Model (MNL)",
+        "linear_regression": "Linear Regression (OLS)",
+        "mixed_logit": "Mixed Logit (Random Parameters Logit)",
+        "hierarchical_bayes": "Hierarchical Bayes (HB)"
+    }.get(method, method)
+
     summary = _summarize_results_for_thesis(all_method_results)
+    equations = _get_method_equations(method)
 
-    ch4_prompt = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 4 ผลการศึกษา** จาก Conjoint Analysis:
+    chapter_prompts = {}
+
+    if 3 in chapters:
+        chapter_prompts[3] = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 3 ระเบียบวิธีวิจัย (Research Methodology)** สำหรับ Conjoint Analysis:
+
+ชื่อการศึกษา: {study_title} | ผู้ตอบ: {respondent_count} คน
+วิธีวิเคราะห์หลัก: {method_display}
+
+{equations}
+
+โครงสร้างบทที่ 3:
+## บทที่ 3 ระเบียบวิธีวิจัย
+### 3.1 รูปแบบการวิจัย
+- อธิบาย Choice-Based Conjoint (CBC) design
+- Experimental design: Full-profile, random assignment
+- จำนวน choice sets, alternatives per set, attributes and levels
+
+### 3.2 ประชากรและกลุ่มตัวอย่าง
+- วิธีการกำหนดขนาดตัวอย่าง (n={respondent_count})
+- Sampling method (convenience/purposive/random)
+
+### 3.3 เครื่องมือที่ใช้ในการวิจัย
+- แบบสอบถาม Conjoint Analysis
+- การออกแบบ choice sets (orthogonal/balanced overlap/random)
+
+### 3.4 วิธีการวิเคราะห์ข้อมูล — {method_display}
+- **เขียนสูตรสมการทุกสูตร** ที่ใช้ในวิธีนี้ อย่างละเอียด
+- อธิบายทุกตัวแปรในสมการ
+- อธิบาย estimation method (MLE, OLS, MCMC ตามวิธี)
+- เกณฑ์การทดสอบ: Wald test, t-test, F-test, Chi-square ตามวิธี
+- Model fit criteria: R², Pseudo R², AIC, BIC, Log-Likelihood ตามวิธี
+- ระดับนัยสำคัญ: α = 0.05
+
+### 3.5 สมมติฐานของแบบจำลอง
+- สมมติฐานทางทฤษฎี (Random Utility Theory, IIA, etc.)
+- วิธีการตรวจสอบสมมติฐาน
+
+ข้อกำหนด: ภาษาไทยวิชาการ, แสดงสูตรคณิตศาสตร์ทุกสมการ, อธิบายตัวแปรทุกตัว, อย่างน้อย 3 ย่อหน้าต่อหัวข้อ"""
+
+    if 4 in chapters:
+        chapter_prompts[4] = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 4 ผลการศึกษา (Results)** จาก Conjoint Analysis:
 
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
+วิธีวิเคราะห์หลัก: {method_display}
+
+{equations}
 
 ผลวิเคราะห์สรุป:
 {summary}
 
-โครงสร้าง:
+โครงสร้างบทที่ 4:
 ## บทที่ 4 ผลการศึกษา
-### 4.1 ข้อมูลทั่วไปของผู้ตอบ (จำนวน วิธีเก็บ)
-### 4.2 Counting Method (Part-worths, Importance Scores, คุณลักษณะสำคัญ)
-### 4.3 MNL (Logit Coefficients, SE, z, p-value, Pseudo R², LL, AIC)
-### 4.4 Linear Regression (R², Coefficients, เปรียบเทียบกับ MNL)
-### 4.5 Mixed Logit / Hierarchical Bayes (ถ้ามีข้อมูล)
-### 4.6 ตารางเปรียบเทียบ Importance Scores ทุกวิธี
-### 4.7 สรุปผลบทที่ 4
+### 4.1 ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม
+- จำนวนผู้ตอบ, วิธีเก็บข้อมูล, ระยะเวลา
 
-ข้อกำหนด: ภาษาไทยวิชาการ, อ้างสถิติเสมอ เช่น (β=0.245, p<0.05), ทุกหัวข้อ 2-3 ย่อหน้า, ใช้ [ตาราง X.X: ชื่อ] แล้วแสดงตาราง Markdown"""
+### 4.2 ผลการวิเคราะห์ด้วย {method_display}
+- แสดงสมการที่ใช้ + แทนค่าจริงลงในสมการ
+- แสดงค่า Coefficients/Part-worths ทุกตัว พร้อม SE, test statistic, p-value
+- แสดง Model fit statistics ทั้งหมด (R², Pseudo R², LL, AIC ตามวิธี)
+- ใช้ [ตาราง 4.X: ชื่อ] แล้วแสดง Markdown table
+- อธิบายนัยสำคัญทางสถิติ: *** p<0.001, ** p<0.01, * p<0.05, ns
 
-    ch5_prompt = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ** จาก Conjoint Analysis:
+### 4.3 Importance Scores ของคุณลักษณะ
+- จัดลำดับความสำคัญ
+- อธิบายความหมายเชิงธุรกิจ
+
+### 4.4 Part-worth Utilities แต่ละระดับ
+- แสดงค่า utility ทุกระดับของทุกคุณลักษณะ
+- เปรียบเทียบ: ระดับไหนมี utility สูงสุด/ต่ำสุด
+- แสดงเป็นตาราง
+
+### 4.5 การทดสอบสมมติฐาน
+- อ้างอิงสมการทดสอบ (Wald/t/F/LR test)
+- ผลการทดสอบ + สรุป
+
+### 4.6 สรุปผลบทที่ 4
+
+ข้อกำหนด: ภาษาไทยวิชาการ, อ้างค่าสถิติจริงทุกจุด เช่น (β=0.245, SE=0.032, z=7.66, p<0.001), แสดงสมการ, ใช้ตาราง Markdown"""
+
+    if 5 in chapters:
+        chapter_prompts[5] = f"""เขียนวิทยานิพนธ์ MBA **บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ (Discussion & Conclusion)** จาก Conjoint Analysis:
 
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
+วิธีวิเคราะห์หลัก: {method_display}
 
 ผลวิเคราะห์สรุป:
 {summary}
 
-โครงสร้าง:
+โครงสร้างบทที่ 5:
 ## บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ
-### 5.1 สรุปผลการวิจัย (ตอบวัตถุประสงค์และคำถามวิจัย)
-### 5.2 อภิปรายผลเปรียบเทียบทฤษฎีและงานวิจัยที่เกี่ยวข้อง
-### 5.3 ข้อเสนอแนะเชิงกลยุทธ์และนโยบาย (5-7 ข้อ)
-### 5.4 ข้อจำกัดการวิจัย
-### 5.5 ข้อเสนอแนะวิจัยอนาคต (3-5 ข้อ)
+### 5.1 สรุปผลการวิจัย
+- ตอบวัตถุประสงค์การวิจัย
+- สรุปผลหลัก: คุณลักษณะที่สำคัญที่สุด, ระดับที่ชอบที่สุด
+- อ้างค่าสถิติจริง
 
-ข้อกำหนด: ภาษาไทยวิชาการ, อ้างสถิติเสมอ, ทุกหัวข้อ 2-3 ย่อหน้า"""
+### 5.2 อภิปรายผล
+- เปรียบเทียบกับทฤษฎี (Consumer Behavior, Random Utility Theory)
+- เปรียบเทียบกับงานวิจัยที่เกี่ยวข้อง
+- อธิบายเหตุผลที่ผลเป็นแบบนี้
 
-    return system_msg, ch4_prompt, ch5_prompt
+### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ)
+- ข้อเสนอแนะด้านผลิตภัณฑ์
+- ข้อเสนอแนะด้านราคา (ถ้าเป็น attribute)
+- ข้อเสนอแนะด้านการตลาดและ positioning
+- ข้อเสนอแนะด้านการสื่อสาร
+
+### 5.4 ข้อจำกัดของการวิจัย
+- ด้านระเบียบวิธี, ขนาดตัวอย่าง, ขอบเขต
+
+### 5.5 ข้อเสนอแนะสำหรับการวิจัยในอนาคต (3-5 ข้อ)
+
+ข้อกำหนด: ภาษาไทยวิชาการ, อ้างค่าสถิติจริง, ทุกหัวข้อ 2-3 ย่อหน้า"""
+
+    return system_msg, chapter_prompts
 
 
 def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str) -> bytes:
@@ -11219,7 +11387,7 @@ def _add_table_to_doc(doc, table_data):
 @api_router.post("/conjoint/studies/{study_id}/export-thesis")
 async def export_thesis_start(
     study_id: str,
-    request: AIInterpretationRequest,
+    request: ThesisExportRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user)
 ):
@@ -11231,7 +11399,8 @@ async def export_thesis_start(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     respondent_count = study.get("respondent_count", 0)
-    cache_key = f"thesis_{request.method}_{'all' if request.compare_all else 'single'}"
+    chapters_key = "_".join(str(c) for c in sorted(request.chapters))
+    cache_key = f"thesis_{request.method}_{chapters_key}"
 
     # Check cache — if AI content already exists, return ready immediately
     cached = await db.analysis_cache.find_one(
@@ -11263,23 +11432,31 @@ async def export_thesis_start(
     # Run generation in background
     background_tasks.add_task(
         _run_thesis_generation,
-        study_id, cache_key, job_id, respondent_count, study.get("title", "")
+        study_id, cache_key, job_id, respondent_count, study.get("title", ""),
+        request.method, request.chapters
     )
 
     return {"status": "processing", "job_id": job_id}
 
 
-async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str, respondent_count: int, study_title: str):
+async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str,
+                                respondent_count: int, study_title: str,
+                                method: str = "mnl", chapters: list = None):
     """Background task to generate thesis content via AI and cache it."""
     import asyncio
+    if chapters is None:
+        chapters = [3, 4, 5]
     try:
         full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
 
-        # Use only core methods (counting + mnl + linear_regression) to keep prompt small
-        methods = ["counting", "mnl", "linear_regression"]
+        # Compute the chosen method + counting as baseline
+        methods_to_compute = ["counting"]
+        if method != "counting":
+            methods_to_compute.append(method)
+
         all_results = {}
-        for m in methods:
+        for m in methods_to_compute:
             try:
                 cached_method = await db.analysis_cache.find_one(
                     {"study_id": study_id, "method": m, "respondent_count": respondent_count},
@@ -11292,36 +11469,22 @@ async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str, res
             except Exception as e:
                 logging.warning(f"Thesis bg - method {m} failed: {e}")
 
-        # Also try mixed_logit/HB if cached (don't compute fresh - too slow)
-        for m in ["mixed_logit", "hierarchical_bayes"]:
-            try:
-                cached_method = await db.analysis_cache.find_one(
-                    {"study_id": study_id, "method": m, "respondent_count": respondent_count},
-                    {"_id": 0}
-                )
-                if cached_method and cached_method.get("results"):
-                    all_results[m] = cached_method["results"]
-            except Exception:
-                pass
-
-        system_msg, ch4_prompt, ch5_prompt = _build_thesis_prompt(study_title, respondent_count, all_results)
-
-        # Split into 2 calls: Chapter 4 then Chapter 5 (each ~30s instead of one 60s+ call)
-        logging.info(f"Thesis job {job_id}: Generating Chapter 4...")
-        ch4_content = await _call_gemini_with_retry(
-            system_msg=system_msg,
-            prompt=ch4_prompt,
-            session_id=f"thesis-ch4-{study_id}-{job_id}"
+        system_msg, chapter_prompts = _build_thesis_prompt(
+            study_title, respondent_count, all_results, method, chapters
         )
 
-        logging.info(f"Thesis job {job_id}: Generating Chapter 5...")
-        ch5_content = await _call_gemini_with_retry(
-            system_msg=system_msg,
-            prompt=ch5_prompt,
-            session_id=f"thesis-ch5-{study_id}-{job_id}"
-        )
+        # Generate each chapter separately (to stay within proxy timeout)
+        chapter_contents = {}
+        for ch_num in sorted(chapter_prompts.keys()):
+            logging.info(f"Thesis job {job_id}: Generating Chapter {ch_num}...")
+            ch_content = await _call_gemini_with_retry(
+                system_msg=system_msg,
+                prompt=chapter_prompts[ch_num],
+                session_id=f"thesis-ch{ch_num}-{study_id}-{job_id}"
+            )
+            chapter_contents[ch_num] = ch_content
 
-        ai_content = ch4_content + "\n\n---\n\n" + ch5_content
+        ai_content = "\n\n---\n\n".join(chapter_contents[ch] for ch in sorted(chapter_contents.keys()))
 
         # Cache AI content
         await db.analysis_cache.update_one(
@@ -11372,6 +11535,7 @@ async def export_thesis_status(
 @api_router.get("/conjoint/studies/{study_id}/export-thesis-download")
 async def export_thesis_download(
     study_id: str,
+    cache_key: str = None,
     current_user: User = Depends(get_current_user)
 ):
     """Download the generated thesis .docx from cached AI content."""
@@ -11385,18 +11549,31 @@ async def export_thesis_download(
 
     respondent_count = study.get("respondent_count", 0)
 
-    # Find any thesis cache for this study
-    cached = await db.analysis_cache.find_one(
-        {"study_id": study_id, "method": {"$regex": "^thesis_"}, "respondent_count": respondent_count},
-        {"_id": 0}
-    )
+    # Find thesis cache (specific or any)
+    if cache_key:
+        cached = await db.analysis_cache.find_one(
+            {"study_id": study_id, "method": cache_key, "respondent_count": respondent_count},
+            {"_id": 0}
+        )
+    else:
+        cached = await db.analysis_cache.find_one(
+            {"study_id": study_id, "method": {"$regex": "^thesis_"}, "respondent_count": respondent_count},
+            {"_id": 0},
+            sort=[("created_at", -1)]
+        )
     if not cached or not cached.get("results", {}).get("ai_content"):
         raise HTTPException(status_code=404, detail="ยังไม่มีเนื้อหาวิทยานิพนธ์ กรุณาสร้างก่อน")
 
     ai_content = cached["results"]["ai_content"]
     docx_bytes = _create_thesis_docx(study.get("title", ""), respondent_count, ai_content)
 
-    filename = f"Conjoint_Thesis_Ch4_Ch5_{study_id[:8]}.docx"
+    # Build filename from cache_key
+    chapters_str = ""
+    if cache_key and "thesis_" in cache_key:
+        parts = cache_key.replace("thesis_", "").split("_")
+        if len(parts) > 1:
+            chapters_str = "_Ch" + "_Ch".join(parts[1:])
+    filename = f"Conjoint_Thesis{chapters_str}_{study_id[:8]}.docx"
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",

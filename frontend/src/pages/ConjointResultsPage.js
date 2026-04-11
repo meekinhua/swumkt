@@ -31,6 +31,8 @@ import {
   Network
 } from 'lucide-react';
 import ShareConjointModal from '@/components/ShareConjointModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   PieChart,
   Pie,
@@ -102,6 +104,9 @@ const ConjointResultsPage = () => {
   // Thesis export states
   const [loadingThesis, setLoadingThesis] = useState(false);
   const [thesisProgress, setThesisProgress] = useState(''); // '', 'generating', 'downloading'
+  const [showThesisModal, setShowThesisModal] = useState(false);
+  const [thesisMethod, setThesisMethod] = useState('mnl');
+  const [thesisChapters, setThesisChapters] = useState([3, 4, 5]);
 
   useEffect(() => {
     // Load results for both authenticated and public access
@@ -508,11 +513,26 @@ const ConjointResultsPage = () => {
     }
   };
 
-  const handleExportThesis = async () => {
+  const handleExportThesis = () => {
     if (!token) {
       toast.error('กรุณาเข้าสู่ระบบก่อน');
       return;
     }
+    setShowThesisModal(true);
+  };
+
+  const toggleThesisChapter = (ch) => {
+    setThesisChapters(prev => 
+      prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch].sort()
+    );
+  };
+
+  const handleStartThesisExport = async () => {
+    if (thesisChapters.length === 0) {
+      toast.error('กรุณาเลือกอย่างน้อย 1 บท');
+      return;
+    }
+    setShowThesisModal(false);
     setLoadingThesis(true);
     setThesisProgress('generating');
     const headers = { Authorization: `Bearer ${token}` };
@@ -521,23 +541,25 @@ const ConjointResultsPage = () => {
       // Step 1: Start generation
       const startRes = await axios.post(
         `${API}/conjoint/studies/${studyId}/export-thesis`,
-        { method: selectedMethod, compare_all: true },
+        { method: thesisMethod, chapters: thesisChapters },
         { headers }
       );
       
       const { status, job_id } = startRes.data;
+      const cacheKey = startRes.data.cached ? job_id : null;
       
       if (status === 'ready') {
         // Already cached, download directly
         setThesisProgress('downloading');
-        await downloadThesisFile(headers);
+        await downloadThesisFile(headers, cacheKey);
         return;
       }
       
       // Step 2: Poll for completion
-      toast.info('AI กำลังสร้างเนื้อหาวิทยานิพนธ์... อาจใช้เวลา 1-2 นาที');
+      const chapterNames = thesisChapters.map(c => `บทที่ ${c}`).join(', ');
+      toast.info(`AI กำลังสร้าง ${chapterNames}... อาจใช้เวลา 1-3 นาที`);
       let attempts = 0;
-      const maxAttempts = 40; // ~2 minutes at 3s intervals
+      const maxAttempts = 60; // ~3 minutes at 3s intervals
       
       const pollInterval = setInterval(async () => {
         attempts++;
@@ -575,19 +597,21 @@ const ConjointResultsPage = () => {
     }
   };
   
-  const downloadThesisFile = async (headers) => {
+  const downloadThesisFile = async (headers, cacheKey) => {
     try {
+      const params = cacheKey ? `?cache_key=${encodeURIComponent(cacheKey)}` : '';
       const dlRes = await axios.get(
-        `${API}/conjoint/studies/${studyId}/export-thesis-download`,
+        `${API}/conjoint/studies/${studyId}/export-thesis-download${params}`,
         { headers, responseType: 'blob' }
       );
       
       const blob = new Blob([dlRes.data], { 
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
       });
+      const chStr = thesisChapters.map(c => `Ch${c}`).join('_');
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `Conjoint_Thesis_Ch4_Ch5_${studyId.slice(0, 8)}.docx`;
+      link.download = `Conjoint_Thesis_${chStr}_${studyId.slice(0, 8)}.docx`;
       link.click();
       URL.revokeObjectURL(link.href);
       
@@ -682,6 +706,91 @@ const ConjointResultsPage = () => {
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
       <Navigation />
+
+      {/* Thesis Export Modal */}
+      <Dialog open={showThesisModal} onOpenChange={setShowThesisModal}>
+        <DialogContent className="sm:max-w-lg" data-testid="thesis-export-modal">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-emerald-600" />
+              Export วิทยานิพนธ์ (Word)
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {/* Method Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                วิธีวิเคราะห์หลัก (Statistical Method)
+              </label>
+              <select
+                value={thesisMethod}
+                onChange={(e) => setThesisMethod(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                data-testid="thesis-method-select"
+              >
+                <option value="counting">Counting Method (นับความถี่)</option>
+                <option value="mnl">Multinomial Logit (MNL)</option>
+                <option value="linear_regression">Linear Regression (OLS)</option>
+                <option value="mixed_logit">Mixed Logit</option>
+                <option value="hierarchical_bayes">Hierarchical Bayes (HB)</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                สมการและค่าสถิติจะถูกเขียนตามวิธีที่เลือก
+              </p>
+            </div>
+
+            {/* Chapter Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                เลือกบทที่ต้องการ
+              </label>
+              <div className="space-y-3">
+                {[
+                  { ch: 3, title: 'บทที่ 3 — ระเบียบวิธีวิจัย (Methodology)', desc: 'Research design, สูตรสมการ, เกณฑ์ทดสอบ, สมมติฐานของแบบจำลอง' },
+                  { ch: 4, title: 'บทที่ 4 — ผลการศึกษา (Results)', desc: 'Coefficients, Importance Scores, Model Fit, ตาราง, การทดสอบสมมติฐาน' },
+                  { ch: 5, title: 'บทที่ 5 — สรุป อภิปราย ข้อเสนอแนะ (Discussion)', desc: 'สรุปผล, เปรียบเทียบทฤษฎี, ข้อเสนอแนะเชิงกลยุทธ์' }
+                ].map(({ ch, title, desc }) => (
+                  <label
+                    key={ch}
+                    className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      thesisChapters.includes(ch)
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                    data-testid={`thesis-chapter-${ch}`}
+                  >
+                    <Checkbox
+                      checked={thesisChapters.includes(ch)}
+                      onCheckedChange={() => toggleThesisChapter(ch)}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-semibold text-sm text-gray-800">{title}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowThesisModal(false)}>
+              ยกเลิก
+            </Button>
+            <Button
+              onClick={handleStartThesisExport}
+              disabled={thesisChapters.length === 0}
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+              data-testid="thesis-confirm-export-btn"
+            >
+              <GraduationCap className="w-4 h-4 mr-2" />
+              สร้างเอกสาร ({thesisChapters.length} บท)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Header */}

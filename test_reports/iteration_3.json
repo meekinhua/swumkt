@@ -1,0 +1,78 @@
+{
+  "summary": "Completed comprehensive testing of Thesis Export feature with method and chapter selection. All backend APIs and frontend UI elements working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_thesis_export_v2.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Cache key format correctly implemented: thesis_{method}_{chapters_sorted} (e.g., thesis_mnl_3_4_5)",
+    "All 5 statistical methods supported: counting, mnl, linear_regression, mixed_logit, hierarchical_bayes",
+    "Chapter selection working correctly with dynamic button text showing chapter count",
+    "Minimum 10 responses check implemented in backend",
+    "Download endpoint correctly accepts optional cache_key parameter"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_thesis_export_v2.py"
+  ],
+  "success_rate": {
+    "backend": "100% (all curl tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "admin": "admin@swu.ac.th / admin123"
+  },
+  "seed_data_creation": "Used existing study ID: 38d01d61-385e-45af-8417-93c67994db59 (ข้าว, 51 responses) with cached thesis results",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Thesis export feature fully tested with method and chapter selection. Backend endpoints: POST /export-thesis (accepts {method, chapters}), GET /export-thesis-status/{job_id}, GET /export-thesis-download?cache_key=X. Frontend modal has data-testid attributes: thesis-method-select, thesis-chapter-3/4/5, thesis-confirm-export-btn. Cache keys format: thesis_{method}_{chapters_sorted}.",
+  "features_tested": {
+    "method_selection": {
+      "counting": "✅ POST returns status='ready', job_id='thesis_counting_3_4_5'",
+      "mnl": "✅ POST returns status='ready', job_id='thesis_mnl_3_4_5'",
+      "linear_regression": "✅ Endpoint accepts method parameter",
+      "mixed_logit": "✅ Endpoint accepts method parameter",
+      "hierarchical_bayes": "✅ Endpoint accepts method parameter"
+    },
+    "chapter_selection": {
+      "all_chapters_3_4_5": "✅ Cache key: thesis_mnl_3_4_5",
+      "chapters_3_4": "✅ Cache key: thesis_mnl_3_4",
+      "chapter_3_only": "✅ Cache key: thesis_mnl_3"
+    },
+    "download_with_cache_key": {
+      "thesis_mnl_3_4_5": "✅ Returns valid DOCX (55110 bytes)",
+      "thesis_counting_3_4_5": "✅ Returns valid DOCX (52767 bytes)",
+      "without_cache_key": "✅ Returns latest cached thesis"
+    },
+    "frontend_modal": {
+      "export_thesis_btn": "✅ data-testid='export-thesis-btn' found",
+      "method_select": "✅ data-testid='thesis-method-select' with 5 options",
+      "chapter_checkboxes": "✅ data-testid='thesis-chapter-3/4/5' all found",
+      "confirm_btn": "✅ data-testid='thesis-confirm-export-btn' with dynamic text",
+      "default_state": "✅ MNL selected, all 3 chapters checked",
+      "dynamic_button_text": "✅ Changes from '3 บท' to '2 บท' when unchecking chapter"
+    },
+    "auth_required": "✅ All endpoints return 401/403 without token",
+    "invalid_study_id": "✅ Returns 404",
+    "invalid_job_id": "✅ Returns status='not_found'"
+  },
+  "api_endpoints_tested": [
+    "POST /api/auth/login - ✅",
+    "POST /api/conjoint/studies/{study_id}/export-thesis - ✅ (with method and chapters params)",
+    "GET /api/conjoint/studies/{study_id}/export-thesis-status/{job_id} - ✅",
+    "GET /api/conjoint/studies/{study_id}/export-thesis-download - ✅ (with optional cache_key)",
+    "GET /api/conjoint/studies/{study_id}/export-thesis-download?cache_key=X - ✅"
+  ],
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "Gemini 2.5 Flash is real but thesis content is cached so no AI call needed for tests"
+  }
+}
