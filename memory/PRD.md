@@ -1,62 +1,35 @@
 # PRD - SWU Marketing Research Tool
 
 ## Original Problem Statement
-A comprehensive marketing research and academic tool for Srinakharinwirot University (SWU). Features include Conjoint Analysis, Survey Management, Customer Journey Mapping, Kanban Project Management with RBAC, and AI-powered content generation.
-
-## Core Requirements
-- Conjoint Analysis with multiple statistical methods (Counting, MNL, Mixed Logit, HB, Linear Regression)
-- AI interpretation of results via Gemini 2.5 Flash
-- Export capabilities (CSV, Word thesis format)
-- Kanban Project Management with sub-kanban, RBAC, member management
+A comprehensive marketing research and academic tool for Srinakharinwirot University (SWU).
 
 ## What's Been Implemented
 
 ### Conjoint Analysis (COMPLETE)
-- Full conjoint study creation and response collection
-- 5 statistical analysis methods
-- AI interpretation with Gemini 2.5 Flash (with MongoDB caching)
-- Generate Prompt fallback for external AI usage
-- CSV export for raw response data
-- **Thesis Word Export with method & chapter selection:**
-  - User selects statistical method (Counting, MNL, OLS, Mixed Logit, HB) via modal
-  - User selects chapters: Ch3 (Methodology), Ch4 (Results), Ch5 (Discussion)
-  - Each method includes detailed statistical equations (utility functions, Pseudo R², AIC, test criteria)
-  - Background job + polling pattern for reliable generation
-  - Summarized prompts (3K chars vs 50K+ raw JSON) for reliable Gemini completion
-  - Retry helper with exponential backoff for 502 errors
-- Performance optimized: nested loops removed, payload reduced from 7.4MB to 36KB
-- Async bcrypt for event-loop safety
-
-### AI Reliability (FIXED Apr 2026)
-- Root cause: proxy 60s timeout + oversized prompts
-- Summarized prompts, split chapter generation, retry with backoff
-- All AI calls now complete reliably in 30-45s
+- 5 statistical methods: Counting, MNL, Mixed Logit, HB, Linear Regression
+- AI interpretation via Gemini 2.5 Flash with caching
+- Generate Prompt fallback
+- CSV export
+- **Thesis Word Export** with multi-method & chapter selection:
+  - Select 1 or more methods (checkboxes, min 1)
+  - Select chapters 3 (Methodology), 4 (Results), 5 (Discussion)
+  - Detailed statistical equations per method (utility functions, R², AIC, Pseudo R², Wald test etc.)
+  - Multi-method → Ch4 includes comparison table
+  - Background job + polling, retry with backoff
+- AI reliability: summarized prompts (3K vs 50K), split chapter generation, retry helper
 
 ### Kanban Project Management (COMPLETE)
-- Full CRUD with drag-and-drop, Sub-Kanban, Cover Images, Assignees
-- RBAC: Owner, Manager, Editor, Card Owner (Student), Viewer
-- Mobile & Desktop responsive
-
-## Architecture
-- Frontend: React + TailwindCSS + Shadcn/UI
-- Backend: FastAPI + Python + MongoDB
-- AI: Gemini 2.5 Flash via emergentintegrations
-- Word generation: python-docx
-
-## Prioritized Backlog
-### P1
-- Google Drive Integration for Kanban card attachments
-- Verify Survey Image Display Fix
-### P2
-- Phase 2 Caching (Image Endpoint)
-- Verify Auto AI Analysis in "Share as Content"
-### P3+
-- Expand Kanban features, Refactor server.py, Customer Behavior Analysis, Survey Analytics
+- Sub-Kanban, Cover Images, Assignees, RBAC, Responsive
 
 ## Key API Endpoints (Thesis)
-- POST /api/conjoint/studies/{id}/export-thesis — {method, chapters[]}
+- POST /api/conjoint/studies/{id}/export-thesis — {methods: [...], chapters: [...]}
 - GET /api/conjoint/studies/{id}/export-thesis-status/{job_id}
 - GET /api/conjoint/studies/{id}/export-thesis-download?cache_key=X
+
+## Backlog
+- P1: Google Drive Integration for Kanban, Survey Image Display Fix
+- P2: Phase 2 Caching, Auto AI Analysis verification
+- P3+: Kanban templates, Refactor server.py, Survey Analytics
 
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
