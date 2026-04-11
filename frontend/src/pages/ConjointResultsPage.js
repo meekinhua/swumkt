@@ -205,21 +205,71 @@ const ConjointResultsPage = () => {
         requestBody,
         { headers }
       );
-      setAiInterpretation(response.data);
-      setGeneratedPrompt(null);
-      
-      const wasCached = response.data.cached;
-      if (aiAnalysisMode === 'compare_all') {
-        toast.success(`วิเคราะห์ทุกวิธีสำเร็จ${wasCached ? ' (จาก cache)' : ''}!`);
-      } else {
-        toast.success(`${getMethodName(selectedMethod)} ${wasCached ? '(จาก cache)' : 'สำเร็จ'}!`);
+
+      // If cached, result comes back immediately
+      if (response.data.status === 'ready') {
+        setAiInterpretation(response.data);
+        setGeneratedPrompt(null);
+        const wasCached = response.data.cached;
+        if (aiAnalysisMode === 'compare_all') {
+          toast.success(`วิเคราะห์ทุกวิธีสำเร็จ${wasCached ? ' (จาก cache)' : ''}!`);
+        } else {
+          toast.success(`${getMethodName(selectedMethod)} ${wasCached ? '(จาก cache)' : 'สำเร็จ'}!`);
+        }
+        setLoadingAI(false);
+        return;
       }
+
+      // Background job started — poll for result
+      const job_id = response.data.job_id;
+      toast.info('AI กำลังวิเคราะห์... รอสักครู่');
+      let attempts = 0;
+      const maxAttempts = 40; // ~2 minutes at 3s intervals
+      let resolved = false;
+
+      const pollInterval = setInterval(async () => {
+        if (resolved) return;
+        attempts++;
+        try {
+          const pollRes = await axios.get(
+            `${API}/conjoint/studies/${studyId}/ai-interpretation-status/${job_id}`,
+            { headers }
+          );
+
+          if (pollRes.data.status === 'ready' && !resolved) {
+            resolved = true;
+            clearInterval(pollInterval);
+            setAiInterpretation(pollRes.data);
+            setGeneratedPrompt(null);
+            setLoadingAI(false);
+            if (aiAnalysisMode === 'compare_all') {
+              toast.success('วิเคราะห์ทุกวิธีสำเร็จ!');
+            } else {
+              toast.success(`${getMethodName(selectedMethod)} สำเร็จ!`);
+            }
+          } else if (pollRes.data.status === 'failed' && !resolved) {
+            resolved = true;
+            clearInterval(pollInterval);
+            setLoadingAI(false);
+            toast.error(pollRes.data.error || 'AI วิเคราะห์ไม่สำเร็จ — กำลังสร้าง Prompt ให้คัดลอกไปใช้เอง...');
+            await loadGeneratedPrompt();
+          } else if (attempts >= maxAttempts && !resolved) {
+            resolved = true;
+            clearInterval(pollInterval);
+            setLoadingAI(false);
+            toast.error('AI ใช้เวลานานเกินไป — กำลังสร้าง Prompt ให้คัดลอกไปใช้เอง...');
+            await loadGeneratedPrompt();
+          }
+        } catch (pollErr) {
+          console.error('Poll error:', pollErr);
+        }
+      }, 3000);
+
     } catch (error) {
       console.error('Error generating AI interpretation:', error);
       toast.error('AI วิเคราะห์ไม่สำเร็จ — กำลังสร้าง Prompt ให้คัดลอกไปใช้เอง...');
       // Auto-generate prompt as fallback
       await loadGeneratedPrompt();
-    } finally {
       setLoadingAI(false);
     }
   };
@@ -390,9 +440,29 @@ const ConjointResultsPage = () => {
             { headers }
           );
           
-          interpretationText = aiResponse.data.interpretation;
-          setAiInterpretation(aiResponse.data);
-          toast.success('✅ สร้างการวิเคราะห์ด้วย AI สำเร็จ!');
+          if (aiResponse.data.status === 'ready') {
+            interpretationText = aiResponse.data.interpretation;
+            setAiInterpretation(aiResponse.data);
+            toast.success('✅ สร้างการวิเคราะห์ด้วย AI สำเร็จ!');
+          } else if (aiResponse.data.job_id) {
+            // Poll and wait for background job
+            const jobId = aiResponse.data.job_id;
+            for (let i = 0; i < 30; i++) {
+              await new Promise(r => setTimeout(r, 3000));
+              const pollRes = await axios.get(
+                `${API}/conjoint/studies/${studyId}/ai-interpretation-status/${jobId}`,
+                { headers }
+              );
+              if (pollRes.data.status === 'ready') {
+                interpretationText = pollRes.data.interpretation;
+                setAiInterpretation(pollRes.data);
+                toast.success('✅ สร้างการวิเคราะห์ด้วย AI สำเร็จ!');
+                break;
+              } else if (pollRes.data.status === 'failed') {
+                throw new Error(pollRes.data.error || 'AI failed');
+              }
+            }
+          }
         } catch (aiError) {
           console.error('Error generating AI interpretation:', aiError);
           toast.warning('⚠️ ไม่สามารถสร้างการวิเคราะห์ AI ได้ แต่จะดำเนินการแชร์ต่อ');

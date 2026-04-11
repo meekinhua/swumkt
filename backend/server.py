@@ -10744,11 +10744,10 @@ async def _prepare_analysis_summary(study, responses, method: str, compare_all: 
 async def get_ai_interpretation(
     study_id: str,
     request: AIInterpretationRequest,
+    background_tasks: BackgroundTasks,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Generate AI interpretation — cached in DB. Returns cached if exists."""
-    import asyncio
-
+    """Generate AI interpretation — cached in DB. Uses background task to avoid proxy timeout."""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
@@ -10763,33 +10762,90 @@ async def get_ai_interpretation(
     respondent_count = study.get("respondent_count", 0)
     cache_key = f"ai_{request.method}_{'all' if request.compare_all else 'single'}"
 
-    # Check cache first
+    # Check cache first — return immediately if exists
     cached = await db.analysis_cache.find_one(
         {"study_id": study_id, "method": cache_key, "respondent_count": respondent_count},
         {"_id": 0}
     )
     if cached and cached.get("results"):
         return {
+            "status": "ready",
             "interpretation": cached["results"]["interpretation"],
             "summary_data": cached["results"].get("summary_data"),
             "cached": True
         }
 
-    # Need to compute — load full study + responses
-    full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
-
     if len(responses) < 10:
         raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
 
-    analysis_summary = await _prepare_analysis_summary(full_study, responses, request.method, request.compare_all)
-    system_message, prompt = _build_interpretation_prompt(analysis_summary)
+    # Create job record and run in background
+    job_id = f"ai_interp_{study_id}_{uuid.uuid4().hex[:8]}"
+    await db.ai_interp_jobs.update_one(
+        {"job_id": job_id},
+        {"$set": {
+            "job_id": job_id,
+            "study_id": study_id,
+            "cache_key": cache_key,
+            "status": "processing",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
 
+    background_tasks.add_task(
+        _run_ai_interpretation,
+        study_id, cache_key, job_id, respondent_count,
+        request.method, request.compare_all
+    )
+
+    return {"status": "processing", "job_id": job_id}
+
+
+@api_router.get("/conjoint/studies/{study_id}/ai-interpretation-status/{job_id}")
+async def get_ai_interpretation_status(
+    study_id: str,
+    job_id: str,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Poll AI interpretation job status. Returns result when ready."""
+    job = await db.ai_interp_jobs.find_one({"job_id": job_id}, {"_id": 0})
+    if not job:
+        return {"status": "not_found"}
+
+    if job.get("status") == "ready":
+        # Fetch the cached result
+        cached = await db.analysis_cache.find_one(
+            {"study_id": study_id, "method": job["cache_key"]},
+            {"_id": 0}
+        )
+        if cached and cached.get("results"):
+            return {
+                "status": "ready",
+                "interpretation": cached["results"]["interpretation"],
+                "summary_data": cached["results"].get("summary_data"),
+                "cached": False
+            }
+        return {"status": "ready", "interpretation": "", "summary_data": None}
+
+    return {"status": job.get("status", "unknown"), "error": job.get("error")}
+
+
+async def _run_ai_interpretation(study_id: str, cache_key: str, job_id: str,
+                                  respondent_count: int, method: str, compare_all: bool):
+    """Background task: generate AI interpretation and cache result."""
+    import asyncio
     try:
+        full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+
+        analysis_summary = await _prepare_analysis_summary(full_study, responses, method, compare_all)
+        system_message, prompt = _build_interpretation_prompt(analysis_summary)
+
         response = await _call_gemini_with_retry(
             system_msg=system_message,
             prompt=prompt,
-            session_id=f"conjoint-interpret-{study_id}"
+            session_id=f"conjoint-interpret-{study_id}-{job_id}"
         )
 
         result_data = {
@@ -10797,7 +10853,6 @@ async def get_ai_interpretation(
             "summary_data": analysis_summary
         }
 
-        # Cache the result
         await db.analysis_cache.update_one(
             {"study_id": study_id, "method": cache_key},
             {"$set": {
@@ -10810,14 +10865,24 @@ async def get_ai_interpretation(
             upsert=True
         )
 
-        return {**result_data, "cached": False}
+        await db.ai_interp_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "ready"}}
+        )
+        logging.info(f"AI interpretation completed for job {job_id}")
 
     except asyncio.TimeoutError:
-        logging.error(f"AI interpretation timed out for study {study_id}")
-        raise HTTPException(status_code=504, detail="AI วิเคราะห์ใช้เวลานานเกินไป กรุณาใช้ปุ่ม 'สร้าง Prompt' แทน")
+        logging.error(f"AI interpretation timed out for job {job_id}")
+        await db.ai_interp_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "failed", "error": "AI ใช้เวลานานเกินไป กรุณาลองใหม่"}}
+        )
     except Exception as e:
-        logging.error(f"AI interpretation error: {e}")
-        raise HTTPException(status_code=500, detail=f"AI วิเคราะห์ไม่สำเร็จ: {str(e)}")
+        logging.error(f"AI interpretation failed for job {job_id}: {e}")
+        await db.ai_interp_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "failed", "error": str(e)}}
+        )
 
 
 # Generate prompt template (no AI call) for user to copy
