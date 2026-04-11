@@ -7439,6 +7439,7 @@ class AIInterpretationRequest(BaseModel):
 class ThesisExportRequest(BaseModel):
     methods: List[str] = ["mnl"]  # counting, mnl, linear_regression, mixed_logit, hierarchical_bayes
     chapters: List[int] = [3, 4, 5]  # Which chapters to generate
+    extra_prompt: str = ""  # Additional user instructions for AI
 
 
 class ConjointContentShareRequest(BaseModel):
@@ -11060,7 +11061,7 @@ def _get_method_equations(method: str) -> str:
 
 
 def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict,
-                         methods: list = None, chapters: list = None) -> tuple:
+                         methods: list = None, chapters: list = None, extra_prompt: str = "") -> tuple:
     """Build per-chapter prompts with detailed method-specific equations.
     Returns (system_msg, dict_of_chapter_prompts)
     """
@@ -11080,8 +11081,17 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
     system_msg = (
         "คุณเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ MBA ที่มีความเชี่ยวชาญด้าน Conjoint Analysis "
         "เขียนเนื้อหาวิทยานิพนธ์อย่างเป็นทางการ ภาษาไทยวิชาการ อ้างอิงค่าสถิติถูกต้อง "
-        "แสดงสูตรสมการทุกจุดที่เกี่ยวข้อง"
+        "แสดงสูตรสมการทุกจุดที่เกี่ยวข้อง\n\n"
+        "**กฎการเขียนสมการ**: เขียนสมการในรูปแบบ LaTeX โดยใช้ $$...$$ สำหรับสมการหลัก (display equation) "
+        "และ $...$ สำหรับสมการในบรรทัด (inline equation) เช่น:\n"
+        "$$U_j = \\sum_{k=1}^{K} \\beta_k x_{jk} + \\varepsilon_j$$\n"
+        "หรือ ค่า $\\beta_1 = 0.245$ มีนัยสำคัญทางสถิติ\n"
+        "ห้ามเขียนสมการเป็นข้อความธรรมดา ต้องใช้ LaTeX syntax เสมอ"
     )
+
+    # Append extra prompt to system message if provided
+    if extra_prompt:
+        system_msg += f"\n\n**คำสั่งเพิ่มเติมจากผู้ใช้**: {extra_prompt}"
 
     methods_display = ", ".join(METHOD_NAMES.get(m, m) for m in methods)
     all_equations = "\n".join(_get_method_equations(m) for m in methods)
@@ -11194,17 +11204,20 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 
 
 def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str) -> bytes:
-    """Create a .docx file with thesis formatting from AI content."""
+    """Create a .docx file with thesis formatting from AI content, including native Word equations."""
     from docx import Document
     from docx.shared import Pt, Inches, Cm, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT
     import io
     import re
+    import math2docx
+
+    FONT_NAME = 'TH SarabunPSK'
 
     doc = Document()
 
-    # Page margins
+    # Page margins (SWU iThesis format)
     for section in doc.sections:
         section.top_margin = Cm(2.54)
         section.bottom_margin = Cm(2.54)
@@ -11213,17 +11226,78 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
 
     # Styles
     style_normal = doc.styles['Normal']
-    style_normal.font.name = 'TH SarabunPSK'
+    style_normal.font.name = FONT_NAME
     style_normal.font.size = Pt(16)
     style_normal.paragraph_format.line_spacing = 1.5
     style_normal.paragraph_format.space_after = Pt(6)
 
+    def _set_run_font(run, size=16, bold=False, italic=False):
+        run.font.name = FONT_NAME
+        run.font.size = Pt(size)
+        run.font.bold = bold
+        run.font.italic = italic
+
+    def _add_math_to_para(paragraph, latex_str):
+        """Add a native Word equation to a paragraph using math2docx."""
+        try:
+            cleaned = latex_str.strip()
+            if not cleaned:
+                return
+            math2docx.add_math(paragraph, cleaned)
+        except Exception as e:
+            logging.warning(f"math2docx failed for '{latex_str[:80]}': {e}")
+            run = paragraph.add_run(latex_str)
+            _set_run_font(run, italic=True)
+
+    def _add_text_with_inline_math(paragraph, text):
+        """Add text with inline math ($...$) and bold/italic formatting."""
+        # Split by inline math $...$ (not $$)
+        parts = re.split(r'(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)', text)
+        for idx, part in enumerate(parts):
+            if idx % 2 == 1:
+                # This is an inline math segment
+                _add_math_to_para(paragraph, part)
+            else:
+                # Regular text with bold/italic formatting
+                if not part:
+                    continue
+                sub_parts = re.split(r'(\*\*.*?\*\*|\*.*?\*)', part)
+                for sp in sub_parts:
+                    if sp.startswith('**') and sp.endswith('**'):
+                        run = paragraph.add_run(sp[2:-2])
+                        _set_run_font(run, bold=True)
+                    elif sp.startswith('*') and sp.endswith('*'):
+                        run = paragraph.add_run(sp[1:-1])
+                        _set_run_font(run, italic=True)
+                    else:
+                        if sp:
+                            run = paragraph.add_run(sp)
+                            _set_run_font(run)
+
+    # Pre-process: merge multi-line display equations ($$\n...\n$$)
+    processed_lines = []
+    i = 0
+    raw_lines = ai_content.split('\n')
+    while i < len(raw_lines):
+        stripped = raw_lines[i].strip()
+        # Start of multi-line display equation
+        if stripped == '$$':
+            eq_lines = []
+            i += 1
+            while i < len(raw_lines) and raw_lines[i].strip() != '$$':
+                eq_lines.append(raw_lines[i].strip())
+                i += 1
+            processed_lines.append('$$' + ' '.join(eq_lines) + '$$')
+            i += 1
+            continue
+        processed_lines.append(raw_lines[i])
+        i += 1
+
     # Parse AI content into sections
-    lines = ai_content.split('\n')
     current_table_data = []
     in_table = False
 
-    for line in lines:
+    for line in processed_lines:
         stripped = line.strip()
         if not stripped:
             if in_table and current_table_data:
@@ -11248,14 +11322,23 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
             current_table_data = []
             in_table = False
 
+        # Display equation line: $$...$$
+        if stripped.startswith('$$') and stripped.endswith('$$') and len(stripped) > 4:
+            latex = stripped[2:-2].strip()
+            p = doc.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p.paragraph_format.space_before = Pt(6)
+            p.paragraph_format.space_after = Pt(6)
+            _add_math_to_para(p, latex)
+            continue
+
         # Chapter headings (## บทที่)
         if stripped.startswith('## บทที่') or stripped.startswith('## '):
             heading_text = stripped.lstrip('#').strip()
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = p.add_run(heading_text)
-            run.font.size = Pt(18)
-            run.font.bold = True
+            _set_run_font(run, size=18, bold=True)
             p.paragraph_format.space_before = Pt(24)
             p.paragraph_format.space_after = Pt(12)
 
@@ -11264,8 +11347,7 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
             heading_text = stripped.lstrip('#').strip()
             p = doc.add_paragraph()
             run = p.add_run(heading_text)
-            run.font.size = Pt(16)
-            run.font.bold = True
+            _set_run_font(run, bold=True)
             p.paragraph_format.space_before = Pt(12)
             p.paragraph_format.space_after = Pt(6)
 
@@ -11274,9 +11356,7 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
             heading_text = stripped.lstrip('#').strip()
             p = doc.add_paragraph()
             run = p.add_run(heading_text)
-            run.font.size = Pt(16)
-            run.font.bold = True
-            run.font.italic = True
+            _set_run_font(run, bold=True, italic=True)
             p.paragraph_format.space_before = Pt(8)
 
         # Bold lines (**text**)
@@ -11284,19 +11364,18 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
             text = stripped.strip('*').strip()
             p = doc.add_paragraph()
             run = p.add_run(text)
-            run.font.bold = True
-            run.font.size = Pt(16)
+            _set_run_font(run, bold=True)
 
         # Bullet points
         elif stripped.startswith('- ') or stripped.startswith('• '):
             text = stripped[2:].strip()
             p = doc.add_paragraph(style='List Bullet')
-            _add_formatted_text(p, text)
+            _add_text_with_inline_math(p, text)
 
         # Numbered list
         elif re.match(r'^\d+\.', stripped):
             p = doc.add_paragraph(style='List Number')
-            _add_formatted_text(p, stripped)
+            _add_text_with_inline_math(p, stripped)
 
         # Table label [ตาราง X.X: ...]
         elif stripped.startswith('[ตาราง'):
@@ -11304,18 +11383,17 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = p.add_run(text)
-            run.font.bold = True
-            run.font.size = Pt(16)
+            _set_run_font(run, bold=True)
 
         # Horizontal rule
         elif stripped == '---':
             doc.add_page_break()
 
-        # Regular paragraph
+        # Regular paragraph (may contain inline math)
         else:
             p = doc.add_paragraph()
             p.paragraph_format.first_line_indent = Cm(1.27)
-            _add_formatted_text(p, stripped)
+            _add_text_with_inline_math(p, stripped)
 
     # Flush remaining table
     if current_table_data:
@@ -11352,6 +11430,8 @@ def _add_table_to_doc(doc, table_data):
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+    FONT_NAME = 'TH SarabunPSK'
+
     if not table_data or len(table_data) < 1:
         return
 
@@ -11370,6 +11450,7 @@ def _add_table_to_doc(doc, table_data):
                 p = cell.paragraphs[0]
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 run = p.add_run(cell_text.strip())
+                run.font.name = FONT_NAME
                 run.font.size = Pt(14)
                 if i == 0:
                     run.font.bold = True
@@ -11394,7 +11475,11 @@ async def export_thesis_start(
     respondent_count = study.get("respondent_count", 0)
     methods_key = "_".join(sorted(request.methods))
     chapters_key = "_".join(str(c) for c in sorted(request.chapters))
-    cache_key = f"thesis_{methods_key}_{chapters_key}"
+    extra_hash = ""
+    if request.extra_prompt and request.extra_prompt.strip():
+        import hashlib
+        extra_hash = hashlib.md5(request.extra_prompt.strip().encode()).hexdigest()[:8]
+    cache_key = f"thesis_{methods_key}_{chapters_key}" + (f"_ep{extra_hash}" if extra_hash else "")
 
     # Check cache — if AI content already exists, return ready immediately
     cached = await db.analysis_cache.find_one(
@@ -11427,7 +11512,7 @@ async def export_thesis_start(
     background_tasks.add_task(
         _run_thesis_generation,
         study_id, cache_key, job_id, respondent_count, study.get("title", ""),
-        request.methods, request.chapters
+        request.methods, request.chapters, request.extra_prompt.strip() if request.extra_prompt else ""
     )
 
     return {"status": "processing", "job_id": job_id}
@@ -11435,7 +11520,8 @@ async def export_thesis_start(
 
 async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str,
                                 respondent_count: int, study_title: str,
-                                methods: list = None, chapters: list = None):
+                                methods: list = None, chapters: list = None,
+                                extra_prompt: str = ""):
     """Background task to generate thesis content via AI and cache it."""
     import asyncio
     if chapters is None:
@@ -11464,7 +11550,7 @@ async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str,
                 logging.warning(f"Thesis bg - method {m} failed: {e}")
 
         system_msg, chapter_prompts = _build_thesis_prompt(
-            study_title, respondent_count, all_results, methods, chapters
+            study_title, respondent_count, all_results, methods, chapters, extra_prompt
         )
 
         # Generate each chapter separately (to stay within proxy timeout)

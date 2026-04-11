@@ -108,6 +108,7 @@ const ConjointResultsPage = () => {
   const [thesisMethod, setThesisMethod] = useState('mnl');
   const [thesisMethods, setThesisMethods] = useState(['mnl']);
   const [thesisChapters, setThesisChapters] = useState([3, 4, 5]);
+  const [extraPrompt, setExtraPrompt] = useState('');
 
   useEffect(() => {
     // Load results for both authenticated and public access
@@ -552,7 +553,7 @@ const ConjointResultsPage = () => {
       // Step 1: Start generation
       const startRes = await axios.post(
         `${API}/conjoint/studies/${studyId}/export-thesis`,
-        { methods: thesisMethods, chapters: thesisChapters },
+        { methods: thesisMethods, chapters: thesisChapters, extra_prompt: extraPrompt || '' },
         { headers }
       );
       
@@ -802,6 +803,23 @@ const ConjointResultsPage = () => {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Extra Prompt */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              คำสั่งเพิ่มเติม (Extra Prompt) — ไม่บังคับ
+            </label>
+            <textarea
+              value={extraPrompt}
+              onChange={(e) => setExtraPrompt(e.target.value)}
+              placeholder="เช่น: เน้นเรื่องกลยุทธ์ราคา, เพิ่มรายละเอียดเรื่อง Brand Positioning, ใช้ภาษาทางการมากขึ้น..."
+              className="w-full min-h-[80px] rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-y"
+              data-testid="thesis-extra-prompt"
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              AI จะนำคำสั่งนี้ไปใช้ประกอบการเขียนเนื้อหาวิทยานิพนธ์
+            </p>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">

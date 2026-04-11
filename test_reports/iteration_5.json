@@ -1,0 +1,82 @@
+{
+  "summary": "Completed comprehensive testing of Thesis Export Extra Prompt feature. All 16 backend tests passed (100%) and all frontend UI elements verified. The feature allows users to add custom AI instructions via Extra Prompt textarea, which is included in the cache key hash and passed to the AI prompt builder.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_thesis_extra_prompt.py",
+    "/app/test_reports/pytest/pytest_thesis_extra_prompt.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ThesisExportRequest model correctly includes extra_prompt: str = '' field (line 7442)",
+    "_build_thesis_prompt function correctly appends extra_prompt to system message with 'คำสั่งเพิ่มเติมจากผู้ใช้' prefix (lines 11093-11094)",
+    "_create_thesis_docx uses math2docx library for native Word equations (OMML) instead of raw LaTeX (line 11214, 11246)",
+    "Display equations ($$...$$) are converted via _add_math_to_para function (line 11240-11250)",
+    "Inline equations ($...$) are converted via _add_text_with_inline_math function (line 11252-11275)",
+    "Multi-line display equations ($$\\n...\\n$$) are merged correctly (lines 11277-11294)",
+    "TH SarabunPSK font is set on Normal style and all runs (line 11216, 11229, 11234-11238)",
+    "Cache key includes MD5 hash of extra_prompt when provided: _ep{hash[:8]} (lines 11479-11482)",
+    "Frontend extraPrompt state correctly initialized and passed to API (lines 111, 556)",
+    "Extra Prompt textarea has data-testid='thesis-extra-prompt' for testing (line 818)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_thesis_extra_prompt.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "admin": "admin@swu.ac.th / admin123"
+  },
+  "seed_data_creation": "Used existing study ID: 38d01d61-385e-45af-8417-93c67994db59 (ข้าว, 51 responses)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Thesis Export Extra Prompt feature fully tested. Key test file: /app/backend/tests/test_thesis_extra_prompt.py. The feature adds: 1) Extra Prompt textarea in modal (data-testid='thesis-extra-prompt'), 2) extra_prompt parameter in ThesisExportRequest model, 3) Cache key includes _ep{hash} when extra_prompt provided, 4) math2docx library converts LaTeX to native Word equations (OMML), 5) TH SarabunPSK font set on all document runs. All tests pass.",
+  "features_tested": {
+    "backend_api": {
+      "extra_prompt_accepted": "✅ POST /export-thesis accepts extra_prompt in request body",
+      "extra_prompt_optional": "✅ Works without extra_prompt or with empty string",
+      "cache_key_with_hash": "✅ Cache key includes _ep{md5_hash[:8]} when extra_prompt provided",
+      "cache_key_without_hash": "✅ Cache key has no _ep suffix when extra_prompt is empty",
+      "auth_required": "✅ Returns 403 without authentication"
+    },
+    "docx_generation": {
+      "math2docx_import": "✅ math2docx library v3.1.0 imported successfully",
+      "display_equations": "✅ $$...$$ converted to native Word equations via math2docx.add_math()",
+      "inline_equations": "✅ $...$ converted to native Word equations",
+      "multiline_equations": "✅ $$\\n...\\n$$ merged and rendered correctly",
+      "font_settings": "✅ TH SarabunPSK font set on Normal style",
+      "mixed_content": "✅ Handles text, tables, and equations together"
+    },
+    "prompt_builder": {
+      "extra_prompt_in_system_msg": "✅ extra_prompt appended to system message with 'คำสั่งเพิ่มเติมจากผู้ใช้' prefix",
+      "latex_instructions": "✅ System message includes LaTeX equation syntax instructions ($$...$$ and $...$)",
+      "works_without_extra_prompt": "✅ No extra instructions section when extra_prompt is empty"
+    },
+    "frontend_modal": {
+      "extra_prompt_textarea": "✅ data-testid='thesis-extra-prompt' found and visible",
+      "textarea_placeholder": "✅ Placeholder: 'เช่น: เน้นเรื่องกลยุทธ์ราคา, เพิ่มรายละเอียดเรื่อง Brand Positioning...'",
+      "textarea_editable": "✅ Can type in textarea",
+      "label_text": "✅ Label: 'คำสั่งเพิ่มเติม (Extra Prompt) — ไม่บังคับ'",
+      "method_checkboxes": "✅ All 5 methods present (counting, mnl, linear_regression, mixed_logit, hierarchical_bayes)",
+      "chapter_checkboxes": "✅ All 3 chapters present (3, 4, 5)",
+      "confirm_button": "✅ Button shows dynamic text '(1 วิธี, 3 บท)'"
+    }
+  },
+  "api_endpoints_tested": [
+    "POST /api/auth/login - ✅",
+    "POST /api/conjoint/studies/{study_id}/export-thesis - ✅ (with extra_prompt parameter)"
+  ],
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All APIs are real. math2docx library is installed and working for native Word equation generation."
+  }
+}
