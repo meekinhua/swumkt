@@ -567,13 +567,15 @@ const ConjointResultsPage = () => {
         return;
       }
       
-      // Step 2: Poll for completion
+      // Step 2: Poll for completion (with download guard)
       const chapterNames = thesisChapters.map(c => `บทที่ ${c}`).join(', ');
       toast.info(`AI กำลังสร้าง ${chapterNames}... อาจใช้เวลา 1-3 นาที`);
       let attempts = 0;
-      const maxAttempts = 60; // ~3 minutes at 3s intervals
+      const maxAttempts = 60;
+      let downloaded = false;
       
       const pollInterval = setInterval(async () => {
+        if (downloaded) return;
         attempts++;
         try {
           const pollRes = await axios.get(
@@ -581,16 +583,19 @@ const ConjointResultsPage = () => {
             { headers }
           );
           
-          if (pollRes.data.status === 'ready') {
+          if (pollRes.data.status === 'ready' && !downloaded) {
+            downloaded = true;
             clearInterval(pollInterval);
             setThesisProgress('downloading');
             await downloadThesisFile(headers);
           } else if (pollRes.data.status === 'failed') {
+            downloaded = true;
             clearInterval(pollInterval);
             setLoadingThesis(false);
             setThesisProgress('');
             toast.error(pollRes.data.error || 'ไม่สามารถสร้างเนื้อหาได้ กรุณาลองใหม่');
           } else if (attempts >= maxAttempts) {
+            downloaded = true;
             clearInterval(pollInterval);
             setLoadingThesis(false);
             setThesisProgress('');
