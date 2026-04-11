@@ -721,15 +721,15 @@ const ConjointResultsPage = () => {
 
       {/* Thesis Export Modal */}
       <Dialog open={showThesisModal} onOpenChange={setShowThesisModal}>
-        <DialogContent className="sm:max-w-lg" data-testid="thesis-export-modal">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col" data-testid="thesis-export-modal">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <GraduationCap className="w-5 h-5 text-emerald-600" />
               Export วิทยานิพนธ์ (Word)
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 py-2">
+          <div className="space-y-6 py-2 overflow-y-auto flex-1 min-h-0 pr-1">
             {/* Method Selection - Multi-select */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -803,7 +803,6 @@ const ConjointResultsPage = () => {
                 ))}
               </div>
             </div>
-          </div>
 
           {/* Extra Prompt */}
           <div>
@@ -821,8 +820,9 @@ const ConjointResultsPage = () => {
               AI จะนำคำสั่งนี้ไปใช้ประกอบการเขียนเนื้อหาวิทยานิพนธ์
             </p>
           </div>
+          </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0 pt-2 border-t">
             <Button variant="outline" onClick={() => setShowThesisModal(false)}>
               ยกเลิก
             </Button>
