@@ -1,38 +1,176 @@
-# PRD - SWU Marketing Research Tool
+# PRD - SWU Marketing Research & Alumni Platform
 
 ## Original Problem Statement
-A comprehensive marketing research and academic tool for Srinakharinwirot University (SWU).
+A comprehensive marketing research and academic tool for Srinakharinwirot University (SWU), now expanding to include an Alumni Network platform ("สายตระกูล MKT SWU").
 
-## What's Been Implemented
+## User Language: THAI — All communication MUST be in Thai.
+
+---
+
+## System 1: Marketing Research Tool (COMPLETE)
 
 ### Conjoint Analysis (COMPLETE)
 - 5 statistical methods: Counting, MNL, Mixed Logit, HB, Linear Regression
 - AI interpretation via Gemini 2.5 Flash with caching
+- Background task + polling architecture (prevents 502 proxy timeout)
+- `_call_gemini_with_retry` for reliable AI calls
 - Generate Prompt fallback
 - CSV export
-- **Thesis Word Export** with multi-method & chapter selection:
-  - Select 1 or more methods (checkboxes, min 1)
-  - Select chapters 3 (Methodology), 4 (Results), 5 (Discussion)
-  - Detailed statistical equations per method (utility functions, R², AIC, Pseudo R², Wald test etc.)
-  - Multi-method → Ch4 includes comparison table
+- **Thesis Word Export**:
+  - Select methods (checkboxes) + chapters (3: Methodology, 4: Results, 5: Discussion)
+  - Extra Prompt input for custom AI instructions
+  - Native Word Equations (OMML) via `math2docx`
+  - SWU iThesis Format: TH SarabunPSK font, academic margins, 1.5 line spacing
   - Background job + polling, retry with backoff
-  - **Extra Prompt** input for custom AI instructions (appended to system message)
-  - **Native Word Equations (OMML)** via math2docx: LaTeX $...$ and $$...$$ converted to editable Word equations
-  - **SWU iThesis Format**: TH SarabunPSK font (16pt body, 18pt headings), margins (left 3.81cm, others 2.54cm), 1.5 line spacing
-- AI reliability: summarized prompts (3K vs 50K), split chapter generation, retry helper
+- AI Interpretation: Background task + polling (same as thesis, prevents 502)
 
 ### Kanban Project Management (COMPLETE)
-- Sub-Kanban, Cover Images, Assignees, RBAC, Responsive
+- Sub-Kanban inside cards, Cover Images, Assignees with auto-avatar
+- RBAC: owner, manager, editor, card_owner (student), viewer
+- Students can only edit cards they created or are assigned to
+- Mobile & Desktop Responsive
 
-## Key API Endpoints (Thesis)
-- POST /api/conjoint/studies/{id}/export-thesis — {methods: [...], chapters: [...], extra_prompt: "..."}
+### Other Features (COMPLETE)
+- Survey Builder, Customer Journey, Customer Perception
+- Journal Finder, Academic Format Editor
+- Content sharing, Admin dashboard, Notifications
+
+## System 2: Alumni Network — "สายตระกูล MKT SWU" (NEW — NOT STARTED)
+
+### Vision
+สร้างเครือข่ายศิษย์เก่า-นิสิตปัจจุบัน คณะการตลาด มศว ที่ active, สนุก และให้ value จริง โดยใช้ระบบ "สายรหัส" (พี่ take → ปู่ → ทวด → เทียด) เป็น core metaphor
+
+### Core Concept: สายตระกูล (Bloodline System)
+- Relationship model: เทียดทวด → เทียด → ทวด → ปู่ → พี่ take → คุณ → น้อง take → เหลน
+- Marking rules: 2-way confirmation (A marks B → B accepts)
+- Auto-derive chain: If B is your พี่ take and C is B's พี่ take → C is your ปู่
+- Multi-parent supported (multiple พี่ take possible)
+
+### Phase 1 — MVP (TO DO):
+1. **Landing Page** (public) — Hero with animated gen counter, live stats, how-it-works, testimonials, CTAs
+2. **Onboarding** (4 steps) — Verify identity → Specify พี่ take → Invite chain → Preview tree
+3. **Family Tree** — Ancestors/Descendants view, click node detail, mark relations, unknown ancestor hints
+4. **Profile** — Avatar, stats, badges, bio, gamification basics
+
+### Phase 2 (FUTURE):
+- Discover (Mystery Match — random person 3-6 hops away)
+- Feed (post types: text, throwback, review, job, announcement, search)
+- Jobs & Business directory
+
+### Alumni Design System (from spec):
+- Colors: Red `#C8102E`, Red-ink `#8A0B20`, Red-soft `#FCE8EB`, Blue `#1B75BC`, Blue-ink `#0E4F83`, Blue-soft `#E3F0FA`, Ink `#14161A`, Paper `#F7F4EE`, Yellow `#F6C445`
+- Typography: IBM Plex Sans Thai (300-700), IBM Plex Mono
+- Radius: 8 / 14 / 22 / 32px
+- Shadow: sm / md / lg defined in spec
+- Dark theme support defined in CSS variables
+
+### Alumni Architecture Decision:
+- **Backend**: `/app/backend/routes/alumni.py` (SEPARATE from server.py)
+- **Frontend**: `/app/frontend/src/pages/alumni/` (SEPARATE folder)
+- **DB**: MongoDB (existing), new collections: `alumni_users`, `alumni_relations`, `alumni_posts`, `alumni_jobs`, `alumni_reviews`, `alumni_invites`, `alumni_badges`
+- **Auth**: Use existing auth system + alumni-specific fields (gen, studentId, role)
+- **Route prefix**: `/api/alumni/...` for backend, `/alumni/...` for frontend routes
+- **Register in server.py**: Same pattern as Kanban — `api_router.include_router(alumni_router)` at bottom of server.py
+
+### Alumni DB Schema (from spec):
+```
+alumni_users: {
+  id, user_id (ref to existing users), student_id, name, nickname, gen, 
+  role (current/alumni/staff), major, position, company, bio, avatar_hue,
+  verified, xp, streak_days, last_active_at, privacy_settings, badges[]
+}
+
+alumni_relations: {
+  id, from_user_id, to_user_id, kind (take/mentor/custom), 
+  status (pending/confirmed/rejected), confirmed_by_from, confirmed_by_to,
+  derived (bool), primary (bool), created_by, created_at, confirmed_at
+}
+
+alumni_invites: {
+  id, inviter_id, invitee_email/invitee_student_id, code, 
+  status (sent/opened/registered/expired), relation_hint, sent_at, accepted_at
+}
+
+alumni_reviews: {
+  id, reviewer_id, subject_id, rating (1-5), category, text, 
+  helpful_tags[], anonymous, helpful_count, status, created_at
+}
+
+alumni_posts: {
+  id, author_id, type (text/throwback/review/job/announce/search),
+  content, images[], metadata (jsonb), visibility (family/network/all),
+  reactions, created_at
+}
+
+alumni_jobs: {
+  id, title, company, type, salary_range, location, tags[],
+  referrer_id, posted_by, applicants_count, status, expires_at
+}
+```
+
+### Alumni Spec & Prototype Files:
+- Full spec: `/app/memory/alumni-spec/SPEC.md`
+- Design CSS: `/app/memory/alumni-spec/app/styles.css`
+- Mock data: `/app/memory/alumni-spec/app/data.jsx`
+- Landing: `/app/memory/alumni-spec/app/screen-landing.jsx`
+- Onboarding: `/app/memory/alumni-spec/app/screen-onboarding.jsx`
+- Tree: `/app/memory/alumni-spec/app/screen-tree.jsx`
+- Discover: `/app/memory/alumni-spec/app/screen-discover.jsx`
+- Feed: `/app/memory/alumni-spec/app/screen-feed.jsx`
+- Jobs: `/app/memory/alumni-spec/app/screen-jobs.jsx`
+- Profile: `/app/memory/alumni-spec/app/screen-profile.jsx`
+- Shared components: `/app/memory/alumni-spec/app/components.jsx`
+- Icons: `/app/memory/alumni-spec/app/icons.jsx`
+
+---
+
+## Key API Endpoints (Existing)
+
+### Conjoint
+- POST /api/conjoint/studies/{id}/export-thesis — {methods, chapters, extra_prompt}
 - GET /api/conjoint/studies/{id}/export-thesis-status/{job_id}
 - GET /api/conjoint/studies/{id}/export-thesis-download?cache_key=X
+- POST /api/conjoint/studies/{id}/ai-interpretation (background task + polling)
+- GET /api/conjoint/studies/{id}/ai-interpretation-status/{job_id}
 
-## Backlog
-- P1: Google Drive Integration for Kanban, Survey Image Display Fix
-- P2: Phase 2 Caching, Auto AI Analysis verification
-- P3+: Kanban templates, Refactor server.py, Survey Analytics, Customer Behavior Analysis
+### Kanban
+- PUT /api/projects/{id}/members
+- POST /api/projects/{id}/cards/{card_id}/cover
+- PUT /api/projects/{id}/cards/{card_id}/subtasks/{subtask_id}/move
+
+---
+
+## Architecture Overview
+```
+/app/
+├── backend/
+│   ├── server.py              # Main API (11,700+ lines) — auth, conjoint, surveys, content
+│   ├── routes/
+│   │   ├── projects.py        # Kanban routes (separate)
+│   │   └── alumni.py          # TO CREATE — Alumni routes (separate)
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── App.js             # Route definitions
+│   │   ├── context/AuthContext.js
+│   │   ├── components/ui/     # Shadcn UI components
+│   │   └── pages/
+│   │       ├── alumni/        # TO CREATE — Alumni pages
+│   │       ├── ConjointResultsPage.js
+│   │       ├── KanbanBoard.js
+│   │       └── ... (30+ pages)
+│   └── package.json
+└── memory/
+    ├── PRD.md
+    ├── CHANGELOG.md
+    ├── ROADMAP.md
+    ├── test_credentials.md
+    └── alumni-spec/           # Full prototype & spec
+```
+
+## 3rd Party Integrations
+- Emergent LLM Key → Gemini 2.5 Flash (`gemini-2.5-flash`) via `litellm`
+- Google Drive: Pending for Kanban attachments
 
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
