@@ -1,5 +1,34 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
+## 2026-04-18 — 🚀 Alumni Phase 1.5: Viral Invite + Gamification Engine + Notifications + Trivia
+- **Invite Viral Loop (production-ready)**:
+  - Shareable link `/alumni/invite/{code}` with public preview endpoint (shows inviter card)
+  - InviteModal: real **QR code** (qrcode.react SVG), Copy Link, LINE deep-link share, Download QR
+  - Floating Action Button (+100 XP badge) + Sticky top-nav "ชวนเพื่อน" button
+  - Auto-mark flow: new registrant via link → auto-creates pending 'take' relation to inviter
+  - Pending invite code persists in localStorage across register → onboarding → accept
+  - Inviter earns **+100 XP** per accepted invite + notification
+- **XP / Badge / Level Engine**:
+  - `XP_EVENTS` catalog: login_daily +5, upload_avatar +20, mark_relation +10, relation_confirmed +30, invite_sent +5, invite_accepted +100, trivia_correct +10, streak milestones +20/+50/+100/+300
+  - 8 auto-unlock badges (`BADGE_RULES`): tree_builder, king, 5_tier_club, connector, reviewer, iq_master, streak_7, streak_30
+  - 15-level progression (XP thresholds [0→50000])
+  - Level-up notifications ("🎉 Lv.5 แล้ว!") + badge-earned notifications
+- **Streak System**: `_touch_streak` on `/me` — auto resets if >1 day gap, +XP at 3/7/14/30 day milestones
+- **Notifications**:
+  - New collection `alumni_notifications` with `{user_id, kind, title, body, meta, read, created_at}`
+  - Bell icon in top nav with unread red badge · dropdown with time-ago formatting · deep-links to relevant page · "อ่านทั้งหมด" mass-mark-read · 30s polling
+  - Event kinds: mark_request, relation_confirmed, invite_accepted, welcome, badge, level_up, streak
+- **Trivia "รู้จักสายของคุณไหม?"** (`/alumni/trivia`):
+  - Auto-generates daily MCQ from user's tree (question types: company / position / gen)
+  - 4 options with correct/wrong visual feedback + XP reward
+  - IQ Leaderboard sidebar (top trivia_streak)
+  - Idempotent per day
+- **Throwback Widget** (Tree page sidebar):
+  - Random 4 alumni with playful Thai captions ("มีใครจำพี่คนนี้ได้ไหม?", "ตำนานของรุ่น")
+  - "สุ่มใหม่" refresh button
+- **Privacy toggles** now fully functional (PUT /api/alumni/privacy with partial merge)
+- **Testing**: iteration_7 · 18/18 backend · ~95% frontend · test file `/app/backend/tests/test_alumni_phase15.py`
+
 ## 2026-04-18 — 🎉 Alumni Network "สายตระกูล MKT SWU" Phase 1 MVP
 - **New Feature**: Full Alumni Networking & Family Tree module (Phase 1 of 2).
 - **Backend** — new router `/app/backend/routes/alumni.py` (factory pattern, separate from server.py):

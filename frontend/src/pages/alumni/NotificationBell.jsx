@@ -79,8 +79,9 @@ const NotificationBell = ({ token }) => {
       </button>
       {open && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 41 }} />
-          <div data-testid="notif-dropdown" style={{
+          <div onClick={() => setOpen(false)} data-testid="notif-dropdown-backdrop"
+            style={{ position: 'fixed', inset: 0, zIndex: 41 }} />
+          <div data-testid="notif-dropdown" role="menu" style={{
             position: 'absolute', top: '100%', right: 0, marginTop: 8,
             width: 340, maxHeight: 440, overflowY: 'auto',
             background: 'var(--al-card)', border: '1px solid var(--al-line)',

@@ -381,6 +381,9 @@ const AlumniProfilePage = () => {
                       <button
                         onClick={() => handleTogglePrivacy(key, on)}
                         data-testid={`privacy-toggle-${key}`}
+                        role="switch"
+                        aria-checked={on ? 'true' : 'false'}
+                        data-state={on ? 'checked' : 'unchecked'}
                         style={{
                           width: 34, height: 20, borderRadius: 999,
                           background: on ? 'var(--al-red)' : 'var(--al-line-2)',
