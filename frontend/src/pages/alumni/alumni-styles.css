@@ -1,0 +1,227 @@
+/* Alumni Design System — "สายตระกูล MKT SWU"
+   Scoped to .alumni-root so it doesn't affect the rest of the app.
+*/
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+.alumni-root {
+  --al-red: #C8102E;
+  --al-red-ink: #8A0B20;
+  --al-red-soft: #FCE8EB;
+  --al-blue: #1B75BC;
+  --al-blue-ink: #0E4F83;
+  --al-blue-soft: #E3F0FA;
+  --al-ink: #14161A;
+  --al-ink-2: #2A2E35;
+  --al-mute: #6B7280;
+  --al-line: #E6E3DC;
+  --al-line-2: #D7D3CA;
+  --al-paper: #F7F4EE;
+  --al-paper-2: #EFEBE2;
+  --al-card: #FFFFFF;
+  --al-yellow: #F6C445;
+
+  --al-font-sans: 'IBM Plex Sans Thai', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --al-font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  --al-r-sm: 8px;
+  --al-r-md: 14px;
+  --al-r-lg: 22px;
+  --al-r-xl: 32px;
+
+  --al-shadow-sm: 0 1px 2px rgba(20,22,26,0.04), 0 1px 1px rgba(20,22,26,0.03);
+  --al-shadow-md: 0 4px 14px rgba(20,22,26,0.06), 0 2px 4px rgba(20,22,26,0.04);
+  --al-shadow-lg: 0 24px 60px -20px rgba(20,22,26,0.18), 0 8px 20px -8px rgba(20,22,26,0.08);
+
+  font-family: var(--al-font-sans);
+  background: var(--al-paper);
+  color: var(--al-ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.alumni-root * { box-sizing: border-box; }
+.alumni-root button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
+.alumni-root a { color: inherit; text-decoration: none; }
+.alumni-root input, .alumni-root textarea, .alumni-root select { font-family: inherit; font-size: inherit; color: inherit; }
+
+.al-mono { font-family: var(--al-font-mono); font-feature-settings: "tnum"; }
+.al-tabular { font-variant-numeric: tabular-nums; }
+
+/* Top Nav */
+.al-topnav {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 20px;
+  padding: 14px 28px;
+  background: rgba(247,244,238,0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--al-line);
+}
+.al-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
+.al-brand-mark {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--al-red); color: white;
+  display: grid; place-items: center;
+  font-family: var(--al-font-mono); font-weight: 700; font-size: 13px;
+  position: relative;
+}
+.al-brand-mark::after {
+  content: ''; position: absolute; inset: 3px 3px auto auto; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--al-blue);
+}
+.al-brand-name { font-size: 16px; }
+.al-brand-name em { font-style: normal; color: var(--al-mute); font-weight: 500; margin-left: 6px; font-size: 13px; }
+
+.al-nav-tabs { display: flex; gap: 2px; margin-left: 24px; }
+.al-nav-tab {
+  padding: 8px 14px; border-radius: 999px; font-size: 14px; color: var(--al-ink-2); font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.al-nav-tab:hover { background: var(--al-paper-2); }
+.al-nav-tab.active { background: var(--al-ink); color: white; }
+.al-nav-spacer { flex: 1; }
+.al-nav-right { display: flex; align-items: center; gap: 10px; }
+.al-iconbtn {
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  color: var(--al-ink-2); background: transparent; position: relative;
+}
+.al-iconbtn:hover { background: var(--al-paper-2); }
+.al-iconbtn .al-badge {
+  position: absolute; top: 4px; right: 4px; min-width: 16px; height: 16px; border-radius: 8px;
+  background: var(--al-red); color: white; font-size: 10px; display: grid; place-items: center; padding: 0 4px;
+  font-weight: 600;
+}
+
+/* Buttons */
+.al-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  transition: transform .08s, background .15s;
+}
+.al-btn:active { transform: translateY(1px); }
+.al-btn-primary { background: var(--al-ink); color: white; }
+.al-btn-primary:hover { background: var(--al-ink-2); }
+.al-btn-red { background: var(--al-red); color: white; }
+.al-btn-red:hover { background: var(--al-red-ink); }
+.al-btn-blue { background: var(--al-blue); color: white; }
+.al-btn-blue:hover { background: var(--al-blue-ink); }
+.al-btn-outline { background: transparent; color: var(--al-ink); border: 1px solid var(--al-line-2); }
+.al-btn-outline:hover { background: white; }
+.al-btn-ghost { background: transparent; color: var(--al-ink-2); }
+.al-btn-ghost:hover { background: var(--al-paper-2); }
+.al-btn-lg { padding: 14px 22px; font-size: 15px; border-radius: 12px; }
+.al-btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+.al-btn-block { width: 100%; justify-content: center; }
+
+/* Cards */
+.al-card {
+  background: var(--al-card);
+  border: 1px solid var(--al-line);
+  border-radius: var(--al-r-lg);
+  box-shadow: var(--al-shadow-sm);
+}
+.al-card-pad { padding: 22px; }
+
+/* Chips */
+.al-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500;
+  background: var(--al-paper-2); color: var(--al-ink-2);
+  border: 1px solid transparent;
+}
+.al-tag.red { background: var(--al-red-soft); color: var(--al-red-ink); }
+.al-tag.blue { background: var(--al-blue-soft); color: var(--al-blue-ink); }
+.al-tag.outline { background: transparent; border-color: var(--al-line-2); }
+.al-tag.dark { background: var(--al-ink); color: white; }
+
+/* Page */
+.al-page { max-width: 1280px; margin: 0 auto; padding: 28px; width: 100%; }
+
+/* Headings */
+.al-h-display {
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  margin: 0;
+}
+.al-h-section { font-size: 28px; letter-spacing: -0.02em; font-weight: 700; margin: 0; }
+.al-h-card { font-size: 17px; letter-spacing: -0.01em; font-weight: 700; margin: 0; }
+.al-eyebrow {
+  font-family: var(--al-font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--al-mute); font-weight: 500;
+}
+
+/* Utility */
+.al-muted { color: var(--al-mute); }
+.al-small { font-size: 13px; }
+.al-tiny { font-size: 11px; }
+.al-sep { height: 1px; background: var(--al-line); margin: 14px 0; }
+
+/* Tree canvas */
+.al-tree-canvas {
+  background: var(--al-paper-2);
+  border-radius: var(--al-r-lg);
+  border: 1px solid var(--al-line);
+  position: relative;
+  overflow: hidden;
+  background-image: radial-gradient(circle at 1px 1px, rgba(20,22,26,0.08) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+/* Tabs */
+.al-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--al-line); }
+.al-tabs button {
+  padding: 10px 14px; font-size: 14px; color: var(--al-mute); font-weight: 500;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.al-tabs button.active { color: var(--al-ink); border-bottom-color: var(--al-ink); }
+
+/* Progress */
+.al-progress { height: 4px; background: var(--al-line); border-radius: 999px; overflow: hidden; }
+.al-progress > div { height: 100%; background: var(--al-ink); border-radius: 999px; transition: width .3s; }
+
+/* Modal */
+.al-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(10,12,14,0.5);
+  backdrop-filter: blur(6px);
+  z-index: 50; display: grid; place-items: center;
+  animation: al-fade .15s ease-out both;
+  padding: 20px;
+}
+.al-modal {
+  background: var(--al-card); border-radius: var(--al-r-xl); padding: 28px;
+  max-width: 560px; width: 100%; box-shadow: var(--al-shadow-lg);
+  border: 1px solid var(--al-line);
+  max-height: 90vh; overflow-y: auto;
+}
+
+/* Animations */
+@keyframes al-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.al-fade-in { animation: al-fade .3s ease-out both; }
+
+/* Bottom nav (mobile) */
+.al-bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  background: rgba(247,244,238,0.95); backdrop-filter: blur(10px);
+  border-top: 1px solid var(--al-line);
+  display: none; padding: 6px 4px;
+}
+.al-bottom-nav button {
+  flex: 1; padding: 8px 4px; display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  color: var(--al-mute); font-size: 10px; font-weight: 500;
+}
+.al-bottom-nav button.active { color: var(--al-ink); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .al-topnav { padding: 12px 16px; gap: 10px; }
+  .al-nav-tabs { display: none; }
+  .al-page { padding: 16px; padding-bottom: 90px; }
+  .al-h-display { font-size: clamp(32px, 9vw, 48px); }
+  .al-bottom-nav { display: flex; }
+  .al-hero-grid { grid-template-columns: 1fr !important; }
+  .al-cta-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+  .al-tree-layout { grid-template-columns: 1fr !important; }
+  .al-profile-layout { grid-template-columns: 1fr !important; }
+}

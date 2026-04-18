@@ -33,6 +33,10 @@ import AdminUserManagement from '@/pages/AdminUserManagement';
 import AdminLLMPrompts from '@/pages/AdminLLMPrompts';
 import ProjectsPage from '@/pages/ProjectsPage';
 import KanbanBoard from '@/pages/KanbanBoard';
+import AlumniLandingPage from '@/pages/alumni/AlumniLandingPage';
+import AlumniOnboardingPage from '@/pages/alumni/AlumniOnboardingPage';
+import AlumniTreePage from '@/pages/alumni/AlumniTreePage';
+import AlumniProfilePage from '@/pages/alumni/AlumniProfilePage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -336,6 +340,49 @@ function App() {
               element={
                 <ProtectedRoute>
                   <KanbanBoard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Alumni Network — สายตระกูล MKT SWU */}
+            <Route path="/alumni" element={<AlumniLandingPage />} />
+            <Route
+              path="/alumni/onboarding"
+              element={
+                <ProtectedRoute>
+                  <AlumniOnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/tree"
+              element={
+                <ProtectedRoute>
+                  <AlumniTreePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/tree/:userId"
+              element={
+                <ProtectedRoute>
+                  <AlumniTreePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/profile"
+              element={
+                <ProtectedRoute>
+                  <AlumniProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/profile/:userId"
+              element={
+                <ProtectedRoute>
+                  <AlumniProfilePage />
                 </ProtectedRoute>
               }
             />
