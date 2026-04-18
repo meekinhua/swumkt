@@ -69,6 +69,26 @@ const AlumniProfilePage = () => {
     }
   };
 
+  const handleAvatarUpload = async (file) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.show('ไฟล์ใหญ่เกินไป (จำกัด 2MB)');
+      return;
+    }
+    // Convert to base64 data URL
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        await axios.put(`${API}/auth/profile`, { avatar_url: reader.result }, authHeader);
+        toast.show('เปลี่ยนรูปโปรไฟล์แล้ว');
+        loadProfile();
+      } catch {
+        toast.show('อัปโหลดไม่สำเร็จ');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveEdit = async () => {
     try {
       await axios.put(`${API}/alumni/me`, {
@@ -130,7 +150,34 @@ const AlumniProfilePage = () => {
             }} />
           </div>
           <div style={{ padding: '0 28px 24px', marginTop: -48, display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
-            <Avatar name={u.name} hue={u.avatar_hue || 210} size="xl" ring="var(--al-paper)" verified={u.verified} src={u.avatar_url} />
+            <div style={{ position: 'relative' }}>
+              <Avatar name={u.name} hue={u.avatar_hue || 210} size="xl" ring="var(--al-paper)" verified={u.verified} src={u.avatar_url} />
+              {isOwn && (
+                <label
+                  htmlFor="alumni-avatar-upload"
+                  title="เปลี่ยนรูปโปรไฟล์"
+                  data-testid="profile-avatar-upload-label"
+                  style={{
+                    position: 'absolute', bottom: 2, right: 2,
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: 'var(--al-ink)', color: 'white',
+                    display: 'grid', placeItems: 'center',
+                    cursor: 'pointer', border: '2px solid var(--al-paper)',
+                    boxShadow: 'var(--al-shadow-md)',
+                  }}
+                >
+                  <Icon name="sliders" size={14} />
+                  <input
+                    id="alumni-avatar-upload"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={e => handleAvatarUpload(e.target.files?.[0])}
+                    style={{ display: 'none' }}
+                    data-testid="profile-avatar-upload-input"
+                  />
+                </label>
+              )}
+            </div>
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
                 <h1 style={{ fontSize: 26, margin: 0, letterSpacing: '-0.02em' }} data-testid="profile-name">{u.name}</h1>

@@ -120,19 +120,24 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
     async def _get_user_info(user_id: str) -> Optional[dict]:
         return await db.users.find_one(
             {"id": user_id},
-            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1, "profile_image": 1},
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "student_id": 1,
+             "profile_image": 1, "avatar_url": 1, "google_picture": 1},
         )
 
     async def _enrich_alumni(alum: dict) -> dict:
-        """Attach user info (full_name, email) to alumni record."""
+        """Attach user info (full_name, email, avatar) to alumni record."""
         if not alum:
             return alum
         user = await _get_user_info(alum["user_id"])
         if user:
             alum["name"] = user.get("full_name") or alum.get("nickname") or ""
             alum["email"] = user.get("email")
-            if not alum.get("avatar_url"):
-                alum["avatar_url"] = user.get("profile_image")
+            # Prefer uploaded avatar_url, else Google picture, else profile_image
+            alum["avatar_url"] = (
+                user.get("avatar_url")
+                or user.get("google_picture")
+                or user.get("profile_image")
+            )
         return alum
 
     async def _confirmed_parents(user_id: str) -> List[dict]:
@@ -204,9 +209,11 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             return None
         alum = alum or {}
         label = ancestor_label(distance) if direction == "up" else descendant_label(distance)
+        u = user or {}
+        avatar = u.get("avatar_url") or u.get("google_picture") or u.get("profile_image")
         return {
             "user_id": user_id,
-            "name": (user or {}).get("full_name") or alum.get("nickname") or "",
+            "name": u.get("full_name") or alum.get("nickname") or "",
             "nickname": alum.get("nickname"),
             "student_id": alum.get("student_id"),
             "gen": alum.get("gen"),
@@ -214,7 +221,7 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             "position": alum.get("position"),
             "company": alum.get("company"),
             "avatar_hue": alum.get("avatar_hue", 210),
-            "avatar_url": (user or {}).get("profile_image"),
+            "avatar_url": avatar,
             "verified": alum.get("verified", False),
             "distance": distance,
             "relation": label,
