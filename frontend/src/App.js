@@ -37,6 +37,8 @@ import AlumniLandingPage from '@/pages/alumni/AlumniLandingPage';
 import AlumniOnboardingPage from '@/pages/alumni/AlumniOnboardingPage';
 import AlumniTreePage from '@/pages/alumni/AlumniTreePage';
 import AlumniProfilePage from '@/pages/alumni/AlumniProfilePage';
+import AlumniTriviaPage from '@/pages/alumni/AlumniTriviaPage';
+import AlumniInviteAcceptPage from '@/pages/alumni/AlumniInviteAcceptPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -346,6 +348,7 @@ function App() {
 
             {/* Alumni Network — สายตระกูล MKT SWU */}
             <Route path="/alumni" element={<AlumniLandingPage />} />
+            <Route path="/alumni/invite/:code" element={<AlumniInviteAcceptPage />} />
             <Route
               path="/alumni/onboarding"
               element={
@@ -367,6 +370,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AlumniTreePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/trivia"
+              element={
+                <ProtectedRoute>
+                  <AlumniTriviaPage />
                 </ProtectedRoute>
               }
             />

@@ -117,6 +117,19 @@ const AlumniOnboardingPage = () => {
         avatar_hue: 210,
       }, authHeader);
       toast.show('ลงทะเบียนสำเร็จ');
+
+      // Check for pending invite code (from /alumni/invite/{code} flow)
+      const pendingCode = localStorage.getItem('pending_invite_code');
+      if (pendingCode) {
+        try {
+          await axios.post(`${API}/alumni/invites/accept/${pendingCode}`, {}, authHeader);
+          localStorage.removeItem('pending_invite_code');
+          toast.show('เชื่อมเข้ากับสายของผู้เชิญแล้ว');
+        } catch {
+          localStorage.removeItem('pending_invite_code');
+        }
+      }
+
       next();
     } catch (e) {
       toast.show(e.response?.data?.detail || 'ลงทะเบียนไม่สำเร็จ');

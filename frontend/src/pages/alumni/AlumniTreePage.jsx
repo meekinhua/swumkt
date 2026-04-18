@@ -107,6 +107,7 @@ const AlumniTreePage = () => {
   const [markModal, setMarkModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [throwback, setThrowback] = useState([]);
 
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -117,7 +118,15 @@ const AlumniTreePage = () => {
     }
     loadTree();
     loadPending();
+    loadThrowback();
   }, [user, userId]);
+
+  const loadThrowback = async () => {
+    try {
+      const r = await axios.get(`${API}/alumni/throwback/random?count=4`, authHeader);
+      setThrowback(r.data.items || []);
+    } catch {}
+  };
 
   const loadTree = async () => {
     setLoading(true);
@@ -376,6 +385,38 @@ const AlumniTreePage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Throwback widget — ขำเล่น */}
+            {throwback.length > 0 && (
+              <div className="al-card al-card-pad" data-testid="throwback-widget">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div className="al-eyebrow">📸 Throwback · ขำเล่น</div>
+                  <button className="al-btn al-btn-ghost al-btn-sm" onClick={loadThrowback} data-testid="throwback-refresh-btn">
+                    <Icon name="sparkles" size={12} /> สุ่มใหม่
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {throwback.map(t => (
+                    <div key={t.user_id} data-testid={`throwback-card-${t.user_id}`}
+                      style={{
+                        padding: 12, background: 'var(--al-paper-2)', borderRadius: 12,
+                        textAlign: 'center',
+                      }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+                        <Avatar name={t.name} hue={t.avatar_hue || 210} size="lg" src={t.avatar_url} />
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>
+                        {t.nickname || t.name}
+                      </div>
+                      <div className="al-tiny al-muted" style={{ marginBottom: 4 }}>รุ่น {t.gen}</div>
+                      <div className="al-tiny" style={{ fontStyle: 'italic', color: 'var(--al-ink-2)', lineHeight: 1.3 }}>
+                        "{t.caption}"
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -69,6 +69,17 @@ const AlumniProfilePage = () => {
     }
   };
 
+  const handleTogglePrivacy = async (key, current) => {
+    try {
+      const payload = { [key]: !current };
+      const r = await axios.put(`${API}/alumni/privacy`, payload, authHeader);
+      setProfile(prev => ({ ...prev, privacy_settings: r.data.privacy_settings }));
+      toast.show('บันทึกการตั้งค่าแล้ว');
+    } catch {
+      toast.show('บันทึกไม่สำเร็จ');
+    }
+  };
+
   const handleAvatarUpload = async (file) => {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -367,13 +378,18 @@ const AlumniProfilePage = () => {
                   return (
                     <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
                       <span className="al-small">{labels[key] || key}</span>
-                      <div style={{
-                        width: 34, height: 20, borderRadius: 999,
-                        background: on ? 'var(--al-red)' : 'var(--al-line-2)',
-                        padding: 2, display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start',
-                      }}>
+                      <button
+                        onClick={() => handleTogglePrivacy(key, on)}
+                        data-testid={`privacy-toggle-${key}`}
+                        style={{
+                          width: 34, height: 20, borderRadius: 999,
+                          background: on ? 'var(--al-red)' : 'var(--al-line-2)',
+                          padding: 2, display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start',
+                          cursor: 'pointer', border: 'none', transition: 'background .2s',
+                        }}
+                      >
                         <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white' }} />
-                      </div>
+                      </button>
                     </div>
                   );
                 })}

@@ -99,6 +99,47 @@ class InviteRequest(BaseModel):
     relation_hint: Optional[str] = None  # "น้อง take" / "พี่ take" etc.
 
 
+class PrivacyUpdate(BaseModel):
+    show_in_feed: Optional[bool] = None
+    show_company_to_juniors: Optional[bool] = None
+    allow_mystery_match: Optional[bool] = None
+    allow_message_requests: Optional[bool] = None
+    mask_student_id: Optional[bool] = None
+
+
+class TriviaAnswer(BaseModel):
+    question_id: str
+    answer_index: int  # 0-3
+
+
+# ==== XP / BADGE ENGINE ====
+XP_EVENTS = {
+    "login_daily": 5,
+    "upload_avatar": 20,
+    "mark_relation": 10,
+    "relation_confirmed": 30,
+    "invite_sent": 5,
+    "invite_accepted": 100,
+    "trivia_correct": 10,
+    "streak_milestone_3": 20,
+    "streak_milestone_7": 50,
+    "streak_milestone_14": 100,
+    "streak_milestone_30": 300,
+}
+
+BADGE_RULES = [
+    # key, name, emoji, check(profile, stats) -> bool
+    ("tree_builder", "ผู้ก่อร่าง", "🌳", lambda p, s: s.get("invite_accepted", 0) >= 5),
+    ("king", "นายก๊ก", "👑", lambda p, s: s.get("invite_accepted", 0) >= 10),
+    ("5_tier_club", "5 ทอดคลับ", "🔗", lambda p, s: s.get("max_ancestor_depth", 0) >= 5),
+    ("connector", "Connector", "🤝", lambda p, s: s.get("confirmed_relations", 0) >= 10),
+    ("reviewer", "นักรีวิว", "⭐", lambda p, s: s.get("reviews_written", 0) >= 3),
+    ("iq_master", "IQ Master", "🧠", lambda p, s: s.get("trivia_streak", 0) >= 7),
+    ("streak_7", "ไฟลุก 7 วัน", "🔥", lambda p, s: p.get("streak_days", 0) >= 7),
+    ("streak_30", "ตำนานตระกูล", "🏆", lambda p, s: p.get("streak_days", 0) >= 30),
+]
+
+
 def _default_privacy() -> Dict[str, bool]:
     return {
         "show_in_feed": True,
@@ -139,6 +180,148 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
                 or user.get("profile_image")
             )
         return alum
+
+    # ============ XP / BADGE / STREAK / NOTIFICATION ENGINE ============
+
+    def _level_from_xp(xp: int) -> int:
+        """Return level 1-15 based on XP thresholds."""
+        thresholds = [0, 100, 300, 600, 1000, 1500, 2500, 4000, 6000, 9000, 13000, 18000, 25000, 35000, 50000]
+        for i, t in enumerate(reversed(thresholds)):
+            if xp >= t:
+                return len(thresholds) - i
+        return 1
+
+    async def _push_notification(user_id: str, kind: str, title: str, body: str = "", meta: dict = None):
+        """Insert a notification."""
+        doc = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "kind": kind,
+            "title": title,
+            "body": body,
+            "meta": meta or {},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.alumni_notifications.insert_one(doc)
+        return doc
+
+    async def _compute_user_stats(user_id: str) -> dict:
+        """Compute stats for badge unlock checks."""
+        invite_accepted = await db.alumni_invites.count_documents({
+            "inviter_id": user_id, "status": "registered",
+        })
+        confirmed = await db.alumni_relations.count_documents({
+            "$or": [{"from_user_id": user_id}, {"to_user_id": user_id}],
+            "status": "confirmed",
+        })
+        # Max ancestor depth via simple BFS
+        max_depth = 0
+        frontier = [(user_id, 0)]
+        visited = {user_id}
+        while frontier:
+            nxt = []
+            for uid, d in frontier:
+                parents = await _confirmed_parents(uid)
+                for rel in parents:
+                    pid = rel["to_user_id"]
+                    if pid in visited:
+                        continue
+                    visited.add(pid)
+                    max_depth = max(max_depth, d + 1)
+                    if d + 1 < 8:
+                        nxt.append((pid, d + 1))
+            frontier = nxt
+
+        trivia_stats = await db.alumni_users.find_one({"user_id": user_id}, {"_id": 0, "trivia_streak": 1, "reviews_written": 1}) or {}
+        return {
+            "invite_accepted": invite_accepted,
+            "confirmed_relations": confirmed,
+            "max_ancestor_depth": max_depth,
+            "trivia_streak": trivia_stats.get("trivia_streak", 0),
+            "reviews_written": trivia_stats.get("reviews_written", 0),
+        }
+
+    async def _award_xp(user_id: str, event_key: str, custom_amount: Optional[int] = None):
+        """Award XP + check level up + check badge unlocks. Creates notification for big events."""
+        amount = custom_amount if custom_amount is not None else XP_EVENTS.get(event_key, 0)
+        if amount <= 0:
+            return
+        profile = await db.alumni_users.find_one({"user_id": user_id}, {"_id": 0})
+        if not profile:
+            return
+        old_xp = profile.get("xp", 0)
+        old_level = _level_from_xp(old_xp)
+        new_xp = old_xp + amount
+        new_level = _level_from_xp(new_xp)
+        update = {"xp": new_xp}
+
+        # Check badge unlocks
+        stats = await _compute_user_stats(user_id)
+        earned_now = set(profile.get("badges", []))
+        newly_earned = []
+        for key, name, emoji, rule in BADGE_RULES:
+            if key in earned_now:
+                continue
+            try:
+                if rule(profile, stats):
+                    earned_now.add(key)
+                    newly_earned.append((key, name, emoji))
+            except Exception:
+                pass
+        if newly_earned:
+            update["badges"] = list(earned_now)
+
+        await db.alumni_users.update_one({"user_id": user_id}, {"$set": update})
+
+        # Level-up notification
+        if new_level > old_level:
+            await _push_notification(user_id, "level_up",
+                f"🎉 เลเวลอัพ! Lv.{new_level}",
+                f"คุณได้ +{amount} XP และขึ้น Lv.{new_level} แล้ว",
+                {"old_level": old_level, "new_level": new_level})
+        # Badge-earned notifications
+        for key, name, emoji in newly_earned:
+            await _push_notification(user_id, "badge",
+                f"{emoji} ปลดล็อค Badge ใหม่!",
+                f"คุณได้ Badge \"{name}\" แล้ว",
+                {"badge_key": key})
+
+    async def _touch_streak(user_id: str):
+        """Update streak_days based on last_active_at. Awards milestone XP."""
+        profile = await db.alumni_users.find_one({"user_id": user_id}, {"_id": 0})
+        if not profile:
+            return
+        now = datetime.now(timezone.utc)
+        last_active_str = profile.get("last_active_at")
+        streak = profile.get("streak_days", 0)
+
+        if last_active_str:
+            try:
+                last_active = datetime.fromisoformat(last_active_str.replace("Z", "+00:00"))
+                delta_days = (now.date() - last_active.date()).days
+                if delta_days == 0:
+                    return  # Already touched today
+                elif delta_days == 1:
+                    streak += 1
+                else:
+                    streak = 1  # Reset
+            except Exception:
+                streak = 1
+        else:
+            streak = 1
+
+        await db.alumni_users.update_one(
+            {"user_id": user_id},
+            {"$set": {"streak_days": streak, "last_active_at": now.isoformat()}},
+        )
+
+        # Milestone rewards
+        if streak in (3, 7, 14, 30):
+            await _award_xp(user_id, f"streak_milestone_{streak}")
+            await _push_notification(user_id, "streak",
+                f"🔥 Streak {streak} วันแล้ว!",
+                f"active ต่อเนื่อง {streak} วัน · รับโบนัสไปเลย")
 
     async def _confirmed_parents(user_id: str) -> List[dict]:
         """Get confirmed "พี่ take" parents (outgoing take relations)."""
@@ -313,15 +496,24 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         }
         await db.alumni_users.insert_one(profile)
         logging.info(f"[ALUMNI] Registered: {current_user.email} gen={data.gen}")
+        await _touch_streak(current_user.id)
+
+        # If registered via invite code (stored in session/later), mark invite + auto-relation
+        # (handled separately via /invites/accept endpoint)
+
         return await _enrich_alumni(await _get_alumni_profile(current_user.id))
 
     @alumni_router.get("/me")
     async def get_my_profile(current_user=Depends(get_current_user)):
-        """Get my alumni profile (null if not registered)."""
+        """Get my alumni profile (null if not registered). Also touches streak."""
         alum = await _get_alumni_profile(current_user.id)
         if not alum:
             return {"registered": False, "profile": None}
-        return {"registered": True, "profile": await _enrich_alumni(alum)}
+        await _touch_streak(current_user.id)
+        alum = await _get_alumni_profile(current_user.id)  # reload after touch
+        enriched = await _enrich_alumni(alum)
+        enriched["level"] = _level_from_xp(enriched.get("xp", 0))
+        return {"registered": True, "profile": enriched}
 
     @alumni_router.put("/me")
     async def update_my_profile(data: AlumniProfileUpdate, current_user=Depends(get_current_user)):
@@ -485,6 +677,17 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             "confirmed_at": None,
         }
         await db.alumni_relations.insert_one(relation)
+
+        # Award small XP + notify the target
+        await _award_xp(current_user.id, "mark_relation")
+        me_name = (current_user.full_name or "").strip() or (current_user.email.split("@")[0])
+        await _push_notification(
+            data.to_user_id, "mark_request",
+            "🤝 มีคนขอให้คุณเป็นพี่ในสายของเขา",
+            f"{me_name} ขอ mark คุณเป็น \"พี่ take\" · เข้าไปยืนยันได้",
+            {"relation_id": relation["id"], "from_user_id": current_user.id},
+        )
+
         return {k: v for k, v in relation.items() if k != "_id"}
 
     @alumni_router.put("/relations/{relation_id}/confirm")
@@ -508,6 +711,20 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         }
         await db.alumni_relations.update_one({"id": relation_id}, {"$set": update})
         updated = await db.alumni_relations.find_one({"id": relation_id}, {"_id": 0})
+
+        if data.accept:
+            # Both parties earn XP when confirmed
+            await _award_xp(rel["from_user_id"], "relation_confirmed")
+            await _award_xp(rel["to_user_id"], "relation_confirmed")
+            # Notify the marker
+            me_name = (current_user.full_name or "").strip() or current_user.email.split("@")[0]
+            await _push_notification(
+                rel["from_user_id"], "relation_confirmed",
+                "✅ ได้รับการยืนยันแล้ว",
+                f"{me_name} ยืนยันเป็นพี่ take ในสายตระกูลของคุณ",
+                {"relation_id": relation_id, "to_user_id": rel["to_user_id"]},
+            )
+
         return updated
 
     @alumni_router.get("/relations/pending")
@@ -546,14 +763,15 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         await db.alumni_relations.delete_one({"id": relation_id})
         return {"message": "Relation deleted"}
 
-    # ============ INVITES ============
+    # ============ INVITES (Viral Loop) ============
+
+    def _build_invite_url(code: str) -> str:
+        """Build shareable invite URL. Relies on frontend route /alumni/invite/{code}."""
+        return f"/alumni/invite/{code}"
 
     @alumni_router.post("/invites")
     async def send_invite(data: InviteRequest, current_user=Depends(get_current_user)):
-        """Send an invite to an email/studentId. Creates a record for later verification."""
-        if not data.invitee_email and not data.invitee_student_id and not data.invitee_name:
-            raise HTTPException(status_code=400, detail="Need at least one identifier")
-
+        """Create an invite with unique short code. Returns shareable URL."""
         code = uuid.uuid4().hex[:10]
         now = datetime.now(timezone.utc).isoformat()
         invite = {
@@ -564,17 +782,19 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             "invitee_name": data.invitee_name,
             "code": code,
             "status": "sent",
-            "relation_hint": data.relation_hint,
+            "relation_hint": data.relation_hint or "น้อง take",
+            "share_url": _build_invite_url(code),
             "sent_at": now,
             "accepted_at": None,
         }
         await db.alumni_invites.insert_one(invite)
 
-        # Increment inviter counter
+        # Counter + small XP
         await db.alumni_users.update_one(
             {"user_id": current_user.id},
             {"$inc": {"invite_count": 1}},
         )
+        await _award_xp(current_user.id, "invite_sent")
 
         return {k: v for k, v in invite.items() if k != "_id"}
 
@@ -583,6 +803,91 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         cur = db.alumni_invites.find({"inviter_id": current_user.id}, {"_id": 0}).sort("sent_at", -1)
         items = await cur.to_list(200)
         return {"invites": items, "total": len(items)}
+
+    @alumni_router.get("/invites/preview/{code}")
+    async def preview_invite(code: str):
+        """Public — used on /alumni/invite/{code} landing page to show who's inviting."""
+        invite = await db.alumni_invites.find_one({"code": code}, {"_id": 0})
+        if not invite:
+            raise HTTPException(status_code=404, detail="Invite code not found or expired")
+        if invite.get("status") == "expired":
+            raise HTTPException(status_code=410, detail="Invite expired")
+        # Mark as opened
+        if invite.get("status") == "sent":
+            await db.alumni_invites.update_one(
+                {"code": code}, {"$set": {"status": "opened", "opened_at": datetime.now(timezone.utc).isoformat()}},
+            )
+        inviter_alum = await _get_alumni_profile(invite["inviter_id"])
+        inviter = await _enrich_alumni(inviter_alum) if inviter_alum else None
+        return {
+            "code": code,
+            "inviter": inviter,
+            "relation_hint": invite.get("relation_hint"),
+            "status": invite.get("status"),
+        }
+
+    @alumni_router.post("/invites/accept/{code}")
+    async def accept_invite(code: str, current_user=Depends(get_current_user)):
+        """Called after registration — links invite to the new alumni profile and auto-creates pending mark."""
+        invite = await db.alumni_invites.find_one({"code": code}, {"_id": 0})
+        if not invite:
+            raise HTTPException(status_code=404, detail="Invite not found")
+        if invite.get("status") == "registered":
+            return {"message": "Already accepted", "invite": invite}
+
+        inviter_id = invite["inviter_id"]
+        if inviter_id == current_user.id:
+            raise HTTPException(status_code=400, detail="Cannot accept your own invite")
+
+        # Both must have alumni profiles
+        me_alum = await _get_alumni_profile(current_user.id)
+        if not me_alum:
+            raise HTTPException(status_code=400, detail="Register alumni profile first")
+
+        # Auto-create pending relation (me → inviter as พี่ take) — inviter still confirms
+        now = datetime.now(timezone.utc).isoformat()
+        existing = await db.alumni_relations.find_one({
+            "from_user_id": current_user.id, "to_user_id": inviter_id, "kind": "take",
+        })
+        if not existing:
+            relation = {
+                "id": str(uuid.uuid4()),
+                "from_user_id": current_user.id,
+                "to_user_id": inviter_id,
+                "kind": "take",
+                "status": "pending",
+                "confirmed_by_from": True,
+                "confirmed_by_to": False,
+                "derived": False,
+                "primary": True,
+                "created_by": current_user.id,
+                "created_at": now,
+                "confirmed_at": None,
+            }
+            await db.alumni_relations.insert_one(relation)
+
+        # Update invite status + reward inviter
+        await db.alumni_invites.update_one(
+            {"code": code},
+            {"$set": {"status": "registered", "accepted_at": now, "accepted_by_user_id": current_user.id}},
+        )
+        await _award_xp(inviter_id, "invite_accepted")
+        inviter_alum = await _get_alumni_profile(inviter_id)
+        inviter_name = (inviter_alum or {}).get("nickname") or "พี่"
+        me_name = (current_user.full_name or "").strip() or current_user.email.split("@")[0]
+        await _push_notification(
+            inviter_id, "invite_accepted",
+            "🎉 มีคนเข้ามาผ่าน invite ของคุณแล้ว!",
+            f"{me_name} สมัครผ่านลิงก์ของคุณ · เข้าไปยืนยันเป็นน้อง take",
+            {"invitee_user_id": current_user.id, "code": code},
+        )
+        await _push_notification(
+            current_user.id, "welcome",
+            f"👋 ยินดีต้อนรับสู่สายของ {inviter_name}",
+            "คุณถูกเพิ่มเข้าสายตระกูลโดยอัตโนมัติ — {inviter_name} ต้องยืนยันก่อน",
+        )
+
+        return {"message": "Invite accepted", "inviter_id": inviter_id, "relation_pending": True}
 
     # ============ ACTIVITY FEED (Basic) ============
 
@@ -598,5 +903,233 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         invites = await inv_cur.to_list(10)
 
         return {"relations": relations, "invites": invites}
+
+    # ============ PRIVACY ============
+
+    @alumni_router.put("/privacy")
+    async def update_privacy(data: PrivacyUpdate, current_user=Depends(get_current_user)):
+        """Update privacy toggles."""
+        profile = await _get_alumni_profile(current_user.id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        current = profile.get("privacy_settings") or _default_privacy()
+        updates = {k: v for k, v in data.model_dump().items() if v is not None}
+        current.update(updates)
+        await db.alumni_users.update_one(
+            {"user_id": current_user.id},
+            {"$set": {"privacy_settings": current, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        return {"privacy_settings": current}
+
+    # ============ NOTIFICATIONS ============
+
+    @alumni_router.get("/notifications")
+    async def list_notifications(current_user=Depends(get_current_user), limit: int = 20):
+        cur = db.alumni_notifications.find(
+            {"user_id": current_user.id}, {"_id": 0}
+        ).sort("created_at", -1).limit(limit)
+        items = await cur.to_list(limit)
+        unread = await db.alumni_notifications.count_documents(
+            {"user_id": current_user.id, "read": False}
+        )
+        return {"notifications": items, "unread": unread}
+
+    @alumni_router.put("/notifications/{notif_id}/read")
+    async def mark_notification_read(notif_id: str, current_user=Depends(get_current_user)):
+        await db.alumni_notifications.update_one(
+            {"id": notif_id, "user_id": current_user.id},
+            {"$set": {"read": True}},
+        )
+        return {"message": "Marked as read"}
+
+    @alumni_router.put("/notifications/read-all")
+    async def mark_all_notifications_read(current_user=Depends(get_current_user)):
+        await db.alumni_notifications.update_many(
+            {"user_id": current_user.id, "read": False},
+            {"$set": {"read": True}},
+        )
+        return {"message": "All marked as read"}
+
+    # ============ TRIVIA "รู้จักสายของคุณไหม?" ============
+
+    async def _generate_trivia_question(user_id: str) -> Optional[dict]:
+        """Generate a daily trivia question based on user's tree. Multiple choice (4 options)."""
+        # Get all alumni connected via tree (up to 5 levels)
+        ancestors_raw = await _bfs_ancestors(user_id, max_depth=5)
+        descendants_raw = await _bfs_descendants(user_id, max_depth=3)
+        all_ids = [a["user_id"] for a in ancestors_raw + descendants_raw]
+        if not all_ids:
+            return None
+
+        import random
+        # Pick a random tree member as subject
+        subject_uid = random.choice(all_ids)
+        subject = await _get_alumni_profile(subject_uid)
+        subject_user = await _get_user_info(subject_uid)
+        if not subject or not subject_user:
+            return None
+        subject_name = subject_user.get("full_name") or subject.get("nickname") or "พี่"
+
+        # Pool of distractor alumni (not the subject)
+        distractor_cur = db.alumni_users.find(
+            {"user_id": {"$ne": subject_uid}}, {"_id": 0}
+        ).limit(50)
+        distractors = await distractor_cur.to_list(50)
+        random.shuffle(distractors)
+
+        # Choose question type
+        valid_types = []
+        if subject.get("company"):
+            valid_types.append("company")
+        if subject.get("position"):
+            valid_types.append("position")
+        if subject.get("gen"):
+            valid_types.append("gen")
+
+        if not valid_types:
+            return None
+        qtype = random.choice(valid_types)
+
+        if qtype == "company":
+            question = f"พี่ {subject.get('nickname') or subject_name} ทำงานอยู่ที่บริษัทไหน?"
+            correct = subject.get("company")
+            distract_pool = [d.get("company") for d in distractors if d.get("company") and d.get("company") != correct]
+        elif qtype == "position":
+            question = f"ตำแหน่งของพี่ {subject.get('nickname') or subject_name} คืออะไร?"
+            correct = subject.get("position")
+            distract_pool = [d.get("position") for d in distractors if d.get("position") and d.get("position") != correct]
+        else:  # gen
+            question = f"{subject_name} คือรุ่นอะไร?"
+            correct = str(subject.get("gen"))
+            distract_pool = [str(d.get("gen")) for d in distractors if d.get("gen") and str(d.get("gen")) != correct]
+
+        # Ensure at least 3 distractors
+        distract_pool = list(set(distract_pool))[:3]
+        while len(distract_pool) < 3:
+            distract_pool.append("ไม่ทราบ / อื่น ๆ " + str(len(distract_pool)))
+
+        options = distract_pool[:3] + [correct]
+        random.shuffle(options)
+        correct_idx = options.index(correct)
+
+        return {
+            "id": str(uuid.uuid4()),
+            "date": datetime.now(timezone.utc).date().isoformat(),
+            "subject_user_id": subject_uid,
+            "question": question,
+            "options": options,
+            "correct_index": correct_idx,
+            "type": qtype,
+        }
+
+    @alumni_router.get("/trivia/daily")
+    async def get_daily_trivia(current_user=Depends(get_current_user)):
+        """Return today's trivia question. Idempotent per day per user."""
+        today = datetime.now(timezone.utc).date().isoformat()
+        existing = await db.alumni_trivia_daily.find_one(
+            {"user_id": current_user.id, "date": today}, {"_id": 0}
+        )
+        if existing:
+            # Hide correct_index if not yet answered
+            out = dict(existing)
+            if not existing.get("answered"):
+                out.pop("correct_index", None)
+            return out
+
+        q = await _generate_trivia_question(current_user.id)
+        if not q:
+            return {"question": None, "message": "ยังไม่มีคนในสายของคุณมากพอ · ลอง mark พี่ take ก่อน"}
+
+        doc = {
+            **q,
+            "user_id": current_user.id,
+            "answered": False,
+            "is_correct": None,
+            "answered_at": None,
+        }
+        await db.alumni_trivia_daily.insert_one(doc)
+        out = {k: v for k, v in doc.items() if k not in ("_id", "correct_index")}
+        return out
+
+    @alumni_router.post("/trivia/answer")
+    async def answer_trivia(data: TriviaAnswer, current_user=Depends(get_current_user)):
+        today = datetime.now(timezone.utc).date().isoformat()
+        q = await db.alumni_trivia_daily.find_one(
+            {"id": data.question_id, "user_id": current_user.id, "date": today}, {"_id": 0}
+        )
+        if not q:
+            raise HTTPException(status_code=404, detail="Trivia question not found")
+        if q.get("answered"):
+            raise HTTPException(status_code=400, detail="Already answered today")
+
+        is_correct = data.answer_index == q.get("correct_index")
+        await db.alumni_trivia_daily.update_one(
+            {"id": data.question_id},
+            {"$set": {
+                "answered": True,
+                "is_correct": is_correct,
+                "answered_at": datetime.now(timezone.utc).isoformat(),
+                "answer_index": data.answer_index,
+            }},
+        )
+
+        # Update trivia streak
+        profile = await _get_alumni_profile(current_user.id)
+        trivia_streak = profile.get("trivia_streak", 0)
+        if is_correct:
+            trivia_streak += 1
+            await db.alumni_users.update_one(
+                {"user_id": current_user.id},
+                {"$set": {"trivia_streak": trivia_streak}},
+            )
+            await _award_xp(current_user.id, "trivia_correct")
+        else:
+            await db.alumni_users.update_one(
+                {"user_id": current_user.id},
+                {"$set": {"trivia_streak": 0}},
+            )
+
+        return {
+            "is_correct": is_correct,
+            "correct_index": q.get("correct_index"),
+            "xp_earned": XP_EVENTS["trivia_correct"] if is_correct else 0,
+            "trivia_streak": trivia_streak if is_correct else 0,
+        }
+
+    @alumni_router.get("/leaderboard/iq")
+    async def leaderboard_iq(limit: int = 10):
+        """Top trivia streakers."""
+        cur = db.alumni_users.find(
+            {"trivia_streak": {"$gt": 0}}, {"_id": 0}
+        ).sort("trivia_streak", -1).limit(limit)
+        items = await cur.to_list(limit)
+        enriched = [await _enrich_alumni(i) for i in items]
+        return {"leaderboard": enriched}
+
+    # ============ THROWBACK (Random alumni showcase for fun) ============
+
+    @alumni_router.get("/throwback/random")
+    async def throwback_random(count: int = 5, current_user=Depends(get_current_user)):
+        """Return random alumni for playful showcase. Lightweight fun."""
+        import random
+        cur = db.alumni_users.find({}, {"_id": 0}).limit(200)
+        pool = await cur.to_list(200)
+        if not pool:
+            return {"items": []}
+        picks = random.sample(pool, min(count, len(pool)))
+        captions = [
+            "มีใครจำพี่คนนี้ได้ไหม?",
+            "ครั้งหนึ่งเคยเป็นวัยรุ่นแบบเรา",
+            "ตำนานของรุ่น",
+            "เจ้าของ legendary",
+            "พี่ที่ทุกคนในคณะควรรู้จัก",
+            "สายนี้ห่างจากคุณแค่ไม่กี่ทอด",
+        ]
+        result = []
+        for p in picks:
+            enriched = await _enrich_alumni(p)
+            enriched["caption"] = random.choice(captions)
+            result.append(enriched)
+        return {"items": result}
 
     return alumni_router
