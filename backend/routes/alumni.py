@@ -278,11 +278,15 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             raise HTTPException(status_code=400, detail="Invalid role")
 
         now = datetime.now(timezone.utc).isoformat()
+        default_nick = data.nickname
+        if not default_nick:
+            full_name = (current_user.full_name or "").strip()
+            default_nick = full_name.split()[0] if full_name else current_user.email.split("@")[0]
         profile = {
             "id": str(uuid.uuid4()),
             "user_id": current_user.id,
             "student_id": data.student_id,
-            "nickname": data.nickname or current_user.full_name.split()[0],
+            "nickname": default_nick,
             "gen": data.gen,
             "role": data.role,
             "major": data.major,

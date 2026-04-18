@@ -145,7 +145,7 @@ const AlumniLandingPage = () => {
         </div>
 
         {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 48 }}>
+        <div data-testid="alumni-stats-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 48 }}>
           <StatPill testId="stat-alumni" label="ศิษย์เก่าที่ลงทะเบียน" value={(stats.alumni || 0).toLocaleString()} sub="จากทั้งคณะ ~4,200 คน" />
           <StatPill testId="stat-current" label="นิสิตปัจจุบัน" value={stats.current || 0} sub="รุ่น 64-67" />
           <StatPill testId="stat-companies" label="บริษัทในเครือข่าย" value={stats.companies || 0} sub="ในไทย + 12 ประเทศ" />

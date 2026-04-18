@@ -64,7 +64,8 @@ const TreeConnector = ({ dashed }) => (
 );
 
 const PersonPanel = ({ person, onClose, onMessage }) => (
-  <div className="al-card al-card-pad al-fade-in" style={{ position: 'relative' }} data-testid="tree-person-panel">
+  <div className="al-card al-card-pad al-fade-in" role="dialog" aria-label="person-details"
+    style={{ position: 'relative' }} data-testid="tree-side-panel">
     <button className="al-iconbtn" style={{ position: 'absolute', top: 10, right: 10 }} onClick={onClose}
       data-testid="person-panel-close-btn">
       <Icon name="x" size={16} />
