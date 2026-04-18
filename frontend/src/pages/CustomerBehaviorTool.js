@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, Copy, AlertTriangle, Code, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://kanban-subtasks-1.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://family-tree-hub-41.preview.emergentagent.com';
 
 const CustomerBehaviorTool = () => {
   const navigate = useNavigate();

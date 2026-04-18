@@ -1,155 +1,150 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to build a suite of marketing and academic research tools. The previous session focused on enhancing the **Choice-Based Conjoint Analysis** tool, optimizing performance, and making the app responsive.
+The user previously requested enhancements to the Conjoint Analysis Thesis Export, specifically asking for native Word equations (OMML), SWU iThesis formatting (TH SarabunPSK font), and an Extra Prompt input for AI direction. After successfully implementing these and fixing several UI/UX bugs (modal overflow, multiple concurrent file downloads, and 502 proxy timeouts for AI interpretations), the user uploaded a new design mockup bundle (). 
+The new core requirement is to build a completely new **Alumni Networking & Family Tree Module** based on the provided HTML/CSS/JS mockups and specification documents. The user decided to fork the project to utilize a different model (Opus) for this massive new feature.
 
-This session's primary goals were:
-1.  **Continue Responsive Design:** Make the remaining core pages of the application mobile-friendly.
-2.  **Improve Loading Performance:** Address user concerns about the content loading mechanism and its lack of support for caching (CDN/Proxy).
-3.  **Enhance User Experience:** Implement a seamless infinite scroll that loads content continuously without requiring manual button clicks for subsequent pages.
+**PRODUCT REQUIREMENTS:**
+- Begin implementing the Alumni Module (Phase 1: Landing, Onboarding, Family Tree, Profile) exactly as specified in .
+- Match the frontend UI with the provided HTML/CSS mockups located in .
+- Ensure the new Alumni API routes are separated into a dedicated router (e.g., ) rather than adding them to the already massive .
 
-**User's preferred language**: Thai
+**User's preferred language**: Thai (INSTRUCT NEXT AGENT TO RESPOND IN THAI ONLY)
 
-**what currently exists?**
-The application is now almost fully responsive. All major pages, including , , , , , , and , have been updated with responsive layouts using TailwindCSS.
-
-A significant performance improvement has been implemented on the backend (). The primary content endpoints ( and ) now include  and  headers. This enables HTTP caching, allowing browsers and proxies to serve cached responses and use conditional requests (), which drastically reduces redundant data transfer and backend load.
-
-The  page was modified to implement a continuous infinite scroll, replacing the previous system that showed pagination buttons after the first page. However, this new implementation is currently buggy.
+**what currently exists?** 
+A fully functional Project Management (Kanban) module and a highly stable Conjoint Analysis module. The Thesis Export feature now supports custom AI prompts, native Word mathematical equations (via ), and SWU format styling. The  endpoints have been refactored to use a background task + polling architecture, permanently fixing previous 502 proxy timeouts. For the new Alumni module, all UI prototypes, mock data, and specifications have been extracted and are waiting in .
 
 **Last working item**:
--   Last item agent was working: The agent was verifying the successful implementation of HTTP caching headers (, ) on the backend.
--   Status: COMPLETED
--   Agent Testing Done: Y
--   Which testing method agent to use? NA
--   User Testing Done: N
+- Last item agent was working: Preparing the environment for a clean handoff to the new fork. The agent extracted  into , read the specs, and updated the PRD, ROADMAP, and CHANGELOG so the next agent can immediately begin building the Alumni Module.
+- Status: NOT STARTED (Setup complete, implementation pending)
+- Agent Testing Done: N
+- Which testing method agent to use? both (Frontend for UI component creation, Backend testing agent for new Alumni APIs)
+- User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Infinite Scroll on Content Page is Broken (P0)**
-    -   **Description:** The infinite scroll feature on the  page stops loading new content prematurely. During the last test, it loaded 25 out of 34 total items and then incorrectly displayed an all items loaded message, preventing the user from accessing the remaining content. This is a regression from the previous working pagination.
-    -   **Attempted fixes:** The agent refactored the loading logic to remove pagination and create a continuous scroll. However, this introduced a state management bug. The agent incorrectly moved  inside a , but the error  indicates a problem with the  dependency array or function definition order. A subsequent fix was attempted by resetting the page count, which also did not resolve the core issue.
-    -   **Next debug checklist:**
-        1.  Open .
-        2.  Review the  function and the state variables it depends on (, , , ).
-        3.  The main suspect is the logic that determines when to stop fetching: . Add  statements to track these values during each fetch.
-        4.  Ensure the  state, which is set on the initial fetch, is being correctly referenced in subsequent fetches. The bug likely lies in how  is set to  too early.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical bug blocking users from viewing all content. Fixing it will restore the core browsing functionality.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on other issue:** None
+  Issue 1: Implement File Attachments on Kanban Cards (P1)
+  Issue 2: Verify Auto AI Analysis in Share as Content Flow (P2)
 
--   **Issue 2: Verify Auto AI Analysis in Share as Content Flow (P1)**
-    -   **Description:** A core feature where sharing a conjoint study automatically generates an AI interpretation was never fully verified due to a lack of test data (no conjoint studies with >= 30 responses).
-    -   **Status:** BLOCKED (on test data creation)
-    -   **Is recurring issue?** Y
-
--   **Issue 3: AI Rearrange Context Window Fallback (P2)**
-    -   **Description:** The AI Rearrange feature fails if the article exceeds the AI model's context limit. A better fallback solution is needed.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
+  Issues Detail:
+  - Issue 1: Implement File Attachments on Kanban Cards
+     - Attempted fixes: Placeholder UI exists; backend integration postponed.
+     - Next debug checklist: Check . Use  for Google Drive file uploads.
+     - Why fix this issue and what will be achieved with the fix? Fulfills core Kanban file-sharing requirement requested by the user previously.
+     - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: None
+  - Issue 2: Verify Auto AI Analysis in Share as Content Flow
+     - Attempted fixes: The underlying  API was refactored to use background tasks in this session. The frontend  logic was updated to poll it.
+     - Next debug checklist: Create a conjoint study with >= 30 responses, click Share as Content, and verify the background polling succeeds and saves the interpretation correctly.
+     - Why fix this issue and what will be achieved with the fix? Verifies that sharing a conjoint study does not fail under the new background task architecture.
+     - Status: TESTING PENDING
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: Needs test data (>= 30 responses)
 
 **In progress Task List**:
--   **Task 1: Fix Infinite Scroll Logic (P0)**
-    -   **Where to resume:** . The priority is to debug the  function and its associated state management.
-    -   **What will be achieved with this?** A seamless and correct infinite scroll experience, allowing users to view all available content without interruption.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on something:** None
+  Task 1: Build the New Alumni Module (Phase 1)
+     - Where to resume: Read  and . Explore the React/HTML mockups in . Begin setting up the database schemas and frontend routing for the Alumni Module.
+     - What will be achieved with this? Fulfills the user's latest request to build a networking and family tree platform for SWU MKT alumni.
+     - Status: NOT STARTED
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on something: None
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   **P1: Verify Survey Image Display Fix:** The fix for images not appearing on the survey page was never visually verified. Use .
-    -   **P2: Implement Phase 2 Caching (Image Endpoint):** Create a dedicated backend endpoint (e.g., ) to serve images instead of embedding them as Base64 in the main API response. This will allow for independent image caching by CDNs and further improve performance.
-    -   **P2: Review Simplified Statistical Models:** Confirm with the user if the simplified HB and Mixed Logit models are sufficient.
--   **Future Tasks:**
-    -   **P3: Android Push Notification  option:** Implement in .
-    -   **P4: Revisit Academic Format Corrector:** This feature was previously abandoned.
-    -   **P5: Implement Customer Behavior Analysis (Quantitative):** Build functionality for the disabled Quantitative tab.
-    -   **P6: Survey Analytics & Dashboard:** Implement visualization for the Survey Builder tool.
-    -   **P7: Refactor  issue:** Investigate and fix the root cause in .
+    Upcoming Tasks:
+    - P0: Implement Alumni Module Phase 1 (Landing, Onboarding, Family Tree, Profile) based on specs.
+    - P1: Implement Google Drive Integration for Kanban card attachments ().
+    - P1: Verify Survey Image Display Fix via screenshot tools.
+    Future Tasks:
+    - P2: Alumni Module Phase 2 (Discover, Feed, Jobs, Businesses).
+    - P3: Implement Phase 2 Caching (Image Endpoint) to serve images instead of Base64 embedding.
+    - P3: Expand Kanban Board features (different templates, custom fields).
+    - P4: Refactor  (>11,700 lines) by extracting routes into .
+    - P5: Customer Behavior Analysis (Quantitative tab) & Survey Analytics Dashboard.
 
 **Completed work in this session**
--   **Responsive Design Overhaul:**
-    -   Made the following pages fully responsive: , , , , .
--   **Performance - HTTP Caching (Phase 1):**
-    -   Implemented  and  headers on the  and  endpoints in .
-    -   Successfully tested that the backend returns  for cached content, reducing bandwidth and server load.
--   **UX - Continuous Infinite Scroll (Attempted):**
-    -   Refactored  to remove pagination buttons and enable a continuous scrolling experience across all pages of content. (Note: This is currently broken).
+- Installed , , and  to support converting AI LaTeX output into native Word OMML equations (DONE).
+- Updated Thesis Export () to render native equations and apply SWU iThesis format ( font) (DONE).
+- Added Extra Prompt input to Thesis Export Modal and integrated it into the Gemini AI backend payload (DONE).
+- Fixed Thesis Export Modal UI overflow issue on smaller screens by implementing  and sticky footers (DONE).
+- Fixed a polling race condition bug where downloading a generated thesis triggered 9 simultaneous file downloads (DONE).
+- Refactored  API from a synchronous call to an asynchronous background task + polling architecture to permanently fix 502 proxy timeouts (DONE).
+- Extracted and prepared the  bundle into  for the next agent (DONE).
 
 **Earlier issues found/mentioned but not fixed**
--   None in this session. All pending items are tracked above.
+   Issue 1: AI Rearrange Context Window Fallback
+   - Debug checklist: Monitor if AI summarization fails on exceedingly large datasets.
+   - Why to solve this issue and what will be achieved with this? Prevents token limits from crashing analysis.
+   - Should Test frontend/backend/both after fix: backend
+   - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Images not appearing on the survey page.
--   **Recurrence count:** 1
--   **Status:** BLOCKED (Verification is still pending).
+  - Issue recurrence in previous fork: 502 Proxy Timeouts during AI Generation.
+  - Recurrence count: 3 (Resolved in this session by migrating the last synchronous AI route to background polling).
+  - Status: RESOLVED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **HTTP Caching:** Using  and  headers in a FastAPI backend to enable conditional requests () and browser/proxy caching, resulting in  responses.
--   **Infinite Scroll:** Implementing continuous content loading using the  API to detect when the user reaches the bottom of the page.
--   **Responsive Web Design with TailwindCSS:** Applying responsive utility classes (, , ) to create adaptive layouts for various screen sizes.
+- Frontend: React, TailwindCSS, Axios interceptors.
+- Backend: FastAPI, Python, MongoDB, .
+- Document Generation:  combined with  to inject native OMML equations.
+- Architecture: Async background tasks with frontend polling interval for all heavy AI operations to bypass 60s proxy timeouts.
 
 **key DB schema**
--   No Schema Changes.
+  - analysis_cache: 
+  - (NEW REQUIRED) alumni_users / family_tree: To be designed based on .
 
 **changes in tech stack**
--   None.
+  - Installed , , and  to handle Word Math XML injections.
 
-**All files of reference**
--   : Modified for caching headers.
--   : Modified for infinite scroll (currently buggy).
--   : Made responsive.
--   : Made responsive.
--   : Made responsive.
--   : Made responsive.
--   : Made responsive.
+**All files of reference** 
+  -  and  (You MUST read these before starting the Alumni feature).
+  - 
+  - 
 
-**Areas that need refactoring**:
--   : The state management and effect logic for the infinite scroll feature needs to be debugged and refactored to work correctly.
+**Areas that need refactoring**: 
+  -  is critically bloated. As you build the new Alumni module, **create dedicated routers** (e.g., ) and include them in  via .
 
 **key api endpoints**
--   : GET endpoint for browsing content. Now supports  and .
--   : GET endpoint for a single content item. Now supports  and .
+  -  (Now returns  for polling)
+  -  (New polling endpoint)
 
-**Critical Info for New Agent**
--   **USER LANGUAGE IS THAI.** All communication must be in Thai.
--   Your immediate and highest priority task is to **fix the broken infinite scroll** on the main content page (). This is a critical regression.
--   The backend caching (Phase 1) is complete and working. The user is aware of a potential Phase 2 (dedicated image endpoint) as a future enhancement.
--   The agent had several conversations with the user about available 3rd party integrations (Gemini, Stripe, etc.) but did not implement any. This is just for context.
+**Critical Info for New Agent** 
+- **USER LANGUAGE IS THAI.** All communication MUST be in Thai.
+- **ALUMNI MODULE FOCUS**: The user forked this job specifically to build the new Alumni module. Do not focus on older Kanban/Conjoint tasks until the Alumni baseline is set up.
+- **READ THE SPEC FIRST**: The complete design prototype, CSS, and markdown specifications for the Alumni module are located at . Review these files thoroughly using parallel tool calls.
+- **ARCHITECTURE WARNING**: Do not add the Alumni APIs directly into . Create new route files in .
 
-**documents created in this job**
--   None.
+**documents and test reports created in this job** 
+  -  (Updated with Alumni Module info)
+  -  (Created new)
+  -  (Created new)
+  -  (100% pass for Thesis Export features)
 
-**Last 10 User Messages and any pending user messages**
-1.  **User:** make the conjoint design page responsive -> **Status:** COMPLETED
-2.  **User:** conjoint result page too -> **Status:** COMPLETED
-3.  **User:** Is the current content loading method designed to support caching like proxies or CDNs? -> **Status:** COMPLETED. Agent explained the limitations of base64 images and proposed improvements.
-4.  **User:** Which option is easy, efficient for caching, and has the least impact? -> **Status:** COMPLETED. Agent recommended starting with Cache-Control headers (Phase 1).
-5.  **User:** Do it. (approving Phase 1) -> **Status:** COMPLETED
-6.  **User:** make the content on page 2 and beyond load automatically when scrolling down. -> **Status:** IN PROGRESS (This is the buggy feature).
-7.  **User:** The first page auto-loads when scrolling... but for page 2, you have to press a button... Make them the same. -> **Status:** IN PROGRESS (This clarified the previous request).
-8.  **User:** Is the caching for both the content list and content detail pages working now? -> **Status:** COMPLETED. Agent performed  tests and confirmed caching was working correctly.
-*(No further user messages. The user is unaware that the infinite scroll implementation is broken).*
+**Last 10 User Messages and any pending HUMAN messages** 
+ 1. User: Export Thesis popup overflows the screen, can't click. -> COMPLETED (Fixed UI with max-h-[90vh] and scroll).
+ 2. User: It downloads 9 files at once when ready. -> COMPLETED (Fixed polling race condition).
+ 3. User: AI interpretation fails often (unlike Thesis export). -> COMPLETED (Migrated AI interpretation to background polling).
+ 4. User: Uploads  to build the new Alumni Module. -> COMPLETED (Extracted to ).
+ 5. User: เห็นด้วย แต่ อยากใช้ opus 4.7 ทำงานแทน น่าจะต้อง folk ใหม่ รึเปล่า (Wants to fork and use Opus 4.7) -> COMPLETED (Prepared workspace, PRD, and mockups for a clean handoff to this exact fork).
 
 **Project Health Check:**
--   **Broken:** The infinite scroll functionality on  is non-functional, preventing users from accessing all content.
--   **Mocked:** None.
+Broken: None.
+Mocked: Google Drive attachments logic in Kanban. The Alumni module data is currently mocked inside .
 
-**3rd Party Integrations**
--   No new integrations were added. The agent discussed options like Gemini with the user but did not implement them.
+**3rd Party Integrations** 
+ - Emergent LLM Key -> Gemini 2.5 Flash () via 
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** The infinite scroll on the content browse page is a regression. It previously worked with pagination buttons but now stops loading content entirely.
+  - Testing agent used after significant changes: YES (Iteration 5 passed perfectly).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: 
+  - Known regressions: None.
 
 **Credentials to test flow:**
--   **Email:** 
--   **Password:** 
+  - Admin (Full Access):  / 
+  - Student (Card Owner):  / 
 
 **What agent forgot to execute**
--   The agent failed to fix the critical bug it introduced in the infinite scroll feature. It observed the bug during a  test (loading stopped at 25/34 items) but then incorrectly concluded the task was successful and finished the session. The immediate priority for the next agent is to fix this regression.</analysis>
+Everything from the previous session was completed. The agent set up the environment perfectly for you to immediately begin building the Alumni Module. Ensure you read the specs in  before touching any code.</analysis>

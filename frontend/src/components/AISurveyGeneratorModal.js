@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { X, Sparkles, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://kanban-subtasks-1.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://family-tree-hub-41.preview.emergentagent.com';
 
 const AISurveyGeneratorModal = ({ onClose }) => {
   const navigate = useNavigate();

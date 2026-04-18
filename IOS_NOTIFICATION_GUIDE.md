@@ -20,7 +20,7 @@
 
 ### ขั้นตอนที่ 1: เปิดเว็บใน Safari
 1. เปิด Safari บน iPhone/iPad
-2. ไปที่ URL: `https://kanban-subtasks-1.preview.emergentagent.com`
+2. ไปที่ URL: `https://family-tree-hub-41.preview.emergentagent.com`
 3. Login เข้าระบบ
 
 ### ขั้นตอนที่ 2: กดปุ่ม Share
