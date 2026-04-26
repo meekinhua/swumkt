@@ -8,13 +8,18 @@ import InviteModal from './InviteModal';
 const TABS = [
   { id: 'landing', label: 'หน้าแรก', icon: 'home', path: '/alumni' },
   { id: 'tree', label: 'สายตระกูล', icon: 'tree', path: '/alumni/tree' },
-  { id: 'trivia', label: 'Trivia', icon: 'sparkles', path: '/alumni/trivia' },
+  { id: 'discover', label: 'Discover', icon: 'compass', path: '/alumni/discover' },
+  { id: 'feed', label: 'ฟีด', icon: 'feed', path: '/alumni/feed' },
+  { id: 'jobs', label: 'งาน', icon: 'briefcase', path: '/alumni/jobs' },
   { id: 'profile', label: 'ฉัน', icon: 'user', path: '/alumni/profile' },
 ];
 
 const getActiveId = (path) => {
   if (path === '/alumni') return 'landing';
   if (path.startsWith('/alumni/tree')) return 'tree';
+  if (path.startsWith('/alumni/discover')) return 'discover';
+  if (path.startsWith('/alumni/feed')) return 'feed';
+  if (path.startsWith('/alumni/jobs')) return 'jobs';
   if (path.startsWith('/alumni/trivia')) return 'trivia';
   if (path.startsWith('/alumni/profile')) return 'profile';
   if (path.startsWith('/alumni/onboarding')) return 'onboarding';

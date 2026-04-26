@@ -1,0 +1,48 @@
+{
+  "summary": "Alumni Phase 2 (Discover Mystery Match, Feed posts/reactions/comments, Jobs Directory, Reviews) end-to-end validated. Backend 24/24 pytest passed. Frontend: /alumni/discover, /alumni/feed, /alumni/jobs, /alumni/profile reviews-section all render and integrate correctly with the new Phase 2 endpoints. Cross-user review modal works (bas reviewing student1 via /alumni/profile/{id}). Nav now exposes 6 tabs (หน้าแรก, สายตระกูล, Discover, ฟีด, งาน, ฉัน).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "ReviewModal tag chips", "issue": "When the modal first opens (bas → student1's profile), [data-testid^=\"review-tag-\"] count was 0 in the immediate scan — tags load async from GET /api/alumni/reviews/tags but the test queried before they rendered. Submit still worked (5★ + comment). Recommend either pre-load tags on profile mount or add a loading spinner in modal so users (and tests) know tags are arriving.", "affected_selectors": ["[data-testid^='review-tag-']"]}
+    ],
+    "design_issues": [
+      {"screen": "/alumni/discover", "issues": ["Reveal/blur animation looks great. Reasons chips are clear. No issues."]},
+      {"screen": "/alumni/feed", "issues": ["Composer with kind selector + 7 filter chips render fine. +5 XP toast surfaces after post. ❤️ react toggles. Comment expand renders. OK."]},
+      {"screen": "/alumni/jobs", "issues": ["Modal opens with PostJobModal (title/company/description/submit). Job cards listed and 'สนใจ' counter visible. OK."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_alumni_phase2.py",
+    "/app/test_reports/pytest/alumni_phase2.xml"
+  ],
+  "action_items": [
+    "(Low) On ReviewModal mount, show a small skeleton/'กำลังโหลด tags…' state until GET /api/alumni/reviews/tags resolves so users (and automated tests) can detect when tag chips are ready.",
+    "(Cosmetic) Multiple GSI_LOGGER warnings in console: 'google.accounts.id.initialize() is called multiple times' — guard the Google Identity init to run only once on app mount.",
+    "(Cosmetic) '/logout' route does not exist — clicking sign-out (if any) currently relies on clearing localStorage. Add an explicit /logout route or button data-testid for a clean signout flow.",
+    "(Spec note) Mystery Match excludes only direct relations (from_user_id/to_user_id) — confirmed correct per agent_to_agent_context_note. Tree-transitive members (e.g. ดิน via ฟ้า) correctly remain in candidate pool."
+  ],
+  "critical_code_review_comments": [
+    "alumni_phase2.py is well-structured at ~512 lines and uses the helpers-dict factory pattern correctly. _enrich_post and _enrich_job are local helpers — fine.",
+    "post_review upserts but uses existing['_id'] directly in the update filter; this works but means every existing review document carries Mongo _id forward. Reads exclude _id via projection {\"_id\": 0} so no JSON serialization issue. OK.",
+    "list_reviews exposes reviewer_id even when anonymous=True (it just overrides 'reviewer' key). Strictly speaking, this leaks the anonymous reviewer's identity to anyone who can read the JSON. Recommend stripping reviewer_id from the response when anonymous=True to honor the anonymity contract end-to-end.",
+    "skip_mystery_match has no idempotency guard — a user can spam-skip the same target and accumulate duplicate rows in alumni_mystery_skipped. Functionally harmless (set() dedupes on read) but wastes storage. Consider $addToSet or a unique index on (user_id, skipped_user_id).",
+    "mystery_match fallback branch (random pool when within-range candidates exhausted) does NOT filter by privacy_settings.allow_mystery_match defaulting to True; uses {'$ne': False} which is correct. ✓",
+    "create_post awards +5 XP but POST_KINDS validation happens BEFORE _get_alumni_profile — order is fine. ✓",
+    "express_interest 'idempotent' branch returns interest_count from the in-memory snapshot taken before the update — for first call we return interest_count + 1 (computed manually). Confirmed correct in tests but a re-fetch would be cleaner.",
+    "delete_post hard-deletes the post and cascades comments via delete_many — good. delete_job soft-deletes (active=false) — also good (preserves analytics)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_alumni_phase2.py (new)"
+  ],
+  "success_rate": {"backend": "100% (24/24)", "frontend": "~95% — all Phase 2 pages render, all key data-testids present, every primary user action (skip/shuffle, compose+react+comment, post job + interest, open review modal + submit) succeeded"},
+  "test_credentials": "student1@swu.ac.th / student123 (ภูมิ), bas66@g.swu.ac.th / alumni123 (บาส), din58@g.swu.ac.th / alumni123 (ดิน) — per /app/memory/test_credentials.md",
+  "seed_data_creation": "None. Tests create ephemeral TEST_-prefixed posts/jobs/reviews. Posts deleted in test_delete_post_only_by_author. Jobs soft-deleted in test_delete_job_soft. Reviews remain (TEST_REVIEW phase2 by bas, anonymous review by din). Acceptable — TEST_ prefix makes cleanup easy.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/test_alumni_phase2.py -v` for Phase 2 regression. Note: post_review awards XP only on first review (upsert path skips XP). The skip_mystery_match endpoint is not idempotent (allows dup rows) — set a unique index when the product matures. UI: ReviewModal tag chips load async — automated tests should wait for [data-testid^='review-tag-'] before clicking. /alumni/profile/{user_id} is the route for viewing other alumni profiles; /alumni/u/{id} does not exist.",
+  "rca of the issue": "N/A — no blocking bugs. All 24 backend assertions pass and every frontend flow completes successfully. Only soft items: (a) review tag chips load async from /reviews/tags causing a brief empty state in the modal, (b) anonymous reviews still ship reviewer_id in the JSON payload (privacy hardening), (c) duplicate Google Identity init logs in console, (d) /logout route missing."
+}

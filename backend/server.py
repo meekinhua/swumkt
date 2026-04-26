@@ -11736,9 +11736,13 @@ api_router.include_router(project_router)
 
 # ============ ALUMNI NETWORK — สายตระกูล MKT SWU ============
 from routes.alumni import get_alumni_routes
+from routes.alumni_phase2 import get_phase2_routes
 
-alumni_routes = get_alumni_routes(db, get_current_user, get_current_user_optional, UserRole)
+alumni_routes, alumni_helpers = get_alumni_routes(db, get_current_user, get_current_user_optional, UserRole)
 api_router.include_router(alumni_routes)
+
+phase2_routes = get_phase2_routes(db, get_current_user, get_current_user_optional, alumni_helpers)
+api_router.include_router(phase2_routes)
 
 app.include_router(api_router)
 

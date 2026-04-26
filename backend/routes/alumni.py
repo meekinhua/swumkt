@@ -1132,4 +1132,28 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             result.append(enriched)
         return {"items": result}
 
-    return alumni_router
+    return alumni_router, {
+        "_get_alumni_profile": _get_alumni_profile,
+        "_get_user_info": _get_user_info,
+        "_enrich_alumni": _enrich_alumni,
+        "_bfs_ancestors": _bfs_ancestors,
+        "_bfs_descendants": _bfs_descendants,
+        "_award_xp": _award_xp,
+        "_push_notification": _push_notification,
+        "_touch_streak": _touch_streak,
+        "_compute_user_stats": _compute_user_stats,
+        "_level_from_xp": _level_from_xp,
+    }
+
+
+def get_alumni_helpers(db, get_current_user, get_optional_user, UserRole):
+    """Re-export the internal helpers for use by phase2 router (avoids circular dep).
+
+    Returns a dict of helper functions bound to the same DB.
+    Note: This re-instantiates the helpers — we avoid that duplication by
+    having get_alumni_routes also return helpers via a separate accessor below.
+    """
+    # Helpers are defined inside get_alumni_routes closure. To share, we use
+    # the route-instance approach: caller of get_alumni_routes can stash via a
+    # side-channel. For simplicity, we re-define the necessary helpers here.
+    raise NotImplementedError("Use get_alumni_routes which now returns (router, helpers)")

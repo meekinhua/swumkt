@@ -39,6 +39,9 @@ import AlumniTreePage from '@/pages/alumni/AlumniTreePage';
 import AlumniProfilePage from '@/pages/alumni/AlumniProfilePage';
 import AlumniTriviaPage from '@/pages/alumni/AlumniTriviaPage';
 import AlumniInviteAcceptPage from '@/pages/alumni/AlumniInviteAcceptPage';
+import AlumniDiscoverPage from '@/pages/alumni/AlumniDiscoverPage';
+import AlumniFeedPage from '@/pages/alumni/AlumniFeedPage';
+import AlumniJobsPage from '@/pages/alumni/AlumniJobsPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -378,6 +381,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AlumniTriviaPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/discover"
+              element={
+                <ProtectedRoute>
+                  <AlumniDiscoverPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/feed"
+              element={
+                <ProtectedRoute>
+                  <AlumniFeedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/jobs"
+              element={
+                <ProtectedRoute>
+                  <AlumniJobsPage />
                 </ProtectedRoute>
               }
             />

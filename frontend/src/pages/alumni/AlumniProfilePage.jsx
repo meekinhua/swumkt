@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, StatPill, useToast } from './AlumniUI';
+import { ReviewsSection } from './Reviews';
 import './alumni-styles.css';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -318,6 +319,14 @@ const AlumniProfilePage = () => {
                 </div>
               </div>
             )}
+
+            {/* Reviews from family */}
+            <ReviewsSection
+              userId={userId || user.id}
+              currentUserId={user.id}
+              token={token}
+              profile={u}
+            />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
