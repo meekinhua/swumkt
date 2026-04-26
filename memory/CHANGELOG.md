@@ -1,5 +1,38 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
+## 2026-04-26 — 🚀 Alumni Phase 2: Discover + Feed + Jobs + Reviews
+**4 new major features in modular `alumni_phase2.py` router (~512 lines, separate from main alumni.py)**
+
+- **Discover (Mystery Match)** `/alumni/discover`:
+  - `GET /api/alumni/discover/mystery-match` returns 1 alumni 3-6 hops away with reasons
+  - Filters: hop range (close/far/all), industry
+  - `POST /discover/skip/{user_id}` to never see again
+  - UI: blur→reveal animation, gradient card, 4 actions (Mark/View/Skip/Shuffle)
+- **Feed** `/alumni/feed`:
+  - 6 post kinds: plain, throwback, review, job_share, announcement, search_help
+  - `POST /feed/posts` (+5 XP), `GET /feed/posts` with kind filter
+  - `POST /feed/posts/{id}/react` toggle ❤️ (notifies author)
+  - `GET/POST /feed/posts/{id}/comments` (notifies author, increments comment_count)
+  - `DELETE /feed/posts/{id}` (author only)
+  - UI: composer with kind selector, post cards, react toggle, expandable comments
+- **Jobs Directory** `/alumni/jobs`:
+  - `POST /jobs` (+30 XP), supports kind=hiring|seeking_referral, level, salary, apply_url
+  - `GET /jobs` with kind+level filters
+  - `POST /jobs/{id}/interest` increments counter, notifies poster, idempotent
+  - `DELETE /jobs/{id}` soft-deletes (active=false, preserves analytics)
+  - UI: filter chips, JobCard with poster avatar + interest button, PostJobModal
+- **Reviews 1-5 stars** (in Profile page sidebar):
+  - `POST /reviews` (+25 XP first review only) with stars + tags + optional anonymous
+  - `GET /reviews/user/{user_id}` returns reviews + average + breakdown + top_tags
+  - `GET /reviews/tags` returns 13 curated tag list
+  - Upsert behavior: re-reviewing same person updates not duplicates
+  - Anonymous reviewer_id stripped from API response (privacy hardened)
+  - UI: ReviewModal (StarInput + tag chips + anonymous toggle), ReviewsSection (avg, breakdown bars, top tags, list)
+- **Architecture**: `get_alumni_routes` now returns `(router, helpers)` tuple. Phase 2 receives helpers via factory pattern — clean separation.
+- **New collections**: alumni_posts, alumni_post_comments, alumni_jobs, alumni_reviews, alumni_mystery_skipped
+- **Top nav**: now 6 tabs (หน้าแรก · สายตระกูล · Discover · ฟีด · งาน · ฉัน)
+- **Testing**: iteration_8 · 24/24 backend pytest · ~95% frontend · `/app/backend/tests/test_alumni_phase2.py`
+
 ## 2026-04-18 — 🚀 Alumni Phase 1.5: Viral Invite + Gamification Engine + Notifications + Trivia
 - **Invite Viral Loop (production-ready)**:
   - Shareable link `/alumni/invite/{code}` with public preview endpoint (shows inviter card)

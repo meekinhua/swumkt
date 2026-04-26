@@ -490,6 +490,7 @@ def get_phase2_routes(db, get_current_user, get_optional_user, alumni_helpers):
         for r in reviews:
             if r.get("anonymous"):
                 r["reviewer"] = {"name": "ศิษย์เก่า MKT", "anonymous": True}
+                r.pop("reviewer_id", None)  # Strip ID to honor anonymity
             else:
                 rev_alum = await H["_get_alumni_profile"](r["reviewer_id"])
                 r["reviewer"] = await H["_enrich_alumni"](rev_alum) if rev_alum else None

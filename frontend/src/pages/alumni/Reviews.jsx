@@ -37,12 +37,17 @@ export const ReviewModal = ({ open, onClose, subject, token, onPosted }) => {
   const [comment, setComment] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [allTags, setAllTags] = useState([]);
+  const [tagsLoading, setTagsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
     if (open) {
-      axios.get(`${API}/alumni/reviews/tags`).then(r => setAllTags(r.data.tags || [])).catch(() => {});
+      setTagsLoading(true);
+      axios.get(`${API}/alumni/reviews/tags`)
+        .then(r => setAllTags(r.data.tags || []))
+        .catch(() => {})
+        .finally(() => setTagsLoading(false));
       setRating(0); setTags([]); setComment(''); setAnonymous(false);
     }
   }, [open]);
@@ -91,14 +96,18 @@ export const ReviewModal = ({ open, onClose, subject, token, onPosted }) => {
 
         <div style={{ marginBottom: 20 }}>
           <div className="al-eyebrow" style={{ marginBottom: 8 }}>แท็ก (เลือกหลายอันได้)</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {allTags.map(t => (
-              <button key={t} onClick={() => toggleTag(t)} data-testid={`review-tag-${t}`}
-                className={`al-btn al-btn-sm ${tags.includes(t) ? 'al-btn-red' : 'al-btn-outline'}`}>
-                {tags.includes(t) && <Icon name="check" size={12} />} {t}
-              </button>
-            ))}
-          </div>
+          {tagsLoading ? (
+            <div className="al-muted al-small" data-testid="review-tags-loading" style={{ padding: 8 }}>กำลังโหลดแท็ก...</div>
+          ) : (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} data-testid="review-tags-grid">
+              {allTags.map(t => (
+                <button key={t} onClick={() => toggleTag(t)} data-testid={`review-tag-${t}`}
+                  className={`al-btn al-btn-sm ${tags.includes(t) ? 'al-btn-red' : 'al-btn-outline'}`}>
+                  {tags.includes(t) && <Icon name="check" size={12} />} {t}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 16 }}>
