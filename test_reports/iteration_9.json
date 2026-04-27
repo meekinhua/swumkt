@@ -1,0 +1,35 @@
+{
+  "summary": "Activity Stream feature (backend + frontend) tested end-to-end. 13/13 backend tests pass covering scope=tree|global|self, limit param, actor enrichment, and activity logging triggers (post_created, job_posted, review_given, position_changed, anonymous review suppression, tree-scope cross-user visibility). Frontend ActivityStream component renders on both /alumni/feed (with 3 tabs) and /alumni/tree (compact). All 9 kinds display with correct emojis; clicking an item navigates to profile; refresh + tab switching work.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_activity_stream.py",
+    "/app/test_reports/pytest/activity_stream.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Review upsert behavior in alumni_phase2.post_review only logs activity on first creation (new_review=True). If a user re-reviews the same subject, no activity is logged even though the rating/comment changed. Consider logging a 'review_updated' activity or re-logging 'review_given' on material changes. Not a bug, just UX nuance.",
+    "ActivityStream.jsx useEffect has empty catch block (`catch {}`) at line 45 — errors from /activity/stream API calls are silently swallowed; consider surfacing an error state so users know when the feed is stale (currently just shows empty state).",
+    "Tree-scope actor_id list uses `$in` with potentially large arrays (direct relations + BFS descendants/ancestors up to depth 8 + siblings). For large trees consider adding an index on alumni_activities.actor_id + created_at for the sort performance."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_activity_stream.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13)",
+    "frontend": "100% (all flows verified)"
+  },
+  "test_credentials": "student1@swu.ac.th/student123, bas66@g.swu.ac.th/alumni123, din58@g.swu.ac.th/alumni123 — all from /app/memory/test_credentials.md",
+  "seed_data_creation": "Tests create TEST-prefixed posts/jobs/reviews/position updates for student1. `clean_student_bas_review` fixture uses pymongo to purge existing review before non-anon/anon review trigger tests to allow fresh insert path. No destructive changes to seeded data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend test file: /app/backend/tests/test_activity_stream.py (13 tests, all pass in ~10s). Activity kinds verified: post_created, job_posted, review_given (non-anonymous only), position_changed. Not directly verified via dedicated test: joined_family, company_changed, tree_extended (relation confirm), level_up, badge_earned — but endpoint shape/scope tests pass and these use the same _log_activity helper now wired into alumni.py at lines 303, 315, 531, 571, 577, 784. Frontend verified on /alumni/feed (with tabs) and /alumni/tree (compact). Activity item click routes to /alumni/profile/{actor.user_id}. Review upsert path: _log_activity only triggers on new review creation; repeat reviews by same reviewer/subject won't log a new activity.",
+  "rca of the issue": "N/A — no bugs found. Initial test failures were in the test script itself (wrong endpoint /alumni/posts vs /alumni/feed/posts, missing 'kind' field in PostCreate, 'stars' vs 'rating' field name, and the upsert-on-duplicate-review semantics blocking activity log on 2nd review). All were fixed in the test script without modifying product code."
+}

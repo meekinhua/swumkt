@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, Modal, useToast } from './AlumniUI';
+import ActivityStream from './ActivityStream';
 import './alumni-styles.css';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -417,6 +418,9 @@ const AlumniTreePage = () => {
                 </div>
               </div>
             )}
+
+            {/* Activity Stream — real-time tree events */}
+            <ActivityStream token={token} scope="tree" limit={10} compact={true} title="ความเคลื่อนไหวของสาย" />
           </div>
         </div>
 

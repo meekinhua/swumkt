@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, useToast } from './AlumniUI';
+import ActivityStream from './ActivityStream';
 import './alumni-styles.css';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -216,11 +217,14 @@ const AlumniFeedPage = () => {
 
   return (
     <AlumniLayout>
-      <div className="al-page al-fade-in" style={{ maxWidth: 720 }} data-testid="alumni-feed-page">
+      <div className="al-page al-fade-in" style={{ maxWidth: 1100 }} data-testid="alumni-feed-page">
         <div style={{ marginBottom: 22 }}>
           <div className="al-eyebrow" style={{ marginBottom: 6 }}>· ฟีดของสายตระกูล ·</div>
           <h1 className="al-h-section" style={{ fontSize: 32 }}>กิจกรรมของรุ่น 📰</h1>
         </div>
+
+        <div className="al-tree-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 20 }}>
+          <div>
 
         {/* Filters */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
@@ -292,6 +296,13 @@ const AlumniFeedPage = () => {
             onClickAuthor={(uid) => navigate(`/alumni/profile/${uid}`)}
           />
         ))}
+          </div>
+
+          {/* Activity Stream sidebar */}
+          <div style={{ position: 'sticky', top: 90, alignSelf: 'flex-start' }}>
+            <ActivityStream token={token} scope="tree" limit={15} />
+          </div>
+        </div>
 
         {toast.node}
       </div>

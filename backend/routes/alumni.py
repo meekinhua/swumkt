@@ -206,6 +206,25 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         await db.alumni_notifications.insert_one(doc)
         return doc
 
+    async def _log_activity(actor_id: str, kind: str, summary: str,
+                            target_id: Optional[str] = None, meta: Optional[dict] = None):
+        """Log an activity event for tree-stream consumption.
+
+        Activity kinds: joined_family | position_changed | company_changed |
+        post_created | job_posted | review_given | tree_extended | level_up | badge_earned
+        """
+        doc = {
+            "id": str(uuid.uuid4()),
+            "actor_id": actor_id,
+            "kind": kind,
+            "summary": summary,
+            "target_id": target_id,
+            "meta": meta or {},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.alumni_activities.insert_one(doc)
+        return doc
+
     async def _compute_user_stats(user_id: str) -> dict:
         """Compute stats for badge unlock checks."""
         invite_accepted = await db.alumni_invites.count_documents({
@@ -280,12 +299,24 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
                 f"🎉 เลเวลอัพ! Lv.{new_level}",
                 f"คุณได้ +{amount} XP และขึ้น Lv.{new_level} แล้ว",
                 {"old_level": old_level, "new_level": new_level})
+            actor_nick = profile.get("nickname") or "บางคน"
+            await _log_activity(
+                user_id, "level_up",
+                f"{actor_nick} เลเวลอัพเป็น Lv.{new_level}",
+                meta={"old_level": old_level, "new_level": new_level},
+            )
         # Badge-earned notifications
         for key, name, emoji in newly_earned:
             await _push_notification(user_id, "badge",
                 f"{emoji} ปลดล็อค Badge ใหม่!",
                 f"คุณได้ Badge \"{name}\" แล้ว",
                 {"badge_key": key})
+            actor_nick = profile.get("nickname") or "บางคน"
+            await _log_activity(
+                user_id, "badge_earned",
+                f"{actor_nick} ได้ Badge {emoji} \"{name}\"",
+                meta={"badge_key": key, "badge_name": name, "badge_emoji": emoji},
+            )
 
     async def _touch_streak(user_id: str):
         """Update streak_days based on last_active_at. Awards milestone XP."""
@@ -497,6 +528,11 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         await db.alumni_users.insert_one(profile)
         logging.info(f"[ALUMNI] Registered: {current_user.email} gen={data.gen}")
         await _touch_streak(current_user.id)
+        await _log_activity(
+            current_user.id, "joined_family",
+            f"{default_nick} (รุ่น {data.gen}) เข้ามาในตระกูล",
+            meta={"gen": data.gen, "nickname": default_nick},
+        )
 
         # If registered via invite code (stored in session/later), mark invite + auto-relation
         # (handled separately via /invites/accept endpoint)
@@ -528,6 +564,22 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         update["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         await db.alumni_users.update_one({"user_id": current_user.id}, {"$set": update})
+
+        # Log activity for meaningful changes
+        nick = alum.get("nickname") or "บางคน"
+        if "position" in update and update["position"] and update["position"] != alum.get("position"):
+            await _log_activity(
+                current_user.id, "position_changed",
+                f"{nick} เปลี่ยนตำแหน่งเป็น \"{update['position']}\"",
+                meta={"old": alum.get("position"), "new": update["position"]},
+            )
+        if "company" in update and update["company"] and update["company"] != alum.get("company"):
+            await _log_activity(
+                current_user.id, "company_changed",
+                f"{nick} ย้ายไปทำงานที่ {update['company']}",
+                meta={"old": alum.get("company"), "new": update["company"]},
+            )
+
         return await _enrich_alumni(await _get_alumni_profile(current_user.id))
 
     @alumni_router.get("/profile/{user_id}")
@@ -724,6 +776,17 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
                 f"{me_name} ยืนยันเป็นพี่ take ในสายตระกูลของคุณ",
                 {"relation_id": relation_id, "to_user_id": rel["to_user_id"]},
             )
+            # Log tree_extended activity
+            from_alum = await _get_alumni_profile(rel["from_user_id"])
+            to_alum = await _get_alumni_profile(rel["to_user_id"])
+            from_nick = (from_alum or {}).get("nickname") or "บางคน"
+            to_nick = (to_alum or {}).get("nickname") or "บางคน"
+            await _log_activity(
+                rel["from_user_id"], "tree_extended",
+                f"{from_nick} เพิ่ม {to_nick} เป็นพี่ take ในสาย",
+                target_id=rel["to_user_id"],
+                meta={"relation_id": relation_id},
+            )
 
         return updated
 
@@ -888,6 +951,57 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         )
 
         return {"message": "Invite accepted", "inviter_id": inviter_id, "relation_pending": True}
+
+    # ============ ACTIVITY STREAM ============
+
+    @alumni_router.get("/activity/stream")
+    async def activity_stream(
+        scope: str = "tree",  # tree | global | self
+        limit: int = 30,
+        current_user=Depends(get_current_user),
+    ):
+        """Recent activity events from your tree members (or global/self).
+
+        scope='tree' → events from ancestors+descendants (BFS up to 8 levels)
+        scope='global' → all events
+        scope='self' → own events only
+        """
+        actor_ids = None
+        if scope == "self":
+            actor_ids = [current_user.id]
+        elif scope == "tree":
+            ancestors = await _bfs_ancestors(current_user.id, max_depth=8)
+            descendants = await _bfs_descendants(current_user.id, max_depth=8)
+            actor_ids = [a["user_id"] for a in ancestors + descendants]
+            actor_ids.append(current_user.id)
+            # Also include direct relations (siblings of same gen who marked me/i marked them)
+            rel_cur = db.alumni_relations.find({
+                "$or": [{"from_user_id": current_user.id}, {"to_user_id": current_user.id}],
+                "status": "confirmed",
+            }, {"_id": 0, "from_user_id": 1, "to_user_id": 1})
+            rels = await rel_cur.to_list(500)
+            for r in rels:
+                actor_ids.append(r["from_user_id"])
+                actor_ids.append(r["to_user_id"])
+            actor_ids = list(set(actor_ids))
+
+        query = {}
+        if actor_ids is not None:
+            query["actor_id"] = {"$in": actor_ids}
+
+        cur = db.alumni_activities.find(query, {"_id": 0}).sort("created_at", -1).limit(limit)
+        items = await cur.to_list(limit)
+
+        # Enrich with actor profile (cache in this call)
+        actor_cache: Dict[str, Any] = {}
+        for it in items:
+            aid = it["actor_id"]
+            if aid not in actor_cache:
+                a = await _get_alumni_profile(aid)
+                actor_cache[aid] = await _enrich_alumni(a) if a else None
+            it["actor"] = actor_cache[aid]
+
+        return {"items": items, "total": len(items), "scope": scope}
 
     # ============ ACTIVITY FEED (Basic) ============
 
@@ -1143,6 +1257,7 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         "_touch_streak": _touch_streak,
         "_compute_user_stats": _compute_user_stats,
         "_level_from_xp": _level_from_xp,
+        "_log_activity": _log_activity,
     }
 
 

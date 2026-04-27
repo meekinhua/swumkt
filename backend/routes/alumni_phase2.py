@@ -206,6 +206,19 @@ def get_phase2_routes(db, get_current_user, get_optional_user, alumni_helpers):
         }
         await db.alumni_posts.insert_one(post)
         await H["_award_xp"](current_user.id, "post_created", 5)
+        # Activity log
+        nick = me.get("nickname") or "บางคน"
+        kind_label = {
+            "plain": "โพสต์", "throwback": "แชร์ throwback",
+            "review": "รีวิวพี่", "job_share": "แชร์งาน",
+            "announcement": "ประกาศ", "search_help": "ขอคำแนะนำ",
+        }.get(data.kind, "โพสต์")
+        await H["_log_activity"](
+            current_user.id, "post_created",
+            f"{nick} {kind_label} ใหม่",
+            target_id=post["id"],
+            meta={"post_kind": data.kind, "preview": data.content[:80]},
+        )
         return {k: v for k, v in post.items() if k != "_id"}
 
     async def _enrich_post(p: dict, current_user_id: str) -> dict:
@@ -348,6 +361,13 @@ def get_phase2_routes(db, get_current_user, get_optional_user, alumni_helpers):
         }
         await db.alumni_jobs.insert_one(job)
         await H["_award_xp"](current_user.id, "job_posted", 30)
+        nick = me.get("nickname") or "บางคน"
+        await H["_log_activity"](
+            current_user.id, "job_posted",
+            f"{nick} {'ลงประกาศงาน' if data.kind == 'hiring' else 'หางาน refer'}: {data.title} @ {data.company}",
+            target_id=job["id"],
+            meta={"title": data.title, "company": data.company, "kind": data.kind},
+        )
         return {k: v for k, v in job.items() if k != "_id"}
 
     async def _enrich_job(j: dict) -> dict:
@@ -475,6 +495,17 @@ def get_phase2_routes(db, get_current_user, get_optional_user, alumni_helpers):
                 f"{display_from} รีวิวคุณ {data.rating}/5 ดาว",
                 {"review_id": review_doc["id"], "rating": data.rating},
             )
+            # Activity log (only if not anonymous, to honor privacy)
+            if not data.anonymous:
+                subject_alum = await H["_get_alumni_profile"](data.subject_user_id)
+                subject_nick = (subject_alum or {}).get("nickname") or "บางคน"
+                stars = "⭐" * data.rating
+                await H["_log_activity"](
+                    current_user.id, "review_given",
+                    f"{me_name} รีวิว {subject_nick} {stars} ({data.rating}/5)",
+                    target_id=data.subject_user_id,
+                    meta={"rating": data.rating, "subject_nickname": subject_nick},
+                )
 
         out = {k: v for k, v in review_doc.items() if k != "_id"}
         return out
