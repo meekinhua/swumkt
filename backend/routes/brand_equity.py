@@ -479,7 +479,8 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
                 continue
             if tmpl.get("requires_palette") and not (palette_image_asset or visual_palette_hex):
                 continue
-            # Competitor templates: emit one per top-2 competitor (skip if no competitors)
+            # Competitor templates: emit one per competitor (skip if no competitors).
+            # Cap previously was top-2; now uses every competitor the user provided.
             if tmpl.get("compare_brand") == "competitor":
                 if not competitors_top:
                     continue

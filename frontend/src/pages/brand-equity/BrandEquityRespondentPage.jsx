@@ -517,7 +517,8 @@ const BrandEquityRespondentPage = () => {
             <React.Fragment key={g.key}>
               {g.label && (
                 <div style={{ padding: '18px 0 4px',
-                              borderTop: gi > 0 ? '1px solid var(--rule-strong)' : 'none' }}>
+                              borderTop: gi > 0 ? '1px solid var(--rule-strong)' : 'none' }}
+                     data-testid={g.kind === 'axis' ? `be-resp-group-header-${g.key}` : `be-resp-group-${g.key}`}>
                   <div className="be-eyebrow">
                     <span className="be-dot-sm" style={{ background: g.kind === 'axis' ? 'var(--be-gold)' : 'var(--be-red)' }}/>
                     {g.label}
