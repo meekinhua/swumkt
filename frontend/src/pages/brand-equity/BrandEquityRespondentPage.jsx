@@ -65,13 +65,17 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
     );
   }
   if (q.type === 'mcq_single') {
+    const opts = q.options || [];
+    const optsLocalized = (lang === 'en' && q.options_en) ? q.options_en
+                       : (lang === 'th' && q.options_th) ? q.options_th
+                       : opts;
     return (
       <div className="be-resp-mcq" data-testid={`be-resp-q-${q.id}`}>
-        {(q.options || []).map(opt => (
+        {opts.map((opt, idx) => (
           <div key={opt} className={'be-resp-mcq-opt ' + (value === opt ? 'sel' : '')}
                onClick={() => onChange(opt)} data-testid={`be-resp-mcq-${q.id}-${opt}`}>
             <div className="check">{value === opt && <Icon name="check" size={10}/>}</div>
-            <span>{opt}</span>
+            <span>{optsLocalized[idx] || opt}</span>
           </div>
         ))}
       </div>
@@ -79,16 +83,20 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
   }
   if (q.type === 'mcq_multi') {
     const arr = Array.isArray(value) ? value : [];
+    const opts = q.options || [];
+    const optsLocalized = (lang === 'en' && q.options_en) ? q.options_en
+                       : (lang === 'th' && q.options_th) ? q.options_th
+                       : opts;
     return (
       <div className="be-resp-mcq" data-testid={`be-resp-q-${q.id}`}>
-        {(q.options || []).map(opt => {
+        {opts.map((opt, idx) => {
           const sel = arr.includes(opt);
           return (
             <div key={opt} className={'be-resp-mcq-opt ' + (sel ? 'sel' : '')}
                  onClick={() => onChange(sel ? arr.filter(x => x !== opt) : [...arr, opt])}
                  data-testid={`be-resp-mcq-${q.id}-${opt}`}>
               <div className="check">{sel && <Icon name="check" size={10}/>}</div>
-              <span>{opt}</span>
+              <span>{optsLocalized[idx] || opt}</span>
             </div>
           );
         })}
@@ -98,10 +106,14 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
   if (q.type === 'trait_grid') {
     const arr = Array.isArray(value) ? value : [];
     const min = q.min || 3, max = q.max || 5;
+    const opts = q.options || [];
+    const optsLocalized = (lang === 'en' && q.options_en) ? q.options_en
+                       : (lang === 'th' && q.options_th) ? q.options_th
+                       : opts;
     return (
       <>
         <div className="be-resp-trait-grid" data-testid={`be-resp-q-${q.id}`}>
-          {(q.options || []).map(opt => {
+          {opts.map((opt, idx) => {
             const sel = arr.includes(opt);
             return (
               <div key={opt} className={'be-resp-trait ' + (sel ? 'sel' : '')}
@@ -110,14 +122,14 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
                      else if (arr.length < max) onChange([...arr, opt]);
                    }}
                    data-testid={`be-resp-trait-${q.id}-${opt}`}>
-                {opt}
+                {optsLocalized[idx] || opt}
               </div>
             );
           })}
         </div>
         <div className="be-resp-likert-labels" style={{ marginTop: 8 }}>
-          <span>เลือกแล้ว {arr.length} / {max}</span>
-          <span>(อย่างน้อย {min})</span>
+          <span>{lang === 'en' ? `selected ${arr.length} / ${max}` : `เลือกแล้ว ${arr.length} / ${max}`}</span>
+          <span>{lang === 'en' ? `(min ${min})` : `(อย่างน้อย ${min})`}</span>
         </div>
       </>
     );
@@ -433,11 +445,35 @@ const BrandEquityRespondentPage = () => {
 
         {sectionQs.length === 0 ? (
           <div className="be-resp-q">
-            <div className="be-muted be-small">ไม่มีคำถามใน dimension นี้</div>
+            <div className="be-muted be-small">{lang === 'en' ? 'No questions in this dimension' : 'ไม่มีคำถามใน dimension นี้'}</div>
           </div>
         ) : (() => {
-          // Group identity questions by perspective for visual clarity
-          const groupOrder = lang === 'en' ? [
+          // === Build groups so respondents can compare brands side-by-side per topic ===
+          // Strategy:
+          //  1. Separate axis-tagged Likert questions (have comparison_group) into per-axis groups
+          //     — each group shows brand + competitors together for the same attribute.
+          //  2. Non-axis questions (open-ended, trait_grid, NPS, MCQ, comparative, visual)
+          //     fall back to the previous perspective grouping for Identity, or "all" for others.
+          const axisQsByGroup = {};
+          const nonAxisQs = [];
+          sectionQs.forEach(q => {
+            const g = q.comparison_group || q.axis_label;
+            if (g && (q.type === 'likert_5' || q.type === 'likert_7') && q.dimension !== 'awareness') {
+              (axisQsByGroup[g] = axisQsByGroup[g] || []).push(q);
+            } else {
+              nonAxisQs.push(q);
+            }
+          });
+          // Drop singleton "groups" that have only 1 question — display them without the topic header
+          Object.keys(axisQsByGroup).forEach(k => {
+            if (axisQsByGroup[k].length < 2) {
+              nonAxisQs.push(...axisQsByGroup[k]);
+              delete axisQsByGroup[k];
+            }
+          });
+
+          // Non-axis grouping (Identity perspective fallback)
+          const perspectiveOrder = lang === 'en' ? [
             { key: '_brand_image',   label: 'Brand Image · overall',         match: q => q.dimension === 'identity' && !q.perspective },
             { key: 'as_organization', label: 'As Organization',               match: q => q.perspective === 'as_organization' },
             { key: 'as_person',       label: 'As Person',                     match: q => q.perspective === 'as_person' },
@@ -452,14 +488,45 @@ const BrandEquityRespondentPage = () => {
             { key: 'as_product',      label: 'As Product · ผลิตภัณฑ์',     match: q => q.perspective === 'as_product' },
             { key: 'competitor',      label: 'About competitors · เกี่ยวกับคู่แข่ง', match: q => q.perspective === 'competitor' },
           ];
-          const groups = section === 2  // identity section
-            ? groupOrder.map(g => ({ ...g, qs: sectionQs.filter(g.match) })).filter(g => g.qs.length)
-            : [{ key: 'all', label: '', qs: sectionQs }];
-          return groups.map((g, gi) => (
+
+          const renderableGroups = [];
+
+          // 1. Identity-only: keep perspective sub-grouping for non-axis
+          if (section === 2) {
+            perspectiveOrder.forEach(g => {
+              const qs = nonAxisQs.filter(g.match);
+              if (qs.length) renderableGroups.push({ key: 'p-' + g.key, label: g.label, kind: 'perspective', qs });
+            });
+          } else if (nonAxisQs.length) {
+            renderableGroups.push({ key: 'na', label: '', kind: 'plain', qs: nonAxisQs });
+          }
+
+          // 2. Axis groups — one card per topic
+          const topicLabel = lang === 'en' ? 'TOPIC · ' : 'หัวข้อ · ';
+          Object.keys(axisQsByGroup).forEach(k => {
+            const qs = axisQsByGroup[k];
+            renderableGroups.push({
+              key: 'axis-' + k,
+              label: topicLabel + k,
+              kind: 'axis',
+              qs,
+            });
+          });
+
+          return renderableGroups.map((g, gi) => (
             <React.Fragment key={g.key}>
               {g.label && (
-                <div style={{ padding: '18px 0 4px', borderTop: gi > 0 ? '1px solid var(--rule-strong)' : 'none' }}>
-                  <div className="be-eyebrow"><span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>{g.label}</div>
+                <div style={{ padding: '18px 0 4px',
+                              borderTop: gi > 0 ? '1px solid var(--rule-strong)' : 'none' }}>
+                  <div className="be-eyebrow">
+                    <span className="be-dot-sm" style={{ background: g.kind === 'axis' ? 'var(--be-gold)' : 'var(--be-red)' }}/>
+                    {g.label}
+                    {g.kind === 'axis' && (
+                      <span className="be-mono be-tiny be-muted" style={{ marginLeft: 8 }}>
+                        · {g.qs.length} {lang === 'en' ? 'brands' : 'แบรนด์'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
               {g.qs.map(q => (

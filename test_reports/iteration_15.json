@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 15 — Brand Equity: (1) uncapped competitors, (2) question grouping by comparison_group/axis_label, (3) trait pool TH translation. Backend 13/13 PASS (new test file /app/backend/tests/test_brand_equity_grouping_trait_th.py, 1.90s runtime). Frontend: lang toggle TH/EN verified (TH shows Thai prompts + 'ตอนที่ 1/4 · การจดจำแบรนด์', EN shows English prompts + 'SECTION 1/4 · BRAND RECALL'); Wizard step 0 confirmed no 'top 2 only' hint (label reads 'คู่แข่งหลัก * (อย่างน้อย 1 — ใส่ได้ตามต้องการ)'). 'หัวข้อ' / 'TOPIC' group header rendering not visually reached because Awareness section blocks progression without answering required mcq_multi AW-3 — but verified in source: BrandEquityRespondentPage.jsx lines 460/505 use q.comparison_group with topicLabel='หัวข้อ · '/'TOPIC · '.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_grouping_trait_th.py",
+    "/app/test_reports/pytest/brand_equity_grouping_trait_th.xml"
+  ],
+  "action_items": [
+    "NONE — all 3 requested features (uncapped competitors + grouping + TH trait pool translations) verified end-to-end on backend. Frontend toggle + wizard hint removal verified.",
+    "Optional: consider adding data-testid='be-resp-group-header' to the .be-eyebrow element inside axis groups so testing agents can verify group headers without textual search. Non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "_group_questions_for_comparison is a stable in-dimension re-order using a consumed-set walk; preserves non-axis question positions — matches spec. Brand-first + comp_order sort correct.",
+    "comparison_group assignment `q.get('axis_label') or tmpl['id']` is robust — non-axis templates fall back to template id so singleton siblings won't accidentally merge.",
+    "Frontend drops singleton axis groups (len<2) back into nonAxis — prevents misleading 'TOPIC · X · 1 brands' header when only us-version exists (e.g., Responsible, Relatable, Aspirational, Distinctive, Diverse-offerings all have no COMP template).",
+    "options_th is placed on all trait_grid questions: brand_list options use identity translation (brand names unchanged), trait_list uses DEFAULT_TRAIT_POOL_TH[:24], personality_traits uses PERSONALITY_TRAIT_POOL_TH. TRAIT_TH_MAP provides one-source-of-truth lookup for identity.traits.",
+    "Backend stat engine uses q.options[idx] (English) for storage — frontend QuestionInput uses opts[idx] in onChange handler, only swapping display label via optsLocalized — correct separation of storage vs presentation.",
+    "Custom quality attrs still cap at 5 (line 493 `[:5]`) by design to avoid questionnaire bloat; each attr spawns 1 us + N competitor questions matching comparison pattern.",
+    "File size: /app/backend/routes/brand_equity.py is now 1562 lines — a good candidate for splitting into brand_equity_templates.py + brand_equity_stats.py + brand_equity_routes.py. Not blocking but recommended for future maintenance."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_grouping_trait_th.py (new, 13 tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13)",
+    "frontend": "90% (lang toggle + wizard hint removal verified visually; axis group header rendering verified via code inspection only — survey progression blocked by required-answer validation in Awareness section during automated test)"
+  },
+  "test_credentials": "admin@swu.ac.th / admin123 (verified working)",
+  "seed_data_creation": "Test fixture creates TEST_GROUP_BRAND with 4 competitors [Alpha, Bravo, Charlie, Delta] + custom attr 'น่าเชื่อถือ'; auto-deleted at end of module. Seed study 0a0a1f3b-54f9-4d06-addb-10a4c620d187 had regenerate-questions called on it (questions list updated with comparison_group + options_th fields — schema migration confirmed; its 12 existing responses preserved).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 15 delta — uncapped competitors, axis_label grouping, hard-coded TH trait pool. Fully regression-covered by /app/backend/tests/test_brand_equity_grouping_trait_th.py (13 tests, 1.90s). Key contract facts: (a) each COMP-1..COMP-5 template emits one question per competitor — total COMP-* = 5 × N_competitors; (b) every q with axis_label has q.comparison_group == q.axis_label; (c) trait_grid (BI-1, ASP-1) always carries options_th parallel to options — DEFAULT_TRAIT_POOL_TH[24] + PERSONALITY_TRAIT_POOL_TH[17]; (d) _group_questions_for_comparison re-orders within each dimension: axis-tagged questions gathered into contiguous blocks, brand-first then competitors in user input order, non-axis questions preserve original slot. Frontend key code: BrandEquityRespondentPage.jsx lines 80-112 (options_th swap on lang toggle), 457-514 (axisQsByGroup + topicLabel rendering). Testids: be-resp-lang-th, be-resp-lang-en, be-resp-lang-toggle, be-resp-q-{id}, be-resp-trait-{qid}-{opt}. Wizard step 0 competitor label: 'คู่แข่งหลัก * (อย่างน้อย 1 — ใส่ได้ตามต้องการ)'. For group header visual verification, next agent should either (a) create fresh study + launch + answer AW section mcq_multi to reach Identity/Quality sections, or (b) add data-testid='be-resp-group-header' to .be-eyebrow for direct query.",
+  "rca of the issue": "No bugs found. All 3 requested features land cleanly: competitors_top uses `list(brand_setup.competitors or [])` with no cap (line 375); comparison_group assigned at build() line 456; options_th populated at lines 442/445/450; _group_questions_for_comparison at line 536 uses consumed-set + stable sort for contiguous axis blocks with brand-first competitors-in-input-order ordering. Frontend correctly uses options_th when lang==='th' (lines 110-112) and renders 'หัวข้อ · <axis>' / 'TOPIC · <axis>' group headers with brand count (lines 505-528). The previously incorrect 'top-2 only' comment on line 482 in brand_equity.py still reads `# Competitor templates: emit one per top-2 competitor (skip if no competitors)` but the actual loop iterates over all competitors_top — cosmetic stale comment, not a bug. Suggest main agent update the comment to 'emit one per competitor' for code clarity."
+}

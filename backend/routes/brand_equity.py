@@ -275,6 +275,15 @@ PERSONALITY_TRAIT_POOL = [
     "Outdoorsy", "Tough", "Rugged",
 ]
 
+# Thai translations (1:1 with PERSONALITY_TRAIT_POOL — hard-coded since pool is finite)
+PERSONALITY_TRAIT_POOL_TH = [
+    "ซื่อสัตย์", "อบอุ่น/แท้จริง", "ติดดิน", "ร่าเริง",
+    "กล้า", "มีชีวิตชีวา", "ช่างจินตนาการ", "ทันสมัย",
+    "ไว้ใจได้", "ฉลาด", "ประสบความสำเร็จ",
+    "หรูหรา", "มีเสน่ห์", "เก๋ไก๋",
+    "รักธรรมชาติ", "แกร่ง", "ลุย/ทรหด",
+]
+
 
 # Default trait pool (Aaker's 5-archetype + custom-friendly)
 DEFAULT_TRAIT_POOL = [
@@ -283,6 +292,18 @@ DEFAULT_TRAIT_POOL = [
     "Professional", "Caring", "Energetic", "Calm", "Authentic", "Edgy",
     "Down-to-earth", "Aspirational", "Tech-savvy", "Traditional", "Playful", "Serious",
 ]
+
+# Thai translations (1:1 with DEFAULT_TRAIT_POOL)
+DEFAULT_TRAIT_POOL_TH = [
+    "ทันสมัย", "คลาสสิก", "น่าเชื่อถือ", "นวัตกรรม", "เป็นกันเอง", "พรีเมี่ยม",
+    "ราคาเข้าถึงได้", "ตื่นเต้น", "ไว้ใจได้", "หรูดูดี", "กล้าหาญ", "สนุก",
+    "มืออาชีพ", "ใส่ใจ", "มีพลัง", "สงบ/นิ่ง", "แท้จริง/จริงใจ", "เท่/แตกต่าง",
+    "ติดดิน", "มีแรงบันดาลใจ", "ล้ำเทคโนโลยี", "ดั้งเดิม", "ขี้เล่น", "จริงจัง",
+]
+
+# Lookup helpers — one source of truth for any future code that needs trait→TH
+TRAIT_TH_MAP = dict(zip(DEFAULT_TRAIT_POOL, DEFAULT_TRAIT_POOL_TH))
+TRAIT_TH_MAP.update(dict(zip(PERSONALITY_TRAIT_POOL, PERSONALITY_TRAIT_POOL_TH)))
 
 
 # ============ MODELS ============
@@ -350,10 +371,13 @@ def _now_iso():
 def _generate_questions_from_template(brand_setup: BrandSetup, identity: IdentitySetup) -> List[dict]:
     """Generate question objects from template, filling in brand/competitors/etc."""
     questions = []
-    competitors_top = (brand_setup.competitors or [])[:2]
+    # Use ALL competitors the user entered (no longer capped at 2)
+    competitors_top = list(brand_setup.competitors or [])
     primary_competitor = competitors_top[0] if competitors_top else "คู่แข่ง"
     brand_list = [brand_setup.name] + (brand_setup.competitors or [])
     trait_pool = list(set(DEFAULT_TRAIT_POOL + (identity.traits or [])))
+    # Build matching TH list (preserve order of trait_pool)
+    trait_pool_th = [TRAIT_TH_MAP.get(t, t) for t in trait_pool]
 
     visual_assets = identity.visual_assets or []
     logo_asset = next((a.model_dump() if hasattr(a, "model_dump") else a
@@ -415,14 +439,21 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
         if tmpl.get("options_t") == "brand_list":
             decoys = ["Brand X", "Brand Y", "Brand Z"]
             q["options"] = brand_list + decoys[:max(0, 5 - len(brand_list))]
+            q["options_th"] = q["options"]  # brand names — no translation
         elif tmpl.get("options_t") == "trait_list":
             q["options"] = trait_pool[:24]
+            q["options_th"] = trait_pool_th[:24]
             q["min"] = tmpl.get("min", 1)
             q["max"] = tmpl.get("max", 5)
         elif tmpl.get("options_t") == "personality_traits":
             q["options"] = PERSONALITY_TRAIT_POOL
+            q["options_th"] = PERSONALITY_TRAIT_POOL_TH
             q["min"] = tmpl.get("min", 2)
             q["max"] = tmpl.get("max", 4)
+        # Comparison group key — used by the Respondent UI to group questions
+        # about the same attribute together so users can compare side-by-side.
+        # Priority: explicit axis_label → template root id (so paired templates fall in the same bucket)
+        q["comparison_group"] = (q.get("axis_label") or tmpl["id"])
         # Attach display image for visual-identity questions
         if tmpl.get("requires_asset") == "logo" and logo_asset:
             q["display_image"] = {
@@ -481,8 +512,8 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
         # Override EN prompt with proper translation
         q_brand["prompt_en"] = f"{brand_setup.name} is a brand that is {attr_en}"
         questions.append(q_brand)
-        # Parallel competitor attribute likert (top-1 only to keep length manageable)
-        if competitors_top:
+        # Parallel competitor questions — one per competitor (was top-1 only; now full list)
+        for comp in competitors_top:
             q_comp = build({
                 "id": f"COMP-CUSTOM-{slug.upper()[:8]}",
                 "type": "likert_7",
@@ -492,10 +523,67 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
                 "compare_brand": "competitor",
                 "prompt_t": f"{{competitor}} เป็นแบรนด์ที่ {attr_clean}",
                 "required": False,
-            }, "quality", override_competitor=competitors_top[0])
-            q_comp["prompt_en"] = f"{competitors_top[0]} is a brand that is {attr_en}"
+            }, "quality", override_competitor=comp)
+            q_comp["prompt_en"] = f"{comp} is a brand that is {attr_en}"
             questions.append(q_comp)
-    return questions
+
+    # === Re-order within each dimension so brand+competitor questions for the same
+    # comparison_group are contiguous (brand first, then competitors in user order).
+    # Preserves dimension order; questions without a comparison group keep their original slot. ===
+    return _group_questions_for_comparison(questions, brand_setup.name, competitors_top)
+
+
+def _group_questions_for_comparison(questions: List[dict], brand_name: str, competitors: List[str]) -> List[dict]:
+    """Re-order questions so that within a dimension, all questions sharing the same
+    comparison_group are placed contiguously: brand first, then competitors in input order.
+    Questions without `axis_label` (open-ended, trait_grid, etc.) stay in original slot.
+    """
+    comp_order = {name: i for i, name in enumerate(competitors)}
+
+    def is_groupable(q):
+        return bool(q.get("axis_label"))  # only axis-tagged Likert questions group
+
+    def sort_key_within_group(q):
+        # brand questions (no compare_brand) sort first; then competitors in input order
+        if not q.get("compare_brand"):
+            return (0, 0)
+        return (1, comp_order.get(q.get("compare_brand"), 99))
+
+    # Group questions by dimension first to preserve dimension order on the survey
+    by_dim: Dict[str, List[dict]] = {}
+    dim_order: List[str] = []
+    for q in questions:
+        d = q.get("dimension", "")
+        if d not in by_dim:
+            by_dim[d] = []
+            dim_order.append(d)
+        by_dim[d].append(q)
+
+    out: List[dict] = []
+    for d in dim_order:
+        dim_qs = by_dim[d]
+        # Walk through, when we hit an axis-tagged question, gather ALL its group siblings
+        consumed = set()
+        for i, q in enumerate(dim_qs):
+            if i in consumed:
+                continue
+            if is_groupable(q):
+                group_key = q.get("comparison_group") or q.get("axis_label")
+                # Pull all siblings (anywhere in this dimension) that share the group
+                siblings = [(j, x) for j, x in enumerate(dim_qs)
+                            if j not in consumed
+                            and is_groupable(x)
+                            and (x.get("comparison_group") or x.get("axis_label")) == group_key]
+                # Mark consumed
+                for j, _ in siblings:
+                    consumed.add(j)
+                # Sort: brand → competitors in input order
+                siblings.sort(key=lambda jx: sort_key_within_group(jx[1]))
+                out.extend(x for _, x in siblings)
+            else:
+                consumed.add(i)
+                out.append(q)
+    return out
 
 
 # ============ STATS ENGINE ============

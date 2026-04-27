@@ -368,7 +368,7 @@ const BrandEquityWizardPage = () => {
               </div>
 
               <div className="be-card">
-                <label className="be-label">คู่แข่งหลัก * (อย่างน้อย 1, แนะนำ 3-4)</label>
+                <label className="be-label">คู่แข่งหลัก * (อย่างน้อย 1 — ใส่ได้ตามต้องการ)</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="be-input" value={competitorInput}
                          onChange={e => setCompetitorInput(e.target.value)}
@@ -446,6 +446,10 @@ const BrandEquityWizardPage = () => {
               <div className="be-small be-muted" style={{ lineHeight: 1.6 }}>
                 AI ใช้ category และ competitor names ในการสร้าง prompt template
                 เช่น "เทียบ <strong>Mali</strong> กับ <strong>Starbucks</strong> คุณคิดว่า..."
+              </div>
+              <div className="be-small be-muted" style={{ lineHeight: 1.6, marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--rule)' }}>
+                <strong>Heads-up:</strong> ทุกคู่แข่งจะมีคำถามเปรียบเทียบใน radar/perceptual map
+                · <strong>{(brand.competitors || []).length} แบรนด์</strong> = +{(brand.competitors || []).length * 5} คำถาม โดยประมาณ
               </div>
             </div>
           </div>
