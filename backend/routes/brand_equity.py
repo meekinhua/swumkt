@@ -284,8 +284,11 @@ def _comparative_stats(values: List[int]) -> dict:
     }
 
 
-def _aggregate_responses(study: dict, responses: List[dict]) -> dict:
-    """Compute stats per question."""
+def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None) -> dict:
+    """Compute stats per question.
+    normalized: optional {question_id: {counts: [...], total: N, variants_map: {...}}}
+                — if provided, overrides _frequency_stats counts for that question with AI-canonicalized buckets.
+    """
     by_q: Dict[str, List] = {}
     for r in responses:
         for ans in r.get("answers", []):
@@ -296,6 +299,7 @@ def _aggregate_responses(study: dict, responses: List[dict]) -> dict:
     questions = study.get("questions", [])
     out_questions = []
     dim_aggregates: Dict[str, List[float]] = {d: [] for d in DIMENSIONS}
+    normalized = normalized or {}
 
     for q in questions:
         qid = q["id"]
@@ -315,11 +319,30 @@ def _aggregate_responses(study: dict, responses: List[dict]) -> dict:
                 dim_aggregates[q["dimension"]].append(stats["score_100"])
         elif q["type"] in ("mcq_single", "mcq_multi", "trait_grid", "open_short"):
             stats = _frequency_stats(values)
+            # Override with AI-normalized counts for open-ended brand/concept questions
+            if q.get("ai_processing") in ("extract_brand", "extract_brands", "word_cloud") and qid in normalized:
+                norm = normalized[qid]
+                if norm.get("counts"):
+                    stats = {
+                        "n": norm.get("total", stats.get("n", 0)),
+                        "counts": norm["counts"],
+                        "ai_normalized": True,
+                    }
+        elif q["type"] == "open_long":
+            # If AI normalized this open_long (e.g., extract_brands), use it; otherwise raw responses
+            if q.get("ai_processing") in ("extract_brand", "extract_brands") and qid in normalized:
+                norm = normalized[qid]
+                stats = {
+                    "n": norm.get("total", len(values)),
+                    "counts": norm.get("counts", []),
+                    "ai_normalized": True,
+                    "responses": [v for v in values if v][:10],  # keep sample
+                }
+            else:
+                stats = {"n": len(values), "responses": [v for v in values if v]}
         elif q["type"] == "comparative_7":
             numeric = [int(v) for v in values if isinstance(v, (int, float)) or (isinstance(v, str) and v.isdigit())]
             stats = _comparative_stats(numeric)
-        elif q["type"] == "open_long":
-            stats = {"n": len(values), "responses": [v for v in values if v]}
 
         out_questions.append({
             "id": qid, "dimension": q["dimension"], "type": q["type"],
@@ -374,6 +397,97 @@ async def _gemini_call(prompt: str, system: str = "You are a brand strategy expe
     except Exception as e:
         logging.error(f"[BrandEquity] Gemini error: {e}")
         return ""
+
+
+async def _ai_normalize_open(responses: List[str], kind: str, brand_list: List[str], category: str = "") -> dict:
+    """Cluster open-ended brand/concept mentions written in different ways
+    (Thai/English, casing, typos, abbreviations) into canonical buckets.
+
+    kind:
+      - 'brand_single' : each response = one brand (top-of-mind)
+      - 'brand_multi'  : each response may list MULTIPLE brands separated by comma/space
+      - 'concept'      : one-word brand descriptors (Modern == ทันสมัย == modern)
+
+    Returns: {"counts": [{label, count, pct, variants}], "total": N}
+    """
+    if not responses:
+        return {"counts": [], "total": 0}
+    # cap input
+    sample = [r for r in responses if r and str(r).strip()][:200]
+    if not sample:
+        return {"counts": [], "total": 0}
+
+    if kind in ("brand_single", "brand_multi"):
+        guidance = f"""These are brand-name responses about category '{category}'.
+Known brands to anchor canonical labels: {', '.join(brand_list)}.
+Cluster mentions referring to the SAME brand. Handle:
+- Thai/English variants ('Mali' = 'มะลิ' = 'MALI')
+- Casing/typos ('starbuks' = 'Starbucks')
+- Abbreviations ('SB' = 'Starbucks' if context suggests)
+- Multi-brand single responses (split commas, slashes, '/').
+Use the most recognized form (prefer English brand if commonly used) as canonical."""
+    else:  # concept
+        guidance = """These are one-word brand descriptors.
+Cluster synonyms / cross-language equivalents into one canonical concept:
+- 'Modern' = 'modern' = 'ทันสมัย' = 'ทันยุค'
+- 'Cozy'   = 'อบอุ่น' = 'นั่งสบาย' = 'cozy'
+- 'Premium' = 'หรู' = 'แพง' (but 'expensive'/'แพง' is closer to 'Expensive' than 'Premium')
+Use a single English title-case word as canonical when possible."""
+
+    prompt = f"""{guidance}
+
+Responses ({len(sample)}):
+{json.dumps(sample, ensure_ascii=False)}
+
+Return JSON only (no markdown):
+{{
+  "clusters": [
+    {{"canonical": "<label>", "variants": ["v1", "v2", "v3"], "count": <int>}},
+    ...
+  ]
+}}
+Sort by count desc. Maximum 15 clusters. The total `count` across all clusters MAY exceed
+{len(sample)} for brand_multi (multiple brands per response), but never less than the most-frequent variant.
+Return ONLY JSON:"""
+    text = await _gemini_call(prompt)
+    if not text:
+        # Fallback: case-insensitive frequency on raw strings
+        normalized_pairs = [(r.strip().lower(), r.strip()) for r in sample]
+        counter = Counter(p[0] for p in normalized_pairs)
+        total = len(sample)
+        return {
+            "counts": [
+                {"label": k.title(), "count": v,
+                 "pct": round(v / total * 100, 1) if total else 0,
+                 "variants": list(set(orig for low, orig in normalized_pairs if low == k))}
+                for k, v in counter.most_common(15)
+            ],
+            "total": total,
+        }
+    try:
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```")[1]
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+            cleaned = cleaned.rsplit("```", 1)[0]
+        parsed = json.loads(cleaned.strip())
+        clusters = parsed.get("clusters", [])
+        # base = number of responses (not sum of counts) — for percentage display
+        total = len(sample)
+        return {
+            "counts": [
+                {"label": c.get("canonical", "?"),
+                 "count": int(c.get("count", 0)),
+                 "pct": round(int(c.get("count", 0)) / total * 100, 1) if total else 0,
+                 "variants": c.get("variants", []) or []}
+                for c in clusters[:15]
+            ],
+            "total": total,
+        }
+    except Exception as e:
+        logging.error(f"[BrandEquity] Parse normalize ({kind}) failed: {e} text={text[:200]}")
+        return {"counts": [], "total": len(sample)}
 
 
 async def _ai_extract_themes(open_responses: List[str], context: str = "") -> List[dict]:
@@ -641,8 +755,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         cur = db.brand_responses.find({"study_id": study_id}, {"_id": 0})
         responses = await cur.to_list(5000)
 
-        agg = _aggregate_responses(study, responses)
         ai_cache = study.get("ai_cache", {})
+        normalized = ai_cache.get("normalized_by_question") or {}
+        agg = _aggregate_responses(study, responses, normalized=normalized)
 
         return {
             "study": study,
@@ -669,7 +784,29 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             await db.brand_studies.update_one({"id": study_id},
                 {"$set": {"ai_cache.status": "running", "ai_cache.updated_at": _now_iso()}})
 
-            agg = _aggregate_responses(study, responses)
+            # ---- Step 1: Normalize open-ended brand/concept responses ----
+            normalized_by_q: Dict[str, dict] = {}
+            brand_list = [study["brand"]["name"]] + (study["brand"].get("competitors") or [])
+            category = study["brand"].get("category", "")
+            for q in study["questions"]:
+                ap = q.get("ai_processing")
+                if ap not in ("extract_brand", "extract_brands", "word_cloud"):
+                    continue
+                open_resps: List[str] = []
+                for r in responses:
+                    for a in r.get("answers", []):
+                        if a.get("question_id") == q["id"] and a.get("value"):
+                            open_resps.append(str(a["value"]))
+                if not open_resps:
+                    continue
+                kind = "brand_single" if ap == "extract_brand" else \
+                       "brand_multi"  if ap == "extract_brands" else "concept"
+                norm = await _ai_normalize_open(open_resps, kind, brand_list, category)
+                if norm.get("counts"):
+                    normalized_by_q[q["id"]] = norm
+
+            # Recompute aggregate WITH normalized counts (so master insights see canonical buckets)
+            agg = _aggregate_responses(study, responses, normalized=normalized_by_q)
 
             # Theme extraction per open question
             themes_by_q: Dict[str, List[dict]] = {}
@@ -713,6 +850,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 "$set": {
                     "ai_cache": {
                         "status": "ready",
+                        "normalized_by_question": normalized_by_q,
                         "themes_by_question": themes_by_q,
                         "identity_image": identity_image,
                         "master_insights": insights,

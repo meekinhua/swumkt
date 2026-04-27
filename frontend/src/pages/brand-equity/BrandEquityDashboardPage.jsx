@@ -303,6 +303,7 @@ const BrandEquityDashboardPage = () => {
 const SectionAwareness = ({ study, aggregate, ai }) => {
   const qs = aggregate?.questions || [];
   const tom = qs.find(q => q.kind === 'unaided_top_of_mind');
+  const recall = qs.find(q => q.kind === 'unaided_recall');
   const aided = qs.find(q => q.kind === 'aided_recognition');
   const score = Math.round(aggregate?.composite?.awareness || 0);
 
@@ -315,6 +316,13 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
     target: c.label?.toLowerCase().includes(target?.toLowerCase() || '___'),
     x: 12 + (i % 4) * 22 + Math.random() * 10,
     y: 18 + Math.floor(i / 4) * 26 + Math.random() * 8,
+  }));
+
+  // Unaided recall — AI normalized counts (each response may list multiple brands)
+  const recallRows = (recall?.stats?.counts || []).slice(0, 8).map(c => ({
+    label: c.label,
+    value: c.pct,
+    target: c.label?.toLowerCase().includes(target?.toLowerCase() || '___'),
   }));
 
   // Aided recognition bars
@@ -351,7 +359,17 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Top-of-Mind brand cloud</h3>
-                <div className="be-card-d">"แบรนด์แรกที่นึกถึง?" · n={tom?.stats?.n} · target highlighted</div>
+                <div className="be-card-d">
+                  "แบรนด์แรกที่นึกถึง?" · n={tom?.stats?.n} · target highlighted
+                  {tom?.stats?.ai_normalized && (
+                    <span className="be-chip-dim be-mono"
+                          style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
+                                   border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
+                                   fontSize: 9.5, letterSpacing: '0.06em' }}>
+                      AI · NORMALIZED
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="be-card-stat">
                 <span className="be-big be-num">{Math.round(targetTomPct)}</span>
@@ -359,6 +377,46 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
               </div>
             </div>
             <WordCloud words={cloudWords}/>
+            {tom?.stats?.ai_normalized && tomCounts.some(c => (c.variants || []).length > 1) && (
+              <details style={{ marginTop: 12, fontSize: 11, color: 'var(--ink-3)' }}>
+                <summary style={{ cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace',
+                                   textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  ดู variants ที่ AI รวมเข้าด้วยกัน
+                </summary>
+                <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                  {tomCounts.filter(c => (c.variants || []).length > 1).slice(0, 8).map((c, i) => (
+                    <div key={i} style={{ padding: '6px 10px', background: 'var(--paper-2)', border: '1px dashed var(--rule)' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: 12 }}>{c.label}</div>
+                      <div style={{ fontStyle: 'italic', lineHeight: 1.5 }}>
+                        {(c.variants || []).slice(0, 6).join(' · ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+
+        {recallRows.length > 0 && (
+          <div className="be-card">
+            <div className="be-card-h">
+              <div>
+                <h3 className="be-card-t">Unaided recall</h3>
+                <div className="be-card-d">
+                  "นึกถึงแบรนด์อะไรอีกบ้าง?" · n={recall?.stats?.n}
+                  {recall?.stats?.ai_normalized && (
+                    <span className="be-chip-dim be-mono"
+                          style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
+                                   border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
+                                   fontSize: 9.5, letterSpacing: '0.06em' }}>
+                      AI · NORMALIZED
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <HBar rows={recallRows} color={DIMENSIONS.awareness.color}/>
           </div>
         )}
 
@@ -538,6 +596,17 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
     kind: aligned.includes(p.trait) ? 'aligned' : unintended.includes(p.trait) ? 'unintended' : 'lost',
   }));
 
+  // 1-word identity cloud (BI-3 word_cloud question)
+  const oneWord = qs.find(q => q.kind === 'image_one_word');
+  const oneWordCounts = oneWord?.stats?.counts || [];
+  const oneWordCloudWords = oneWordCounts.slice(0, 14).map((c, i) => ({
+    text: c.label,
+    size: Math.max(12, 14 + Math.round(c.pct * 0.6)),
+    target: aligned.includes(c.label),
+    x: 10 + (i % 5) * 18 + Math.random() * 8,
+    y: 18 + Math.floor(i / 5) * 28 + Math.random() * 6,
+  }));
+
   return (
     <div className="be-section" style={{ background: '#FBF7F1', padding: '40px 24px', margin: '0 -32px',
                                            border: '1px solid var(--rule-strong)' }}
@@ -570,16 +639,59 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
           </div>
         </div>
       ) : (
-        <div className="be-card" style={{ padding: 24 }}>
-          <IdentityImageMap intended={intended} image={imageCol} statusMap={statusMap}/>
-          {ii.narrative && (
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--rule)',
-                          fontFamily: 'IBM Plex Serif', fontSize: 14, fontStyle: 'italic',
-                          color: 'var(--ink-2)', lineHeight: 1.6 }}>
-              "{ii.narrative}"
+        <>
+          <div className="be-card" style={{ padding: 24 }}>
+            <IdentityImageMap intended={intended} image={imageCol} statusMap={statusMap}/>
+            {ii.narrative && (
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--rule)',
+                            fontFamily: 'IBM Plex Serif', fontSize: 14, fontStyle: 'italic',
+                            color: 'var(--ink-2)', lineHeight: 1.6 }}>
+                "{ii.narrative}"
+              </div>
+            )}
+          </div>
+
+          {oneWordCloudWords.length > 0 && (
+            <div className="be-card" style={{ padding: 24, marginTop: 16 }}>
+              <div className="be-card-h">
+                <div>
+                  <h3 className="be-card-t">One-word identity cloud</h3>
+                  <div className="be-card-d">
+                    "อธิบาย {study.brand?.name} ในคำเดียว" · n={oneWord?.stats?.n}
+                    {oneWord?.stats?.ai_normalized && (
+                      <span className="be-chip-dim be-mono"
+                            style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
+                                     border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
+                                     fontSize: 9.5, letterSpacing: '0.06em' }}>
+                        AI · NORMALIZED
+                      </span>
+                    )}
+                    {' '}· aligned highlighted in red
+                  </div>
+                </div>
+              </div>
+              <WordCloud words={oneWordCloudWords}/>
+              {oneWord?.stats?.ai_normalized && oneWordCounts.some(c => (c.variants || []).length > 1) && (
+                <details style={{ marginTop: 12, fontSize: 11, color: 'var(--ink-3)' }}>
+                  <summary style={{ cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace',
+                                     textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    ดู variants ที่ AI รวมเข้าด้วยกัน
+                  </summary>
+                  <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                    {oneWordCounts.filter(c => (c.variants || []).length > 1).slice(0, 8).map((c, i) => (
+                      <div key={i} style={{ padding: '6px 10px', background: 'var(--paper-2)', border: '1px dashed var(--rule)' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: 12 }}>{c.label}</div>
+                        <div style={{ fontStyle: 'italic', lineHeight: 1.5 }}>
+                          {(c.variants || []).slice(0, 6).join(' · ')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
