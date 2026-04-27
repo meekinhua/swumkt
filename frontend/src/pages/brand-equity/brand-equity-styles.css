@@ -379,6 +379,15 @@
 .be-trait-toggle:hover { background: var(--paper-2); }
 .be-trait-toggle.sel { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
+/* Bilingual chip — Thai label on top, faded English underneath */
+.be-trait-bi { display: inline-flex; flex-direction: column; line-height: 1.05; align-items: flex-start; }
+.be-trait-bi .th { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 12.5px; }
+.be-trait-bi .en { font-family: 'IBM Plex Mono', monospace; font-size: 8.5px;
+                   letter-spacing: 0.06em; text-transform: uppercase;
+                   color: var(--ink-3); margin-top: 2px; }
+.be-trait-toggle.sel .be-trait-bi .en { color: rgba(247, 244, 238, 0.55); }
+.be-chip .be-trait-bi .en { color: var(--ink-3); opacity: 0.8; }
+
 /* ============ Dashboard hero ============ */
 .be-hero { background: var(--surface); border: 1px solid var(--rule-strong); padding: 28px 32px; margin-bottom: 1px; }
 .be-hero-row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 22px; }

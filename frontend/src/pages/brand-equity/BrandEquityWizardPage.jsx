@@ -28,7 +28,17 @@ const TRAIT_TH = {
   'Tech-savvy': 'ล้ำเทคโนโลยี', 'Traditional': 'ดั้งเดิม',
   'Playful': 'ขี้เล่น', 'Serious': 'จริงจัง',
 };
-const traitLabel = (t) => TRAIT_TH[t] || t;
+// Dual-line chip content: Thai label on top, faded EN underneath (only when they differ)
+const TraitBi = ({ value }) => {
+  const th = TRAIT_TH[value];
+  if (!th || th === value) return <>{value}</>;  // unknown / already-Thai → single line
+  return (
+    <span className="be-trait-bi">
+      <span className="th">{th}</span>
+      <span className="en">{value}</span>
+    </span>
+  );
+};
 
 const PRICING = [
   { v: 'budget',  label: 'Budget' },
@@ -602,7 +612,9 @@ const BrandEquityWizardPage = () => {
                           {identity.derived_traits.map((t, i) => (
                             <span key={i} className="be-chip"
                                   title={t}
-                                  style={{ borderColor: 'var(--be-red)', color: 'var(--be-red)' }}>{traitLabel(t)}</span>
+                                  style={{ borderColor: 'var(--be-red)', color: 'var(--be-red)' }}>
+                              <TraitBi value={t}/>
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -626,7 +638,7 @@ const BrandEquityWizardPage = () => {
                           title={t}
                           data-testid={`be-wizard-trait-${t}`}>
                       {identity.traits.includes(t) && <Icon name="check" size={10}/>}
-                      {traitLabel(t)}
+                      <TraitBi value={t}/>
                     </span>
                   ))}
                 </div>
@@ -848,7 +860,7 @@ const BrandEquityWizardPage = () => {
 
               <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>Identity traits</h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
-                {identity.traits.map(t => <span key={t} className="be-chip" title={t}>{traitLabel(t)}</span>)}
+                {identity.traits.map(t => <span key={t} className="be-chip" title={t}><TraitBi value={t}/></span>)}
               </div>
 
               <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>Competitors · {brand.competitors.length}</h4>
