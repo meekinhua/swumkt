@@ -35,6 +35,7 @@ const BrandEquityWizardPage = () => {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [previewLang, setPreviewLang] = useState('th');
 
   const [brand, setBrand] = useState({ name: '', logo_url: '', category: '', competitors: [], industry_context: '', custom_quality_attributes: [] });
   const [identity, setIdentity] = useState({
@@ -620,10 +621,26 @@ const BrandEquityWizardPage = () => {
           <div className="be-wiz-body" data-testid="be-wizard-step-3">
             <div>
               <div className="be-wiz-head">
-                <div className="be-eyebrow" style={{ marginBottom: 10 }}>STEP · 04 / 04</div>
-                <h1 className="be-h1">ตรวจสอบคำถาม · {totalQ} ข้อ</h1>
-                <div className="be-muted be-small" style={{ marginTop: 8, maxWidth: 580 }}>
-                  ระบบสร้างคำถามครอบคลุม Aaker 4 dimensions แล้ว — คุณสามารถลบ/regenerate ได้ก่อนเปิดรับคำตอบ
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 14 }}>
+                  <div>
+                    <div className="be-eyebrow" style={{ marginBottom: 10 }}>STEP · 04 / 04</div>
+                    <h1 className="be-h1">ตรวจสอบคำถาม · {totalQ} ข้อ</h1>
+                    <div className="be-muted be-small" style={{ marginTop: 8, maxWidth: 580 }}>
+                      ระบบสร้างคำถามครอบคลุม Aaker 4 dimensions แล้ว — ลบ/regenerate/preview EN ได้ก่อนเปิดรับคำตอบ
+                    </div>
+                  </div>
+                  <div className="be-mono be-tiny" style={{ display: 'flex', border: '1px solid var(--rule-strong)' }}>
+                    {['th', 'en'].map(l => (
+                      <button key={l} onClick={() => setPreviewLang(l)}
+                              data-testid={`be-wizard-preview-lang-${l}`}
+                              style={{ padding: '5px 12px', fontSize: 11, letterSpacing: '0.10em',
+                                       background: previewLang === l ? 'var(--ink)' : 'transparent',
+                                       color: previewLang === l ? 'var(--paper)' : 'var(--ink)',
+                                       border: 0, cursor: 'pointer', textTransform: 'uppercase' }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -673,8 +690,22 @@ const BrandEquityWizardPage = () => {
                           <div key={q.id} className="be-qrow" data-testid={`be-wizard-q-${q.id}`}>
                             <div className="be-qid">{q.template_id || q.id.slice(0, 5)}</div>
                             <div className="be-qprompt">
-                              {q.prompt}
+                              {(previewLang === 'en' ? q.prompt_en : q.prompt_th) || q.prompt}
                               {q.required && <span style={{ color: 'var(--be-red)', marginLeft: 6 }}>*</span>}
+                              {q.display_image && (
+                                <span className="be-mono be-tiny" style={{ marginLeft: 8, color: 'var(--be-gold)',
+                                       background: 'rgba(212,160,23,0.10)', border: '1px solid rgba(212,160,23,0.35)',
+                                       padding: '1px 5px', fontSize: 9, letterSpacing: '0.06em' }}>
+                                  📷 {q.display_image.kind?.toUpperCase()}
+                                </span>
+                              )}
+                              {q.display_palette && (
+                                <span className="be-mono be-tiny" style={{ marginLeft: 8, color: 'var(--be-gold)',
+                                       background: 'rgba(212,160,23,0.10)', border: '1px solid rgba(212,160,23,0.35)',
+                                       padding: '1px 5px', fontSize: 9, letterSpacing: '0.06em' }}>
+                                  🎨 PALETTE
+                                </span>
+                              )}
                               {q.ai_processing && (
                                 <span className="be-chip-dim be-mono"
                                       style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',

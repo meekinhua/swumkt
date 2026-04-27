@@ -161,6 +161,29 @@ TEMPLATE_LIB = {
         {"id": "COMP-5", "type": "likert_7", "kind": "competitor_iconic",
          "perspective": "competitor", "axis_label": "Iconic", "compare_brand": "competitor",
          "prompt_t": "ฉันจำสัญลักษณ์ / ดีไซน์ของ {competitor} ได้ทันที", "required": False},
+
+        # === Visual Identity Tests (only generated if brand uploaded matching assets) ===
+        {"id": "VIS-1", "type": "open_short", "kind": "logo_unaided",
+         "perspective": "as_symbol",
+         "requires_asset": "logo",
+         "prompt_t": "เห็นโลโก้นี้แล้ว คุณนึกถึงแบรนด์อะไร?",
+         "required": False, "ai_processing": "extract_brand"},
+        {"id": "VIS-2", "type": "mcq_single", "kind": "logo_aided",
+         "perspective": "as_symbol",
+         "requires_asset": "logo", "options_t": "brand_list",
+         "prompt_t": "นี่คือโลโก้ของแบรนด์ใด?",
+         "required": False},
+        {"id": "VIS-3", "type": "open_long", "kind": "logo_association",
+         "perspective": "as_symbol",
+         "requires_asset": "logo",
+         "prompt_t": "เห็นโลโก้นี้แล้วคิดถึงอะไร? / รู้สึกอย่างไร?",
+         "help": "เช่น คุ้นเคย · เก๋ · เป็นมิตร · ทันสมัย · ไม่รู้สึกอะไร",
+         "required": False, "ai_processing": "theme_extraction"},
+        {"id": "VIS-4", "type": "open_short", "kind": "color_recall",
+         "perspective": "as_symbol",
+         "requires_palette": True,
+         "prompt_t": "เห็นชุดสีนี้แล้วนึกถึงแบรนด์ใด?",
+         "required": False, "ai_processing": "extract_brand"},
     ],
     "loyalty": [
         {"id": "LY-1", "type": "nps_0_10", "kind": "nps",
@@ -177,6 +200,66 @@ TEMPLATE_LIB = {
          "required": False, "ai_processing": "theme_extraction"},
     ],
 }
+
+# EN translation map — keyed by template id. Prompts are the user-facing TH→EN.
+PROMPT_EN = {
+    "AW-1": "When you think of {category}, which brand comes to mind first?",
+    "AW-2": "Besides those, what other {category} brands can you recall?",
+    "AW-3": "Which of the following brands have you heard of? (select all that apply)",
+    "AW-4": "How well do you know {brand}?",
+    "PQ-1": "Overall, how would you rate {brand}'s quality?",
+    "PQ-2": "{brand} is reliable and performs as expected",
+    "PQ-3": "{brand} offers good value for money",
+    "PQ-4": "{brand} has good design / aesthetics",
+    "PQ-5": "Comparing {brand} with {competitor}, you think...",
+    "PQ-6": "What makes you feel that {brand} has good or poor quality?",
+    "BI-1": "Pick 3-5 traits that best describe {brand}",
+    "BI-2": "If {brand} were a person, how would you describe them?",
+    "BI-3": "Describe {brand} in one word",
+    "BI-4": '{brand} delivers on its promise: "{brand_promise}"',
+    "ASO-1": "When you think of {brand} as an organization / company, what value or word comes first?",
+    "ASO-2": "{brand} is a trustworthy and honest organization",
+    "ASO-3": "{brand} is an innovative / modern organization",
+    "ASO-4": "{brand} cares about society / environment / employees",
+    "ASP-1": "If {brand} were a person, choose 2-4 personality traits that fit",
+    "ASP-2": "{brand} feels like a friend or someone close to you",
+    "ASP-3": "{brand} feels like someone you aspire to be / admire",
+    "ASS-1": "What logo / color / slogan / symbol of {brand} do you remember?",
+    "ASS-2": "I can instantly recognize the symbol / design of {brand}",
+    "ASS-3": "{brand} looks clearly different from competitors (visual / slogan / design)",
+    "ASD-1": "{brand} is a high-quality product / service",
+    "ASD-2": "{brand} offers a diverse product line / menu / options",
+    "ASD-3": "{brand} is a premium / high-end brand",
+    "COMP-1": "{competitor} is a high-quality brand",
+    "COMP-2": "{competitor} is a premium / high-end brand",
+    "COMP-3": "{competitor} is an innovative / modern brand",
+    "COMP-4": "{competitor} is a trustworthy and honest organization",
+    "COMP-5": "I can instantly recognize the symbol / design of {competitor}",
+    "LY-1": "How likely are you to recommend {brand} to a friend or family? (0-10)",
+    "LY-2": "I will keep using {brand} in the future",
+    "LY-3": "If a competitor offered a 20% discount, I would still stick with {brand}",
+    "LY-4": "Why do you stay with {brand}? (or why might you switch?)",
+    # Visual identity tests (NEW)
+    "VIS-1": "What brand do you think of when you see this logo?",
+    "VIS-2": "Whose logo is this?",
+    "VIS-3": "What does this logo make you think of? How does it feel?",
+    "VIS-4": "What brand do you associate with these colors?",
+}
+
+HELP_EN = {
+    "ASO-1": "e.g. trustworthy · innovative · socially-conscious · heritage · local",
+    "VIS-3": "Open thoughts — brand recall, mood, feelings, associations…",
+}
+
+SCALE_EN = {
+    "AW-4": ["Never heard", "Heard of", "Somewhat know", "Know well", "Know very well"],
+    "PQ-1": ["Very poor", "Poor", "Below avg", "Average", "Above avg", "Good", "Excellent"],
+}
+
+SCALE_LR_EN = {
+    "PQ-5": ("{brand} is much better", "{competitor} is much better"),
+}
+
 
 # Aaker Brand Personality Scale (BPS) — 5 facets
 PERSONALITY_TRAIT_POOL = [
@@ -266,13 +349,35 @@ def _now_iso():
 def _generate_questions_from_template(brand_setup: BrandSetup, identity: IdentitySetup) -> List[dict]:
     """Generate question objects from template, filling in brand/competitors/etc."""
     questions = []
-    competitors_top = (brand_setup.competitors or [])[:2]  # max 2 for competitor parallel set
+    competitors_top = (brand_setup.competitors or [])[:2]
     primary_competitor = competitors_top[0] if competitors_top else "คู่แข่ง"
     brand_list = [brand_setup.name] + (brand_setup.competitors or [])
     trait_pool = list(set(DEFAULT_TRAIT_POOL + (identity.traits or [])))
 
+    visual_assets = identity.visual_assets or []
+    logo_asset = next((a.model_dump() if hasattr(a, "model_dump") else a
+                       for a in visual_assets
+                       if (a.kind if hasattr(a, "kind") else a.get("kind")) == "logo"), None)
+    palette_image_asset = next((a.model_dump() if hasattr(a, "model_dump") else a
+                                for a in visual_assets
+                                if (a.kind if hasattr(a, "kind") else a.get("kind")) == "palette"), None)
+    visual_palette_hex = identity.visual_palette or []
+
+    def fill(text: str, override_competitor: Optional[str] = None) -> str:
+        if not text:
+            return text
+        comp = override_competitor or primary_competitor
+        return (text
+                .replace("{brand}", brand_setup.name)
+                .replace("{category}", brand_setup.category)
+                .replace("{competitor}", comp)
+                .replace("{brand_promise}", identity.brand_promise or "ที่ตั้งใจไว้"))
+
     def build(tmpl, dim, override_competitor=None):
         comp = override_competitor or primary_competitor
+        prompt_th = fill(tmpl["prompt_t"], comp)
+        en_template = PROMPT_EN.get(tmpl["id"])
+        prompt_en = fill(en_template, comp) if en_template else prompt_th
         q = {
             "id": f"{tmpl['id']}-{uuid.uuid4().hex[:4]}",
             "template_id": tmpl["id"],
@@ -281,11 +386,9 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
             "kind": tmpl["kind"],
             "required": tmpl.get("required", False),
             "ai_processing": tmpl.get("ai_processing"),
-            "prompt": tmpl["prompt_t"]
-                .replace("{brand}", brand_setup.name)
-                .replace("{category}", brand_setup.category)
-                .replace("{competitor}", comp)
-                .replace("{brand_promise}", identity.brand_promise or "ที่ตั้งใจไว้"),
+            "prompt": prompt_th,
+            "prompt_th": prompt_th,
+            "prompt_en": prompt_en,
         }
         for fld in ("perspective", "axis_label"):
             if fld in tmpl:
@@ -294,11 +397,20 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
             q["compare_brand"] = comp
         if "scale" in tmpl:
             q["scale"] = tmpl["scale"]
+            if tmpl["id"] in SCALE_EN:
+                q["scale_en"] = SCALE_EN[tmpl["id"]]
         if "scale_left" in tmpl:
-            q["scale_left"] = tmpl["scale_left"].replace("{brand}", brand_setup.name)
-            q["scale_right"] = tmpl["scale_right"].replace("{competitor}", comp)
+            q["scale_left"] = fill(tmpl["scale_left"], comp)
+            q["scale_right"] = fill(tmpl["scale_right"], comp)
+            if tmpl["id"] in SCALE_LR_EN:
+                lt, rt = SCALE_LR_EN[tmpl["id"]]
+                q["scale_left_en"] = fill(lt, comp)
+                q["scale_right_en"] = fill(rt, comp)
         if "help" in tmpl:
-            q["help"] = tmpl["help"]
+            help_th = fill(tmpl["help"], comp)
+            q["help"] = help_th
+            q["help_th"] = help_th
+            q["help_en"] = HELP_EN.get(tmpl["id"], help_th)
         if tmpl.get("options_t") == "brand_list":
             decoys = ["Brand X", "Brand Y", "Brand Z"]
             q["options"] = brand_list + decoys[:max(0, 5 - len(brand_list))]
@@ -310,10 +422,31 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
             q["options"] = PERSONALITY_TRAIT_POOL
             q["min"] = tmpl.get("min", 2)
             q["max"] = tmpl.get("max", 4)
+        # Attach display image for visual-identity questions
+        if tmpl.get("requires_asset") == "logo" and logo_asset:
+            q["display_image"] = {
+                "kind": "logo",
+                "image_base64": logo_asset.get("image_base64"),
+                "mime_type": logo_asset.get("mime_type", "image/png"),
+            }
+        elif tmpl.get("requires_palette"):
+            if palette_image_asset:
+                q["display_image"] = {
+                    "kind": "palette",
+                    "image_base64": palette_image_asset.get("image_base64"),
+                    "mime_type": palette_image_asset.get("mime_type", "image/png"),
+                }
+            elif visual_palette_hex:
+                q["display_palette"] = visual_palette_hex[:6]
         return q
 
     for dim, templates in TEMPLATE_LIB.items():
         for tmpl in templates:
+            # Visual identity tests: skip if required asset not provided
+            if tmpl.get("requires_asset") == "logo" and not logo_asset:
+                continue
+            if tmpl.get("requires_palette") and not (palette_image_asset or visual_palette_hex):
+                continue
             # Competitor templates: emit one per top-2 competitor (skip if no competitors)
             if tmpl.get("compare_brand") == "competitor":
                 if not competitors_top:
