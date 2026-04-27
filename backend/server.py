@@ -11744,6 +11744,12 @@ api_router.include_router(alumni_routes)
 phase2_routes = get_phase2_routes(db, get_current_user, get_current_user_optional, alumni_helpers)
 api_router.include_router(phase2_routes)
 
+# ============ BRAND EQUITY / BRAND HEALTH CHECK ============
+from routes.brand_equity import get_brand_equity_routes
+
+brand_equity_routes = get_brand_equity_routes(db, get_current_user, get_current_user_optional)
+api_router.include_router(brand_equity_routes)
+
 app.include_router(api_router)
 
 app.add_middleware(
