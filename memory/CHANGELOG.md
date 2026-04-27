@@ -1,6 +1,28 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-04-27 (later) — 🖼️ Brand Equity: Real Brand Logos + Editable Studies
+- **New `BrandLogo` component** (`be-components.jsx`) with priority fallback chain:
+  1. `identity.visual_assets[kind=logo]` (uploaded base64) → 2. `brand.logo_url` (URL) → 3. initial letter on gradient
+  - `onError` auto-falls back to initial when remote URL breaks
+- **Replaced initial-letter boxes with real logos** on:
+  - Studies List card (`.be-study-card`)
+  - Dashboard hero (`be-dashboard-brand-logo`)
+  - Public Respondent welcome screen (size 64) + question header (size 42)
+- **Wizard Step 0 — Logo card**: URL input + Upload button + live preview + clear; supports both `brand.logo_url` and inline upload (de-duplicates kind='logo')
+- **Backend** `get_public_study`: surfaces standalone `logo_asset` (kind=logo only) instead of full `visual_assets` — drops public payload size while letting respondent render real logo
+- **🐛 Fixed Edit Bug**: previously editing a study or going back to fix typos created duplicate studies because Wizard always POSTed a new one. Now:
+  - `loadStudy` lands on Step 0 (was auto-jumping to Step 3 review)
+  - `Stepper` is clickable in edit mode (jump freely)
+  - `proceedToReview` uses `PUT /studies/{id} + POST regenerate-questions` when `study.id` exists; falls back to `POST /studies` for brand-new
+  - Step 2 button label switches to **"Update & regenerate →"** for existing studies
+  - Step 3 launch becomes **"Save & re-publish"** for `status='collecting'`
+  - Quick **"Save changes"** button on every step (steps 0/1/2 + step 3) for edit mode
+- **Edit access points**: "Edit study" button on Dashboard hero + small "Edit" on every List card (stopPropagation)
+- **Testing**: iteration_14 · 7/7 backend pytest · 100% frontend e2e · `/app/backend/tests/test_brand_equity_logo_edit.py`
+
+
+
 ## 2026-04-27 — 🎨 Brand Equity: SWUMKT Logo + EN Translation Polish
 - **Backend** `brand_equity.py`:
   - New `_translate_attrs_to_en(attrs_th)` helper — Gemini 2.5 Flash translates TH brand-quality attributes to natural EN adjectives (1:1 indexed, falls back to TH on error)

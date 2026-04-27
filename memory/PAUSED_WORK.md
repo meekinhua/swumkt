@@ -12,6 +12,7 @@
 - 🟡 **Smart Nudges** (ideja ของ AI agent · user ยังไม่ confirm) — ใช้ activity gap → กระตุ้น "ไม่ได้โพสต์ 7 วัน +5 XP ถ้าโพสต์ตอนนี้"
 
 ## Pre-existing Backlog
+- 🟡 **Public showcase mode** — toggle ที่ List/Dashboard เพื่อให้ public ดู study เป็น content ได้ (read-only) สำหรับ social sharing / portfolio
 - 🟡 **Google Drive Integration** สำหรับ Kanban card attachments — ใช้ `integration_playbook_expert_v2`
 - 🟡 **Verify Auto AI Analysis** ใน Conjoint "Share as Content" flow (ต้อง create study + ≥30 responses)
 
