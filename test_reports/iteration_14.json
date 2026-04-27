@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 14 — Brand Equity logo + edit-flow regression. 7/7 backend tests PASS (logo_asset standalone exposure on public endpoint, PUT updates without duplication, regenerate-questions does not duplicate, full create→launch→public flow with base64 logo, clear-logo→null, logo_url-only fallback, seed study still has logo_asset=null key). Frontend verified end-to-end: BrandLogo renders real images for Mali/Mali Visual/coke and gradient initials for others; Wizard step 0 logo card with URL input, file upload, real-time preview img switching, and clear button (visible only when logo set, hides preview img after click); edit mode lands on step 0 (not step 3); stepper clickable to jump directly to any step; step 2 button switches to 'Update & regenerate →' for existing studies and step 3 launch becomes 'Save & re-publish' for status=collecting; quick Save changes button (be-wizard-save) on steps 0/1/2; Save changes button (be-wizard-save-questions) on step 3; Dashboard hero shows be-dashboard-brand-logo + be-dashboard-edit nav button; List card has be-study-edit-{id} that stops propagation correctly. All testids match spec.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_logo_edit.py",
+    "/app/test_reports/pytest/brand_equity_logo_edit.xml"
+  ],
+  "action_items": [
+    "NONE — all 3 features (BrandLogo component, Wizard logo input/upload, edit-flow bug fix) verified working end-to-end on backend + frontend.",
+    "Optional polish: BrandEquityWizardPage.jsx is now ~900 lines (split candidate); BrandEquityDashboardPage.jsx is 1100+ lines (split into hero/scorecards/segments sub-components). Carry-over from iteration_12/13."
+  ],
+  "critical_code_review_comments": [
+    "BrandLogo priority order is correct (visual_assets[kind=logo] → brand.logo_url → fallback). onError swap to fallback works (tested by setting bogus URL and clearing).",
+    "proceedToReview now correctly branches on study?.id — PUT+regenerate vs POST. Saved {...putResp, questions: regenResp.questions} merge is right.",
+    "loadStudy starts at step 0 and Stepper has onStepClick — correct fix for previous bug where edit auto-jumped to step 3.",
+    "Public endpoint correctly strips identity.visual_assets and surfaces logo_asset standalone — payload reduction confirmed by test (no visual_assets key on respondent payload).",
+    "Logo upload pipe (onUploadImages with kind='logo') re-uses generic upload handler. Multiple logo uploads would accumulate up to 5 in visual_assets (slice(0,5)) but only the first kind='logo' is shown — minor UX inconsistency: should de-dup kind='logo' to keep the most recent. Not blocking.",
+    "be-wizard-logo-clear deletes ALL kind='logo' assets and clears logo_url at once — correct, matches user expectation of single 'remove logo' action.",
+    "BrandEquityListPage card edit button stops propagation correctly so card-click (navigate to dashboard) is not triggered."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_logo_edit.py (new, 7 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (Wizard step0 logo card + edit-mode flow + dashboard + list + respondent fallback all verified)"},
+  "test_credentials": "admin@swu.ac.th / admin123 (verified working)",
+  "seed_data_creation": "Test fixture creates TEST_LogoEditBrand (with base64 PNG logo) and TEST_LogoUrlOnlyBrand (logo_url only); both auto-deleted at end of module via DELETE /api/brand-equity/studies/{id}. Seed study 0a0a1f3b-54f9-4d06-addb-10a4c620d187 only read. No residual TEST_ data after tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 14 delta — BrandLogo component + Wizard logo URL/upload + edit flow bug fix — fully covered by /app/backend/tests/test_brand_equity_logo_edit.py (7 tests, 3.09s runtime). Public endpoint contract: GET /api/brand-equity/public/{token} returns standalone 'logo_asset' field (kind=logo from visual_assets, or None) and brand.logo_url passthrough; identity.visual_assets is NOT included publicly. Edit testids: be-wizard-logo-url, be-wizard-logo-upload, be-wizard-logo-preview, be-wizard-logo-clear, be-wizard-save (steps 0-2), be-wizard-save-questions (step 3), be-wizard-generate (label 'Update & regenerate →' when study.id exists), be-wizard-launch ('Save & re-publish' when status=collecting), be-dashboard-edit, be-dashboard-brand-logo, be-study-edit-{id}, be-study-logo-{id}, be-resp-welcome-logo, be-resp-brand-logo. Dashboard URL is /brand-equity/studies/{id} (NOT /brand-equity/{id} — correcting iteration_13 note). Edit URL is /brand-equity/studies/{id}/edit. Stepper testids: be-step-0..3, all clickable in edit mode. BrandLogo onError handles broken URL → falls back to initial+gradient automatically.",
+  "rca of the issue": "No bugs found this iteration. The 3 features (BrandLogo with priority fallback, Wizard logo input/upload at step 0, edit-flow PUT-or-POST) all landed cleanly. Earlier failed runs in this iteration were tester-side mistakes: (a) used /brand-equity/{id} for dashboard URL instead of correct /brand-equity/studies/{id}, (b) queried be-brand-logo testid on dashboard hero where actual override is be-dashboard-brand-logo. Both confirmed working when corrected."
+}

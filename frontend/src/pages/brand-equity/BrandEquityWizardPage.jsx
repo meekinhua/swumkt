@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
-import { BeTopbar, Icon, Stepper, BeLoading, DIMENSIONS } from './be-components';
+import { BeTopbar, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -71,7 +71,8 @@ const BrandEquityWizardPage = () => {
       setSegments(s.segments_to_capture || []);
       setTarget(s.target_responses || 100);
       setQuestions(s.questions || []);
-      setStep(3);
+      // Edit mode: start at Brand basics so user can adjust everything; Stepper is clickable to jump
+      setStep(0);
     } catch (e) {
       toast.error('โหลด study ไม่สำเร็จ');
     }
@@ -181,15 +182,27 @@ const BrandEquityWizardPage = () => {
   const proceedToReview = async () => {
     setCreating(true);
     try {
-      const r = await axios.post(`${API}/brand-equity/studies`, {
-        brand, identity, segments_to_capture: segments, target_responses: target,
-      }, authH);
-      setStudy(r.data);
-      setQuestions(r.data.questions || []);
+      let saved;
+      if (study?.id) {
+        // Update existing study (edit mode OR re-edit after first generation)
+        const r = await axios.put(`${API}/brand-equity/studies/${study.id}`, {
+          brand, identity, segments_to_capture: segments, target_responses: target,
+        }, authH);
+        // Server doesn't auto-regenerate questions on PUT — call regenerate explicitly
+        const rg = await axios.post(`${API}/brand-equity/studies/${study.id}/regenerate-questions`, {}, authH);
+        saved = { ...r.data, questions: rg.data.questions || [] };
+      } else {
+        const r = await axios.post(`${API}/brand-equity/studies`, {
+          brand, identity, segments_to_capture: segments, target_responses: target,
+        }, authH);
+        saved = r.data;
+      }
+      setStudy(saved);
+      setQuestions(saved.questions || []);
       setStep(3);
-      toast.success('สร้างคำถาม ' + (r.data.questions?.length || 0) + ' ข้อสำเร็จ');
+      toast.success((study?.id ? 'อัปเดต' : 'สร้าง') + ' · ' + (saved.questions?.length || 0) + ' คำถาม');
     } catch (e) {
-      toast.error('สร้าง study ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error((study?.id ? 'อัปเดต' : 'สร้าง') + ' study ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
     }
     setCreating(false);
   };
@@ -211,12 +224,30 @@ const BrandEquityWizardPage = () => {
     if (!study?.id) return;
     setCreating(true);
     try {
+      // Persist any final edits to brand/identity/segments along with status + edited questions
       await axios.put(`${API}/brand-equity/studies/${study.id}`,
-        { status: 'collecting', questions }, authH);
+        { status: 'collecting', questions,
+          brand, identity, segments_to_capture: segments, target_responses: target }, authH);
       toast.success('Study เปิดรับคำตอบแล้ว');
       navigate(`/brand-equity/studies/${study.id}`);
     } catch (e) {
       toast.error('Launch ไม่สำเร็จ');
+    }
+    setCreating(false);
+  };
+
+  // Save edits without changing status (used for "Save changes" in edit mode)
+  const saveEdits = async () => {
+    if (!study?.id) return;
+    setCreating(true);
+    try {
+      await axios.put(`${API}/brand-equity/studies/${study.id}`,
+        { brand, identity, segments_to_capture: segments, target_responses: target,
+          questions }, authH);
+      toast.success('บันทึกการแก้ไขเรียบร้อย');
+      navigate(`/brand-equity/studies/${study.id}`);
+    } catch (e) {
+      toast.error('บันทึกไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
     }
     setCreating(false);
   };
@@ -252,7 +283,16 @@ const BrandEquityWizardPage = () => {
         <span className="be-chip be-mono">DRAFT</span>
       </div>
 
-      <Stepper steps={STEP_LABELS} current={step}/>
+      <Stepper steps={STEP_LABELS} current={step}
+               onStepClick={(i) => {
+                 // Allow free navigation when: editing, OR study already created (step 3 reached)
+                 if (isEdit || study?.id) {
+                   setStep(i);
+                 } else {
+                   // For brand-new wizard: only allow going back to completed/visited steps
+                   if (i <= step) setStep(i);
+                 }
+               }}/>
 
       <div className="be-wiz">
         {/* STEP 0 - Brand basics */}
@@ -284,6 +324,47 @@ const BrandEquityWizardPage = () => {
                           onChange={e => setBrand({ ...brand, industry_context: e.target.value })}
                           placeholder="ตลาดอย่างไร · target ใคร · positioning ต่างจากเจ้าอื่นยังไง"
                           data-testid="be-wizard-brand-context"/>
+              </div>
+
+              <div className="be-card" style={{ marginBottom: 16 }}>
+                <label className="be-label">โลโก้แบรนด์ (option)</label>
+                <div className="be-help" style={{ marginBottom: 10 }}>
+                  ใส่ <strong>URL</strong> โลโก้ หรือ <strong>upload</strong> รูป (PNG/JPEG/WEBP, ≤1MB)
+                  · ใช้แสดงในหน้า Studies, Dashboard และ public survey · เว้นว่างได้ ระบบจะใช้อักษรย่อแทน
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <BrandLogo brand={brand} identity={identity} size={64}
+                             gradient="linear-gradient(140deg,#0E5538 0%,#10B981 60%,#7DDDB1 100%)"
+                             testid="be-wizard-logo-preview"/>
+                  <div style={{ flex: 1 }}>
+                    <input className="be-input" value={brand.logo_url || ''}
+                           onChange={e => setBrand({ ...brand, logo_url: e.target.value })}
+                           placeholder="https://example.com/logo.png"
+                           data-testid="be-wizard-logo-url"/>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <label className="be-btn" style={{ cursor: 'pointer' }}>
+                        <Icon name="plus" size={11}/>Upload PNG/JPG
+                        <input type="file" accept="image/png,image/jpeg,image/webp"
+                               style={{ display: 'none' }}
+                               data-testid="be-wizard-logo-upload"
+                               onChange={e => { onUploadImages(e.target.files, 'logo'); e.target.value = ''; }}/>
+                      </label>
+                      {((identity.visual_assets || []).some(a => a.kind === 'logo') || brand.logo_url) && (
+                        <button className="be-btn be-btn-ghost"
+                                data-testid="be-wizard-logo-clear"
+                                onClick={() => {
+                                  setBrand({ ...brand, logo_url: '' });
+                                  setIdentity(prev => ({
+                                    ...prev,
+                                    visual_assets: (prev.visual_assets || []).filter(a => a.kind !== 'logo'),
+                                  }));
+                                }}>
+                          <Icon name="trash" size={11}/>ลบโลโก้
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="be-card">
@@ -771,6 +852,13 @@ const BrandEquityWizardPage = () => {
           <span className="be-mono be-tiny be-muted">
             {step === 3 ? `${totalQ} questions · 4 dimensions · est ${estMin} min` : `Step ${step + 1} of 4`}
           </span>
+          {/* Quick "Save changes" — visible on steps 0/1/2 when editing an existing study */}
+          {study?.id && step < 3 && (
+            <button className="be-btn" onClick={saveEdits} disabled={creating}
+                    data-testid="be-wizard-save">
+              <Icon name="check" size={11}/>{creating ? '…' : 'Save changes'}
+            </button>
+          )}
           {step < 2 && (
             <button className="be-btn be-btn-primary"
                     disabled={(step === 0 && !validStep0) || (step === 1 && !validStep1)}
@@ -782,14 +870,26 @@ const BrandEquityWizardPage = () => {
           {step === 2 && (
             <button className="be-btn be-btn-primary" disabled={!validStep2 || creating}
                     onClick={proceedToReview} data-testid="be-wizard-generate">
-              <Icon name="sparkle" size={11}/>{creating ? 'กำลังสร้างคำถาม…' : 'AI สร้างคำถาม →'}
+              <Icon name="sparkle" size={11}/>
+              {creating ? 'กำลังประมวลผล…'
+                        : (study?.id ? 'Update & regenerate →' : 'AI สร้างคำถาม →')}
             </button>
           )}
           {step === 3 && (
-            <button className="be-btn be-btn-red" onClick={launchStudy} disabled={creating || !study?.id}
-                    data-testid="be-wizard-launch">
-              {creating ? '…' : 'เปิดรับคำตอบ'}<Icon name="arrowR" size={11}/>
-            </button>
+            <>
+              {study?.id && study?.status && study.status !== 'draft' && (
+                <button className="be-btn" onClick={saveEdits} disabled={creating}
+                        data-testid="be-wizard-save-questions">
+                  <Icon name="check" size={11}/>{creating ? '…' : 'Save changes'}
+                </button>
+              )}
+              <button className="be-btn be-btn-red" onClick={launchStudy} disabled={creating || !study?.id}
+                      data-testid="be-wizard-launch">
+                {creating ? '…'
+                          : (study?.status === 'collecting' ? 'Save & re-publish' : 'เปิดรับคำตอบ')}
+                <Icon name="arrowR" size={11}/>
+              </button>
+            </>
           )}
         </div>
       </div>

@@ -6,7 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
 import {
   BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
-  IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS
+  IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
+  BrandLogo
 } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -108,10 +109,10 @@ const BrandEquityDashboardPage = () => {
         <div className="be-hero" data-testid="be-dashboard-hero">
           <div className="be-hero-row1">
             <div className="be-hero-brand">
-              <div className="be-study-logo" style={{ width: 48, height: 48, fontSize: 22,
-                     background: 'linear-gradient(140deg,#0E5538 0%,#10B981 60%,#7DDDB1 100%)' }}>
-                {study.brand?.name?.[0]?.toUpperCase() || 'B'}
-              </div>
+              <BrandLogo brand={study.brand} identity={study.identity}
+                         size={56}
+                         gradient="linear-gradient(140deg,#0E5538 0%,#10B981 60%,#7DDDB1 100%)"
+                         testid="be-dashboard-brand-logo"/>
               <div>
                 <div className="be-eyebrow" style={{ marginBottom: 4 }}>
                   STUDY · BE-{study.id?.slice(0, 8).toUpperCase()}
@@ -128,6 +129,10 @@ const BrandEquityDashboardPage = () => {
             </div>
             <div className="be-hero-actions">
               <StatusPill status={study.status}/>
+              <button className="be-btn" onClick={() => navigate(`/brand-equity/studies/${study.id}/edit`)}
+                      data-testid="be-dashboard-edit">
+                <Icon name="edit" size={11}/>Edit study
+              </button>
               {study.status === 'draft' && (
                 <button className="be-btn be-btn-red" onClick={launch} data-testid="be-dashboard-launch">
                   <Icon name="arrowR" size={11}/>เปิดรับคำตอบ

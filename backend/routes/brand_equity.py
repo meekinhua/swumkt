@@ -1274,12 +1274,19 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(404, "Study not found")
         if study.get("status") not in ("collecting", "analyzing"):
             raise HTTPException(410, "Study is not currently accepting responses")
+        # Surface only the logo asset (skip palette/design/ad images — heavy and unused on respondent UI)
+        identity = study.get("identity") or {}
+        logo_asset = next(
+            (a for a in (identity.get("visual_assets") or []) if a.get("kind") == "logo"),
+            None
+        )
         # Strip sensitive owner info
         return {
             "id": study["id"],
             "share_token": share_token,
             "brand": study["brand"],
-            "identity": {"brand_promise": study["identity"].get("brand_promise")},
+            "identity": {"brand_promise": identity.get("brand_promise")},
+            "logo_asset": logo_asset,
             "questions": study["questions"],
             "segments_to_capture": study.get("segments_to_capture", []),
             "estimated_minutes": max(5, len(study["questions"]) // 4),

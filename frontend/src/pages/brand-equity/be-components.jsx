@@ -360,18 +360,70 @@ export const AIInsightCard = ({ dimension = 'awareness', title, bullets = [], pr
   );
 };
 
-// ============ Stepper ============
-export const Stepper = ({ steps = [], current = 0 }) => (
-  <div className="be-stepper" data-testid="be-stepper">
-    {steps.map((s, i) => (
-      <div key={i} className={'be-step ' + (i < current ? 'done' : i === current ? 'on' : '')}>
-        <div className="be-step-top">
-          <span className="be-step-num">{i < current ? <Icon name="check" size={9} stroke="#F7F4EE"/> : i + 1}</span>
-          {s}
-        </div>
-        <div className="be-step-bar"/>
+// ============ Brand Logo (real image with fallback to initial+gradient) ============
+// Priority: identity.visual_assets[kind='logo'].image_base64 → brand.logo_url → initial letter on gradient
+// Pass `logoAsset` directly when available (e.g. from public endpoint).
+export const BrandLogo = ({
+  brand = {}, identity = {}, logoAsset = null,
+  size = 48, radius = 0, gradient,
+  testid = 'be-brand-logo',
+}) => {
+  const [imgError, setImgError] = React.useState(false);
+  const asset = logoAsset
+    || (identity?.visual_assets || []).find(a => a?.kind === 'logo');
+  const inlineSrc = asset?.image_base64
+    ? `data:${asset.mime_type || 'image/png'};base64,${asset.image_base64}`
+    : null;
+  const urlSrc = brand?.logo_url && /^https?:\/\//i.test(brand.logo_url) ? brand.logo_url : null;
+  const src = imgError ? null : (inlineSrc || urlSrc);
+  const initial = (brand?.name?.[0] || 'B').toUpperCase();
+  const fallbackBg = gradient || 'linear-gradient(140deg,#14161A 0%,#3A3D45 100%)';
+
+  if (src) {
+    return (
+      <div data-testid={testid}
+           style={{ width: size, height: size, borderRadius: radius, overflow: 'hidden',
+                    background: '#FFFFFF', border: '1px solid var(--rule-strong)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0 }}>
+        <img src={src} alt={brand?.name || 'Brand logo'}
+             onError={() => setImgError(true)}
+             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}/>
       </div>
-    ))}
+    );
+  }
+  return (
+    <div data-testid={testid}
+         style={{ width: size, height: size, borderRadius: radius,
+                  background: fallbackBg, color: '#F7F4EE',
+                  display: 'grid', placeItems: 'center',
+                  fontFamily: 'IBM Plex Serif, Georgia, serif', fontWeight: 600,
+                  fontSize: Math.round(size * 0.42), letterSpacing: '-0.01em',
+                  flexShrink: 0 }}>
+      {initial}
+    </div>
+  );
+};
+
+// ============ Stepper ============
+export const Stepper = ({ steps = [], current = 0, onStepClick = null }) => (
+  <div className="be-stepper" data-testid="be-stepper">
+    {steps.map((s, i) => {
+      const clickable = typeof onStepClick === 'function';
+      return (
+        <div key={i}
+             className={'be-step ' + (i < current ? 'done' : i === current ? 'on' : '')}
+             onClick={clickable ? () => onStepClick(i) : undefined}
+             data-testid={`be-step-${i}`}
+             style={clickable ? { cursor: 'pointer' } : undefined}>
+          <div className="be-step-top">
+            <span className="be-step-num">{i < current ? <Icon name="check" size={9} stroke="#F7F4EE"/> : i + 1}</span>
+            {s}
+          </div>
+          <div className="be-step-bar"/>
+        </div>
+      );
+    })}
   </div>
 );
 

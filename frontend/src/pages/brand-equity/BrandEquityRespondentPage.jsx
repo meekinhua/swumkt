@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import './brand-equity-styles.css';
-import { Icon, BeLoading, SWU_LOGO_URL } from './be-components';
+import { Icon, BeLoading, SWU_LOGO_URL, BrandLogo } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -268,9 +268,13 @@ const BrandEquityRespondentPage = () => {
               <span className="be-dot-sm be-pulse" style={{ background: 'var(--be-red)' }}/>
               BRAND HEALTH CHECK
             </div>
-            <h1 className="be-h1" style={{ fontSize: 36, marginBottom: 16 }}>
-              {study.brand?.name}
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 16 }}>
+              <BrandLogo brand={study.brand} logoAsset={study.logo_asset}
+                         size={64} testid="be-resp-welcome-logo"/>
+              <h1 className="be-h1" style={{ fontSize: 36, margin: 0 }}>
+                {study.brand?.name}
+              </h1>
+            </div>
             <div className="be-muted" style={{ marginBottom: 24, lineHeight: 1.7 }}>
               {T.welcomeAsk(study.estimated_minutes)}
             </div>
@@ -408,11 +412,8 @@ const BrandEquityRespondentPage = () => {
       <PublicTopbar/>
       <div className="be-resp-wrap">
         <div className="be-resp-head">
-          <div style={{ width: 32, height: 32, background: 'var(--ink)', color: 'var(--paper)',
-                        display: 'grid', placeItems: 'center', fontFamily: 'IBM Plex Serif',
-                        fontWeight: 600, fontSize: 16 }}>
-            {study.brand?.name?.[0]?.toUpperCase() || 'B'}
-          </div>
+          <BrandLogo brand={study.brand} logoAsset={study.logo_asset}
+                     size={42} testid="be-resp-brand-logo"/>
           <div style={{ flex: 1 }}>
             <strong style={{ fontFamily: 'IBM Plex Serif', fontSize: 14 }}>{study.brand?.name}</strong>
             <div className="be-mono be-tiny be-muted">BRAND HEALTH CHECK</div>

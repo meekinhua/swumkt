@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
-import { BeTopbar, Icon, StatusPill, BeLoading } from './be-components';
+import { BeTopbar, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -129,8 +129,11 @@ const BrandEquityListPage = () => {
                      data-testid={`be-study-card-${s.id}`}>
                   <div className="be-study-top">
                     <div className="be-study-brand">
-                      <div className="be-study-logo" style={{ background: LOGO_GRADIENTS[i % LOGO_GRADIENTS.length] }}>
-                        {s.brand?.name?.[0]?.toUpperCase() || 'B'}
+                      <div className="be-study-logo-wrap">
+                        <BrandLogo brand={s.brand} identity={s.identity}
+                                   size={48}
+                                   gradient={LOGO_GRADIENTS[i % LOGO_GRADIENTS.length]}
+                                   testid={`be-study-logo-${s.id}`}/>
                       </div>
                       <div>
                         <div className="be-study-name">{s.brand?.name || '—'}</div>
@@ -162,14 +165,24 @@ const BrandEquityListPage = () => {
 
                   <div className="be-study-foot">
                     <span>{s.share_token ? `/${s.share_token.slice(0, 6)}` : '—'}</span>
-                    {score ? (
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <span className="big" style={{ color: tierColor(score) }}>{Math.round(score)}</span>
-                        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>BES</span>
-                      </div>
-                    ) : (
-                      <span>BES locked · {Math.max(0, 10 - n)} more</span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/brand-equity/studies/${s.id}/edit`); }}
+                              className="be-mono be-tiny"
+                              data-testid={`be-study-edit-${s.id}`}
+                              style={{ background: 'transparent', border: '1px solid var(--rule-strong)',
+                                       padding: '2px 8px', cursor: 'pointer', textTransform: 'uppercase',
+                                       letterSpacing: '0.10em', fontSize: 9.5, color: 'var(--ink-2)' }}>
+                        Edit
+                      </button>
+                      {score ? (
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span className="big" style={{ color: tierColor(score) }}>{Math.round(score)}</span>
+                          <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>BES</span>
+                        </div>
+                      ) : (
+                        <span>BES locked · {Math.max(0, 10 - n)} more</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
