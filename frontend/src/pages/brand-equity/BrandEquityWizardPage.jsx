@@ -36,7 +36,7 @@ const BrandEquityWizardPage = () => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const [brand, setBrand] = useState({ name: '', logo_url: '', category: '', competitors: [], industry_context: '' });
+  const [brand, setBrand] = useState({ name: '', logo_url: '', category: '', competitors: [], industry_context: '', custom_quality_attributes: [] });
   const [identity, setIdentity] = useState({
     traits: [], description: '', visual_assets: [],
     brand_promise: '', pricing_tier: 'mid', archetype: '',
@@ -48,6 +48,7 @@ const BrandEquityWizardPage = () => {
   const [study, setStudy] = useState(null);
   const [expanded, setExpanded] = useState({ awareness: true, quality: false, identity: true, loyalty: false });
   const [competitorInput, setCompetitorInput] = useState('');
+  const [qualityAttrInput, setQualityAttrInput] = useState('');
   const [extractingIdentity, setExtractingIdentity] = useState(false);
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
@@ -302,6 +303,54 @@ const BrandEquityWizardPage = () => {
                     <span key={i} className="be-chip">
                       {c}
                       <button onClick={() => setBrand({ ...brand, competitors: brand.competitors.filter((_, j) => j !== i) })}
+                              style={{ background: 'transparent', border: 0, marginLeft: 4 }}>
+                        <Icon name="close" size={9}/>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="be-card" style={{ marginTop: 14 }}>
+                <label className="be-label">Custom Quality Attributes (เพิ่ม attribute เฉพาะแบรนด์นี้ — สูงสุด 5)</label>
+                <div className="be-help" style={{ marginBottom: 10 }}>
+                  ระบบใส่ attributes มาตรฐานให้แล้ว (Reliability · Value · Design)
+                  · เพิ่ม attributes ที่สำคัญกับแบรนด์ของคุณเอง — จะใช้ทั้งบน radar และ perceptual map
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input className="be-input" value={qualityAttrInput}
+                         onChange={e => setQualityAttrInput(e.target.value)}
+                         onKeyDown={e => {
+                           if (e.key === 'Enter') {
+                             const v = qualityAttrInput.trim();
+                             if (v && !(brand.custom_quality_attributes || []).includes(v) && (brand.custom_quality_attributes || []).length < 5) {
+                               setBrand({ ...brand, custom_quality_attributes: [...(brand.custom_quality_attributes || []), v] });
+                               setQualityAttrInput('');
+                             }
+                           }
+                         }}
+                         placeholder="เช่น Sustainability, Local sourcing, Origin transparency"
+                         data-testid="be-wizard-qattr-input"/>
+                  <button className="be-btn" data-testid="be-wizard-qattr-add"
+                          onClick={() => {
+                            const v = qualityAttrInput.trim();
+                            if (v && !(brand.custom_quality_attributes || []).includes(v) && (brand.custom_quality_attributes || []).length < 5) {
+                              setBrand({ ...brand, custom_quality_attributes: [...(brand.custom_quality_attributes || []), v] });
+                              setQualityAttrInput('');
+                            }
+                          }}>
+                    <Icon name="plus" size={11}/>เพิ่ม
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}
+                     data-testid="be-wizard-qattr-list">
+                  {(brand.custom_quality_attributes || []).map((c, i) => (
+                    <span key={i} className="be-chip" style={{ borderColor: 'var(--be-gold)', color: 'var(--be-gold)' }}>
+                      {c}
+                      <button onClick={() => setBrand({
+                                ...brand,
+                                custom_quality_attributes: brand.custom_quality_attributes.filter((_, j) => j !== i)
+                              })}
                               style={{ background: 'transparent', border: 0, marginLeft: 4 }}>
                         <Icon name="close" size={9}/>
                       </button>

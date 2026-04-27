@@ -65,7 +65,7 @@ export const ScoreRing = ({ value = 0, size = 148, stroke = 9, color }) => {
   );
 };
 
-// ============ Radar (polygonal grid, straight lines) ============
+// ============ Radar (polygonal grid, straight lines, null-aware path) ============
 export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes = [], testidPrefix = 'be-radar-axis' }) => {
   const cx = size / 2, cy = size / 2;
   const max = 100;
@@ -76,6 +76,13 @@ export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes
     const safe = vv == null ? 0 : vv;
     const r = (safe / max) * (size / 2 - 36);
     return [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+  };
+  // Build a closed path that skips null entries entirely (connects only valid neighbors)
+  const seriesPath = (vals) => {
+    const idx = vals.map((v, i) => v == null ? null : i).filter(i => i != null);
+    if (idx.length < 2) return '';
+    const pts = idx.map(i => pt(i, vals[i]));
+    return 'M ' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L ') + ' Z';
   };
   return (
     <svg width={size} height={size} style={{ overflow: 'visible' }} data-testid="be-radar">
@@ -88,14 +95,15 @@ export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes
         return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="rgba(20,22,26,0.10)" strokeWidth="1"/>;
       })}
       {series.map((s, si) => {
-        // Skip rendering if all values are null
-        const validVals = s.values.map(v => v == null ? 0 : v);
-        if (validVals.every(v => v === 0)) return null;
+        const validCount = s.values.filter(v => v != null).length;
+        if (validCount < 2) return null;
+        const d = seriesPath(s.values);
         return (
           <g key={si}>
-            <polygon points={s.values.map((vv, i) => pt(i, vv == null ? 0 : vv).join(',')).join(' ')}
-                     fill={s.color} fillOpacity={s.fill ?? 0.10}
-                     stroke={s.color} strokeWidth="2" strokeDasharray={s.dash || '0'}/>
+            <path d={d}
+                  fill={s.color} fillOpacity={s.fill ?? 0.10}
+                  stroke={s.color} strokeWidth="2" strokeDasharray={s.dash || '0'}
+                  strokeLinejoin="round"/>
             {s.values.map((vv, i) => (vv == null ? null :
               <circle key={i} cx={pt(i, vv)[0]} cy={pt(i, vv)[1]} r="3.5" fill={s.color}/>
             ))}
@@ -124,28 +132,52 @@ export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes
 };
 
 // ============ 2D Perceptual Map ============
-export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360 }) => {
-  // dots: [{name, x, y, kind ('brand'|'competitor'), color}]
-  const pad = 50;
+export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360,
+                                xRange, yRange, normalized = true }) => {
+  // dots: [{name, x, y, kind ('brand'|'competitor'), color, rawX, rawY}]
+  // xRange/yRange: [min, max] of the underlying raw values (e.g. 0-100 or actual data min/max)
+  const pad = 56;
   const inner = size - pad * 2;
+  const xMin = xRange?.[0] ?? 0, xMax = xRange?.[1] ?? 100;
+  const yMin = yRange?.[0] ?? 0, yMax = yRange?.[1] ?? 100;
+  const xMid = (xMin + xMax) / 2;
+  const yMid = (yMin + yMax) / 2;
+  // when normalized, the dot.x / dot.y are already 0-100 within the rescaled range
   const toX = (v) => pad + (v / 100) * inner;
   const toY = (v) => size - pad - (v / 100) * inner;
+  const fmt = (v) => v == null ? '' : (v >= 10 ? Math.round(v) : v.toFixed(1));
   return (
     <svg width={size} height={size} style={{ overflow: 'visible' }} data-testid="be-perceptual-map">
       {/* Quadrant background */}
       <rect x={pad} y={pad} width={inner} height={inner} fill="rgba(20,22,26,0.02)" stroke="rgba(20,22,26,0.15)"/>
-      {/* Crosshair at 50/50 */}
+      {/* Crosshair at MID (50% in normalized space) */}
       <line x1={pad + inner / 2} y1={pad} x2={pad + inner / 2} y2={size - pad}
             stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
       <line x1={pad} y1={pad + inner / 2} x2={size - pad} y2={pad + inner / 2}
             stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
-      {/* Axis labels */}
+      {/* Axis labels with actual numeric ranges */}
       <text x={size - pad} y={pad + inner / 2 - 6} textAnchor="end" fontSize="10.5"
             fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
             style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>{xAxis} →</text>
       <text x={pad + inner / 2 + 6} y={pad - 8} fontSize="10.5"
             fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
             style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>↑ {yAxis}</text>
+      {/* Axis range tickmarks (corners) */}
+      <text x={pad - 4} y={size - pad + 14} textAnchor="end" fontSize="9.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF">{fmt(xMin)}</text>
+      <text x={size - pad + 4} y={size - pad + 14} fontSize="9.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF">{fmt(xMax)}</text>
+      <text x={pad - 6} y={pad - 4} textAnchor="end" fontSize="9.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF">{fmt(yMax)}</text>
+      <text x={pad - 6} y={size - pad + 4} textAnchor="end" fontSize="9.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF">{fmt(yMin)}</text>
+      {normalized && (
+        <text x={pad + inner / 2} y={size - pad + 28} textAnchor="middle" fontSize="9"
+              fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF"
+              style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          axes auto-zoomed · midline {fmt(xMid)} × {fmt(yMid)}
+        </text>
+      )}
       {/* Dots */}
       {dots.map((d, i) => {
         const cx = toX(d.x), cy = toY(d.y);
@@ -159,6 +191,13 @@ export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360 }) => {
                   fontFamily="IBM Plex Serif, Georgia, serif"
                   fontWeight={d.kind === 'brand' ? 600 : 500}
                   fill="#0A0A0A">{d.name}</text>
+            {d.rawX != null && d.rawY != null && (
+              <text x={cx} y={cy + r + 12} textAnchor="middle" fontSize="9.5"
+                    fontFamily="IBM Plex Mono, monospace" fill="#5C5F66"
+                    style={{ letterSpacing: '0.04em' }}>
+                {fmt(d.rawX)}, {fmt(d.rawY)}
+              </text>
+            )}
           </g>
         );
       })}

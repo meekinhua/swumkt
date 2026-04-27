@@ -584,6 +584,7 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
 
   // Perceptual map state — pick 2 axes from radar
   const [pmAxes, setPmAxes] = React.useState([]);
+  const [radarMode, setRadarMode] = React.useState('common'); // 'common' = intersection, 'all' = union
   const togglePmAxis = (ax) => {
     setPmAxes(prev => {
       if (prev.includes(ax)) return prev.filter(a => a !== ax);
@@ -591,6 +592,19 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
       return [...prev, ax];
     });
   };
+
+  // Build the displayed radar — if "common" mode, drop axes where any series is null
+  const displayedRadar = React.useMemo(() => {
+    if (!imageRadar.axes || imageRadar.series.length === 0) return imageRadar;
+    if (radarMode === 'all') return imageRadar;
+    const keepIdx = imageRadar.axes
+      .map((_, i) => i)
+      .filter(i => imageRadar.series.every(s => s.values[i] != null));
+    return {
+      axes: keepIdx.map(i => imageRadar.axes[i]),
+      series: imageRadar.series.map(s => ({ ...s, values: keepIdx.map(i => s.values[i]) })),
+    };
+  }, [imageRadar, radarMode]);
 
   const intended = study.identity?.traits || [];
   const aligned = ii.aligned || [];
@@ -761,33 +775,52 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
             <div>
               <h3 className="be-card-t">Multi-dimensional Image Radar</h3>
               <div className="be-card-d">
-                {imageRadar.axes.length} attributes · {imageRadar.series.length} brand{imageRadar.series.length > 1 ? 's' : ''}
+                {displayedRadar.axes.length} attributes · {displayedRadar.series.length} brand{displayedRadar.series.length > 1 ? 's' : ''}
                 {' · '}คลิกแกนเพื่อเลือก 2 แกนสำหรับ Perceptual Map ด้านล่าง
               </div>
             </div>
-            <div className="be-mono be-tiny be-muted" style={{ textAlign: 'right' }}>
-              {pmAxes.length === 0 ? 'click any 2 axes →' :
-               pmAxes.length === 1 ? `1/2 · ${pmAxes[0]}` :
-                                      `2/2 · ${pmAxes.join(' × ')}`}
-              {pmAxes.length > 0 && (
-                <button className="be-btn-ghost" onClick={() => setPmAxes([])}
-                        style={{ marginLeft: 8, fontSize: 10, color: 'var(--be-red)', padding: '0 4px',
-                                 background: 'transparent', border: 0, cursor: 'pointer' }}
-                        data-testid="be-radar-axes-clear">clear</button>
-              )}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="be-mono be-tiny be-muted" style={{ display: 'flex', border: '1px solid var(--rule-strong)' }}>
+                <button onClick={() => setRadarMode('common')}
+                        style={{ padding: '4px 10px', background: radarMode === 'common' ? 'var(--ink)' : 'transparent',
+                                 color: radarMode === 'common' ? 'var(--paper)' : 'var(--ink)',
+                                 border: 0, fontSize: 10.5, letterSpacing: '0.08em', cursor: 'pointer' }}
+                        data-testid="be-radar-mode-common">
+                  COMMON
+                </button>
+                <button onClick={() => setRadarMode('all')}
+                        style={{ padding: '4px 10px', background: radarMode === 'all' ? 'var(--ink)' : 'transparent',
+                                 color: radarMode === 'all' ? 'var(--paper)' : 'var(--ink)',
+                                 border: 0, borderLeft: '1px solid var(--rule-strong)', fontSize: 10.5,
+                                 letterSpacing: '0.08em', cursor: 'pointer' }}
+                        data-testid="be-radar-mode-all">
+                  ALL ATTRS
+                </button>
+              </div>
+              <div className="be-mono be-tiny be-muted" style={{ textAlign: 'right' }}>
+                {pmAxes.length === 0 ? 'click 2 axes →' :
+                 pmAxes.length === 1 ? `1/2 · ${pmAxes[0]}` :
+                                        `2/2 · ${pmAxes.join(' × ')}`}
+                {pmAxes.length > 0 && (
+                  <button className="be-btn-ghost" onClick={() => setPmAxes([])}
+                          style={{ marginLeft: 8, fontSize: 10, color: 'var(--be-red)', padding: '0 4px',
+                                   background: 'transparent', border: 0, cursor: 'pointer' }}
+                          data-testid="be-radar-axes-clear">clear</button>
+                )}
+              </div>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: 24, alignItems: 'center' }}>
             <div style={{ display: 'grid', placeItems: 'center', minHeight: 320 }}>
-              <RadarChart axes={imageRadar.axes}
-                          series={imageRadar.series.map((s, i) => ({
+              <RadarChart axes={displayedRadar.axes}
+                          series={displayedRadar.series.map((s, i) => ({
                             ...s,
                             color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
                             dash: s.kind === 'brand' ? '0' : '4 3',
                             fill: s.kind === 'brand' ? 0.18 : 0.06,
                           }))}
-                          size={Math.min(360, imageRadar.axes.length * 36 + 200)}
+                          size={Math.min(360, displayedRadar.axes.length * 36 + 200)}
                           onAxisClick={togglePmAxis}
                           selectedAxes={pmAxes}
                           testidPrefix="be-image-radar-axis"/>
@@ -805,25 +838,56 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
                   {s.kind === 'brand' && <span className="be-mono be-tiny be-muted">· focal</span>}
                 </div>
               ))}
+              {radarMode === 'common' && imageRadar.axes.length > displayedRadar.axes.length && (
+                <div className="be-tiny be-muted" style={{ marginTop: 14, paddingTop: 10,
+                       borderTop: '1px dashed var(--rule)', lineHeight: 1.5 }}>
+                  {imageRadar.axes.length - displayedRadar.axes.length} attribute(s) hidden
+                  (no competitor data) · ดู ALL ATTRS เพื่อ show all
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* === 2D Perceptual Map (interactive — pick 2 axes from radar) === */}
-      {pmAxes.length === 2 && imageRadar.series.length > 0 && (() => {
+      {/* === 2D Perceptual Map (interactive — pick 2 axes from radar, AUTO-NORMALIZED) === */}
+      {pmAxes.length === 2 && displayedRadar.series.length > 0 && (() => {
         const [xAx, yAx] = pmAxes;
-        const xIdx = imageRadar.axes.indexOf(xAx);
-        const yIdx = imageRadar.axes.indexOf(yAx);
-        const dots = imageRadar.series.map((s, i) => {
+        const xIdx = displayedRadar.axes.indexOf(xAx);
+        const yIdx = displayedRadar.axes.indexOf(yAx);
+        if (xIdx < 0 || yIdx < 0) return null;
+
+        // Collect raw values for plotted brands
+        const raw = displayedRadar.series.map((s, i) => {
           const xv = s.values[xIdx];
           const yv = s.values[yIdx];
           if (xv == null || yv == null) return null;
           return {
-            name: s.name, x: xv, y: yv, kind: s.kind,
+            name: s.name, rawX: xv, rawY: yv, kind: s.kind,
             color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
           };
         }).filter(Boolean);
+
+        if (raw.length === 0) return null;
+
+        // Compute min/max with 12% padding so dots aren't on the edge
+        const xs = raw.map(d => d.rawX);
+        const ys = raw.map(d => d.rawY);
+        const xMinR = Math.min(...xs), xMaxR = Math.max(...xs);
+        const yMinR = Math.min(...ys), yMaxR = Math.max(...ys);
+        const padPct = 0.18;
+        const xRange = xMaxR - xMinR;
+        const yRange = yMaxR - yMinR;
+        const xMin = Math.max(0, xMinR - (xRange || 5) * padPct);
+        const xMax = Math.min(100, xMaxR + (xRange || 5) * padPct);
+        const yMin = Math.max(0, yMinR - (yRange || 5) * padPct);
+        const yMax = Math.min(100, yMaxR + (yRange || 5) * padPct);
+        const dots = raw.map(d => ({
+          ...d,
+          x: ((d.rawX - xMin) / Math.max(0.001, xMax - xMin)) * 100,
+          y: ((d.rawY - yMin) / Math.max(0.001, yMax - yMin)) * 100,
+        }));
+
         return (
           <div className="be-card" style={{ padding: 22, marginBottom: 16 }}
                data-testid="be-perceptual-map-card">
@@ -831,23 +895,24 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
               <div>
                 <h3 className="be-card-t">Perceptual Map · {xAx} × {yAx}</h3>
                 <div className="be-card-d">
-                  Positioning ของ {study.brand?.name} เทียบกับคู่แข่งบน 2 มิติที่เลือก
-                  · {dots.length} brand{dots.length > 1 ? 's' : ''} plotted
+                  Positioning ของ {study.brand?.name} เทียบกับคู่แข่ง
+                  · auto-zoom · {dots.length} brand{dots.length > 1 ? 's' : ''} plotted
                 </div>
               </div>
               <div className="be-mono be-tiny be-muted" style={{ textAlign: 'right', lineHeight: 1.6 }}>
-                X-AXIS · {xAx}<br/>
-                Y-AXIS · {yAx}
+                X · {xAx}<br/>
+                Y · {yAx}
               </div>
             </div>
             <div style={{ display: 'grid', placeItems: 'center', padding: '14px 0' }}>
-              <PerceptualMap xAxis={xAx} yAxis={yAx} dots={dots} size={420}/>
+              <PerceptualMap xAxis={xAx} yAxis={yAx} dots={dots}
+                             xRange={[xMin, xMax]} yRange={[yMin, yMax]}
+                             normalized={true} size={460}/>
             </div>
-            {dots.length < imageRadar.series.length && (
-              <div className="be-tiny be-muted" style={{ textAlign: 'center', marginTop: 8 }}>
-                {imageRadar.series.length - dots.length} brand(s) hidden · ไม่มีข้อมูลในแกนที่เลือก
-              </div>
-            )}
+            <div className="be-tiny be-muted" style={{ textAlign: 'center', marginTop: 4, lineHeight: 1.5 }}>
+              ค่าตัวเลขใต้แต่ละจุด = score 0-100 จริง · กรอบแสดง {Math.round(xMin)}-{Math.round(xMax)}
+              บนแกน X และ {Math.round(yMin)}-{Math.round(yMax)} บนแกน Y เพื่อขยายความต่างให้เห็นชัด
+            </div>
           </div>
         );
       })()}

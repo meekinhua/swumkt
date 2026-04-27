@@ -210,6 +210,7 @@ class BrandSetup(BaseModel):
     category: str = "ทั่วไป"
     competitors: List[str] = []
     industry_context: Optional[str] = None
+    custom_quality_attributes: List[str] = []  # extra Likert-7 attributes per brand
 
 
 class VisualAsset(BaseModel):
@@ -321,6 +322,36 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
                     questions.append(build(tmpl, dim, override_competitor=comp))
             else:
                 questions.append(build(tmpl, dim))
+
+    # === Custom quality attributes (per-brand variation, optional) ===
+    import re
+    for attr in (brand_setup.custom_quality_attributes or [])[:5]:
+        attr_clean = attr.strip()
+        if not attr_clean:
+            continue
+        slug = re.sub(r"[^a-zA-Z0-9]", "", attr_clean).lower() or uuid.uuid4().hex[:4]
+        # Brand attribute likert
+        questions.append(build({
+            "id": f"PQ-CUSTOM-{slug.upper()[:8]}",
+            "type": "likert_7",
+            "kind": f"attribute_{slug}",
+            "perspective": "as_product",
+            "axis_label": attr_clean,
+            "prompt_t": f"{{brand}} เป็นแบรนด์ที่ {attr_clean}",
+            "required": False,
+        }, "quality"))
+        # Parallel competitor attribute likert (top-1 only to keep length manageable)
+        if competitors_top:
+            questions.append(build({
+                "id": f"COMP-CUSTOM-{slug.upper()[:8]}",
+                "type": "likert_7",
+                "kind": f"competitor_{slug}",
+                "perspective": "competitor",
+                "axis_label": attr_clean,
+                "compare_brand": "competitor",
+                "prompt_t": f"{{competitor}} เป็นแบรนด์ที่ {attr_clean}",
+                "required": False,
+            }, "quality", override_competitor=competitors_top[0]))
     return questions
 
 
