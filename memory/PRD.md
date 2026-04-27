@@ -9,6 +9,25 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 
 ## System 1: Marketing Research Tool (COMPLETE)
 
+### Brand Equity / Brand Health Check (COMPLETE — Feb 2026)
+- Aaker's 4-dimension framework: Awareness · Quality · Identity vs Image · Loyalty
+- Auto-generated questions (~18) from template lib + brand/competitor/category context
+- 4-step Wizard: Brand basics → Identity traits (3-8) → Segments → Question review
+- Public respondent flow (no auth) — Likert 5/7, NPS 0-10, MCQ single/multi, trait grid (3-5), comparative 7-pt, open short/long
+- Stats engine: T2B, B2B, Net-Q, NPS, mean/median/std, distribution, frequency
+- AI background analysis (Gemini 2.5 Flash via emergentintegrations):
+  - Theme extraction from open-ended responses
+  - Identity-Image alignment (aligned · lost · unintended traits, alignment_score_0_100)
+  - Master Insights — 5 actionable recommendations with cited question IDs
+- Dashboard: Score ring (color-tiered), 4 dimension cards, Word cloud, Radar, NPS bar,
+  Histogram with T2B/B2B/Net-Q, Identity-Image map, Master AI Insights rail
+- Editorial / Swiss design (1px borders, IBM Plex Serif/Mono/Sans, paper #F7F4EE)
+- Routes: `/brand-equity` · `/brand-equity/new` · `/brand-equity/studies/:id` · `/brand-equity/respond/:token`
+- Backend router: `/app/backend/routes/brand_equity.py` (separate from server.py)
+- DB collections: `brand_studies` · `brand_responses`
+- 100% test pass (iteration_10) — 11/11 backend, frontend smoke + dashboard verified
+
+
 ### Conjoint Analysis (COMPLETE)
 - 5 statistical methods: Counting, MNL, Mixed Logit, HB, Linear Regression
 - AI interpretation via Gemini 2.5 Flash with caching

@@ -1,19 +1,20 @@
 # Test Credentials
 
-## Admin (Full Access)
-- Email: admin@swu.ac.th
-- Password: admin123
+## SWU Marketing Research Platform
 
-## Student (Card Owner · Alumni "ภูมิ" — has full tree seeded)
-- Email: student1@swu.ac.th
-- Password: student123
+| Role    | Email                  | Password   | Notes |
+|---------|------------------------|------------|-------|
+| Admin   | admin@swu.ac.th        | admin123   | Full access — Brand Equity owner, Conjoint, Alumni admin |
+| Student | student1@swu.ac.th     | student123 | Card owner role, Alumni member |
 
-## Seeded Alumni users (all password: alumni123)
-- fah61@g.swu.ac.th (ฟ้า · รุ่น 61 · พี่ take ของภูมิ)
-- din58@g.swu.ac.th (ดิน · รุ่น 58 · ปู่ ของภูมิ)
-- prae55@g.swu.ac.th (แพร · รุ่น 55 · ทวด ของภูมิ)
-- kan51@g.swu.ac.th (กันต์ · รุ่น 51 · เทียด ของภูมิ)
-- sriratana47@g.swu.ac.th (พี่อิ๊ก · รุ่น 47 · เทียดทวด ของภูมิ)
-- baitoey66@g.swu.ac.th (ใบเตย · รุ่น 66 · น้อง take ของภูมิ)
-- bas66@g.swu.ac.th (บาส · รุ่น 66 · น้อง take ของภูมิ)
-- mind67@g.swu.ac.th (มายด์ · รุ่น 67 · เหลน ของภูมิ)
+## Brand Equity seed data (created by testing agent iteration 10)
+
+- Study ID: `0a0a1f3b-54f9-4d06-addb-10a4c620d187`
+- Brand: `TEST_UIBrand`
+- Status: `collecting`
+- Share token: `e936845d9491`
+- Public respond URL: `/brand-equity/respond/e936845d9491`
+- 12 anonymous responses already submitted → dashboard unlocked
+- Owner: `admin@swu.ac.th`
+
+Delete via `DELETE /api/brand-equity/studies/0a0a1f3b-54f9-4d06-addb-10a4c620d187` (admin auth).
