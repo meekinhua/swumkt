@@ -1,5 +1,22 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
+
+## 2026-04-27 — 🎨 Brand Equity: SWUMKT Logo + EN Translation Polish
+- **Backend** `brand_equity.py`:
+  - New `_translate_attrs_to_en(attrs_th)` helper — Gemini 2.5 Flash translates TH brand-quality attributes to natural EN adjectives (1:1 indexed, falls back to TH on error)
+  - `BrandSetup.custom_quality_attributes_en: List[str]` parallel field
+  - `POST /studies` auto-translates on create
+  - `PUT /studies/{id}` re-translates only when TH list changed (saves Gemini calls)
+  - `POST /studies/{id}/regenerate-questions` lazy-backfills EN list for legacy studies
+  - `_generate_questions_from_template` emits proper `prompt_en` for PQ-CUSTOM-* and COMP-CUSTOM-* (e.g. "Brand is a brand that is trustworthy") instead of leaking Thai into EN respondent flow
+- **Frontend** Brand Equity:
+  - `BeTopbar` now shows real SWUMKT logo (`<img class='be-logo-img'>`) + name + sub-label, replacing the abstract dot — applied to List, Wizard, Dashboard
+  - New `PublicTopbar` on `BrandEquityRespondentPage` (welcome / question / demographics / thanks) with logo + LangToggle so survey looks part of the SWU MKT system
+  - Mobile-responsive CSS (`.be-public-topbar`, `.be-public-logo`)
+  - Exported `SWU_LOGO_URL` constant from `be-components.jsx`
+- **Testing**: iteration_13 · 7/7 backend pytest · frontend topbar + toggle + persistence verified on 3 pages · `/app/backend/tests/test_brand_equity_translation.py`
+
+
 ## 2026-04-27 — 📡 Activity Stream — Real-time Tree Events
 - **Backend**:
   - New `_log_activity(actor_id, kind, summary, target_id, meta)` helper in alumni.py
