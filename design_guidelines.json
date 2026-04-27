@@ -1,0 +1,104 @@
+{
+  "theme": "light",
+  "archetype": "Archetype 4 (Swiss & High-Contrast) + Editorial 'Old Money' Tech",
+  "design_philosophy": "A premium analytical tool that feels like a brand strategy deck or financial newspaper. Avoids generic SaaS soft-shadows. Embraces crisp 1px borders, rigid grids, editorial typography (Serif for insights, Mono for data, Sans for UI), and the warmth of the #F7F4EE paper background.",
+  "colors": {
+    "background": {
+      "paper": "#F7F4EE",
+      "surface": "#FFFFFF",
+      "panel": "#F0EBE1"
+    },
+    "text": {
+      "primary": "#0A0A0A",
+      "secondary": "#5C5F66",
+      "inverse": "#F7F4EE"
+    },
+    "border": {
+      "default": "#D8D4CC",
+      "strong": "#1A1A1A",
+      "divider": "#E5E0D8"
+    },
+    "dimensions": {
+      "awareness": "#1B75BC",
+      "quality": "#D4A017",
+      "identity": "#C8102E",
+      "loyalty": "#10B981"
+    }
+  },
+  "typography": {
+    "families": {
+      "sans": "IBM Plex Sans Thai, sans-serif",
+      "serif": "IBM Plex Serif Thai, serif",
+      "mono": "IBM Plex Mono, monospace"
+    },
+    "hierarchy": {
+      "h1": "text-5xl lg:text-6xl font-serif tracking-tight text-primary leading-none",
+      "h2": "text-3xl font-sans font-medium tracking-tight border-b-2 border-strong pb-2 mb-6",
+      "h3": "text-xl font-serif font-medium text-primary",
+      "eyebrow": "text-xs font-mono uppercase tracking-[0.2em] text-secondary",
+      "body": "text-base font-sans text-secondary leading-relaxed",
+      "data": "text-4xl font-mono tracking-tighter text-primary"
+    }
+  },
+  "spacing_and_layout": {
+    "strategy": "The 'Control Room' Grid mixed with Editorial Whitespace",
+    "container_padding": "p-6 lg:p-8",
+    "grid_system": "Dashboard uses CSS Grid. Apply `gap-px bg-border_strong` on parent, and `bg-paper` on children to create literal 1px wireframe borders.",
+    "border_radius": "rounded-none or max rounded-sm. NO large rounded corners."
+  },
+  "components": {
+    "score_ring": {
+      "visual": "Concentric SVG circles. Track is #E5E0D8. Progress uses dimension color. Center text is giant Mono font.",
+      "animation": "stroke-dashoffset 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards."
+    },
+    "ai_insight_card": {
+      "background": "#FFFFFF",
+      "border": "1px solid #1A1A1A",
+      "left_accent": "4px solid dimension_color (e.g., #1B75BC for Awareness)",
+      "typography": "Serif for insight body text. Mono for cited question IDs like [AW-3]."
+    },
+    "radar_chart": {
+      "style": "Recharts. Straight lines (not curved). Polygonal grid instead of circular. Fill opacity 0.1 with 2px solid stroke."
+    },
+    "identity_image_connectors": {
+      "layout": "Two vertical lists (Intended vs Perceived). Center column is SVG canvas.",
+      "paths": "Cubic bezier curves. Aligned traits = solid 2px #10B981 path. Lost traits = dashed 1px #C8102E path.",
+      "animation": "Framer motion path drawing on scroll/reveal."
+    },
+    "matrix_2x2": {
+      "layout": "CSS Grid or Recharts Scatter. 4 quadrants divided by 1px #1A1A1A lines.",
+      "dots": "Target dot is 16px, dimension color, with a 2px offset outline (stroke) to pop out."
+    },
+    "word_cloud": {
+      "style": "Align all words horizontally. Vary font-size and opacity. Target brand highlighted in primary brand color, bolded."
+    },
+    "mobile_respondent": {
+      "trait_grid": "Bento-style CSS grid of tap targets. Selected state: inverted colors (bg-primary text-inverse) with scale down 0.98.",
+      "likert": "Vertical stack of large buttons for mobile, NOT horizontal radio buttons which are hard to tap."
+    }
+  },
+  "motion": {
+    "global_easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "page_transition": "Fade in with slight 10px Y-axis translate.",
+    "hover_card": "No scale. Instead, use sharp shadow reveal: shadow-[4px_4px_0px_#1A1A1A] and -translate-y-[2px] -translate-x-[2px].",
+    "ai_generation": "Typewriter effect for insights. Scrambled text decode effect for the 'Status Indicator'."
+  },
+  "signature_elements": [
+    "Dotted rules: Use `border-dashed` or `border-dotted` for secondary separators.",
+    "Editorial numbers: Giant (text-8xl) font-serif text-border/30 absolute behind section headers (e.g., '01', '02').",
+    "Ink-stamps: Status tags (like 'ACTIVE', 'DRAFT') use border-2 border-primary text-primary font-mono text-xs uppercase px-2 py-1 rotate-[-2deg]."
+  ],
+  "testing": {
+    "data_testid_pattern": "be-[module]-[component]-[state/action]",
+    "examples": [
+      "be-study-list-card",
+      "be-wizard-step4-accordion",
+      "be-dashboard-score-ring",
+      "be-insight-master-card"
+    ]
+  },
+  "implementation_notes": {
+    "css_scoping": "Ensure all Tailwind overrides or custom classes are wrapped within `.be-root` to prevent bleeding into the SWU alumni module.",
+    "framer_motion": "Wrap grid items in `<motion.div>` directly, do not break grid parent-child relationship. Use `layout` prop for collapsible accordions."
+  }
+}
