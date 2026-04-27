@@ -1,5 +1,20 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
+## 2026-04-27 — 📡 Activity Stream — Real-time Tree Events
+- **Backend**:
+  - New `_log_activity(actor_id, kind, summary, target_id, meta)` helper in alumni.py
+  - New collection `alumni_activities`
+  - `GET /api/alumni/activity/stream?scope=tree|global|self&limit=30` — filters events by ancestors+descendants+direct relations (BFS up to 8 levels)
+  - 9 activity kinds auto-logged: `joined_family`, `position_changed`, `company_changed`, `post_created`, `job_posted`, `review_given`, `tree_extended`, `level_up`, `badge_earned`
+  - Anonymous reviews skip activity log (privacy hardening)
+  - Helpers dict now exposes `_log_activity` to phase2 router
+- **Frontend** `ActivityStream.jsx`:
+  - Right sidebar of `/alumni/feed` (3 tabs: สายของฉัน / ทั้งคณะ / ของฉัน)
+  - Compact version on `/alumni/tree` sidebar
+  - Auto-refresh every 60s · click item → /alumni/profile/{actor.user_id}
+  - Each kind has emoji + tone color · time-ago formatter
+- **Testing**: iteration_9 · 13/13 backend · 100% frontend · `/app/backend/tests/test_activity_stream.py`
+
 ## 2026-04-26 — 🚀 Alumni Phase 2: Discover + Feed + Jobs + Reviews
 **4 new major features in modular `alumni_phase2.py` router (~512 lines, separate from main alumni.py)**
 
