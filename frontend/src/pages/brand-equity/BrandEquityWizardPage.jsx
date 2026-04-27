@@ -15,6 +15,21 @@ const DEFAULT_TRAITS = [
   'Down-to-earth', 'Aspirational', 'Tech-savvy', 'Traditional', 'Playful', 'Serious',
 ];
 
+// Display labels in Thai (storage stays in English so stats engine + dashboard map cleanly).
+// Mirrors backend DEFAULT_TRAIT_POOL_TH in /app/backend/routes/brand_equity.py
+const TRAIT_TH = {
+  'Modern': 'ทันสมัย', 'Classic': 'คลาสสิก', 'Trustworthy': 'น่าเชื่อถือ',
+  'Innovative': 'นวัตกรรม', 'Friendly': 'เป็นกันเอง', 'Premium': 'พรีเมี่ยม',
+  'Affordable': 'ราคาเข้าถึงได้', 'Exciting': 'ตื่นเต้น', 'Reliable': 'ไว้ใจได้',
+  'Sophisticated': 'หรูดูดี', 'Bold': 'กล้าหาญ', 'Fun': 'สนุก',
+  'Professional': 'มืออาชีพ', 'Caring': 'ใส่ใจ', 'Energetic': 'มีพลัง',
+  'Calm': 'สงบ/นิ่ง', 'Authentic': 'แท้จริง/จริงใจ', 'Edgy': 'เท่/แตกต่าง',
+  'Down-to-earth': 'ติดดิน', 'Aspirational': 'มีแรงบันดาลใจ',
+  'Tech-savvy': 'ล้ำเทคโนโลยี', 'Traditional': 'ดั้งเดิม',
+  'Playful': 'ขี้เล่น', 'Serious': 'จริงจัง',
+};
+const traitLabel = (t) => TRAIT_TH[t] || t;
+
 const PRICING = [
   { v: 'budget',  label: 'Budget' },
   { v: 'mid',     label: 'Mid-tier' },
@@ -585,7 +600,9 @@ const BrandEquityWizardPage = () => {
                         <span className="be-eyebrow">DERIVED TRAITS · merged into your identity</span>
                         <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                           {identity.derived_traits.map((t, i) => (
-                            <span key={i} className="be-chip" style={{ borderColor: 'var(--be-red)', color: 'var(--be-red)' }}>{t}</span>
+                            <span key={i} className="be-chip"
+                                  title={t}
+                                  style={{ borderColor: 'var(--be-red)', color: 'var(--be-red)' }}>{traitLabel(t)}</span>
                           ))}
                         </div>
                       </div>
@@ -606,9 +623,10 @@ const BrandEquityWizardPage = () => {
                     <span key={t}
                           className={'be-trait-toggle ' + (identity.traits.includes(t) ? 'sel' : '')}
                           onClick={() => toggleTrait(t)}
+                          title={t}
                           data-testid={`be-wizard-trait-${t}`}>
                       {identity.traits.includes(t) && <Icon name="check" size={10}/>}
-                      {t}
+                      {traitLabel(t)}
                     </span>
                   ))}
                 </div>
@@ -830,7 +848,7 @@ const BrandEquityWizardPage = () => {
 
               <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>Identity traits</h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
-                {identity.traits.map(t => <span key={t} className="be-chip">{t}</span>)}
+                {identity.traits.map(t => <span key={t} className="be-chip" title={t}>{traitLabel(t)}</span>)}
               </div>
 
               <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>Competitors · {brand.competitors.length}</h4>
