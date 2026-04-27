@@ -732,7 +732,7 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
               const v = Math.round(association.by_perspective[p.key] || 0);
               const tier = v >= 70 ? 'var(--be-green)' : v >= 40 ? 'var(--be-gold)' : 'var(--be-red)';
               return (
-                <div key={p.key} className="be-dim-card" data-testid={`be-perspective-${p.key}`}>
+                <div key={p.key} className="be-dim-card" data-testid={`be-association-card-${p.key}`}>
                   <div className="be-mono be-tiny" style={{ color: 'var(--ink-4)', letterSpacing: '0.10em' }}>
                     {p.icon} · {p.label.toUpperCase()}
                   </div>
@@ -789,12 +789,15 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
                           }))}
                           size={Math.min(360, imageRadar.axes.length * 36 + 200)}
                           onAxisClick={togglePmAxis}
-                          selectedAxes={pmAxes}/>
+                          selectedAxes={pmAxes}
+                          testidPrefix="be-image-radar-axis"/>
             </div>
             <div>
               <div className="be-mono be-tiny be-muted" style={{ marginBottom: 8, letterSpacing: '0.10em' }}>LEGEND</div>
               {imageRadar.series.map((s, i) => (
-                <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12 }}>
+                <div key={s.name}
+                     data-testid={`be-radar-legend-${s.name}`}
+                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12 }}>
                   <span style={{ width: 16, height: 3,
                           background: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
                           borderTop: s.kind !== 'brand' ? '1px dashed' : 'none' }}/>

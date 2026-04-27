@@ -66,7 +66,7 @@ export const ScoreRing = ({ value = 0, size = 148, stroke = 9, color }) => {
 };
 
 // ============ Radar (polygonal grid, straight lines) ============
-export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes = [] }) => {
+export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes = [], testidPrefix = 'be-radar-axis' }) => {
   const cx = size / 2, cy = size / 2;
   const max = 100;
   const levels = [25, 50, 75, 100];
@@ -108,12 +108,13 @@ export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes
         return (
           <g key={i} style={{ cursor: onAxisClick ? 'pointer' : 'default' }}
              onClick={() => onAxisClick && onAxisClick(axis)}
-             data-testid={`be-radar-axis-${axis}`}>
+             data-testid={`${testidPrefix}-${axis}`}>
             {isSel && <circle cx={x} cy={y} r="11" fill="#C8102E" opacity="0.18"/>}
             <text x={x} y={y} textAnchor="middle" dominantBaseline="middle"
                   fontSize="10.5" fontFamily="IBM Plex Mono, monospace"
                   fill={isSel ? '#C8102E' : '#3B3D43'}
                   fontWeight={isSel ? 600 : 500}
+                  textDecoration={onAxisClick && !isSel ? 'underline dotted' : 'none'}
                   style={{ textTransform: 'uppercase', letterSpacing: '0.06em', userSelect: 'none' }}>{axis}</text>
           </g>
         );
