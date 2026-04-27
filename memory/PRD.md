@@ -13,6 +13,7 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - Aaker's 4-dimension framework: Awareness · Quality · Identity vs Image · Loyalty
 - Auto-generated questions (~18) from template lib + brand/competitor/category context
 - 4-step Wizard: Brand basics → Identity traits (3-8) → Segments → Question review
+- **Public Showcase Mode** — owner toggles a study to be publicly viewable as content (read-only, no auth) at `/showcase/{token}`. Sanitized payload (no demographics/owner/raw responses), Take-Survey CTA, "Powered by SWU MKT" footer
 - **Editable any time** — clickable Stepper, "Update & regenerate" / "Save changes" / "Save & re-publish" actions; Edit buttons on Dashboard hero + List cards
 - **Real brand logos** — Logo URL input + image upload in Wizard Step 0, displayed on List cards, Dashboard hero, and Public Respondent (welcome + header). Fallback to initial-letter gradient if no logo
 - Public respondent flow (no auth) — Likert 5/7, NPS 0-10, MCQ single/multi, trait grid (3-5), comparative 7-pt, open short/long
