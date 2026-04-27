@@ -92,6 +92,75 @@ TEMPLATE_LIB = {
         {"id": "BI-4", "type": "likert_5", "kind": "brand_promise_match",
          "prompt_t": "{brand} ทำตามสัญญาที่ให้ไว้: \"{brand_promise}\"",
          "required": True},
+
+        # === Brand Association · Aaker 4 perspectives ===
+        # Brand as Organization (corporate trust, values, responsibility)
+        {"id": "ASO-1", "type": "open_short", "kind": "as_org_unaided",
+         "perspective": "as_organization",
+         "prompt_t": "เมื่อนึกถึง {brand} ในฐานะองค์กร / บริษัท คำหรือคุณค่าอะไรที่นึกถึงเป็นอย่างแรก?",
+         "help": "เช่น น่าเชื่อถือ · นวัตกรรม · ใส่ใจสังคม · เก่าแก่ · ท้องถิ่น",
+         "required": True, "ai_processing": "word_cloud"},
+        {"id": "ASO-2", "type": "likert_7", "kind": "as_org_trust",
+         "perspective": "as_organization", "axis_label": "Trustworthy",
+         "prompt_t": "{brand} เป็นองค์กรที่น่าเชื่อถือและซื่อสัตย์", "required": True},
+        {"id": "ASO-3", "type": "likert_7", "kind": "as_org_innovation",
+         "perspective": "as_organization", "axis_label": "Innovative",
+         "prompt_t": "{brand} เป็นองค์กรที่มีนวัตกรรม / ทันสมัย", "required": True},
+        {"id": "ASO-4", "type": "likert_7", "kind": "as_org_responsibility",
+         "perspective": "as_organization", "axis_label": "Responsible",
+         "prompt_t": "{brand} ใส่ใจสังคม / สิ่งแวดล้อม / พนักงาน", "required": False},
+
+        # Brand as Person (personality / archetype, Aaker BPS-inspired)
+        {"id": "ASP-1", "type": "trait_grid", "kind": "as_person_personality",
+         "perspective": "as_person", "options_t": "personality_traits",
+         "prompt_t": "ถ้า {brand} เป็นคน · เลือกบุคลิกที่ตรงที่สุด 2-4 ข้อ",
+         "required": True, "min": 2, "max": 4},
+        {"id": "ASP-2", "type": "likert_7", "kind": "as_person_relatable",
+         "perspective": "as_person", "axis_label": "Relatable",
+         "prompt_t": "{brand} เป็นเหมือนเพื่อนหรือคนใกล้ตัวของคุณ", "required": False},
+        {"id": "ASP-3", "type": "likert_7", "kind": "as_person_aspirational",
+         "perspective": "as_person", "axis_label": "Aspirational",
+         "prompt_t": "{brand} เป็นเหมือนคนที่คุณอยากเป็น / ชื่นชม", "required": False},
+
+        # Brand as Symbol (icon, colors, slogan recall)
+        {"id": "ASS-1", "type": "open_short", "kind": "as_symbol_unaided",
+         "perspective": "as_symbol",
+         "prompt_t": "อะไรคือ logo / สี / สโลแกน / สัญลักษณ์ของ {brand} ที่คุณจำได้?",
+         "required": False, "ai_processing": "word_cloud"},
+        {"id": "ASS-2", "type": "likert_7", "kind": "as_symbol_recognizability",
+         "perspective": "as_symbol", "axis_label": "Iconic",
+         "prompt_t": "ฉันจำสัญลักษณ์ / ดีไซน์ของ {brand} ได้ทันที", "required": True},
+        {"id": "ASS-3", "type": "likert_7", "kind": "as_symbol_distinctive",
+         "perspective": "as_symbol", "axis_label": "Distinctive",
+         "prompt_t": "{brand} ดูแตกต่างจากคู่แข่งอย่างชัดเจน (visual / สโลแกน / ดีไซน์)", "required": True},
+
+        # Brand as Product (functional attributes — extends PQ but uniquely framed)
+        {"id": "ASD-1", "type": "likert_7", "kind": "as_product_quality",
+         "perspective": "as_product", "axis_label": "High-quality",
+         "prompt_t": "{brand} เป็นสินค้า / บริการที่มีคุณภาพสูง", "required": True},
+        {"id": "ASD-2", "type": "likert_7", "kind": "as_product_variety",
+         "perspective": "as_product", "axis_label": "Diverse-offerings",
+         "prompt_t": "{brand} มี product line / เมนู / option ให้เลือกหลากหลาย", "required": False},
+        {"id": "ASD-3", "type": "likert_7", "kind": "as_product_premium",
+         "perspective": "as_product", "axis_label": "Premium",
+         "prompt_t": "{brand} เป็นแบรนด์ระดับ premium / ดูแพง", "required": True},
+
+        # === Competitor parallel attributes (for radar overlay & perceptual map) ===
+        {"id": "COMP-1", "type": "likert_7", "kind": "competitor_quality",
+         "perspective": "competitor", "axis_label": "High-quality", "compare_brand": "competitor",
+         "prompt_t": "{competitor} เป็นแบรนด์ที่มีคุณภาพสูง", "required": False},
+        {"id": "COMP-2", "type": "likert_7", "kind": "competitor_premium",
+         "perspective": "competitor", "axis_label": "Premium", "compare_brand": "competitor",
+         "prompt_t": "{competitor} เป็นแบรนด์ระดับ premium / ดูแพง", "required": False},
+        {"id": "COMP-3", "type": "likert_7", "kind": "competitor_innovation",
+         "perspective": "competitor", "axis_label": "Innovative", "compare_brand": "competitor",
+         "prompt_t": "{competitor} เป็นแบรนด์ที่มีนวัตกรรม / ทันสมัย", "required": False},
+        {"id": "COMP-4", "type": "likert_7", "kind": "competitor_trust",
+         "perspective": "competitor", "axis_label": "Trustworthy", "compare_brand": "competitor",
+         "prompt_t": "{competitor} เป็นองค์กรที่น่าเชื่อถือและซื่อสัตย์", "required": False},
+        {"id": "COMP-5", "type": "likert_7", "kind": "competitor_iconic",
+         "perspective": "competitor", "axis_label": "Iconic", "compare_brand": "competitor",
+         "prompt_t": "ฉันจำสัญลักษณ์ / ดีไซน์ของ {competitor} ได้ทันที", "required": False},
     ],
     "loyalty": [
         {"id": "LY-1", "type": "nps_0_10", "kind": "nps",
@@ -108,6 +177,21 @@ TEMPLATE_LIB = {
          "required": False, "ai_processing": "theme_extraction"},
     ],
 }
+
+# Aaker Brand Personality Scale (BPS) — 5 facets
+PERSONALITY_TRAIT_POOL = [
+    # Sincerity
+    "Honest", "Wholesome", "Down-to-earth", "Cheerful",
+    # Excitement
+    "Daring", "Spirited", "Imaginative", "Up-to-date",
+    # Competence
+    "Reliable", "Intelligent", "Successful",
+    # Sophistication
+    "Upper-class", "Charming", "Glamorous",
+    # Ruggedness
+    "Outdoorsy", "Tough", "Rugged",
+]
+
 
 # Default trait pool (Aaker's 5-archetype + custom-friendly)
 DEFAULT_TRAIT_POOL = [
@@ -181,42 +265,62 @@ def _now_iso():
 def _generate_questions_from_template(brand_setup: BrandSetup, identity: IdentitySetup) -> List[dict]:
     """Generate question objects from template, filling in brand/competitors/etc."""
     questions = []
-    primary_competitor = brand_setup.competitors[0] if brand_setup.competitors else "คู่แข่ง"
+    competitors_top = (brand_setup.competitors or [])[:2]  # max 2 for competitor parallel set
+    primary_competitor = competitors_top[0] if competitors_top else "คู่แข่ง"
     brand_list = [brand_setup.name] + (brand_setup.competitors or [])
     trait_pool = list(set(DEFAULT_TRAIT_POOL + (identity.traits or [])))
 
+    def build(tmpl, dim, override_competitor=None):
+        comp = override_competitor or primary_competitor
+        q = {
+            "id": f"{tmpl['id']}-{uuid.uuid4().hex[:4]}",
+            "template_id": tmpl["id"],
+            "dimension": dim,
+            "type": tmpl["type"],
+            "kind": tmpl["kind"],
+            "required": tmpl.get("required", False),
+            "ai_processing": tmpl.get("ai_processing"),
+            "prompt": tmpl["prompt_t"]
+                .replace("{brand}", brand_setup.name)
+                .replace("{category}", brand_setup.category)
+                .replace("{competitor}", comp)
+                .replace("{brand_promise}", identity.brand_promise or "ที่ตั้งใจไว้"),
+        }
+        for fld in ("perspective", "axis_label"):
+            if fld in tmpl:
+                q[fld] = tmpl[fld]
+        if tmpl.get("compare_brand") == "competitor":
+            q["compare_brand"] = comp
+        if "scale" in tmpl:
+            q["scale"] = tmpl["scale"]
+        if "scale_left" in tmpl:
+            q["scale_left"] = tmpl["scale_left"].replace("{brand}", brand_setup.name)
+            q["scale_right"] = tmpl["scale_right"].replace("{competitor}", comp)
+        if "help" in tmpl:
+            q["help"] = tmpl["help"]
+        if tmpl.get("options_t") == "brand_list":
+            decoys = ["Brand X", "Brand Y", "Brand Z"]
+            q["options"] = brand_list + decoys[:max(0, 5 - len(brand_list))]
+        elif tmpl.get("options_t") == "trait_list":
+            q["options"] = trait_pool[:24]
+            q["min"] = tmpl.get("min", 1)
+            q["max"] = tmpl.get("max", 5)
+        elif tmpl.get("options_t") == "personality_traits":
+            q["options"] = PERSONALITY_TRAIT_POOL
+            q["min"] = tmpl.get("min", 2)
+            q["max"] = tmpl.get("max", 4)
+        return q
+
     for dim, templates in TEMPLATE_LIB.items():
         for tmpl in templates:
-            q = {
-                "id": f"{tmpl['id']}-{uuid.uuid4().hex[:4]}",
-                "template_id": tmpl["id"],
-                "dimension": dim,
-                "type": tmpl["type"],
-                "kind": tmpl["kind"],
-                "required": tmpl.get("required", False),
-                "ai_processing": tmpl.get("ai_processing"),
-                "prompt": tmpl["prompt_t"]
-                    .replace("{brand}", brand_setup.name)
-                    .replace("{category}", brand_setup.category)
-                    .replace("{competitor}", primary_competitor)
-                    .replace("{brand_promise}", identity.brand_promise or "ที่ตั้งใจไว้"),
-            }
-            if "scale" in tmpl:
-                q["scale"] = tmpl["scale"]
-            if "scale_left" in tmpl:
-                q["scale_left"] = tmpl["scale_left"].replace("{brand}", brand_setup.name)
-                q["scale_right"] = tmpl["scale_right"].replace("{competitor}", primary_competitor)
-            if "help" in tmpl:
-                q["help"] = tmpl["help"]
-            if tmpl.get("options_t") == "brand_list":
-                # Add some decoy brands
-                decoys = ["Brand X", "Brand Y", "Brand Z"]
-                q["options"] = brand_list + decoys[:max(0, 5 - len(brand_list))]
-            elif tmpl.get("options_t") == "trait_list":
-                q["options"] = trait_pool[:24]
-                q["min"] = tmpl.get("min", 1)
-                q["max"] = tmpl.get("max", 5)
-            questions.append(q)
+            # Competitor templates: emit one per top-2 competitor (skip if no competitors)
+            if tmpl.get("compare_brand") == "competitor":
+                if not competitors_top:
+                    continue
+                for comp in competitors_top:
+                    questions.append(build(tmpl, dim, override_competitor=comp))
+            else:
+                questions.append(build(tmpl, dim))
     return questions
 
 
@@ -361,10 +465,13 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         out_questions.append({
             "id": qid, "dimension": q["dimension"], "type": q["type"],
             "kind": q.get("kind"), "prompt": q.get("prompt"),
+            "perspective": q.get("perspective"),
+            "axis_label": q.get("axis_label"),
+            "compare_brand": q.get("compare_brand"),
             "stats": stats,
         })
 
-    # Composite scores
+    # Composite scores per dimension
     composite = {}
     for d in DIMENSIONS:
         if dim_aggregates[d]:
@@ -384,11 +491,87 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         target_count = next((c for c in aided_q["stats"]["counts"] if c["label"] == target), None)
         awareness_extras["aided_recognition_pct"] = target_count["pct"] if target_count else 0
 
+    # ========== Brand Association: per-perspective scores ==========
+    # Aggregate likert score_100 per perspective for the focal brand only (skip competitor questions)
+    perspective_scores: Dict[str, List[float]] = {
+        "as_organization": [], "as_person": [], "as_symbol": [], "as_product": [],
+    }
+    for q in out_questions:
+        persp = q.get("perspective")
+        if persp in perspective_scores and not q.get("compare_brand"):
+            s = q["stats"].get("score_100")
+            if s is not None:
+                perspective_scores[persp].append(s)
+    association = {
+        "by_perspective": {
+            p: round(sum(v) / len(v), 1) if v else 0
+            for p, v in perspective_scores.items()
+        },
+    }
+    pv = [v for v in association["by_perspective"].values() if v]
+    association["overall"] = round(sum(pv) / len(pv), 1) if pv else 0
+
+    # ========== Brand Image Radar (focal brand + competitors) ==========
+    # Collect axis_label means for the focal brand (from non-competitor questions)
+    # and per competitor (from compare_brand questions)
+    radar_axes_set = []  # ordered, deduped axis labels
+    seen_axis = set()
+    brand_axis: Dict[str, float] = {}  # axis -> mean (1-7)
+    for q in out_questions:
+        ax = q.get("axis_label")
+        if not ax or q.get("compare_brand"):
+            continue
+        if ax not in seen_axis:
+            seen_axis.add(ax)
+            radar_axes_set.append(ax)
+        m = q["stats"].get("mean")
+        if m is not None:
+            brand_axis[ax] = m
+
+    # Per competitor
+    competitor_axes: Dict[str, Dict[str, float]] = {}  # comp_name -> {axis -> mean}
+    for q in out_questions:
+        ax = q.get("axis_label")
+        comp = q.get("compare_brand")
+        if not ax or not comp:
+            continue
+        m = q["stats"].get("mean")
+        if m is not None:
+            competitor_axes.setdefault(comp, {})[ax] = m
+        if ax not in seen_axis:
+            seen_axis.add(ax)
+            radar_axes_set.append(ax)
+
+    # Build radar payload (scaled to 0-100 for unified rendering)
+    def to_pct(v: Optional[float]) -> Optional[float]:
+        return round(v / 7 * 100, 1) if v is not None else None
+
+    image_radar = {
+        "axes": radar_axes_set,
+        "series": [],
+    }
+    if brand_axis:
+        image_radar["series"].append({
+            "name": study["brand"]["name"],
+            "kind": "brand",
+            "values": [to_pct(brand_axis.get(ax)) for ax in radar_axes_set],
+            "raw_means": [brand_axis.get(ax) for ax in radar_axes_set],
+        })
+    for comp_name, comp_axes in competitor_axes.items():
+        image_radar["series"].append({
+            "name": comp_name,
+            "kind": "competitor",
+            "values": [to_pct(comp_axes.get(ax)) for ax in radar_axes_set],
+            "raw_means": [comp_axes.get(ax) for ax in radar_axes_set],
+        })
+
     return {
         "total_responses": len(responses),
         "questions": out_questions,
         "composite": composite,
         "awareness_extras": awareness_extras,
+        "association": association,
+        "image_radar": image_radar,
     }
 
 

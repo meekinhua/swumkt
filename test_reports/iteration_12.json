@@ -1,0 +1,61 @@
+{
+  "summary": "Brand Equity v3 (Association + Multi-dim Image Radar + Perceptual Map) tested. Backend: 12/12 pytest PASSED on fresh study — question count 40 (4+6+26+4, 5 COMP-* × 2 top competitors), perspective/axis_label/compare_brand fields all correctly propagated through template gen → dashboard out_questions, association.by_perspective 4 keys 0-100 with overall avg, image_radar.axes ≥3 + brand+2 competitor series, Starbucks line verifiably higher than Inthanin (31 pts delta from differential responses), 3rd competitor 'CafeAmazon' correctly excluded from COMP-* (only top-2). Frontend seed study a407a08f-... dashboard confirmed rendering: 4 perspective score cards (77/78/82/79 with 'aligned' tags), multi-dim radar with legend listing Mali (focal, red) + Starbucks (dashed blue) + Inthanin (dashed gold), all 10 image axes labeled. Identity section also keeps existing One-word cloud. Existing awareness/quality/loyalty sections and AI-pending placeholder all intact.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "RadarChart — testid collision between Quality-radar and Image-radar",
+        "issue": "Both the Quality attributes · radar (Section 02, non-interactive) and Multi-dimensional Image Radar (Section 03, interactive via onAxisClick) generate identical data-testid pattern `be-radar-axis-{label}` from the shared RadarChart component in be-components.jsx line 111. On the dashboard there are 13 such testids — 3 from Quality radar (RELIABILITY, VALUE, DESIGN — NOT clickable) and 10 from Image radar (Trustworthy, Innovative, etc). Playwright selectors picking axes[0] or axes[1] land on the non-interactive Quality radar and the perceptual-map handler is never invoked. Impact: (a) automated testing brittle, (b) no evidence interactive click/perceptual-map flow works because correct axes were never exercised by my test script; (c) if a user clicks Quality radar axes expecting interaction, nothing happens (no visual cue that those axes are non-clickable).",
+        "selector": "[data-testid^='be-radar-axis-']",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "be-association-grid cards missing data-testid",
+        "issue": "The 4 perspective cards (AS ORGANIZATION / AS PERSON / AS SYMBOL / AS PRODUCT) render correctly with scores + 'aligned' tags, but the individual cards do not carry a data-testid like `be-association-card-as_organization`. Only the wrapping grid has the testid. Add per-card testids to make the tag (aligned/mixed/misaligned) targetable by tests and the review-request's criterion (cards showing score + tag) automatable.",
+        "selector": "[data-testid^='be-association-card-']",
+        "priority": "LOW"
+      },
+      {
+        "component": "Radar legend items lack data-testid",
+        "issue": "Legend list is visually rendered (Mali · focal / Starbucks / Inthanin) but individual legend entries have no data-testid (e.g. `be-radar-legend-Mali`). Reduces testability.",
+        "selector": "[data-testid^='be-radar-legend-']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Interactive axis-click → Perceptual Map",
+        "issue": "Could not verify via Playwright due to the testid-collision bug above (first two matched axes were from the non-interactive Quality radar, so pmAxes state never updated and be-perceptual-map-card + be-radar-axes-clear never appeared). Functionally probable to work given the wired-up onAxisClick/selectedAxes/pmAxes plumbing in BrandEquityDashboardPage.jsx L776-826, but unverified end-to-end. Recommend main agent either (a) namespace the image-radar testid to `be-image-radar-axis-{label}`, or (b) self-test by clicking actual Image-radar axes (Trustworthy, Innovative) and confirming map appears + clear button works.",
+        "affected_selectors": ["[data-testid='be-perceptual-map-card']", "[data-testid='be-perceptual-map']", "[data-testid='be-radar-axes-clear']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_v3.py",
+    "/app/test_reports/pytest/brand_equity_v3.xml"
+  ],
+  "action_items": [
+    "MEDIUM: In be-components.jsx RadarChart (line 111), accept an optional `testidPrefix` prop (default 'be-radar-axis') and pass `be-image-radar-axis` from the Image Radar instance in BrandEquityDashboardPage.jsx so the two radars have disjoint testid namespaces. Also add a `clickable` visual cue (hover cursor, underline) only when onAxisClick is provided.",
+    "LOW: Add per-card data-testid to the 4 Brand Association cards: `be-association-card-as_organization` etc, so automated tests can assert the 'aligned/mixed/misaligned' tag logic (>=70 / >=40 / <40).",
+    "LOW: Add data-testid to each radar legend row (`be-radar-legend-{name}`).",
+    "MANUAL VERIFY: Main agent should manually click 2 Image-radar axes (e.g. Trustworthy + Premium) on study a407a08f-... and confirm be-perceptual-map-card appears with dots for Mali+Starbucks+Inthanin, then click a 3rd axis (verify rolling-2 window), then click be-radar-axes-clear (verify the card disappears). The backend data supports this (radar.series has all 3 brands with values across all 10 axes — verified via pytest)."
+  ],
+  "critical_code_review_comments": [
+    "brand_equity.py now 1243 lines — well past the 700-line threshold. Strongly recommend splitting into models.py / templates.py / stats.py / ai.py / routes.py. Currently one file holds Pydantic models, template library, stats engine, AI helpers, and 12+ route handlers.",
+    "_generate_questions_from_template silently caps to top-2 competitors — good, but there's no warning/response-field telling the owner that their 3rd+ competitors aren't part of COMP-* / radar. Consider returning a `competitor_coverage: {included: [...], excluded: [...]}` hint in the study payload.",
+    "Template string replacement uses chained .replace(). A COMP question with competitor name containing '{' would break. Low-risk for brand names but worth using str.format_map with a default dict.",
+    "_aggregate_responses builds radar_axes_set ordered by first-sighting — focal brand axes listed first, then any competitor-only axes. For Starbucks+Inthanin sharing axes with focal brand, every axis label already overlaps so result is stable — but a future edit to COMP templates using a novel axis_label would get appended at the tail awkwardly. Consider defining a canonical RADAR_AXIS_ORDER list.",
+    "SectionIdentity in BrandEquityDashboardPage.jsx renders `be-image-radar` always once brand_axis is non-empty — good. The conditional pmAxes.length===2 correctly gates the perceptual-map card. No JSX-branching bug this round (unlike iteration_11). But the radar axes testids collide with Quality radar (see UI bug above)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_v3.py (new, 12 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "~80% (visual rendering verified, interactive perceptual-map not automatable due to testid collision)"},
+  "test_credentials": "admin@swu.ac.th / admin123 (verified)",
+  "seed_data_creation": "Backend tests auto-create TEST_V3Brand with 3 competitors and 12 responses, then cleanup via DELETE. No residual test data. Seed study a407a08f-... (Mali) was only read, not modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend v3 contract is fully locked down via /app/backend/tests/test_brand_equity_v3.py — 12 tests covering: question count (40), perspective/axis_label/compare_brand field propagation, top-2-competitor enforcement (3rd comp excluded), association.by_perspective 4 keys + overall avg math, radar axes (>=3) + brand+2-competitor series + null-safe values, differential-response sanity (Starbucks > Inthanin by 15+ points). Frontend: dashboard visual rendering verified on seed study a407a08f-... Interactive perceptual map flow blocked only by a testid-collision between Quality-radar and Image-radar (same `be-radar-axis-{label}` pattern). After main agent namespaces the image-radar testids, a next Playwright run can click [data-testid='be-image-radar-axis-Trustworthy'] + [data-testid='be-image-radar-axis-Premium'] and assert be-perceptual-map-card + be-pmap-dot-* appear. Respondent subgroup headers (be-resp-subgroup-*) not probed deeply — needs a manual walk through section 3 on the respondent page.",
+  "rca of the issue": "Radar testid collision RCA — RadarChart in be-components.jsx hardcodes `data-testid={`be-radar-axis-${axis}`}` without any namespace context. Both the Quality section (non-interactive) and the Image section (interactive) reuse the component. When Playwright queries all matching testids, the first matches are Quality's 3 axes (no onClick bound), so automated interaction tests silently no-op. Fix: parameterize the testid prefix per instance (`be-quality-radar-axis-*` vs `be-image-radar-axis-*`) and/or only attach the `be-radar-axis-` testid when onAxisClick is provided (so non-interactive radars emit something like `be-radar-axis-readonly-*`)."
+}

@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
 import {
   BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
-  IdentityImageMap, AIInsightCard, WordCloud, BeLoading, StatusPill, DIMENSIONS
+  IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS
 } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -579,10 +579,21 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
   const score = Math.round(aggregate?.composite?.identity || 0);
   const qs = aggregate?.questions || [];
   const ii = ai?.identity_image || {};
+  const association = aggregate?.association || {};
+  const imageRadar = aggregate?.image_radar || { axes: [], series: [] };
+
+  // Perceptual map state — pick 2 axes from radar
+  const [pmAxes, setPmAxes] = React.useState([]);
+  const togglePmAxis = (ax) => {
+    setPmAxes(prev => {
+      if (prev.includes(ax)) return prev.filter(a => a !== ax);
+      if (prev.length >= 2) return [prev[1], ax];
+      return [...prev, ax];
+    });
+  };
 
   const intended = study.identity?.traits || [];
   const aligned = ii.aligned || [];
-  const lost = ii.lost || [];
   const unintended = ii.unintended || [];
   const perceived = ii.perceived_traits || [];
 
@@ -698,67 +709,206 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
         </div>
       )}
 
+      {/* === Brand Association · Aaker 4 perspectives === */}
+      {(association.by_perspective && Object.values(association.by_perspective).some(v => v > 0)) && (
+        <div className="be-card" style={{ padding: 22, marginBottom: 16 }} data-testid="be-association-grid">
+          <div className="be-card-h">
+            <div>
+              <h3 className="be-card-t">Brand Association · 4 perspectives</h3>
+              <div className="be-card-d">
+                Aaker framework — image ที่ผู้บริโภครับรู้แต่ละมิติเทียบกับ identity ที่ตั้งใจ
+                · overall <strong style={{ color: 'var(--ink)' }}>{association.overall}/100</strong>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--rule-strong)',
+                        border: '1px solid var(--rule-strong)' }}>
+            {[
+              { key: 'as_organization', label: 'As Organization', th: 'องค์กร',  icon: '◆' },
+              { key: 'as_person',       label: 'As Person',       th: 'บุคลิก',   icon: '☻' },
+              { key: 'as_symbol',       label: 'As Symbol',       th: 'สัญลักษณ์', icon: '✦' },
+              { key: 'as_product',      label: 'As Product',      th: 'ผลิตภัณฑ์', icon: '■' },
+            ].map(p => {
+              const v = Math.round(association.by_perspective[p.key] || 0);
+              const tier = v >= 70 ? 'var(--be-green)' : v >= 40 ? 'var(--be-gold)' : 'var(--be-red)';
+              return (
+                <div key={p.key} className="be-dim-card" data-testid={`be-perspective-${p.key}`}>
+                  <div className="be-mono be-tiny" style={{ color: 'var(--ink-4)', letterSpacing: '0.10em' }}>
+                    {p.icon} · {p.label.toUpperCase()}
+                  </div>
+                  <div className="be-dim-num" style={{ color: v > 0 ? tier : 'var(--ink-4)' }}>
+                    {v > 0 ? v : '—'}
+                  </div>
+                  <div className="be-dim-name">{p.th}</div>
+                  <div className="be-dim-bar">
+                    <div className="be-dim-bar-fill" style={{ width: v + '%', background: tier }}/>
+                  </div>
+                  <div className="be-mono be-tiny be-muted">
+                    {v >= 70 ? 'aligned' : v >= 40 ? 'mixed' : 'misaligned'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* === Brand Image Radar (multi-dim, brand vs competitors) === */}
+      {imageRadar.axes && imageRadar.axes.length >= 3 && imageRadar.series.length >= 1 && (
+        <div className="be-card" style={{ padding: 22, marginBottom: 16 }}
+             data-testid="be-image-radar">
+          <div className="be-card-h">
+            <div>
+              <h3 className="be-card-t">Multi-dimensional Image Radar</h3>
+              <div className="be-card-d">
+                {imageRadar.axes.length} attributes · {imageRadar.series.length} brand{imageRadar.series.length > 1 ? 's' : ''}
+                {' · '}คลิกแกนเพื่อเลือก 2 แกนสำหรับ Perceptual Map ด้านล่าง
+              </div>
+            </div>
+            <div className="be-mono be-tiny be-muted" style={{ textAlign: 'right' }}>
+              {pmAxes.length === 0 ? 'click any 2 axes →' :
+               pmAxes.length === 1 ? `1/2 · ${pmAxes[0]}` :
+                                      `2/2 · ${pmAxes.join(' × ')}`}
+              {pmAxes.length > 0 && (
+                <button className="be-btn-ghost" onClick={() => setPmAxes([])}
+                        style={{ marginLeft: 8, fontSize: 10, color: 'var(--be-red)', padding: '0 4px',
+                                 background: 'transparent', border: 0, cursor: 'pointer' }}
+                        data-testid="be-radar-axes-clear">clear</button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: 24, alignItems: 'center' }}>
+            <div style={{ display: 'grid', placeItems: 'center', minHeight: 320 }}>
+              <RadarChart axes={imageRadar.axes}
+                          series={imageRadar.series.map((s, i) => ({
+                            ...s,
+                            color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
+                            dash: s.kind === 'brand' ? '0' : '4 3',
+                            fill: s.kind === 'brand' ? 0.18 : 0.06,
+                          }))}
+                          size={Math.min(360, imageRadar.axes.length * 36 + 200)}
+                          onAxisClick={togglePmAxis}
+                          selectedAxes={pmAxes}/>
+            </div>
+            <div>
+              <div className="be-mono be-tiny be-muted" style={{ marginBottom: 8, letterSpacing: '0.10em' }}>LEGEND</div>
+              {imageRadar.series.map((s, i) => (
+                <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12 }}>
+                  <span style={{ width: 16, height: 3,
+                          background: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
+                          borderTop: s.kind !== 'brand' ? '1px dashed' : 'none' }}/>
+                  <span style={{ fontWeight: s.kind === 'brand' ? 600 : 400 }}>{s.name}</span>
+                  {s.kind === 'brand' && <span className="be-mono be-tiny be-muted">· focal</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === 2D Perceptual Map (interactive — pick 2 axes from radar) === */}
+      {pmAxes.length === 2 && imageRadar.series.length > 0 && (() => {
+        const [xAx, yAx] = pmAxes;
+        const xIdx = imageRadar.axes.indexOf(xAx);
+        const yIdx = imageRadar.axes.indexOf(yAx);
+        const dots = imageRadar.series.map((s, i) => {
+          const xv = s.values[xIdx];
+          const yv = s.values[yIdx];
+          if (xv == null || yv == null) return null;
+          return {
+            name: s.name, x: xv, y: yv, kind: s.kind,
+            color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
+          };
+        }).filter(Boolean);
+        return (
+          <div className="be-card" style={{ padding: 22, marginBottom: 16 }}
+               data-testid="be-perceptual-map-card">
+            <div className="be-card-h">
+              <div>
+                <h3 className="be-card-t">Perceptual Map · {xAx} × {yAx}</h3>
+                <div className="be-card-d">
+                  Positioning ของ {study.brand?.name} เทียบกับคู่แข่งบน 2 มิติที่เลือก
+                  · {dots.length} brand{dots.length > 1 ? 's' : ''} plotted
+                </div>
+              </div>
+              <div className="be-mono be-tiny be-muted" style={{ textAlign: 'right', lineHeight: 1.6 }}>
+                X-AXIS · {xAx}<br/>
+                Y-AXIS · {yAx}
+              </div>
+            </div>
+            <div style={{ display: 'grid', placeItems: 'center', padding: '14px 0' }}>
+              <PerceptualMap xAxis={xAx} yAxis={yAx} dots={dots} size={420}/>
+            </div>
+            {dots.length < imageRadar.series.length && (
+              <div className="be-tiny be-muted" style={{ textAlign: 'center', marginTop: 8 }}>
+                {imageRadar.series.length - dots.length} brand(s) hidden · ไม่มีข้อมูลในแกนที่เลือก
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* === Identity vs Image map (AI-required) === */}
       {!ai?.identity_image || Object.keys(ii).length === 0 ? (
-        <div className="be-card" style={{ padding: 30, textAlign: 'center' }}>
+        <div className="be-card" style={{ padding: 30, textAlign: 'center', marginBottom: 16 }}>
           <div className="be-eyebrow" style={{ marginBottom: 10, justifyContent: 'center' }}>AI ANALYSIS PENDING</div>
           <div className="be-muted be-small">
             Identity-Image map ต้องการ AI analysis · กดปุ่ม <strong>Run AI analysis</strong> ด้านบน
           </div>
         </div>
       ) : (
-        <>
-          <div className="be-card" style={{ padding: 24 }}>
-            <IdentityImageMap intended={intended} image={imageCol} statusMap={statusMap}/>
-            {ii.narrative && (
-              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--rule)',
-                            fontFamily: 'IBM Plex Serif', fontSize: 14, fontStyle: 'italic',
-                            color: 'var(--ink-2)', lineHeight: 1.6 }}>
-                "{ii.narrative}"
-              </div>
-            )}
-          </div>
-
-          {oneWordCloudWords.length > 0 && (
-            <div className="be-card" style={{ padding: 24, marginTop: 16 }}>
-              <div className="be-card-h">
-                <div>
-                  <h3 className="be-card-t">One-word identity cloud</h3>
-                  <div className="be-card-d">
-                    "อธิบาย {study.brand?.name} ในคำเดียว" · n={oneWord?.stats?.n}
-                    {oneWord?.stats?.ai_normalized && (
-                      <span className="be-chip-dim be-mono"
-                            style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
-                                     border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
-                                     fontSize: 9.5, letterSpacing: '0.06em' }}>
-                        AI · NORMALIZED
-                      </span>
-                    )}
-                    {' '}· aligned highlighted in red
-                  </div>
-                </div>
-              </div>
-              <WordCloud words={oneWordCloudWords}/>
-              {oneWord?.stats?.ai_normalized && oneWordCounts.some(c => (c.variants || []).length > 1) && (
-                <details style={{ marginTop: 12, fontSize: 11, color: 'var(--ink-3)' }}>
-                  <summary style={{ cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace',
-                                     textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    ดู variants ที่ AI รวมเข้าด้วยกัน
-                  </summary>
-                  <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
-                    {oneWordCounts.filter(c => (c.variants || []).length > 1).slice(0, 8).map((c, i) => (
-                      <div key={i} style={{ padding: '6px 10px', background: 'var(--paper-2)', border: '1px dashed var(--rule)' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: 12 }}>{c.label}</div>
-                        <div style={{ fontStyle: 'italic', lineHeight: 1.5 }}>
-                          {(c.variants || []).slice(0, 6).join(' · ')}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
+        <div className="be-card" style={{ padding: 24, marginBottom: 16 }}>
+          <IdentityImageMap intended={intended} image={imageCol} statusMap={statusMap}/>
+          {ii.narrative && (
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--rule)',
+                          fontFamily: 'IBM Plex Serif', fontSize: 14, fontStyle: 'italic',
+                          color: 'var(--ink-2)', lineHeight: 1.6 }}>
+              "{ii.narrative}"
             </div>
           )}
-        </>
+        </div>
+      )}
+
+      {oneWordCloudWords.length > 0 && (
+        <div className="be-card" style={{ padding: 24 }}>
+          <div className="be-card-h">
+            <div>
+              <h3 className="be-card-t">One-word identity cloud</h3>
+              <div className="be-card-d">
+                "อธิบาย {study.brand?.name} ในคำเดียว" · n={oneWord?.stats?.n}
+                {oneWord?.stats?.ai_normalized && (
+                  <span className="be-chip-dim be-mono"
+                        style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
+                                 border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
+                                 fontSize: 9.5, letterSpacing: '0.06em' }}>
+                    AI · NORMALIZED
+                  </span>
+                )}
+                {' '}· aligned highlighted in red
+              </div>
+            </div>
+          </div>
+          <WordCloud words={oneWordCloudWords}/>
+          {oneWord?.stats?.ai_normalized && oneWordCounts.some(c => (c.variants || []).length > 1) && (
+            <details style={{ marginTop: 12, fontSize: 11, color: 'var(--ink-3)' }}>
+              <summary style={{ cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace',
+                                 textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                ดู variants ที่ AI รวมเข้าด้วยกัน
+              </summary>
+              <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                {oneWordCounts.filter(c => (c.variants || []).length > 1).slice(0, 8).map((c, i) => (
+                  <div key={i} style={{ padding: '6px 10px', background: 'var(--paper-2)', border: '1px dashed var(--rule)' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: 12 }}>{c.label}</div>
+                    <div style={{ fontStyle: 'italic', lineHeight: 1.5 }}>
+                      {(c.variants || []).slice(0, 6).join(' · ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
       )}
     </div>
   );

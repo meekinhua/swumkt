@@ -348,20 +348,43 @@ const BrandEquityRespondentPage = () => {
           <div className="be-resp-q">
             <div className="be-muted be-small">ไม่มีคำถามใน dimension นี้</div>
           </div>
-        ) : sectionQs.map(q => (
-          <div className="be-resp-q" key={q.id}>
-            <div className="be-resp-q-num">
-              <span className="be-dot-sm" style={{ background: 'var(--ink)' }}/>
-              {q.template_id || q.id.slice(0, 5)}
-            </div>
-            <div className="be-resp-q-prompt">
-              {q.prompt}
-              {q.required && <span style={{ color: 'var(--be-red)', marginLeft: 4 }}>*</span>}
-            </div>
-            {q.help && <div className="be-resp-q-help">{q.help}</div>}
-            <QuestionInput q={q} value={answers[q.id]} onChange={v => setAnswers({ ...answers, [q.id]: v })}/>
-          </div>
-        ))}
+        ) : (() => {
+          // Group identity questions by perspective for visual clarity
+          const groupOrder = [
+            { key: '_brand_image', label: 'Brand Image · ภาพรวม', match: q => q.dimension === 'identity' && !q.perspective },
+            { key: 'as_organization', label: 'As Organization · องค์กร',  match: q => q.perspective === 'as_organization' },
+            { key: 'as_person',       label: 'As Person · บุคลิก',        match: q => q.perspective === 'as_person' },
+            { key: 'as_symbol',       label: 'As Symbol · สัญลักษณ์',      match: q => q.perspective === 'as_symbol' },
+            { key: 'as_product',      label: 'As Product · ผลิตภัณฑ์',     match: q => q.perspective === 'as_product' },
+            { key: 'competitor',      label: 'About competitors · เกี่ยวกับคู่แข่ง', match: q => q.perspective === 'competitor' },
+          ];
+          const groups = section === 2  // identity section
+            ? groupOrder.map(g => ({ ...g, qs: sectionQs.filter(g.match) })).filter(g => g.qs.length)
+            : [{ key: 'all', label: '', qs: sectionQs }];
+          return groups.map((g, gi) => (
+            <React.Fragment key={g.key}>
+              {g.label && (
+                <div style={{ padding: '18px 0 4px', borderTop: gi > 0 ? '1px solid var(--rule-strong)' : 'none' }}>
+                  <div className="be-eyebrow"><span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>{g.label}</div>
+                </div>
+              )}
+              {g.qs.map(q => (
+                <div className="be-resp-q" key={q.id}>
+                  <div className="be-resp-q-num">
+                    <span className="be-dot-sm" style={{ background: 'var(--ink)' }}/>
+                    {q.template_id || q.id.slice(0, 5)}
+                  </div>
+                  <div className="be-resp-q-prompt">
+                    {q.prompt}
+                    {q.required && <span style={{ color: 'var(--be-red)', marginLeft: 4 }}>*</span>}
+                  </div>
+                  {q.help && <div className="be-resp-q-help">{q.help}</div>}
+                  <QuestionInput q={q} value={answers[q.id]} onChange={v => setAnswers({ ...answers, [q.id]: v })}/>
+                </div>
+              ))}
+            </React.Fragment>
+          ));
+        })()}
 
         <div className="be-resp-foot">
           {section > 0 ? (

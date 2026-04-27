@@ -66,18 +66,19 @@ export const ScoreRing = ({ value = 0, size = 148, stroke = 9, color }) => {
 };
 
 // ============ Radar (polygonal grid, straight lines) ============
-export const RadarChart = ({ axes, series, size = 280 }) => {
+export const RadarChart = ({ axes, series, size = 280, onAxisClick, selectedAxes = [] }) => {
   const cx = size / 2, cy = size / 2;
   const max = 100;
   const levels = [25, 50, 75, 100];
   const n = axes.length || 3;
   const angle = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
   const pt = (i, vv) => {
-    const r = (vv / max) * (size / 2 - 36);
+    const safe = vv == null ? 0 : vv;
+    const r = (safe / max) * (size / 2 - 36);
     return [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
   };
   return (
-    <svg width={size} height={size} style={{ overflow: 'visible' }}>
+    <svg width={size} height={size} style={{ overflow: 'visible' }} data-testid="be-radar">
       {levels.map((lv, i) => (
         <polygon key={i} points={axes.map((_, j) => pt(j, lv).join(',')).join(' ')}
                  fill="none" stroke="rgba(20,22,26,0.10)" strokeWidth="1" strokeDasharray={i < 3 ? '2 3' : '0'}/>
@@ -86,22 +87,79 @@ export const RadarChart = ({ axes, series, size = 280 }) => {
         const [x, y] = pt(i, 100);
         return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="rgba(20,22,26,0.10)" strokeWidth="1"/>;
       })}
-      {series.map((s, si) => (
-        <g key={si}>
-          <polygon points={s.values.map((vv, i) => pt(i, vv).join(',')).join(' ')}
-                   fill={s.color} fillOpacity={s.fill ?? 0.10}
-                   stroke={s.color} strokeWidth="2" strokeDasharray={s.dash || '0'}/>
-          {s.values.map((vv, i) => {
-            const [x, y] = pt(i, vv);
-            return <circle key={i} cx={x} cy={y} r="3" fill={s.color}/>;
-          })}
-        </g>
-      ))}
+      {series.map((s, si) => {
+        // Skip rendering if all values are null
+        const validVals = s.values.map(v => v == null ? 0 : v);
+        if (validVals.every(v => v === 0)) return null;
+        return (
+          <g key={si}>
+            <polygon points={s.values.map((vv, i) => pt(i, vv == null ? 0 : vv).join(',')).join(' ')}
+                     fill={s.color} fillOpacity={s.fill ?? 0.10}
+                     stroke={s.color} strokeWidth="2" strokeDasharray={s.dash || '0'}/>
+            {s.values.map((vv, i) => (vv == null ? null :
+              <circle key={i} cx={pt(i, vv)[0]} cy={pt(i, vv)[1]} r="3.5" fill={s.color}/>
+            ))}
+          </g>
+        );
+      })}
       {axes.map((axis, i) => {
-        const [x, y] = pt(i, 118);
-        return <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
-                     fontSize="10.5" fill="#3B3D43" fontFamily="IBM Plex Mono, monospace"
-                     style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>{axis}</text>;
+        const [x, y] = pt(i, 122);
+        const isSel = selectedAxes.includes(axis);
+        return (
+          <g key={i} style={{ cursor: onAxisClick ? 'pointer' : 'default' }}
+             onClick={() => onAxisClick && onAxisClick(axis)}
+             data-testid={`be-radar-axis-${axis}`}>
+            {isSel && <circle cx={x} cy={y} r="11" fill="#C8102E" opacity="0.18"/>}
+            <text x={x} y={y} textAnchor="middle" dominantBaseline="middle"
+                  fontSize="10.5" fontFamily="IBM Plex Mono, monospace"
+                  fill={isSel ? '#C8102E' : '#3B3D43'}
+                  fontWeight={isSel ? 600 : 500}
+                  style={{ textTransform: 'uppercase', letterSpacing: '0.06em', userSelect: 'none' }}>{axis}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ============ 2D Perceptual Map ============
+export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360 }) => {
+  // dots: [{name, x, y, kind ('brand'|'competitor'), color}]
+  const pad = 50;
+  const inner = size - pad * 2;
+  const toX = (v) => pad + (v / 100) * inner;
+  const toY = (v) => size - pad - (v / 100) * inner;
+  return (
+    <svg width={size} height={size} style={{ overflow: 'visible' }} data-testid="be-perceptual-map">
+      {/* Quadrant background */}
+      <rect x={pad} y={pad} width={inner} height={inner} fill="rgba(20,22,26,0.02)" stroke="rgba(20,22,26,0.15)"/>
+      {/* Crosshair at 50/50 */}
+      <line x1={pad + inner / 2} y1={pad} x2={pad + inner / 2} y2={size - pad}
+            stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
+      <line x1={pad} y1={pad + inner / 2} x2={size - pad} y2={pad + inner / 2}
+            stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
+      {/* Axis labels */}
+      <text x={size - pad} y={pad + inner / 2 - 6} textAnchor="end" fontSize="10.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
+            style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>{xAxis} →</text>
+      <text x={pad + inner / 2 + 6} y={pad - 8} fontSize="10.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
+            style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>↑ {yAxis}</text>
+      {/* Dots */}
+      {dots.map((d, i) => {
+        const cx = toX(d.x), cy = toY(d.y);
+        const r = d.kind === 'brand' ? 9 : 6;
+        return (
+          <g key={i}>
+            <circle cx={cx} cy={cy} r={r} fill={d.color || (d.kind === 'brand' ? '#C8102E' : '#5C5F66')}
+                    fillOpacity={d.kind === 'brand' ? 0.85 : 0.55}
+                    stroke={d.kind === 'brand' ? '#0A0A0A' : 'transparent'} strokeWidth="2"/>
+            <text x={cx} y={cy - r - 6} textAnchor="middle" fontSize="11.5"
+                  fontFamily="IBM Plex Serif, Georgia, serif"
+                  fontWeight={d.kind === 'brand' ? 600 : 500}
+                  fill="#0A0A0A">{d.name}</text>
+          </g>
+        );
       })}
     </svg>
   );
