@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 16 — Brand Equity Public Showcase Mode. Backend: 6/6 pytest PASS (new /app/backend/tests/test_brand_equity_showcase.py covering PUT toggle persist, GET showcase 200/403/404, ai_cache allowed-key whitelist, sanitization of owner_id/owner_email/demographics/raw_responses). Frontend: /showcase/:token route loads without auth, renders BrandEquityDashboardPage in public mode with be-showcase-topbar, be-showcase-footer, be-showcase-take-survey + be-showcase-footer-take-survey CTAs (status='collecting'), footer-home link href='/', hides ALL owner controls (showcase-toggle, showcase-copy, refresh, run-ai, copy-share, edit, launch, regen-insights), renders 6 SVG charts incl. radar/perceptual/identity. Direct URL refresh persists. CRITICAL BUG FOUND AND FIXED: Showcase footer JSX block was placed INSIDE SectionLoyalty sub-component (out-of-scope variables isShowcase/data/responseCount/targetN) causing ReferenceError: isShowcase is not defined that crashed the entire showcase page. ALSO FIXED: be-dashboard-regen-insights 'Generate new insights' button leaked into showcase view (AI rail was not gated by isShowcase). Post-fix: 0 console errors, all selectors resolve.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_showcase.py",
+    "/app/test_reports/pytest/brand_equity_showcase.xml"
+  ],
+  "action_items": [
+    "No outstanding items — both bugs were fixed by testing agent during verification. Main agent should review the two fixes in BrandEquityDashboardPage.jsx (footer relocation + regen-button isShowcase gate) to confirm they match design intent.",
+    "Optional: owner dashboard UI verification of the toggle button state transitions (Publish as showcase ↔ Showcase: ON, disabled when responses<10, Copy showcase URL button) was NOT executed end-to-end via Playwright because login form had a transient unstable-element click issue; backend-side persistence is already covered 100% by test_brand_equity_showcase.py::TestShowcaseToggle (PUT → GET roundtrip)."
+  ],
+  "critical_code_review_comments": [
+    "Backend endpoint /api/brand-equity/showcase/{token} is correctly implemented: 404 on unknown token, 403 on is_public_showcase=false, strict ai_cache whitelist (themes_by_question/identity_image/master_insights/normalized_by_question only), demographics key removed from aggregate, owner_id/owner_email never emitted, no raw responses leaked. Logo asset correctly filtered to kind=='logo' (palette/design images stay owner-internal).",
+    "Frontend isShowcase detection via useLocation().pathname.startsWith('/showcase/') — simple and correct. No ProtectedRoute wrapper at /showcase/:token in App.js line 471 — verified.",
+    "BUG FIXED: lines 1200-1233 of BrandEquityDashboardPage.jsx — the showcase footer block had been appended inside SectionLoyalty (starts line 1086). `isShowcase`, `data.study.share_token`, `responseCount`, `targetN` are all in BrandEquityDashboardPage scope only. Moved the block to just before the closing </div> of be-root in the main component (now at lines 399-433).",
+    "BUG FIXED: lines 390-393 — `Generate new insights` button inside be-dashboard-ai-rail was not wrapped in !isShowcase, so it leaked into public showcase. Wrapped it with {!isShowcase && ...}.",
+    "File /app/frontend/src/pages/brand-equity/BrandEquityDashboardPage.jsx is 1240 lines — large file with 4 Section sub-components; recommend splitting Section* into /pages/brand-equity/dashboard-sections/*.jsx for maintainability. Non-blocking.",
+    "Dashboard payload `data.study.share_token` is used in showcase CTA href (line 241) — but the public payload from /api/brand-equity/showcase/{token} does not have nested .study; component normalizes to { study: data } on showcase path (line 55-62). Verified correct.",
+    "Backend file /app/backend/routes/brand_equity.py is 1625 lines — same refactor suggestion from iteration 15 still stands."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/brand-equity/BrandEquityDashboardPage.jsx (2 fixes: relocated showcase footer block out of SectionLoyalty; gated regen-insights button with !isShowcase)",
+    "/app/backend/tests/test_brand_equity_showcase.py (new, 6 tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6)",
+    "frontend": "100% post-fix (all 6 showcase testids resolve, 0 owner testids leak, 0 console errors, charts render, direct-URL refresh persists, no login redirect)"
+  },
+  "test_credentials": "admin@swu.ac.th / admin123 (login response field is access_token, not token)",
+  "seed_data_creation": "Reused existing seed study id=0a0a1f3b-54f9-4d06-addb-10a4c620d187, share_token=e936845d9491 with 12 responses. No new seed created. Left is_public_showcase=true at end of testing per instructions so user can continue manual QA at /showcase/e936845d9491.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 16 delta — Public Showcase Mode for Brand Equity. Backend contract: GET /api/brand-equity/showcase/{token} returns {id, share_token, status, brand, logo_asset, competitors, estimated_minutes, response_count, target_responses, ready_for_dashboard, aggregate (no demographics), ai_cache (4 whitelist keys), created_at, updated_at}. 403 if is_public_showcase=false, 404 if token unknown. Frontend route /showcase/:token in App.js reuses BrandEquityDashboardPage; detection via location.pathname. Owner-only testids hidden in showcase mode: be-dashboard-{showcase-toggle,showcase-copy,refresh,run-ai,share,edit,launch,regen-insights}. Showcase-only testids: be-showcase-page (root), be-showcase-topbar, be-showcase-footer, be-showcase-footer-home (href='/'), be-showcase-take-survey + be-showcase-footer-take-survey (only when status in {collecting,analyzing}). Owner dashboard toggle testids: be-dashboard-showcase-toggle (disabled when ready_for_dashboard=false), be-dashboard-showcase-copy (only visible when is_public_showcase=true). NOTE: login's token field is access_token (not token) — this tripped earlier iterations.",
+  "rca of the issue": "Two bugs discovered. (1) Showcase footer JSX (lines 1200-1233 pre-fix) was placed inside SectionLoyalty component instead of BrandEquityDashboardPage. SectionLoyalty only receives {study, aggregate, ai} as props; isShowcase, data, responseCount, targetN are undefined in that scope. When isShowcase truthy, React tried to evaluate `{isShowcase && ...}` → ReferenceError → showcase page crashed with runtime-error overlay. FIX: moved the entire footer block up to the main component's render tree, just before the closing </div> of be-root. (2) be-dashboard-regen-insights button inside be-dash-ai right-rail was unconditionally rendered; since the right-rail is shown both in owner and showcase modes (to display master_insights), the button leaked into public view. FIX: wrapped button in {!isShowcase && (...)}. Reproduction: visit /showcase/e936845d9491 on main branch pre-fix — full-screen dev error overlay 'isShowcase is not defined at SectionLoyalty'. Post-fix: page renders cleanly with 0 console errors and all showcase testids visible."
+}

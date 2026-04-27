@@ -87,6 +87,27 @@
   .be-public-name { font-size: 12px; }
   .be-public-sub { font-size: 8px; }
 }
+
+/* ============ Public showcase footer ============ */
+.be-showcase-footer {
+  margin-top: 60px; padding: 28px 32px 36px;
+  border-top: 1px solid var(--rule);
+  background: var(--paper-2);
+}
+.be-showcase-footer-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; max-width: 1280px; margin: 0 auto; flex-wrap: wrap;
+}
+.be-showcase-footer-brand { display: flex; align-items: center; gap: 14px; }
+.be-showcase-footer-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.be-showcase-footer-meta {
+  max-width: 1280px; margin: 18px auto 0;
+  padding-top: 14px; border-top: 1px dashed var(--rule);
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .be-showcase-footer { padding: 22px 16px 28px; }
+}
 .be-topnav { display: flex; gap: 22px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); }
 .be-topnav a:hover { color: var(--ink); }
 .be-topnav .on { color: var(--ink); border-bottom: 2px solid var(--be-red); padding-bottom: 2px; }

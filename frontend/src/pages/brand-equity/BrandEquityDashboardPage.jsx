@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
@@ -7,7 +7,7 @@ import './brand-equity-styles.css';
 import {
   BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
   IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
-  BrandLogo
+  BrandLogo, SWU_LOGO_URL
 } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -23,27 +23,56 @@ const findStat = (questions, kindOrType, dim) => {
 const BrandEquityDashboardPage = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  const { studyId } = useParams();
+  const location = useLocation();
+  const params = useParams();
+  // Detect showcase mode via URL: /showcase/:token (public, no auth)
+  const isShowcase = location.pathname.startsWith('/showcase/');
+  const studyId = params.studyId;       // owner mode key
+  const shareToken = params.token;      // showcase mode key
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiRunning, setAiRunning] = useState(false);
   const [activeSegment, setActiveSegment] = useState('all');
+  const [togglingShowcase, setTogglingShowcase] = useState(false);
   const pollRef = useRef(null);
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
-  useEffect(() => { load(); return () => clearInterval(pollRef.current); /* eslint-disable-next-line */ }, [studyId]);
+  useEffect(() => { load(); return () => clearInterval(pollRef.current); /* eslint-disable-next-line */ }, [studyId, shareToken]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const r = await axios.get(`${API}/brand-equity/studies/${studyId}/dashboard`, authH);
-      setData(r.data);
-      if (r.data.ai_cache?.status === 'running' || r.data.ai_cache?.status === 'queued') {
-        startPolling();
+      if (isShowcase) {
+        // PUBLIC fetch — no auth header
+        const r = await axios.get(`${API}/brand-equity/showcase/${shareToken}`);
+        // Normalize the showcase payload to the same { study, aggregate, ai_cache, ready_for_dashboard }
+        // shape the rest of this component already understands.
+        const sd = r.data;
+        setData({
+          study: {
+            id: sd.id,
+            share_token: sd.share_token,
+            status: sd.status,
+            brand: sd.brand,
+            // Reconstruct minimal identity so BrandLogo can resolve uploaded base64 logo
+            identity: sd.logo_asset ? { visual_assets: [sd.logo_asset] } : { visual_assets: [] },
+            target_responses: sd.target_responses,
+            is_public_showcase: true,
+          },
+          aggregate: sd.aggregate,
+          ai_cache: sd.ai_cache,
+          ready_for_dashboard: sd.ready_for_dashboard,
+        });
+      } else {
+        const r = await axios.get(`${API}/brand-equity/studies/${studyId}/dashboard`, authH);
+        setData(r.data);
+        if (r.data.ai_cache?.status === 'running' || r.data.ai_cache?.status === 'queued') {
+          startPolling();
+        }
       }
     } catch (e) {
-      toast.error('โหลด dashboard ไม่สำเร็จ');
+      toast.error(isShowcase ? 'Showcase ไม่พร้อม' : 'โหลด dashboard ไม่สำเร็จ');
     }
     setLoading(false);
   };
@@ -87,6 +116,28 @@ const BrandEquityDashboardPage = () => {
     toast.success('คัดลอก link แล้ว');
   };
 
+  const copyShowcaseLink = () => {
+    const url = `${window.location.origin}/showcase/${data.study.share_token}`;
+    navigator.clipboard.writeText(url);
+    toast.success('คัดลอก showcase link แล้ว');
+  };
+
+  const toggleShowcase = async () => {
+    if (!data?.study?.id) return;
+    const next = !data.study.is_public_showcase;
+    setTogglingShowcase(true);
+    try {
+      await axios.put(`${API}/brand-equity/studies/${data.study.id}`,
+        { is_public_showcase: next }, authH);
+      toast.success(next ? 'เปิด public showcase แล้ว' : 'ปิด public showcase แล้ว');
+      // Optimistic update without full reload
+      setData(prev => ({ ...prev, study: { ...prev.study, is_public_showcase: next } }));
+    } catch (e) {
+      toast.error('สลับโหมดไม่สำเร็จ');
+    }
+    setTogglingShowcase(false);
+  };
+
   if (loading) return <div className="be-root"><BeLoading text="กำลังโหลด dashboard…"/></div>;
   if (!data) return null;
 
@@ -98,11 +149,28 @@ const BrandEquityDashboardPage = () => {
   const targetN = study.target_responses || 100;
 
   return (
-    <div className="be-root" data-testid="be-dashboard-page">
-      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
-                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/brand-equity')}>
-                         <Icon name="chevronL" size={10}/>Studies
-                       </button>}/>
+    <div className="be-root" data-testid={isShowcase ? 'be-showcase-page' : 'be-dashboard-page'}>
+      {isShowcase ? (
+        <div className="be-public-topbar" data-testid="be-showcase-topbar">
+          <div className="be-public-brand">
+            <img src={SWU_LOGO_URL} alt="SWUMKT Logo" className="be-public-logo"/>
+            <span className="be-public-text">
+              <span className="be-public-name">SWU · Marketing Research</span>
+              <span className="be-public-sub be-mono">BRAND HEALTH CHECK · PUBLIC SHOWCASE</span>
+            </span>
+          </div>
+          <a href="/" className="be-mono be-tiny"
+             style={{ padding: '6px 12px', border: '1px solid var(--rule-strong)',
+                      textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--ink)' }}>
+            Powered by SWU MKT →
+          </a>
+        </div>
+      ) : (
+        <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
+                  right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/brand-equity')}>
+                           <Icon name="chevronL" size={10}/>Studies
+                         </button>}/>
+      )}
 
       <div className="be-page">
         {/* HERO */}
@@ -127,28 +195,56 @@ const BrandEquityDashboardPage = () => {
                 </div>
               </div>
             </div>
-            <div className="be-hero-actions">
-              <StatusPill status={study.status}/>
-              <button className="be-btn" onClick={() => navigate(`/brand-equity/studies/${study.id}/edit`)}
-                      data-testid="be-dashboard-edit">
-                <Icon name="edit" size={11}/>Edit study
-              </button>
-              {study.status === 'draft' && (
-                <button className="be-btn be-btn-red" onClick={launch} data-testid="be-dashboard-launch">
-                  <Icon name="arrowR" size={11}/>เปิดรับคำตอบ
+            {!isShowcase ? (
+              <div className="be-hero-actions">
+                <StatusPill status={study.status}/>
+                <button className="be-btn" onClick={() => navigate(`/brand-equity/studies/${study.id}/edit`)}
+                        data-testid="be-dashboard-edit">
+                  <Icon name="edit" size={11}/>Edit study
                 </button>
-              )}
-              <button className="be-btn" onClick={copyShareLink} data-testid="be-dashboard-share">
-                <Icon name="share" size={11}/>Copy share link
-              </button>
-              <button className="be-btn" onClick={load} data-testid="be-dashboard-refresh">
-                <Icon name="refresh" size={11}/>Refresh
-              </button>
-              <button className="be-btn be-btn-primary" onClick={runAI}
-                      disabled={!ready_for_dashboard || aiRunning} data-testid="be-dashboard-run-ai">
-                <Icon name="sparkle" size={11}/>{aiRunning ? 'AI working…' : 'Run AI analysis'}
-              </button>
-            </div>
+                {study.status === 'draft' && (
+                  <button className="be-btn be-btn-red" onClick={launch} data-testid="be-dashboard-launch">
+                    <Icon name="arrowR" size={11}/>เปิดรับคำตอบ
+                  </button>
+                )}
+                <button className="be-btn" onClick={copyShareLink} data-testid="be-dashboard-share">
+                  <Icon name="share" size={11}/>Copy share link
+                </button>
+                <button className={'be-btn ' + (study.is_public_showcase ? 'be-btn-primary' : '')}
+                        onClick={toggleShowcase}
+                        disabled={togglingShowcase || !ready_for_dashboard}
+                        title={!ready_for_dashboard ? 'ต้องมีอย่างน้อย 10 คำตอบก่อน publish' : ''}
+                        data-testid="be-dashboard-showcase-toggle">
+                  <Icon name="external" size={11}/>
+                  {togglingShowcase ? '…'
+                    : study.is_public_showcase ? 'Showcase: ON' : 'Publish as showcase'}
+                </button>
+                {study.is_public_showcase && (
+                  <button className="be-btn" onClick={copyShowcaseLink}
+                          data-testid="be-dashboard-showcase-copy">
+                    <Icon name="copy" size={11}/>Copy showcase URL
+                  </button>
+                )}
+                <button className="be-btn" onClick={load} data-testid="be-dashboard-refresh">
+                  <Icon name="refresh" size={11}/>Refresh
+                </button>
+                <button className="be-btn be-btn-primary" onClick={runAI}
+                        disabled={!ready_for_dashboard || aiRunning} data-testid="be-dashboard-run-ai">
+                  <Icon name="sparkle" size={11}/>{aiRunning ? 'AI working…' : 'Run AI analysis'}
+                </button>
+              </div>
+            ) : (
+              <div className="be-hero-actions">
+                <StatusPill status={study.status}/>
+                {(study.status === 'collecting' || study.status === 'analyzing') && (
+                  <a className="be-btn be-btn-red"
+                     href={`/brand-equity/respond/${data.study.share_token}`}
+                     data-testid="be-showcase-take-survey">
+                    <Icon name="arrowR" size={11}/>ร่วมตอบแบบสอบถาม
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="be-hero-row2">
@@ -291,14 +387,51 @@ const BrandEquityDashboardPage = () => {
                 </div>
               ))}
 
-              <button className="be-btn" style={{ width: '100%', marginTop: 16, justifyContent: 'center' }}
-                      onClick={runAI} disabled={aiRunning} data-testid="be-dashboard-regen-insights">
-                <Icon name="refresh" size={11}/>{aiRunning ? 'Regenerating…' : 'Generate new insights'}
-              </button>
+              {!isShowcase && (
+                <button className="be-btn" style={{ width: '100%', marginTop: 16, justifyContent: 'center' }}
+                        onClick={runAI} disabled={aiRunning} data-testid="be-dashboard-regen-insights">
+                  <Icon name="refresh" size={11}/>{aiRunning ? 'Regenerating…' : 'Generate new insights'}
+                </button>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Showcase footer — Powered by SWU MKT (only on public showcase view) */}
+      {isShowcase && (
+        <div className="be-showcase-footer" data-testid="be-showcase-footer">
+          <div className="be-showcase-footer-inner">
+            <div className="be-showcase-footer-brand">
+              <img src={SWU_LOGO_URL} alt="SWUMKT Logo" style={{ height: 36, width: 'auto' }}/>
+              <div>
+                <div className="be-mono be-tiny" style={{ letterSpacing: '0.14em', color: 'var(--be-red)' }}>
+                  POWERED BY
+                </div>
+                <div style={{ fontFamily: 'IBM Plex Serif', fontSize: 16, fontWeight: 600, marginTop: 2 }}>
+                  SWU · Marketing Research Tools
+                </div>
+              </div>
+            </div>
+            <div className="be-showcase-footer-cta">
+              <a href="/" className="be-btn"
+                 data-testid="be-showcase-footer-home">
+                <Icon name="external" size={11}/>เกี่ยวกับเครื่องมือ
+              </a>
+              {(study.status === 'collecting' || study.status === 'analyzing') && (
+                <a href={`/brand-equity/respond/${data.study.share_token}`}
+                   className="be-btn be-btn-red"
+                   data-testid="be-showcase-footer-take-survey">
+                  <Icon name="arrowR" size={11}/>ร่วมตอบแบบสอบถาม
+                </a>
+              )}
+            </div>
+          </div>
+          <div className="be-showcase-footer-meta be-mono be-tiny be-muted">
+            Brand Health Check · Anonymous data · {responseCount}/{targetN} respondents
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1100,6 +1233,7 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
           </div>
         )}
       </div>
+
     </div>
   );
 };

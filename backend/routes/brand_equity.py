@@ -354,6 +354,7 @@ class StudyUpdate(BaseModel):
     target_responses: Optional[int] = None
     status: Optional[str] = None  # draft | collecting | analyzing | completed | closed
     weights: Optional[Dict[str, int]] = None
+    is_public_showcase: Optional[bool] = None  # owner toggle for read-only public dashboard view
 
 
 class ResponseSubmit(BaseModel):
@@ -1401,6 +1402,67 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         }
         await db.brand_responses.insert_one(resp)
         return {"message": "Response saved", "id": resp["id"]}
+
+    # ---- Public Showcase (read-only sanitized dashboard view, no auth) ----
+
+    @brand_equity_router.get("/showcase/{share_token}")
+    async def get_public_showcase(share_token: str):
+        """Public — sanitized dashboard view of a study that the owner has marked as showcase.
+        Returns aggregates + AI insights + brand info, but strips owner identity, raw responses,
+        demographics breakdown, and any sensitive fields. Survey-taking is still possible via
+        the normal /respond/ endpoint (we surface its share_token + status so the page can link).
+        """
+        study = await db.brand_studies.find_one({"share_token": share_token}, {"_id": 0})
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if not study.get("is_public_showcase"):
+            raise HTTPException(403, "This study is not published as a public showcase")
+        # Need at least 10 responses before showcasing — same gate as the owner dashboard
+        responses_count = await db.brand_responses.count_documents({"study_id": study["id"]})
+        responses = []
+        if responses_count >= 10:
+            cur = db.brand_responses.find({"study_id": study["id"]}, {"_id": 0})
+            responses = await cur.to_list(5000)
+        ai_cache = study.get("ai_cache", {}) or {}
+        agg = _aggregate_responses(study, responses,
+                                   normalized=ai_cache.get("normalized_by_question") or {}) \
+              if responses else {}
+
+        # Only logo asset is exposed (palette/design images are owner-internal)
+        identity = study.get("identity") or {}
+        logo_asset = next(
+            (a for a in (identity.get("visual_assets") or []) if a.get("kind") == "logo"),
+            None
+        )
+
+        # Sanitize aggregate: drop demographics breakdown if present
+        if agg:
+            agg = {k: v for k, v in agg.items() if k != "demographics"}
+
+        # Sanitize AI cache: keep only display-safe fields
+        ai_safe = {
+            "themes_by_question": ai_cache.get("themes_by_question", {}),
+            "identity_image": ai_cache.get("identity_image", {}),
+            "master_insights": ai_cache.get("master_insights", []),
+            "normalized_by_question": ai_cache.get("normalized_by_question", {}),
+        }
+
+        return {
+            "id": study["id"],
+            "share_token": share_token,
+            "status": study.get("status"),
+            "brand": study["brand"],
+            "logo_asset": logo_asset,
+            "competitors": (study["brand"].get("competitors") or []),
+            "estimated_minutes": max(5, len(study.get("questions") or []) // 4),
+            "response_count": responses_count,
+            "target_responses": study.get("target_responses", 100),
+            "ready_for_dashboard": responses_count >= 10,
+            "aggregate": agg,
+            "ai_cache": ai_safe,
+            "created_at": study.get("created_at"),
+            "updated_at": study.get("updated_at"),
+        }
 
     # ---- Responses (for owner) ----
 

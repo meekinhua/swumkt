@@ -466,6 +466,11 @@ function App() {
               path="/brand-equity/respond/:token"
               element={<BrandEquityRespondentPage />}
             />
+            {/* Public showcase — read-only dashboard, no auth */}
+            <Route
+              path="/showcase/:token"
+              element={<BrandEquityDashboardPage />}
+            />
           </Routes>
           <Toaster position="top-right" richColors />
         </div>
