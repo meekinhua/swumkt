@@ -105,6 +105,23 @@ const MarketResearch = () => {
       path: '/market-research/conjoint-analysis'
     },
     {
+      id: 'brand-equity',
+      icon: <TrendingUp className="w-16 h-16" />,
+      title: 'Brand Equity / Brand Health Check',
+      description: 'วัดสุขภาพแบรนด์ครบ 4 มิติด้วย Aaker framework + AI insights',
+      features: [
+        'Brand Awareness · Top-of-mind, aided recall, familiarity',
+        'Perceived Quality · Likert scales + comparative judgement',
+        'Identity vs Image · AI alignment of intended vs perceived traits',
+        'Brand Loyalty · NPS, repeat intent, switching resistance',
+        'AI-generated questions ตามบริบทแบรนด์',
+        'Master AI Insights · 5 actionable recommendations'
+      ],
+      gradient: 'from-[#C8102E] via-[#D4A017] to-[#10B981]',
+      comingSoon: false,
+      path: '/brand-equity'
+    },
+    {
       id: 'competitor-analysis',
       icon: <Target className="w-16 h-16" />,
       title: t('marketResearch.competitorAnalysis.title'),

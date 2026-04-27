@@ -42,6 +42,10 @@ import AlumniInviteAcceptPage from '@/pages/alumni/AlumniInviteAcceptPage';
 import AlumniDiscoverPage from '@/pages/alumni/AlumniDiscoverPage';
 import AlumniFeedPage from '@/pages/alumni/AlumniFeedPage';
 import AlumniJobsPage from '@/pages/alumni/AlumniJobsPage';
+import BrandEquityListPage from '@/pages/brand-equity/BrandEquityListPage';
+import BrandEquityWizardPage from '@/pages/brand-equity/BrandEquityWizardPage';
+import BrandEquityRespondentPage from '@/pages/brand-equity/BrandEquityRespondentPage';
+import BrandEquityDashboardPage from '@/pages/brand-equity/BrandEquityDashboardPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -423,6 +427,44 @@ function App() {
                   <AlumniProfilePage />
                 </ProtectedRoute>
               }
+            />
+            {/* Brand Equity Module */}
+            <Route
+              path="/brand-equity"
+              element={
+                <ProtectedRoute>
+                  <BrandEquityListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/brand-equity/new"
+              element={
+                <ProtectedRoute>
+                  <BrandEquityWizardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/brand-equity/studies/:studyId/edit"
+              element={
+                <ProtectedRoute>
+                  <BrandEquityWizardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/brand-equity/studies/:studyId"
+              element={
+                <ProtectedRoute>
+                  <BrandEquityDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Public respondent — no auth */}
+            <Route
+              path="/brand-equity/respond/:token"
+              element={<BrandEquityRespondentPage />}
             />
           </Routes>
           <Toaster position="top-right" richColors />

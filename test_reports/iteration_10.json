@@ -1,0 +1,38 @@
+{
+  "summary": "Tested Brand Equity / Brand Health Check module end-to-end. Backend pytest: 11/11 PASS (templates, study CRUD, owner authorization, public token gating 410/200, regenerate questions, public response submission, dashboard aggregation with composite scores, AI background queue/status, delete cleanup). Frontend: list page, dashboard page, public respondent welcome page render correctly with full Swiss/editorial design. Created seed study (TEST_UIBrand) + 12 anonymous responses → dashboard shows score ring 84/100 Healthy, 4 dimension cards (AW 80 / PQ 86 / BI 80 / LY 91), Top-of-Mind word cloud, aided recognition, familiarity, AI insights placeholder. No console/page errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity.py",
+    "/app/test_reports/pytest/brand_equity_results.xml"
+  ],
+  "action_items": [
+    "(Low) Add data-testid attributes to wizard step 2 trait chips (e.g., data-testid=\"trait-chip-Modern\") and wizard step 3 launch button to make E2E Playwright automation easier. Currently the trait chips have no testid/role match, so automated tests must rely on text content which is fragile with Thai+English labels.",
+    "(Optional) Increase request timeout / streaming for the AI analysis call — under load, ai-analyze followed quickly by ai-status can exceed 15s on the preview ingress; backend itself returns fast but Gemini calls in the background task occasionally cause adjacent requests to be slow. Consider running Gemini calls with asyncio.to_thread or shielded so they don't share the FastAPI event loop with subsequent requests."
+  ],
+  "critical_code_review_comments": [
+    "brand_equity.py is 752 lines — borderline; the AI prompt parsers and stats engine could be split into stats.py + ai.py for maintainability but not blocking.",
+    "_ai_extract_themes / _ai_identity_image / _ai_master_insights duplicate the same JSON-fence-stripping logic — extract a small _parse_json_response helper.",
+    "BrandEquity routes correctly use {'_id': 0} projection everywhere — no MongoDB ObjectId leakage.",
+    "Owner-authorization checks present on every /studies/{id}/* and ai-* endpoint (correct).",
+    "Public endpoints correctly strip owner_id/owner_email when returning study to respondent.",
+    "Dashboard threshold (n>=10) hardcoded — fine for MVP, document or make configurable later.",
+    "All numeric inputs from public respondents are coerced via isdigit() which handles strings well; ranking type is declared in QUESTION_TYPES but no template currently uses it (intentional / future-proofing)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin@swu.ac.th / admin123 (verified working)",
+  "seed_data_creation": "Created and left in DB: study id=0a0a1f3b-54f9-4d06-addb-10a4c620d187 (brand=TEST_UIBrand, status=collecting, share_token=e936845d9491) with 12 submitted responses for dashboard verification. Main agent or next iteration may delete via DELETE /api/brand-equity/studies/{id} (owner=admin@swu.ac.th). The pytest suite separately creates TEST_BrandX and self-cleans.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test file at /app/backend/tests/test_brand_equity.py runs in ~80s end-to-end (includes a 60s AI analyze poll). All 13 review-request features verified. The 4-step wizard form was NOT clicked through via Playwright due to trait-chip selector fragility (no data-testid); functionality was instead verified by setting up the data via API and confirming the resulting dashboard renders correctly. If retesting the wizard, ask main agent to add data-testid attributes to .be-trait-chip / launch button first."
+}
