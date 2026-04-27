@@ -397,12 +397,17 @@ export const StatusPill = ({ status }) => {
 };
 
 // ============ Top bar ============
+export const SWU_LOGO_URL = 'https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png';
+
 export const BeTopbar = ({ user, onLogo, right }) => (
   <div className="be-topbar">
     <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
       <div className="be-logo" onClick={onLogo} data-testid="be-logo">
-        <span className="be-logo-dot"/>
-        <span>SWU · Marketing Research</span>
+        <img src={SWU_LOGO_URL} alt="SWUMKT Logo" className="be-logo-img"/>
+        <span className="be-logo-text">
+          <span className="be-logo-name">SWU · Marketing Research</span>
+          <span className="be-logo-sub be-mono">BRAND HEALTH CHECK</span>
+        </span>
       </div>
       <div className="be-topnav be-mono">
         <a href="/dashboard">Surveys</a>

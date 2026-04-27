@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import './brand-equity-styles.css';
-import { Icon, BeLoading } from './be-components';
+import { Icon, BeLoading, SWU_LOGO_URL } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -243,15 +243,27 @@ const BrandEquityRespondentPage = () => {
     </div>
   );
 
+  // Public top bar — keeps the survey visually anchored to the SWU MKT system
+  const PublicTopbar = () => (
+    <div className="be-public-topbar" data-testid="be-resp-topbar">
+      <div className="be-public-brand">
+        <img src={SWU_LOGO_URL} alt="SWUMKT Logo" className="be-public-logo"/>
+        <span className="be-public-text">
+          <span className="be-public-name">SWU · Marketing Research</span>
+          <span className="be-public-sub be-mono">BRAND HEALTH CHECK · ANONYMOUS</span>
+        </span>
+      </div>
+      <LangToggle/>
+    </div>
+  );
+
   // Welcome screen
   if (section === -1) {
     return (
       <div className="be-root" data-testid="be-respondent-page">
+        <PublicTopbar/>
         <div className="be-resp-wrap">
-          <div style={{ paddingTop: 30, display: 'flex', justifyContent: 'flex-end' }}>
-            <LangToggle/>
-          </div>
-          <div style={{ paddingTop: 14 }}>
+          <div style={{ paddingTop: 20 }}>
             <div className="be-eyebrow" style={{ marginBottom: 16 }}>
               <span className="be-dot-sm be-pulse" style={{ background: 'var(--be-red)' }}/>
               BRAND HEALTH CHECK
@@ -303,8 +315,8 @@ const BrandEquityRespondentPage = () => {
     };
     return (
       <div className="be-root" data-testid="be-respondent-demographics">
+        <PublicTopbar/>
         <div className="be-resp-wrap">
-          <div style={{ paddingTop: 14, display: 'flex', justifyContent: 'flex-end' }}><LangToggle/></div>
           <div style={{ paddingTop: 16 }}>
             <div className="be-eyebrow" style={{ marginBottom: 12 }}>{T.finalSection}</div>
             <h2 className="be-h2" style={{ fontSize: 22, marginBottom: 6 }}>{T.aboutYou}</h2>
@@ -346,6 +358,7 @@ const BrandEquityRespondentPage = () => {
   if (section === 5) {
     return (
       <div className="be-root" data-testid="be-respondent-thanks">
+        <PublicTopbar/>
         <div className="be-resp-wrap">
           <div style={{ paddingTop: 80, textAlign: 'center' }}>
             <div className="be-eyebrow" style={{ marginBottom: 16, justifyContent: 'center' }}>
@@ -392,6 +405,7 @@ const BrandEquityRespondentPage = () => {
 
   return (
     <div className="be-root" data-testid="be-respondent-page">
+      <PublicTopbar/>
       <div className="be-resp-wrap">
         <div className="be-resp-head">
           <div style={{ width: 32, height: 32, background: 'var(--ink)', color: 'var(--paper)',
@@ -403,7 +417,6 @@ const BrandEquityRespondentPage = () => {
             <strong style={{ fontFamily: 'IBM Plex Serif', fontSize: 14 }}>{study.brand?.name}</strong>
             <div className="be-mono be-tiny be-muted">BRAND HEALTH CHECK</div>
           </div>
-          <LangToggle/>
         </div>
 
         <div className="be-resp-progress">

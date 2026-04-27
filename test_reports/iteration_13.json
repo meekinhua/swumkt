@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 13 testing complete. Verified (1) auto-translate Thai→English for custom_quality_attributes on create/update/regenerate endpoints, (2) PQ-CUSTOM-*/COMP-CUSTOM-* questions carry correct English prompt_en using translated attrs, (3) Visual Identity questions (VIS-1..VIS-4) emitted with display_image/display_palette when brand uploads logo + palette, (4) PublicTopbar on public respondent page renders SWUMKT logo + 'SWU · Marketing Research' + TH/EN toggle persisting via localStorage be_lang, (5) BeTopbar on authenticated list + wizard pages now uses <img class='be-logo-img'> with SWUMKT logo (be-logo-dot removed). 7/7 backend tests PASS. Frontend smoke PASS on 3 screens.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Public respondent welcome (EN mode)", "issues": ["Minor i18n gap: 'WHAT YOU\\'LL DO' header renders 'WHAT YOU\\'LL DO' in both modes (already EN constant) — acceptable since it reads as a heading label, but TH mode shows 'ขอเวลา 5 นาที' (TH) alongside unchanged labels like 'BRAND HEALTH CHECK' / 'WHAT YOU\\'LL DO' in EN caps. Style choice, not a bug."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_translation.py",
+    "/app/test_reports/pytest/brand_equity_translation.xml"
+  ],
+  "action_items": [
+    "NONE CRITICAL — all iteration-13 features verified working end-to-end. Main agent may self-test the wizard-flow (step 4 question preview) manually if desired; backend contract is already locked via pytest."
+  ],
+  "critical_code_review_comments": [
+    "brand_equity.py is now ~1300+ lines. Splitting into translation.py / templates.py / routes.py remains strongly recommended (carried over from iteration_12).",
+    "_translate_attrs_to_en fallback silently returns Thai text when EMERGENT_LLM_KEY missing or Gemini throws. Current behavior is safe (no exception) but there is no flag in the study payload indicating translation failed. Consider adding brand.custom_quality_attributes_en_source = 'gemini' | 'fallback' so the UI can show a warning badge when Thai leaked into prompt_en.",
+    "update_study detects re-translation via `new_th != old_th or len(old_en) != len(new_th)`. If the owner changes only the ORDER of attrs (TH list permutation) but keeps same items, logic still re-translates unnecessarily — minor inefficiency, negligible at 5-attr cap.",
+    "regenerate_questions backfills translation only when custom_quality_attributes_en is falsy — correct. But if the EN list length drifts from TH (e.g. owner edited TH via a tool that bypassed PUT), the backfill condition won't fire. Consider also triggering when len(en) != len(th).",
+    "Public respondent page correctly strips owner fields via whitelist in get_public_study. custom_quality_attributes_en IS included (as part of brand dump) — good, required for EN mode rendering of PQ-CUSTOM prompts.",
+    "Logo img src is a hard-coded emergentagent.com CDN URL embedded in be-components.jsx (SWU_LOGO_URL). Acceptable for preview env but brittle against asset-server rotation; consider env-driven REACT_APP_BRAND_LOGO_URL for production."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_translation.py (new, 7 tests)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (topbar + toggle + persistence verified on 3 pages)"},
+  "test_credentials": "admin@swu.ac.th / admin123 (verified working)",
+  "seed_data_creation": "Tests auto-create TEST_TranslateBrand, TEST_RegenBrand, TEST_VisBrand then cleanup via DELETE. No residual data. Seed study 0a0a1f3b-54f9-4d06-addb-10a4c620d187 was only read (for frontend respondent smoke).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 13 delta — custom quality attr TH→EN auto-translation + SWUMKT logo in topbars + Public respondent topbar — is fully regressed by /app/backend/tests/test_brand_equity_translation.py (7 tests, all passing against the public URL). The translation fixture verifies: TH list produces non-Thai EN list of same length, prompt_en follows pattern '<Brand> is a brand that is <EN attr>', same-TH PUT preserves EN (no redundant Gemini call), new-TH PUT re-translates, regenerate works standalone. Visual Identity section auto-emits VIS-1..VIS-4 when identity.visual_assets includes kind=logo and kind=palette (or visual_palette hex list). Frontend: public respondent (/brand-equity/respond/{token}) now has [data-testid='be-resp-topbar'] with img.be-public-logo on welcome/question/demographics/thanks; [data-testid='be-resp-lang-th|en'] toggles update localStorage.be_lang and switch all labels+prompts. Authenticated pages (list, wizard, dashboard) use img.be-logo-img (legacy be-logo-dot fully removed). Dashboard route is /brand-equity/{id} (NOT /dashboard suffix) — use that for future runs.",
+  "rca of the issue": "No bugs found this iteration. All 3 features landed cleanly."
+}

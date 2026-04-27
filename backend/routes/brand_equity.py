@@ -294,6 +294,7 @@ class BrandSetup(BaseModel):
     competitors: List[str] = []
     industry_context: Optional[str] = None
     custom_quality_attributes: List[str] = []  # extra Likert-7 attributes per brand
+    custom_quality_attributes_en: List[str] = []  # auto-translated EN versions (parallel index)
 
 
 class VisualAsset(BaseModel):
@@ -458,13 +459,17 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
 
     # === Custom quality attributes (per-brand variation, optional) ===
     import re
-    for attr in (brand_setup.custom_quality_attributes or [])[:5]:
+    custom_attrs = (brand_setup.custom_quality_attributes or [])[:5]
+    custom_attrs_en = (brand_setup.custom_quality_attributes_en or [])
+    for idx, attr in enumerate(custom_attrs):
         attr_clean = attr.strip()
         if not attr_clean:
             continue
+        # Use translated EN version if available, else fall back to TH text
+        attr_en = (custom_attrs_en[idx] if idx < len(custom_attrs_en) and custom_attrs_en[idx] else attr_clean).strip()
         slug = re.sub(r"[^a-zA-Z0-9]", "", attr_clean).lower() or uuid.uuid4().hex[:4]
         # Brand attribute likert
-        questions.append(build({
+        q_brand = build({
             "id": f"PQ-CUSTOM-{slug.upper()[:8]}",
             "type": "likert_7",
             "kind": f"attribute_{slug}",
@@ -472,10 +477,13 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
             "axis_label": attr_clean,
             "prompt_t": f"{{brand}} เป็นแบรนด์ที่ {attr_clean}",
             "required": False,
-        }, "quality"))
+        }, "quality")
+        # Override EN prompt with proper translation
+        q_brand["prompt_en"] = f"{brand_setup.name} is a brand that is {attr_en}"
+        questions.append(q_brand)
         # Parallel competitor attribute likert (top-1 only to keep length manageable)
         if competitors_top:
-            questions.append(build({
+            q_comp = build({
                 "id": f"COMP-CUSTOM-{slug.upper()[:8]}",
                 "type": "likert_7",
                 "kind": f"competitor_{slug}",
@@ -484,7 +492,9 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
                 "compare_brand": "competitor",
                 "prompt_t": f"{{competitor}} เป็นแบรนด์ที่ {attr_clean}",
                 "required": False,
-            }, "quality", override_competitor=competitors_top[0]))
+            }, "quality", override_competitor=competitors_top[0])
+            q_comp["prompt_en"] = f"{competitors_top[0]} is a brand that is {attr_en}"
+            questions.append(q_comp)
     return questions
 
 
@@ -758,6 +768,38 @@ async def _gemini_call(prompt: str, system: str = "You are a brand strategy expe
     except Exception as e:
         logging.error(f"[BrandEquity] Gemini error: {e}")
         return ""
+
+
+async def _translate_attrs_to_en(attrs_th: List[str]) -> List[str]:
+    """Translate Thai brand-quality attributes to natural English adjectives/phrases.
+    Aligns 1:1 with input order. Falls back to original Thai on error.
+    """
+    cleaned = [a.strip() for a in (attrs_th or []) if a and a.strip()]
+    if not cleaned:
+        return []
+    try:
+        prompt = (
+            "Translate each of the following Thai brand quality attributes into a natural, "
+            "concise English adjective/phrase suitable for a survey statement of the form "
+            "'<Brand> is a brand that is <ATTR>'. Keep order, return ONE per line, "
+            "NO numbering, NO quotes, NO extra commentary.\n\n"
+            + "\n".join(cleaned)
+        )
+        out = await _gemini_call(
+            prompt,
+            system="You are a precise bilingual TH↔EN brand-marketing translator. "
+                   "Output EN translations only — one per line, in the exact order given.",
+        )
+        if not out:
+            return cleaned
+        lines = [ln.strip(" -•\t").strip() for ln in out.splitlines() if ln.strip()]
+        # Pad / truncate to match length
+        if len(lines) < len(cleaned):
+            lines = lines + cleaned[len(lines):]
+        return lines[:len(cleaned)]
+    except Exception as e:
+        logging.error(f"[BrandEquity] translate_attrs error: {e}")
+        return cleaned
 
 
 async def _ai_extract_visual_identity(brand_name: str, category: str,
@@ -1058,6 +1100,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     @brand_equity_router.post("/studies")
     async def create_study(data: StudyCreate, current_user=Depends(get_current_user)):
+        # Auto-translate custom quality attrs (TH → EN) so EN respondents see proper prompts
+        if data.brand.custom_quality_attributes and not data.brand.custom_quality_attributes_en:
+            data.brand.custom_quality_attributes_en = await _translate_attrs_to_en(data.brand.custom_quality_attributes)
         questions = _generate_questions_from_template(data.brand, data.identity)
         share_token = uuid.uuid4().hex[:12]
         study = {
@@ -1105,6 +1150,15 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(404, "Study not found")
         if study["owner_id"] != current_user.id:
             raise HTTPException(403, "Not authorized")
+        # Re-translate custom quality attrs if the TH list changed
+        if data.brand is not None:
+            new_th = data.brand.custom_quality_attributes or []
+            old_th = (study.get("brand") or {}).get("custom_quality_attributes") or []
+            old_en = (study.get("brand") or {}).get("custom_quality_attributes_en") or []
+            if new_th != old_th or len(old_en) != len(new_th):
+                data.brand.custom_quality_attributes_en = await _translate_attrs_to_en(new_th)
+            else:
+                data.brand.custom_quality_attributes_en = old_en
         update = {k: v.model_dump() if hasattr(v, "model_dump") else v
                   for k, v in data.model_dump().items() if v is not None}
         update["updated_at"] = _now_iso()
@@ -1133,9 +1187,14 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(403)
         brand = BrandSetup(**study["brand"])
         identity = IdentitySetup(**study["identity"])
+        # Ensure custom attrs have EN translation (lazy backfill for old studies)
+        if brand.custom_quality_attributes and not brand.custom_quality_attributes_en:
+            brand.custom_quality_attributes_en = await _translate_attrs_to_en(brand.custom_quality_attributes)
         questions = _generate_questions_from_template(brand, identity)
         await db.brand_studies.update_one({"id": study_id},
-            {"$set": {"questions": questions, "updated_at": _now_iso()}})
+            {"$set": {"questions": questions,
+                      "brand.custom_quality_attributes_en": brand.custom_quality_attributes_en,
+                      "updated_at": _now_iso()}})
         return {"questions": questions}
 
     class IdentityExtractRequest(BaseModel):
