@@ -37,13 +37,18 @@ const BrandEquityWizardPage = () => {
   const [creating, setCreating] = useState(false);
 
   const [brand, setBrand] = useState({ name: '', logo_url: '', category: '', competitors: [], industry_context: '' });
-  const [identity, setIdentity] = useState({ traits: [], brand_promise: '', pricing_tier: 'mid', archetype: '' });
+  const [identity, setIdentity] = useState({
+    traits: [], description: '', visual_assets: [],
+    brand_promise: '', pricing_tier: 'mid', archetype: '',
+    derived_traits: [], visual_palette: [], visual_keywords: [], ai_summary: '',
+  });
   const [segments, setSegments] = useState(['age', 'gender']);
   const [target, setTarget] = useState(100);
   const [questions, setQuestions] = useState([]);
   const [study, setStudy] = useState(null);
   const [expanded, setExpanded] = useState({ awareness: true, quality: false, identity: true, loyalty: false });
   const [competitorInput, setCompetitorInput] = useState('');
+  const [extractingIdentity, setExtractingIdentity] = useState(false);
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -56,7 +61,11 @@ const BrandEquityWizardPage = () => {
       const s = r.data;
       setStudy(s);
       setBrand(s.brand);
-      setIdentity(s.identity);
+      setIdentity({
+        traits: [], description: '', visual_assets: [],
+        derived_traits: [], visual_palette: [], visual_keywords: [], ai_summary: '',
+        ...s.identity,
+      });
       setSegments(s.segments_to_capture || []);
       setTarget(s.target_responses || 100);
       setQuestions(s.questions || []);
@@ -68,7 +77,10 @@ const BrandEquityWizardPage = () => {
   };
 
   const validStep0 = brand.name?.trim() && brand.category?.trim() && brand.competitors.length >= 1;
-  const validStep1 = identity.traits.length >= 3;
+  // Step 1 valid if EITHER user picked >=3 traits OR provided description OR uploaded an image
+  const validStep1 = (identity.traits || []).length >= 3
+                  || (identity.description || '').trim().length >= 20
+                  || (identity.visual_assets || []).length >= 1;
   const validStep2 = segments.length >= 1;
 
   const addCompetitor = () => {
@@ -82,6 +94,81 @@ const BrandEquityWizardPage = () => {
   const toggleTrait = (t) => {
     if (identity.traits.includes(t)) setIdentity({ ...identity, traits: identity.traits.filter(x => x !== t) });
     else if (identity.traits.length < 8) setIdentity({ ...identity, traits: [...identity.traits, t] });
+  };
+
+  // ---- Visual asset upload (base64 in-memory) ----
+  const onUploadImages = async (filesList, kind = 'design') => {
+    const files = Array.from(filesList || []);
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    const MAX = 1024 * 1024; // 1 MB per image
+    const newAssets = [];
+    for (const f of files) {
+      if (!allowed.includes(f.type)) {
+        toast.error(`${f.name}: รองรับเฉพาะ PNG / JPEG / WEBP`);
+        continue;
+      }
+      if (f.size > MAX) {
+        toast.error(`${f.name}: เกิน 1MB (resize ก่อนนะครับ)`);
+        continue;
+      }
+      const b64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',', 2)[1]);
+        r.onerror = rej;
+        r.readAsDataURL(f);
+      });
+      newAssets.push({ kind, image_base64: b64, mime_type: f.type, note: f.name });
+    }
+    if (newAssets.length) {
+      setIdentity(prev => ({ ...prev, visual_assets: [...(prev.visual_assets || []), ...newAssets].slice(0, 5) }));
+      toast.success(`อัปโหลด ${newAssets.length} ภาพ`);
+    }
+  };
+
+  const removeAsset = (idx) => {
+    setIdentity(prev => ({ ...prev, visual_assets: prev.visual_assets.filter((_, i) => i !== idx) }));
+  };
+
+  const setAssetKind = (idx, kind) => {
+    setIdentity(prev => ({
+      ...prev,
+      visual_assets: prev.visual_assets.map((a, i) => i === idx ? { ...a, kind } : a),
+    }));
+  };
+
+  const runAIExtract = async () => {
+    if (!identity.description?.trim() && !(identity.visual_assets || []).length && !identity.traits.length) {
+      toast.error('กรอก description หรืออัปโหลดภาพอย่างน้อย 1 รายการก่อน');
+      return;
+    }
+    setExtractingIdentity(true);
+    try {
+      const r = await axios.post(`${API}/brand-equity/extract-identity`, {
+        brand_name: brand.name || 'Brand',
+        category: brand.category,
+        description: identity.description || '',
+        traits: identity.traits || [],
+        brand_promise: identity.brand_promise,
+        pricing_tier: identity.pricing_tier,
+        visual_assets: identity.visual_assets || [],
+      }, authH);
+      const d = r.data;
+      // Merge derived into local identity (don't blow away user's chosen traits)
+      const mergedTraits = Array.from(new Set([...(identity.traits || []), ...(d.derived_traits || [])])).slice(0, 12);
+      setIdentity(prev => ({
+        ...prev,
+        traits: mergedTraits,
+        derived_traits: d.derived_traits || [],
+        visual_palette: d.visual_palette || [],
+        visual_keywords: d.visual_keywords || [],
+        ai_summary: d.summary || '',
+        archetype: d.archetype || prev.archetype,
+      }));
+      toast.success(`AI สร้าง ${(d.derived_traits || []).length} traits + palette + keywords`);
+    } catch (e) {
+      toast.error('AI extract ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+    }
+    setExtractingIdentity(false);
   };
 
   const toggleSegment = (s) => {
@@ -233,7 +320,7 @@ const BrandEquityWizardPage = () => {
           </div>
         )}
 
-        {/* STEP 1 - Identity */}
+        {/* STEP 1 - Identity (free-form text + visuals + AI-derive) */}
         {step === 1 && (
           <div className="be-wiz-body" data-testid="be-wizard-step-1">
             <div>
@@ -241,16 +328,146 @@ const BrandEquityWizardPage = () => {
                 <div className="be-eyebrow" style={{ marginBottom: 10 }}>STEP · 02 / 04</div>
                 <h1 className="be-h1">Brand identity ที่ตั้งใจให้เป็น</h1>
                 <div className="be-muted be-small" style={{ marginTop: 8, maxWidth: 580 }}>
-                  สิ่งที่แบรนด์อยากให้ผู้บริโภครู้สึก — เราจะใช้เปรียบเทียบกับ image ที่ผู้ตอบรับรู้จริง
-                  ในขั้น Identity vs Image
+                  เล่าด้วยภาษาคุณเอง + แนบรูป (logo, palette, design) — AI จะวิเคราะห์
+                  สี, mood, archetype, traits ออกมาให้ จากนั้นใช้เปรียบเทียบกับ image ที่ผู้ตอบรับรู้จริง
                 </div>
               </div>
 
-              <div className="be-card" style={{ marginBottom: 16 }}>
-                <label className="be-label">เลือก Identity Traits * (3-8 ข้อ)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}
+              {/* FREE-FORM DESCRIPTION */}
+              <div className="be-card" style={{ marginBottom: 14 }}>
+                <label className="be-label">อธิบาย brand identity ด้วยภาษาตัวเอง</label>
+                <textarea className="be-textarea" value={identity.description || ''}
+                          onChange={e => setIdentity({ ...identity, description: e.target.value })}
+                          placeholder="เช่น 'แบรนด์เน้น craft + slow living · มีกลิ่นอายญี่ปุ่นแต่ไทยร่วมสมัย · ลูกค้ารู้สึกอบอุ่นแต่ก็ดู premium · เราไม่อยากดูเหมือน Starbucks ที่ commercial เกินไป'"
+                          style={{ minHeight: 120 }}
+                          data-testid="be-wizard-identity-desc"/>
+                <div className="be-help">ยิ่งละเอียด AI ยิ่งวิเคราะห์ได้แม่น (อย่างน้อย 20 ตัวอักษร)</div>
+              </div>
+
+              {/* VISUAL ASSETS UPLOAD */}
+              <div className="be-card" style={{ marginBottom: 14 }}>
+                <label className="be-label">Visual identity · อัปโหลดรูป (logo, palette, design — สูงสุด 5)</label>
+                <input type="file" multiple accept="image/png,image/jpeg,image/webp"
+                       onChange={e => onUploadImages(e.target.files, 'design')}
+                       style={{ display: 'block', marginBottom: 12 }}
+                       data-testid="be-wizard-identity-upload"/>
+                <div className="be-help" style={{ marginBottom: 12 }}>
+                  PNG / JPEG / WEBP · &lt; 1MB ต่อไฟล์ · ระบุประเภทแต่ละภาพหลังอัปโหลด
+                </div>
+                {(identity.visual_assets || []).length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}
+                       data-testid="be-wizard-identity-asset-list">
+                    {identity.visual_assets.map((a, i) => (
+                      <div key={i} style={{ border: '1px solid var(--rule-strong)', background: 'var(--surface)', padding: 8 }}>
+                        <div style={{ width: '100%', height: 110, background: 'var(--paper-2)',
+                                       display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          <img src={`data:${a.mime_type};base64,${a.image_base64}`}
+                               alt={a.note || ''} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}/>
+                        </div>
+                        <select value={a.kind}
+                                onChange={e => setAssetKind(i, e.target.value)}
+                                className="be-mono"
+                                style={{ width: '100%', padding: '4px 6px', fontSize: 10.5,
+                                          marginTop: 6, background: 'var(--paper)', border: '1px solid var(--rule)',
+                                          textTransform: 'uppercase', letterSpacing: '0.06em' }}
+                                data-testid={`be-wizard-asset-kind-${i}`}>
+                          <option value="logo">LOGO</option>
+                          <option value="palette">COLOR PALETTE</option>
+                          <option value="design">DESIGN SAMPLE</option>
+                          <option value="ad">ADVERTISEMENT</option>
+                          <option value="other">OTHER</option>
+                        </select>
+                        <div className="be-tiny be-muted" style={{ marginTop: 4, overflow: 'hidden',
+                              textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.note}</div>
+                        <button className="be-btn be-btn-ghost be-btn-sm" onClick={() => removeAsset(i)}
+                                style={{ width: '100%', marginTop: 6, color: 'var(--be-red)' }}
+                                data-testid={`be-wizard-asset-remove-${i}`}>
+                          <Icon name="trash" size={10}/>ลบ
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* AI EXTRACT BUTTON */}
+              <div className="be-card" style={{ marginBottom: 14, background: '#FFFAF0', borderColor: 'var(--be-red)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div>
+                    <div className="be-eyebrow"><span className="be-dot-sm be-pulse" style={{ background: 'var(--be-red)' }}/>AI VISUAL IDENTITY EXTRACT</div>
+                    <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.55 }}>
+                      ให้ AI วิเคราะห์ description + ภาพที่อัปโหลด → คืน traits, palette, keywords, archetype
+                    </div>
+                  </div>
+                  <button className="be-btn be-btn-red" onClick={runAIExtract}
+                          disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length)}
+                          data-testid="be-wizard-identity-ai-run">
+                    <Icon name="sparkle" size={11}/>{extractingIdentity ? 'กำลังวิเคราะห์…' : 'AI วิเคราะห์'}
+                  </button>
+                </div>
+
+                {/* Show derived results */}
+                {(identity.derived_traits?.length > 0 || identity.visual_palette?.length > 0) && (
+                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed var(--rule)' }}
+                       data-testid="be-wizard-identity-ai-result">
+                    {identity.ai_summary && (
+                      <div className="be-serif" style={{ fontSize: 13.5, fontStyle: 'italic',
+                              color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 12 }}>
+                        "{identity.ai_summary}"
+                      </div>
+                    )}
+                    {identity.archetype && (
+                      <div style={{ marginBottom: 10 }}>
+                        <span className="be-eyebrow">ARCHETYPE</span>
+                        <span className="be-chip" style={{ marginLeft: 8, background: 'var(--ink)', color: 'var(--paper)' }}>
+                          {identity.archetype}
+                        </span>
+                      </div>
+                    )}
+                    {identity.visual_palette?.length > 0 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <span className="be-eyebrow">PALETTE</span>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          {identity.visual_palette.map((hex, i) => (
+                            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <div style={{ width: 36, height: 36, background: hex, border: '1px solid var(--rule-strong)' }}/>
+                              <span className="be-mono be-tiny" style={{ marginTop: 3 }}>{hex}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {identity.visual_keywords?.length > 0 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <span className="be-eyebrow">VISUAL KEYWORDS</span>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          {identity.visual_keywords.map((k, i) => <span key={i} className="be-chip">{k}</span>)}
+                        </div>
+                      </div>
+                    )}
+                    {identity.derived_traits?.length > 0 && (
+                      <div>
+                        <span className="be-eyebrow">DERIVED TRAITS · merged into your identity</span>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          {identity.derived_traits.map((t, i) => (
+                            <span key={i} className="be-chip" style={{ borderColor: 'var(--be-red)', color: 'var(--be-red)' }}>{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* TRAITS — quick-pick + show AI merged + manually editable */}
+              <div className="be-card" style={{ marginBottom: 14 }}>
+                <label className="be-label">Identity traits final · (จะใช้เปรียบเทียบกับ image ที่ผู้ตอบรับรู้)</label>
+                <div className="be-help" style={{ marginBottom: 8 }}>
+                  เลือกเอง หรือให้ AI สร้างให้แล้วปรับเพิ่ม-ลด · อย่างน้อย 3 ข้อ
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}
                      data-testid="be-wizard-traits">
-                  {DEFAULT_TRAITS.map(t => (
+                  {Array.from(new Set([...DEFAULT_TRAITS, ...(identity.traits || [])])).map(t => (
                     <span key={t}
                           className={'be-trait-toggle ' + (identity.traits.includes(t) ? 'sel' : '')}
                           onClick={() => toggleTrait(t)}
@@ -260,12 +477,15 @@ const BrandEquityWizardPage = () => {
                     </span>
                   ))}
                 </div>
-                <div className="be-help">เลือกแล้ว {identity.traits.length} / 8</div>
+                <div className="be-help" style={{ marginTop: 8 }}>
+                  เลือกแล้ว {identity.traits.length} / 8
+                  {identity.traits.length < 3 && <span style={{ color: 'var(--be-red)', marginLeft: 8 }}>· ต้องการอย่างน้อย 3</span>}
+                </div>
               </div>
 
-              <div className="be-card" style={{ marginBottom: 16 }}>
+              <div className="be-card" style={{ marginBottom: 14 }}>
                 <label className="be-label">Brand promise (1 ประโยค)</label>
-                <input className="be-input" value={identity.brand_promise}
+                <input className="be-input" value={identity.brand_promise || ''}
                        onChange={e => setIdentity({ ...identity, brand_promise: e.target.value })}
                        placeholder="เช่น Slow coffee, made with care"
                        data-testid="be-wizard-promise"/>
@@ -286,10 +506,15 @@ const BrandEquityWizardPage = () => {
               </div>
             </div>
             <div className="be-wiz-side">
-              <h4>Identity vs Image (ที่ตั้งใจ vs ที่ถูกรับรู้)</h4>
+              <h4>Identity vs Image</h4>
+              <div className="be-small be-muted" style={{ lineHeight: 1.6, marginBottom: 14 }}>
+                ใน dashboard เราจะ <strong>match</strong> traits ที่คุณตั้งใจ (รวม AI derived) กับ open-end
+                responses ของผู้ตอบ → หา <strong>aligned · lost · unintended</strong> traits
+              </div>
+              <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>How AI uses visuals</h4>
               <div className="be-small be-muted" style={{ lineHeight: 1.6 }}>
-                ใน dashboard เราจะ <strong>match</strong> traits ที่คุณเลือกกับ open-end responses
-                ของผู้ตอบ เพื่อหา <strong>aligned · lost · unintended</strong> traits
+                Gemini 2.5 Flash อ่านภาพ + ข้อความ → derive สี, mood, design style, archetype
+                ที่คุณอาจไม่ได้พิมพ์ตรงๆ
               </div>
             </div>
           </div>

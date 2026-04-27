@@ -640,6 +640,73 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
         </div>
       ) : (
         <>
+          {/* Visual identity setup (AI-derived from owner inputs) */}
+          {(study.identity?.ai_summary || (study.identity?.visual_palette || []).length > 0) && (
+            <div className="be-card" style={{ padding: 22, marginBottom: 16,
+                  background: 'var(--paper-2)' }}
+                 data-testid="be-visual-identity-panel">
+              <div className="be-eyebrow" style={{ marginBottom: 10 }}>
+                <span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>
+                BRAND VISUAL IDENTITY · what the brand intended
+                {study.identity?.archetype && (
+                  <span className="be-chip" style={{ marginLeft: 10, background: 'var(--ink)', color: 'var(--paper)' }}>
+                    {study.identity.archetype}
+                  </span>
+                )}
+              </div>
+              {study.identity?.ai_summary && (
+                <div className="be-serif" style={{ fontSize: 14, fontStyle: 'italic',
+                       color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 14 }}>
+                  "{study.identity.ai_summary}"
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {(study.identity?.visual_palette || []).length > 0 && (
+                  <div>
+                    <div className="be-mono be-tiny be-muted" style={{ marginBottom: 8 }}>PALETTE</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {study.identity.visual_palette.map((hex, i) => (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div style={{ width: 38, height: 38, background: hex, border: '1px solid var(--rule-strong)' }}/>
+                          <span className="be-mono be-tiny" style={{ marginTop: 3 }}>{hex}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(study.identity?.visual_keywords || []).length > 0 && (
+                  <div>
+                    <div className="be-mono be-tiny be-muted" style={{ marginBottom: 8 }}>VISUAL KEYWORDS</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {study.identity.visual_keywords.map((k, i) => <span key={i} className="be-chip">{k}</span>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {(study.identity?.visual_assets || []).length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div className="be-mono be-tiny be-muted" style={{ marginBottom: 8 }}>UPLOADED ASSETS · {study.identity.visual_assets.length}</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {study.identity.visual_assets.map((a, i) => (
+                      <div key={i} style={{ width: 80, height: 80, background: 'var(--surface)',
+                              border: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              overflow: 'hidden', position: 'relative' }}>
+                        <img src={`data:${a.mime_type};base64,${a.image_base64}`}
+                             alt={a.note || ''}
+                             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}/>
+                        <span className="be-mono be-tiny" style={{ position: 'absolute', bottom: 0, left: 0, right: 0,
+                                background: 'rgba(255,255,255,0.92)', textAlign: 'center', padding: '1px 0',
+                                textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-3)' }}>
+                          {a.kind}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="be-card" style={{ padding: 24 }}>
             <IdentityImageMap intended={intended} image={imageCol} statusMap={statusMap}/>
             {ii.narrative && (

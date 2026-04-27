@@ -128,11 +128,25 @@ class BrandSetup(BaseModel):
     industry_context: Optional[str] = None
 
 
+class VisualAsset(BaseModel):
+    kind: str = "design"  # logo | palette | design | ad | other
+    image_base64: str  # raw base64, no data: prefix
+    mime_type: str = "image/png"  # image/png | image/jpeg | image/webp
+    note: Optional[str] = None
+
+
 class IdentitySetup(BaseModel):
     traits: List[str] = []
+    description: Optional[str] = None  # free-form: what the brand wants to be
+    visual_assets: List[VisualAsset] = []  # uploaded images (logo, palette, design, etc.)
     brand_promise: Optional[str] = None
     pricing_tier: Optional[str] = "mid"  # budget | mid | premium | luxury
     archetype: Optional[str] = None
+    # AI-derived (computed from description + visual_assets)
+    derived_traits: List[str] = []
+    visual_palette: List[str] = []  # hex colors
+    visual_keywords: List[str] = []
+    ai_summary: Optional[str] = None
 
 
 class StudyCreate(BaseModel):
@@ -397,6 +411,96 @@ async def _gemini_call(prompt: str, system: str = "You are a brand strategy expe
     except Exception as e:
         logging.error(f"[BrandEquity] Gemini error: {e}")
         return ""
+
+
+async def _ai_extract_visual_identity(brand_name: str, category: str,
+                                       description: str, traits: List[str],
+                                       brand_promise: Optional[str],
+                                       pricing_tier: Optional[str],
+                                       visual_assets: List[dict]) -> dict:
+    """Multimodal Gemini: combine free-form text + uploaded images
+    (logo, palette, design samples) into a structured visual identity.
+
+    Returns:
+      {
+        "derived_traits":   ["Modern", "Artisanal", ...],     # 5-10 trait words
+        "visual_palette":   ["#0E5538", "#7DDDB1", ...],       # hex codes from imagery
+        "visual_keywords":  ["minimalist", "earthy", ...],     # mood/style descriptors
+        "design_style":     "...",                             # short label
+        "archetype":        "...",                             # Aaker-style archetype
+        "summary":          "..."                              # 2-3 sentence brand essence
+      }
+    """
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            return {}
+
+        prompt = f"""คุณคือ senior brand strategist + visual designer
+วิเคราะห์ identity ของแบรนด์ "{brand_name}" (category: {category}) จากข้อมูลทั้งหมด:
+
+Free-form description from owner:
+\"\"\"{description or '(none)'}\"\"\"
+
+Brand promise: {brand_promise or '(none)'}
+Pricing tier: {pricing_tier or 'mid'}
+User-tagged traits: {', '.join(traits) if traits else '(none)'}
+
+แนบมา {len(visual_assets)} ภาพ (logo, color palette, หรือ design samples)
+"""
+        if visual_assets:
+            asset_lines = []
+            for i, a in enumerate(visual_assets):
+                asset_lines.append(f"  Image #{i+1}: kind={a.get('kind')}"
+                                   + (f" · note: {a.get('note')}" if a.get('note') else ""))
+            prompt += "Asset descriptions:\n" + "\n".join(asset_lines) + "\n"
+
+        prompt += """
+จงสรุปว่าแบรนด์นี้ตั้งใจสื่อ aspect ใดบ้าง โดยพิจารณาทั้ง text และภาพ (สี · ฟอนต์ · mood · composition · layout)
+
+Return JSON ONLY (no markdown):
+{
+  "derived_traits": ["Modern", "Artisanal", ...],
+  "visual_palette": ["#hex1", "#hex2", "#hex3"],
+  "visual_keywords": ["minimalist", "earthy", "premium", ...],
+  "design_style": "...",
+  "archetype": "...",
+  "summary": "2-3 ประโยคอธิบาย brand essence ที่สื่อจาก text + visuals"
+}
+"""
+
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"brand-identity-{uuid.uuid4().hex[:8]}",
+            system_message="You are a senior brand strategist analyzing brand identity from descriptions and visual assets. Reply in Thai when appropriate, keep traits as concise English title-case words.",
+        ).with_model("gemini", "gemini-2.5-flash")
+
+        # Attach up to 5 images to keep payload reasonable
+        file_contents = []
+        for a in (visual_assets or [])[:5]:
+            b64 = a.get("image_base64") or ""
+            # Strip data URL prefix if present
+            if b64.startswith("data:"):
+                b64 = b64.split(",", 1)[-1]
+            if b64:
+                file_contents.append(ImageContent(image_base64=b64))
+
+        msg = UserMessage(text=prompt, file_contents=file_contents) if file_contents \
+              else UserMessage(text=prompt)
+        resp = await chat.send_message(msg)
+        text = resp if isinstance(resp, str) else str(resp)
+
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```", 2)[1]
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+            cleaned = cleaned.rsplit("```", 1)[0]
+        return json.loads(cleaned.strip())
+    except Exception as e:
+        logging.exception(f"[BrandEquity] visual identity extract failed: {e}")
+        return {}
 
 
 async def _ai_normalize_open(responses: List[str], kind: str, brand_list: List[str], category: str = "") -> dict:
@@ -686,6 +790,73 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         await db.brand_studies.update_one({"id": study_id},
             {"$set": {"questions": questions, "updated_at": _now_iso()}})
         return {"questions": questions}
+
+    class IdentityExtractRequest(BaseModel):
+        brand_name: str
+        category: Optional[str] = ""
+        description: Optional[str] = ""
+        traits: List[str] = []
+        brand_promise: Optional[str] = None
+        pricing_tier: Optional[str] = "mid"
+        visual_assets: List[VisualAsset] = []
+
+    @brand_equity_router.post("/extract-identity")
+    async def extract_identity(payload: IdentityExtractRequest, current_user=Depends(get_current_user)):
+        """Stateless: take free-form text + uploaded images and return derived identity.
+        Used by the wizard BEFORE study creation. Owner just merges result into draft."""
+        if not (payload.description or payload.visual_assets or payload.traits):
+            raise HTTPException(400, "Provide description, traits, or at least 1 visual asset")
+        derived = await _ai_extract_visual_identity(
+            brand_name=payload.brand_name,
+            category=payload.category or "",
+            description=payload.description or "",
+            traits=payload.traits,
+            brand_promise=payload.brand_promise,
+            pricing_tier=payload.pricing_tier,
+            visual_assets=[a.model_dump() for a in payload.visual_assets],
+        )
+        if not derived:
+            raise HTTPException(502, "AI extraction failed. Try simplifying description or fewer images.")
+        return derived
+
+    @brand_equity_router.post("/studies/{study_id}/extract-visual-identity")
+    async def extract_visual_identity(study_id: str, current_user=Depends(get_current_user)):
+        """Run multimodal LLM over the study's identity (description + visual_assets)
+        to derive traits, palette, keywords. Updates study.identity with derived_*."""
+        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if study["owner_id"] != current_user.id:
+            raise HTTPException(403, "Not authorized")
+        ident = study.get("identity", {}) or {}
+        if not (ident.get("description") or ident.get("visual_assets")):
+            raise HTTPException(400, "Provide identity.description or identity.visual_assets first")
+        brand = study.get("brand", {}) or {}
+        derived = await _ai_extract_visual_identity(
+            brand_name=brand.get("name", ""),
+            category=brand.get("category", ""),
+            description=ident.get("description") or "",
+            traits=ident.get("traits") or [],
+            brand_promise=ident.get("brand_promise"),
+            pricing_tier=ident.get("pricing_tier"),
+            visual_assets=ident.get("visual_assets") or [],
+        )
+        if not derived:
+            raise HTTPException(502, "AI extraction returned no result. Check description/images and try again.")
+        # Merge derived back into identity (don't overwrite explicit traits unless empty)
+        new_traits = list(dict.fromkeys((ident.get("traits") or []) + (derived.get("derived_traits") or [])))
+        update = {
+            "identity.derived_traits": derived.get("derived_traits") or [],
+            "identity.visual_palette": derived.get("visual_palette") or [],
+            "identity.visual_keywords": derived.get("visual_keywords") or [],
+            "identity.ai_summary": derived.get("summary") or "",
+            "identity.archetype": derived.get("archetype") or ident.get("archetype"),
+            "identity.traits": new_traits[:12],
+            "updated_at": _now_iso(),
+        }
+        await db.brand_studies.update_one({"id": study_id}, {"$set": update})
+        out = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        return {"identity": out.get("identity"), "derived": derived}
 
     # ---- Public respondent flow ----
 

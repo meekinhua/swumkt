@@ -1,0 +1,40 @@
+{
+  "summary": "Tested Brand Equity v2 multimodal identity features (free-form text + image upload + Gemini 2.5 Flash extract). Backend pytest: 12/12 PASS (stateless /extract-identity auth+400+desc/images/both/data-URL prefix, per-study /extract-visual-identity owner-ok/403/400, IdentitySetup persistence on create+PUT for description/visual_assets/derived_traits/visual_palette/visual_keywords/ai_summary, normalization sanity). Frontend wizard step 0→1 flow works end-to-end: be-wizard-identity-desc/upload/ai-run/ai-result testids all present; AI returns CREATOR archetype + 7 derived traits + 4-color palette + 9 keywords + Thai summary in ~7s; description-only validation correctly unlocks Next (proceeds to step 2). HOWEVER: dashboard be-visual-identity-panel is gated behind the wrong condition — it's rendered inside the else-branch of the AI identity_image check, so the panel never shows until master AI analysis has run, even though its data (ai_summary/visual_palette/visual_keywords) is populated by a completely separate endpoint (/extract-visual-identity).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "BrandEquityDashboardPage · SectionIdentity",
+        "issue": "be-visual-identity-panel is nested inside the `else` branch of `!ai?.identity_image || Object.keys(ii).length === 0` ternary (file /app/frontend/src/pages/brand-equity/BrandEquityDashboardPage.jsx lines 634-707). This hides the owner-side visual identity panel (palette/keywords/ai_summary/archetype/uploaded assets) until master AI insights for identity_image have been generated. Verified via API that study 0a0a1f3b-... has ai_summary(328 chars), palette(4 hex), keywords(9) populated by /extract-visual-identity, but the panel does NOT appear in DOM — only the 'AI ANALYSIS PENDING' placeholder shows. Fix: lift the panel block (lines 643-707) OUT of the ternary, render it directly after `<div className='be-section-head'>` so it shows whenever the owner has run visual-identity extract, regardless of AI identity_image status.",
+        "selector": "[data-testid=\"be-visual-identity-panel\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_visual_identity.py",
+    "/app/test_reports/pytest/brand_equity_visual_identity.xml"
+  ],
+  "action_items": [
+    "HIGH: Move be-visual-identity-panel rendering (BrandEquityDashboardPage.jsx lines 643-707) outside the `!ai?.identity_image || Object.keys(ii).length===0` ternary so it renders above the Identity-Image map regardless of master-AI status. Current placement defeats the whole purpose — the panel is shown only *after* master AI runs, but its data comes from the separate /extract-visual-identity endpoint that the wizard calls before any responses are collected."
+  ],
+  "critical_code_review_comments": [
+    "brand_equity.py now 1061 lines — at/past 700-line threshold. Recommend splitting into models.py + ai.py + stats.py + routes.py. Not blocking, but future maintenance will hurt.",
+    "_ai_extract_visual_identity, _ai_normalize_open, _ai_extract_themes, _ai_master_insights all repeat the ```json fence-stripping + json.loads block. Extract `_parse_json_response(text)` helper.",
+    "/extract-identity accepts description+traits+assets, but if only `traits` are provided (no description/assets) the multimodal LLM gets called with empty description and no images — will still succeed but wastes a Gemini call. Consider routing traits-only requests to a cheaper text-only path.",
+    "Image base64 is stored inline in MongoDB (study.identity.visual_assets[].image_base64). At 5 × 1MB this bloats the study doc to ~5MB and every GET /studies/{id} ships it. Acceptable for MVP (1MB cap enforced client-side) but plan S3/GridFS migration before scale.",
+    "Dashboard endpoint returns visual_assets with full base64 — dashboard img tags render from `data:${mime};base64,...`. Preview loads <5s per E1's note, confirmed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_visual_identity.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "83%"},
+  "test_credentials": "admin@swu.ac.th / admin123 (verified)",
+  "seed_data_creation": "Modified existing TEST_UIBrand study 0a0a1f3b-54f9-4d06-addb-10a4c620d187 — added identity.description and ran /extract-visual-identity to populate ai_summary + palette + keywords. Also created short-lived TEST_WizUIBrand via wizard E2E (not cleaned up — main agent can delete if desired). Backend test file creates/cleans its own TEST_VisualIdentityBrand and TEST_Empty studies.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests in /app/backend/tests/test_brand_equity_visual_identity.py (12 tests, ~63s incl. multiple Gemini calls). Use REACT_APP_BACKEND_URL env var. All 3 new backend endpoints verified including 400/403 paths and data-URL prefix stripping. Frontend: wizard step 1 AI extract works end-to-end. Remaining bug is purely a JSX placement issue in BrandEquityDashboardPage.jsx line 643 — trivial fix. After fix, re-run the Playwright scroll-to-panel check on study 0a0a1f3b-... to confirm panel renders with 4-color palette and 9-keyword chips.",
+  "rca of the issue": "The be-visual-identity-panel was placed inside `{condition ? <AI-pending-placeholder/> : (<><panel/><old-identity-map/></>)}`. The condition `!ai?.identity_image || Object.keys(ii).length===0` is true whenever master AI has not yet generated the identity_image mapping — which is independent of whether the owner has extracted visual identity. Root cause: mixed two different data sources (owner-intent derived via /extract-visual-identity vs consumer-perception derived via /ai-analyze) into a single conditional branch. Mitigation: render the owner-intent panel unconditionally (with its own `study.identity?.ai_summary || visual_palette.length>0` guard that already exists on line 644) outside the AI-map ternary."
+}
