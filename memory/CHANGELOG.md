@@ -1,6 +1,21 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-04-28 — 🎨 Conjoint Module: Visual Theme Unification with Brand Equity
+- Conjoint Analysis module ทุก 5 หน้าตอนนี้ใช้ design system เดียวกับ Brand Equity (Editorial / Swiss / Plex stack)
+- **Reused** `brand-equity-styles.css` เป็น single source of truth (no rename, no duplicate)
+- **New CSS scope** `.be-conjoint-page` + 8 override rules ภายใน `.be-root` ที่ flatten shadcn corners, ลบ shadows, แปลง blue/purple buttons → ink/red, แทน gradient bg ด้วย paper-2
+- **Pages restyled** (shell only — chart/table/form logic untouched):
+  - `ConjointAnalysisTool.js` — list page header สวยขึ้น, BeTopbar, `be-btn-red` CTA
+  - `ConjointDesignPage.js` — wizard wrapped, BE topbar
+  - `ConjointResultsPage.js` — dashboard + `insufficient_data` state ใช้ be-card / be-eyebrow / be-data
+  - `ConjointQualitativePage.js` — wrapped
+  - `ConjointSurveyPage.js` — PUBLIC: local `PublicTopbar` (logo SWUMKT + 'CONJOINT ANALYSIS · ANONYMOUS'), loading/notfound/submitted states ทั้งหมดใช้ be-card
+- **Scope isolation verified**: CSS overrides scoped ภายใน `.be-root` เท่านั้น, ไม่ leak ไปกระทบหน้า non-Conjoint, non-BE
+- **Testing**: iteration_17 · 7/7 frontend e2e pass · BE regression OK · 0 UI bugs · 0 console errors
+
+
+
 ## 2026-04-27 (later 3) — 🌐 Brand Equity: Public Showcase Mode
 - **New `is_public_showcase: bool`** field on study (default false). Owner toggles via existing `PUT /api/brand-equity/studies/{id}`
 - **New endpoint** `GET /api/brand-equity/showcase/{share_token}` — public, no auth:
