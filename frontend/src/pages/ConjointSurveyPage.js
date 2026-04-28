@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
+import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { API } from '@/App';
@@ -128,63 +130,81 @@ const ConjointSurveyPage = () => {
     return level;
   };
 
+  // Public top bar — keeps the Conjoint survey visually anchored to the SWU MKT system
+  const PublicTopbar = () => (
+    <div className="be-public-topbar" data-testid="conjoint-resp-topbar">
+      <div className="be-public-brand">
+        <img src={SWU_LOGO_URL} alt="SWUMKT Logo" className="be-public-logo"/>
+        <span className="be-public-text">
+          <span className="be-public-name">SWU · Marketing Research</span>
+          <span className="be-public-sub be-mono">CONJOINT ANALYSIS · ANONYMOUS</span>
+        </span>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+      <div className="be-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="be-mono be-tiny be-muted" style={{ letterSpacing: '0.18em' }}>LOADING SURVEY…</div>
       </div>
     );
   }
 
   if (!survey) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <Card className="p-8 max-w-lg text-center">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">ไม่พบแบบสอบถาม</h2>
-          <div className="text-left bg-gray-50 p-4 rounded-lg mb-4">
-            <p className="text-sm text-gray-700 mb-2">
-              <strong>🔍 ข้อมูลการ Debug:</strong>
-            </p>
-            <p className="text-xs text-gray-600 font-mono break-all mb-2">
-              Study ID: {studyId}
-            </p>
-            <p className="text-xs text-gray-600">
-              กรุณาตรวจสอบ Console (F12) เพื่อดูรายละเอียด error
-            </p>
+      <div className="be-root">
+        <PublicTopbar/>
+        <div className="be-conjoint-page" style={{ maxWidth: 640, paddingTop: 60 }}>
+          <div className="be-card" style={{ padding: 40, textAlign: 'center' }}>
+            <div className="be-eyebrow" style={{ marginBottom: 14, justifyContent: 'center' }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>SURVEY NOT FOUND
+            </div>
+            <h2 className="be-h2" style={{ fontSize: 22, marginBottom: 16, fontFamily: 'IBM Plex Serif' }}>
+              ไม่พบแบบสอบถาม
+            </h2>
+            <div className="be-mono be-tiny be-muted" style={{ marginBottom: 16 }}>
+              STUDY ID · {studyId}
+            </div>
+            <div className="be-small be-muted" style={{ textAlign: 'left', lineHeight: 1.7, marginBottom: 16 }}>
+              <strong>สาเหตุที่เป็นไปได้:</strong>
+              <ul style={{ listStyle: 'disc', paddingLeft: 22, marginTop: 6 }}>
+                <li>แบบสอบถามยังไม่เปิดรับคำตอบ</li>
+                <li>Study ID ไม่ถูกต้อง</li>
+                <li>แบบสอบถามถูกลบหรือถูกปิดไปแล้ว</li>
+                <li>ปัญหาการเชื่อมต่อเครือข่าย</li>
+              </ul>
+            </div>
+            <button onClick={() => window.location.reload()} className="be-btn be-btn-primary">
+              ลองใหม่อีกครั้ง
+            </button>
           </div>
-          <div className="text-sm text-gray-700 space-y-2">
-            <p>💡 <strong>สาเหตุที่เป็นไปได้:</strong></p>
-            <ul className="text-left list-disc list-inside space-y-1 text-gray-600">
-              <li>แบบสอบถามยังไม่เปิดรับคำตอบ</li>
-              <li>Study ID ไม่ถูกต้อง</li>
-              <li>แบบสอบถามถูกลบหรือถูกปิดไปแล้ว</li>
-              <li>ปัญหาการเชื่อมต่อเครือข่าย</li>
-            </ul>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            ลองใหม่อีกครั้ง
-          </button>
-        </Card>
+        </div>
       </div>
     );
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-        <Card className="p-8 max-w-md text-center bg-white border-2 border-green-300">
-          <CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-6" />
-          <h1 className="text-3xl font-black text-gray-900 mb-4">
-            ขอบคุณสำหรับการตอบแบบสอบถาม!
-          </h1>
-          <p className="text-gray-700">
-            คำตอบของคุณจะถูกนำไปวิเคราะห์เพื่อประโยชน์ในการวิจัย
-          </p>
-        </Card>
+      <div className="be-root">
+        <PublicTopbar/>
+        <div className="be-conjoint-page" style={{ maxWidth: 560, paddingTop: 80 }}>
+          <div className="be-card" style={{ padding: 48, textAlign: 'center' }}>
+            <div style={{ width: 64, height: 64, margin: '0 auto 18px', background: 'var(--be-green)',
+                          color: '#fff', display: 'grid', placeItems: 'center', fontSize: 32 }}>
+              <CheckCircle className="w-10 h-10"/>
+            </div>
+            <div className="be-eyebrow" style={{ marginBottom: 12, justifyContent: 'center' }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-green)' }}/>RESPONSE SAVED
+            </div>
+            <h1 className="be-h1" style={{ fontSize: 30, marginBottom: 10, fontFamily: 'IBM Plex Serif' }}>
+              ขอบคุณ!
+            </h1>
+            <p className="be-muted be-small">
+              คำตอบของคุณจะถูกนำไปวิเคราะห์เพื่อประโยชน์ในการวิจัย
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -194,8 +214,9 @@ const ConjointSurveyPage = () => {
   const isLastSet = currentSetIndex === survey.choice_sets.length - 1;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-5xl mx-auto">
+    <div className="be-root">
+      <PublicTopbar/>
+      <div className="be-conjoint-page" style={{ maxWidth: 1200 }}>
         {/* Header */}
         <Card className="p-6 mb-6 bg-white border-2 border-blue-300">
           <h1 className="text-3xl font-black text-gray-900 mb-2">

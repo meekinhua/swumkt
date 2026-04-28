@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
+import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ReferenceImagesSection from '@/components/ReferenceImagesSection';
@@ -1007,8 +1009,8 @@ const ConjointDesignPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00A9CE]"></div>
+      <div className="be-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="be-mono be-tiny be-muted" style={{ letterSpacing: '0.18em' }}>LOADING…</div>
       </div>
     );
   }
@@ -1016,10 +1018,13 @@ const ConjointDesignPage = () => {
   const recommendedSets = calculateRecommendedSets();
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
-      <Navigation />
+    <div className="be-root">
+      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
+                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/market-research/conjoint-analysis')}>
+                         <Icon name="chevronL" size={10}/>Studies
+                       </button>}/>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+      <div className="be-conjoint-page" style={{ maxWidth: 1200 }}>
         {/* Header */}
         <div className="mb-4 sm:mb-6">
           <Button

@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 17 — Conjoint module visual/CSS restyle to Brand Equity design system. Frontend-only testing (per request). Verified all 5 Conjoint pages now wrap in .be-root + .be-conjoint-page with paper bg (rgb(247, 244, 238) = #F7F4EE), IBM Plex fonts, BeTopbar (SWUMKT logo, data-testid='be-logo'). ConjointAnalysisTool renders 'Conjoint Analysis' header with red CTA button data-testid='conjoint-new-study'. ConjointDesignPage wizard + stepper render in BE shell. ConjointResultsPage insufficient_data state uses be-card + be-eyebrow ('● DASHBOARD LOCKED'). ConjointQualitativePage stepper renders correctly. ConjointSurveyPage (public, no-auth) uses local PublicTopbar with data-testid='conjoint-resp-topbar' showing 'SWU · Marketing Research / CONJOINT ANALYSIS · ANONYMOUS'. Brand Equity regression: /brand-equity list and /showcase/e936845d9491 both render correctly — no CSS leak. All selectors resolved on first try, 0 page errors, no UI regressions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/admin/prompts/... (prompt settings)", "issue": "Repeating 404 'Error loading prompt settings: AxiosError' in console on multiple Conjoint pages — pre-existing (not related to this iteration's restyle) but pollutes console. Low priority."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Scope isolation of .be-root CSS overrides (brand-equity-styles.css lines ~113–170) works as intended — sharp corners/paper bg only apply within .be-root. Verified Dashboard and non-Conjoint pages are unaffected.",
+    "All 5 Conjoint pages consistently import BeTopbar from '@/pages/brand-equity/be-components' and brand-equity-styles.css — good reuse, single source of truth.",
+    "ConjointSurveyPage uses a local PublicTopbar component (lines 134–155) rather than BeTopbar because public route does not have authenticated user; acceptable inline solution. Testid 'conjoint-resp-topbar' resolves correctly.",
+    "Minor: BeTopbar's data-testid='be-logo' is applied inside the shared component — all 4 authenticated Conjoint pages inherit correctly without additional wiring.",
+    "File sizes: ConjointResultsPage.js still large (~2400+ lines) — carry-over from earlier iterations, unrelated to this restyle. Non-blocking."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only testing per request)",
+    "frontend": "100% (7/7 test points: all 5 Conjoint pages verified + BE list + Showcase regression)"
+  },
+  "test_credentials": "admin@swu.ac.th / admin123 (login token field: access_token)",
+  "seed_data_creation": "None. Reused existing conjoint study id=1a4b8a5c-2536-4b0a-91e6-7e8fa20f7827 ('ปณ', status=active, 3 respondents) for design/results/qualitative/survey page checks; also used e936845d9491 BE showcase token.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 17 = purely visual/CSS — Conjoint module adopts Brand Equity design system. All 5 Conjoint pages wrap in .be-root + .be-conjoint-page; import BeTopbar and brand-equity-styles.css. Public survey uses local PublicTopbar (testid conjoint-resp-topbar). Scoped overrides in brand-equity-styles.css line ~113+ flatten shadcn rounded corners, remove shadows, restyle blue/purple buttons → ink/red, all within .be-root scope only. No backend changes. Core Conjoint functionality (create study, design wizard, results charts/tables/exports, AI interpret, share, thesis export) was not deep-tested end-to-end beyond page-load verification per task scope (no logic changes). Pre-existing console 404 on '/api/admin/prompts' endpoint is noise unrelated to this iteration.",
+  "rca of the issue": "No issues/bugs found. Restyle implemented correctly — verified paper bg #F7F4EE, BE topbar on all 5 Conjoint pages, be-conjoint-page wrapper present, CSS scope isolation intact (BE pages + Dashboard non-Conjoint pages unaffected)."
+}

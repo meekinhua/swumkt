@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import Navigation from '@/components/Navigation';
+import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -192,35 +193,41 @@ const ConjointAnalysisTool = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00A9CE]"></div>
+      <div className="be-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="be-mono be-tiny be-muted" style={{ letterSpacing: '0.18em' }}>LOADING…</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
-      <Navigation />
+    <div className="be-root">
+      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
+                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/dashboard')}>
+                         <Icon name="chevronL" size={10}/>Dashboard
+                       </button>}/>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+      <div className="be-conjoint-page">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div className="be-eyebrow" style={{ marginBottom: 12 }}>
+            <span className="be-dot-sm be-pulse" style={{ background: 'var(--be-blue)' }}/>
+            CHOICE-BASED CONJOINT · MARKET RESEARCH
+          </div>
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-2 leading-tight">
-                📊 Choice-Based Conjoint Analysis
+              <h1 className="be-h1" style={{ fontSize: 38, marginBottom: 6 }}>
+                Conjoint Analysis
               </h1>
-              <p className="text-sm sm:text-base md:text-lg text-gray-600">
+              <p className="be-muted" style={{ fontSize: 15, maxWidth: 640 }}>
                 วิเคราะห์ความสำคัญของคุณสมบัติผลิตภัณฑ์ และจำลองส่วนแบ่งตลาด
               </p>
             </div>
-            <Button
+            <button
               onClick={() => setShowCreateModal(true)}
-              className="w-full md:w-auto bg-gradient-to-r from-[#007B9A] to-[#00A9CE] hover:from-[#005A73] hover:to-[#008FB5] text-white font-bold shadow-lg text-sm sm:text-base"
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              สร้างการศึกษาใหม่
-            </Button>
+              className="be-btn be-btn-red"
+              data-testid="conjoint-new-study">
+              <Icon name="plus" size={11}/>สร้างการศึกษาใหม่
+            </button>
           </div>
         </div>
 

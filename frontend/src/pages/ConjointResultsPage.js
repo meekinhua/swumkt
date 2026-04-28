@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
+import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { API } from '@/App';
@@ -731,40 +733,37 @@ const ConjointResultsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดผลการวิเคราะห์...</p>
-        </div>
+      <div className="be-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 14 }}>
+        <div className="be-mono be-tiny be-muted" style={{ letterSpacing: '0.18em' }}>LOADING ANALYSIS…</div>
       </div>
     );
   }
 
   if (!currentResults || currentResults.status === 'insufficient_data') {
     return (
-      <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
-        <Navigation />
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            กลับ
-          </Button>
-
-          <Card className="p-8 text-center">
-            <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="be-root">
+        <BeTopbar user={user} onLogo={() => navigate('/dashboard')}/>
+        <div className="be-conjoint-page" style={{ maxWidth: 880 }}>
+          <button onClick={() => navigate(-1)} className="be-btn" style={{ marginBottom: 18 }}>
+            <Icon name="chevronL" size={11}/>กลับ
+          </button>
+          <div className="be-card" style={{ padding: 40, textAlign: 'center' }}>
+            <div className="be-eyebrow" style={{ marginBottom: 14, justifyContent: 'center' }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>DASHBOARD LOCKED
+            </div>
+            <h2 className="be-h2" style={{ fontSize: 22, marginBottom: 10, fontFamily: 'IBM Plex Serif' }}>
               ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="be-muted be-small" style={{ marginBottom: 18 }}>
               ต้องการอย่างน้อย 30 คำตอบสำหรับการวิเคราะห์ที่เชื่อถือได้
             </p>
-            <p className="text-lg font-bold text-blue-600">
-              ปัจจุบัน: {currentResults?.respondent_count || 0} คำตอบ
-            </p>
-            <p className="text-sm text-gray-500 mt-4">
-              ยังขาดอีก {Math.max(0, 30 - (currentResults?.respondent_count || 0))} คำตอบ
-            </p>
-          </Card>
+            <div className="be-data" style={{ fontSize: 36, color: 'var(--be-blue)' }}>
+              {currentResults?.respondent_count || 0}
+            </div>
+            <div className="be-mono be-tiny be-muted" style={{ marginTop: 4 }}>
+              CURRENT RESPONSES · need {Math.max(0, 30 - (currentResults?.respondent_count || 0))} more
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -791,8 +790,11 @@ const ConjointResultsPage = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #E8ECF1 100%)' }}>
-      <Navigation />
+    <div className="be-root">
+      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
+                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/market-research/conjoint-analysis')}>
+                         <Icon name="chevronL" size={10}/>Studies
+                       </button>}/>
 
       {/* Thesis Export Modal */}
       <Dialog open={showThesisModal} onOpenChange={setShowThesisModal}>

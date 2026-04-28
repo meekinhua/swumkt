@@ -108,6 +108,94 @@
 @media (max-width: 600px) {
   .be-showcase-footer { padding: 22px 16px 28px; }
 }
+
+/* ============ Conjoint module skin overrides ============
+   Pages from /app/frontend/src/pages/Conjoint*.js wrap themselves in .be-root
+   so they pick up paper background, IBM Plex fonts and 1px borders.
+   These selectors gently re-skin shadcn primitives (Card, Button, Input)
+   used inside Conjoint without rewriting every component. */
+
+/* Tighten shadcn Card to BE editorial card vibe (sharp corners, 1px ink border, paper-tinted) */
+.be-root [class*="rounded-lg"],
+.be-root [class*="rounded-xl"],
+.be-root [class*="rounded-2xl"] {
+  border-radius: 0 !important;
+}
+.be-root .bg-white,
+.be-root .bg-white\/95 {
+  background: var(--surface) !important;
+}
+.be-root [class*="shadow-"] {
+  box-shadow: none !important;
+}
+/* Remove gradient wash from old hero/card backgrounds when wrapped */
+.be-root [class*="bg-gradient-to-"] {
+  background: var(--paper-2) !important;
+}
+.be-root .border-2,
+.be-root .border-blue-200,
+.be-root .border-purple-200,
+.be-root .border-green-200,
+.be-root .border-gray-200,
+.be-root .border-gray-300 {
+  border: 1px solid var(--rule) !important;
+}
+/* Buttons inside Conjoint — convert shadcn primary blue/purple/green to editorial */
+.be-root button[class*="bg-blue-"],
+.be-root button[class*="bg-purple-"],
+.be-root button[class*="bg-indigo-"] {
+  background: var(--ink) !important;
+  color: var(--paper) !important;
+  border: 1px solid var(--ink) !important;
+  border-radius: 0 !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  font-weight: 500 !important;
+}
+.be-root button[class*="bg-blue-"]:hover,
+.be-root button[class*="bg-purple-"]:hover,
+.be-root button[class*="bg-indigo-"]:hover {
+  background: var(--be-red) !important;
+  border-color: var(--be-red) !important;
+}
+.be-root button[class*="bg-red-"] {
+  background: var(--be-red) !important;
+  color: #fff !important;
+  border-radius: 0 !important;
+}
+.be-root button[class*="bg-green-"] {
+  background: var(--be-green) !important;
+  color: #fff !important;
+  border-radius: 0 !important;
+}
+/* Outline / ghost buttons → BE outline */
+.be-root button[class*="border-blue-"],
+.be-root button[class*="border-purple-"],
+.be-root button[class*="border-gray-"] {
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+}
+/* Headings — apply Plex Serif to Conjoint h1/h2 inside be-root */
+.be-root h1.be-serif-auto, .be-root h2.be-serif-auto,
+.be-root [class*="text-4xl"],
+.be-root [class*="text-3xl"] {
+  font-family: 'IBM Plex Serif', Georgia, serif !important;
+  letter-spacing: -0.015em !important;
+}
+/* Page wrapper helper — uses paper bg without the blue gradient */
+.be-conjoint-page {
+  min-height: 100vh;
+  padding: 32px 28px;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+@media (max-width: 768px) {
+  .be-conjoint-page { padding: 20px 16px; }
+}
 .be-topnav { display: flex; gap: 22px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); }
 .be-topnav a:hover { color: var(--ink); }
 .be-topnav .on { color: var(--ink); border-bottom: 2px solid var(--be-red); padding-bottom: 2px; }
