@@ -173,6 +173,7 @@ const ConjointQualitativePage = () => {
   return (
     <div className="be-root">
       <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
+                subtitle="CONJOINT ANALYSIS" active="conjoint"
                 right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/market-research/conjoint-analysis')}>
                          <Icon name="chevronL" size={10}/>Studies
                        </button>}/>
