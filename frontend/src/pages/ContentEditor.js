@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Plus, X, Upload, Trash2, Image as ImageIcon, Copy, Ale
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import RichTextEditor from '@/components/RichTextEditor';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const ContentEditor = () => {
   const { id } = useParams();
@@ -339,14 +340,9 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
     return prompt;
   };
 
-  // Copy prompt to clipboard
+  // Copy prompt to clipboard (uses fallback util to handle iframe blocks)
   const handleCopyRearrangePrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(rearrangePrompt);
-      toast.success('คัดลอก Prompt แล้ว!');
-    } catch (error) {
-      toast.error('ไม่สามารถคัดลอกได้');
-    }
+    await copyToClipboard(rearrangePrompt, { successMessage: 'คัดลอก Prompt แล้ว!' });
   };
 
   // Apply manual HTML input

@@ -17,6 +17,7 @@ import {
   Image, UserCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const KanbanBoard = () => {
   const { projectId } = useParams();
@@ -876,8 +877,7 @@ const KanbanBoard = () => {
                   className="text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => {
                     const url = `${window.location.origin}/projects/public/${project.share_token}`;
-                    navigator.clipboard.writeText(url);
-                    toast.success('คัดลอก Public Link แล้ว!');
+                    copyToClipboard(url, { successMessage: 'คัดลอก Public Link แล้ว!' });
                   }}
                 >
                   <Share2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />

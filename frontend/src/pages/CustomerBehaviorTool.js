@@ -141,14 +141,9 @@ ${researchContext ? `\n=== Additional Context ===\n${researchContext}` : ''}
 ${userPrompt}`;
   };
 
-  // Copy prompt to clipboard
+  // Copy prompt to clipboard (uses fallback util to handle iframe blocks)
   const handleCopyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedPrompt);
-      toast.success('คัดลอก Prompt แล้ว!');
-    } catch (error) {
-      toast.error('ไม่สามารถคัดลอกได้');
-    }
+    await copyToClipboard(generatedPrompt, { successMessage: 'คัดลอก Prompt แล้ว!' });
   };
 
   // Parse and apply manual analysis input

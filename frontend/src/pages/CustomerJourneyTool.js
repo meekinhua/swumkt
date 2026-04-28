@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import ShareJourneyMapModal from '@/components/ShareJourneyMapModal';
 import mermaid from 'mermaid';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const CustomerJourneyTool = () => {
   const navigate = useNavigate();
@@ -364,14 +365,11 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
     }
   };
 
-  // Copy prompt to clipboard
+  // Copy prompt to clipboard (uses fallback util to handle iframe blocks)
   const handleCopyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(lastGeneratedPrompt);
-      toast.success(i18n.language === 'th' ? 'คัดลอก Prompt แล้ว!' : 'Prompt copied!');
-    } catch (error) {
-      toast.error(i18n.language === 'th' ? 'ไม่สามารถคัดลอกได้' : 'Failed to copy');
-    }
+    await copyToClipboard(lastGeneratedPrompt, {
+      successMessage: i18n.language === 'th' ? 'คัดลอก Prompt แล้ว!' : 'Prompt copied!',
+    });
   };
 
   const handleLogout = () => {

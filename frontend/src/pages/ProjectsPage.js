@@ -17,6 +17,7 @@ import {
   LayoutGrid, List
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -254,8 +255,7 @@ const ProjectsPage = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           const url = `${window.location.origin}/projects/public/${project.share_token}`;
-                          navigator.clipboard.writeText(url);
-                          toast.success('คัดลอก Public Link แล้ว!');
+                          copyToClipboard(url, { successMessage: 'คัดลอก Public Link แล้ว!' });
                         }}
                         title="Copy Public Link"
                       >

@@ -1,6 +1,19 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-04-28 — 🛠️ Clipboard Permission Fix (Iframe Preview)
+- **Issue**: `NotAllowedError: Failed to execute 'writeText' on 'Clipboard'` เมื่อกด Copy ภายใน preview iframe (Permissions Policy block ใน cross-origin context)
+- **Solution**: ใช้ utility `/app/frontend/src/lib/clipboard.js` (modern API → legacy `execCommand` textarea fallback → toast manual copy) ทดแทนการเรียก `navigator.clipboard.writeText` ตรง ๆ
+- **Files migrated** (5):
+  - `CustomerBehaviorTool.js` (Copy AI Prompt)
+  - `ContentEditor.js` (Copy Rearrange Prompt)
+  - `CustomerJourneyTool.js` (Copy Mermaid Prompt — i18n preserved)
+  - `KanbanBoard.js` (Copy Public Link)
+  - `ProjectsPage.js` (Copy Public Link)
+- **Skipped** (Alumni paused): `alumni/InviteModal.jsx`
+- **Verified**: smoke test คลิก Copy บน /projects → toast "คัดลอก Public Link แล้ว!" แสดงผล, 0 runtime errors
+
+
 ## 2026-04-28 — 🎨 Conjoint Module: Visual Theme Unification with Brand Equity
 - Conjoint Analysis module ทุก 5 หน้าตอนนี้ใช้ design system เดียวกับ Brand Equity (Editorial / Swiss / Plex stack)
 - **Reused** `brand-equity-styles.css` เป็น single source of truth (no rename, no duplicate)
