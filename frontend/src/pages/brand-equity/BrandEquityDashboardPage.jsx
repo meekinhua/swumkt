@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { copyToClipboard } from '@/lib/clipboard';
 import './brand-equity-styles.css';
 import {
   BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
@@ -112,14 +113,12 @@ const BrandEquityDashboardPage = () => {
 
   const copyShareLink = () => {
     const url = `${window.location.origin}/brand-equity/respond/${data.study.share_token}`;
-    navigator.clipboard.writeText(url);
-    toast.success('คัดลอก link แล้ว');
+    copyToClipboard(url, { successMessage: 'คัดลอก link แล้ว' });
   };
 
   const copyShowcaseLink = () => {
     const url = `${window.location.origin}/showcase/${data.study.share_token}`;
-    navigator.clipboard.writeText(url);
-    toast.success('คัดลอก showcase link แล้ว');
+    copyToClipboard(url, { successMessage: 'คัดลอก showcase link แล้ว' });
   };
 
   const toggleShowcase = async () => {

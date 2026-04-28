@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
 import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import { copyToClipboard } from '@/lib/clipboard';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -299,29 +300,13 @@ const ConjointResultsPage = () => {
     }
   };
 
-  const handleCopyPrompt = () => {
-    if (generatedPrompt) {
-      // Fallback for environments without clipboard API
-      try {
-        const textArea = document.createElement('textarea');
-        textArea.value = generatedPrompt;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        setPromptCopied(true);
-        toast.success('คัดลอก Prompt แล้ว! นำไปวางใน ChatGPT / Claude / Gemini ได้เลย');
-      } catch (err) {
-        // If even execCommand fails, try modern API
-        navigator.clipboard?.writeText(generatedPrompt).then(() => {
-          setPromptCopied(true);
-          toast.success('คัดลอก Prompt แล้ว!');
-        }).catch(() => {
-          toast.error('ไม่สามารถคัดลอกได้ กรุณาเลือกข้อความแล้ว Ctrl+C เอง');
-        });
-      }
+  const handleCopyPrompt = async () => {
+    if (!generatedPrompt) return;
+    const ok = await copyToClipboard(generatedPrompt, {
+      successMessage: 'คัดลอก Prompt แล้ว! นำไปวางใน ChatGPT / Claude / Gemini ได้เลย',
+    });
+    if (ok) {
+      setPromptCopied(true);
       setTimeout(() => setPromptCopied(false), 3000);
     }
   };
@@ -418,8 +403,7 @@ const ConjointResultsPage = () => {
 
   const handleCopyShareLink = () => {
     const shareUrl = `${window.location.origin}/conjoint/results/${studyId}`;
-    navigator.clipboard.writeText(shareUrl);
-    toast.success('📋 คัดลอกลิงก์แชร์สำเร็จ!');
+    copyToClipboard(shareUrl, { successMessage: 'คัดลอกลิงก์แชร์สำเร็จ!' });
   };
 
   const handleShareAsContent = async (formData) => {

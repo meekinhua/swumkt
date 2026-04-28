@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
 import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import { copyToClipboard } from '@/lib/clipboard';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -309,10 +310,7 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
                   {generatePrompt()}
                 </p>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatePrompt());
-                    toast.success('คัดลอก prompt แล้ว');
-                  }}
+                  onClick={() => copyToClipboard(generatePrompt(), { successMessage: 'คัดลอก prompt แล้ว' })}
                   className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                 >
                   <Copy className="w-3 h-3" />
@@ -652,10 +650,7 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
                   {generatePrompt()}
                 </p>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatePrompt());
-                    toast.success('คัดลอก prompt แล้ว');
-                  }}
+                  onClick={() => copyToClipboard(generatePrompt(), { successMessage: 'คัดลอก prompt แล้ว' })}
                   className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                 >
                   <Copy className="w-3 h-3" />
@@ -994,8 +989,7 @@ const ConjointDesignPage = () => {
 
   const handleCopySurveyLink = () => {
     const surveyLink = `${window.location.origin}/survey/conjoint/${studyId}`;
-    navigator.clipboard.writeText(surveyLink);
-    toast.success('คัดลอกลิงก์แล้ว!');
+    copyToClipboard(surveyLink, { successMessage: 'คัดลอกลิงก์แล้ว!' });
   };
 
   const calculateRecommendedSets = () => {
@@ -1120,8 +1114,7 @@ const ConjointDesignPage = () => {
                     <Button
                       onClick={() => {
                         const surveyLink = `${window.location.origin}/survey/conjoint/${studyId}`;
-                        navigator.clipboard.writeText(surveyLink);
-                        toast.success('คัดลอกลิงก์แล้ว!');
+                        copyToClipboard(surveyLink, { successMessage: 'คัดลอกลิงก์แล้ว!' });
                       }}
                       className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white whitespace-nowrap flex-shrink-0 text-sm"
                     >

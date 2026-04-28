@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, Copy, AlertTriangle, Code, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://family-tree-hub-41.preview.emergentagent.com';
 
