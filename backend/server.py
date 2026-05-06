@@ -7,6 +7,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict, Any
@@ -213,6 +214,18 @@ def compress_base64_image(base64_str: str, max_size_kb: float = 150.0, target_di
         logging.error(f"Image compression failed: {e}")
         # Return original if compression fails
         return base64_str
+
+
+# Async wrappers — push CPU-bound PIL ops to the default thread pool so the
+# event loop stays responsive for concurrent requests (login, list, polling).
+async def compress_base64_image_async(*args, **kwargs) -> str:
+    import asyncio
+    return await asyncio.to_thread(compress_base64_image, *args, **kwargs)
+
+async def create_thumbnail_base64_async(*args, **kwargs) -> str:
+    import asyncio
+    return await asyncio.to_thread(create_thumbnail_base64, *args, **kwargs)
+
 
 # MongoDB connection with connection pooling for better performance
 mongo_url = os.environ['MONGO_URL']
@@ -4160,7 +4173,7 @@ Target Language for Labels: {request.target_language}
         from image_utils import compress_base64_image, get_image_size_kb
         
         original_size = get_image_size_kb(image_data_url)
-        compressed_image = compress_base64_image(image_data_url, max_size_kb=500, quality=85)
+        compressed_image = await asyncio.to_thread(compress_base64_image, image_data_url, max_size_kb=500, quality=85)
         compressed_size = get_image_size_kb(compressed_image)
         
         logging.info(f"Image compressed: {original_size:.1f}KB → {compressed_size:.1f}KB")
@@ -4223,7 +4236,7 @@ Customer Behavior Analysis
             from image_utils import compress_base64_image, get_image_size_kb
             
             # Compress image for storage
-            compressed_image = compress_base64_image(data.image_base64, max_size_kb=500)
+            compressed_image = await asyncio.to_thread(compress_base64_image, data.image_base64, max_size_kb=500)
             image_size = get_image_size_kb(compressed_image)
             
             attachments.append({
@@ -4290,7 +4303,7 @@ async def compress_image(
     """Compress an uploaded image"""
     try:
         from image_utils import compress_base64_image
-        compressed_image = compress_base64_image(request.image_base64, max_size_kb=500)
+        compressed_image = await asyncio.to_thread(compress_base64_image, request.image_base64, max_size_kb=500)
         return {"compressed_image": compressed_image}
     except Exception as e:
         logging.error(f"Image compression error: {str(e)}")
@@ -5288,7 +5301,7 @@ Customer Perception Analysis
             from image_utils import compress_base64_image, get_image_size_kb
             
             # Compress image
-            compressed_image = compress_base64_image(data.image_base64, max_size_kb=500)
+            compressed_image = await asyncio.to_thread(compress_base64_image, data.image_base64, max_size_kb=500)
             image_size = get_image_size_kb(compressed_image)
             
             attachments.append({
@@ -8418,7 +8431,7 @@ async def generate_single_image(
             image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
         # Compress image aggressively (target: 100-150KB for 100+ images per study)
-        compressed_base64 = compress_base64_image(image_base64, max_size_kb=150.0, target_dimension=640)
+        compressed_base64 = await asyncio.to_thread(compress_base64_image, image_base64, max_size_kb=150.0, target_dimension=640)
         
         # Create data URL
         image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
@@ -8658,7 +8671,7 @@ async def generate_profile_image(
             image_base64 = base64.b64encode(images[0]).decode('utf-8')
         
         # Compress image aggressively (target: 100-150KB for 100+ images per study)
-        compressed_base64 = compress_base64_image(image_base64, max_size_kb=150.0, target_dimension=640)
+        compressed_base64 = await asyncio.to_thread(compress_base64_image, image_base64, max_size_kb=150.0, target_dimension=640)
         
         # Create data URL
         image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
@@ -8771,7 +8784,7 @@ async def upload_reference_images(
                 base64_str = img_url
             
             # Compress
-            compressed_base64 = compress_base64_image(base64_str, max_size_kb=150.0, target_dimension=640)
+            compressed_base64 = await asyncio.to_thread(compress_base64_image, base64_str, max_size_kb=150.0, target_dimension=640)
             compressed_url = f"data:image/jpeg;base64,{compressed_base64}"
             compressed_images.append(compressed_url)
         except Exception as e:
@@ -10138,7 +10151,7 @@ Return ONLY the image generation prompt, no explanation."""
         image_base64 = images[0]['data']
         
         # Compress image
-        compressed_base64 = compress_base64_image(image_base64, max_size_kb=150.0, target_dimension=640)
+        compressed_base64 = await asyncio.to_thread(compress_base64_image, image_base64, max_size_kb=150.0, target_dimension=640)
         
         # Create data URL
         image_url = f"data:image/jpeg;base64,{compressed_base64}"
@@ -10299,7 +10312,7 @@ Keep the prompt concise (2-3 sentences max). Return ONLY the image generation pr
         
         # Get base64 image and compress
         shelf_image_base64 = images[0]['data']
-        compressed_base64 = compress_base64_image(shelf_image_base64, max_size_kb=150.0, target_dimension=640)
+        compressed_base64 = await asyncio.to_thread(compress_base64_image, shelf_image_base64, max_size_kb=150.0, target_dimension=640)
         shelf_image_url = f"data:image/jpeg;base64,{compressed_base64}"
         
         return {
@@ -11720,7 +11733,12 @@ async def export_thesis_download(
         raise HTTPException(status_code=404, detail="ยังไม่มีเนื้อหาวิทยานิพนธ์ กรุณาสร้างก่อน")
 
     ai_content = cached["results"]["ai_content"]
-    docx_bytes = _create_thesis_docx(study.get("title", ""), respondent_count, ai_content)
+    # Run CPU-heavy DOCX generation in a worker thread so the event loop
+    # stays free for other requests (login, list, etc.) while we render.
+    import asyncio
+    docx_bytes = await asyncio.to_thread(
+        _create_thesis_docx, study.get("title", ""), respondent_count, ai_content
+    )
 
     # Build filename from cache_key
     chapters_str = ""
