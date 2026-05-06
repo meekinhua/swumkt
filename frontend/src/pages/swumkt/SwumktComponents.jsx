@@ -23,16 +23,17 @@ export const Eyebrow = ({ children, red, dot, pulse, green }) => (
 export const Topbar = ({ active }) => {
   const navigate = useNavigate();
   return (
-    <header className="topbar">
+    <header className="topbar glass" style={{ position: 'sticky', top: 0 }}>
       <div className="topbar__inner">
         <SwuLogo />
         <nav className="topbar__nav">
           <Link to="/showcase" className={active === 'showcase' ? 'active' : ''}>Showcase</Link>
           <Link to="/learn" className={active === 'learn' ? 'active' : ''}>Learn</Link>
           <Link to="/about/swu-marketing" className={active === 'about' ? 'active' : ''}>About</Link>
-          <a href="#login" className="topbar__signin"
+          <a href="#login" className="topbar__signin btn-pill btn-pill--blue"
+             style={{ marginLeft: 8 }}
              onClick={(e) => { e.preventDefault(); navigate('/login'); }}>
-            Sign in
+            Sign in →
           </a>
         </nav>
       </div>

@@ -1,6 +1,30 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🌟 Liveliness V2: Bright/Modern + Imagery + Motion
+- **User**: "ทำให้ สดใส ขึ้น · ใช้รูปประกอบ · ทันสมัยขึ้น"
+- **Design agent** เรียกอีกรอบ — guidelines saved to `/app/design_guidelines.json`
+- **CSS V2 layer** appended to `swumkt-design.css`:
+  - `--logo-grad-soft` (soft 10% opacity version of the gradient)
+  - `.glass` panel (rgba 78% white + 18px backdrop-blur saturate 180%) สำหรับ sticky topbar
+  - `.bg-dots / .bg-dots-soft` — radial dots BG echoing the SWU MKT logo's network motif
+  - `.card-modern` — soft 1px stroke + 16px radius + lift+shadow on hover + `.corner-accent` gradient corner triangle
+  - `.btn-pill` (blue / dark / ghost) — pill-shaped CTAs replace boxy ones
+  - `.chip / .chip--red / .chip--gray` — soft pill labels for categories
+  - `.fade-up` + staggered delays (`.fade-up-1` … `.fade-up-5`) for entrance motion
+  - `.img-frame` — rounded image container with paper bg
+- **Topbar**: now `.glass` + sticky, "Sign in →" becomes blue pill button
+- **HomePage**:
+  - Hero: Pexels portrait photograph (Thai students field research) in rounded frame on right + "● FIELD RESEARCH · 2026" overlay chip; soft dots BG over white; 5 staggered fade-up animations
+  - Featured brand → `.card-modern` with corner-accent gradient on hover
+  - Tools bento → 4×2 modern cards (was bento with 1px gaps); each card: chip tag + serif title + sans description + blue "Open Tool →" CTA + corner-accent
+  - Knowledge Hub → magazine image on right + dark pill CTA + 4 modern cards
+  - Section transitions alternate `#FFFFFF` ↔ `var(--paper)` for breathing rhythm
+- **ShowcaseIndexPage**: same modern card treatment, search becomes pill input on paper bg
+- **Verified**: 5 staggered animations on hero, glass topbar visible, photographs render, alternating bg sections create rhythm
+
+
+
 ## 2026-02-06 — 🎨 Logo enlarged + Palette refined to Blue/Gray/Red only
 - **User**: "ขยาย logo · ใช้ สี ฟ้า แดง เทา ไม่ใช่ ม่วง"
 - **Logo size**: SwuLogo default `36px` → `56px`; topbar height `64px` → `88px`; footer brand logo → `64px`

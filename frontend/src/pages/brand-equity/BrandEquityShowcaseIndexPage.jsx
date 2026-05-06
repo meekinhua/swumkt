@@ -65,109 +65,110 @@ const ShowcaseIndexPage = () => {
   });
 
   return (
-    <div data-testid="showcase-index">
+    <div data-testid="showcase-index" style={{ background: '#FFFFFF' }}>
       <Topbar active="showcase" />
 
-      <section style={{ borderBottom: '1px solid var(--ink)', padding: '72px 0 56px' }}>
-        <div className="swu-container">
+      <section style={{ background: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
+        <div className="bg-dots-soft" aria-hidden
+             style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}/>
+        <div className="swu-container" style={{ padding: '72px 32px 56px', position: 'relative' }}>
           <Eyebrow red dot pulse>● Public Showcase · {items.length} Live {items.length === 1 ? 'Study' : 'Studies'}</Eyebrow>
           <h1 className="h-display" style={{ marginTop: 24, maxWidth: '11ch' }}>
             Brand Health,<br/><span className="italic-accent">in Public.</span>
           </h1>
-          <p className="lede" style={{ fontSize: 19, marginTop: 32, maxWidth: '54ch' }}>
+          <p className="lede" style={{ fontSize: 19, marginTop: 28, maxWidth: '54ch' }}>
             งานวิจัย Brand Health Check ทั้งหมดที่นักวิจัยเลือกเผยแพร่สู่สาธารณะ —
             รายงานเต็มฉบับ พร้อม Aaker scores, perceptual map และข้อมูล n ของผู้ตอบ
           </p>
         </div>
+        <div className="hero-grad-rule"></div>
       </section>
 
-      <section className="swu-container" style={{ padding: 0 }}>
-        <div className="stat-strip" style={{ borderTop: 'none' }}>
-          <div className="stat-strip__item">
-            <span className="stat-strip__num">{items.length}</span>
-            <span className="stat-strip__label">Brands</span>
-          </div>
-          <div className="stat-strip__item">
-            <span className="stat-strip__num">{totalRespondents.toLocaleString()}</span>
-            <span className="stat-strip__label">Respondents</span>
-          </div>
-          <div className="stat-strip__item">
-            <span className="stat-strip__num">{readyCount}</span>
-            <span className="stat-strip__label">Ready to Read</span>
+      <section style={{ background: 'var(--paper)' }}>
+        <div className="swu-container" style={{ padding: '0 32px' }}>
+          <div className="stat-strip" style={{ borderTop: 'none' }}>
+            <div className="stat-strip__item">
+              <span className="stat-strip__num">{items.length}</span>
+              <span className="stat-strip__label">Brands</span>
+            </div>
+            <div className="stat-strip__item">
+              <span className="stat-strip__num">{totalRespondents.toLocaleString()}</span>
+              <span className="stat-strip__label">Respondents</span>
+            </div>
+            <div className="stat-strip__item">
+              <span className="stat-strip__num">{readyCount}</span>
+              <span className="stat-strip__label">Ready to Read</span>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="swu-container" style={{ padding: '40px 32px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16,
-                      borderBottom: '1px solid var(--rule)', paddingBottom: 14 }}>
-          <span className="meta">Search</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)}
-                 placeholder="ค้นหาแบรนด์ หมวด หรือคู่แข่ง…"
-                 data-testid="showcase-search"
-                 style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent',
-                          fontFamily: 'var(--sans)', fontSize: 17, color: 'var(--ink)' }}/>
-          <span className="meta">{filtered.length} results</span>
-        </div>
-      </section>
-
-      <section className="swu-container" style={{ padding: '32px 32px 0' }}>
-        {loading ? (
-          <div className="meta" style={{ padding: 60, textAlign: 'center' }}>Loading…</div>
-        ) : filtered.length === 0 ? (
-          <div className="meta" style={{ padding: 60, textAlign: 'center',
-                                           border: '1px dashed var(--rule)' }}>
-            {items.length === 0 ? 'ยังไม่มี showcase สาธารณะ' : `No matches for "${q}"`}
+      <section style={{ background: '#FFFFFF', padding: '48px 0 88px' }}>
+        <div className="swu-container" style={{ padding: '0 32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16,
+                        background: 'var(--paper)', padding: '14px 18px',
+                        borderRadius: 999, marginBottom: 32 }}>
+            <span className="meta">🔍 Search</span>
+            <input value={q} onChange={(e) => setQ(e.target.value)}
+                   placeholder="ค้นหาแบรนด์ หมวด หรือคู่แข่ง…"
+                   data-testid="showcase-search"
+                   style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent',
+                            fontFamily: 'var(--sans)', fontSize: 16, color: 'var(--ink)' }}/>
+            <span className="meta">{filtered.length} results</span>
           </div>
-        ) : (
-          <div className="article-grid"
-               style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 32 }}
-               data-testid="showcase-grid">
-            {filtered.map((b) => (
-              <Link key={b.id} to={`/showcase/${b.share_token}`}
-                    className="ed-card"
-                    data-testid={`showcase-card-${b.id}`}
-                    style={{ borderTop: '1px solid var(--ink)', padding: '24px 0 28px',
-                             textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between',
-                              alignItems: 'flex-start' }}>
-                  <BrandLogo brand={{ name: b.brand_name, logo_url: b.logo_url }}
-                             identity={{ visual_assets: b.logo_asset ? [b.logo_asset] : [] }}
-                             gradient={gradientForBrand(b.id)}/>
-                  {b.ready_for_dashboard
-                    ? <StatusPill kind="green">Public · n={b.response_count || 0}</StatusPill>
-                    : <StatusPill kind="red">Collecting · n={b.response_count || 0}</StatusPill>}
-                </div>
-                <div>
-                  <div className="serif" style={{ fontSize: 26, lineHeight: 1.12,
-                                                    letterSpacing: '-0.01em', marginTop: 18 }}>
-                    {b.brand_name}
+          {loading ? (
+            <div className="meta" style={{ padding: 60, textAlign: 'center' }}>Loading…</div>
+          ) : filtered.length === 0 ? (
+            <div className="meta" style={{ padding: 60, textAlign: 'center',
+                                             border: '1px dashed var(--rule)', borderRadius: 16 }}>
+              {items.length === 0 ? 'ยังไม่มี showcase สาธารณะ' : `No matches for "${q}"`}
+            </div>
+          ) : (
+            <div data-testid="showcase-grid"
+                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20 }}>
+              {filtered.map((b, i) => (
+                <Link key={b.id} to={`/showcase/${b.share_token}`}
+                      className={`card-modern fade-up fade-up-${(i % 4) + 1}`}
+                      data-testid={`showcase-card-${b.id}`}
+                      style={{ textDecoration: 'none', color: 'inherit',
+                               display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <span className="corner-accent"/>
+                  <div style={{ display: 'flex', justifyContent: 'space-between',
+                                alignItems: 'flex-start' }}>
+                    <BrandLogo brand={{ name: b.brand_name, logo_url: b.logo_url }}
+                               identity={{ visual_assets: b.logo_asset ? [b.logo_asset] : [] }}
+                               gradient={gradientForBrand(b.id)}/>
+                    {b.ready_for_dashboard
+                      ? <StatusPill kind="green">Public · n={b.response_count || 0}</StatusPill>
+                      : <StatusPill kind="red">Collecting · n={b.response_count || 0}</StatusPill>}
                   </div>
-                  <div className="meta" style={{ marginTop: 6 }}>{b.category || 'general'}</div>
-                </div>
-                {(b.competitors || []).length > 0 && (
-                  <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12,
-                                display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="meta">VS</span>
-                    <span style={{ fontSize: 13.5, color: 'var(--ink-2)' }}>
-                      {(b.competitors || []).slice(0, 3).join(' · ')}
-                      {(b.competitors || []).length > 3 ? ` · +${b.competitors.length - 3}` : ''}
-                    </span>
+                  <div>
+                    <div className="serif" style={{ fontSize: 24, lineHeight: 1.12,
+                                                      letterSpacing: '-0.01em' }}>
+                      {b.brand_name}
+                    </div>
+                    <div className="meta" style={{ marginTop: 6 }}>{b.category || 'general'}</div>
                   </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between',
-                              alignItems: 'center', marginTop: 8 }}>
-                  {b.ready_for_dashboard ? (
-                    <span className="meta" style={{ color: 'var(--be-green)' }}>● Brand Equity</span>
-                  ) : (
-                    <span className="meta" style={{ color: 'var(--be-red)' }}>● Awaiting min n=10</span>
+                  {(b.competitors || []).length > 0 && (
+                    <div style={{ borderTop: '1px solid rgba(26,26,26,0.08)', paddingTop: 12,
+                                  display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span className="meta">VS</span>
+                      <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                        {(b.competitors || []).slice(0, 3).join(' · ')}
+                        {(b.competitors || []).length > 3 ? ` · +${b.competitors.length - 3}` : ''}
+                      </span>
+                    </div>
                   )}
-                  <span className="link-arrow link-arrow--red">View Report →</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between',
+                                alignItems: 'center', marginTop: 'auto' }}>
+                    <span className="meta" style={{ color: 'var(--logo-blue)' }}>● Brand Equity</span>
+                    <span className="link-arrow link-arrow--red">View Report →</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <Footer />

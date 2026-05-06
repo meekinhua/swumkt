@@ -63,131 +63,124 @@ const HomePage = () => {
   const sideBrands = sorted.slice(1, 5);
   const featuredArticles = ARTICLE_LIST.slice(0, 4);
 
+  // Editorial photographs (curated for a Thai university research platform)
+  const HERO_IMG = 'https://images.unsplash.com/photo-1556560984-36a7ec2ba544?crop=entropy&cs=srgb&fm=jpg&q=85&w=900';
+  const KNOWLEDGE_IMG = 'https://images.unsplash.com/photo-1719726793997-5f520d89f695?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200';
+
   return (
-    <div data-testid="home-page">
+    <div data-testid="home-page" style={{ background: '#FFFFFF' }}>
       <Topbar active="home" />
 
-      {/* HERO — Asymmetric: text + featured brand panel */}
-      <section style={{ background: 'var(--paper)' }}>
-        <div className="swu-container" style={{ padding: '64px 32px 80px' }}>
-          <div style={{ marginBottom: 28 }}>
+      {/* HERO — bento layout with type left, portrait right */}
+      <section style={{ background: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
+        {/* Soft dots background */}
+        <div className="bg-dots-soft" aria-hidden
+             style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}/>
+        <div className="swu-container" style={{ padding: '56px 32px 88px', position: 'relative' }}>
+          <div className="fade-up fade-up-1" style={{ marginBottom: 24 }}>
             <Eyebrow red dot pulse>Public Showcase · Live Brand Research from SWU MKT</Eyebrow>
           </div>
           <div className="hero-grid"
-               style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)',
-                        gap: 64, alignItems: 'start' }}>
-            <div>
-              <h1 className="h-display">
+               style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, 0.9fr)',
+                        gap: 56, alignItems: 'stretch' }}>
+
+            {/* Left — typography */}
+            <div className="fade-up fade-up-2">
+              <h1 className="h-display" style={{ fontSize: 'clamp(54px, 7.5vw, 104px)' }}>
                 งานวิจัย<br/>แบรนด์ที่<br/><span className="italic-accent">เปิดเผย</span>.
               </h1>
-              <p className="lede" style={{ marginTop: 36, maxWidth: '46ch' }}>
-                แพลตฟอร์มวิจัยตลาดเปิดของสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — เผยแพร่งานวิจัย Brand Health
-                จริง พร้อมเครื่องมือฟรีและความรู้ที่ทุกคนอ่านได้
+              <p className="lede" style={{ marginTop: 32, maxWidth: '46ch' }}>
+                แพลตฟอร์มวิจัยตลาดเปิดของสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ —
+                เผยแพร่งานวิจัย Brand Health จริง พร้อมเครื่องมือฟรีและความรู้ที่ทุกคนอ่านได้
               </p>
-              <div style={{ display: 'flex', gap: 14, marginTop: 36, flexWrap: 'wrap' }}>
-                <Link to="/showcase" className="btn" data-testid="hero-showcase-btn">
+              <div style={{ display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
+                <Link to="/showcase" className="btn-pill btn-pill--blue" data-testid="hero-showcase-btn">
                   ดูผลงานทั้งหมด <span>→</span>
                 </Link>
-                <Link to="/register" className="btn btn--ghost" data-testid="hero-register-btn">
+                <Link to="/register" className="btn-pill btn-pill--ghost" data-testid="hero-register-btn">
                   เริ่มสร้างวิจัยฟรี
                 </Link>
               </div>
             </div>
 
-            {/* Right side — featured brand + grid (uses real API data) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1,
-                          background: 'var(--ink)', border: '1px solid var(--ink)' }}>
+            {/* Right — Photo + featured brand bento */}
+            <div className="fade-up fade-up-3"
+                 style={{ display: 'grid', gridTemplateRows: '0.9fr 1.1fr', gap: 16,
+                          minHeight: 480 }}>
+              {/* Photo cell */}
+              <div className="img-frame"
+                   style={{ background: '#fff', position: 'relative' }}>
+                <img src={HERO_IMG} alt="Modern Thai marketing student"
+                     style={{ filter: 'saturate(1.1) contrast(1.04)' }}/>
+                <div style={{ position: 'absolute', bottom: 12, left: 12,
+                              padding: '6px 10px', background: 'rgba(255,255,255,0.92)',
+                              borderRadius: 999, fontFamily: 'var(--mono)',
+                              fontSize: 10, letterSpacing: '0.14em',
+                              textTransform: 'uppercase', color: 'var(--ink)' }}>
+                  ● Field Research · 2026
+                </div>
+              </div>
+
+              {/* Featured brand cell */}
               {loading ? (
-                <div style={{ background: 'var(--paper)', padding: 40, textAlign: 'center' }}
-                     className="meta">Loading…</div>
+                <div className="card-modern" style={{ display: 'flex',
+                                                       alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="meta">Loading…</span>
+                </div>
               ) : featured ? (
-                <>
-                  {/* Featured brand */}
-                  <Link to={`/showcase/${featured.share_token}`}
-                        data-testid="hero-featured-brand"
-                        style={{ background: 'var(--paper)', padding: 24,
-                                 display: 'flex', flexDirection: 'column', gap: 14,
-                                 textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <span className="meta" style={{ color: 'var(--be-red)' }}>● FEATURED</span>
-                      <span className="meta">N = {featured.response_count || 0}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <BrandLogo brand={{ name: featured.brand_name, logo_url: featured.logo_url }}
-                                 identity={{ visual_assets: featured.logo_asset ? [featured.logo_asset] : [] }}
-                                 size="lg" gradient={gradientForBrand(featured.id)}/>
-                      <div style={{ minWidth: 0 }}>
-                        <div className="serif" style={{ fontSize: 26, lineHeight: 1.1,
-                                                          letterSpacing: '-0.01em',
-                                                          whiteSpace: 'nowrap', overflow: 'hidden',
-                                                          textOverflow: 'ellipsis' }}>
-                          {featured.brand_name}
-                        </div>
-                        <div className="meta" style={{ color: 'var(--ink-3)', marginTop: 4 }}>
-                          {featured.category || 'general'}
-                        </div>
+                <Link to={`/showcase/${featured.share_token}`}
+                      data-testid="hero-featured-brand"
+                      className="card-modern"
+                      style={{ textDecoration: 'none', color: 'inherit',
+                               padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <span className="corner-accent"/>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="chip chip--red">● FEATURED</span>
+                    <span className="meta">N = {featured.response_count || 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <BrandLogo brand={{ name: featured.brand_name, logo_url: featured.logo_url }}
+                               identity={{ visual_assets: featured.logo_asset ? [featured.logo_asset] : [] }}
+                               size="lg" gradient={gradientForBrand(featured.id)}/>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="serif" style={{ fontSize: 22, lineHeight: 1.1,
+                                                        letterSpacing: '-0.01em',
+                                                        whiteSpace: 'nowrap', overflow: 'hidden',
+                                                        textOverflow: 'ellipsis' }}>
+                        {featured.brand_name}
+                      </div>
+                      <div className="meta" style={{ marginTop: 4 }}>
+                        {featured.category || 'general'}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between',
-                                  alignItems: 'center', borderTop: '1px solid var(--rule)',
-                                  paddingTop: 14, marginTop: 4 }}>
-                      <span className="meta">
-                        {featured.ready_for_dashboard ? '● PUBLIC' : '○ AWAITING DATA'}
-                      </span>
-                      <span className="link-arrow link-arrow--red">View Report →</span>
-                    </div>
-                  </Link>
-
-                  {/* Mini grid */}
+                  </div>
                   {sideBrands.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr',
-                                  gap: 1, background: 'var(--ink)' }}>
-                      {sideBrands.map((b) => (
-                        <Link key={b.id} to={`/showcase/${b.share_token}`}
-                              data-testid={`hero-side-brand-${b.id}`}
-                              style={{ background: 'var(--paper)', padding: 16,
-                                       display: 'flex', flexDirection: 'column', gap: 10,
-                                       textDecoration: 'none', color: 'inherit',
-                                       transition: 'background 0.15s' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = '#fff'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = 'var(--paper)'; }}>
-                          <BrandLogo brand={{ name: b.brand_name, logo_url: b.logo_url }}
-                                     identity={{ visual_assets: b.logo_asset ? [b.logo_asset] : [] }}
-                                     gradient={gradientForBrand(b.id)}/>
-                          <div style={{ minWidth: 0 }}>
-                            <div className="serif" style={{ fontSize: 16, lineHeight: 1.15,
-                                                              whiteSpace: 'nowrap',
-                                                              overflow: 'hidden',
-                                                              textOverflow: 'ellipsis' }}>
-                              {b.brand_name}
-                            </div>
-                            <div className="meta" style={{ color: 'var(--ink-3)',
-                                                            marginTop: 4, fontSize: 9 }}>
-                              {b.category || 'general'}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between',
-                                        alignItems: 'center', marginTop: 'auto' }}>
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9,
-                                            letterSpacing: '0.14em',
-                                            color: b.ready_for_dashboard ? 'var(--be-green)' : 'var(--be-red)' }}>
-                              ● {b.ready_for_dashboard ? 'PUBLIC' : 'COLLECTING'}
-                            </span>
-                            <span className="meta" style={{ fontSize: 9 }}>n={b.response_count || 0}</span>
-                          </div>
-                        </Link>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap',
+                                  borderTop: '1px solid rgba(26,26,26,0.08)', paddingTop: 12 }}>
+                      {sideBrands.slice(0, 4).map((b) => (
+                        <span key={b.id} className="chip chip--gray"
+                              style={{ fontSize: 9, padding: '3px 8px' }}>
+                          {b.brand_name}
+                        </span>
                       ))}
                     </div>
                   )}
-                </>
+                  <div style={{ display: 'flex', justifyContent: 'space-between',
+                                alignItems: 'center', marginTop: 'auto' }}>
+                    <span className="meta" style={{ color: 'var(--logo-blue)' }}>
+                      ● {featured.ready_for_dashboard ? 'PUBLIC' : 'AWAITING DATA'}
+                    </span>
+                    <span className="link-arrow link-arrow--red">View Report →</span>
+                  </div>
+                </Link>
               ) : (
-                <div style={{ background: 'var(--paper)', padding: 40, textAlign: 'center' }}
-                     className="meta">No public showcases yet</div>
+                <div className="card-modern" style={{ textAlign: 'center', padding: 40 }}>
+                  <span className="meta">No public showcases yet</span>
+                </div>
               )}
             </div>
           </div>
         </div>
-        {/* Brand spectrum hairline replaces plain 1px black border under hero */}
         <div className="hero-grad-rule"></div>
       </section>
       <section className="swu-container" style={{ padding: '0 32px' }}>
@@ -207,75 +200,106 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* TOOLS BENTO */}
-      <section className="swu-container" style={{ padding: '80px 32px 0' }}>
-        <div className="hero-grid"
-             style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
-                      gap: 56, marginBottom: 32, alignItems: 'end' }}>
-          <div>
-            <Eyebrow red>● Open Tools</Eyebrow>
-            <h2 className="h-section" style={{ marginTop: 14 }}>เครื่องมือวิจัยตลาด<br/>ที่ใช้ได้ฟรี</h2>
+      {/* TOOLS BENTO — modern rounded cards on paper bg */}
+      <section style={{ background: 'var(--paper)', padding: '88px 0' }}>
+        <div className="swu-container" style={{ padding: '0 32px' }}>
+          <div className="hero-grid"
+               style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
+                        gap: 56, marginBottom: 40, alignItems: 'end' }}>
+            <div>
+              <Eyebrow red>● Open Tools</Eyebrow>
+              <h2 className="h-section" style={{ marginTop: 14 }}>เครื่องมือวิจัยตลาด<br/>ที่ใช้ได้ฟรี</h2>
+            </div>
+            <p className="lede" style={{ fontSize: 17 }}>
+              แปดเครื่องมือที่ออกแบบโดยอาจารย์และนักวิจัยจากสาขาการตลาด มศว. — เปิดให้นักศึกษา SME และนักการตลาดทุกคนใช้งานได้โดยไม่มีค่าใช้จ่าย
+            </p>
           </div>
-          <p className="lede" style={{ fontSize: 16 }}>
-            แปดเครื่องมือที่ออกแบบโดยอาจารย์และนักวิจัยจากสาขาการตลาด มศว. — เปิดให้นักศึกษา SME และนักการตลาดทุกคนใช้งานได้โดยไม่มีค่าใช้จ่าย
-          </p>
-        </div>
 
-        <div className="bento" data-testid="home-tools-bento">
-          {TOOLS.map((tool) => (
-            <Link key={tool.t} to={tool.p} className="bento__cell"
-                  data-testid={`home-tool-${tool.t.replace(/\s+/g, '-').toLowerCase()}`}>
-              <span className="tag">{tool.tag}</span>
-              <h3>{tool.t}</h3>
-              <p>{tool.s}</p>
-              <span className="open">Open Tool →</span>
-            </Link>
-          ))}
+          <div data-testid="home-tools-bento"
+               style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+            {TOOLS.map((tool, i) => (
+              <Link key={tool.t} to={tool.p} className={`card-modern fade-up fade-up-${(i % 4) + 1}`}
+                    data-testid={`home-tool-${tool.t.replace(/\s+/g, '-').toLowerCase()}`}
+                    style={{ textDecoration: 'none', color: 'inherit',
+                             display: 'flex', flexDirection: 'column', gap: 10, minHeight: 180 }}>
+                <span className="corner-accent"/>
+                <span className="chip">{tool.tag}</span>
+                <h3 className="serif" style={{ fontSize: 22, lineHeight: 1.18,
+                                                 letterSpacing: '-0.01em', margin: '6px 0 0' }}>
+                  {tool.t}
+                </h3>
+                <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.5,
+                            margin: 0, fontFamily: 'var(--sans)' }}>
+                  {tool.s}
+                </p>
+                <span className="meta" style={{ marginTop: 'auto', color: 'var(--logo-blue)' }}>
+                  Open Tool →
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* KNOWLEDGE HUB */}
-      <section className="swu-container" style={{ padding: '96px 32px 0' }}>
-        <div className="rule rule--strong" style={{ marginBottom: 56 }}></div>
-        <div className="hero-grid"
-             style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64,
-                      alignItems: 'start', marginBottom: 56 }}>
-          <div>
-            <Eyebrow red>● Knowledge Hub</Eyebrow>
-            <h2 className="h-section" style={{ marginTop: 14, fontSize: 'clamp(36px, 4.5vw, 56px)' }}>
-              เรียนการตลาด<br/><span className="italic-accent">ฉบับ มศว.</span>
-            </h2>
+      {/* KNOWLEDGE HUB — with banner image */}
+      <section style={{ background: '#FFFFFF', padding: '96px 0' }}>
+        <div className="swu-container" style={{ padding: '0 32px' }}>
+          <div className="hero-grid"
+               style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 0.9fr)',
+                        gap: 56, alignItems: 'center', marginBottom: 56 }}>
+            <div>
+              <Eyebrow red>● Knowledge Hub</Eyebrow>
+              <h2 className="h-section" style={{ marginTop: 14, fontSize: 'clamp(40px, 5vw, 68px)' }}>
+                เรียนการตลาด<br/><span className="italic-accent">ฉบับ มศว.</span>
+              </h2>
+              <p className="lede" style={{ fontSize: 17, marginTop: 22, maxWidth: '50ch' }}>
+                บทความวิชาการเขียนโดย SWU Marketing Research Team — เน้นเชื่อมทฤษฎีคลาสสิก
+                (Aaker · Kotler · Trout & Ries) กับเครื่องมือจริงในแพลตฟอร์ม
+              </p>
+              <Link to="/learn" className="btn-pill btn-pill--dark"
+                    data-testid="home-learn-all"
+                    style={{ marginTop: 24 }}>
+                อ่านทั้งหมด →
+              </Link>
+            </div>
+            <div className="img-frame" style={{ height: 360 }}>
+              <img src={KNOWLEDGE_IMG} alt="Marketing knowledge hub"/>
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignSelf: 'end' }}>
-            <p className="lede" style={{ fontSize: 16 }}>
-              บทความวิชาการที่ผ่านการเรียบเรียงให้อ่านง่าย เน้นเชื่อมทฤษฎีกับเครื่องมือจริงในแพลตฟอร์ม —
-              เขียนโดย SWU Marketing Research Team
-            </p>
-            <Link to="/learn" className="link-arrow" data-testid="home-learn-all">อ่านทั้งหมด →</Link>
-          </div>
-        </div>
 
-        <div className="article-grid"
-             style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 32 }}>
-          {featuredArticles.map((a) => (
-            <Link key={a.slug} to={`/learn/${a.slug}`} className="ed-card"
-                  data-testid={`home-article-${a.slug}`}
-                  style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="ed-card__meta">
-                <span className="ed-card__cat">{a.category}</span>
-                <span className="ed-card__time">{a.readMin} MIN</span>
-              </div>
-              <h3 className="ed-card__title">{a.title}</h3>
-              <p className="ed-card__excerpt">{a.description}</p>
-              <span className="ed-card__cta">Read Article →</span>
-            </Link>
-          ))}
+          <div data-testid="home-articles-grid"
+               style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
+            {featuredArticles.map((a, i) => (
+              <Link key={a.slug} to={`/learn/${a.slug}`}
+                    className={`card-modern fade-up fade-up-${(i % 4) + 1}`}
+                    data-testid={`home-article-${a.slug}`}
+                    style={{ textDecoration: 'none', color: 'inherit',
+                             display: 'flex', flexDirection: 'column', gap: 10, padding: 22 }}>
+                <span className="corner-accent"/>
+                <div style={{ display: 'flex', justifyContent: 'space-between',
+                              alignItems: 'center' }}>
+                  <span className="chip">{a.category}</span>
+                  <span className="meta">{a.readMin} MIN</span>
+                </div>
+                <h3 className="serif" style={{ fontSize: 19, lineHeight: 1.18,
+                                                 letterSpacing: '-0.01em', margin: '4px 0 0' }}>
+                  {a.title}
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5,
+                            margin: 0, fontFamily: 'var(--sans)' }}>
+                  {a.description.slice(0, 110)}…
+                </p>
+                <span className="meta" style={{ marginTop: 'auto', color: 'var(--logo-blue)' }}>
+                  Read Article →
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* DARK ABOUT BAND */}
-      <section style={{ background: 'var(--ink)', color: 'var(--paper)',
-                        marginTop: 96, padding: '88px 0' }}
+      <section style={{ background: 'var(--ink)', color: 'var(--paper)', padding: '88px 0' }}
                data-testid="home-about-band">
         <div className="swu-container">
           <div className="hero-grid"
