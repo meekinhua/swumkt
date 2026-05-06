@@ -77,6 +77,12 @@ const LandingPage = () => {
               <a href="#features" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.features')}</a>
               <a href="#stats" className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.about')}</a>
               <button onClick={() => navigate('/market-research')} className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.marketResearch')}</button>
+              <button onClick={() => navigate('/showcase')}
+                      data-testid="nav-showcase-btn"
+                      className="text-gray-800 hover:text-[#E63946] font-semibold transition-colors accent-border pb-1 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#E63946] animate-pulse"/>
+                {t('nav.showcase')}
+              </button>
               <button onClick={() => navigate('/content')} className="text-gray-800 hover:text-[#00A9CE] font-semibold transition-colors accent-border pb-1">{t('nav.content')}</button>
               <LanguageSwitcher />
               {user ? (
@@ -123,6 +129,12 @@ const LandingPage = () => {
               <a href="#features" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.features')}</a>
               <a href="#stats" className="block text-white hover:text-[#33BCDA] font-semibold transition-colors">{t('nav.about')}</a>
               <button onClick={() => navigate('/market-research')} className="block text-white hover:text-[#33BCDA] font-semibold transition-colors w-full text-left">{t('nav.marketResearch')}</button>
+              <button onClick={() => navigate('/showcase')}
+                      data-testid="mobile-nav-showcase-btn"
+                      className="block text-white hover:text-[#FFB3B8] font-semibold transition-colors w-full text-left flex items-center gap-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#FFB3B8] animate-pulse"/>
+                {t('nav.showcase')}
+              </button>
               <button onClick={() => navigate('/content')} className="block text-white hover:text-[#33BCDA] font-semibold transition-colors w-full text-left">{t('nav.content')}</button>
               <div className="pt-2">
                 <LanguageSwitcher />
@@ -207,6 +219,16 @@ const LandingPage = () => {
                 {t('landing.browseContent')}
               </Button>
             </div>
+            {/* Tertiary CTA — public showcase of brand research */}
+            <button
+              onClick={() => navigate('/showcase')}
+              data-testid="hero-showcase-link"
+              className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#E63946] hover:text-[#B8232E] transition-colors group"
+            >
+              <span className="inline-block w-2 h-2 rounded-full bg-[#E63946] animate-pulse"/>
+              {t('landing.viewShowcase', 'ดูผลงานวิจัยแบรนด์ที่เปิดสาธารณะ')}
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       </section>

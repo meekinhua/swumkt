@@ -1,6 +1,15 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🔗 Landing page: Showcase entry points
+- เพิ่ม Showcase link 2 จุดบน landing page หลักให้ visitor ค้นหา public showcase ง่าย:
+  - **Top nav (desktop + mobile)**: "● ผลงานวิจัยแบรนด์" — มี red dot pulsing accent
+  - **Hero tertiary CTA**: "● ดูผลงานวิจัยแบรนด์ที่เปิดสาธารณะ →" ใต้ปุ่มหลัก เข้ากับ branding ไม่บดบัง CTA primary
+- TH/EN translations: `nav.showcase` + `landing.viewShowcase`
+- คลิกที่ลิงก์ → ไปที่ `/showcase` (public, no auth)
+
+
+
 ## 2026-02-06 — 🐛 Showcase: "Identity ที่แบรนด์ตั้งใจ" output ไม่ครบ
 - **User report**: หน้า public showcase แสดง section Identity vs Image ไม่ครบ — "ที่แบรนด์ตั้งใจ" ว่างเปล่า
 - **Root cause** (`BrandEquityDashboardPage.jsx` line 60 ก่อนแก้):
