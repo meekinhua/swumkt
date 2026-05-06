@@ -1,0 +1,27 @@
+# SWUMKT Portal — robots policy
+# Public showcase pages are crawler-friendly. Authenticated/admin areas are blocked.
+
+User-agent: *
+Allow: /
+Allow: /showcase
+Allow: /showcase/
+
+Disallow: /api/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /research/
+Disallow: /market-research/
+
+# Social-network crawlers (LINE, Facebook, Twitter) — allow everything public
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LineBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /

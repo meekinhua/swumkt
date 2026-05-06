@@ -10,6 +10,7 @@ import {
   IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
   BrandLogo, SWU_LOGO_URL
 } from './be-components';
+import useDocumentMeta from '@/hooks/useDocumentMeta';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -19,6 +20,54 @@ const tierFor = (s) => s >= 70 ? { name: 'Healthy', th: 'แข็งแรง',
 
 const findStat = (questions, kindOrType, dim) => {
   return questions.find(q => (q.kind === kindOrType || q.type === kindOrType) && (!dim || q.dimension === dim));
+};
+
+// Document head for public showcase pages — sets <title>, OG/Twitter cards,
+// and JSON-LD structured data so social shares (LINE, Facebook, Twitter) and
+// Google show a proper preview with brand name, logo, and key score.
+const ShowcaseHead = ({ study, score, tier, responseCount }) => {
+  const brand = study?.brand || {};
+  const identity = study?.identity || {};
+  const logoAsset = (identity.visual_assets || []).find(a => a?.kind === 'logo');
+  const inlineLogo = logoAsset?.image_base64
+    ? `data:${logoAsset.mime_type || 'image/png'};base64,${logoAsset.image_base64}`
+    : null;
+  const externalLogo = brand.logo_url && /^https?:\/\//i.test(brand.logo_url) ? brand.logo_url : null;
+  // Prefer external URL over base64 for social previews (Facebook strips data: URIs)
+  const ogImage = externalLogo || inlineLogo || SWU_LOGO_URL;
+
+  const url = typeof window !== 'undefined' ? window.location.href : '';
+  const title = `${brand.name || 'Brand'} · Brand Health Check — SWU MKT`;
+  const description = brand.name
+    ? `${brand.name} (${brand.category || 'brand'}) — Brand Equity score ${score}/100 · ${tier?.name || ''} · ${responseCount} respondents · Awareness, Quality, Identity & Loyalty insights.`
+    : 'Public Brand Health Check report by SWU Marketing Research.';
+
+  useDocumentMeta({
+    title,
+    description,
+    image: ogImage,
+    url,
+    type: 'article',
+    jsonLd: brand.name ? {
+      '@context': 'https://schema.org',
+      '@type': 'Report',
+      name: title,
+      headline: title,
+      description,
+      url,
+      about: {
+        '@type': 'Brand',
+        name: brand.name,
+        ...(externalLogo ? { logo: externalLogo } : {}),
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: 'SWU Marketing Research',
+        logo: { '@type': 'ImageObject', url: SWU_LOGO_URL },
+      },
+    } : null,
+  });
+  return null;
 };
 
 const BrandEquityDashboardPage = () => {
@@ -152,7 +201,9 @@ const BrandEquityDashboardPage = () => {
 
   return (
     <div className="be-root" data-testid={isShowcase ? 'be-showcase-page' : 'be-dashboard-page'}>
-      {isShowcase ? (
+      {isShowcase && (
+        <ShowcaseHead study={study} score={score} tier={tier} responseCount={responseCount}/>
+      )}      {isShowcase ? (
         <div className="be-public-topbar" data-testid="be-showcase-topbar">
           <div className="be-public-brand">
             <img src={SWU_LOGO_URL} alt="SWUMKT Logo" className="be-public-logo"/>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './brand-equity-styles.css';
 import { Icon, BrandLogo, BeLoading, SWU_LOGO_URL } from './be-components';
+import useDocumentMeta from '@/hooks/useDocumentMeta';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -51,6 +52,38 @@ const BrandEquityShowcaseIndexPage = () => {
       (s.competitors || []).some(c => (c || '').toLowerCase().includes(needle))
     );
   }, [items, q]);
+
+  // Document head: title, description, OG/Twitter cards, JSON-LD ItemList
+  const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const ogTitle = 'Brand Health, in Public · SWU MKT';
+  const ogDescription = items.length > 0
+    ? `${items.length} แบรนด์เปิดเผยผลวิจัย Brand Health Check แบบสาธารณะ — Awareness, Quality, Identity, Loyalty พร้อม AI insights ดูได้ทันทีโดยไม่ต้องสมัครสมาชิก`
+    : 'รวมผลงานวิจัย Brand Health Check ที่นักวิจัยเปิดเผยต่อสาธารณะ จาก SWU Marketing Research Platform';
+
+  useDocumentMeta({
+    title: ogTitle,
+    description: ogDescription,
+    image: SWU_LOGO_URL,
+    url: pageUrl,
+    type: 'website',
+    jsonLd: !loading && items.length > 0 ? {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: ogTitle,
+      description: ogDescription,
+      url: pageUrl,
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: items.length,
+        itemListElement: items.slice(0, 20).map((s, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          url: `${typeof window !== 'undefined' ? window.location.origin : ''}/showcase/${s.share_token}`,
+          name: s.brand_name,
+        })),
+      },
+    } : null,
+  });
 
   return (
     <div className="be-root" data-testid="be-showcase-index">

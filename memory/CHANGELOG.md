@@ -1,6 +1,26 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🔍 SEO + Social Share Previews (Meta tags + JSON-LD)
+- **Why**: ให้นักวิจัยใช้ลิงก์ `/showcase/{token}` แชร์บน LINE/Facebook/Twitter ได้สวย พร้อมโลโก้แบรนด์ + คะแนน — และ Google index ได้
+- **Custom hook** (`/app/frontend/src/hooks/useDocumentMeta.js` NEW):
+  - Lightweight, zero-dependency hook ที่ inject meta tags ผ่าน DOM โดยตรง (เลี่ยง react-helmet-async ที่ไม่เข้ากับ React 19)
+  - Manages `<title>`, `<meta name="description">`, OG tags, Twitter Card tags, canonical link, JSON-LD `<script type="application/ld+json">`
+  - Auto-cleanup on unmount (กัน meta ค้างข้ามหน้า)
+- **Showcase index** (`/showcase`):
+  - Title: "Brand Health, in Public · SWU MKT" + dynamic count description
+  - JSON-LD `CollectionPage` + `ItemList` (top 20 brands) for rich snippets
+- **Showcase detail** (`/showcase/{token}`):
+  - Title: `{Brand} · Brand Health Check — SWU MKT`
+  - Description: รวม Brand Equity score, tier (Healthy/At watch/At risk), response count
+  - og:image: brand logo (external URL > base64 > SWU fallback) — Facebook ตัด data: URIs จึงเลือก URL ก่อน
+  - JSON-LD `Report` schema + `Brand` + `Organization` publisher
+- **Default tags** (`index.html`): OG + Twitter Card defaults สำหรับ crawler ที่ไม่ render JS
+- **robots.txt** (NEW): Allow `/showcase/*`, disallow auth pages, special rules สำหรับ facebookexternalhit, Twitterbot, LineBot, WhatsApp
+- **Verified**: Title resets ถูก คน navigate ระหว่างหน้า, og: tags ตั้งค่าถูกตามเนื้อหา, JSON-LD schema valid
+
+
+
 ## 2026-02-06 — 🔗 Landing page: Showcase entry points
 - เพิ่ม Showcase link 2 จุดบน landing page หลักให้ visitor ค้นหา public showcase ง่าย:
   - **Top nav (desktop + mobile)**: "● ผลงานวิจัยแบรนด์" — มี red dot pulsing accent
