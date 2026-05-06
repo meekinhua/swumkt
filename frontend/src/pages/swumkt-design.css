@@ -565,3 +565,87 @@ a { color: inherit; text-decoration: none; }
   .stat-strip__num { font-size: 40px; }
   .h-display { font-size: clamp(40px, 11vw, 64px) !important; }
 }
+
+/* ============================================================
+   LOGO BRAND PALETTE
+   Extracted from the official SWU MKT wordmark gradient.
+   Used sparingly as accents — keep editorial discipline.
+   ============================================================ */
+:root {
+  --logo-blue:   #3597E4;
+  --logo-purple: #8A58C7;
+  --logo-pink:   #D44F80;
+  --logo-red:    #E22B37;
+
+  --logo-grad: linear-gradient(90deg, #3597E4 0%, #8A58C7 38%, #D44F80 68%, #E22B37 100%);
+  --logo-grad-soft: linear-gradient(90deg, rgba(53,151,228,0.10), rgba(138,88,199,0.10), rgba(212,79,128,0.10), rgba(226,43,55,0.10));
+}
+
+/* Realign primary red across the system to the logo's red so all editorial
+   accents (eyebrow dots, italic-accent, link arrows) match the wordmark. */
+:root {
+  --be-red: var(--logo-red);
+}
+
+/* Italic accent text — apply the brand spectrum as a text gradient.
+   Falls back to solid red on browsers without background-clip:text. */
+.italic-accent {
+  background: var(--logo-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Optional inline gradient bar to sit below a hero or section eyebrow */
+.logo-grad-bar {
+  height: 3px;
+  width: 96px;
+  background: var(--logo-grad);
+  margin: 14px 0 0;
+  border-radius: 0;
+}
+
+/* Eyebrow dot — when paired with `.dot--brand`, paint the spectrum */
+.dot--brand {
+  background: var(--logo-grad) !important;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+}
+.dot--brand.dot--pulse {
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+/* Subtle band of brand color under the homepage hero (replaces the plain 1px border) */
+.hero-grad-rule {
+  height: 2px;
+  width: 100%;
+  background: var(--logo-grad);
+  opacity: 0.85;
+}
+
+/* Brand-logo fallback gradients now follow the wordmark palette so missing
+   brand logos visually echo the platform's identity */
+.blogo--g1 { background: linear-gradient(140deg, #3597E4, #5BB1F1); }   /* Blue */
+.blogo--g2 { background: linear-gradient(140deg, #8A58C7, #B68FE2); }   /* Purple */
+.blogo--g3 { background: linear-gradient(140deg, #D44F80, #EE8AA9); }   /* Pink */
+.blogo--g4 { background: linear-gradient(140deg, #E22B37, #F26C76); }   /* Red */
+.blogo--g5 { background: linear-gradient(140deg, #3597E4 0%, #8A58C7 50%, #E22B37 100%); }  /* Spectrum */
+
+/* Tool-CTA block on dark background — accent line uses the brand spectrum */
+.tool-cta {
+  position: relative;
+}
+.tool-cta::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--logo-grad);
+}
+
+/* Featured brand panel — top accent rule */
+.brand-spectrum-rule {
+  height: 2px;
+  background: var(--logo-grad);
+  width: 100%;
+}

@@ -68,7 +68,7 @@ const HomePage = () => {
       <Topbar active="home" />
 
       {/* HERO — Asymmetric: text + featured brand panel */}
-      <section style={{ borderBottom: '1px solid var(--ink)', background: 'var(--paper)' }}>
+      <section style={{ background: 'var(--paper)' }}>
         <div className="swu-container" style={{ padding: '64px 32px 80px' }}>
           <div style={{ marginBottom: 28 }}>
             <Eyebrow red dot pulse>Public Showcase · Live Brand Research from SWU MKT</Eyebrow>
@@ -187,9 +187,9 @@ const HomePage = () => {
             </div>
           </div>
         </div>
+        {/* Brand spectrum hairline replaces plain 1px black border under hero */}
+        <div className="hero-grad-rule"></div>
       </section>
-
-      {/* STATS STRIP */}
       <section className="swu-container" style={{ padding: '0 32px' }}>
         <div className="stat-strip">
           <div className="stat-strip__item">

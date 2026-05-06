@@ -1,6 +1,26 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🎨 Logo Restoration + Brand Color Blending
+- **User**: "เอา logo เก่ากลับมา · blend สี จาก logo เข้าไปใน design โดยรวมด้วย"
+- **Logo analysis** (Gemini multimodal vision on the bitmap):
+  - Wordmark gradient: Blue `#3597E4` → Purple `#8A58C7` → Pink `#D44F80` → Red `#E22B37`
+  - Network of hexagonal nodes following the same spectrum
+- **Restored logo**: `SwuLogo` component now renders the actual SWU MKT bitmap from `SWU_LOGO_URL` instead of typographic SWU/MKT wordmark
+- **Blended brand palette into design system** (`swumkt-design.css`):
+  - Added `--logo-blue / --logo-purple / --logo-pink / --logo-red` + `--logo-grad` (linear-gradient) tokens
+  - Realigned `--be-red` to match the logo's exact `#E22B37`
+  - `.italic-accent` (every italic accent word like "เปิดเผย" / "in Public.") now uses the **brand spectrum as a text gradient** via `background-clip: text`
+  - `.hero-grad-rule` — replaces the plain 1px black border under the homepage hero with a 2px brand-spectrum hairline
+  - `.tool-cta::before` — every inline tool CTA gets a 2px gradient accent rule along the top edge
+  - `.dot--brand` variant — eyebrow dot with full-spectrum gradient (used sparingly)
+  - **Brand-logo fallback gradients** (`.blogo--g1` through `.blogo--g5`) rebuilt from the logo palette so missing brand logos echo the platform identity:
+    - g1=blue, g2=purple, g3=pink, g4=red, g5=full spectrum
+- **Discipline preserved**: Swiss/editorial layout untouched — gradients used as ACCENTS (italic words, hairlines, fallback avatars) not on chrome/buttons/typography
+- **Verified**: italic-accent renders as gradient text, logo loads from CDN, all 5 public pages still pass smoke test
+
+
+
 ## 2026-02-06 — 🎨 Public Pages V2: Integrated Claude Design Handoff
 - **User feedback**: V1 redesign "ไม่สวย" — created design brief, user took to Claude Design tool, returned a `swumkt-handoff.zip` bundle
 - **Integrated handoff**:
