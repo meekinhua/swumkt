@@ -46,6 +46,7 @@ import BrandEquityListPage from '@/pages/brand-equity/BrandEquityListPage';
 import BrandEquityWizardPage from '@/pages/brand-equity/BrandEquityWizardPage';
 import BrandEquityRespondentPage from '@/pages/brand-equity/BrandEquityRespondentPage';
 import BrandEquityDashboardPage from '@/pages/brand-equity/BrandEquityDashboardPage';
+import BrandEquityShowcaseIndexPage from '@/pages/brand-equity/BrandEquityShowcaseIndexPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -465,6 +466,11 @@ function App() {
             <Route
               path="/brand-equity/respond/:token"
               element={<BrandEquityRespondentPage />}
+            />
+            {/* Public showcase index — no auth */}
+            <Route
+              path="/showcase"
+              element={<BrandEquityShowcaseIndexPage />}
             />
             {/* Public showcase — read-only dashboard, no auth */}
             <Route

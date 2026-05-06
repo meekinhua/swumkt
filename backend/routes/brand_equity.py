@@ -1542,6 +1542,47 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     # ---- Public Showcase (read-only sanitized dashboard view, no auth) ----
 
+    @brand_equity_router.get("/showcase")
+    async def list_public_showcases():
+        """Public — list all studies the owner has marked as `is_public_showcase`.
+        Returns lean metadata only (no aggregates). Anyone can browse;
+        clicking into /showcase/{token} loads the full sanitized dashboard."""
+        cur = db.brand_studies.find(
+            {"is_public_showcase": True, "deleted_at": {"$exists": False}},
+            {"_id": 0, "id": 1, "brand": 1, "share_token": 1, "status": 1,
+             "created_at": 1, "updated_at": 1, "is_public_showcase": 1,
+             "identity.visual_assets": 1}
+        ).sort("updated_at", -1)
+        items = await cur.to_list(500)
+
+        out = []
+        for s in items:
+            tok = s.get("share_token")
+            if not tok:
+                continue
+            brand = s.get("brand") or {}
+            identity = s.get("identity") or {}
+            logo_asset = next(
+                (a for a in (identity.get("visual_assets") or []) if a.get("kind") == "logo"),
+                None
+            )
+            response_count = await db.brand_responses.count_documents({"study_id": s["id"]})
+            out.append({
+                "id": s["id"],
+                "share_token": tok,
+                "status": s.get("status"),
+                "brand_name": brand.get("name"),
+                "category": brand.get("category"),
+                "competitors": (brand.get("competitors") or [])[:5],
+                "logo_url": brand.get("logo_url"),
+                "logo_asset": logo_asset,
+                "response_count": response_count,
+                "ready_for_dashboard": response_count >= 10,
+                "created_at": s.get("created_at"),
+                "updated_at": s.get("updated_at"),
+            })
+        return {"showcases": out, "total": len(out)}
+
     @brand_equity_router.get("/showcase/{share_token}")
     async def get_public_showcase(share_token: str):
         """Public — sanitized dashboard view of a study that the owner has marked as showcase.

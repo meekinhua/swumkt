@@ -1,6 +1,22 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🎭 Public Showcase Hub Page (`/showcase` index)
+- **Why**: User requested a landing page where visitors can browse all Brand Equity studies that owners have published as public showcases — instead of needing the direct `/showcase/{token}` URL
+- **Backend** (`/app/backend/routes/brand_equity.py`):
+  - `GET /api/brand-equity/showcase` (NEW, public, no auth): lists studies where `is_public_showcase: true` AND not soft-deleted
+  - Lean projection — brand name, category, logo, competitors, response_count, ready_for_dashboard flag
+  - Registered BEFORE `/showcase/{share_token}` to avoid path collision
+- **Frontend** (`/app/frontend/src/pages/brand-equity/BrandEquityShowcaseIndexPage.jsx` NEW):
+  - Public route `/showcase` (no auth required) registered in App.js
+  - Editorial/Swiss design: large serif hero "Brand Health, in Public.", stats bar (BRANDS · RESPONDENTS · READY TO READ), search filter (name/category/competitor), grid of brand cards
+  - Each card → click navigates to `/showcase/{share_token}` (existing public dashboard)
+  - PUBLIC vs AWAITING DATA badge based on `ready_for_dashboard` (response_count >= 10)
+  - Empty/no-match states; sparse-grid override (transparent bg + border per card) when items < 3
+- **Verified**: List endpoint returns 1 showcase publicly, click-through to detail loads full dashboard
+
+
+
 ## 2026-02-06 — 🗑️ Conjoint Analysis: Soft-delete + Trash Bin (mirroring Brand Equity)
 - **Why**: User explicitly requested feature parity — "ทั้ง conjoint และ brand" — Brand Equity got Trash in prior iteration but Conjoint was missed
 - **Backend** (`/app/backend/server.py`):
