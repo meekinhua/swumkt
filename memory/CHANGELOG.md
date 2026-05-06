@@ -1,6 +1,20 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🎨 Public Pages V2: Integrated Claude Design Handoff
+- **User feedback**: V1 redesign "ไม่สวย" — created design brief, user took to Claude Design tool, returned a `swumkt-handoff.zip` bundle
+- **Integrated handoff**:
+  - Copied `styles.css` (548 lines) → `/app/frontend/src/pages/swumkt-design.css`
+  - Created `SwumktComponents.jsx` (Topbar, Footer, Eyebrow, BrandLogo with API support, ScoreRing, StatusPill, gradientForBrand)
+  - Rewrote 5 public pages to use the new design system: HomePage, ShowcaseIndex, LearnIndex, LearnArticle, AboutSwuMarketing
+  - Wired all pages to **real API data** (showcase fetched from `/api/brand-equity/showcase`) — design prototype used static data
+  - Preserved: `useDocumentMeta` SEO hooks, JSON-LD schemas, react-router navigation, BrandLogo with uploaded-logo fallback to gradient+initial
+  - Added responsive media queries (900px / 640px breakpoints) since prototype was desktop-only
+- **Result**: Editorial / Monocle-style aesthetic with massive serif hero italics, asymmetric grids, 1px-gap-on-dark bento, sticky topbar, sitemap footer
+- Old `LandingPage` archived at `/legacy-home` (rollback path)
+
+
+
 ## 2026-02-06 — 🏛️ SEO Restructure: Homepage Redesign + Knowledge Hub + Marketing Pillar
 - **Why**: User wants Brand Showcase as homepage hero + multiple SEO content pages targeting Thai marketing keywords + restructure for Google ranking
 - **Design**: เรียก `design_agent_full_stack` ออกแบบ Swiss/Editorial system — IBM Plex Serif/Mono/Sans, paper bg #F7F4EE, 1px hairline rules, large editorial serif headlines, restrained color (red #C8102E, black) — full guidelines saved to `/app/design_guidelines.json`

@@ -1,10 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Icon, SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
-import '@/pages/brand-equity/brand-equity-styles.css';
+import { Topbar, Footer, Eyebrow } from './swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
+import { SWU_LOGO_URL } from './brand-equity/be-components';
 
 const CAMPUS_IMG = 'https://images.pexels.com/photos/19193975/pexels-photo-19193975.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
+
+const TOOLS = [
+  { tag: 'BRAND', t: 'Brand Health Check', p: '/brand-equity' },
+  { tag: 'RESEARCH', t: 'Conjoint Analysis', p: '/market-research/conjoint-analysis' },
+  { tag: 'CX', t: 'Customer Journey', p: '/market-research' },
+  { tag: 'LEARN', t: 'Knowledge Hub', p: '/learn' },
+];
 
 const AboutSwuMarketing = () => {
   const url = typeof window !== 'undefined' ? window.location.href : '';
@@ -12,15 +19,13 @@ const AboutSwuMarketing = () => {
     title: 'สาขาการตลาด มศว · SWU Marketing Department · มหาวิทยาลัยศรีนครินทรวิโรฒ',
     description: 'สาขาวิชาการตลาด คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ — ศูนย์รวมงานวิจัยตลาด พฤติกรรมผู้บริโภค Brand Strategy และเครื่องมือ AI-driven Marketing Research ฟรีสำหรับนักวิจัย นักศึกษา และนักการตลาดทั่วไทย',
     image: CAMPUS_IMG,
-    url,
-    type: 'profile',
+    url, type: 'profile',
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'EducationalOrganization',
       name: 'Srinakharinwirot University — Department of Marketing',
       alternateName: 'สาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ',
-      url,
-      logo: SWU_LOGO_URL,
+      url, logo: SWU_LOGO_URL,
       address: { '@type': 'PostalAddress', addressLocality: 'Bangkok', addressCountry: 'TH' },
       department: {
         '@type': 'CollegeOrUniversity',
@@ -31,155 +36,126 @@ const AboutSwuMarketing = () => {
   });
 
   return (
-    <div className="be-root" data-testid="about-swu-marketing">
-      <div className="be-public-topbar">
-        <Link to="/" className="be-public-brand" style={{ textDecoration: 'none' }}>
-          <img src={SWU_LOGO_URL} alt="SWU MKT" className="be-public-logo"/>
-          <span className="be-public-text">
-            <span className="be-public-name">SWU · Marketing Research</span>
-            <span className="be-public-sub be-mono">ABOUT THE DEPARTMENT</span>
-          </span>
-        </Link>
-        <Link to="/" className="be-mono be-tiny"
-              style={{ padding: '6px 12px', border: '1px solid var(--rule-strong)',
-                       letterSpacing: '0.10em', color: 'var(--ink)', textDecoration: 'none' }}>
-          ← Home
-        </Link>
-      </div>
+    <div data-testid="about-swu-marketing">
+      <Topbar active="about" />
 
-      <div className="be-page" style={{ maxWidth: 1180 }}>
-        <nav className="be-mono be-tiny be-muted" style={{ marginBottom: 24, letterSpacing: '0.12em' }}>
-          <Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>HOME</Link>
-          {' / ABOUT / '}
-          <span style={{ color: 'var(--be-red)' }}>SWU MARKETING</span>
-        </nav>
-
-        <header style={{ borderBottom: '1px solid var(--ink)', paddingBottom: 32, marginBottom: 40 }}>
-          <div className="be-eyebrow" style={{ marginBottom: 14 }}>
-            <span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>
-            ABOUT · เกี่ยวกับสาขาวิชา
-          </div>
-          <h1 style={{ fontFamily: 'IBM Plex Serif, Georgia, serif',
-                       fontSize: 'clamp(40px, 6vw, 68px)', lineHeight: 1.05,
-                       fontWeight: 500, color: 'var(--ink)', marginBottom: 16 }}>
-            การตลาด มศว.<br/>วิจัย · ปฏิบัติ · เปิดเผย
+      <section style={{ borderBottom: '1px solid var(--ink)', padding: '72px 0 64px' }}>
+        <div className="swu-container">
+          <Eyebrow red>● About · Department of Marketing</Eyebrow>
+          <h1 className="h-display" style={{ marginTop: 24, maxWidth: '12ch' }}>
+            การตลาด มศว. — วิจัย · ปฏิบัติ · <span className="italic-accent">เปิดเผย</span>.
           </h1>
-          <p style={{ fontFamily: 'IBM Plex Sans Thai', fontSize: 19, lineHeight: 1.6,
-                      color: 'var(--ink-2)', maxWidth: 760 }}>
-            สาขาวิชาการตลาด คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ —
-            ผู้ผลิตงานวิจัยตลาดเชิงประยุกต์ และผู้พัฒนาเครื่องมือ AI-driven Marketing Research
-            ที่เปิดให้ประชาชนทั่วไปใช้ฟรี เพื่อยกระดับมาตรฐานวิจัยตลาดในประเทศไทย
+          <p className="lede" style={{ fontSize: 19, marginTop: 32, maxWidth: '58ch' }}>
+            สาขาการตลาด คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ — ผลิตงานวิจัยและบุคลากรการตลาดในประเทศไทยมา 50 ปี
           </p>
-        </header>
+        </div>
+      </section>
 
-        <img src={CAMPUS_IMG} alt="SWU Campus"
-             style={{ width: '100%', maxHeight: 420, objectFit: 'cover',
-                      filter: 'grayscale(20%) contrast(108%)', marginBottom: 48 }}/>
+      {/* Full-bleed image */}
+      <img src={CAMPUS_IMG} alt="SWU Campus"
+           style={{ width: '100%', height: 420, objectFit: 'cover',
+                    filter: 'grayscale(20%) contrast(108%)' }}/>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                      gap: 32, marginBottom: 56, borderTop: '1px solid var(--ink)', paddingTop: 32 }}>
-          <div>
-            <div className="be-mono be-tiny" style={{ color: 'var(--be-red)', letterSpacing: '0.14em',
-                                                        marginBottom: 10 }}>
-              ESTABLISHED
-            </div>
-            <h2 style={{ fontFamily: 'IBM Plex Serif, Georgia, serif', fontSize: 24,
-                         fontWeight: 500, marginBottom: 10 }}>1974</h2>
-            <p className="be-muted" style={{ fontSize: 15, lineHeight: 1.6,
-                                               fontFamily: 'IBM Plex Sans Thai' }}>
-              สาขาวิชาการตลาดก่อตั้งภายใต้คณะบริหารธุรกิจเพื่อสังคม
-              บนหลักปรัชญา "การศึกษาเพื่อพัฒนาสังคม"
-            </p>
+      {/* Stats */}
+      <section className="swu-container" style={{ padding: '0 32px' }}>
+        <div className="stat-strip">
+          <div className="stat-strip__item">
+            <span className="stat-strip__num">1974</span>
+            <span className="stat-strip__label">Established</span>
           </div>
-          <div>
-            <div className="be-mono be-tiny" style={{ color: 'var(--be-red)', letterSpacing: '0.14em',
-                                                        marginBottom: 10 }}>
-              FOCUS AREAS
-            </div>
-            <h2 style={{ fontFamily: 'IBM Plex Serif, Georgia, serif', fontSize: 24,
-                         fontWeight: 500, marginBottom: 10 }}>5 streams</h2>
-            <p className="be-muted" style={{ fontSize: 15, lineHeight: 1.6,
-                                               fontFamily: 'IBM Plex Sans Thai' }}>
-              Brand Strategy · Consumer Behavior · Digital Marketing · Marketing Analytics ·
-              Sustainable Marketing
-            </p>
+          <div className="stat-strip__item">
+            <span className="stat-strip__num">5</span>
+            <span className="stat-strip__label">Research Streams</span>
           </div>
+          <div className="stat-strip__item">
+            <span className="stat-strip__num">Open</span>
+            <span className="stat-strip__label">Platform Policy</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Mission */}
+      <section className="swu-container" style={{ padding: '80px 32px 0', maxWidth: 1100 }}>
+        <div className="hero-grid"
+             style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr', gap: 64,
+                      alignItems: 'start' }}>
           <div>
-            <div className="be-mono be-tiny" style={{ color: 'var(--be-red)', letterSpacing: '0.14em',
-                                                        marginBottom: 10 }}>
-              RESEARCH OUTPUT
-            </div>
-            <h2 style={{ fontFamily: 'IBM Plex Serif, Georgia, serif', fontSize: 24,
-                         fontWeight: 500, marginBottom: 10 }}>Open Platform</h2>
-            <p className="be-muted" style={{ fontSize: 15, lineHeight: 1.6,
-                                               fontFamily: 'IBM Plex Sans Thai' }}>
-              เปิดให้ใช้เครื่องมือ Brand Health Check, Conjoint Analysis, Customer Journey
-              ฟรีสำหรับนักวิจัย นักศึกษา และผู้ประกอบการไทย
+            <Eyebrow red>● Mission</Eyebrow>
+            <h2 className="h-section" style={{ marginTop: 16 }}>
+              การวิจัยตลาด<br/>ควรเป็นของ<br/><span className="italic-accent">ทุกคน</span>.
+            </h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+            <p style={{ fontSize: 17, lineHeight: 1.78, color: 'var(--ink)', margin: 0 }}>
+              ในประเทศไทย เครื่องมือวิจัยตลาดระดับมาตรฐานวิชาการมักถูกใช้งานเฉพาะในบริษัทที่จ่ายค่าใช้จ่ายระดับหลักล้านได้
+              — ทำให้ SME นักศึกษา และนักการตลาดอิสระเข้าไม่ถึง
+            </p>
+            <p style={{ fontSize: 17, lineHeight: 1.78, color: 'var(--ink-2)', margin: 0 }}>
+              SWU MKT ก่อตั้งขึ้นเพื่อแก้ปัญหานี้ — โดยเปิดเครื่องมือวิจัยตลาดมาตรฐาน อาทิ Brand Equity Survey,
+              Choice-Based Conjoint Analysis, Customer Journey Mapping ให้ทุกคนใช้ได้ฟรี
+              และเผยแพร่ผลงานวิจัยจริงสู่สาธารณะ
+            </p>
+            <p style={{ fontSize: 17, lineHeight: 1.78, color: 'var(--ink-2)', margin: 0 }}>
+              เป้าหมายคือสร้าง <strong style={{ fontWeight: 600 }}>ระบบนิเวศการวิจัยตลาดเปิด</strong>
+              สำหรับประเทศไทย ที่ความรู้ไม่ถูกล็อกอยู่ในกระดาษวิชาการ และเครื่องมือไม่ถูกล็อกอยู่ในซอฟต์แวร์ราคาแพง
             </p>
           </div>
         </div>
+      </section>
 
-        <section style={{ marginBottom: 56 }}>
-          <h2 style={{ fontFamily: 'IBM Plex Serif, Georgia, serif', fontSize: 36,
-                       fontWeight: 500, marginBottom: 20 }}>
-            พันธกิจ · Mission
-          </h2>
-          <p style={{ fontFamily: 'IBM Plex Sans Thai', fontSize: 17, lineHeight: 1.75,
-                      color: 'var(--ink-2)', maxWidth: 780, marginBottom: 18 }}>
-            เราเชื่อว่าการวิจัยตลาดที่ดีไม่ควรถูกจำกัดอยู่ในห้องเรียนหรือบริษัทใหญ่
-            สาขาการตลาด มศว จึงพัฒนาแพลตฟอร์มงานวิจัยที่ <strong>เปิดเผย โปร่งใส และฟรี</strong>
-            สำหรับทุกคนที่สนใจ — ไม่ว่าจะเป็นนักศึกษา SME หรือ NGO
-          </p>
-          <p style={{ fontFamily: 'IBM Plex Sans Thai', fontSize: 17, lineHeight: 1.75,
-                      color: 'var(--ink-2)', maxWidth: 780 }}>
-            ทุกเครื่องมือผ่านการตรวจสอบโดยอาจารย์ในสาขาก่อนเผยแพร่
-            ใช้ methodology ที่ตีพิมพ์ในวารสาร peer-reviewed
-            และเชื่อมโยงทฤษฎีคลาสสิก (Aaker, Kotler, Trout & Ries) กับเทคนิคทันสมัย
-            (LLM-driven analysis, Hierarchical Bayes Conjoint, NLP sentiment)
-          </p>
-        </section>
+      {/* Pull quote */}
+      <section className="swu-container" style={{ padding: '80px 32px 0', maxWidth: 1100 }}>
+        <div className="rule rule--strong" style={{ marginBottom: 40 }}></div>
+        <blockquote style={{ borderLeft: '4px solid var(--be-red)',
+                              padding: '12px 0 12px 32px', margin: 0,
+                              fontFamily: 'var(--serif)',
+                              fontSize: 'clamp(28px, 4vw, 44px)', fontStyle: 'italic',
+                              lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+          "We don&apos;t sell research — we publish it. Brand Health belongs to the public, not behind a paywall."
+          <footer style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em',
+                            textTransform: 'uppercase', color: 'var(--ink-3)',
+                            marginTop: 24, fontStyle: 'normal' }}>
+            — SWU MKT Charter, 2024
+          </footer>
+        </blockquote>
+      </section>
 
-        <section style={{ background: 'var(--ink)', color: 'var(--paper)', padding: '48px 36px',
-                          marginBottom: 48, marginLeft: 'calc(50% - 50vw)',
-                          marginRight: 'calc(50% - 50vw)', paddingLeft: 'max(36px, calc(50vw - 540px))',
-                          paddingRight: 'max(36px, calc(50vw - 540px))' }}>
-          <div className="be-mono be-tiny" style={{ letterSpacing: '0.18em', opacity: 0.7,
-                                                       marginBottom: 14 }}>
-            EXPLORE THE PLATFORM
-          </div>
-          <h2 style={{ fontFamily: 'IBM Plex Serif, Georgia, serif', fontSize: 36,
-                       fontWeight: 500, lineHeight: 1.15, marginBottom: 28 }}>
-            เริ่มต้นใช้เครื่องมือวิจัยตลาดของเรา
+      {/* Tools shortcut on dark */}
+      <section style={{ background: 'var(--ink)', color: '#fff', marginTop: 80, padding: '80px 0' }}>
+        <div className="swu-container">
+          <span className="eyebrow" style={{ color: 'var(--paper)' }}>
+            <span className="dot"></span>Open Tools
+          </span>
+          <h2 className="serif" style={{ fontSize: 'clamp(36px, 5vw, 56px)', lineHeight: 1.05,
+                                            letterSpacing: '-0.02em', marginTop: 18, color: '#fff' }}>
+            เริ่มงานวิจัย<br/>ของคุณ.
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                        gap: 24 }}>
-            {[
-              { p: '/showcase', t: 'Public Showcase', d: 'ดูผลวิจัยแบรนด์จริงที่ทีมเปิดเผย' },
-              { p: '/brand-equity', t: 'Brand Health', d: 'วัด Brand Equity ตาม Aaker' },
-              { p: '/market-research/conjoint-analysis', t: 'Conjoint', d: 'CBC + Market Simulator' },
-              { p: '/learn', t: 'Knowledge Hub', d: 'อ่านบทความเชิงลึก' },
-            ].map((c) => (
-              <Link key={c.p} to={c.p}
-                    data-testid={`about-tool-link-${c.p.replace(/\//g, '-')}`}
-                    style={{ borderTop: '1px solid #fff', paddingTop: 14,
-                             color: '#fff', textDecoration: 'none' }}>
-                <div style={{ fontFamily: 'IBM Plex Serif, Georgia, serif', fontSize: 22,
-                              fontWeight: 500, marginBottom: 6 }}>
-                  {c.t}
-                </div>
-                <div style={{ fontFamily: 'IBM Plex Sans Thai', fontSize: 14,
-                              opacity: 0.75, marginBottom: 14 }}>
-                  {c.d}
-                </div>
-                <span className="be-mono" style={{ fontSize: 11, letterSpacing: '0.12em',
-                                                     color: 'var(--be-red)' }}>
-                  OPEN →
+          <div className="tools-dark-grid"
+               style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                        gap: 1, marginTop: 48,
+                        background: 'var(--ink-2)', border: '1px solid var(--ink-2)' }}>
+            {TOOLS.map((tool) => (
+              <Link key={tool.t} to={tool.p}
+                    data-testid={`about-tool-${tool.t.replace(/\s+/g, '-').toLowerCase()}`}
+                    style={{ background: 'var(--ink)', padding: '24px 20px',
+                             display: 'flex', flexDirection: 'column', gap: 8,
+                             textDecoration: 'none', color: 'inherit' }}>
+                <span className="meta" style={{ color: 'var(--be-red)' }}>{tool.tag}</span>
+                <h4 className="serif" style={{ fontSize: 19, lineHeight: 1.18, color: '#fff', margin: 0 }}>
+                  {tool.t}
+                </h4>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em',
+                                textTransform: 'uppercase', color: 'var(--paper)',
+                                marginTop: 'auto', paddingTop: 16 }}>
+                  Open →
                 </span>
               </Link>
             ))}
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
+
+      <Footer />
     </div>
   );
 };
