@@ -1,104 +1,111 @@
 {
-  "theme": "light",
-  "archetype": "Archetype 4 (Swiss & High-Contrast) + Editorial 'Old Money' Tech",
-  "design_philosophy": "A premium analytical tool that feels like a brand strategy deck or financial newspaper. Avoids generic SaaS soft-shadows. Embraces crisp 1px borders, rigid grids, editorial typography (Serif for insights, Mono for data, Sans for UI), and the warmth of the #F7F4EE paper background.",
+  "theme": "LIGHT",
+  "archetype": "4 (Swiss & High-Contrast - Editorial Variant)",
+  "rationale": "The user explicitly favors the existing Swiss/Editorial aesthetic from the /showcase page. For an academic and authoritative SEO play (SWU Marketing), an editorial 'digital magazine' approach establishes E-E-A-T (Expertise, Authoritativeness, Trustworthiness) better than generic SaaS gradients.",
   "colors": {
     "background": {
-      "paper": "#F7F4EE",
-      "surface": "#FFFFFF",
-      "panel": "#F0EBE1"
+      "primary": "#F7F4EE",
+      "secondary": "#FFFFFF",
+      "tertiary": "#EBE7DD"
     },
     "text": {
-      "primary": "#0A0A0A",
-      "secondary": "#5C5F66",
-      "inverse": "#F7F4EE"
+      "primary": "#1A1A1A",
+      "secondary": "#4A4A4A",
+      "muted": "#737373"
     },
-    "border": {
-      "default": "#D8D4CC",
-      "strong": "#1A1A1A",
-      "divider": "#E5E0D8"
+    "accent": {
+      "primary": "#C8102E",
+      "secondary": "#1A1A1A",
+      "highlight": "#D9CDC0"
     },
-    "dimensions": {
-      "awareness": "#1B75BC",
-      "quality": "#D4A017",
-      "identity": "#C8102E",
-      "loyalty": "#10B981"
+    "borders": {
+      "hairline": "#D1CCC2",
+      "strong": "#1A1A1A"
     }
   },
   "typography": {
-    "families": {
-      "sans": "IBM Plex Sans Thai, sans-serif",
-      "serif": "IBM Plex Serif Thai, serif",
-      "mono": "IBM Plex Mono, monospace"
+    "fonts": {
+      "heading": "'IBM Plex Serif', 'IBM Plex Serif Thai', serif",
+      "body": "'IBM Plex Sans', 'IBM Plex Sans Thai', sans-serif",
+      "mono": "'IBM Plex Mono', monospace"
     },
-    "hierarchy": {
-      "h1": "text-5xl lg:text-6xl font-serif tracking-tight text-primary leading-none",
-      "h2": "text-3xl font-sans font-medium tracking-tight border-b-2 border-strong pb-2 mb-6",
-      "h3": "text-xl font-serif font-medium text-primary",
-      "eyebrow": "text-xs font-mono uppercase tracking-[0.2em] text-secondary",
-      "body": "text-base font-sans text-secondary leading-relaxed",
-      "data": "text-4xl font-mono tracking-tighter text-primary"
-    }
+    "scales": {
+      "h1": "text-5xl sm:text-6xl tracking-tight leading-none font-medium",
+      "h2": "text-4xl sm:text-5xl tracking-tight leading-none font-medium",
+      "h3": "text-2xl sm:text-3xl tracking-tight font-medium",
+      "h4": "text-xl sm:text-2xl font-medium",
+      "body": "text-base sm:text-lg leading-relaxed text-secondary",
+      "eyebrow": "text-xs font-mono uppercase tracking-[0.2em] text-secondary"
+    },
+    "pairing_rules": "Use IBM Plex Serif for all main headings to create a scholarly/editorial feel. Use IBM Plex Mono for overlines, metadata, and tags. Use IBM Plex Sans for long-form readability."
   },
-  "spacing_and_layout": {
-    "strategy": "The 'Control Room' Grid mixed with Editorial Whitespace",
-    "container_padding": "p-6 lg:p-8",
-    "grid_system": "Dashboard uses CSS Grid. Apply `gap-px bg-border_strong` on parent, and `bg-paper` on children to create literal 1px wireframe borders.",
-    "border_radius": "rounded-none or max rounded-sm. NO large rounded corners."
+  "layout_and_spacing": {
+    "philosophy": "Asymmetrical, grid-based, heavy use of negative space. 'Paper' feel with 1px hairline borders delineating sections.",
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "section_spacing": "py-24 md:py-32",
+    "grid": {
+      "bento_marketing": "grid grid-cols-1 md:grid-cols-12 gap-px bg-hairline border-y border-hairline",
+      "article_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12"
+    }
   },
   "components": {
-    "score_ring": {
-      "visual": "Concentric SVG circles. Track is #E5E0D8. Progress uses dimension color. Center text is giant Mono font.",
-      "animation": "stroke-dashoffset 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards."
+    "hero_showcase": {
+      "layout": "Full viewport height or min-h-[85vh]. Split or overlapping grid. Massive serif typography intersecting with scrolling brand cards.",
+      "interactions": "Lenis smooth scroll mandatory. On scroll, brand research cards float upwards with slight parallax. Hover on brand cards reveals SWU scoring badges.",
+      "visuals": "Paper background, large 'PUBLIC SHOWCASE' mono eyebrow. 1px solid black border at the bottom."
     },
-    "ai_insight_card": {
-      "background": "#FFFFFF",
-      "border": "1px solid #1A1A1A",
-      "left_accent": "4px solid dimension_color (e.g., #1B75BC for Awareness)",
-      "typography": "Serif for insight body text. Mono for cited question IDs like [AW-3]."
+    "tools_grid": {
+      "layout": "Bento box style, utilizing 1px borders to separate cells instead of gaps (CSS: gap-px with a gray background on the container).",
+      "hover": "Hovering a cell changes its background from paper to pure white or subtle red tint, with an arrow icon translating right.",
+      "content": "Links to Conjoint Analysis, Journey Mapping, Survey Builder, etc."
     },
-    "radar_chart": {
-      "style": "Recharts. Straight lines (not curved). Polygonal grid instead of circular. Fill opacity 0.1 with 2px solid stroke."
+    "article_card": {
+      "layout": "Editorial block. No rounded corners. Top border (1px solid black). Mono date/category, large serif title, concise sans excerpt.",
+      "image": "Grayscale or highly contrasted image, optionally overlapping the border."
     },
-    "identity_image_connectors": {
-      "layout": "Two vertical lists (Intended vs Perceived). Center column is SVG canvas.",
-      "paths": "Cubic bezier curves. Aligned traits = solid 2px #10B981 path. Lost traits = dashed 1px #C8102E path.",
-      "animation": "Framer motion path drawing on scroll/reveal."
+    "content_layout": {
+      "template": "Left sidebar (sticky TOC & share links, col-span-3) + Main content (col-span-6) + Right sidebar (Tool CTAs / Author, col-span-3).",
+      "typography": "Drop caps for the first paragraph. Pull quotes using massive left border (SWU Red) and italic serif."
     },
-    "matrix_2x2": {
-      "layout": "CSS Grid or Recharts Scatter. 4 quadrants divided by 1px #1A1A1A lines.",
-      "dots": "Target dot is 16px, dimension color, with a 2px offset outline (stroke) to pop out."
-    },
-    "word_cloud": {
-      "style": "Align all words horizontally. Vary font-size and opacity. Target brand highlighted in primary brand color, bolded."
-    },
-    "mobile_respondent": {
-      "trait_grid": "Bento-style CSS grid of tap targets. Selected state: inverted colors (bg-primary text-inverse) with scale down 0.98.",
-      "likert": "Vertical stack of large buttons for mobile, NOT horizontal radio buttons which are hard to tap."
+    "inline_tool_cta": {
+      "layout": "Inserted mid-article. High contrast block (Black background, white text) to break the paper texture and grab attention.",
+      "action": "Direct link to the related tool."
     }
   },
-  "motion": {
-    "global_easing": "cubic-bezier(0.16, 1, 0.3, 1)",
-    "page_transition": "Fade in with slight 10px Y-axis translate.",
-    "hover_card": "No scale. Instead, use sharp shadow reveal: shadow-[4px_4px_0px_#1A1A1A] and -translate-y-[2px] -translate-x-[2px].",
-    "ai_generation": "Typewriter effect for insights. Scrambled text decode effect for the 'Status Indicator'."
+  "media": {
+    "image_urls": {
+      "hero_background": {
+        "url": "https://images.unsplash.com/photo-1663208848595-36ce355cb715?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHxlZGl0b3JpYWwlMjBkZXNpZ24lMjBwYXBlciUyMHRleHR1cmV8ZW58MHx8fHwxNzc4MDk0ODYyfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Subtle paper texture for hero background or large section backgrounds."
+      },
+      "university_campus": {
+        "url": "https://images.pexels.com/photos/19193975/pexels-photo-19193975.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Modern university building with trees. Use for the 'About SWU Marketing' pillar page hero."
+      },
+      "marketing_strategy": {
+        "url": "https://images.unsplash.com/photo-1533750349088-cd871a92f312?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxtYXJrZXRpbmclMjBzdHJhdGVneSUyMGZyYW1ld29ya3xlbnwwfHx8fDE3NzgwOTQ4NjJ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "White paper with Marketing Strategy text. Use for article thumbnails or Knowledge Hub index."
+      },
+      "brand_identity": {
+        "url": "https://images.unsplash.com/photo-1645658043538-fc2bb1702cfe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxicmFuZCUyMHN0cmF0ZWd5fGVufDB8fHx8MTc3ODA5NDg2Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Man holding a book about designing brand identity. Use for Brand Equity article thumbnail."
+      }
+    },
+    "image_treatment": "All photos should have a slightly desaturated or high-contrast pass (via CSS filter: grayscale(20%) contrast(110%)) to fit the editorial vibe. NO heavy rounded corners (max rounded-sm or sharp edges)."
   },
-  "signature_elements": [
-    "Dotted rules: Use `border-dashed` or `border-dotted` for secondary separators.",
-    "Editorial numbers: Giant (text-8xl) font-serif text-border/30 absolute behind section headers (e.g., '01', '02').",
-    "Ink-stamps: Status tags (like 'ACTIVE', 'DRAFT') use border-2 border-primary text-primary font-mono text-xs uppercase px-2 py-1 rotate-[-2deg]."
-  ],
-  "testing": {
-    "data_testid_pattern": "be-[module]-[component]-[state/action]",
-    "examples": [
-      "be-study-list-card",
-      "be-wizard-step4-accordion",
-      "be-dashboard-score-ring",
-      "be-insight-master-card"
-    ]
+  "seo_and_accessibility": {
+    "heading_hierarchy": "Strict H1 > H2 > H3. Ensure the Knowledge Hub uses semantic HTML5 <article> and <aside> tags.",
+    "json_ld": "Must include Article schema on /learn/[topic] pages and BreadcrumbList schema.",
+    "performance": "No heavy WebGL. Use CSS for interactions (transforms, opacity) to ensure Core Web Vitals remain in the green for SEO ranking.",
+    "test_ids": "Add data-testid to all links, tools, and TOC elements (e.g., data-testid='toc-link', data-testid='hero-showcase-link')."
   },
-  "implementation_notes": {
-    "css_scoping": "Ensure all Tailwind overrides or custom classes are wrapped within `.be-root` to prevent bleeding into the SWU alumni module.",
-    "framer_motion": "Wrap grid items in `<motion.div>` directly, do not break grid parent-child relationship. Use `layout` prop for collapsible accordions."
-  }
+  "instructions_to_main_agent": [
+    "Migrate the homepage from the old gradient SaaS look to the '.be-root' Swiss/Editorial aesthetic (Background: #F7F4EE, Text: #1A1A1A).",
+    "Implement the Hero section featuring the Brand Showcase. Fetch data from GET /api/brand-equity/showcase if possible, or mock it beautifully using the editorial grid.",
+    "Build the Tools Showcase Grid below the hero using a 1px border grid layout (bento style).",
+    "Create the /learn Knowledge Hub index page showcasing articles in an editorial, masonry or strict grid layout.",
+    "Create the /learn/[topic] article template with a sticky left TOC, main content area, and right sidebar for Tool CTAs. Use IBM Plex Serif for headings.",
+    "Create the /about/swu-marketing pillar page focusing on E-E-A-T. Use the provided university campus image.",
+    "Ensure all components use proper semantic tags and include SEO-friendly structures."
+  ]
 }
