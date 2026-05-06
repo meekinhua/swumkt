@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import '@/pages/swumkt-design.css';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
 
-// Real SWU/MKT logo (bitmap). Falls back to typographic wordmark if image fails to load.
-export const SwuLogo = ({ size = 36 }) => (
+// Real SWU/MKT logo (bitmap). Defaults to a generous size so the wordmark reads clearly.
+export const SwuLogo = ({ size = 56 }) => (
   <Link to="/" className="topbar__logo" aria-label="SWU MKT — Marketing Research"
         style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
     <img src={SWU_LOGO_URL}

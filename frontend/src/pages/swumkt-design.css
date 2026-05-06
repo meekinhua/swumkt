@@ -184,7 +184,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ---------- Topbar ---------- */
 .topbar {
-  height: 64px;
+  height: 88px;
   border-bottom: 1px solid var(--rule);
   display: flex;
   align-items: center;
@@ -418,6 +418,7 @@ a { color: inherit; text-decoration: none; }
   gap: 40px;
 }
 .footer__brand .topbar__logo { font-size: 28px; }
+.footer__brand .topbar__logo img { height: 64px !important; }
 .footer__brand p {
   font-size: 13px;
   line-height: 1.55;
@@ -569,16 +570,17 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    LOGO BRAND PALETTE
    Extracted from the official SWU MKT wordmark gradient.
+   Three-stop palette: Blue · Gray · Red (no purple/pink).
    Used sparingly as accents — keep editorial discipline.
    ============================================================ */
 :root {
   --logo-blue:   #3597E4;
-  --logo-purple: #8A58C7;
-  --logo-pink:   #D44F80;
+  --logo-gray:   #8E8E93;
+  --logo-gray-2: #6B6B6F;
   --logo-red:    #E22B37;
 
-  --logo-grad: linear-gradient(90deg, #3597E4 0%, #8A58C7 38%, #D44F80 68%, #E22B37 100%);
-  --logo-grad-soft: linear-gradient(90deg, rgba(53,151,228,0.10), rgba(138,88,199,0.10), rgba(212,79,128,0.10), rgba(226,43,55,0.10));
+  --logo-grad: linear-gradient(90deg, #3597E4 0%, #8E8E93 50%, #E22B37 100%);
+  --logo-grad-soft: linear-gradient(90deg, rgba(53,151,228,0.10), rgba(142,142,147,0.10), rgba(226,43,55,0.10));
 }
 
 /* Realign primary red across the system to the logo's red so all editorial
@@ -623,13 +625,12 @@ a { color: inherit; text-decoration: none; }
   opacity: 0.85;
 }
 
-/* Brand-logo fallback gradients now follow the wordmark palette so missing
-   brand logos visually echo the platform's identity */
-.blogo--g1 { background: linear-gradient(140deg, #3597E4, #5BB1F1); }   /* Blue */
-.blogo--g2 { background: linear-gradient(140deg, #8A58C7, #B68FE2); }   /* Purple */
-.blogo--g3 { background: linear-gradient(140deg, #D44F80, #EE8AA9); }   /* Pink */
-.blogo--g4 { background: linear-gradient(140deg, #E22B37, #F26C76); }   /* Red */
-.blogo--g5 { background: linear-gradient(140deg, #3597E4 0%, #8A58C7 50%, #E22B37 100%); }  /* Spectrum */
+/* Brand-logo fallback gradients — Blue · Gray · Red palette only */
+.blogo--g1 { background: linear-gradient(140deg, #3597E4, #5BB1F1); }                       /* Blue */
+.blogo--g2 { background: linear-gradient(140deg, #3597E4, #8E8E93); }                       /* Blue → Gray */
+.blogo--g3 { background: linear-gradient(140deg, #6B6B6F, #B0B0B5); }                       /* Gray */
+.blogo--g4 { background: linear-gradient(140deg, #8E8E93, #E22B37); }                       /* Gray → Red */
+.blogo--g5 { background: linear-gradient(140deg, #3597E4 0%, #8E8E93 50%, #E22B37 100%); }  /* Spectrum */
 
 /* Tool-CTA block on dark background — accent line uses the brand spectrum */
 .tool-cta {

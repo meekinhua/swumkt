@@ -1,6 +1,20 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🎨 Logo enlarged + Palette refined to Blue/Gray/Red only
+- **User**: "ขยาย logo · ใช้ สี ฟ้า แดง เทา ไม่ใช่ ม่วง"
+- **Logo size**: SwuLogo default `36px` → `56px`; topbar height `64px` → `88px`; footer brand logo → `64px`
+- **Palette refined** (no more purple/pink):
+  - Old gradient: Blue → Purple → Pink → Red (4 stops, too "playful")
+  - New gradient: **Blue → Gray → Red** (3 stops, scholarly/corporate)
+  - Tokens: `--logo-blue: #3597E4`, `--logo-gray: #8E8E93`, `--logo-red: #E22B37`
+  - `--logo-grad: linear-gradient(90deg, #3597E4 0%, #8E8E93 50%, #E22B37 100%)`
+- **Brand-logo fallbacks** (g1-g5) rebuilt with the new palette: blue, blue→gray, gray, gray→red, full spectrum
+- All accents (italic-accent text, hero-grad-rule, tool-cta::before, dot--brand) automatically inherit the new gradient since they reference `--logo-grad`
+- **Verified**: italic "เปิดเผย" / "in Public." now reads Blue→Gray→Red smoothly; logo height 56px confirmed via DOM measurement
+
+
+
 ## 2026-02-06 — 🎨 Logo Restoration + Brand Color Blending
 - **User**: "เอา logo เก่ากลับมา · blend สี จาก logo เข้าไปใน design โดยรวมด้วย"
 - **Logo analysis** (Gemini multimodal vision on the bitmap):
