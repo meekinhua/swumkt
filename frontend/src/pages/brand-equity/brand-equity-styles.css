@@ -144,7 +144,7 @@
   box-shadow: none !important;
 }
 /* Remove gradient wash from old hero/card backgrounds when wrapped */
-.be-root [class*="bg-gradient-to-"] {
+.be-root [class*="bg-gradient-to-"]:not(button):not([role="button"]) {
   background: var(--paper-2) !important;
 }
 .be-root .border-2,
@@ -158,7 +158,8 @@
 /* Buttons inside Conjoint — convert shadcn primary blue/purple/green to editorial */
 .be-root button[class*="bg-blue-"],
 .be-root button[class*="bg-purple-"],
-.be-root button[class*="bg-indigo-"] {
+.be-root button[class*="bg-indigo-"],
+.be-root button[class*="bg-gradient-to-"] {
   background: var(--ink) !important;
   color: var(--paper) !important;
   border: 1px solid var(--ink) !important;
@@ -171,28 +172,46 @@
 }
 .be-root button[class*="bg-blue-"]:hover,
 .be-root button[class*="bg-purple-"]:hover,
-.be-root button[class*="bg-indigo-"]:hover {
+.be-root button[class*="bg-indigo-"]:hover,
+.be-root button[class*="bg-gradient-to-"]:hover {
   background: var(--be-red) !important;
   border-color: var(--be-red) !important;
+}
+/* Disabled state must stay readable */
+.be-root button[class*="bg-blue-"]:disabled,
+.be-root button[class*="bg-purple-"]:disabled,
+.be-root button[class*="bg-indigo-"]:disabled,
+.be-root button[class*="bg-gradient-to-"]:disabled {
+  background: var(--ink-3) !important;
+  border-color: var(--ink-3) !important;
+  color: var(--paper) !important;
+  opacity: 0.6;
 }
 .be-root button[class*="bg-red-"] {
   background: var(--be-red) !important;
   color: #fff !important;
   border-radius: 0 !important;
 }
-.be-root button[class*="bg-green-"] {
+.be-root button[class*="bg-green-"],
+.be-root button[class*="bg-gradient-to-"][class*="green"],
+.be-root button[class*="bg-gradient-to-"][class*="emerald"] {
   background: var(--be-green) !important;
   color: #fff !important;
+  border-color: var(--be-green) !important;
   border-radius: 0 !important;
 }
-/* Outline / ghost buttons → BE outline */
+/* Outline / ghost buttons → BE outline (covers shadcn variant="outline" via border-input) */
 .be-root button[class*="border-blue-"],
 .be-root button[class*="border-purple-"],
-.be-root button[class*="border-gray-"] {
+.be-root button[class*="border-gray-"],
+.be-root button[class*="border-input"] {
   border: 1px solid var(--rule-strong) !important;
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--ink) !important;
+}
+.be-root button[class*="border-input"]:hover {
+  background: var(--paper-2) !important;
 }
 /* Headings — apply Plex Serif to Conjoint h1/h2 inside be-root */
 .be-root h1.be-serif-auto, .be-root h2.be-serif-auto,
