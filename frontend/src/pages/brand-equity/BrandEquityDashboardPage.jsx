@@ -600,6 +600,9 @@ const SectionQuality = ({ study, aggregate, ai }) => {
   const qs = aggregate?.questions || [];
   const score = Math.round(aggregate?.composite?.quality || 0);
   const overall = qs.find(q => q.kind === 'overall_quality');
+  const [qRadarMode, setQRadarMode] = useState('brand'); // 'brand' | 'compare'
+
+  const sluggify = (kind) => (kind || '').replace(/^attribute_/, '').replace(/^competitor_/, '');
 
   // Build radar from likert_7 attributes (brand-side only — exclude competitor_*
   // parallels which also live in `dimension="quality"` and would otherwise leak in
@@ -610,13 +613,40 @@ const SectionQuality = ({ study, aggregate, ai }) => {
     && (q.kind || '').startsWith('attribute_')
     && q.stats?.mean
   );
-  const radarAxes = attrQs.map(q => {
-    const raw = (q.axis_label || (q.kind || '').replace('attribute_', '')).toString();
-    return raw.toUpperCase();
-  }).slice(0, 8);
-  const radarSeries = radarAxes.length >= 3 ? [
-    { name: study.brand?.name, color: DIMENSIONS.quality.color,
-      values: attrQs.slice(0, radarAxes.length).map(q => Math.round((q.stats?.mean || 0) / 7 * 100)) },
+  const radarAxesData = attrQs.slice(0, 8).map(q => ({
+    axis: ((q.axis_label || sluggify(q.kind)) + '').toUpperCase(),
+    slug: sluggify(q.kind),
+    brandValue: Math.round((q.stats?.mean || 0) / 7 * 100),
+  }));
+  const radarAxes = radarAxesData.map(a => a.axis);
+
+  // Competitor parallels (kind=competitor_<slug>) — gather mean per (compare_brand, slug)
+  const compMap = {}; // { brandName: { slug: pct } }
+  qs.filter(q =>
+    q.dimension === 'quality'
+    && q.type === 'likert_7'
+    && (q.kind || '').startsWith('competitor_')
+    && q.stats?.mean
+  ).forEach(q => {
+    const cb = q.compare_brand || 'Competitor';
+    const slug = sluggify(q.kind);
+    if (!compMap[cb]) compMap[cb] = {};
+    compMap[cb][slug] = Math.round((q.stats.mean || 0) / 7 * 100);
+  });
+  const competitorNames = Object.keys(compMap);
+  const hasCompetitorRadar = competitorNames.length > 0 && radarAxesData.length >= 3;
+  const compareOn = qRadarMode === 'compare' && hasCompetitorRadar;
+
+  const COMP_PALETTE = ['#1B75BC', '#D4A017', '#5C5F66', '#10B981', '#7C3AED'];
+  const radarSeries = radarAxesData.length >= 3 ? [
+    { name: study.brand?.name, kind: 'brand', color: DIMENSIONS.quality.color, fill: 0.18,
+      values: radarAxesData.map(a => a.brandValue) },
+    ...(compareOn ? competitorNames.map((cb, i) => ({
+      name: cb, kind: 'competitor',
+      color: COMP_PALETTE[i % COMP_PALETTE.length],
+      dash: '4 3', fill: 0.06,
+      values: radarAxesData.map(a => compMap[cb][a.slug] ?? null),
+    })) : []),
   ] : [];
 
   // Themes
@@ -643,7 +673,7 @@ const SectionQuality = ({ study, aggregate, ai }) => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="be-grid-2">
         {radarSeries.length > 0 && (
           <div className="be-card">
             <div className="be-card-h">
@@ -651,10 +681,41 @@ const SectionQuality = ({ study, aggregate, ai }) => {
                 <h3 className="be-card-t">Quality attributes · radar</h3>
                 <div className="be-card-d">Mean Likert (1-7) scaled to 0-100</div>
               </div>
+              {hasCompetitorRadar && (
+                <div className="be-radar-toggle" data-testid="be-quality-radar-toggle">
+                  <button onClick={() => setQRadarMode('brand')}
+                          className={qRadarMode === 'brand' ? 'on' : ''}
+                          data-testid="be-quality-radar-brand">
+                    Brand only
+                  </button>
+                  <button onClick={() => setQRadarMode('compare')}
+                          className={qRadarMode === 'compare' ? 'on' : ''}
+                          data-testid="be-quality-radar-compare">
+                    เทียบกับคู่แข่ง
+                  </button>
+                </div>
+              )}
             </div>
             <div style={{ display: 'grid', placeItems: 'center', padding: '10px 0' }}>
               <RadarChart axes={radarAxes} series={radarSeries} size={260}/>
             </div>
+            {compareOn && (
+              <div className="be-mono be-tiny be-muted"
+                   data-testid="be-quality-radar-legend"
+                   style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'center',
+                            paddingTop: 8, borderTop: '1px dashed var(--rule)' }}>
+                {radarSeries.map((s, i) => (
+                  <span key={s.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 14, height: 3, background: s.color,
+                                   borderTop: s.kind === 'competitor' ? '1px dashed' : 'none' }}/>
+                    <span style={{ fontWeight: s.kind === 'brand' ? 600 : 400,
+                                   color: s.kind === 'brand' ? 'var(--ink)' : 'var(--ink-2)' }}>
+                      {s.name}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -672,7 +733,7 @@ const SectionQuality = ({ study, aggregate, ai }) => {
             </div>
             <Histogram values={overall.stats.distribution} color={DIMENSIONS.quality.color}
                        peakIdx={overall.stats.distribution.indexOf(Math.max(...overall.stats.distribution))}/>
-            <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            <div className="be-grid-3" style={{ marginTop: 14 }}>
               <div style={{ padding: '8px 10px', background: 'var(--paper-2)' }}>
                 <div className="be-mono be-tiny be-muted">TOP-2-BOX</div>
                 <div className="be-num" style={{ fontSize: 18, fontWeight: 500 }}>{overall.stats?.t2b}%</div>
@@ -882,8 +943,7 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--rule-strong)',
-                        border: '1px solid var(--rule-strong)' }}>
+          <div className="be-grid-association">
             {[
               { key: 'as_organization', label: 'As Organization', th: 'องค์กร',  icon: '◆' },
               { key: 'as_person',       label: 'As Person',       th: 'บุคลิก',   icon: '☻' },
@@ -958,7 +1018,7 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: 24, alignItems: 'center' }}>
+          <div className="be-grid-2-rail">
             <div style={{ display: 'grid', placeItems: 'center', minHeight: 320 }}>
               <RadarChart axes={displayedRadar.axes}
                           series={displayedRadar.series.map((s, i) => ({
@@ -1157,7 +1217,7 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="be-grid-2">
         {nps && nps.stats?.n > 0 && (
           <div className="be-card">
             <div className="be-card-h">
@@ -1167,7 +1227,7 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
               </div>
             </div>
             <NPSBar detractors={nps.stats?.detractors} passives={nps.stats?.passives} promoters={nps.stats?.promoters}/>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 14 }}>
+            <div className="be-grid-3" style={{ marginTop: 14 }}>
               <div><div className="be-mono be-tiny be-muted">NPS</div>
                    <div className="be-data" style={{ fontSize: 24, color: nps.stats?.score >= 0 ? 'var(--be-green)' : 'var(--be-red)' }}>
                      {nps.stats?.score > 0 ? '+' : ''}{nps.stats?.score}</div></div>
