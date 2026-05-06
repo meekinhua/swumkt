@@ -1189,6 +1189,34 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     # ---- Studies CRUD ----
 
     @brand_equity_router.post("/studies")
+    # ---- ownership helpers ----------------------------------------------
+    def _is_admin(u) -> bool:
+        return getattr(u, "role", None) == "admin"
+
+    def _owns(u, study: dict) -> bool:
+        if not study:
+            return False
+        if _is_admin(u):
+            return True
+        if study.get("owner_id") == u.id:
+            return True
+        # Email fallback — handles edge cases where the owner_id changed
+        # (e.g. mixed-case email re-registered, OAuth merge, manual data fix).
+        oem = (study.get("owner_email") or "").strip().lower()
+        uem = (getattr(u, "email", "") or "").strip().lower()
+        return bool(oem) and oem == uem
+
+    def _owner_query(u):
+        """Mongo filter so a user sees the studies they truly own
+        even if owner_id was stored under a stale id."""
+        uem = (getattr(u, "email", "") or "").strip().lower()
+        clauses = [{"owner_id": u.id}]
+        if uem:
+            # case-insensitive exact match on owner_email
+            import re
+            clauses.append({"owner_email": {"$regex": f"^{re.escape(uem)}$", "$options": "i"}})
+        return {"$or": clauses} if len(clauses) > 1 else clauses[0]
+
     async def create_study(data: StudyCreate, current_user=Depends(get_current_user)):
         # Auto-translate custom quality attrs (TH → EN) so EN respondents see proper prompts
         if data.brand.custom_quality_attributes and not data.brand.custom_quality_attributes_en:
@@ -1198,7 +1226,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = {
             "id": str(uuid.uuid4()),
             "owner_id": current_user.id,
-            "owner_email": current_user.email,
+            # Always store lower-cased email so future lookups are deterministic
+            "owner_email": (current_user.email or "").strip().lower(),
             "status": "draft",
             "brand": data.brand.model_dump(),
             "identity": data.identity.model_dump(),
@@ -1216,8 +1245,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     @brand_equity_router.get("/studies")
     async def list_studies(current_user=Depends(get_current_user)):
-        cur = db.brand_studies.find({"owner_id": current_user.id}, {"_id": 0}).sort("updated_at", -1)
-        items = await cur.to_list(200)
+        # Admin sees ALL studies (matches Conjoint pattern). Non-admin uses
+        # owner_id OR owner_email fallback so studies aren't lost if the id changed.
+        query = {} if _is_admin(current_user) else _owner_query(current_user)
+        cur = db.brand_studies.find(query, {"_id": 0}).sort("updated_at", -1)
+        items = await cur.to_list(500)
         # Attach response counts
         for s in items:
             s["response_count"] = await db.brand_responses.count_documents({"study_id": s["id"]})
@@ -1228,7 +1260,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(404, "Study not found")
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403, "Not authorized")
         study["response_count"] = await db.brand_responses.count_documents({"study_id": study_id})
         return study
@@ -1238,7 +1270,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id})
         if not study:
             raise HTTPException(404, "Study not found")
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403, "Not authorized")
         # Re-translate custom quality attrs if the TH list changed
         if data.brand is not None:
@@ -1262,7 +1294,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id})
         if not study:
             raise HTTPException(404, "Study not found")
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403, "Not authorized")
         await db.brand_studies.delete_one({"id": study_id})
         await db.brand_responses.delete_many({"study_id": study_id})
@@ -1273,7 +1305,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id})
         if not study:
             raise HTTPException(404)
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403)
         brand = BrandSetup(**study["brand"])
         identity = IdentitySetup(**study["identity"])
@@ -1322,7 +1354,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(404, "Study not found")
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403, "Not authorized")
         ident = study.get("identity", {}) or {}
         if not (ident.get("description") or ident.get("visual_assets")):
@@ -1471,7 +1503,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id})
         if not study:
             raise HTTPException(404)
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403)
         cur = db.brand_responses.find({"study_id": study_id}, {"_id": 0}).sort("submitted_at", -1).limit(limit)
         items = await cur.to_list(limit)
@@ -1484,7 +1516,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(404)
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403)
 
         cur = db.brand_responses.find({"study_id": study_id}, {"_id": 0})
@@ -1605,7 +1637,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await db.brand_studies.find_one({"id": study_id})
         if not study:
             raise HTTPException(404)
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403)
         await db.brand_studies.update_one({"id": study_id},
             {"$set": {"ai_cache.status": "queued"}})
@@ -1614,10 +1646,13 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     @brand_equity_router.get("/studies/{study_id}/ai-status")
     async def ai_status(study_id: str, current_user=Depends(get_current_user)):
-        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0, "ai_cache": 1, "owner_id": 1})
+        study = await db.brand_studies.find_one(
+            {"id": study_id},
+            {"_id": 0, "ai_cache": 1, "owner_id": 1, "owner_email": 1},
+        )
         if not study:
             raise HTTPException(404)
-        if study["owner_id"] != current_user.id:
+        if not _owns(current_user, study):
             raise HTTPException(403)
         return study.get("ai_cache", {"status": "idle"})
 

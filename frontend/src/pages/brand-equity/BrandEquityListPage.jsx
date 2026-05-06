@@ -164,7 +164,19 @@ const BrandEquityListPage = () => {
                   </div>
 
                   <div className="be-study-foot">
-                    <span>{s.share_token ? `/${s.share_token.slice(0, 6)}` : '—'}</span>
+                    <span>
+                      {s.share_token ? `/${s.share_token.slice(0, 6)}` : '—'}
+                      {user?.role === 'admin' && s.owner_email && (
+                        <span className="be-mono be-tiny"
+                              data-testid={`be-study-owner-${s.id}`}
+                              style={{ marginLeft: 10, padding: '1px 6px',
+                                       border: '1px solid var(--rule-strong)',
+                                       textTransform: 'lowercase', letterSpacing: '0.04em',
+                                       color: 'var(--ink-2)' }}>
+                          @{(s.owner_email.split('@')[0] || s.owner_email).slice(0, 14)}
+                        </span>
+                      )}
+                    </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <button onClick={(e) => { e.stopPropagation(); navigate(`/brand-equity/studies/${s.id}/edit`); }}
                               className="be-mono be-tiny"
