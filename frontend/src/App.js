@@ -3,6 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import '@/App.css';
 import LandingPage from '@/pages/LandingPage';
+import HomePage from '@/pages/HomePage';
+import LearnIndexPage from '@/pages/learn/LearnIndexPage';
+import LearnArticlePage from '@/pages/learn/LearnArticlePage';
+import AboutSwuMarketing from '@/pages/AboutSwuMarketing';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import Dashboard from '@/pages/Dashboard';
@@ -126,7 +130,11 @@ function App() {
       <BrowserRouter>
         <div className="App">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/legacy-home" element={<LandingPage />} />
+            <Route path="/learn" element={<LearnIndexPage />} />
+            <Route path="/learn/:slug" element={<LearnArticlePage />} />
+            <Route path="/about/swu-marketing" element={<AboutSwuMarketing />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/content" element={<ContentBrowse />} />

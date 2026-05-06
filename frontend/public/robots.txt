@@ -1,10 +1,13 @@
 # SWUMKT Portal — robots policy
-# Public showcase pages are crawler-friendly. Authenticated/admin areas are blocked.
+# Public showcase + knowledge hub pages are crawler-friendly. Authenticated/admin areas are blocked.
 
 User-agent: *
 Allow: /
 Allow: /showcase
 Allow: /showcase/
+Allow: /learn
+Allow: /learn/
+Allow: /about/
 
 Disallow: /api/
 Disallow: /admin
@@ -12,8 +15,10 @@ Disallow: /dashboard
 Disallow: /profile
 Disallow: /research/
 Disallow: /market-research/
+Disallow: /brand-equity/new
+Disallow: /brand-equity/wizard
 
-# Social-network crawlers (LINE, Facebook, Twitter) — allow everything public
+# Social-network crawlers — allow everything public
 User-agent: facebookexternalhit
 Allow: /
 
@@ -25,3 +30,5 @@ Allow: /
 
 User-agent: WhatsApp
 Allow: /
+
+Sitemap: https://swumkt.org/sitemap.xml

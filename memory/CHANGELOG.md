@@ -1,6 +1,46 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🏛️ SEO Restructure: Homepage Redesign + Knowledge Hub + Marketing Pillar
+- **Why**: User wants Brand Showcase as homepage hero + multiple SEO content pages targeting Thai marketing keywords + restructure for Google ranking
+- **Design**: เรียก `design_agent_full_stack` ออกแบบ Swiss/Editorial system — IBM Plex Serif/Mono/Sans, paper bg #F7F4EE, 1px hairline rules, large editorial serif headlines, restrained color (red #C8102E, black) — full guidelines saved to `/app/design_guidelines.json`
+
+### New Pages
+- **`/` HomePage** (`HomePage.jsx` NEW): Public Showcase as HERO ("งานวิจัยแบรนด์ที่เปิดเผย." massive serif), live brand grid pulled from `/api/brand-equity/showcase`, sticky topbar (Showcase/Learn/About/Sign in), bento Tools grid (8 cards: Brand Health, Conjoint, Customer Journey, Perception, Behavior, Survey Builder, Content Hub, Kanban), Knowledge Hub teasers (4 latest articles), About band on dark, sitemap-style 4-column footer for SEO crawlability
+- **`/learn` LearnIndexPage**: Magazine-style grid of 10 articles with category + read time, JSON-LD CollectionPage + ItemList
+- **`/learn/:slug` LearnArticlePage**: Editorial article template — breadcrumb, IBM Plex Serif h1/h2, IBM Plex Sans Thai body, **bold** + [link](url) markdown-lite renderer, blockquotes with red border, inline TOOL CTA block (black bg), author byline, related articles cluster, JSON-LD Article schema
+- **`/about/swu-marketing` AboutSwuMarketing**: Pillar page for E-E-A-T — campus image, mission statement, 3 stat blocks (Established/Focus Areas/Research Output), tools shortcut on dark band, JSON-LD `EducationalOrganization`
+- Old LandingPage archived at `/legacy-home`
+
+### Knowledge Hub Content (10 SEO articles, all in Thai)
+1. `brand-equity` — Brand Equity คืออะไร · Aaker framework
+2. `conjoint-analysis` — CBC + D-Optimal + Market Simulator
+3. `customer-journey-mapping` — 5 stages, touchpoints, MoT
+4. `customer-perception` — Perceptual Map, Sentiment AI
+5. `customer-behavior` — EBM Model, Maslow, involvement
+6. `positioning-strategy` — Trout & Ries framework
+7. `segmentation-targeting` — STP + 5 targeting strategies
+8. `4ps-marketing-mix` — 4Ps + 7Ps for services
+9. `swot-analysis` — TOWS Matrix
+10. `marketing-research-methods` — Quant vs Qual comparison
+
+แต่ละบทความมี `tool` link ไปหน้า tool ที่เกี่ยวข้อง + `related` ที่ link ข้ามบทความ (cluster strategy)
+
+### Technical SEO
+- All pages use `useDocumentMeta` hook (title, OG, Twitter, canonical, JSON-LD)
+- `/sitemap.xml` ใหม่ (14 URLs) + `Sitemap:` directive ใน robots.txt
+- Updated `robots.txt`: allow `/learn`, `/about/`, disallow auth/admin pages
+- Article schema: Article + Organization publisher + datePublished + dateModified + keywords
+- Internal linking strategy: every article links 2-3 related articles + 1 tool CTA
+- Footer sitemap: 4 columns (Explore/Tools/Learn/Account) for crawlability
+
+### Verified
+- Smoke test: ทั้ง 4 หน้าใหม่ load สำเร็จ พร้อม title + OG + JSON-LD ครบ
+- Cross-navigation: hero buttons → showcase, learn nav → articles, footer links → tools
+- About band: white text on dark fixed (was blending with bg)
+
+
+
 ## 2026-02-06 — 🔍 SEO + Social Share Previews (Meta tags + JSON-LD)
 - **Why**: ให้นักวิจัยใช้ลิงก์ `/showcase/{token}` แชร์บน LINE/Facebook/Twitter ได้สวย พร้อมโลโก้แบรนด์ + คะแนน — และ Google index ได้
 - **Custom hook** (`/app/frontend/src/hooks/useDocumentMeta.js` NEW):
