@@ -44,6 +44,29 @@ const BrandEquityListPage = () => {
   const isAdmin = user?.role === 'admin';
   const myEmail = (user?.email || '').toLowerCase();
 
+  // Patch a study (status change, etc.)
+  const updateStatus = async (id, status) => {
+    try {
+      await axios.put(`${API}/brand-equity/studies/${id}`, { status }, authH);
+      setStudies(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+    } catch (e) {
+      console.error(e);
+      alert('เปลี่ยนสถานะไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+    }
+  };
+
+  // Delete with confirm
+  const deleteStudy = async (id, name) => {
+    if (!window.confirm(`ลบ study "${name}" และ response ทั้งหมดถาวร?\nการกระทำนี้ย้อนกลับไม่ได้`)) return;
+    try {
+      await axios.delete(`${API}/brand-equity/studies/${id}`, authH);
+      setStudies(prev => prev.filter(s => s.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert('ลบไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+    }
+  };
+
   // Owner-filtered base list (admin only); used for both status counts AND the visible grid
   const ownerScoped = !isAdmin
     ? studies
@@ -238,8 +261,28 @@ const BrandEquityListPage = () => {
                         </span>
                       )}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <button onClick={(e) => { e.stopPropagation(); navigate(`/brand-equity/studies/${s.id}/edit`); }}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                         onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={s.status}
+                        onChange={(e) => updateStatus(s.id, e.target.value)}
+                        data-testid={`be-study-status-${s.id}`}
+                        title="เปลี่ยนสถานะ"
+                        style={{
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          fontSize: 9.5, letterSpacing: '0.10em', textTransform: 'uppercase',
+                          padding: '2px 6px', border: '1px solid var(--rule-strong)',
+                          background: 'var(--surface)', color: 'var(--ink-2)',
+                          cursor: 'pointer', borderRadius: 0,
+                        }}
+                      >
+                        <option value="draft">DRAFT</option>
+                        <option value="collecting">COLLECTING</option>
+                        <option value="analyzing">ANALYZING</option>
+                        <option value="completed">COMPLETED</option>
+                        <option value="closed">CLOSED</option>
+                      </select>
+                      <button onClick={() => navigate(`/brand-equity/studies/${s.id}/edit`)}
                               className="be-mono be-tiny"
                               data-testid={`be-study-edit-${s.id}`}
                               style={{ background: 'transparent', border: '1px solid var(--rule-strong)',
@@ -247,13 +290,24 @@ const BrandEquityListPage = () => {
                                        letterSpacing: '0.10em', fontSize: 9.5, color: 'var(--ink-2)' }}>
                         Edit
                       </button>
+                      <button onClick={() => deleteStudy(s.id, s.brand?.name || 'study')}
+                              className="be-mono be-tiny"
+                              data-testid={`be-study-delete-${s.id}`}
+                              title="ลบ study + responses ทั้งหมด"
+                              style={{ background: 'transparent', border: '1px solid var(--be-red)',
+                                       padding: '2px 8px', cursor: 'pointer', textTransform: 'uppercase',
+                                       letterSpacing: '0.10em', fontSize: 9.5, color: 'var(--be-red)' }}>
+                        Delete
+                      </button>
                       {score ? (
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                           <span className="big" style={{ color: tierColor(score) }}>{Math.round(score)}</span>
                           <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>BES</span>
                         </div>
                       ) : (
-                        <span>BES locked · {Math.max(0, 10 - n)} more</span>
+                        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>
+                          BES locked · {Math.max(0, 10 - n)} more
+                        </span>
                       )}
                     </div>
                   </div>
