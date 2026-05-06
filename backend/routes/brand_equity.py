@@ -1179,16 +1179,6 @@ Return JSON array of 5 objects, no markdown:"""
 def get_brand_equity_routes(db, get_current_user, get_optional_user):
     """Factory — register routes with DB + auth deps."""
 
-    @brand_equity_router.get("/templates")
-    async def list_templates():
-        """Return raw template library for browsing/preview."""
-        return {"library": TEMPLATE_LIB, "trait_pool": DEFAULT_TRAIT_POOL,
-                "dimensions": DIMENSIONS, "dimension_labels": DIM_LABELS,
-                "dimension_colors": DIM_COLORS, "question_types": QUESTION_TYPES}
-
-    # ---- Studies CRUD ----
-
-    @brand_equity_router.post("/studies")
     # ---- ownership helpers ----------------------------------------------
     def _is_admin(u) -> bool:
         return getattr(u, "role", None) == "admin"
@@ -1209,14 +1199,24 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     def _owner_query(u):
         """Mongo filter so a user sees the studies they truly own
         even if owner_id was stored under a stale id."""
+        import re
         uem = (getattr(u, "email", "") or "").strip().lower()
         clauses = [{"owner_id": u.id}]
         if uem:
             # case-insensitive exact match on owner_email
-            import re
             clauses.append({"owner_email": {"$regex": f"^{re.escape(uem)}$", "$options": "i"}})
         return {"$or": clauses} if len(clauses) > 1 else clauses[0]
 
+    @brand_equity_router.get("/templates")
+    async def list_templates():
+        """Return raw template library for browsing/preview."""
+        return {"library": TEMPLATE_LIB, "trait_pool": DEFAULT_TRAIT_POOL,
+                "dimensions": DIMENSIONS, "dimension_labels": DIM_LABELS,
+                "dimension_colors": DIM_COLORS, "question_types": QUESTION_TYPES}
+
+    # ---- Studies CRUD ----
+
+    @brand_equity_router.post("/studies")
     async def create_study(data: StudyCreate, current_user=Depends(get_current_user)):
         # Auto-translate custom quality attrs (TH → EN) so EN respondents see proper prompts
         if data.brand.custom_quality_attributes and not data.brand.custom_quality_attributes_en:
