@@ -1,111 +1,115 @@
 {
-  "theme": "LIGHT",
-  "archetype": "4 (Swiss & High-Contrast - Editorial Variant)",
-  "rationale": "The user explicitly favors the existing Swiss/Editorial aesthetic from the /showcase page. For an academic and authoritative SEO play (SWU Marketing), an editorial 'digital magazine' approach establishes E-E-A-T (Expertise, Authoritativeness, Trustworthiness) better than generic SaaS gradients.",
-  "colors": {
-    "background": {
-      "primary": "#F7F4EE",
-      "secondary": "#FFFFFF",
-      "tertiary": "#EBE7DD"
-    },
-    "text": {
-      "primary": "#1A1A1A",
-      "secondary": "#4A4A4A",
-      "muted": "#737373"
-    },
-    "accent": {
-      "primary": "#C8102E",
-      "secondary": "#1A1A1A",
-      "highlight": "#D9CDC0"
-    },
-    "borders": {
-      "hairline": "#D1CCC2",
-      "strong": "#1A1A1A"
-    }
+  "theme_archetype": "Archetype 4 (Swiss & High-Contrast) mixed with Editorial Warmth",
+  "theme": "light",
+  "instructions_to_main_agent": "Implement these design guidelines exactly as specified. Ensure all interactive elements include the specified data-testid attributes. Focus on making the editorial layout feel brighter, more modern, and visually lively by relying on crisp contrast, large typography, photography insertions, and subtle CSS motion.",
+  "color_palette": {
+    "primary": "#3597E4",
+    "primary_description": "SWU Brand Blue. Use for primary CTAs, active states, and high-impact visual accents.",
+    "secondary": "#E22B37",
+    "secondary_description": "SWU Brand Red. Use sparingly for notifications, badges, and contrasting visual highlights.",
+    "neutral": "#8E8E93",
+    "neutral_description": "Brand Gray. Use for secondary text, metadata, and subtle borders.",
+    "background_main": "#FFFFFF",
+    "background_main_description": "Crisp White. Replaces the ubiquitous paper background in high-focus areas to increase brightness and modern feel.",
+    "background_alt": "#F7F4EE",
+    "background_alt_description": "Paper Tone. Retained from the original design but used strategically for section backgrounds, sidebars, and card fills to create warmth.",
+    "text_primary": "#1A1A1A",
+    "text_primary_description": "Ink Black. Used for all primary typography to maintain high-contrast legibility."
   },
   "typography": {
-    "fonts": {
-      "heading": "'IBM Plex Serif', 'IBM Plex Serif Thai', serif",
-      "body": "'IBM Plex Sans', 'IBM Plex Sans Thai', sans-serif",
-      "mono": "'IBM Plex Mono', monospace"
+    "headlines": {
+      "font_family": "IBM Plex Serif, serif",
+      "style": "tracking-tight, leading-none to leading-tight",
+      "usage": "H1, H2, and large pull quotes. Emphasizes the scholarly/editorial trust signal."
     },
-    "scales": {
-      "h1": "text-5xl sm:text-6xl tracking-tight leading-none font-medium",
-      "h2": "text-4xl sm:text-5xl tracking-tight leading-none font-medium",
-      "h3": "text-2xl sm:text-3xl tracking-tight font-medium",
-      "h4": "text-xl sm:text-2xl font-medium",
-      "body": "text-base sm:text-lg leading-relaxed text-secondary",
-      "eyebrow": "text-xs font-mono uppercase tracking-[0.2em] text-secondary"
+    "body_ui": {
+      "font_family": "IBM Plex Sans Thai, sans-serif",
+      "style": "tracking-normal, leading-relaxed",
+      "usage": "Body copy, UI elements, buttons, eyebrows (uppercase, tracking-widest)."
     },
-    "pairing_rules": "Use IBM Plex Serif for all main headings to create a scholarly/editorial feel. Use IBM Plex Mono for overlines, metadata, and tags. Use IBM Plex Sans for long-form readability."
+    "scale": {
+      "h1": "text-5xl sm:text-6xl lg:text-7xl font-semibold",
+      "h2": "text-4xl sm:text-5xl font-medium",
+      "h3": "text-2xl sm:text-3xl font-medium",
+      "body": "text-base sm:text-lg text-[#1A1A1A]/80",
+      "eyebrow": "text-xs font-bold uppercase tracking-[0.2em] text-[#3597E4]"
+    }
   },
-  "layout_and_spacing": {
-    "philosophy": "Asymmetrical, grid-based, heavy use of negative space. 'Paper' feel with 1px hairline borders delineating sections.",
-    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
-    "section_spacing": "py-24 md:py-32",
-    "grid": {
-      "bento_marketing": "grid grid-cols-1 md:grid-cols-12 gap-px bg-hairline border-y border-hairline",
-      "article_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12"
+  "visual_liveliness_strategy": {
+    "color_temperature": "Shift from an all-paper (#F7F4EE) baseline to a crisp white (#FFFFFF) baseline. Use paper (#F7F4EE) for offset bento cards and alternate sections to create visual rhythm.",
+    "imagery_integration": "Inject photography directly into the grid. Use high-contrast, well-lit modern photography to break up dense text. Images should feel integrated, not like stock placeholders.",
+    "typography_moments": "Use oversized, editorial-style typography for section transitions instead of thin hairlines. A massive H2 or a bold pull quote acts as a visual anchor.",
+    "modern_indicators": "Subtle glassmorphism on sticky headers (backdrop-blur-xl bg-white/80). Bento grids with 1px border (#1A1A1A/10) and rounded-2xl to soften rigid Swiss layouts."
+  },
+  "imagery": {
+    "hero_portrait": {
+      "url": "https://images.unsplash.com/photo-1556560984-36a7ec2ba544?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjB1bml2ZXJzaXR5JTIwY2FtcHVzJTIwc3R1ZGVudHMlMjB2aWJyYW50fGVufDB8fHx8MTc3ODA5OTMzOXww&ixlib=rb-4.1.0&q=85",
+      "description": "Woman wearing blue sweater. Use inside a bento grid cell on the homepage hero to add a human, vibrant element."
+    },
+    "data_abstract": {
+      "url": "https://images.unsplash.com/photo-1686061593213-98dad7c599b9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxkYXRhJTIwYW5hbHl0aWNzJTIwbWFya2V0aW5nJTIwYWJzdHJhY3R8ZW58MHx8fHwxNzc4MDk5MzM5fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract colorful data screen. Use as a background for the 'Showcase' or 'Tools' section to inject color."
+    },
+    "knowledge_hub": {
+      "url": "https://images.unsplash.com/photo-1719726793997-5f520d89f695?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwyfHxlZGl0b3JpYWwlMjBtYWdhemluZSUyMGxheW91dCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3ODA5OTMzOXww&ixlib=rb-4.1.0&q=85",
+      "description": "Person holding a book. Use as the banner image for the /learn knowledge hub."
+    },
+    "about_hero": {
+      "url": "https://images.unsplash.com/photo-1663162550938-60f70fab5d31?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjB1bml2ZXJzaXR5JTIwY2FtcHVzJTIwc3R1ZGVudHMlMjB2aWJyYW50fGVufDB8fHx8MTc3ODA5OTMzOXww&ixlib=rb-4.1.0&q=85",
+      "description": "Group of students walking. Use as the hero image for /about/swu-marketing, treated with a subtle blue duotone or placed within a crisp border."
+    }
+  },
+  "pages": {
+    "homepage": {
+      "path": "/",
+      "layout_strategy": "Start with a 12-column Bento Grid hero. Cell 1 (span-8): Massive typography ('SWU Marketing Research Platform') with a dynamic 'network of dots' CSS background. Cell 2 (span-4, tall): The 'hero_portrait' image, full bleed. Below the fold, alternate between white and paper backgrounds. Tools bento should use 1px stroke borders on crisp white, hovering to reveal blue accents.",
+      "testid_requirements": ["homepage-hero-cta", "tools-bento-card", "knowledge-hub-teaser"]
+    },
+    "showcase": {
+      "path": "/showcase",
+      "layout_strategy": "Editorial gallery view. Instead of standard lists, use asymmetric masonry or a 3-column bento grid. Cards should have a pure white background, 1px border-ink/10, and a slight shadow on hover. Inject the 'data_abstract' image as a hero banner spanning the top.",
+      "testid_requirements": ["showcase-index-hero", "brand-research-card", "showcase-filter-button"]
+    },
+    "learn_index": {
+      "path": "/learn",
+      "layout_strategy": "Magazine index layout. The top featured article takes up 50% of the viewport height with the 'knowledge_hub' image on the left and a large serif headline on the right. Subsequent articles are presented in a clean 2-column list with generous padding (p-8).",
+      "testid_requirements": ["learn-featured-article", "learn-article-list-item"]
+    },
+    "learn_article": {
+      "path": "/learn/soft-delete-conjoint",
+      "layout_strategy": "Scholarly reading experience. Max-w-3xl for the main text column. Center the content but left-align the text. The background is pure white. Use the paper tone (#F7F4EE) for pull quotes and sidebar data tables to break the monotony. Use a large, bold Serif font for the title, followed by metadata (author, date) in neutral gray.",
+      "testid_requirements": ["article-header-title", "article-body-content", "article-pull-quote"]
+    },
+    "about": {
+      "path": "/about/swu-marketing",
+      "layout_strategy": "Pillar page. Large 'about_hero' image spanning the top with a gradient overlay (bg-gradient-to-t from-white to-transparent) fading into the text. Use the 'Swiss' layout: a 4-column grid where the left column (1 col) is sticky navigation/eyebrows, and the right (3 cols) is the main content.",
+      "testid_requirements": ["about-hero-section", "about-faculty-list", "about-mission-statement"]
     }
   },
   "components": {
-    "hero_showcase": {
-      "layout": "Full viewport height or min-h-[85vh]. Split or overlapping grid. Massive serif typography intersecting with scrolling brand cards.",
-      "interactions": "Lenis smooth scroll mandatory. On scroll, brand research cards float upwards with slight parallax. Hover on brand cards reveals SWU scoring badges.",
-      "visuals": "Paper background, large 'PUBLIC SHOWCASE' mono eyebrow. 1px solid black border at the bottom."
+    "header": {
+      "style": "sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-[#1A1A1A]/10 transition-all duration-300",
+      "testid": "main-navigation-header"
     },
-    "tools_grid": {
-      "layout": "Bento box style, utilizing 1px borders to separate cells instead of gaps (CSS: gap-px with a gray background on the container).",
-      "hover": "Hovering a cell changes its background from paper to pure white or subtle red tint, with an arrow icon translating right.",
-      "content": "Links to Conjoint Analysis, Journey Mapping, Survey Builder, etc."
+    "bento_card": {
+      "style": "bg-white border border-[#1A1A1A]/10 rounded-2xl p-8 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out flex flex-col gap-4 overflow-hidden relative",
+      "testid": "bento-ui-card"
     },
-    "article_card": {
-      "layout": "Editorial block. No rounded corners. Top border (1px solid black). Mono date/category, large serif title, concise sans excerpt.",
-      "image": "Grayscale or highly contrasted image, optionally overlapping the border."
+    "button_primary": {
+      "style": "bg-[#3597E4] text-white px-6 py-3 rounded-full font-sans font-medium hover:bg-[#2b7cbd] transition-colors duration-200 inline-flex items-center gap-2",
+      "testid": "primary-action-button"
     },
-    "content_layout": {
-      "template": "Left sidebar (sticky TOC & share links, col-span-3) + Main content (col-span-6) + Right sidebar (Tool CTAs / Author, col-span-3).",
-      "typography": "Drop caps for the first paragraph. Pull quotes using massive left border (SWU Red) and italic serif."
-    },
-    "inline_tool_cta": {
-      "layout": "Inserted mid-article. High contrast block (Black background, white text) to break the paper texture and grab attention.",
-      "action": "Direct link to the related tool."
+    "section_transition": {
+      "style": "w-full py-24 sm:py-32 flex flex-col items-center justify-center text-center px-4"
     }
   },
-  "media": {
-    "image_urls": {
-      "hero_background": {
-        "url": "https://images.unsplash.com/photo-1663208848595-36ce355cb715?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHxlZGl0b3JpYWwlMjBkZXNpZ24lMjBwYXBlciUyMHRleHR1cmV8ZW58MHx8fHwxNzc4MDk0ODYyfDA&ixlib=rb-4.1.0&q=85",
-        "description": "Subtle paper texture for hero background or large section backgrounds."
-      },
-      "university_campus": {
-        "url": "https://images.pexels.com/photos/19193975/pexels-photo-19193975.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "description": "Modern university building with trees. Use for the 'About SWU Marketing' pillar page hero."
-      },
-      "marketing_strategy": {
-        "url": "https://images.unsplash.com/photo-1533750349088-cd871a92f312?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxtYXJrZXRpbmclMjBzdHJhdGVneSUyMGZyYW1ld29ya3xlbnwwfHx8fDE3NzgwOTQ4NjJ8MA&ixlib=rb-4.1.0&q=85",
-        "description": "White paper with Marketing Strategy text. Use for article thumbnails or Knowledge Hub index."
-      },
-      "brand_identity": {
-        "url": "https://images.unsplash.com/photo-1645658043538-fc2bb1702cfe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxicmFuZCUyMHN0cmF0ZWd5fGVufDB8fHx8MTc3ODA5NDg2Nnww&ixlib=rb-4.1.0&q=85",
-        "description": "Man holding a book about designing brand identity. Use for Brand Equity article thumbnail."
-      }
-    },
-    "image_treatment": "All photos should have a slightly desaturated or high-contrast pass (via CSS filter: grayscale(20%) contrast(110%)) to fit the editorial vibe. NO heavy rounded corners (max rounded-sm or sharp edges)."
+  "motion_and_interactions": {
+    "hover_states": "All cards and buttons must have a clear hover state. Cards lift by 4px (-translate-y-1) and gain a soft shadow. Buttons slightly darken.",
+    "entry_animations": "On page load, use staggered CSS fade-up animations for the hero bento grid. Use simple keyframes: @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }.",
+    "no_parallax": "Strictly CSS transitions. No scroll-jacking or heavy javascript-based scroll animations to preserve Core Web Vitals."
   },
-  "seo_and_accessibility": {
-    "heading_hierarchy": "Strict H1 > H2 > H3. Ensure the Knowledge Hub uses semantic HTML5 <article> and <aside> tags.",
-    "json_ld": "Must include Article schema on /learn/[topic] pages and BreadcrumbList schema.",
-    "performance": "No heavy WebGL. Use CSS for interactions (transforms, opacity) to ensure Core Web Vitals remain in the green for SEO ranking.",
-    "test_ids": "Add data-testid to all links, tools, and TOC elements (e.g., data-testid='toc-link', data-testid='hero-showcase-link')."
-  },
-  "instructions_to_main_agent": [
-    "Migrate the homepage from the old gradient SaaS look to the '.be-root' Swiss/Editorial aesthetic (Background: #F7F4EE, Text: #1A1A1A).",
-    "Implement the Hero section featuring the Brand Showcase. Fetch data from GET /api/brand-equity/showcase if possible, or mock it beautifully using the editorial grid.",
-    "Build the Tools Showcase Grid below the hero using a 1px border grid layout (bento style).",
-    "Create the /learn Knowledge Hub index page showcasing articles in an editorial, masonry or strict grid layout.",
-    "Create the /learn/[topic] article template with a sticky left TOC, main content area, and right sidebar for Tool CTAs. Use IBM Plex Serif for headings.",
-    "Create the /about/swu-marketing pillar page focusing on E-E-A-T. Use the provided university campus image.",
-    "Ensure all components use proper semantic tags and include SEO-friendly structures."
-  ]
+  "css_utilities": {
+    "network_dots_pattern": ".bg-dots { background-image: radial-gradient(#3597E4 1px, transparent 1px); background-size: 24px 24px; opacity: 0.1; }",
+    "glass_panel": "backdrop-blur-xl bg-white/80 border border-[#1A1A1A]/10"
+  }
 }
