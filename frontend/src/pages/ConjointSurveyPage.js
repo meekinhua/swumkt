@@ -269,67 +269,105 @@ const ConjointSurveyPage = () => {
             {currentSet.profiles.map((profile, idx) => {
               const isSelected = selections[currentSet.id] === profile.id;
               const hasProfileImage = profile.profile_image_url;
-              
+
               return (
                 <button
                   key={profile.id}
                   onClick={() => handleSelect(currentSet.id, profile.id)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50 shadow-lg'
-                      : 'border-gray-300 hover:border-blue-400 bg-white'
-                  }`}
+                  data-testid={`profile-card-${profile.id}`}
+                  data-selected={isSelected}
+                  style={{
+                    position: 'relative',
+                    padding: 16,
+                    paddingTop: isSelected ? 18 : 16,
+                    background: isSelected ? 'var(--paper-2)' : 'var(--surface)',
+                    border: isSelected ? '2px solid var(--ink)' : '1px solid var(--rule)',
+                    borderRadius: 0,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'background 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
+                    boxShadow: isSelected ? '0 8px 24px -8px rgba(10, 10, 10, 0.18)' : 'none',
+                    fontFamily: 'inherit',
+                    color: 'var(--ink)',
+                    textTransform: 'none',
+                    letterSpacing: 'normal',
+                    fontWeight: 'normal',
+                    fontSize: 'inherit',
+                  }}
+                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--ink-3)'; }}
+                  onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--rule)'; }}
                 >
-                  <div className="font-bold text-gray-900 mb-4 text-center">
+                  {/* Gold accent stripe on top when selected */}
+                  {isSelected && (
+                    <div style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, height: 4,
+                      background: 'var(--be-gold)',
+                    }}/>
+                  )}
+
+                  <div style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 11,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: isSelected ? 'var(--ink)' : 'var(--ink-3)',
+                    fontWeight: 600,
+                    marginBottom: 14,
+                    textAlign: 'center',
+                  }}>
                     ตัวเลือก {String.fromCharCode(65 + idx)}
                   </div>
-                  
+
                   {/* Show Profile Image if available */}
                   {hasProfileImage ? (
                     <div className="mb-4 w-full aspect-square">
                       <img
                         src={profile.profile_image_url}
                         alt={`Profile ${String.fromCharCode(65 + idx)}`}
-                        className="w-full h-full object-cover rounded border-2 border-gray-200"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover',
+                                 border: '1px solid var(--rule)' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     </div>
                   ) : null}
-                  
+
                   {/* Attribute details */}
                   <div className="space-y-3">
                     {survey.attributes.map((attr) => {
                       const level = getAttributeValue(profile, attr.id);
                       const levelImageUrl = profile.images?.[attr.id] || level?.image_url;
-                      
+
                       return (
                         <div key={attr.id}>
-                          <div className="text-xs font-bold text-gray-600 mb-1">
+                          <div style={{
+                            fontFamily: "'IBM Plex Mono', monospace",
+                            fontSize: 10.5,
+                            letterSpacing: '0.10em',
+                            textTransform: 'uppercase',
+                            color: 'var(--ink-3)',
+                            marginBottom: 4,
+                          }}>
                             {attr.name}
                           </div>
-                          
+
                           {/* Show individual level image only if no profile image */}
                           {!hasProfileImage && levelImageUrl && (
                             <div className="w-full aspect-square mb-2">
                               <img
                                 src={levelImageUrl}
                                 alt={level?.value || attr.name}
-                                className="w-full h-full object-cover rounded"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.target.style.display = 'none'; }}
                               />
                             </div>
                           )}
-                          
-                          <div className="text-sm font-bold text-gray-900">
+
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
                             {level?.value}
                           </div>
-                          
+
                           {level?.description && (
-                            <div className="text-xs text-gray-600 mt-1">
+                            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
                               {level.description}
                             </div>
                           )}
@@ -337,11 +375,25 @@ const ConjointSurveyPage = () => {
                       );
                     })}
                   </div>
-                  
+
                   {isSelected && (
-                    <div className="mt-4 flex items-center justify-center gap-2 text-blue-600 font-bold">
-                      <CheckCircle className="w-5 h-5" />
-                      เลือกตัวเลือกนี้
+                    <div style={{
+                      marginTop: 16,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      padding: '10px 12px',
+                      background: 'var(--ink)',
+                      color: 'var(--paper)',
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontSize: 11,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      fontWeight: 500,
+                    }}>
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Selected · เลือกแล้ว</span>
                     </div>
                   )}
                 </button>
