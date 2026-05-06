@@ -601,9 +601,19 @@ const SectionQuality = ({ study, aggregate, ai }) => {
   const score = Math.round(aggregate?.composite?.quality || 0);
   const overall = qs.find(q => q.kind === 'overall_quality');
 
-  // Build radar from likert_7 attributes
-  const attrQs = qs.filter(q => q.dimension === 'quality' && q.type === 'likert_7' && q.kind !== 'overall_quality' && q.stats?.mean);
-  const radarAxes = attrQs.map(q => (q.kind || '').replace('attribute_', '').toUpperCase()).slice(0, 8);
+  // Build radar from likert_7 attributes (brand-side only — exclude competitor_*
+  // parallels which also live in `dimension="quality"` and would otherwise leak in
+  // as bogus "COMPETITOR_<slug>" axes).
+  const attrQs = qs.filter(q =>
+    q.dimension === 'quality'
+    && q.type === 'likert_7'
+    && (q.kind || '').startsWith('attribute_')
+    && q.stats?.mean
+  );
+  const radarAxes = attrQs.map(q => {
+    const raw = (q.axis_label || (q.kind || '').replace('attribute_', '')).toString();
+    return raw.toUpperCase();
+  }).slice(0, 8);
   const radarSeries = radarAxes.length >= 3 ? [
     { name: study.brand?.name, color: DIMENSIONS.quality.color,
       values: attrQs.slice(0, radarAxes.length).map(q => Math.round((q.stats?.mean || 0) / 7 * 100)) },
