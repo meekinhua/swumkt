@@ -65,6 +65,33 @@ const BrandEquityListPage = () => {
     setLoading(false);
   };
 
+  const [cleaningDecoys, setCleaningDecoys] = useState(false);
+  const cleanupBrandXDecoys = async () => {
+    if (!window.confirm(
+      'ล้าง "Brand X / Y / Z" ออกจากคำถาม Aided Recognition ทุก study?\n\n' +
+      '• ปลอดภัย — แตะเฉพาะตัวเลือกที่เป็นชื่อปลอม Brand X/Y/Z\n' +
+      '• ไม่กระทบแบรนด์จริง / responses / question id\n' +
+      '• สามารถรันซ้ำได้ (idempotent)'
+    )) return;
+    setCleaningDecoys(true);
+    try {
+      const r = await axios.post(`${API}/brand-equity/admin/cleanup-decoys`, {}, authH);
+      const n = r.data?.fixed_count ?? 0;
+      window.alert(
+        n > 0
+          ? `เสร็จสิ้น — ล้าง Brand X/Y/Z ออกจาก ${n} studies เรียบร้อย`
+          : 'ไม่พบ Brand X/Y/Z ในระบบแล้ว — DB สะอาดอยู่ครับ'
+      );
+      // Reload to reflect any changes
+      loadStudies();
+    } catch (e) {
+      console.error(e);
+      window.alert('ล้างไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+    } finally {
+      setCleaningDecoys(false);
+    }
+  };
+
   const isAdmin = user?.role === 'admin';
   const myEmail = (user?.email || '').toLowerCase();
 
@@ -261,6 +288,26 @@ const BrandEquityListPage = () => {
                   </span>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="be-list-controls" style={{ marginTop: -10 }}>
+            <div className="be-list-filters" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="be-mono be-tiny be-muted"
+                    style={{ marginRight: 8, letterSpacing: '0.10em' }}>
+                ADMIN TOOLS ·
+              </span>
+              <button
+                className="be-btn be-btn-ghost be-btn-sm"
+                onClick={cleanupBrandXDecoys}
+                disabled={cleaningDecoys}
+                style={{ borderColor: '#D4A017', color: cleaningDecoys ? '#999' : '#8a6d10' }}
+                title="ล้าง 'Brand X / Y / Z' ออกจากคำถาม Aided Recognition ของ studies เก่า"
+                data-testid="be-admin-cleanup-decoys-btn">
+                {cleaningDecoys ? 'กำลังล้าง…' : '🧹 ล้าง Brand X/Y/Z (studies เก่า)'}
+              </button>
             </div>
           </div>
         )}
