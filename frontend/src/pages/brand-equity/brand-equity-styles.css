@@ -33,7 +33,22 @@
   background: var(--paper);
   color: var(--ink);
   min-height: 100vh;
+  overflow-x: hidden; /* defensive — guards against SVG label bleeds & wide content */
 }
+
+/* Allow grid/flex children to shrink below their intrinsic min-content width
+   so SVG charts / tables / long text never push the layout past viewport. */
+.be-root .be-section,
+.be-root .be-card,
+.be-root .be-dash-rail,
+.be-root .be-dash-ai,
+.be-root .be-dash-body > *,
+.be-root .be-grid-2 > *,
+.be-root .be-grid-3 > *,
+.be-root .be-grid-2-rail > * { min-width: 0; }
+
+/* SVG charts inside cards must not exceed the card width */
+.be-root .be-card svg { max-width: 100%; height: auto; }
 
 /* Subtle paper grain — pure CSS, no images */
 .be-root::before {
@@ -643,4 +658,27 @@
   .be-bignum { font-size: 64px; top: -8px; }
   .be-grid-3 { grid-template-columns: 1fr; }
   .be-list-hero { flex-direction: column; gap: 16px; }
+
+  /* Topbar: hide internal nav links to free room for logo + avatar.
+     Reduces padding, shrinks logo so it never wraps past viewport. */
+  .be-topbar { padding: 10px 14px; gap: 10px; }
+  .be-topnav { display: none; }
+  .be-logo-img { height: 30px; }
+  .be-logo-name { font-size: 12px; }
+  .be-logo-sub { font-size: 8.5px; letter-spacing: 0.10em; }
+
+  /* Section/card spacing tightens */
+  .be-card { padding: 16px; }
+  .be-section-meta { font-size: 13px; }
+
+  /* Hero: shrink padding & score block to fit thin viewport */
+  .be-hero { padding: 18px 16px; }
+  .be-hero-brand { gap: 12px; flex-wrap: wrap; }
+  .be-score-block { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .be-dim-card { min-height: 100px; padding: 12px 10px; }
+
+  /* Identity vs Image map: stack columns vertically on narrow screens */
+  .be-ident-map { grid-template-columns: 1fr; gap: 16px; }
+  .be-ident-col { padding: 0; }
+  .be-ident-connector { display: none; }
 }
