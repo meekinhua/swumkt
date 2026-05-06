@@ -1392,6 +1392,38 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                       "updated_at": _now_iso()}})
         return {"questions": questions}
 
+    @brand_equity_router.post("/admin/cleanup-decoys")
+    async def admin_cleanup_decoys(current_user=Depends(get_current_user)):
+        """Surgical backfill: strip legacy 'Brand X/Y/Z' decoy entries from existing
+        studies' questions.options. Idempotent — safe to call multiple times.
+        Admin-only. Use after deploying the template fix."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        import re as _re
+        decoy_re = _re.compile(r"^Brand\s+[XYZ]$", _re.IGNORECASE)
+
+        cursor = db.brand_studies.find({}, {"_id": 0, "id": 1, "questions": 1})
+        fixed_ids = []
+        async for s in cursor:
+            qs = s.get("questions") or []
+            changed = False
+            for q in qs:
+                for fld in ("options", "options_th"):
+                    opts = q.get(fld)
+                    if isinstance(opts, list):
+                        cleaned = [o for o in opts
+                                   if not (isinstance(o, str) and decoy_re.match(o.strip()))]
+                        if cleaned != opts:
+                            q[fld] = cleaned
+                            changed = True
+            if changed:
+                await db.brand_studies.update_one(
+                    {"id": s["id"]},
+                    {"$set": {"questions": qs, "updated_at": _now_iso()}}
+                )
+                fixed_ids.append(s["id"])
+        return {"fixed_count": len(fixed_ids), "fixed_ids": fixed_ids}
+
     class IdentityExtractRequest(BaseModel):
         brand_name: str
         category: Optional[str] = ""
