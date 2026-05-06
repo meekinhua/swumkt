@@ -967,7 +967,14 @@ Return JSON ONLY (no markdown):
 
         msg = UserMessage(text=prompt, file_contents=file_contents) if file_contents \
               else UserMessage(text=prompt)
-        resp = await chat.send_message(msg)
+        # Hard timeout — multimodal can occasionally hang; we'd rather fail fast than
+        # hold the proxy connection past 60s and trigger an unhelpful 502.
+        import asyncio
+        try:
+            resp = await asyncio.wait_for(chat.send_message(msg), timeout=55.0)
+        except asyncio.TimeoutError:
+            logging.error("[BrandEquity] visual identity timed out after 55s")
+            return {}
         text = resp if isinstance(resp, str) else str(resp)
 
         cleaned = text.strip()
@@ -1639,8 +1646,14 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(404)
         if not _owns(current_user, study):
             raise HTTPException(403)
+        # Idempotency guard — refuse to enqueue another pipeline if one is already in-flight.
+        # Each pipeline can run 5-15 min and consume LLM bandwidth + memory; queueing duplicates
+        # caused the production overload reported by the user.
+        cur_status = (study.get("ai_cache") or {}).get("status")
+        if cur_status in ("queued", "running"):
+            return {"status": cur_status, "message": "AI analysis already in progress"}
         await db.brand_studies.update_one({"id": study_id},
-            {"$set": {"ai_cache.status": "queued"}})
+            {"$set": {"ai_cache.status": "queued", "ai_cache.updated_at": _now_iso()}})
         bg.add_task(_run_ai_analysis, study_id)
         return {"status": "queued"}
 
