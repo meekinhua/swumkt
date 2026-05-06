@@ -24,6 +24,7 @@ const BrandEquityListPage = () => {
   const [studies, setStudies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [ownerFilter, setOwnerFilter] = useState('all'); // admin-only: 'all' | 'mine' | <email>
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -40,14 +41,37 @@ const BrandEquityListPage = () => {
     setLoading(false);
   };
 
+  const isAdmin = user?.role === 'admin';
+  const myEmail = (user?.email || '').toLowerCase();
+
+  // Owner-filtered base list (admin only); used for both status counts AND the visible grid
+  const ownerScoped = !isAdmin
+    ? studies
+    : ownerFilter === 'all'  ? studies
+    : ownerFilter === 'mine' ? studies.filter(s => (s.owner_email || '').toLowerCase() === myEmail)
+    : studies.filter(s => (s.owner_email || '').toLowerCase() === ownerFilter);
+
+  // Build owner chip list (admin only) — unique emails sorted, with counts
+  const ownerChips = (() => {
+    if (!isAdmin) return [];
+    const counts = {};
+    studies.forEach(s => {
+      const em = (s.owner_email || '').toLowerCase();
+      if (!em) return;
+      counts[em] = (counts[em] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  })();
+
   const counts = {
-    all: studies.length,
-    draft: studies.filter(s => s.status === 'draft').length,
-    collecting: studies.filter(s => s.status === 'collecting').length,
-    analyzing: studies.filter(s => s.status === 'analyzing').length,
-    completed: studies.filter(s => s.status === 'completed').length,
+    all: ownerScoped.length,
+    draft: ownerScoped.filter(s => s.status === 'draft').length,
+    collecting: ownerScoped.filter(s => s.status === 'collecting').length,
+    analyzing: ownerScoped.filter(s => s.status === 'analyzing').length,
+    completed: ownerScoped.filter(s => s.status === 'completed').length,
   };
-  const filtered = filter === 'all' ? studies : studies.filter(s => s.status === filter);
+  const filtered = filter === 'all' ? ownerScoped : ownerScoped.filter(s => s.status === filter);
 
   return (
     <div className="be-root" data-testid="be-list-page">
@@ -95,6 +119,43 @@ const BrandEquityListPage = () => {
             ))}
           </div>
         </div>
+
+        {isAdmin && ownerChips.length > 0 && (
+          <div className="be-list-controls" style={{ marginTop: -10 }}
+               data-testid="be-list-owner-filters">
+            <div className="be-list-filters" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="be-mono be-tiny be-muted"
+                    style={{ marginRight: 8, letterSpacing: '0.10em' }}>
+                OWNER ·
+              </span>
+              {[
+                ['all',  `ทั้งหมด · ${studies.length}`],
+                ['mine', `ของฉัน · ${studies.filter(s => (s.owner_email || '').toLowerCase() === myEmail).length}`],
+              ].map(([k, label]) => (
+                <span key={k}
+                      className={'be-chip ' + (ownerFilter === k ? 'solid' : '')}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setOwnerFilter(k)}
+                      data-testid={`be-list-owner-${k}`}>
+                  {label}
+                </span>
+              ))}
+              {ownerChips.map(([em, n]) => {
+                const handle = '@' + ((em.split('@')[0] || em).slice(0, 14));
+                return (
+                  <span key={em}
+                        className={'be-chip ' + (ownerFilter === em ? 'solid' : '')}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setOwnerFilter(em)}
+                        title={em}
+                        data-testid={`be-list-owner-${em}`}>
+                    {handle} · {n}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {loading ? <BeLoading text="Loading studies…"/> :
          filtered.length === 0 ? (
