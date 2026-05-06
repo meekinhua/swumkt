@@ -56,8 +56,11 @@ const BrandEquityDashboardPage = () => {
             share_token: sd.share_token,
             status: sd.status,
             brand: sd.brand,
-            // Reconstruct minimal identity so BrandLogo can resolve uploaded base64 logo
-            identity: sd.logo_asset ? { visual_assets: [sd.logo_asset] } : { visual_assets: [] },
+            // Use server-sanitized identity (traits, brand_promise, archetype, ai_summary,
+            // visual_palette, visual_keywords, visual_assets) so the Identity-vs-Image
+            // section renders the brand's intended identity properly. Falls back to a
+            // logo-only object for older payloads that don't return identity yet.
+            identity: sd.identity || (sd.logo_asset ? { visual_assets: [sd.logo_asset] } : { visual_assets: [] }),
             target_responses: sd.target_responses,
             is_public_showcase: true,
           },
@@ -362,8 +365,10 @@ const BrandEquityDashboardPage = () => {
 
               {(ai_cache?.master_insights || []).length === 0 ? (
                 <div className="be-muted be-small" style={{ padding: '20px 0', textAlign: 'center' }}>
-                  ยังไม่มี master insights —<br/>
-                  กดปุ่ม <strong>Run AI analysis</strong> ด้านบน
+                  {study.is_public_showcase
+                    ? <>ยังไม่มี master insights —<br/>เจ้าของ study ต้องรัน AI analysis ก่อน</>
+                    : <>ยังไม่มี master insights —<br/>กดปุ่ม <strong>Run AI analysis</strong> ด้านบน</>
+                  }
                 </div>
               ) : (ai_cache.master_insights || []).map((rec, i) => (
                 <div key={i} className="be-ai-rec" data-testid={`be-master-insight-${i}`}>
@@ -1129,7 +1134,10 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
         <div className="be-card" style={{ padding: 30, textAlign: 'center', marginBottom: 16 }}>
           <div className="be-eyebrow" style={{ marginBottom: 10, justifyContent: 'center' }}>AI ANALYSIS PENDING</div>
           <div className="be-muted be-small">
-            Identity-Image map ต้องการ AI analysis · กดปุ่ม <strong>Run AI analysis</strong> ด้านบน
+            {study.is_public_showcase
+              ? 'Identity-Image map ยังไม่พร้อม · เจ้าของ study ต้องรัน AI analysis ก่อน'
+              : <>Identity-Image map ต้องการ AI analysis · กดปุ่ม <strong>Run AI analysis</strong> ด้านบน</>
+            }
           </div>
         </div>
       ) : (

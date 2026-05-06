@@ -1625,11 +1625,29 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "normalized_by_question": ai_cache.get("normalized_by_question", {}),
         }
 
+        # Sanitize identity: include the brand-identity intent fields that the public
+        # dashboard's "Identity vs Image" section needs to render.
+        # Logo is already exposed via logo_asset above, so visual_assets keeps ONLY logo
+        # (palette images stay owner-internal).
+        identity_safe = {
+            "traits": identity.get("traits") or [],
+            "description": identity.get("description"),
+            "brand_promise": identity.get("brand_promise"),
+            "pricing_tier": identity.get("pricing_tier"),
+            "archetype": identity.get("archetype"),
+            "derived_traits": identity.get("derived_traits") or [],
+            "visual_palette": identity.get("visual_palette") or [],
+            "visual_keywords": identity.get("visual_keywords") or [],
+            "ai_summary": identity.get("ai_summary"),
+            "visual_assets": [logo_asset] if logo_asset else [],
+        }
+
         return {
             "id": study["id"],
             "share_token": share_token,
             "status": study.get("status"),
             "brand": study["brand"],
+            "identity": identity_safe,
             "logo_asset": logo_asset,
             "competitors": (study["brand"].get("competitors") or []),
             "estimated_minutes": max(5, len(study.get("questions") or []) // 4),
