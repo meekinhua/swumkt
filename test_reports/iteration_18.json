@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 18 — Verified (1) Brand Equity 'Brand X/Y/Z' decoy removal in aided_recognition options, and (2) Conjoint Analysis soft-delete + Trash Bin (restore/purge) feature. Backend: 7/7 pytest tests pass covering aided_recognition options for 0/2/many competitors, full conjoint soft-delete lifecycle (create→delete→list filter→trash list with deleted_at→restore→purge→404), route-priority for /studies/trash before /studies/{id}, and 403 permission checks for non-owner non-admin. Frontend: full UI flow verified end-to-end — both tabs render (การศึกษาของคุณ + ถังขยะ), empty state 'ถังขยะว่างเปล่า' shows when trash is empty, soft-delete dropdown menu item 'ลบการศึกษา' opens modal with new wording 'ย้ายการศึกษาไปยังถังขยะ?' (NOT old 'ลบถาวร' wording), confirmation moves study to trash and out of active list, restore button returns it to active, purge button + confirmation modal removes it permanently (verified API returns 404). All data-testids present and resolve correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_conjoint_trash_and_brandx.py",
+    "/app/test_reports/pytest/iter18_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Route ordering correct: GET /api/conjoint/studies/trash (line 7928) is registered BEFORE GET /api/conjoint/studies/{study_id} (line 7967) — FastAPI resolves /trash without conflict.",
+    "Soft-delete endpoint correctly sets deleted_at as ISO string (not datetime) — matches list/trash query filters consistently. Both queries align: list uses {deleted_at: {$exists: False}}, trash uses {deleted_at: {$exists: True, $ne: None}}.",
+    "Restore endpoint uses $unset on deleted_at (not just setting to null) — keeps Mongo schema clean and ensures list query {$exists: False} works.",
+    "Purge endpoint correctly cascades: deletes study + associated conjoint_responses. Auto-purge of >30-day trash items also wired in list_trashed_conjoint_studies.",
+    "Brand Equity aided_recognition fix (lines 440-455) correctly deduplicates (case-insensitive) and strips empty strings — robust against user input quirks. Verified options == options_th (no translation needed for brand names).",
+    "Permission checks consistent across delete/restore/purge: creator OR admin only — matches Brand Equity pattern.",
+    "Minor non-blocker: list_trashed_conjoint_studies projection omits 'product_category' field — if frontend trash UI later wants to display category, this will need adding."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_conjoint_trash_and_brandx.py (new test file)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 pytest)",
+    "frontend": "100% (all UI flows: tabs, soft-delete modal, soft-delete confirm, trash list, restore, purge modal, purge confirm)"
+  },
+  "test_credentials": "admin@swu.ac.th / admin123 (token field: access_token); student1@swu.ac.th / student123 used for 403 permission checks",
+  "seed_data_creation": "Created and cleaned up TEST_-prefixed conjoint studies during testing. All test data purged afterward — leftover active=0, trash=0 confirmed.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 18 covers (a) Brand X hallucination fix in /api/brand-equity/studies aided_recognition options, and (b) Conjoint trash bin (soft-delete/restore/purge) endpoints + UI tabs. Backend tests at /app/backend/tests/test_conjoint_trash_and_brandx.py — run with REACT_APP_BACKEND_URL set. UI testids verified: conjoint-tab-active, conjoint-tab-trash, conjoint-trash-view, conjoint-trash-item-{id}, conjoint-restore-btn-{id}, conjoint-purge-btn-{id}, conjoint-delete-modal, conjoint-confirm-delete-btn, conjoint-purge-modal, conjoint-confirm-purge-btn. Modal Thai wording confirmed: 'ย้ายการศึกษาไปยังถังขยะ?' for soft-delete, '⚠️ ลบถาวร — ไม่สามารถกู้คืนได้' for purge. Brand Equity trash feature was already shipped in earlier iteration and was NOT re-tested per scope.",
+  "rca of the issue": "No bugs found. Both fixes are correct and working end-to-end."
+}

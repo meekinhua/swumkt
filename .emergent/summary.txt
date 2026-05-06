@@ -1,150 +1,143 @@
 <analysis>**original_problem_statement:**
-The user previously requested enhancements to the Conjoint Analysis Thesis Export, specifically asking for native Word equations (OMML), SWU iThesis formatting (TH SarabunPSK font), and an Extra Prompt input for AI direction. After successfully implementing these and fixing several UI/UX bugs (modal overflow, multiple concurrent file downloads, and 502 proxy timeouts for AI interpretations), the user uploaded a new design mockup bundle (). 
-The new core requirement is to build a completely new **Alumni Networking & Family Tree Module** based on the provided HTML/CSS/JS mockups and specification documents. The user decided to fork the project to utilize a different model (Opus) for this massive new feature.
+The user requested continuous improvements, bug fixes, and system hardening for the Brand Equity and Conjoint Analysis modules. Recent fixes included resolving Clipboard API blocks, fixing Conjoint topbar titles, adding admin visibility filters, fixing mobile responsive layouts, and preventing production server hangs caused by sync CPU-heavy tasks (like document generation and image compression) blocking the async event loop. The user also requested soft-delete/trash bin features for studies.
+The most recent issue reported is a hallucination/data generation bug: in the Aided recognition survey question, an unknown brand (Brand X) is appearing in the options, which was not entered by the user.
 
 **PRODUCT REQUIREMENTS:**
-- Begin implementing the Alumni Module (Phase 1: Landing, Onboarding, Family Tree, Profile) exactly as specified in .
-- Match the frontend UI with the provided HTML/CSS mockups located in .
-- Ensure the new Alumni API routes are separated into a dedicated router (e.g., ) rather than adding them to the already massive .
+- Investigate and fix the Aided Recognition options generation to ensure only the specified brand and its defined competitors are shown (remove hardcoded/hallucinated Brand X).
+- Implement the Soft-delete and Trash bin feature for the Conjoint Analysis module (this was requested for *both* Brand Equity and Conjoint, but only Brand Equity was completed in the last session).
+- ALUMNI MODULE IS STRICTLY PAUSED. Do not work on it.
 
 **User's preferred language**: Thai (INSTRUCT NEXT AGENT TO RESPOND IN THAI ONLY)
 
 **what currently exists?** 
-A fully functional Project Management (Kanban) module and a highly stable Conjoint Analysis module. The Thesis Export feature now supports custom AI prompts, native Word mathematical equations (via ), and SWU format styling. The  endpoints have been refactored to use a background task + polling architecture, permanently fixing previous 502 proxy timeouts. For the new Alumni module, all UI prototypes, mock data, and specifications have been extracted and are waiting in .
+A highly hardened Brand Equity and Conjoint Analysis system. The frontend features a unified Swiss/Editorial UI design. The backend has been optimized to prevent event loop blocking by wrapping CPU-heavy tasks in  and adding concurrency limits/timeouts to LLM calls. Brand Equity now supports a 30-day Trash bin recovery system.
 
 **Last working item**:
-- Last item agent was working: Preparing the environment for a clean handoff to the new fork. The agent extracted  into , read the specs, and updated the PRD, ROADMAP, and CHANGELOG so the next agent can immediately begin building the Alumni Module.
-- Status: NOT STARTED (Setup complete, implementation pending)
-- Agent Testing Done: N
-- Which testing method agent to use? both (Frontend for UI component creation, Backend testing agent for new Alumni APIs)
-- User Testing Done: N
+    - Last item agent was working: The agent successfully completed the soft-delete and Trash bin UI/backend for the Brand Equity module. The user then reported a new bug regarding extra unwanted brands appearing in the Aided Recognition question. The agent has not yet started investigating this new bug.
+    - Status: NOT STARTED
+    - Agent Testing Done: N
+    - Which testing method agent to use? backend testing agent / manual curl
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Implement File Attachments on Kanban Cards (P1)
-  Issue 2: Verify Auto AI Analysis in Share as Content Flow (P2)
-
-  Issues Detail:
-  - Issue 1: Implement File Attachments on Kanban Cards
-     - Attempted fixes: Placeholder UI exists; backend integration postponed.
-     - Next debug checklist: Check . Use  for Google Drive file uploads.
-     - Why fix this issue and what will be achieved with the fix? Fulfills core Kanban file-sharing requirement requested by the user previously.
+  Issue 1: Brand X appearing in Aided Recognition options (P0)
+     - Attempted fixes: None yet.
+     - Next debug checklist: Check , specifically the  function and the  dimension templates. Look at how the  array is built for the  question. Ensure it uses  and  dynamically, and remove any hardcoded placeholder arrays like .
+     - Why fix this issue and what will be achieved with the fix? Ensures survey data integrity. Respondents shouldn't be asked about dummy brands that don't exist in the study's context.
      - Status: NOT STARTED
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? both
+     - Should Test frontend/backend/both after fix? backend (verify JSON output)
      - Blocked on other issue: None
-  - Issue 2: Verify Auto AI Analysis in Share as Content Flow
-     - Attempted fixes: The underlying  API was refactored to use background tasks in this session. The frontend  logic was updated to poll it.
-     - Next debug checklist: Create a conjoint study with >= 30 responses, click Share as Content, and verify the background polling succeeds and saves the interpretation correctly.
-     - Why fix this issue and what will be achieved with the fix? Verifies that sharing a conjoint study does not fail under the new background task architecture.
-     - Status: TESTING PENDING
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? both
-     - Blocked on other issue: Needs test data (>= 30 responses)
 
 **In progress Task List**:
-  Task 1: Build the New Alumni Module (Phase 1)
-     - Where to resume: Read  and . Explore the React/HTML mockups in . Begin setting up the database schemas and frontend routing for the Alumni Module.
-     - What will be achieved with this? Fulfills the user's latest request to build a networking and family tree platform for SWU MKT alumni.
+  Task 1: Soft-delete and Trash Bin for Conjoint Studies (P1)
+     - Where to resume: Review how it was implemented in  (adding , filtering ) and apply the exact same logic to  (or  where conjoint routes live) and the Conjoint frontend list page.
+     - What will be achieved with this? Fulfills the user's previous request to allow deleting/editing studies for *both* conjoint and brand equity (the agent missed conjoint).
      - Status: NOT STARTED
      - Should Test frontend/backend/both after fix? both
      - Blocked on something: None
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - P0: Implement Alumni Module Phase 1 (Landing, Onboarding, Family Tree, Profile) based on specs.
-    - P1: Implement Google Drive Integration for Kanban card attachments ().
-    - P1: Verify Survey Image Display Fix via screenshot tools.
-    Future Tasks:
-    - P2: Alumni Module Phase 2 (Discover, Feed, Jobs, Businesses).
-    - P3: Implement Phase 2 Caching (Image Endpoint) to serve images instead of Base64 embedding.
-    - P3: Expand Kanban Board features (different templates, custom fields).
-    - P4: Refactor  (>11,700 lines) by extracting routes into .
-    - P5: Customer Behavior Analysis (Quantitative tab) & Survey Analytics Dashboard.
+    - P0: Fix Aided Recognition Brand X bug.
+    - P1: Apply Soft-delete / Trash Bin to Conjoint Analysis.
+    Future Tasks (PAUSED by User - DO NOT WORK ON THESE):
+    - Alumni Module Phase 1 & 2.
+    - Image upload in Alumni Feed posts.
+    - Google Drive Kanban attachments.
 
 **Completed work in this session**
-- Installed , , and  to support converting AI LaTeX output into native Word OMML equations (DONE).
-- Updated Thesis Export () to render native equations and apply SWU iThesis format ( font) (DONE).
-- Added Extra Prompt input to Thesis Export Modal and integrated it into the Gemini AI backend payload (DONE).
-- Fixed Thesis Export Modal UI overflow issue on smaller screens by implementing  and sticky footers (DONE).
-- Fixed a polling race condition bug where downloading a generated thesis triggered 9 simultaneous file downloads (DONE).
-- Refactored  API from a synchronous call to an asynchronous background task + polling architecture to permanently fix 502 proxy timeouts (DONE).
-- Extracted and prepared the  bundle into  for the next agent (DONE).
+- Fixed Clipboard  in iframe previews by using a custom textarea fallback (DONE).
+- Fixed Conjoint topbar to correctly display CONJOINT ANALYSIS instead of Brand Equity (DONE).
+- Added Admin visibility logic: admins can now see all Brand Equity studies via  and  helpers, with OWNER filter chips on the frontend (DONE).
+- Auto-promoted specific admin emails to  on login (DONE).
+- Fixed Critical Bug: Corrected decorator placement in  that broke POST  (DONE).
+- Fixed Quality Attributes Radar: filtered out  dimensions from rendering as radar axes (DONE).
+- Added เทียบกับคู่แข่ง toggle to Quality Radar and fixed mobile responsive overflow issues (DONE).
+- Improved Conjoint Survey UI: Increased contrast and visibility for Next/Prev buttons, Progress Bar, and Selected Profile states (DONE).
+- Hardened Production Server: Wrapped synchronous CPU-heavy tasks (, ) in  to prevent event-loop blocking/server hangs (DONE).
+- Hardened AI Analysis: Added , 55s timeouts, and idempotency checks to prevent proxy 502s (DONE).
+- Implemented Edit, Status change, Soft-delete, and Trash bin (30-day recovery) for Brand Equity studies (DONE).
 
 **Earlier issues found/mentioned but not fixed**
-   Issue 1: AI Rearrange Context Window Fallback
-   - Debug checklist: Monitor if AI summarization fails on exceedingly large datasets.
-   - Why to solve this issue and what will be achieved with this? Prevents token limits from crashing analysis.
-   - Should Test frontend/backend/both after fix: backend
-   - Is recurring issue? Y
+   Issue 1: Agent missed applying Trash logic to Conjoint
+   - Debug checklist: User explicitly requested ทั้ง conjoint และ brand (both conjoint and brand) for the editable/trash feature. Agent only did Brand. Needs to be mirrored to Conjoint.
+   - Why to solve this issue and what will be achieved with this? Feature parity and fulfilling user request.
+   - Should Test frontend/backend/both after fix: both
+   - Is recurring issue? N
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: 502 Proxy Timeouts during AI Generation.
-  - Recurrence count: 3 (Resolved in this session by migrating the last synchronous AI route to background polling).
-  - Status: RESOLVED
+  - Issue recurrence in previous fork: Production server hanging/Proxy 502s.
+  - Recurrence count: 2
+  - Status: RESOLVED (via  and AI Semaphores).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- Frontend: React, TailwindCSS, Axios interceptors.
-- Backend: FastAPI, Python, MongoDB, .
-- Document Generation:  combined with  to inject native OMML equations.
-- Architecture: Async background tasks with frontend polling interval for all heavy AI operations to bypass 60s proxy timeouts.
+- Backend: FastAPI, MongoDB. Soft deletes are handled via  field. CPU-heavy synchronous operations MUST use .
+- Frontend: React, TailwindCSS, custom Swiss/Editorial UI ().
 
 **key DB schema**
-  - analysis_cache: 
-  - (NEW REQUIRED) alumni_users / family_tree: To be designed based on .
+  - : Added  (ISO string) for soft-delete logic.
 
 **changes in tech stack**
-  - Installed , , and  to handle Word Math XML injections.
+  - No new libraries, but heavy structural reliance on  for stability.
 
 **All files of reference** 
-  -  and  (You MUST read these before starting the Alumni feature).
+  -  (Check )
   - 
-  - 
+  -  (Needs Trash UI added)
 
 **Areas that need refactoring**: 
-  -  is critically bloated. As you build the new Alumni module, **create dedicated routers** (e.g., ) and include them in  via .
+  - Conjoint routes in  should eventually be moved to  to match Brand Equity structure.
 
 **key api endpoints**
-  -  (Now returns  for polling)
-  -  (New polling endpoint)
+  -  (Soft delete)
+  - 
 
 **Critical Info for New Agent** 
 - **USER LANGUAGE IS THAI.** All communication MUST be in Thai.
-- **ALUMNI MODULE FOCUS**: The user forked this job specifically to build the new Alumni module. Do not focus on older Kanban/Conjoint tasks until the Alumni baseline is set up.
-- **READ THE SPEC FIRST**: The complete design prototype, CSS, and markdown specifications for the Alumni module are located at . Review these files thoroughly using parallel tool calls.
-- **ARCHITECTURE WARNING**: Do not add the Alumni APIs directly into . Create new route files in .
+- NEVER use standard ; always use .
+- If you write CPU-bound backend code (image processing, document generation, heavy loops), you MUST wrap it in  to prevent blocking the single-worker production event loop.
+- Do NOT provide preview or deployed URLs in your summaries or chat.
+- The user's newest request is fixing Brand X appearing in Aided recognition. Fix this first.
 
 **documents and test reports created in this job** 
-  -  (Updated with Alumni Module info)
-  -  (Created new)
-  -  (Created new)
-  -  (100% pass for Thesis Export features)
+  -  (Continuously updated)
 
 **Last 10 User Messages and any pending HUMAN messages** 
- 1. User: Export Thesis popup overflows the screen, can't click. -> COMPLETED (Fixed UI with max-h-[90vh] and scroll).
- 2. User: It downloads 9 files at once when ready. -> COMPLETED (Fixed polling race condition).
- 3. User: AI interpretation fails often (unlike Thesis export). -> COMPLETED (Migrated AI interpretation to background polling).
- 4. User: Uploads  to build the new Alumni Module. -> COMPLETED (Extracted to ).
- 5. User: เห็นด้วย แต่ อยากใช้ opus 4.7 ทำงานแทน น่าจะต้อง folk ใหม่ รึเปล่า (Wants to fork and use Opus 4.7) -> COMPLETED (Prepared workspace, PRD, and mockups for a clean handoff to this exact fork).
+ 1. User: Progress bar is hard to see. -> COMPLETED.
+ 2. User: Make selected profile BG distinct. -> COMPLETED.
+ 3. User: App hangs on production (https://swumkt...); login fails. -> COMPLETED (Fixed event loop blocking sync code).
+ 4. User: AI analysis knocks out the system too. -> COMPLETED (Added semaphore and timeouts).
+ 5. User: Make studies editable, deletable, and change status like Conjoint, because there are trash studies. ทั้ง conjoint และ brand (Both conjoint and brand). -> PARTIALLY COMPLETED (Agent did Brand Equity but forgot Conjoint).
+ 6. User: Use soft-delete + Trash bin. -> COMPLETED (For Brand Equity).
+ 7. User: Aided recognition has a problem: extra brands (Brand X) appear from nowhere. -> PENDING (New issue).
 
 **Project Health Check:**
-Broken: None.
-Mocked: Google Drive attachments logic in Kanban. The Alumni module data is currently mocked inside .
+Broken: Aided Recognition data template.
+Mocked: Alumni module.
 
 **3rd Party Integrations** 
- - Emergent LLM Key -> Gemini 2.5 Flash () via 
+ - Emergent LLM Key -> Gemini (Text & Multimodal Vision) via . (Configured with Semaphore(3) limits).
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Iteration 5 passed perfectly).
+  - Testing agent used after significant changes: NO (Agent relied heavily on bash scripts and manual curl commands for speed).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: 
-  - Known regressions: None.
+  - Test files created: None in the immediate last steps.
+  - Known regressions: None active.
 
 **Credentials to test flow:**
-  - Admin (Full Access):  / 
-  - Student (Card Owner):  / 
+  - Admin:  / 
+  - Student:  / 
 
 **What agent forgot to execute**
-Everything from the previous session was completed. The agent set up the environment perfectly for you to immediately begin building the Alumni Module. Ensure you read the specs in  before touching any code.</analysis>
+The user explicitly asked to make studies editable/deletable for **ทั้ง conjoint และ brand** (both conjoint and brand). The previous agent built a beautiful soft-delete and Trash UI for Brand Equity but completely forgot to apply the same logic to Conjoint Analysis.
+
+**Debugging checklist for current issue**
+    Issue: Brand X appearing in Aided Recognition
+    
+    Backend files to check: 
+    -  -> look for  or the  dictionary definition.
+    - Check if the  template has hardcoded options like  instead of dynamically injecting  and .</analysis>

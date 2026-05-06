@@ -26,7 +26,7 @@
     "frontend": "100% (7/7 test points: all 5 Conjoint pages verified + BE list + Showcase regression)"
   },
   "test_credentials": "admin@swu.ac.th / admin123 (login token field: access_token)",
-  "seed_data_creation": "None. Reused existing conjoint study id=1a4b8a5c-2536-4b0a-91e6-7e8fa20f7827 ('ปณ', status=active, 3 respondents) for design/results/qualitative/survey page checks; also used e936845d9491 BE showcase token.",
+  "seed_data_creation": "None. Reused existing conjoint study id=soft-delete-conjoint ('ปณ', status=active, 3 respondents) for design/results/qualitative/survey page checks; also used e936845d9491 BE showcase token.",
   "retest_needed": false,
   "main_agent_can_self_test": true,
   "context_for_next_testing_agent": "Iteration 17 = purely visual/CSS — Conjoint module adopts Brand Equity design system. All 5 Conjoint pages wrap in .be-root + .be-conjoint-page; import BeTopbar and brand-equity-styles.css. Public survey uses local PublicTopbar (testid conjoint-resp-topbar). Scoped overrides in brand-equity-styles.css line ~113+ flatten shadcn rounded corners, remove shadows, restyle blue/purple buttons → ink/red, all within .be-root scope only. No backend changes. Core Conjoint functionality (create study, design wizard, results charts/tables/exports, AI interpret, share, thesis export) was not deep-tested end-to-end beyond page-load verification per task scope (no logic changes). Pre-existing console 404 on '/api/admin/prompts' endpoint is noise unrelated to this iteration.",

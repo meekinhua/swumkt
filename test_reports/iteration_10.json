@@ -31,7 +31,7 @@
   ],
   "success_rate": {"backend": "100%", "frontend": "100%"},
   "test_credentials": "admin@swu.ac.th / admin123 (verified working)",
-  "seed_data_creation": "Created and left in DB: study id=0a0a1f3b-54f9-4d06-addb-10a4c620d187 (brand=TEST_UIBrand, status=collecting, share_token=e936845d9491) with 12 submitted responses for dashboard verification. Main agent or next iteration may delete via DELETE /api/brand-equity/studies/{id} (owner=admin@swu.ac.th). The pytest suite separately creates TEST_BrandX and self-cleans.",
+  "seed_data_creation": "Created and left in DB: study id=soft-delete-conjoint (brand=TEST_UIBrand, status=collecting, share_token=e936845d9491) with 12 submitted responses for dashboard verification. Main agent or next iteration may delete via DELETE /api/brand-equity/studies/{id} (owner=admin@swu.ac.th). The pytest suite separately creates TEST_BrandX and self-cleans.",
   "retest_needed": false,
   "main_agent_can_self_test": true,
   "context_for_next_testing_agent": "Backend test file at /app/backend/tests/test_brand_equity.py runs in ~80s end-to-end (includes a 60s AI analyze poll). All 13 review-request features verified. The 4-step wizard form was NOT clicked through via Playwright due to trait-chip selector fragility (no data-testid); functionality was instead verified by setting up the data via API and confirming the resulting dashboard renders correctly. If retesting the wizard, ask main agent to add data-testid attributes to .be-trait-chip / launch button first."

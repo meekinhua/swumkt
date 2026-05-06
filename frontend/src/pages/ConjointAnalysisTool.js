@@ -34,7 +34,9 @@ import {
   MoreVertical,
   Clock,
   History,
-  Trash2
+  Trash2,
+  RotateCcw,
+  XCircle
 } from 'lucide-react';
 
 const ConjointAnalysisTool = () => {
@@ -54,12 +56,75 @@ const ConjointAnalysisTool = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [studyToDelete, setStudyToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [view, setView] = useState('active'); // 'active' | 'trash'
+  const [trashedStudies, setTrashedStudies] = useState([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
+  const [restoringId, setRestoringId] = useState(null);
+  const [purgingId, setPurgingId] = useState(null);
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+  const [studyToPurge, setStudyToPurge] = useState(null);
 
   useEffect(() => {
     if (user && token) {
       loadStudies();
     }
   }, [user, token, statusFilter]);
+
+  useEffect(() => {
+    if (user && token && view === 'trash') {
+      loadTrashedStudies();
+    }
+  }, [user, token, view]);
+
+  const loadTrashedStudies = async () => {
+    setLoadingTrash(true);
+    try {
+      const response = await axios.get(`${API}/conjoint/studies/trash`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTrashedStudies(response.data.studies || []);
+    } catch (error) {
+      console.error('Error loading trashed studies:', error);
+      toast.error('ไม่สามารถโหลดรายการในถังขยะได้');
+    } finally {
+      setLoadingTrash(false);
+    }
+  };
+
+  const handleRestoreStudy = async (study) => {
+    setRestoringId(study.id);
+    try {
+      await axios.post(`${API}/conjoint/studies/${study.id}/restore`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('กู้คืนการศึกษาสำเร็จ');
+      loadTrashedStudies();
+    } catch (error) {
+      console.error('Error restoring study:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถกู้คืนได้');
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  const handlePurgeStudy = async () => {
+    if (!studyToPurge) return;
+    setPurgingId(studyToPurge.id);
+    try {
+      await axios.delete(`${API}/conjoint/studies/${studyToPurge.id}/purge`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('ลบถาวรเรียบร้อย');
+      setShowPurgeConfirm(false);
+      setStudyToPurge(null);
+      loadTrashedStudies();
+    } catch (error) {
+      console.error('Error purging study:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถลบถาวรได้');
+    } finally {
+      setPurgingId(null);
+    }
+  };
 
   const loadStudies = async () => {
     setLoading(true);
@@ -110,7 +175,7 @@ const ConjointAnalysisTool = () => {
       await axios.delete(`${API}/conjoint/studies/${studyToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('ลบการศึกษาสำเร็จ');
+      toast.success('ย้ายไปยังถังขยะแล้ว (กู้คืนได้ภายใน 30 วัน)');
       loadStudies(); // Reload list
     } catch (error) {
       console.error('Error deleting study:', error);
@@ -273,6 +338,42 @@ const ConjointAnalysisTool = () => {
 
         {/* Studies List */}
         <Card className="p-4 sm:p-6 bg-white/95 border-2 border-gray-300 shadow-xl">
+          {/* View tabs: Active studies vs Trash */}
+          <div className="flex items-center gap-2 mb-4 sm:mb-6 border-b border-gray-200 pb-3">
+            <button
+              onClick={() => setView('active')}
+              data-testid="conjoint-tab-active"
+              className={`px-4 py-2 rounded-md text-sm font-bold transition ${
+                view === 'active'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              การศึกษาของคุณ
+            </button>
+            <button
+              onClick={() => setView('trash')}
+              data-testid="conjoint-tab-trash"
+              className={`px-4 py-2 rounded-md text-sm font-bold transition flex items-center gap-2 ${
+                view === 'trash'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Trash2 className="w-4 h-4" />
+              ถังขยะ
+              {trashedStudies.length > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  view === 'trash' ? 'bg-white text-gray-900' : 'bg-red-100 text-red-700'
+                }`}>
+                  {trashedStudies.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {view === 'active' && (
+          <>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
             <h2 className="text-xl sm:text-2xl font-black text-gray-900">การศึกษาของคุณ</h2>
             
@@ -488,6 +589,108 @@ const ConjointAnalysisTool = () => {
               ))}
             </div>
           )}
+          </>
+          )}
+
+          {view === 'trash' && (
+            <div data-testid="conjoint-trash-view">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2">
+                    <Trash2 className="w-5 h-5" />ถังขยะ
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                    การศึกษาในถังขยะจะถูกลบถาวรอัตโนมัติหลัง 30 วัน
+                  </p>
+                </div>
+              </div>
+
+              {loadingTrash ? (
+                <div className="text-center py-12 text-gray-500 text-sm">กำลังโหลด…</div>
+              ) : trashedStudies.length === 0 ? (
+                <div className="text-center py-12">
+                  <Trash2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 font-semibold">ถังขยะว่างเปล่า</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {trashedStudies.map((study) => {
+                    const deletedAt = study.deleted_at ? new Date(study.deleted_at) : null;
+                    const purgeAt = deletedAt ? new Date(deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
+                    const daysLeft = purgeAt ? Math.max(0, Math.ceil((purgeAt - new Date()) / (24 * 60 * 60 * 1000))) : null;
+                    return (
+                      <div
+                        key={study.id}
+                        className="p-4 sm:p-6 bg-amber-50/60 rounded-lg border-2 border-amber-200"
+                        data-testid={`conjoint-trash-item-${study.id}`}
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words">{study.title}</h3>
+                            {study.description && (
+                              <p className="text-sm text-gray-600 mt-1 break-words">{study.description}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-3 text-xs text-gray-500">
+                              {deletedAt && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>ลบเมื่อ {deletedAt.toLocaleDateString('th-TH')}</span>
+                                </div>
+                              )}
+                              {daysLeft !== null && (
+                                <div className="flex items-center gap-1 text-amber-700 font-semibold">
+                                  <span>เหลือ {daysLeft} วัน</span>
+                                </div>
+                              )}
+                              {user?.role === 'admin' && study.creator_id !== user?.id && (
+                                <span className="px-2 py-1 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300">
+                                  👤 {study.creator_name || 'Unknown'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
+                            <Button
+                              onClick={() => handleRestoreStudy(study)}
+                              disabled={restoringId === study.id}
+                              size="sm"
+                              variant="outline"
+                              className="border-2 border-green-600 text-green-700 hover:bg-green-50 text-xs sm:text-sm"
+                              data-testid={`conjoint-restore-btn-${study.id}`}
+                            >
+                              {restoringId === study.id ? (
+                                <span className="flex items-center gap-2">
+                                  <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                  กำลังกู้คืน…
+                                </span>
+                              ) : (
+                                <>
+                                  <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                  กู้คืน
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setStudyToPurge(study);
+                                setShowPurgeConfirm(true);
+                              }}
+                              size="sm"
+                              className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm"
+                              data-testid={`conjoint-purge-btn-${study.id}`}
+                            >
+                              <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                              ลบถาวร
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </Card>
       </div>
 
@@ -638,37 +841,40 @@ const ConjointAnalysisTool = () => {
         </div>
       )}
       
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal (soft-delete to Trash) */}
       {showDeleteConfirm && studyToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md w-full mx-4 bg-white">
+          <Card className="p-6 max-w-md w-full mx-4 bg-white" data-testid="conjoint-delete-modal">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              ⚠️ ยืนยันการลบการศึกษา
+              ย้ายการศึกษาไปยังถังขยะ?
             </h3>
             <p className="text-gray-700 mb-6">
-              คุณแน่ใจหรือไม่ว่าต้องการลบการศึกษา <strong>&quot;{studyToDelete.name}&quot;</strong>?
+              การศึกษา <strong>&quot;{studyToDelete.title}&quot;</strong> จะถูกย้ายไปยังถังขยะ
               <br />
-              <span className="text-red-600 font-semibold">
-                การกระทำนี้จะลบทั้งการศึกษาและข้อมูลการตอบทั้งหมด ({studyToDelete.respondent_count || 0} คน)
+              <span className="text-amber-700 font-semibold">
+                สามารถกู้คืนได้ภายใน 30 วัน หลังจากนั้นจะถูกลบถาวรอัตโนมัติ
               </span>
               <br />
-              <span className="text-red-600 font-semibold">ไม่สามารถย้อนกลับได้</span>
+              <span className="text-gray-500 text-sm">
+                ข้อมูลผู้ตอบ ({studyToDelete.respondent_count || 0} คน) จะยังถูกเก็บไว้จนกว่าจะลบถาวร
+              </span>
             </p>
             <div className="flex gap-4">
               <Button
                 onClick={handleDeleteStudy}
                 disabled={deleting}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold"
+                data-testid="conjoint-confirm-delete-btn"
               >
                 {deleting ? (
                   <span className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    กำลังลบ...
+                    กำลังย้าย...
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
                     <Trash2 className="w-4 h-4" />
-                    ยืนยันลบ
+                    ย้ายไปถังขยะ
                   </span>
                 )}
               </Button>
@@ -678,6 +884,54 @@ const ConjointAnalysisTool = () => {
                   setStudyToDelete(null);
                 }}
                 disabled={deleting}
+                variant="outline"
+                className="flex-1 border-2 border-gray-400 hover:bg-gray-100 font-bold"
+              >
+                ยกเลิก
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Purge Confirmation Modal (permanent delete) */}
+      {showPurgeConfirm && studyToPurge && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-md w-full mx-4 bg-white" data-testid="conjoint-purge-modal">
+            <h3 className="text-xl font-bold text-red-700 mb-4">
+              ⚠️ ลบถาวร — ไม่สามารถกู้คืนได้
+            </h3>
+            <p className="text-gray-700 mb-6">
+              คุณกำลังจะลบ <strong>&quot;{studyToPurge.title}&quot;</strong> และข้อมูลผู้ตอบทั้งหมด
+              ({studyToPurge.respondent_count || 0} คน) <span className="text-red-600 font-bold">อย่างถาวร</span>
+              <br />
+              <span className="text-red-600 font-semibold">การกระทำนี้ไม่สามารถย้อนกลับได้</span>
+            </p>
+            <div className="flex gap-4">
+              <Button
+                onClick={handlePurgeStudy}
+                disabled={purgingId === studyToPurge.id}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold"
+                data-testid="conjoint-confirm-purge-btn"
+              >
+                {purgingId === studyToPurge.id ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    กำลังลบ...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <XCircle className="w-4 h-4" />
+                    ลบถาวร
+                  </span>
+                )}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowPurgeConfirm(false);
+                  setStudyToPurge(null);
+                }}
+                disabled={purgingId === studyToPurge.id}
                 variant="outline"
                 className="flex-1 border-2 border-gray-400 hover:bg-gray-100 font-bold"
               >

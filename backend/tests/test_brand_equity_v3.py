@@ -4,7 +4,7 @@ import pytest
 import requests
 
 BASE_URL = (os.environ.get("REACT_APP_BACKEND_URL")
-            or "https://family-tree-hub-41.preview.emergentagent.com").rstrip("/")
+            or "https://soft-delete-conjoint.preview.emergentagent.com").rstrip("/")
 ADMIN = {"email": "admin@swu.ac.th", "password": "admin123"}
 
 

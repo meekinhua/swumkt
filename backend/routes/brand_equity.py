@@ -438,9 +438,21 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
             q["help_th"] = help_th
             q["help_en"] = HELP_EN.get(tmpl["id"], help_th)
         if tmpl.get("options_t") == "brand_list":
-            decoys = ["Brand X", "Brand Y", "Brand Z"]
-            q["options"] = brand_list + decoys[:max(0, 5 - len(brand_list))]
-            q["options_th"] = q["options"]  # brand names — no translation
+            # Use only real brands entered by the user (focal + competitors).
+            # Deduplicate while preserving order, strip whitespace, and drop empties.
+            seen = set()
+            real_brands = []
+            for b in brand_list:
+                name = (b or "").strip()
+                if not name:
+                    continue
+                key = name.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                real_brands.append(name)
+            q["options"] = real_brands
+            q["options_th"] = real_brands  # brand names — no translation
         elif tmpl.get("options_t") == "trait_list":
             q["options"] = trait_pool[:24]
             q["options_th"] = trait_pool_th[:24]

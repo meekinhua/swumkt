@@ -317,7 +317,7 @@ security = HTTPBearer()
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://family-tree-hub-41.preview.emergentagent.com/auth/google/callback')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://soft-delete-conjoint.preview.emergentagent.com/auth/google/callback')
 
 # Create the main app
 app = FastAPI(title="SWUMKT API")
@@ -7924,6 +7924,45 @@ async def generate_conjoint_design(
         }
     }
 
+# List trashed conjoint studies (must be defined BEFORE /studies/{study_id} route to avoid path collision)
+@api_router.get("/conjoint/studies/trash")
+async def list_trashed_conjoint_studies(
+    current_user: User = Depends(get_current_user)
+):
+    """List trashed (soft-deleted) conjoint studies. Auto-purges items older than 30 days
+    before listing. Admin sees all; non-admin sees only their own."""
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    
+    # Best-effort cleanup: hard-purge anything trashed > 30 days
+    old = await db.conjoint_studies.find(
+        {"deleted_at": {"$lt": cutoff}}, {"_id": 0, "id": 1}
+    ).to_list(500)
+    if old:
+        old_ids = [s["id"] for s in old]
+        await db.conjoint_studies.delete_many({"id": {"$in": old_ids}})
+        await db.conjoint_responses.delete_many({"study_id": {"$in": old_ids}})
+        logging.info(f"[TRASH_PURGE] Auto-purged {len(old_ids)} conjoint studies > 30 days")
+    
+    query = {"deleted_at": {"$exists": True, "$ne": None}}
+    if current_user.role != UserRole.ADMIN:
+        query["creator_id"] = current_user.id
+    
+    list_projection = {
+        "_id": 0, "id": 1, "title": 1, "description": 1, "status": 1,
+        "respondent_count": 1, "created_at": 1, "updated_at": 1, "deleted_at": 1,
+        "creator_id": 1, "creator_name": 1, "is_public_result": 1,
+        "share_token": 1, "num_choice_sets": 1,
+    }
+    
+    studies = await db.conjoint_studies.find(query, list_projection).sort("deleted_at", -1).to_list(500)
+    for s in studies:
+        if "num_choice_sets" not in s:
+            s["num_choice_sets"] = 0
+    
+    return {"studies": studies}
+
+
 # Get study details
 @api_router.get("/conjoint/studies/{study_id}")
 async def get_conjoint_study(
@@ -7974,9 +8013,10 @@ async def list_conjoint_studies(
     current_user: User = Depends(get_current_user),
     status_filter: Optional[str] = None
 ):
-    """List conjoint studies - all studies for admin, only owned studies for others"""
+    """List conjoint studies - all studies for admin, only owned studies for others.
+    Excludes soft-deleted (trashed) studies."""
     # Build query
-    query = {}
+    query = {"deleted_at": {"$exists": False}}
     
     # Admin can see all studies, others only their own
     if current_user.role != UserRole.ADMIN:
@@ -8851,7 +8891,7 @@ async def delete_conjoint_study(
     study_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Delete a conjoint study and all its associated data"""
+    """Soft-delete a conjoint study (move to Trash). Auto-purged after 30 days; restore via /restore."""
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
@@ -8860,15 +8900,56 @@ async def delete_conjoint_study(
     if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized to delete this study")
     
-    # Delete study
+    now = datetime.now(timezone.utc)
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {"$set": {"deleted_at": now.isoformat(), "updated_at": now}}
+    )
+    
+    logging.info(f"[TRASH_STUDY] Conjoint study {study_id} moved to trash by {current_user.id}")
+    
+    return {"message": "Moved to Trash", "trashed": True}
+
+
+@api_router.post("/conjoint/studies/{study_id}/restore")
+async def restore_conjoint_study(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Restore a soft-deleted conjoint study from the Trash."""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized to restore this study")
+    if not study.get("deleted_at"):
+        return {"message": "Already active", "trashed": False}
+    
+    now = datetime.now(timezone.utc)
+    await db.conjoint_studies.update_one(
+        {"id": study_id},
+        {"$unset": {"deleted_at": ""}, "$set": {"updated_at": now}}
+    )
+    logging.info(f"[RESTORE_STUDY] Conjoint study {study_id} restored by {current_user.id}")
+    return {"message": "Restored", "trashed": False}
+
+
+@api_router.delete("/conjoint/studies/{study_id}/purge")
+async def purge_conjoint_study(
+    study_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Hard-delete a conjoint study and its responses permanently. No recovery."""
+    study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized to purge this study")
+    
     await db.conjoint_studies.delete_one({"id": study_id})
-    
-    # Delete all associated responses
     await db.conjoint_responses.delete_many({"study_id": study_id})
-    
-    logging.info(f"[DELETE_STUDY] Study {study_id} deleted by {current_user.id}")
-    
-    return {"message": "Study deleted successfully"}
+    logging.info(f"[PURGE_STUDY] Conjoint study {study_id} purged permanently by {current_user.id}")
+    return {"message": "Purged permanently"}
 
 # NCA Analysis endpoint
 @api_router.post("/conjoint/studies/{study_id}/nca-analysis")

@@ -4,7 +4,7 @@ import time
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://family-tree-hub-41.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://soft-delete-conjoint.preview.emergentagent.com").rstrip("/")
 ADMIN_EMAIL = "admin@swu.ac.th"
 ADMIN_PASSWORD = "admin123"
 OTHER_EMAIL = "student1@swu.ac.th"

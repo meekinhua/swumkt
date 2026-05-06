@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { X, Search, FileText, Users, TrendingUp, Target, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://family-tree-hub-41.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://soft-delete-conjoint.preview.emergentagent.com';
 
 const SurveyTemplateModal = ({ onClose }) => {
   const navigate = useNavigate();

@@ -11,7 +11,7 @@ import DemographicsForm from '@/components/DemographicsForm';
 import { ArrowLeft, ArrowRight, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://family-tree-hub-41.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://soft-delete-conjoint.preview.emergentagent.com';
 
 const SurveyTakingPage = () => {
   const { surveyId } = useParams();
