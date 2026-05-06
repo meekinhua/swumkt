@@ -36,6 +36,8 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - Backend router: `/app/backend/routes/brand_equity.py` (separate from server.py, ~1300 lines)
 - DB collections: `brand_studies` · `brand_responses`
 - Tests: iteration_10 (base), iteration_11 (visual ID), iteration_12 (perceptual map), iteration_13 (translation + logo) — all 100% pass
+- **Trash Bin** (Feb 2026): soft-delete via `deleted_at`, 30-day recovery window, auto-purge, restore + permanent purge endpoints
+- **Aided Recognition fix** (Feb 2026): removed hardcoded "Brand X/Y/Z" decoys — options show only real brands (focal + user-entered competitors)
 
 
 ### Conjoint Analysis (COMPLETE)
@@ -52,6 +54,7 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
   - SWU iThesis Format: TH SarabunPSK font, academic margins, 1.5 line spacing
   - Background job + polling, retry with backoff
 - AI Interpretation: Background task + polling (same as thesis, prevents 502)
+- **Trash Bin** (Feb 2026): soft-delete with 30-day recovery, restore + purge endpoints, UI tabs in `ConjointAnalysisTool.js`
 
 ### Kanban Project Management (COMPLETE)
 - Sub-Kanban inside cards, Cover Images, Assignees with auto-avatar

@@ -1,6 +1,36 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-06 — 🗑️ Conjoint Analysis: Soft-delete + Trash Bin (mirroring Brand Equity)
+- **Why**: User explicitly requested feature parity — "ทั้ง conjoint และ brand" — Brand Equity got Trash in prior iteration but Conjoint was missed
+- **Backend** (`/app/backend/server.py`):
+  - `DELETE /api/conjoint/studies/{id}` → soft-delete (sets `deleted_at` ISO string), returns `{trashed: true}`
+  - `GET /api/conjoint/studies` → adds `{deleted_at: {$exists: False}}` filter to hide trashed items
+  - `GET /api/conjoint/studies/trash` (NEW): registered BEFORE `/{study_id}` route to avoid path collision; returns trashed items with `deleted_at` timestamp; auto-purges items > 30 days on each call (cascades responses)
+  - `POST /api/conjoint/studies/{id}/restore` (NEW): `$unset` deleted_at, returns `{trashed: false}`
+  - `DELETE /api/conjoint/studies/{id}/purge` (NEW): hard delete study + responses, no recovery
+  - All endpoints enforce creator-or-admin permission (consistent with existing pattern)
+- **Frontend** (`/app/frontend/src/pages/ConjointAnalysisTool.js`):
+  - View tabs at top of Studies card: "การศึกษาของคุณ" vs "ถังขยะ" with live count badge
+  - Soft-delete confirm modal updated: "ย้ายการศึกษาไปยังถังขยะ?" with 30-day recovery note (replaces old "ลบถาวร" wording)
+  - Trash view: amber-bg cards with deleted-at date, "เหลือ N วัน" countdown, owner badge for admin, **Restore** + **Purge** buttons
+  - Purge confirm modal: separate red modal with "⚠️ ลบถาวร — ไม่สามารถกู้คืนได้"
+  - Fixed pre-existing typo `studyToDelete.name` → `studyToDelete.title`
+- **Verified** (testing agent iteration 18, 7/7 backend pytest + 100% frontend UI flows)
+
+## 2026-02-06 — 🐛 Brand Equity: Aided Recognition "Brand X" hallucination fix
+- **Issue**: ผู้ตอบเห็นแบรนด์ปลอม "Brand X / Y / Z" ในคำถาม Aided Recognition ทั้งที่ admin ไม่ได้ใส่
+- **Root cause** (`/app/backend/routes/brand_equity.py` line 441-442 ก่อนแก้):
+  ```python
+  decoys = ["Brand X", "Brand Y", "Brand Z"]
+  q["options"] = brand_list + decoys[:max(0, 5 - len(brand_list))]
+  ```
+  โค้ดเดิม pad รายการแบรนด์ให้ครบ 5 ตัวด้วย dummy names — สร้าง survey data integrity issue
+- **Fix**: ใช้เฉพาะ `brand_setup.name + competitors` (deduplicate case-insensitive, strip whitespace, drop empties); ไม่ pad ใด ๆ
+- **Verified**: 0/2/many competitors เคสทั้งหมดผ่าน — options แสดงเฉพาะแบรนด์จริงที่ user ใส่
+
+
+
 ## 2026-05-06 — 🗑️ Brand Equity: Soft-delete + Trash Bin (30-day recovery)
 - **Why**: ป้องกันกดผิดลบงานวิจัยนักศึกษา — เดิม DELETE ลบถาวรทันที (study + responses + AI cache)
 - **Backend** (`/app/backend/routes/brand_equity.py`):
