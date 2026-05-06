@@ -229,17 +229,23 @@ const ConjointSurveyPage = () => {
           {/* Progress Bar */}
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold text-gray-700">
+              <span className="be-mono be-tiny" style={{ color: 'var(--ink-2)', letterSpacing: '0.10em' }}>
                 ข้อ {currentSetIndex + 1} จาก {survey.choice_sets.length}
               </span>
-              <span className="text-sm font-bold text-blue-600">
+              <span className="be-mono be-tiny" style={{ color: 'var(--ink)', fontWeight: 600 }}>
                 {Math.round(progress)}%
               </span>
             </div>
-            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+            <div style={{ width: '100%', height: 8, background: 'var(--rule)',
+                          border: '1px solid var(--rule-strong)' }}>
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-300"
-                style={{ width: `${progress}%` }}
+                data-testid="conjoint-survey-progress-fill"
+                style={{
+                  height: '100%',
+                  width: `${progress}%`,
+                  background: 'var(--ink)',
+                  transition: 'width 300ms ease-out',
+                }}
               ></div>
             </div>
           </div>
