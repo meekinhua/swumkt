@@ -1,6 +1,27 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-05-06 — 🗑️ Brand Equity: Soft-delete + Trash Bin (30-day recovery)
+- **Why**: ป้องกันกดผิดลบงานวิจัยนักศึกษา — เดิม DELETE ลบถาวรทันที (study + responses + AI cache)
+- **Backend** (`/app/backend/routes/brand_equity.py`):
+  - `DELETE /studies/{id}` → soft-delete (set `deleted_at` timestamp) แทน hard delete
+  - `GET /studies` → ซ่อน studies ที่มี `deleted_at` ฟิลด์
+  - `GET /studies/trash` (ใหม่): รายการ trashed (owner-scoped + admin) พร้อม auto-purge items >30 days on each call
+  - `POST /studies/{id}/restore` (ใหม่): unset `deleted_at` → กลับมา active
+  - `DELETE /studies/{id}/purge` (ใหม่): hard delete ทั้ง study + responses (ไม่มีกู้คืน)
+- **Frontend** (`BrandEquityListPage.jsx`):
+  - View toggle: `ACTIVE · N` / `TRASH · N` chips ที่ header
+  - Active view: ปุ่ม Delete เดิม → เรียก soft-delete + confirm "ย้ายไปถังขยะ กู้คืนได้ 30 วัน"
+  - Trash view: การ์ด greyscale + hatched bg + ชื่อขีดฆ่า · แสดง "ลบเมื่อ X วันที่แล้ว · เหลือ Y วัน" (เตือนสีแดงเมื่อ ≤7 วัน) · ปุ่ม **↺ Restore** (dark primary) + **✕ Purge** (red outline, **double confirm**)
+  - Trash count badge อัปเดต live ทุก operation
+- **Verified (API + UI E2E)**:
+  - Create → Delete → ACTIVE ซ่อน, TRASH โผล่ ✅
+  - Restore → กลับเข้า ACTIVE, Trash ว่าง ✅
+  - Purge → HTTP 404 บน GET ตามหลัง (hard-deleted จริง) ✅
+  - Auto-purge >30d → cleanup hook ใน `/trash` endpoint
+- ไม่กระทบ ownership / owner-filter / admin scope ใด ๆ
+
+
 ## 2026-05-06 — 🚨 Brand Equity AI Analyze: Concurrency + Timeout Hardening
 - **Issue (ต่อจาก server overload fix)**: User รายงาน AI analyze ของ Brand Equity ก็ทำให้ระบบน๊อค
 - **Root causes**:

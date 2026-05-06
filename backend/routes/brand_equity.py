@@ -1254,10 +1254,36 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     async def list_studies(current_user=Depends(get_current_user)):
         # Admin sees ALL studies (matches Conjoint pattern). Non-admin uses
         # owner_id OR owner_email fallback so studies aren't lost if the id changed.
-        query = {} if _is_admin(current_user) else _owner_query(current_user)
+        owner_q = {} if _is_admin(current_user) else _owner_query(current_user)
+        # Soft-delete: hide trashed studies from the main list
+        not_trashed = {"deleted_at": {"$exists": False}}
+        query = {"$and": [owner_q, not_trashed]} if owner_q else not_trashed
         cur = db.brand_studies.find(query, {"_id": 0}).sort("updated_at", -1)
         items = await cur.to_list(500)
         # Attach response counts
+        for s in items:
+            s["response_count"] = await db.brand_responses.count_documents({"study_id": s["id"]})
+        return {"studies": items, "total": len(items)}
+
+    @brand_equity_router.get("/studies/trash")
+    async def list_trashed_studies(current_user=Depends(get_current_user)):
+        """Trashed studies (soft-deleted, restorable). Auto-purges items older than 30 days
+        before listing. Honors the same admin-vs-owner scoping as the main list."""
+        from datetime import timedelta
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+
+        # Best-effort cleanup: hard-purge anything trashed > 30 days
+        old = await db.brand_studies.find({"deleted_at": {"$lt": cutoff}}, {"_id": 0, "id": 1}).to_list(500)
+        if old:
+            old_ids = [s["id"] for s in old]
+            await db.brand_studies.delete_many({"id": {"$in": old_ids}})
+            await db.brand_responses.delete_many({"study_id": {"$in": old_ids}})
+
+        owner_q = {} if _is_admin(current_user) else _owner_query(current_user)
+        q = {"$and": [owner_q, {"deleted_at": {"$exists": True, "$ne": None}}]} if owner_q \
+            else {"deleted_at": {"$exists": True, "$ne": None}}
+        cur = db.brand_studies.find(q, {"_id": 0}).sort("deleted_at", -1)
+        items = await cur.to_list(500)
         for s in items:
             s["response_count"] = await db.brand_responses.count_documents({"study_id": s["id"]})
         return {"studies": items, "total": len(items)}
@@ -1298,6 +1324,34 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     @brand_equity_router.delete("/studies/{study_id}")
     async def delete_study(study_id: str, current_user=Depends(get_current_user)):
+        """Soft-delete (move to Trash). Auto-purged after 30 days; restore via /restore."""
+        study = await db.brand_studies.find_one({"id": study_id})
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if not _owns(current_user, study):
+            raise HTTPException(403, "Not authorized")
+        await db.brand_studies.update_one({"id": study_id},
+            {"$set": {"deleted_at": _now_iso(), "updated_at": _now_iso()}})
+        return {"message": "Moved to Trash", "trashed": True}
+
+    @brand_equity_router.post("/studies/{study_id}/restore")
+    async def restore_study(study_id: str, current_user=Depends(get_current_user)):
+        """Restore a soft-deleted study from the Trash."""
+        study = await db.brand_studies.find_one({"id": study_id})
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if not _owns(current_user, study):
+            raise HTTPException(403, "Not authorized")
+        if not study.get("deleted_at"):
+            return {"message": "Already active"}
+        await db.brand_studies.update_one({"id": study_id},
+            {"$unset": {"deleted_at": ""}, "$set": {"updated_at": _now_iso()}})
+        return {"message": "Restored", "trashed": False}
+
+    @brand_equity_router.delete("/studies/{study_id}/purge")
+    async def purge_study(study_id: str, current_user=Depends(get_current_user)):
+        """Hard-delete a study and its responses permanently. Use only on already-trashed
+        items (or by admin) — there is no recovery after this."""
         study = await db.brand_studies.find_one({"id": study_id})
         if not study:
             raise HTTPException(404, "Study not found")
@@ -1305,7 +1359,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(403, "Not authorized")
         await db.brand_studies.delete_one({"id": study_id})
         await db.brand_responses.delete_many({"study_id": study_id})
-        return {"message": "Deleted"}
+        return {"message": "Purged permanently"}
 
     @brand_equity_router.post("/studies/{study_id}/regenerate-questions")
     async def regenerate_questions(study_id: str, current_user=Depends(get_current_user)):

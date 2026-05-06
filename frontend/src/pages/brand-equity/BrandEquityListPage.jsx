@@ -22,13 +22,20 @@ const BrandEquityListPage = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const [studies, setStudies] = useState([]);
+  const [trash, setTrash] = useState([]);
+  const [trashCount, setTrashCount] = useState(0);
+  const [view, setView] = useState('active'); // 'active' | 'trash'
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState('all'); // admin-only: 'all' | 'mine' | <email>
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
-  useEffect(() => { loadStudies(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadStudies(); loadTrashCount(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    if (view === 'trash') loadTrash();
+    /* eslint-disable-next-line */
+  }, [view]);
 
   const loadStudies = async () => {
     setLoading(true);
@@ -38,6 +45,23 @@ const BrandEquityListPage = () => {
     } catch (e) {
       console.error(e);
     }
+    setLoading(false);
+  };
+
+  const loadTrashCount = async () => {
+    try {
+      const r = await axios.get(`${API}/brand-equity/studies/trash`, authH);
+      setTrashCount(r.data.total || 0);
+    } catch (e) { /* ignore — count is cosmetic */ }
+  };
+
+  const loadTrash = async () => {
+    setLoading(true);
+    try {
+      const r = await axios.get(`${API}/brand-equity/studies/trash`, authH);
+      setTrash(r.data.studies || []);
+      setTrashCount(r.data.total || 0);
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -55,16 +79,52 @@ const BrandEquityListPage = () => {
     }
   };
 
-  // Delete with confirm
+  // Soft-delete (move to Trash) — recoverable for 30 days
   const deleteStudy = async (id, name) => {
-    if (!window.confirm(`ลบ study "${name}" และ response ทั้งหมดถาวร?\nการกระทำนี้ย้อนกลับไม่ได้`)) return;
+    if (!window.confirm(`ย้าย study "${name}" ไปถังขยะ?\nกู้คืนได้ภายใน 30 วัน`)) return;
     try {
       await axios.delete(`${API}/brand-equity/studies/${id}`, authH);
       setStudies(prev => prev.filter(s => s.id !== id));
+      setTrashCount(c => c + 1);
     } catch (e) {
       console.error(e);
-      alert('ลบไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('ย้ายไปถังขยะไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
     }
+  };
+
+  // Restore from Trash
+  const restoreStudy = async (id) => {
+    try {
+      await axios.post(`${API}/brand-equity/studies/${id}/restore`, {}, authH);
+      setTrash(prev => prev.filter(s => s.id !== id));
+      setTrashCount(c => Math.max(0, c - 1));
+      // Refresh active list so the restored study reappears
+      loadStudies();
+    } catch (e) {
+      console.error(e);
+      alert('กู้คืนไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+    }
+  };
+
+  // Purge permanently (Trash only) — double confirmation
+  const purgeStudy = async (id, name) => {
+    if (!window.confirm(`ลบ "${name}" ถาวร?\nresponses + AI cache ทั้งหมดจะหายไปและกู้คืนไม่ได้`)) return;
+    if (!window.confirm('ยืนยันอีกครั้ง — การกระทำนี้ย้อนกลับไม่ได้')) return;
+    try {
+      await axios.delete(`${API}/brand-equity/studies/${id}/purge`, authH);
+      setTrash(prev => prev.filter(s => s.id !== id));
+      setTrashCount(c => Math.max(0, c - 1));
+    } catch (e) {
+      console.error(e);
+      alert('ลบถาวรไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+    }
+  };
+
+  // Days since deletion (for Trash view labels)
+  const daysSinceDelete = (iso) => {
+    if (!iso) return 0;
+    const ms = Date.now() - new Date(iso).getTime();
+    return Math.max(0, Math.floor(ms / (24 * 60 * 60 * 1000)));
   };
 
   // Owner-filtered base list (admin only); used for both status counts AND the visible grid
@@ -124,22 +184,47 @@ const BrandEquityListPage = () => {
         </div>
 
         <div className="be-list-controls">
-          <div className="be-list-filters">
-            {[
-              ['all',        `ALL · ${counts.all}`],
-              ['draft',      `DRAFT · ${counts.draft}`],
-              ['collecting', `COLLECTING · ${counts.collecting}`],
-              ['analyzing',  `ANALYZING · ${counts.analyzing}`],
-              ['completed',  `COMPLETED · ${counts.completed}`],
-            ].map(([k, label]) => (
-              <span key={k}
-                    className={'be-chip ' + (filter === k ? 'solid' : '')}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => setFilter(k)}
-                    data-testid={`be-list-filter-${k}`}>
-                {label}
-              </span>
-            ))}
+          <div className="be-list-filters" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* View toggle: Active vs Trash */}
+            <span className={'be-chip ' + (view === 'active' ? 'solid' : '')}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setView('active')}
+                  data-testid="be-view-active">
+              ACTIVE · {studies.length}
+            </span>
+            <span className={'be-chip ' + (view === 'trash' ? 'solid' : '')}
+                  style={{ cursor: 'pointer',
+                           borderColor: view === 'trash' ? 'var(--be-red)' : undefined,
+                           background: view === 'trash' ? 'var(--be-red)' : undefined,
+                           color: view === 'trash' ? '#fff' : undefined }}
+                  onClick={() => setView('trash')}
+                  data-testid="be-view-trash">
+              TRASH · {trashCount}
+            </span>
+            {/* Status filters only apply to Active view */}
+            {view === 'active' && (
+              <>
+                <span className="be-mono be-tiny be-muted"
+                      style={{ marginLeft: 12, letterSpacing: '0.10em' }}>
+                  STATUS ·
+                </span>
+                {[
+                  ['all',        `ALL · ${counts.all}`],
+                  ['draft',      `DRAFT · ${counts.draft}`],
+                  ['collecting', `COLLECTING · ${counts.collecting}`],
+                  ['analyzing',  `ANALYZING · ${counts.analyzing}`],
+                  ['completed',  `COMPLETED · ${counts.completed}`],
+                ].map(([k, label]) => (
+                  <span key={k}
+                        className={'be-chip ' + (filter === k ? 'solid' : '')}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setFilter(k)}
+                        data-testid={`be-list-filter-${k}`}>
+                    {label}
+                  </span>
+                ))}
+              </>
+            )}
           </div>
         </div>
 
@@ -180,7 +265,102 @@ const BrandEquityListPage = () => {
           </div>
         )}
 
-        {loading ? <BeLoading text="Loading studies…"/> :
+        {loading ? <BeLoading text={view === 'trash' ? 'Loading trash…' : 'Loading studies…'}/> :
+         view === 'trash' ? (
+          // ========= TRASH VIEW =========
+          trash.length === 0 ? (
+            <div style={{ padding: '60px 20px', textAlign: 'center', border: '1px dashed var(--rule)' }}
+                 data-testid="be-trash-empty">
+              <div className="be-eyebrow" style={{ marginBottom: 12 }}>TRASH IS EMPTY</div>
+              <div className="be-muted be-small">
+                ไม่มี study ในถังขยะ · studies ที่ถูกลบจะอยู่ที่นี่ 30 วัน ก่อนถูกลบถาวรอัตโนมัติ
+              </div>
+            </div>
+          ) : (
+            <div className="be-list-grid" data-testid="be-trash-grid">
+              {trash.map((s, i) => {
+                const days = daysSinceDelete(s.deleted_at);
+                const daysLeft = Math.max(0, 30 - days);
+                return (
+                  <div key={s.id}
+                       className="be-study-card"
+                       style={{ opacity: 0.85, borderColor: 'var(--rule-strong)',
+                                background: 'repeating-linear-gradient(45deg, var(--paper-2), var(--paper-2) 6px, var(--paper) 6px, var(--paper) 12px)' }}
+                       data-testid={`be-trash-card-${s.id}`}>
+                    <div className="be-study-top">
+                      <div className="be-study-brand">
+                        <div className="be-study-logo-wrap" style={{ filter: 'grayscale(0.7)' }}>
+                          <BrandLogo brand={s.brand} identity={s.identity}
+                                     size={48}
+                                     gradient={LOGO_GRADIENTS[i % LOGO_GRADIENTS.length]}
+                                     testid={`be-trash-logo-${s.id}`}/>
+                        </div>
+                        <div>
+                          <div className="be-study-name" style={{ textDecoration: 'line-through', color: 'var(--ink-3)' }}>
+                            {s.brand?.name || '—'}
+                          </div>
+                          <div className="be-study-cat">{s.brand?.category || 'general'}</div>
+                        </div>
+                      </div>
+                      <div className="be-mono be-tiny"
+                           style={{ padding: '4px 8px', border: '1px solid var(--be-red)',
+                                    color: 'var(--be-red)', textTransform: 'uppercase',
+                                    letterSpacing: '0.10em' }}>
+                        Trash
+                      </div>
+                    </div>
+
+                    <div className="be-mono be-tiny be-muted" style={{ padding: '10px 0', letterSpacing: '0.06em' }}>
+                      ลบเมื่อ <strong style={{ color: 'var(--ink-2)' }}>{days} วันที่แล้ว</strong>
+                      {' · '}
+                      <span style={{ color: daysLeft <= 7 ? 'var(--be-red)' : 'var(--ink-3)' }}>
+                        เหลือ {daysLeft} วัน ก่อนลบถาวร
+                      </span>
+                    </div>
+
+                    <div className="be-study-foot">
+                      <span>
+                        n = {s.response_count || 0} · {s.questions?.length || 0} questions
+                        {user?.role === 'admin' && s.owner_email && (
+                          <span className="be-mono be-tiny"
+                                style={{ marginLeft: 10, padding: '1px 6px',
+                                         border: '1px solid var(--rule-strong)',
+                                         textTransform: 'lowercase', letterSpacing: '0.04em',
+                                         color: 'var(--ink-2)' }}>
+                            @{(s.owner_email.split('@')[0] || s.owner_email).slice(0, 14)}
+                          </span>
+                        )}
+                      </span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => restoreStudy(s.id)}
+                                className="be-mono be-tiny"
+                                data-testid={`be-trash-restore-${s.id}`}
+                                title="กู้คืนกลับมาในรายการ Active"
+                                style={{ background: 'var(--ink)', color: 'var(--paper)',
+                                         border: '1px solid var(--ink)',
+                                         padding: '4px 10px', cursor: 'pointer',
+                                         textTransform: 'uppercase', letterSpacing: '0.10em',
+                                         fontSize: 10 }}>
+                          ↺ Restore
+                        </button>
+                        <button onClick={() => purgeStudy(s.id, s.brand?.name || 'study')}
+                                className="be-mono be-tiny"
+                                data-testid={`be-trash-purge-${s.id}`}
+                                title="ลบถาวร — กู้คืนไม่ได้"
+                                style={{ background: 'transparent', border: '1px solid var(--be-red)',
+                                         padding: '4px 10px', cursor: 'pointer',
+                                         textTransform: 'uppercase', letterSpacing: '0.10em',
+                                         fontSize: 10, color: 'var(--be-red)' }}>
+                          ✕ Purge
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+         ) :
          filtered.length === 0 ? (
           <div style={{ padding: '80px 20px', textAlign: 'center', border: '1px dashed var(--rule)' }}
                data-testid="be-list-empty">
