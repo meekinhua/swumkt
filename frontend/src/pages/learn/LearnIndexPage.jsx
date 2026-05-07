@@ -2,23 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Topbar, Footer, Eyebrow } from '@/pages/swumkt/SwumktComponents';
-import { ARTICLE_LIST } from './learnContent';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const LearnIndexPage = () => {
-  const [cmsArticles, setCmsArticles] = useState([]);
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const r = await axios.get(`${API}/cms/posts/public?type=article`);
+        const r = await axios.get(`${API}/cms/posts/public?type=article&limit=200`);
         if (!alive) return;
-        // Map CMS post → Learn Index card shape
-        const mapped = (r.data?.items || []).map(p => ({
+        setArticles((r.data?.items || []).map(p => ({
           slug: p.slug,
           title: p.title,
           titleEn: p.title_en || '',
@@ -26,17 +25,14 @@ const LearnIndexPage = () => {
           readMin: p.read_min || 5,
           description: p.excerpt || '',
           image: p.cover_image,
-          isCms: true,
-        }));
-        setCmsArticles(mapped);
-      } catch (e) { /* silent — fallback to hardcoded only */ }
+        })));
+      } catch (e) { /* keep empty */ }
+      finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
   }, []);
 
-  // Merge: CMS posts first (newest), then hardcoded
-  const merged = [...cmsArticles, ...ARTICLE_LIST];
-  const [featured, ...rest] = merged;
+  const [featured, ...rest] = articles;
 
   const url = typeof window !== 'undefined' ? window.location.href : '';
   useDocumentMeta({
@@ -51,8 +47,8 @@ const LearnIndexPage = () => {
       url,
       mainEntity: {
         '@type': 'ItemList',
-        numberOfItems: merged.length,
-        itemListElement: merged.map((a, i) => ({
+        numberOfItems: articles.length,
+        itemListElement: articles.map((a, i) => ({
           '@type': 'ListItem', position: i + 1,
           url: `${typeof window !== 'undefined' ? window.location.origin : ''}/learn/${a.slug}`,
           name: a.title,
@@ -67,7 +63,7 @@ const LearnIndexPage = () => {
 
       <section style={{ borderBottom: '1px solid var(--ink)', padding: '72px 0 64px' }}>
         <div className="swu-container">
-          <Eyebrow red>● Knowledge Hub · {merged.length} Articles</Eyebrow>
+          <Eyebrow red>● Knowledge Hub · {articles.length} Articles</Eyebrow>
           <h1 className="h-display" style={{ marginTop: 24, maxWidth: '14ch' }}>
             อ่านเทรนด์<br/><span className="italic-accent">ก่อนคนอื่น</span>.
           </h1>

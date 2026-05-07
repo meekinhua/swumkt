@@ -4,7 +4,6 @@ import axios from 'axios';
 import {
   Topbar, Footer, Eyebrow, BrandLogo, ScoreRing, gradientForBrand
 } from './swumkt/SwumktComponents';
-import { ARTICLE_LIST } from './learn/learnContent';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from './brand-equity/be-components';
 
@@ -37,18 +36,21 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [headIdx, setHeadIdx] = useState(0);
   const [landing, setLanding] = useState(null);
+  const [articles, setArticles] = useState([]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [showcaseRes, landingRes] = await Promise.all([
+        const [showcaseRes, landingRes, articlesRes] = await Promise.all([
           axios.get(`${API}/brand-equity/showcase`),
           axios.get(`${API}/cms/landing`),
+          axios.get(`${API}/cms/posts/public?type=article&limit=12`),
         ]);
         if (!alive) return;
         setShowcases(showcaseRes.data?.showcases || []);
         setLanding(landingRes.data || null);
+        setArticles(articlesRes.data?.items || []);
       } catch (e) { console.error(e); }
       finally { if (alive) setLoading(false); }
     })();
@@ -107,7 +109,14 @@ const HomePage = () => {
   const sorted = [...showcases].sort((a, b) => (b.response_count || 0) - (a.response_count || 0));
   const featured = sorted[0];
   const sideBrands = sorted.slice(1, 5);
-  const featuredArticles = ARTICLE_LIST.slice(0, 4);
+  const featuredArticles = articles.slice(0, 4).map(a => ({
+    slug: a.slug,
+    title: a.title,
+    titleEn: a.title_en || '',
+    category: a.category || 'Insights',
+    readMin: a.read_min || 5,
+    description: a.excerpt || '',
+  }));
 
   // Editorial photographs (Knowledge Hub banner)
   const KNOWLEDGE_IMG = 'https://images.unsplash.com/photo-1719726793997-5f520d89f695?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200';
@@ -284,7 +293,7 @@ const HomePage = () => {
             <span className="stat-strip__label">Respondents</span>
           </div>
           <div className="stat-strip__item">
-            <span className="stat-strip__num">{ARTICLE_LIST.length}</span>
+            <span className="stat-strip__num">{articles.length}</span>
             <span className="stat-strip__label">Articles Published</span>
           </div>
         </div>

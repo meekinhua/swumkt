@@ -5,7 +5,7 @@ import '@/App.css';
 import LandingPage from '@/pages/LandingPage';
 import HomePage from '@/pages/HomePage';
 import LearnIndexPage from '@/pages/learn/LearnIndexPage';
-import LearnArticlePage from '@/pages/learn/LearnArticlePage';
+import CmsArticleView from '@/pages/learn/CmsArticleView';
 import AboutSwuMarketing from '@/pages/AboutSwuMarketing';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -137,7 +137,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/legacy-home" element={<LandingPage />} />
             <Route path="/learn" element={<LearnIndexPage />} />
-            <Route path="/learn/:slug" element={<LearnArticlePage />} />
+            <Route path="/learn/:slug" element={<CmsArticleView />} />
             <Route path="/about/swu-marketing" element={<AboutSwuMarketing />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

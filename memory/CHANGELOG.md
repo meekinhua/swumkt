@@ -1,6 +1,25 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — Migration: hardcoded learnContent → CMS 🚚
+- **User**: "Migration script ย้าย hardcoded learnContent.js 10 บทความเข้า CMS (ลบ hardcoded ทิ้งหลัง verify)"
+- **Migration script** (`/app/scripts/migrate_learn_to_cms.mjs`):
+  - Node ESM + built-in `fetch` (no deps)
+  - Dynamic-imports `learnContent.js`, login as admin, skip duplicates by slug
+  - Converts each article: `description → > blockquote`, `sections[] → ## heading + body`, tool callout, related links → all merged into clean Markdown body
+  - Tags from `keywords` (top 6), cover image from `image`, read time from `readMin`
+  - Result: **created=10, skipped=0, failed=0** ✅ (all 10 hardcoded articles → published CMS posts)
+- **Cleanup**:
+  - Deleted `/app/frontend/src/pages/learn/learnContent.js` and `LearnArticlePage.jsx`
+  - `LearnIndexPage` now CMS-only (loads via `/cms/posts/public?type=article`)
+  - `HomePage` Knowledge Hub Featured Articles + stat strip count → CMS-driven
+  - Route `/learn/:slug` → directly renders `<CmsArticleView/>` (single source of truth)
+- **Verified**:
+  - /learn shows 11 articles (10 migrated + 1 earlier test post)
+  - /learn/brand-equity renders via CmsArticleView with Aaker cover image + Markdown body
+  - Homepage hero still works, no compile errors, lint clean
+
+
 ## 2026-02-07 — Knowledge Hub × CMS Integration 📚
 - **User**: "ทำให้บทความใน Knowledge Hub จัดการได้ด้วย"
 - **Backend** (`/app/backend/routes/cms.py`):
