@@ -30,6 +30,9 @@ const HEADLINES = [
     lede: 'แพลตฟอร์มวิจัยตลาดของสาขาการตลาด มศว. — ใช้ data, AI และทฤษฎีการตลาดสากล เพื่อเห็นพฤติกรรมและความต้องการของผู้บริโภค ก่อนที่ตลาดจะส่งสัญญาณ',
     mantra: ['วิจัย', 'เห็นก่อน', 'ชนะก่อน'],
     mantraAccentIdx: 1,
+    image: 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?crop=entropy&cs=srgb&fm=jpg&q=85&w=900',
+    imageAlt: 'Bangkok night street — Thai consumer pulse',
+    imageCaption: '● BANGKOK PULSE · LIVE',
   },
   {
     eyebrow: 'Consumer Insight Studio · SWU MKT',
@@ -38,6 +41,9 @@ const HEADLINES = [
     lede: 'อ่านความรู้สึก ความต้องการ และเหตุผลที่ลูกค้าเลือกแบรนด์ — ด้วยเครื่องมือมาตรฐานวิชาการที่นักการตลาดจริงใช้อยู่',
     mantra: ['เห็น', 'เข้าใจ', 'นำตลาด'],
     mantraAccentIdx: 2,
+    image: 'https://images.unsplash.com/photo-1556560984-36a7ec2ba544?crop=entropy&cs=srgb&fm=jpg&q=85&w=900',
+    imageAlt: 'Modern Thai marketing student — consumer of tomorrow',
+    imageCaption: '● FIELD RESEARCH · 2026',
   },
   {
     eyebrow: 'Marketing Intelligence · มศว.',
@@ -46,6 +52,9 @@ const HEADLINES = [
     lede: 'Insight ที่เร็วกว่าเทรนด์ — งานวิจัยจริงจากสาขาการตลาด มศว. ที่นำสิ่งที่ลูกค้าจะชอบ มาบอกคุณก่อนคู่แข่ง',
     mantra: ['Insight', 'ที่เร็ว', 'กว่าเทรนด์'],
     mantraAccentIdx: 1,
+    image: 'https://images.pexels.com/photos/4350061/pexels-photo-4350061.jpeg?auto=compress&cs=tinysrgb&w=900',
+    imageAlt: 'Asian marketing team collaborating in modern cafe',
+    imageCaption: '● TEAM SYNC · MKT LAB',
   },
 ];
 
@@ -72,6 +81,11 @@ const HomePage = () => {
       setHeadIdx((i) => (i + 1) % HEADLINES.length);
     }, 5500);
     return () => clearInterval(id);
+  }, []);
+
+  // Preload all rotation images so transitions don't flash blank
+  useEffect(() => {
+    HEADLINES.forEach((h) => { const i = new Image(); i.src = h.image; });
   }, []);
 
   const head = HEADLINES[headIdx];
@@ -102,8 +116,7 @@ const HomePage = () => {
   const sideBrands = sorted.slice(1, 5);
   const featuredArticles = ARTICLE_LIST.slice(0, 4);
 
-  // Editorial photographs (curated for a Thai university research platform)
-  const HERO_IMG = 'https://images.unsplash.com/photo-1556560984-36a7ec2ba544?crop=entropy&cs=srgb&fm=jpg&q=85&w=900';
+  // Editorial photographs (Knowledge Hub banner)
   const KNOWLEDGE_IMG = 'https://images.unsplash.com/photo-1719726793997-5f520d89f695?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200';
 
   return (
@@ -185,17 +198,23 @@ const HomePage = () => {
             <div className="fade-up fade-up-3"
                  style={{ display: 'grid', gridTemplateRows: '0.9fr 1.1fr', gap: 16,
                           minHeight: 480 }}>
-              {/* Photo cell */}
-              <div className="img-frame"
-                   style={{ background: '#fff', position: 'relative' }}>
-                <img src={HERO_IMG} alt="Modern Thai marketing student"
-                     style={{ filter: 'saturate(1.1) contrast(1.04)' }}/>
-                <div style={{ position: 'absolute', bottom: 12, left: 12,
+              {/* Photo cell — rotates sync'd with headline */}
+              <div className="img-frame rotator-shell"
+                   data-testid="hero-image-cell"
+                   style={{ background: '#fff', position: 'relative', overflow: 'hidden' }}>
+                <img key={`img-${headIdx}`} src={head.image} alt={head.imageAlt}
+                     className="rotate-in-slow"
+                     style={{ filter: 'saturate(1.08) contrast(1.04)',
+                              width: '100%', height: '100%', objectFit: 'cover',
+                              position: 'absolute', inset: 0 }}/>
+                <div key={`cap-${headIdx}`} className="rotate-in"
+                     style={{ position: 'absolute', bottom: 12, left: 12,
                               padding: '6px 10px', background: 'rgba(255,255,255,0.92)',
                               borderRadius: 999, fontFamily: 'var(--mono)',
                               fontSize: 10, letterSpacing: '0.14em',
-                              textTransform: 'uppercase', color: 'var(--ink)' }}>
-                  ● Field Research · 2026
+                              textTransform: 'uppercase', color: 'var(--ink)',
+                              zIndex: 2 }}>
+                  {head.imageCaption}
                 </div>
               </div>
 

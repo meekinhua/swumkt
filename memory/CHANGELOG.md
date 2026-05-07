@@ -3,22 +3,22 @@
 
 ## 2026-02-07 — Rotating Hero Copy + "Foresight" Brand Voice
 - **User**: "พาดหัว เห่ย ไปหน่อย · 'เปิดเผย' มันเหมือนเน้นความสุจริต · เราเน้นว่าเก่งการตลาด มองเห็นว่าลูกค้าชอบอะไรก่อนใคร · ทำให้ rotate กันได้ไหม"
+- **Follow-up**: "ทำให้ hero image มีหลายๆ รูป rotate ได้ ขอโทน ไทย+inter"
 - **Repositioned brand voice** from "Open/Transparent Research" → **"Consumer Foresight & Insight"** (เห็นก่อน · อ่านใจก่อน · นำตลาด)
-- **3 rotating headline triplets** (eyebrow + H1 + lede + mantra) auto-cycle every 5.5s on `HomePage`:
-  - A) Foresight Lab — "เห็นในสิ่งที่ตลาด · ยังมองไม่เห็น" / mantra: วิจัย · เห็นก่อน · ชนะก่อน
-  - B) Insight Studio — "อ่านใจ · ผู้บริโภค · ก่อนใคร" / mantra: เห็น · เข้าใจ · นำตลาด
-  - C) Marketing Intelligence — "รู้ก่อนตลาด · หนึ่งก้าว" / mantra: Insight · ที่เร็ว · กว่าเทรนด์
-- **CSS**: added `@keyframes rotateIn` (opacity + translateY + blur fade), `.rotate-in` / `.rotate-in-slow` triggered via React `key` prop change
-- **Manual control**: dot indicators with active state (28×8 elongated pill) + counter `01 / 03`
-- **Removed "เปิดเผย / เผยแพร่" copy** site-wide (Footer, About hero, About mission, About quote, Showcase index, Learn index)
+- **3 rotating hero triplets** (eyebrow + H1 + lede + mantra + image + image caption) auto-cycle every 5.5s + clickable dots:
+  1. Foresight Lab — *"เห็นในสิ่งที่ตลาด · ยังมองไม่เห็น"* / `BANGKOK PULSE · LIVE` / Bangkok night neon + tuk-tuks
+  2. Insight Studio — *"อ่านใจ · ผู้บริโภค · ก่อนใคร"* / `FIELD RESEARCH · 2026` / Asian students portrait
+  3. Marketing Intelligence — *"รู้ก่อนตลาด · หนึ่งก้าว"* / `TEAM SYNC · MKT LAB` / Asian team in modern cafe
+- **Image strategy** — โทน Thai+International: Thai urban context (Bangkok) + Asian consumers + Asian collaboration in global modern setting
+- **Preload**: ภาพทั้ง 3 ถูก preload ตอน mount (`new Image()`) เพื่อกัน flash ตอน rotate
+- **CSS**: เพิ่ม `@keyframes rotateIn` (opacity + translateY + blur fade), `.rotate-in` / `.rotate-in-slow` triggered ผ่าน React `key` change
+- **Removed "เปิดเผย / เผยแพร่"** copy site-wide (Footer, About hero, About mission, About quote, Showcase index, Learn index)
 - **Updated headings**:
-  - Tools: "เครื่องมืออ่านใจผู้บริโภค" (was "เครื่องมือวิจัยตลาดที่ใช้ได้ฟรี")
-  - Knowledge Hub: "อ่านเทรนด์ก่อนคนอื่น" (was "เรียนการตลาดฉบับ มศว.")
-  - About hero: "เห็น · เข้าใจ · นำตลาด" (was "วิจัย · ปฏิบัติ · เปิดเผย")
-  - Showcase index: "อ่านใจตลาดจริง" (was "Brand Health, in Public")
-  - About mission: "อ่านใจตลาดควรเป็นของทุกแบรนด์" (was "การวิจัยตลาดควรเป็นของทุกคน")
-- **Tool descriptions** rewritten with foresight angle (e.g., "เห็นจุดที่ลูกค้าจะหลุดมือ ก่อนที่ยอดจะตก")
-- **SEO meta** updated: title/description now lead with "อ่านใจผู้บริโภคก่อนใคร"
+  - Tools: "เครื่องมืออ่านใจผู้บริโภค"
+  - Knowledge Hub: "อ่านเทรนด์ก่อนคนอื่น"
+  - About hero: "เห็น · เข้าใจ · นำตลาด"
+  - Showcase: "อ่านใจตลาดจริง"
+- **SEO meta** updated: title/description นำด้วย "อ่านใจผู้บริโภคก่อนใคร"
 
 
 
