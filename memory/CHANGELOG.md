@@ -1,6 +1,42 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — CMS Content Studio with AI (Text + Image) 🆕
+- **User**: "ทำระบบจัดการ content + ให้ AI ช่วยทำงาน (สร้างรูปประกอบ) มี prompt ตั้งต้นที่ปรับปรุงได้ จัดการได้ทั้ง content จาก prompt หรือจากของในฐานข้อมูล (เลือกได้) ใช้ prompt เสริมได้"
+- **Scope confirmed**: posts หลายประเภท (Article/Insight/Case Story), sources (BE + Conjoint + CMS posts cross-ref), AI ทั้ง text+image+summary+translate, prompts ใน MongoDB, admin only
+- **Backend `/app/backend/routes/cms.py`** (new):
+  - Collections: `cms_posts`, `cms_prompt_templates`
+  - Soft delete via `deleted_at`, restore + purge
+  - 6 default prompt templates seeded on first read (article/insight/case_story/image/summary/translate)
+  - Admin-only via `_is_admin` (UserRole.ADMIN)
+  - Endpoints:
+    - `GET/POST/PUT/DELETE /cms/posts`, `/posts/trash`, `/posts/{id}/restore`, `/posts/{id}/purge`
+    - `GET/POST/PUT/DELETE /cms/prompts` (built-in defaults can be edited but not deleted)
+    - `GET /cms/sources` — picker list across BE studies + Conjoint studies + CMS posts (with q search)
+    - `POST /cms/ai/generate-text` — Gemini 2.5 Flash, accepts base_prompt + extra_prompt + sources, builds context from MongoDB
+    - `POST /cms/ai/generate-image` — Gemini Nano Banana (`gemini-3.1-flash-image-preview`), returns base64 data URL
+    - `POST /cms/ai/summarize` — sources → 5-7 bullet summary
+    - `POST /cms/ai/translate` — TH ↔ EN
+  - Bounded concurrency: `Semaphore(3)` + 55s/90s timeouts to prevent proxy 502
+- **Frontend** (3 pages under `/admin/cms/...`):
+  - `/admin/cms` — list with tabs (All/Article/Insight/Case Story/Trash), search, soft delete + restore + purge
+  - `/admin/cms/new` and `/admin/cms/:id` — full editor:
+    - Title/type/category/slug/excerpt/read min
+    - Cover image: AI Generate (Nano Banana) button + paste URL fallback + caption + editable image prompt template + extra image prompt
+    - Body: Markdown textarea + AI translate EN/TH + AI Write (template-driven)
+    - Sources panel: pick BE/Conjoint/CMS items, multi-select chips, search filter, "Summarize → Body" action
+    - AI Write Body panel: template selector (filtered by post type), prompt preview, extra prompt textarea, generate button
+  - `/admin/cms/prompts` — manage prompt templates (edit/create/delete custom; defaults editable but not deletable)
+  - Linked from `/admin` AdminSettings page ("Content Studio (CMS)" button)
+- **Tested via curl + screenshots**:
+  - Login + list 6 prompts (seeded)
+  - List 21 sources (BE + Conjoint + CMS)
+  - Create draft post + list returns it
+  - AI text gen returned 370-char Markdown insight post (~3s)
+  - AI image gen returned valid 1.18MB jpeg data URL from Nano Banana (~30s)
+  - All 3 frontend pages render via `data-testid` selectors
+
+
 ## 2026-02-07 — Rotating Hero Copy + "Foresight" Brand Voice
 - **User**: "พาดหัว เห่ย ไปหน่อย · 'เปิดเผย' มันเหมือนเน้นความสุจริต · เราเน้นว่าเก่งการตลาด มองเห็นว่าลูกค้าชอบอะไรก่อนใคร · ทำให้ rotate กันได้ไหม"
 - **Follow-up**: "ทำให้ hero image มีหลายๆ รูป rotate ได้ ขอโทน ไทย+inter"

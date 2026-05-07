@@ -11859,6 +11859,12 @@ from routes.brand_equity import get_brand_equity_routes
 brand_equity_routes = get_brand_equity_routes(db, get_current_user, get_current_user_optional)
 api_router.include_router(brand_equity_routes)
 
+# ============ CMS — Content Management ============
+from routes.cms import get_cms_routes
+
+cms_routes = get_cms_routes(db, get_current_user)
+api_router.include_router(cms_routes)
+
 app.include_router(api_router)
 
 app.add_middleware(

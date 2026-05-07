@@ -210,8 +210,19 @@ alumni_jobs: {
 ```
 
 ## 3rd Party Integrations
-- Emergent LLM Key → Gemini 2.5 Flash (`gemini-2.5-flash`) via `litellm`
+- Emergent LLM Key → Gemini 2.5 Flash (`gemini-2.5-flash`) via `emergentintegrations` (text/translate/summary)
+- Emergent LLM Key → Gemini Nano Banana (`gemini-3.1-flash-image-preview`) via `emergentintegrations` (CMS cover image gen)
 - Google Drive: Pending for Kanban attachments
+
+## CMS Module (Feb 7, 2026 — NEW)
+Admin-only Content Studio for publishing Articles, Insights, Case Stories powered by AI.
+- Backend: `/app/backend/routes/cms.py` (collections: `cms_posts`, `cms_prompt_templates`)
+- Frontend: `/app/frontend/src/pages/cms/` — `CmsListPage`, `CmsEditorPage`, `CmsPromptsPage`
+- AI: text/summary/translate via Gemini 2.5 Flash; cover images via Nano Banana
+- Sources picker: Brand Equity studies + Conjoint studies + cross-ref CMS posts
+- Editable prompt templates with `{title}` placeholder; 6 defaults seeded auto
+- Soft delete + 30-day trash + restore + purge
+- Linked from `AdminSettings` ("Content Studio (CMS)" button)
 
 ## Credentials
 - Admin: admin@swu.ac.th / admin123

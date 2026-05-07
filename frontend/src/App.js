@@ -35,6 +35,9 @@ import NotificationSettings from '@/pages/NotificationSettings';
 import AdminNotifications from '@/pages/AdminNotifications';
 import AdminUserManagement from '@/pages/AdminUserManagement';
 import AdminLLMPrompts from '@/pages/AdminLLMPrompts';
+import CmsListPage from '@/pages/cms/CmsListPage';
+import CmsEditorPage from '@/pages/cms/CmsEditorPage';
+import CmsPromptsPage from '@/pages/cms/CmsPromptsPage';
 import ProjectsPage from '@/pages/ProjectsPage';
 import KanbanBoard from '@/pages/KanbanBoard';
 import AlumniLandingPage from '@/pages/alumni/AlumniLandingPage';
@@ -270,6 +273,10 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin/cms" element={<ProtectedRoute><CmsListPage /></ProtectedRoute>} />
+            <Route path="/admin/cms/prompts" element={<ProtectedRoute><CmsPromptsPage /></ProtectedRoute>} />
+            <Route path="/admin/cms/new" element={<ProtectedRoute><CmsEditorPage /></ProtectedRoute>} />
+            <Route path="/admin/cms/:id" element={<ProtectedRoute><CmsEditorPage /></ProtectedRoute>} />
             <Route
               path="/profile/notifications"
               element={
