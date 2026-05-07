@@ -1,6 +1,20 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — Featured Brand Scores on Hero Card 📊
+- **User**: "หน้าแรกของ brand featured card ให้ใส่ค่าผลลัพธ์ล่าสุดทั้ง 4 ค่าลงไปด้วย · Awareness · Perceived Quality · Identity vs Image · Loyalty + BRAND EQUITY SCORE · เพื่อสร้าง CTA"
+- **Backend** (`/app/backend/routes/brand_equity.py`):
+  - `list_public_showcases()` ตอนนี้คำนวณ `composite` scores สำหรับ studies ที่ `response_count >= 10`
+  - Reuses `_aggregate_responses(study, responses, normalized=ai_cache.normalized_by_question)` (same logic as `/showcase/{token}`)
+  - คืน field `scores: { awareness, quality, identity, loyalty, overall }` หรือ `null` ถ้าไม่ครบ
+- **Frontend `HomePage.jsx`** Featured Brand Card ขยายเป็น CTA panel:
+  - **Brand Equity Score** ตัวใหญ่ 36px serif สี logo-blue พร้อม `/100` suffix
+  - **4 Aaker dimensions** เป็น 2×2 grid — แต่ละมิติแสดง label + ตัวเลข + mini progress bar (สีตาม Aaker palette: Awareness blue, Quality amber, Identity violet, Loyalty green)
+  - Smooth `width .8s ease` transition บน progress bars
+  - Scores block แสดงเฉพาะเมื่อ `featured.scores` ไม่ null
+- **Tested**: Hero featured card render BES + 4 dimensions + bars; layout ไม่เพี้ยน, lint clean
+
+
 ## 2026-02-07 — Featured Content Selector (Articles + Brands) 🎯
 - **User**: "ให้มีระบบเลือกได้ว่าจะเอา content ไหนขึ้นหน้าแรกบ้าง · บทความและแบรนด์ · อาจ random หรือ fix ได้"
 - **Backend** (`/app/backend/routes/cms.py`):

@@ -287,9 +287,61 @@ const HomePage = () => {
                       </div>
                     </div>
                   </div>
+                  {/* Score panel — Aaker 4 dimensions + Brand Equity Score */}
+                  {featured.scores && (
+                    <div data-testid="hero-featured-scores"
+                         style={{ borderTop: '1px solid rgba(26,26,26,0.08)',
+                                  paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {/* BES big number */}
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                                     gap: 12 }}>
+                        <span className="meta" style={{ fontSize: 9, color: 'var(--ink-3)' }}>
+                          BRAND EQUITY SCORE
+                        </span>
+                        <span className="serif" data-testid="featured-bes"
+                              style={{ fontSize: 36, fontWeight: 600, lineHeight: 1,
+                                        color: 'var(--logo-blue)', letterSpacing: '-0.02em' }}>
+                          {Number(featured.scores.overall || 0).toFixed(1)}
+                          <span style={{ fontSize: 14, color: 'var(--ink-3)', marginLeft: 4 }}>/100</span>
+                        </span>
+                      </div>
+                      {/* 4 dimension mini bars */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+                                     gap: 8, fontSize: 10 }}>
+                        {[
+                          { k: 'awareness', label: 'Awareness', color: '#1B75BC' },
+                          { k: 'quality', label: 'Perceived Quality', color: '#F59E0B' },
+                          { k: 'identity', label: 'Identity vs Image', color: '#8B5CF6' },
+                          { k: 'loyalty', label: 'Loyalty', color: '#10B981' },
+                        ].map(d => {
+                          const v = Number(featured.scores[d.k] || 0);
+                          return (
+                            <div key={d.k} data-testid={`featured-score-${d.k}`}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between',
+                                              marginBottom: 3, alignItems: 'baseline' }}>
+                                <span style={{ fontFamily: 'var(--mono)', fontSize: 9,
+                                                color: 'var(--ink-2)', textTransform: 'uppercase',
+                                                letterSpacing: '0.06em' }}>
+                                  {d.label}
+                                </span>
+                                <span className="serif" style={{ fontSize: 14, fontWeight: 600,
+                                                                    color: d.color }}>
+                                  {v.toFixed(0)}
+                                </span>
+                              </div>
+                              <div style={{ height: 4, background: 'rgba(26,26,26,0.06)', borderRadius: 999 }}>
+                                <div style={{ width: `${Math.max(0, Math.min(100, v))}%`,
+                                                height: '100%', background: d.color,
+                                                borderRadius: 999, transition: 'width .8s ease' }}/>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {sideBrands.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap',
-                                  borderTop: '1px solid rgba(26,26,26,0.08)', paddingTop: 12 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {sideBrands.slice(0, 4).map((b) => (
                         <span key={b.id} className="chip chip--gray"
                               style={{ fontSize: 9, padding: '3px 8px' }}>

@@ -1567,6 +1567,25 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 None
             )
             response_count = await db.brand_responses.count_documents({"study_id": s["id"]})
+
+            # Compute composite scores when enough data — used for the homepage Featured card preview
+            scores = None
+            if response_count >= 10:
+                try:
+                    full_study = await db.brand_studies.find_one({"id": s["id"]}, {"_id": 0})
+                    if full_study:
+                        responses = await db.brand_responses.find(
+                            {"study_id": s["id"]}, {"_id": 0}
+                        ).to_list(5000)
+                        ai_cache = full_study.get("ai_cache", {}) or {}
+                        agg = _aggregate_responses(
+                            full_study, responses,
+                            normalized=ai_cache.get("normalized_by_question") or {},
+                        )
+                        scores = agg.get("composite") or None
+                except Exception:
+                    scores = None
+
             out.append({
                 "id": s["id"],
                 "share_token": tok,
@@ -1578,6 +1597,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 "logo_asset": logo_asset,
                 "response_count": response_count,
                 "ready_for_dashboard": response_count >= 10,
+                "scores": scores,  # {awareness, quality, identity, loyalty, overall} or None
                 "created_at": s.get("created_at"),
                 "updated_at": s.get("updated_at"),
             })
