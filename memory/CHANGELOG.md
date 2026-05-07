@@ -1,6 +1,28 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — Landing Page Manager (CMS extension) 🏠
+- **User**: "ให้มีระบบจัดการหน้าแรกของ landing ด้วย"
+- **Scope**: c (ทุกส่วน) · b (paste URL + AI generate image) · a (save publish ทันที) · a (form + reorder)
+- **Backend** (`/app/backend/routes/cms.py` extended):
+  - Collection `cms_landing` (single doc with `key="home"`)
+  - `GET /cms/landing` (public, used by HomePage)
+  - `PUT /cms/landing` (admin only)
+  - `POST /cms/landing/reset` (revert to seeded defaults)
+  - Default content seeded from previous HomePage hardcoded values (Foresight/Insight/Intelligence slides + 8 tools + Knowledge Hub + About Band sections)
+- **Frontend** `/admin/cms/landing` — `CmsLandingPage.jsx`:
+  - Hero Slides editor: eyebrow, headline lines (multi), accent index, lede, mantra words (multi), mantra accent index, image URL, AI generate button, image alt, caption — reorder ↑↓ + add/remove
+  - Open Tools editor: tag, title, subtitle, path — reorder + add/remove
+  - Knowledge Hub & About Band section editors (eyebrow, heading, accent word, lede, CTA label, CTA path)
+  - Auto-rotate interval (ms) configurable
+  - "Save & Publish" + "Reset Default" actions
+  - Sticky header with Save button always accessible
+- **HomePage** updated to fetch `/cms/landing` on mount + use API-driven slides/tools/sections + retain hardcoded fallback for SSR/offline
+- Linked from `/admin/cms` ("Landing Page" button next to "Prompt Templates")
+- **Tested**: Login → Edit slide 0 eyebrow → Save → reload Homepage → eyebrow updated. Reset → reverted to default.
+- Lint clean (Python + JS)
+
+
 ## 2026-02-07 — CMS Content Studio with AI (Text + Image) 🆕
 - **User**: "ทำระบบจัดการ content + ให้ AI ช่วยทำงาน (สร้างรูปประกอบ) มี prompt ตั้งต้นที่ปรับปรุงได้ จัดการได้ทั้ง content จาก prompt หรือจากของในฐานข้อมูล (เลือกได้) ใช้ prompt เสริมได้"
 - **Scope confirmed**: posts หลายประเภท (Article/Insight/Case Story), sources (BE + Conjoint + CMS posts cross-ref), AI ทั้ง text+image+summary+translate, prompts ใน MongoDB, admin only

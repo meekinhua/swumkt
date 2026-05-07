@@ -10,51 +10,25 @@ import { SWU_LOGO_URL } from './brand-equity/be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const TOOLS = [
-  { tag: 'BRAND', t: 'Brand Health Check', s: 'วัด Brand Equity ตามกรอบ Aaker — Awareness · Quality · Identity · Loyalty อ่านสุขภาพแบรนด์ก่อนคู่แข่งจะรู้ตัว', p: '/brand-equity' },
-  { tag: 'RESEARCH', t: 'Conjoint Analysis', s: 'Choice-Based Conjoint + D-Optimal — รู้ว่าลูกค้ายอมแลกอะไรเพื่ออะไร ก่อนปล่อยสินค้าจริง', p: '/market-research/conjoint-analysis' },
-  { tag: 'CX', t: 'Customer Journey', s: 'แผนที่ touchpoint และ pain point — เห็นจุดที่ลูกค้าจะหลุดมือ ก่อนที่ยอดจะตก', p: '/market-research' },
-  { tag: 'PSYCH', t: 'Customer Perception', s: 'Perceptual Map + Sentiment AI — อ่านภาพแบรนด์ในหัวลูกค้า ก่อนที่ตลาดจะให้คำตอบ', p: '/market-research' },
-  { tag: 'PSYCH', t: 'Customer Behavior', s: 'EBM Decision-process analytics — เห็นว่าลูกค้าตัดสินใจซื้อยังไง ตั้งแต่ search ถึง post-purchase', p: '/market-research' },
-  { tag: 'TOOL', t: 'Survey Builder', s: 'ออกแบบแบบสอบถาม AI-assisted — ถามคำถามที่ใช่ ได้ insight ที่จริง', p: '/market-research' },
-  { tag: 'LEARN', t: 'Content Hub', s: 'ฐานความรู้การตลาด — อ่านเทรนด์ก่อนคนอื่น เชื่อมทฤษฎีกับเครื่องมือจริง', p: '/learn' },
-  { tag: 'WORKFLOW', t: 'Kanban Projects', s: 'จัดการทีมวิจัย — board, sprint, และ research log สำหรับ insight ที่ส่งทันเวลา', p: '/projects' },
+// Hardcoded fallback used when /cms/landing fails or hasn't loaded yet
+const FALLBACK_TOOLS = [
+  { tag: 'BRAND', t: 'Brand Health Check', s: 'วัด Brand Equity ตามกรอบ Aaker', p: '/brand-equity' },
+  { tag: 'RESEARCH', t: 'Conjoint Analysis', s: 'Choice-Based Conjoint + D-Optimal', p: '/market-research/conjoint-analysis' },
+  { tag: 'LEARN', t: 'Content Hub', s: 'ฐานความรู้การตลาด', p: '/learn' },
 ];
 
-// Rotating hero/mantra triplets — same DNA, different angles of "เห็นก่อน · เข้าใจก่อน"
-const HEADLINES = [
+// Hardcoded fallback used when /cms/landing fails or hasn't loaded yet
+const FALLBACK_HEADLINES = [
   {
     eyebrow: 'Consumer Foresight Lab · SWU MKT',
     heroPre: ['เห็นในสิ่งที่ตลาด', 'ยังมองไม่เห็น'],
     heroAccentIdx: 1,
-    lede: 'แพลตฟอร์มวิจัยตลาดของสาขาการตลาด มศว. — ใช้ data, AI และทฤษฎีการตลาดสากล เพื่อเห็นพฤติกรรมและความต้องการของผู้บริโภค ก่อนที่ตลาดจะส่งสัญญาณ',
+    lede: 'แพลตฟอร์มวิจัยตลาดของสาขาการตลาด มศว.',
     mantra: ['วิจัย', 'เห็นก่อน', 'ชนะก่อน'],
     mantraAccentIdx: 1,
     image: 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?crop=entropy&cs=srgb&fm=jpg&q=85&w=900',
-    imageAlt: 'Bangkok night street — Thai consumer pulse',
+    imageAlt: 'Bangkok night street',
     imageCaption: '● BANGKOK PULSE · LIVE',
-  },
-  {
-    eyebrow: 'Consumer Insight Studio · SWU MKT',
-    heroPre: ['อ่านใจ', 'ผู้บริโภค', 'ก่อนใคร'],
-    heroAccentIdx: 2,
-    lede: 'อ่านความรู้สึก ความต้องการ และเหตุผลที่ลูกค้าเลือกแบรนด์ — ด้วยเครื่องมือมาตรฐานวิชาการที่นักการตลาดจริงใช้อยู่',
-    mantra: ['เห็น', 'เข้าใจ', 'นำตลาด'],
-    mantraAccentIdx: 2,
-    image: 'https://images.unsplash.com/photo-1556560984-36a7ec2ba544?crop=entropy&cs=srgb&fm=jpg&q=85&w=900',
-    imageAlt: 'Modern Thai marketing student — consumer of tomorrow',
-    imageCaption: '● FIELD RESEARCH · 2026',
-  },
-  {
-    eyebrow: 'Marketing Intelligence · มศว.',
-    heroPre: ['รู้ก่อนตลาด', 'หนึ่งก้าว'],
-    heroAccentIdx: 1,
-    lede: 'Insight ที่เร็วกว่าเทรนด์ — งานวิจัยจริงจากสาขาการตลาด มศว. ที่นำสิ่งที่ลูกค้าจะชอบ มาบอกคุณก่อนคู่แข่ง',
-    mantra: ['Insight', 'ที่เร็ว', 'กว่าเทรนด์'],
-    mantraAccentIdx: 1,
-    image: 'https://images.pexels.com/photos/4350061/pexels-photo-4350061.jpeg?auto=compress&cs=tinysrgb&w=900',
-    imageAlt: 'Asian marketing team collaborating in modern cafe',
-    imageCaption: '● TEAM SYNC · MKT LAB',
   },
 ];
 
@@ -62,33 +36,52 @@ const HomePage = () => {
   const [showcases, setShowcases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [headIdx, setHeadIdx] = useState(0);
+  const [landing, setLanding] = useState(null);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const r = await axios.get(`${API}/brand-equity/showcase`);
-        if (alive) setShowcases(r.data?.showcases || []);
+        const [showcaseRes, landingRes] = await Promise.all([
+          axios.get(`${API}/brand-equity/showcase`),
+          axios.get(`${API}/cms/landing`),
+        ]);
+        if (!alive) return;
+        setShowcases(showcaseRes.data?.showcases || []);
+        setLanding(landingRes.data || null);
       } catch (e) { console.error(e); }
       finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
   }, []);
 
-  // Auto-rotate hero copy every 5.5s
+  // Use API-driven headlines if available, else hardcoded fallback
+  const HEADLINES = (landing?.slides && landing.slides.length > 0) ? landing.slides : FALLBACK_HEADLINES;
+  const TOOLS_LIVE = (landing?.tools && landing.tools.length > 0) ? landing.tools : FALLBACK_TOOLS;
+  const KH = landing?.knowledge_hub || {
+    eyebrow: '● Knowledge Hub', heading: 'อ่านเทรนด์', accent: 'ก่อนคนอื่น',
+    lede: '', cta_label: 'อ่านทั้งหมด →', cta_path: '/learn',
+  };
+  const AB = landing?.about_band || {
+    eyebrow: 'About SWU MKT', lede: '',
+    cta_label: 'อ่านเรื่องเรา →', cta_path: '/about/swu-marketing',
+  };
+  const ROTATION_MS = landing?.rotation_ms || 5500;
+
+  // Auto-rotate hero copy
   useEffect(() => {
     const id = setInterval(() => {
       setHeadIdx((i) => (i + 1) % HEADLINES.length);
-    }, 5500);
+    }, ROTATION_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [HEADLINES.length, ROTATION_MS]);
 
   // Preload all rotation images so transitions don't flash blank
   useEffect(() => {
-    HEADLINES.forEach((h) => { const i = new Image(); i.src = h.image; });
-  }, []);
+    HEADLINES.forEach((h) => { if (h?.image) { const i = new Image(); i.src = h.image; } });
+  }, [landing]);
 
-  const head = HEADLINES[headIdx];
+  const head = HEADLINES[headIdx] || HEADLINES[0];
 
   const url = typeof window !== 'undefined' ? window.location.href : '';
   useDocumentMeta({
@@ -314,9 +307,9 @@ const HomePage = () => {
 
           <div data-testid="home-tools-bento"
                style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            {TOOLS.map((tool, i) => (
-              <Link key={tool.t} to={tool.p} className={`card-modern fade-up fade-up-${(i % 4) + 1}`}
-                    data-testid={`home-tool-${tool.t.replace(/\s+/g, '-').toLowerCase()}`}
+            {TOOLS_LIVE.map((tool, i) => (
+              <Link key={`${tool.t}-${i}`} to={tool.p} className={`card-modern fade-up fade-up-${(i % 4) + 1}`}
+                    data-testid={`home-tool-${(tool.t || '').replace(/\s+/g, '-').toLowerCase()}`}
                     style={{ textDecoration: 'none', color: 'inherit',
                              display: 'flex', flexDirection: 'column', gap: 10, minHeight: 180 }}>
                 <span className="corner-accent"/>
@@ -345,18 +338,17 @@ const HomePage = () => {
                style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 0.9fr)',
                         gap: 56, alignItems: 'center', marginBottom: 56 }}>
             <div>
-              <Eyebrow red>● Knowledge Hub</Eyebrow>
+              <Eyebrow red>{KH.eyebrow || '● Knowledge Hub'}</Eyebrow>
               <h2 className="h-section" style={{ marginTop: 14, fontSize: 'clamp(40px, 5vw, 68px)' }}>
-                อ่านเทรนด์<br/><span className="italic-accent">ก่อนคนอื่น</span>.
+                {KH.heading}{KH.accent && <><br/><span className="italic-accent">{KH.accent}</span></>}.
               </h2>
               <p className="lede" style={{ fontSize: 17, marginTop: 22, maxWidth: '50ch' }}>
-                บทความวิชาการเขียนโดย SWU Marketing Research Team — เชื่อมทฤษฎีคลาสสิก
-                (Aaker · Kotler · Trout & Ries) เข้ากับเครื่องมือจริง เพื่อให้คุณเห็นจังหวะของผู้บริโภคก่อนตลาดจะส่งสัญญาณ
+                {KH.lede}
               </p>
-              <Link to="/learn" className="btn-pill btn-pill--dark"
+              <Link to={KH.cta_path || '/learn'} className="btn-pill btn-pill--dark"
                     data-testid="home-learn-all"
                     style={{ marginTop: 24 }}>
-                อ่านทั้งหมด →
+                {KH.cta_label || 'อ่านทั้งหมด →'}
               </Link>
             </div>
             <div className="img-frame" style={{ height: 360 }}>
@@ -404,7 +396,7 @@ const HomePage = () => {
                         alignItems: 'start' }}>
             <div>
               <span className="eyebrow" style={{ color: 'var(--paper)' }}>
-                <span className="dot"></span>About SWU MKT
+                <span className="dot"></span>{AB.eyebrow || 'About SWU MKT'}
               </span>
               <h2 key={`mantra-${headIdx}`} className="serif rotate-in"
                   data-testid="home-mantra"
@@ -426,13 +418,12 @@ const HomePage = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 28 }}>
               <p style={{ fontSize: 17, lineHeight: 1.65, color: '#c9c5bd', maxWidth: '52ch' }}>
-                สาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — ผลิตงานวิจัยและบุคลากรการตลาดระดับประเทศมา 50 ปี
-                เปิดแพลตฟอร์มนี้เพื่อให้ทุกแบรนด์เข้าถึง insight ที่อ่านใจลูกค้าได้ก่อนคู่แข่ง
+                {AB.lede}
               </p>
-              <Link to="/about/swu-marketing" className="btn btn--red"
+              <Link to={AB.cta_path || '/about/swu-marketing'} className="btn btn--red"
                     data-testid="home-about-link"
                     style={{ alignSelf: 'flex-start', marginTop: 8 }}>
-                อ่านเรื่องเรา →
+                {AB.cta_label || 'อ่านเรื่องเรา →'}
               </Link>
             </div>
           </div>

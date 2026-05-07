@@ -62,6 +62,10 @@ const CmsListPage = () => {
             <h1 className="text-3xl font-serif tracking-tight">CMS — Content Management</h1>
           </div>
           <div className="flex gap-2">
+            <Link to="/admin/cms/landing" data-testid="cms-landing-link"
+                  className="px-4 py-2 border border-blue-600 text-blue-600 text-sm font-mono uppercase tracking-wider hover:bg-blue-50 rounded-full">
+              Landing Page
+            </Link>
             <Link to="/admin/cms/prompts" data-testid="cms-prompts-link"
                   className="px-4 py-2 border border-neutral-900 text-sm font-mono uppercase tracking-wider hover:bg-neutral-100 rounded-full">
               Prompt Templates

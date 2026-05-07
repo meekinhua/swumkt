@@ -104,6 +104,112 @@ class AITranslateRequest(BaseModel):
     to: Literal["th", "en"]
 
 
+# ============ LANDING PAGE MODELS ============
+
+class LandingSlide(BaseModel):
+    eyebrow: str
+    heroPre: List[str]
+    heroAccentIdx: int = 1
+    lede: str
+    mantra: List[str]
+    mantraAccentIdx: int = 1
+    image: str = ""
+    imageAlt: Optional[str] = ""
+    imageCaption: Optional[str] = ""
+
+
+class LandingTool(BaseModel):
+    tag: str
+    t: str  # title
+    s: str  # subtitle/description
+    p: str  # path
+
+
+class LandingSection(BaseModel):
+    eyebrow: Optional[str] = ""
+    heading: Optional[str] = ""
+    accent: Optional[str] = ""
+    lede: Optional[str] = ""
+    cta_label: Optional[str] = ""
+    cta_path: Optional[str] = ""
+
+
+class LandingDoc(BaseModel):
+    slides: List[LandingSlide]
+    tools: List[LandingTool]
+    knowledge_hub: LandingSection
+    about_band: LandingSection
+    rotation_ms: Optional[int] = 5500
+
+
+# Default landing content — mirrors current HomePage.jsx hardcoded values.
+DEFAULT_LANDING: Dict[str, Any] = {
+    "key": "home",
+    "rotation_ms": 5500,
+    "slides": [
+        {
+            "eyebrow": "Consumer Foresight Lab · SWU MKT",
+            "heroPre": ["เห็นในสิ่งที่ตลาด", "ยังมองไม่เห็น"],
+            "heroAccentIdx": 1,
+            "lede": "แพลตฟอร์มวิจัยตลาดของสาขาการตลาด มศว. — ใช้ data, AI และทฤษฎีการตลาดสากล เพื่อเห็นพฤติกรรมและความต้องการของผู้บริโภค ก่อนที่ตลาดจะส่งสัญญาณ",
+            "mantra": ["วิจัย", "เห็นก่อน", "ชนะก่อน"],
+            "mantraAccentIdx": 1,
+            "image": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
+            "imageAlt": "Bangkok night street — Thai consumer pulse",
+            "imageCaption": "● BANGKOK PULSE · LIVE",
+        },
+        {
+            "eyebrow": "Consumer Insight Studio · SWU MKT",
+            "heroPre": ["อ่านใจ", "ผู้บริโภค", "ก่อนใคร"],
+            "heroAccentIdx": 2,
+            "lede": "อ่านความรู้สึก ความต้องการ และเหตุผลที่ลูกค้าเลือกแบรนด์ — ด้วยเครื่องมือมาตรฐานวิชาการที่นักการตลาดจริงใช้อยู่",
+            "mantra": ["เห็น", "เข้าใจ", "นำตลาด"],
+            "mantraAccentIdx": 2,
+            "image": "https://images.unsplash.com/photo-1556560984-36a7ec2ba544?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
+            "imageAlt": "Modern Thai marketing student — consumer of tomorrow",
+            "imageCaption": "● FIELD RESEARCH · 2026",
+        },
+        {
+            "eyebrow": "Marketing Intelligence · มศว.",
+            "heroPre": ["รู้ก่อนตลาด", "หนึ่งก้าว"],
+            "heroAccentIdx": 1,
+            "lede": "Insight ที่เร็วกว่าเทรนด์ — งานวิจัยจริงจากสาขาการตลาด มศว. ที่นำสิ่งที่ลูกค้าจะชอบ มาบอกคุณก่อนคู่แข่ง",
+            "mantra": ["Insight", "ที่เร็ว", "กว่าเทรนด์"],
+            "mantraAccentIdx": 1,
+            "image": "https://images.pexels.com/photos/4350061/pexels-photo-4350061.jpeg?auto=compress&cs=tinysrgb&w=900",
+            "imageAlt": "Asian marketing team collaborating in modern cafe",
+            "imageCaption": "● TEAM SYNC · MKT LAB",
+        },
+    ],
+    "tools": [
+        {"tag": "BRAND", "t": "Brand Health Check", "s": "วัด Brand Equity ตามกรอบ Aaker — Awareness · Quality · Identity · Loyalty อ่านสุขภาพแบรนด์ก่อนคู่แข่งจะรู้ตัว", "p": "/brand-equity"},
+        {"tag": "RESEARCH", "t": "Conjoint Analysis", "s": "Choice-Based Conjoint + D-Optimal — รู้ว่าลูกค้ายอมแลกอะไรเพื่ออะไร ก่อนปล่อยสินค้าจริง", "p": "/market-research/conjoint-analysis"},
+        {"tag": "CX", "t": "Customer Journey", "s": "แผนที่ touchpoint และ pain point — เห็นจุดที่ลูกค้าจะหลุดมือ ก่อนที่ยอดจะตก", "p": "/market-research"},
+        {"tag": "PSYCH", "t": "Customer Perception", "s": "Perceptual Map + Sentiment AI — อ่านภาพแบรนด์ในหัวลูกค้า ก่อนที่ตลาดจะให้คำตอบ", "p": "/market-research"},
+        {"tag": "PSYCH", "t": "Customer Behavior", "s": "EBM Decision-process analytics — เห็นว่าลูกค้าตัดสินใจซื้อยังไง ตั้งแต่ search ถึง post-purchase", "p": "/market-research"},
+        {"tag": "TOOL", "t": "Survey Builder", "s": "ออกแบบแบบสอบถาม AI-assisted — ถามคำถามที่ใช่ ได้ insight ที่จริง", "p": "/market-research"},
+        {"tag": "LEARN", "t": "Content Hub", "s": "ฐานความรู้การตลาด — อ่านเทรนด์ก่อนคนอื่น เชื่อมทฤษฎีกับเครื่องมือจริง", "p": "/learn"},
+        {"tag": "WORKFLOW", "t": "Kanban Projects", "s": "จัดการทีมวิจัย — board, sprint, และ research log สำหรับ insight ที่ส่งทันเวลา", "p": "/projects"},
+    ],
+    "knowledge_hub": {
+        "eyebrow": "● Knowledge Hub",
+        "heading": "อ่านเทรนด์",
+        "accent": "ก่อนคนอื่น",
+        "lede": "บทความวิชาการเขียนโดย SWU Marketing Research Team — เชื่อมทฤษฎีคลาสสิก (Aaker · Kotler · Trout & Ries) เข้ากับเครื่องมือจริง เพื่อให้คุณเห็นจังหวะของผู้บริโภคก่อนตลาดจะส่งสัญญาณ",
+        "cta_label": "อ่านทั้งหมด →",
+        "cta_path": "/learn",
+    },
+    "about_band": {
+        "eyebrow": "About SWU MKT",
+        "heading": "",
+        "accent": "",
+        "lede": "สาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — ผลิตงานวิจัยและบุคลากรการตลาดระดับประเทศมา 50 ปี เปิดแพลตฟอร์มนี้เพื่อให้ทุกแบรนด์เข้าถึง insight ที่อ่านใจลูกค้าได้ก่อนคู่แข่ง",
+        "cta_label": "อ่านเรื่องเรา →",
+        "cta_path": "/about/swu-marketing",
+    },
+}
+
+
 # ============ DEFAULT PROMPT TEMPLATES (seeded on first read) ============
 
 DEFAULT_TEMPLATES = [
@@ -672,5 +778,43 @@ def get_cms_routes(db, get_current_user):
         if not text:
             raise HTTPException(503, "AI translate failed")
         return {"text": text}
+
+    # --------- LANDING PAGE ---------
+
+    async def _seed_landing():
+        existing = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
+        if not existing:
+            doc = dict(DEFAULT_LANDING)
+            doc["updated_at"] = _now()
+            await db.cms_landing.insert_one(doc)
+
+    @cms_router.get("/landing")
+    async def get_landing():
+        """Public — HomePage uses this to render. No auth required."""
+        await _seed_landing()
+        doc = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
+        return doc or DEFAULT_LANDING
+
+    @cms_router.put("/landing")
+    async def update_landing(data: LandingDoc, current_user=Depends(get_current_user)):
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        await _seed_landing()
+        upd = data.model_dump()
+        upd["updated_at"] = _now()
+        await db.cms_landing.update_one({"key": "home"}, {"$set": upd})
+        doc = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
+        return doc
+
+    @cms_router.post("/landing/reset")
+    async def reset_landing(current_user=Depends(get_current_user)):
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        doc = dict(DEFAULT_LANDING)
+        doc["updated_at"] = _now()
+        await db.cms_landing.delete_many({"key": "home"})
+        await db.cms_landing.insert_one(doc)
+        out = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
+        return out
 
     return cms_router
