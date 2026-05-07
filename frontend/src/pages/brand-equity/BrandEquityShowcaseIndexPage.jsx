@@ -43,8 +43,8 @@ const ShowcaseIndexPage = () => {
   useDocumentMeta({
     title: 'Brand Health, in Public · SWU MKT Showcase',
     description: items.length > 0
-      ? `${items.length} แบรนด์เปิดเผยผลวิจัย Brand Health Check แบบสาธารณะ — Awareness, Quality, Identity, Loyalty พร้อม AI insights ดูได้ทันที`
-      : 'รวมผลงานวิจัย Brand Health Check ที่นักวิจัยเปิดเผยต่อสาธารณะ จาก SWU Marketing Research',
+      ? `${items.length} แบรนด์โชว์ผลวิจัย Brand Health Check แบบสาธารณะ — Awareness, Quality, Identity, Loyalty พร้อม AI insights ดูได้ทันที`
+      : 'รวมผลงานวิจัย Brand Health Check ที่ทีม SWU Marketing Research ใช้อ่านใจตลาดให้แบรนด์ต่างๆ',
     image: SWU_LOGO_URL,
     url, type: 'website',
     jsonLd: !loading && items.length > 0 ? {
@@ -73,12 +73,12 @@ const ShowcaseIndexPage = () => {
              style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}/>
         <div className="swu-container" style={{ padding: '72px 32px 56px', position: 'relative' }}>
           <Eyebrow red dot pulse>● Public Showcase · {items.length} Live {items.length === 1 ? 'Study' : 'Studies'}</Eyebrow>
-          <h1 className="h-display" style={{ marginTop: 24, maxWidth: '11ch' }}>
-            Brand Health,<br/><span className="italic-accent">in Public.</span>
+          <h1 className="h-display" style={{ marginTop: 24, maxWidth: '13ch' }}>
+            อ่านใจ<br/><span className="italic-accent">ตลาดจริง</span>.
           </h1>
           <p className="lede" style={{ fontSize: 19, marginTop: 28, maxWidth: '54ch' }}>
-            งานวิจัย Brand Health Check ทั้งหมดที่นักวิจัยเลือกเผยแพร่สู่สาธารณะ —
-            รายงานเต็มฉบับ พร้อม Aaker scores, perceptual map และข้อมูล n ของผู้ตอบ
+            งานวิจัย Brand Health Check ที่ทีม SWU Marketing Research ใช้อ่านใจผู้บริโภคในแต่ละหมวดหมู่ —
+            รายงานเต็มฉบับ พร้อม Aaker scores, perceptual map และข้อมูล n ของผู้ตอบจริง
           </p>
         </div>
         <div className="hero-grad-rule"></div>

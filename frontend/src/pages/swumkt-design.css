@@ -740,6 +740,19 @@ a { color: inherit; text-decoration: none; }
 .fade-up-4 { animation-delay: .28s; }
 .fade-up-5 { animation-delay: .36s; }
 
+/* Rotating headlines — re-triggers on React key change */
+@keyframes rotateIn {
+  0%   { opacity: 0; transform: translateY(10px); filter: blur(6px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.rotate-in { animation: rotateIn .65s cubic-bezier(.2,.7,.2,1) both; }
+.rotate-in-slow { animation: rotateIn .9s cubic-bezier(.2,.7,.2,1) both; }
+.rotate-stack { display: inline-block; }
+.rotate-stack > span { display: inline-block; }
+/* Crossfade container so heights don't jump too much */
+.rotator-shell { position: relative; }
+
 /* Image treatments — duotone / vibrant / paper-cropped */
 .img-duotone-blue {
   filter: contrast(1.05) saturate(0.5) brightness(1.02);

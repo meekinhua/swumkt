@@ -1,6 +1,27 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — Rotating Hero Copy + "Foresight" Brand Voice
+- **User**: "พาดหัว เห่ย ไปหน่อย · 'เปิดเผย' มันเหมือนเน้นความสุจริต · เราเน้นว่าเก่งการตลาด มองเห็นว่าลูกค้าชอบอะไรก่อนใคร · ทำให้ rotate กันได้ไหม"
+- **Repositioned brand voice** from "Open/Transparent Research" → **"Consumer Foresight & Insight"** (เห็นก่อน · อ่านใจก่อน · นำตลาด)
+- **3 rotating headline triplets** (eyebrow + H1 + lede + mantra) auto-cycle every 5.5s on `HomePage`:
+  - A) Foresight Lab — "เห็นในสิ่งที่ตลาด · ยังมองไม่เห็น" / mantra: วิจัย · เห็นก่อน · ชนะก่อน
+  - B) Insight Studio — "อ่านใจ · ผู้บริโภค · ก่อนใคร" / mantra: เห็น · เข้าใจ · นำตลาด
+  - C) Marketing Intelligence — "รู้ก่อนตลาด · หนึ่งก้าว" / mantra: Insight · ที่เร็ว · กว่าเทรนด์
+- **CSS**: added `@keyframes rotateIn` (opacity + translateY + blur fade), `.rotate-in` / `.rotate-in-slow` triggered via React `key` prop change
+- **Manual control**: dot indicators with active state (28×8 elongated pill) + counter `01 / 03`
+- **Removed "เปิดเผย / เผยแพร่" copy** site-wide (Footer, About hero, About mission, About quote, Showcase index, Learn index)
+- **Updated headings**:
+  - Tools: "เครื่องมืออ่านใจผู้บริโภค" (was "เครื่องมือวิจัยตลาดที่ใช้ได้ฟรี")
+  - Knowledge Hub: "อ่านเทรนด์ก่อนคนอื่น" (was "เรียนการตลาดฉบับ มศว.")
+  - About hero: "เห็น · เข้าใจ · นำตลาด" (was "วิจัย · ปฏิบัติ · เปิดเผย")
+  - Showcase index: "อ่านใจตลาดจริง" (was "Brand Health, in Public")
+  - About mission: "อ่านใจตลาดควรเป็นของทุกแบรนด์" (was "การวิจัยตลาดควรเป็นของทุกคน")
+- **Tool descriptions** rewritten with foresight angle (e.g., "เห็นจุดที่ลูกค้าจะหลุดมือ ก่อนที่ยอดจะตก")
+- **SEO meta** updated: title/description now lead with "อ่านใจผู้บริโภคก่อนใคร"
+
+
+
 ## 2026-02-06 — 🌟 Liveliness V2: Bright/Modern + Imagery + Motion
 - **User**: "ทำให้ สดใส ขึ้น · ใช้รูปประกอบ · ทันสมัยขึ้น"
 - **Design agent** เรียกอีกรอบ — guidelines saved to `/app/design_guidelines.json`

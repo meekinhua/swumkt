@@ -38,12 +38,12 @@ const LearnIndexPage = () => {
       <section style={{ borderBottom: '1px solid var(--ink)', padding: '72px 0 64px' }}>
         <div className="swu-container">
           <Eyebrow red>● Knowledge Hub · {ARTICLE_LIST.length} Articles</Eyebrow>
-          <h1 className="h-display" style={{ marginTop: 24, maxWidth: '12ch' }}>
-            เรียนการตลาด<br/>กับสาขา <span className="italic-accent">MKT มศว.</span>
+          <h1 className="h-display" style={{ marginTop: 24, maxWidth: '14ch' }}>
+            อ่านเทรนด์<br/><span className="italic-accent">ก่อนคนอื่น</span>.
           </h1>
           <p className="lede" style={{ fontSize: 19, marginTop: 32, maxWidth: '60ch' }}>
-            บทความวิชาการที่เรียบเรียงให้อ่านง่าย — แต่ละเรื่องเชื่อมทฤษฎีคลาสสิกกับเครื่องมือวิจัยจริงในแพลตฟอร์ม
-            สำหรับนักศึกษา SME และนักการตลาดที่ต้องการลงลึก
+            บทความวิชาการที่เรียบเรียงให้อ่านง่าย — เชื่อมทฤษฎีคลาสสิกกับเครื่องมือวิจัยจริงในแพลตฟอร์ม
+            เพื่อให้นักศึกษา SME และนักการตลาดเห็นจังหวะของผู้บริโภค ก่อนที่ตลาดจะส่งสัญญาณ
           </p>
         </div>
       </section>

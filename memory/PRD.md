@@ -3,6 +3,15 @@
 ## Original Problem Statement
 A comprehensive marketing research and academic tool for Srinakharinwirot University (SWU), now expanding to include an Alumni Network platform ("สายตระกูล MKT SWU").
 
+## Brand Voice (Feb 7, 2026)
+**Position**: Consumer Foresight & Insight Lab — "เห็นในสิ่งที่ตลาดยังไม่เห็น · อ่านใจผู้บริโภคก่อนใคร · นำตลาด"
+- **Avoid**: คำว่า "เปิดเผย / เผยแพร่ / Transparent" (ฟังเหมือน transparency report)
+- **Use**: เห็นก่อน · อ่านใจ · นำตลาด · Insight · Foresight · Consumer Intelligence
+- **3 rotating headline triplets** on HomePage hero (auto-cycle 5.5s + dot indicators):
+  1. Foresight Lab — "เห็นในสิ่งที่ตลาด · ยังมองไม่เห็น"
+  2. Insight Studio — "อ่านใจ · ผู้บริโภค · ก่อนใคร"
+  3. Marketing Intelligence — "รู้ก่อนตลาด · หนึ่งก้าว"
+
 ## User Language: THAI — All communication MUST be in Thai.
 
 ---

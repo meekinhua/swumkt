@@ -47,7 +47,7 @@ export const Footer = () => (
       <div className="footer__cols">
         <div className="footer__brand">
           <SwuLogo size={28} />
-          <p>แพลตฟอร์มวิจัยตลาดเปิด โดยสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — เผยแพร่งานวิจัยจริง เครื่องมือฟรี และความรู้ที่อ่านได้ทุกคน</p>
+          <p>Consumer Insight & Foresight Lab โดยสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — เห็นในสิ่งที่ตลาดยังไม่เห็น ด้วยเครื่องมือวิจัยมาตรฐานวิชาการที่ทุกแบรนด์ใช้ได้ฟรี</p>
         </div>
         <div className="footer__col">
           <h5>Explore</h5>

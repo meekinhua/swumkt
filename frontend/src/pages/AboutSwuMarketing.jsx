@@ -42,11 +42,12 @@ const AboutSwuMarketing = () => {
       <section style={{ borderBottom: '1px solid var(--ink)', padding: '72px 0 64px' }}>
         <div className="swu-container">
           <Eyebrow red>● About · Department of Marketing</Eyebrow>
-          <h1 className="h-display" style={{ marginTop: 24, maxWidth: '12ch' }}>
-            การตลาด มศว. — วิจัย · ปฏิบัติ · <span className="italic-accent">เปิดเผย</span>.
+          <h1 className="h-display" style={{ marginTop: 24, maxWidth: '14ch' }}>
+            การตลาด มศว. — เห็น · เข้าใจ · <span className="italic-accent">นำตลาด</span>.
           </h1>
-          <p className="lede" style={{ fontSize: 19, marginTop: 32, maxWidth: '58ch' }}>
-            สาขาการตลาด คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ — ผลิตงานวิจัยและบุคลากรการตลาดในประเทศไทยมา 50 ปี
+          <p className="lede" style={{ fontSize: 19, marginTop: 32, maxWidth: '60ch' }}>
+            สาขาการตลาด คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ — ผลิตงานวิจัยและบุคลากรการตลาดของประเทศไทยมา 50 ปี
+            ด้วยจุดแข็งที่อ่านใจผู้บริโภคไทยได้แม่นกว่าใคร
           </p>
         </div>
       </section>
@@ -82,22 +83,22 @@ const AboutSwuMarketing = () => {
           <div>
             <Eyebrow red>● Mission</Eyebrow>
             <h2 className="h-section" style={{ marginTop: 16 }}>
-              การวิจัยตลาด<br/>ควรเป็นของ<br/><span className="italic-accent">ทุกคน</span>.
+              อ่านใจตลาด<br/>ควรเป็นของ<br/><span className="italic-accent">ทุกแบรนด์</span>.
             </h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             <p style={{ fontSize: 17, lineHeight: 1.78, color: 'var(--ink)', margin: 0 }}>
-              ในประเทศไทย เครื่องมือวิจัยตลาดระดับมาตรฐานวิชาการมักถูกใช้งานเฉพาะในบริษัทที่จ่ายค่าใช้จ่ายระดับหลักล้านได้
-              — ทำให้ SME นักศึกษา และนักการตลาดอิสระเข้าไม่ถึง
+              ในประเทศไทย เครื่องมือ Consumer Insight ระดับมาตรฐานวิชาการมักถูกสงวนไว้ให้บริษัทที่จ่ายค่าวิจัยระดับหลักล้านเท่านั้น
+              — ทำให้ SME นักศึกษา และนักการตลาดอิสระอ่านใจตลาดของตัวเองได้ช้ากว่าคู่แข่งเสมอ
             </p>
             <p style={{ fontSize: 17, lineHeight: 1.78, color: 'var(--ink-2)', margin: 0 }}>
-              SWU MKT ก่อตั้งขึ้นเพื่อแก้ปัญหานี้ — โดยเปิดเครื่องมือวิจัยตลาดมาตรฐาน อาทิ Brand Equity Survey,
+              SWU MKT ก่อตั้งขึ้นเพื่อพลิกสมการนี้ — เปิดเครื่องมือมาตรฐาน อาทิ Brand Equity Survey,
               Choice-Based Conjoint Analysis, Customer Journey Mapping ให้ทุกคนใช้ได้ฟรี
-              และเผยแพร่ผลงานวิจัยจริงสู่สาธารณะ
+              เพื่อให้ทุกแบรนด์มีโอกาสเห็นว่าผู้บริโภคจะชอบอะไรก่อนที่ตลาดจะให้คำตอบ
             </p>
             <p style={{ fontSize: 17, lineHeight: 1.78, color: 'var(--ink-2)', margin: 0 }}>
-              เป้าหมายคือสร้าง <strong style={{ fontWeight: 600 }}>ระบบนิเวศการวิจัยตลาดเปิด</strong>
-              สำหรับประเทศไทย ที่ความรู้ไม่ถูกล็อกอยู่ในกระดาษวิชาการ และเครื่องมือไม่ถูกล็อกอยู่ในซอฟต์แวร์ราคาแพง
+              เป้าหมายคือสร้าง <strong style={{ fontWeight: 600 }}>ระบบนิเวศ Consumer Foresight</strong>
+              สำหรับประเทศไทย ที่ insight ไม่ถูกล็อกอยู่ในกระดาษวิชาการ และเครื่องมือไม่ถูกล็อกอยู่ในซอฟต์แวร์ราคาแพง
             </p>
           </div>
         </div>
@@ -111,7 +112,7 @@ const AboutSwuMarketing = () => {
                               fontFamily: 'var(--serif)',
                               fontSize: 'clamp(28px, 4vw, 44px)', fontStyle: 'italic',
                               lineHeight: 1.25, letterSpacing: '-0.01em' }}>
-          "We don&apos;t sell research — we publish it. Brand Health belongs to the public, not behind a paywall."
+          "We don&apos;t sell research — we sense it. Insight ที่อ่านใจผู้บริโภคก่อนตลาดส่งสัญญาณ ควรเป็นของทุกแบรนด์."
           <footer style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em',
                             textTransform: 'uppercase', color: 'var(--ink-3)',
                             marginTop: 24, fontStyle: 'normal' }}>
@@ -128,7 +129,7 @@ const AboutSwuMarketing = () => {
           </span>
           <h2 className="serif" style={{ fontSize: 'clamp(36px, 5vw, 56px)', lineHeight: 1.05,
                                             letterSpacing: '-0.02em', marginTop: 18, color: '#fff' }}>
-            เริ่มงานวิจัย<br/>ของคุณ.
+            เริ่มอ่านใจ<br/>ตลาดของคุณ.
           </h2>
           <div className="tools-dark-grid"
                style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',

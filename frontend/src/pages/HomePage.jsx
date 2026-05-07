@@ -11,19 +11,48 @@ import { SWU_LOGO_URL } from './brand-equity/be-components';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const TOOLS = [
-  { tag: 'BRAND', t: 'Brand Health Check', s: 'วัด Brand Equity ตามกรอบของ Aaker — Awareness · Quality · Identity · Loyalty พร้อมรายงานสาธารณะ', p: '/brand-equity' },
-  { tag: 'RESEARCH', t: 'Conjoint Analysis', s: 'Choice-Based Conjoint + D-Optimal design และ market simulator สำหรับวัดความสำคัญของ attribute', p: '/market-research/conjoint-analysis' },
-  { tag: 'CX', t: 'Customer Journey', s: 'แผนที่ touchpoint และ pain point ทุกขั้นของการตัดสินใจ', p: '/market-research' },
-  { tag: 'PSYCH', t: 'Customer Perception', s: 'Perceptual Map + Sentiment AI วิเคราะห์ภาพในใจของผู้บริโภค', p: '/market-research' },
-  { tag: 'PSYCH', t: 'Customer Behavior', s: 'EBM Decision-process analytics ระดับขั้น search · evaluate · purchase · post', p: '/market-research' },
-  { tag: 'TOOL', t: 'Survey Builder', s: 'ออกแบบแบบสอบถาม AI-assisted พร้อม validation และ logic skip', p: '/market-research' },
-  { tag: 'LEARN', t: 'Content Hub', s: 'ฐานความรู้การตลาดฉบับวิชาการ ที่อ่านง่ายและเชื่อมไปยังเครื่องมือจริง', p: '/learn' },
-  { tag: 'WORKFLOW', t: 'Kanban Projects', s: 'จัดการงานวิจัยเป็นทีม — board, sprint, และ research log', p: '/projects' },
+  { tag: 'BRAND', t: 'Brand Health Check', s: 'วัด Brand Equity ตามกรอบ Aaker — Awareness · Quality · Identity · Loyalty อ่านสุขภาพแบรนด์ก่อนคู่แข่งจะรู้ตัว', p: '/brand-equity' },
+  { tag: 'RESEARCH', t: 'Conjoint Analysis', s: 'Choice-Based Conjoint + D-Optimal — รู้ว่าลูกค้ายอมแลกอะไรเพื่ออะไร ก่อนปล่อยสินค้าจริง', p: '/market-research/conjoint-analysis' },
+  { tag: 'CX', t: 'Customer Journey', s: 'แผนที่ touchpoint และ pain point — เห็นจุดที่ลูกค้าจะหลุดมือ ก่อนที่ยอดจะตก', p: '/market-research' },
+  { tag: 'PSYCH', t: 'Customer Perception', s: 'Perceptual Map + Sentiment AI — อ่านภาพแบรนด์ในหัวลูกค้า ก่อนที่ตลาดจะให้คำตอบ', p: '/market-research' },
+  { tag: 'PSYCH', t: 'Customer Behavior', s: 'EBM Decision-process analytics — เห็นว่าลูกค้าตัดสินใจซื้อยังไง ตั้งแต่ search ถึง post-purchase', p: '/market-research' },
+  { tag: 'TOOL', t: 'Survey Builder', s: 'ออกแบบแบบสอบถาม AI-assisted — ถามคำถามที่ใช่ ได้ insight ที่จริง', p: '/market-research' },
+  { tag: 'LEARN', t: 'Content Hub', s: 'ฐานความรู้การตลาด — อ่านเทรนด์ก่อนคนอื่น เชื่อมทฤษฎีกับเครื่องมือจริง', p: '/learn' },
+  { tag: 'WORKFLOW', t: 'Kanban Projects', s: 'จัดการทีมวิจัย — board, sprint, และ research log สำหรับ insight ที่ส่งทันเวลา', p: '/projects' },
+];
+
+// Rotating hero/mantra triplets — same DNA, different angles of "เห็นก่อน · เข้าใจก่อน"
+const HEADLINES = [
+  {
+    eyebrow: 'Consumer Foresight Lab · SWU MKT',
+    heroPre: ['เห็นในสิ่งที่ตลาด', 'ยังมองไม่เห็น'],
+    heroAccentIdx: 1,
+    lede: 'แพลตฟอร์มวิจัยตลาดของสาขาการตลาด มศว. — ใช้ data, AI และทฤษฎีการตลาดสากล เพื่อเห็นพฤติกรรมและความต้องการของผู้บริโภค ก่อนที่ตลาดจะส่งสัญญาณ',
+    mantra: ['วิจัย', 'เห็นก่อน', 'ชนะก่อน'],
+    mantraAccentIdx: 1,
+  },
+  {
+    eyebrow: 'Consumer Insight Studio · SWU MKT',
+    heroPre: ['อ่านใจ', 'ผู้บริโภค', 'ก่อนใคร'],
+    heroAccentIdx: 2,
+    lede: 'อ่านความรู้สึก ความต้องการ และเหตุผลที่ลูกค้าเลือกแบรนด์ — ด้วยเครื่องมือมาตรฐานวิชาการที่นักการตลาดจริงใช้อยู่',
+    mantra: ['เห็น', 'เข้าใจ', 'นำตลาด'],
+    mantraAccentIdx: 2,
+  },
+  {
+    eyebrow: 'Marketing Intelligence · มศว.',
+    heroPre: ['รู้ก่อนตลาด', 'หนึ่งก้าว'],
+    heroAccentIdx: 1,
+    lede: 'Insight ที่เร็วกว่าเทรนด์ — งานวิจัยจริงจากสาขาการตลาด มศว. ที่นำสิ่งที่ลูกค้าจะชอบ มาบอกคุณก่อนคู่แข่ง',
+    mantra: ['Insight', 'ที่เร็ว', 'กว่าเทรนด์'],
+    mantraAccentIdx: 1,
+  },
 ];
 
 const HomePage = () => {
   const [showcases, setShowcases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [headIdx, setHeadIdx] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -37,10 +66,20 @@ const HomePage = () => {
     return () => { alive = false; };
   }, []);
 
+  // Auto-rotate hero copy every 5.5s
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHeadIdx((i) => (i + 1) % HEADLINES.length);
+    }, 5500);
+    return () => clearInterval(id);
+  }, []);
+
+  const head = HEADLINES[headIdx];
+
   const url = typeof window !== 'undefined' ? window.location.href : '';
   useDocumentMeta({
-    title: 'การตลาด มศว · SWU MKT — เครื่องมือวิจัยตลาด & Brand Strategy ฟรี',
-    description: 'แพลตฟอร์มวิจัยตลาดเปิดของสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — Brand Equity, Conjoint Analysis, Customer Journey, AI insights พร้อมบทความเชิงลึก ฟรีทั้งหมด',
+    title: 'การตลาด มศว · SWU MKT — อ่านใจผู้บริโภคก่อนใคร · เครื่องมือวิจัยตลาดฟรี',
+    description: 'แพลตฟอร์ม Consumer Insight & Foresight ของสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — Brand Equity, Conjoint Analysis, Customer Journey และ AI-driven research ที่ช่วยให้คุณเห็นเทรนด์และความต้องการของลูกค้าก่อนคู่แข่ง',
     image: SWU_LOGO_URL,
     url,
     type: 'website',
@@ -78,7 +117,11 @@ const HomePage = () => {
              style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}/>
         <div className="swu-container" style={{ padding: '56px 32px 88px', position: 'relative' }}>
           <div className="fade-up fade-up-1" style={{ marginBottom: 24 }}>
-            <Eyebrow red dot pulse>Public Showcase · Live Brand Research from SWU MKT</Eyebrow>
+            <Eyebrow red dot pulse>
+              <span key={`eb-${headIdx}`} className="rotate-in" data-testid="hero-eyebrow">
+                {head.eyebrow}
+              </span>
+            </Eyebrow>
           </div>
           <div className="hero-grid"
                style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, 0.9fr)',
@@ -86,20 +129,55 @@ const HomePage = () => {
 
             {/* Left — typography */}
             <div className="fade-up fade-up-2">
-              <h1 className="h-display" style={{ fontSize: 'clamp(54px, 7.5vw, 104px)' }}>
-                งานวิจัย<br/>แบรนด์ที่<br/><span className="italic-accent">เปิดเผย</span>.
+              <h1 className="h-display rotator-shell"
+                  data-testid="hero-h1"
+                  style={{ fontSize: 'clamp(48px, 7vw, 96px)', minHeight: '3.4em' }}>
+                <span key={`h-${headIdx}`} className="rotate-in rotate-stack">
+                  {head.heroPre.map((line, i) => (
+                    <React.Fragment key={i}>
+                      {i === head.heroAccentIdx ? (
+                        <span className="italic-accent">{line}</span>
+                      ) : (
+                        <span>{line}</span>
+                      )}
+                      {i < head.heroPre.length - 1 && <br/>}
+                    </React.Fragment>
+                  ))}
+                  <span>.</span>
+                </span>
               </h1>
-              <p className="lede" style={{ marginTop: 32, maxWidth: '46ch' }}>
-                แพลตฟอร์มวิจัยตลาดเปิดของสาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ —
-                เผยแพร่งานวิจัย Brand Health จริง พร้อมเครื่องมือฟรีและความรู้ที่ทุกคนอ่านได้
+              <p key={`l-${headIdx}`} className="lede rotate-in-slow"
+                 data-testid="hero-lede"
+                 style={{ marginTop: 32, maxWidth: '46ch', minHeight: '5.2em' }}>
+                {head.lede}
               </p>
               <div style={{ display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
                 <Link to="/showcase" className="btn-pill btn-pill--blue" data-testid="hero-showcase-btn">
                   ดูผลงานทั้งหมด <span>→</span>
                 </Link>
                 <Link to="/register" className="btn-pill btn-pill--ghost" data-testid="hero-register-btn">
-                  เริ่มสร้างวิจัยฟรี
+                  เริ่มอ่านใจตลาดฟรี
                 </Link>
+              </div>
+              {/* Rotation dots */}
+              <div data-testid="hero-rotation-dots"
+                   style={{ display: 'flex', gap: 8, marginTop: 24, alignItems: 'center' }}>
+                {HEADLINES.map((_, i) => (
+                  <button key={i}
+                          onClick={() => setHeadIdx(i)}
+                          aria-label={`Headline ${i + 1}`}
+                          data-testid={`hero-dot-${i}`}
+                          style={{
+                            width: i === headIdx ? 28 : 8, height: 8,
+                            borderRadius: 999,
+                            border: 'none', cursor: 'pointer',
+                            background: i === headIdx ? 'var(--logo-blue)' : 'rgba(26,26,26,0.18)',
+                            transition: 'all .3s ease', padding: 0,
+                          }}/>
+                ))}
+                <span className="meta" style={{ marginLeft: 8, fontSize: 10 }}>
+                  {String(headIdx + 1).padStart(2, '0')} / {String(HEADLINES.length).padStart(2, '0')}
+                </span>
               </div>
             </div>
 
@@ -208,10 +286,10 @@ const HomePage = () => {
                         gap: 56, marginBottom: 40, alignItems: 'end' }}>
             <div>
               <Eyebrow red>● Open Tools</Eyebrow>
-              <h2 className="h-section" style={{ marginTop: 14 }}>เครื่องมือวิจัยตลาด<br/>ที่ใช้ได้ฟรี</h2>
+              <h2 className="h-section" style={{ marginTop: 14 }}>เครื่องมืออ่านใจ<br/>ผู้บริโภค</h2>
             </div>
             <p className="lede" style={{ fontSize: 17 }}>
-              แปดเครื่องมือที่ออกแบบโดยอาจารย์และนักวิจัยจากสาขาการตลาด มศว. — เปิดให้นักศึกษา SME และนักการตลาดทุกคนใช้งานได้โดยไม่มีค่าใช้จ่าย
+              แปดเครื่องมือมาตรฐานวิชาการ ออกแบบโดยอาจารย์และนักวิจัยจากสาขาการตลาด มศว. — ช่วยให้ SME นักศึกษา และนักการตลาดเห็นในสิ่งที่ตลาดยังไม่เห็น โดยไม่มีค่าใช้จ่าย
             </p>
           </div>
 
@@ -250,11 +328,11 @@ const HomePage = () => {
             <div>
               <Eyebrow red>● Knowledge Hub</Eyebrow>
               <h2 className="h-section" style={{ marginTop: 14, fontSize: 'clamp(40px, 5vw, 68px)' }}>
-                เรียนการตลาด<br/><span className="italic-accent">ฉบับ มศว.</span>
+                อ่านเทรนด์<br/><span className="italic-accent">ก่อนคนอื่น</span>.
               </h2>
               <p className="lede" style={{ fontSize: 17, marginTop: 22, maxWidth: '50ch' }}>
-                บทความวิชาการเขียนโดย SWU Marketing Research Team — เน้นเชื่อมทฤษฎีคลาสสิก
-                (Aaker · Kotler · Trout & Ries) กับเครื่องมือจริงในแพลตฟอร์ม
+                บทความวิชาการเขียนโดย SWU Marketing Research Team — เชื่อมทฤษฎีคลาสสิก
+                (Aaker · Kotler · Trout & Ries) เข้ากับเครื่องมือจริง เพื่อให้คุณเห็นจังหวะของผู้บริโภคก่อนตลาดจะส่งสัญญาณ
               </p>
               <Link to="/learn" className="btn-pill btn-pill--dark"
                     data-testid="home-learn-all"
@@ -309,15 +387,28 @@ const HomePage = () => {
               <span className="eyebrow" style={{ color: 'var(--paper)' }}>
                 <span className="dot"></span>About SWU MKT
               </span>
-              <h2 className="serif" style={{ fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 1.05,
-                                                letterSpacing: '-0.02em', marginTop: 18, color: '#fff' }}>
-                วิจัย · ปฏิบัติ · <span className="italic-accent">เปิดเผย</span>.
+              <h2 key={`mantra-${headIdx}`} className="serif rotate-in"
+                  data-testid="home-mantra"
+                  style={{ fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 1.05,
+                           letterSpacing: '-0.02em', marginTop: 18, color: '#fff',
+                           minHeight: '1.2em' }}>
+                {head.mantra.map((w, i) => (
+                  <React.Fragment key={i}>
+                    {i === head.mantraAccentIdx ? (
+                      <span className="italic-accent">{w}</span>
+                    ) : (
+                      <span>{w}</span>
+                    )}
+                    {i < head.mantra.length - 1 && <span style={{ color: 'var(--be-red)', margin: '0 0.35em' }}>·</span>}
+                  </React.Fragment>
+                ))}
+                <span>.</span>
               </h2>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 28 }}>
               <p style={{ fontSize: 17, lineHeight: 1.65, color: '#c9c5bd', maxWidth: '52ch' }}>
-                สาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ ก่อตั้งปี 1974 — ผลิตงานวิจัยและบุคลากรการตลาดในประเทศไทย
-                เปิดแพลตฟอร์มนี้เพื่อให้การวิจัยตลาดเป็นของทุกคน
+                สาขาการตลาด มหาวิทยาลัยศรีนครินทรวิโรฒ — ผลิตงานวิจัยและบุคลากรการตลาดระดับประเทศมา 50 ปี
+                เปิดแพลตฟอร์มนี้เพื่อให้ทุกแบรนด์เข้าถึง insight ที่อ่านใจลูกค้าได้ก่อนคู่แข่ง
               </p>
               <Link to="/about/swu-marketing" className="btn btn--red"
                     data-testid="home-about-link"
