@@ -462,7 +462,36 @@ def get_cms_routes(db, get_current_user):
                 doc["updated_at"] = _now()
                 await db.cms_prompt_templates.insert_one(doc)
 
-    # --------- POSTS ---------
+    # --------- POSTS (public) ---------
+
+    @cms_router.get("/posts/public")
+    async def list_public_posts(type: Optional[str] = None, limit: int = 50):
+        """Public list of published posts (no auth)."""
+        query: Dict[str, Any] = {
+            "deleted_at": {"$exists": False},
+            "status": "published",
+        }
+        if type and type in POST_TYPES:
+            query["type"] = type
+        cur = db.cms_posts.find(
+            query,
+            {"_id": 0, "body_md": 0},  # exclude body for list view (lighter)
+        ).sort("published_at", -1).limit(min(limit, 200))
+        items = await cur.to_list(length=limit)
+        return {"items": items, "total": len(items)}
+
+    @cms_router.get("/posts/public/by-slug/{slug}")
+    async def get_public_post_by_slug(slug: str):
+        """Public single post by slug (no auth, only if published & not deleted)."""
+        doc = await db.cms_posts.find_one(
+            {"slug": slug, "status": "published", "deleted_at": {"$exists": False}},
+            {"_id": 0},
+        )
+        if not doc:
+            raise HTTPException(404, "Post not found or not published")
+        return doc
+
+    # --------- POSTS (admin) ---------
 
     @cms_router.get("/posts")
     async def list_posts(

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link, useParams, Navigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Topbar, Footer, Eyebrow, BrandLogo } from '@/pages/swumkt/SwumktComponents';
 import { ARTICLES } from './learnContent';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
+import CmsArticleView from './CmsArticleView';
 
 // Markdown-lite renderer: **bold** + [text](url)
 const renderInline = (text) => {
@@ -93,7 +94,7 @@ const LearnArticlePage = () => {
     },
   } : { title: 'Article not found · SWU MKT' });
 
-  if (!article) return <Navigate to="/learn" replace/>;
+  if (!article) return <CmsArticleView />;
 
   const { title, titleEn, category, readMin, updatedAt, sections, tool, related, keywords } = article;
   const relatedArticles = (related || []).map(s => ARTICLES[s]).filter(Boolean).slice(0, 3);

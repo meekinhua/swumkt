@@ -1,6 +1,24 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — Knowledge Hub × CMS Integration 📚
+- **User**: "ทำให้บทความใน Knowledge Hub จัดการได้ด้วย"
+- **Backend** (`/app/backend/routes/cms.py`):
+  - `GET /cms/posts/public?type=article` — public list (no auth, only published & not deleted)
+  - `GET /cms/posts/public/by-slug/{slug}` — public single post (no auth)
+- **Frontend**:
+  - `LearnIndexPage` ดึง CMS articles + merge กับ hardcoded `learnContent` (CMS posts ก่อน → featured = CMS ตัวล่าสุด)
+  - แสดง cover image จาก CMS post ทั้งใน featured และ grid card (fallback เป็น diagram placeholder)
+  - `CmsArticleView.jsx` (new) — render CMS post แบบ public ใน `/learn/{slug}`:
+    - Breadcrumb, eyebrow + meta, title, title_en, excerpt, cover image + caption
+    - **react-markdown** รองรับ h1-h3, p, ul/ol/li, blockquote, link, strong, code, hr — styled ตาม Swiss/Editorial design
+    - Tags chips + Back button
+    - SEO meta + JSON-LD Article schema
+  - `LearnArticlePage` fallback ไป `<CmsArticleView/>` เมื่อ slug ไม่ตรง hardcoded `ARTICLES`
+- **Dependency**: `react-markdown` ติดตั้งใหม่ผ่าน yarn
+- **Tested**: Created + published article via API → /learn shows 11 articles (10 hardcoded + 1 CMS) → CMS post featured → click → renders markdown body with H2/list/blockquote correctly
+
+
 ## 2026-02-07 — Landing Page Manager (CMS extension) 🏠
 - **User**: "ให้มีระบบจัดการหน้าแรกของ landing ด้วย"
 - **Scope**: c (ทุกส่วน) · b (paste URL + AI generate image) · a (save publish ทันที) · a (form + reorder)
