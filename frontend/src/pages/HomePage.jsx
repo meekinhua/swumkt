@@ -105,11 +105,45 @@ const HomePage = () => {
   const totalRespondents = showcases.reduce((s, x) => s + (x.response_count || 0), 0);
   const readyCount = showcases.filter(x => x.ready_for_dashboard).length;
 
-  // Pick the most-respondents brand as featured, then 4 side brands
-  const sorted = [...showcases].sort((a, b) => (b.response_count || 0) - (a.response_count || 0));
-  const featured = sorted[0];
-  const sideBrands = sorted.slice(1, 5);
-  const featuredArticles = articles.slice(0, 4).map(a => ({
+  // Apply featured config (mode: auto / random / fixed)
+  const applyFeatured = (pool, getId, cfg, autoSorter) => {
+    const c = cfg || { mode: 'auto', count: 4, ids: [] };
+    const count = c.count || 4;
+    if (c.mode === 'fixed' && c.ids?.length) {
+      // Preserve admin's order, drop missing items
+      return c.ids.map(id => pool.find(x => getId(x) === id)).filter(Boolean).slice(0, count);
+    }
+    if (c.mode === 'random') {
+      // Shuffle pool (or only chosen ids if any) then take N
+      const candidates = c.ids?.length
+        ? c.ids.map(id => pool.find(x => getId(x) === id)).filter(Boolean)
+        : [...pool];
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      return candidates.slice(0, count);
+    }
+    // auto
+    return [...pool].sort(autoSorter).slice(0, count);
+  };
+
+  const sortedBrands = applyFeatured(
+    showcases,
+    s => s.id,
+    landing?.featured_brands,
+    (a, b) => (b.response_count || 0) - (a.response_count || 0),
+  );
+  const featured = sortedBrands[0];
+  const sideBrands = sortedBrands.slice(1, 5);
+
+  const pickedArticles = applyFeatured(
+    articles,
+    a => a.slug,
+    landing?.featured_articles,
+    (a, b) => String(b.published_at || '').localeCompare(String(a.published_at || '')),
+  );
+  const featuredArticles = pickedArticles.slice(0, 4).map(a => ({
     slug: a.slug,
     title: a.title,
     titleEn: a.title_en || '',

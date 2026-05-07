@@ -15,17 +15,32 @@ const emptySlide = () => ({
 
 const emptyTool = () => ({ tag: '', t: '', s: '', p: '/' });
 
+const DEFAULT_FEATURED_ART = { mode: 'auto', count: 4, ids: [] };
+const DEFAULT_FEATURED_BR = { mode: 'auto', count: 5, ids: [] };
+
 const CmsLandingPage = () => {
   const [doc, setDoc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [genIdx, setGenIdx] = useState(-1);
+  const [articlesPool, setArticlesPool] = useState([]);
+  const [brandsPool, setBrandsPool] = useState([]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const r = await axios.get(`${API}/cms/landing`);
-      setDoc(r.data);
+      const [r, ar, br] = await Promise.all([
+        axios.get(`${API}/cms/landing`),
+        axios.get(`${API}/cms/posts/public?type=article&limit=200`),
+        axios.get(`${API}/brand-equity/showcase`),
+      ]);
+      const d = r.data;
+      // Backfill defaults if missing
+      if (!d.featured_articles) d.featured_articles = { ...DEFAULT_FEATURED_ART };
+      if (!d.featured_brands) d.featured_brands = { ...DEFAULT_FEATURED_BR };
+      setDoc(d);
+      setArticlesPool(ar.data?.items || []);
+      setBrandsPool(br.data?.showcases || []);
     } catch { toast.error('โหลด landing ไม่สำเร็จ'); }
     finally { setLoading(false); }
   };
@@ -273,6 +288,34 @@ const CmsLandingPage = () => {
           <SectionEditor data={doc.knowledge_hub} on={(f, v) => updateSection('knowledge_hub', f, v)} prefix="kh"/>
         </Card>
 
+        {/* Featured Articles */}
+        <Card title="● Featured Articles (หน้าแรก)">
+          <FeaturedPicker
+            label="บทความ"
+            config={doc.featured_articles}
+            on={(field, val) => setDoc(d => ({ ...d, featured_articles: { ...d.featured_articles, [field]: val } }))}
+            pool={articlesPool}
+            getId={(a) => a.slug}
+            getTitle={(a) => a.title}
+            getSubtitle={(a) => `${a.category || '-'} · ${a.read_min || 5} min`}
+            prefix="art"
+          />
+        </Card>
+
+        {/* Featured Brands */}
+        <Card title="● Featured Brands (หน้าแรก)">
+          <FeaturedPicker
+            label="แบรนด์"
+            config={doc.featured_brands}
+            on={(field, val) => setDoc(d => ({ ...d, featured_brands: { ...d.featured_brands, [field]: val } }))}
+            pool={brandsPool}
+            getId={(s) => s.id}
+            getTitle={(s) => s.brand_name || s.name || s.title || '(untitled)'}
+            getSubtitle={(s) => `${s.category || '-'} · n=${s.response_count || 0}`}
+            prefix="br"
+          />
+        </Card>
+
         {/* About Band */}
         <Card title="● About Band (dark)">
           <SectionEditor data={doc.about_band} on={(f, v) => updateSection('about_band', f, v)} prefix="ab"/>
@@ -285,6 +328,102 @@ const CmsLandingPage = () => {
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+const FeaturedPicker = ({ label, config, on, pool, getId, getTitle, getSubtitle, prefix }) => {
+  const cfg = config || { mode: 'auto', count: 4, ids: [] };
+  const toggleId = (id) => {
+    const ids = cfg.ids || [];
+    on('ids', ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+  };
+  const moveId = (i, dir) => {
+    const ids = [...(cfg.ids || [])];
+    const j = i + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    on('ids', ids);
+  };
+
+  return (
+    <div className="space-y-3" data-testid={`featured-${prefix}`}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-xs font-mono uppercase tracking-wider mb-1">Mode</label>
+          <select value={cfg.mode || 'auto'} onChange={e => on('mode', e.target.value)}
+                  data-testid={`featured-${prefix}-mode`}
+                  className="w-full border border-neutral-300 rounded px-3 py-1.5 text-sm">
+            <option value="auto">Auto (ล่าสุด/popular)</option>
+            <option value="random">Random (สุ่มจาก pool)</option>
+            <option value="fixed">Fixed (admin เลือกเอง)</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-mono uppercase tracking-wider mb-1">จำนวนที่จะแสดง</label>
+          <input type="number" value={cfg.count || 4}
+                 onChange={e => on('count', parseInt(e.target.value) || 4)}
+                 data-testid={`featured-${prefix}-count`}
+                 className="w-full border border-neutral-300 rounded px-3 py-1.5 text-sm"/>
+        </div>
+        <div className="flex items-end">
+          <div className="text-xs text-neutral-500">
+            {cfg.mode === 'auto' && `แสดง ${label} ${cfg.count || 4} ตัวล่าสุด/popular อัตโนมัติ`}
+            {cfg.mode === 'random' && `สุ่ม ${cfg.count || 4} ตัวจาก pool ${cfg.ids?.length ? `${cfg.ids.length} ที่เลือกไว้` : 'ทั้งหมด'}`}
+            {cfg.mode === 'fixed' && `แสดง ${label} ที่เลือก ${cfg.ids?.length || 0} ตัว ตามลำดับ (ไม่เกิน ${cfg.count || 4})`}
+          </div>
+        </div>
+      </div>
+
+      {/* Selected list (ordered, with reorder) */}
+      {(cfg.ids || []).length > 0 && (
+        <div className="border border-blue-200 rounded p-3 bg-blue-50/40">
+          <div className="text-xs font-mono uppercase mb-2 text-blue-700">
+            ที่เลือกไว้ ({cfg.ids.length}) — ลากลำดับด้วย ↑↓
+          </div>
+          <div className="space-y-1" data-testid={`featured-${prefix}-selected`}>
+            {(cfg.ids || []).map((id, i) => {
+              const item = pool.find(x => getId(x) === id);
+              return (
+                <div key={id}
+                     className="flex items-center gap-2 bg-white border border-neutral-200 rounded px-2 py-1.5">
+                  <span className="text-[10px] font-mono text-neutral-400 w-5">{String(i+1).padStart(2,'0')}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-serif truncate">{item ? getTitle(item) : `(missing: ${id})`}</div>
+                    <div className="text-[10px] text-neutral-500 truncate">{item ? getSubtitle(item) : id}</div>
+                  </div>
+                  <IconBtn onClick={() => moveId(i, -1)} disabled={i === 0} testid={`featured-${prefix}-up-${i}`}>↑</IconBtn>
+                  <IconBtn onClick={() => moveId(i, +1)} disabled={i === cfg.ids.length - 1} testid={`featured-${prefix}-down-${i}`}>↓</IconBtn>
+                  <IconBtn onClick={() => toggleId(id)} testid={`featured-${prefix}-remove-${i}`} danger>×</IconBtn>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Pool picker */}
+      <details className="border border-neutral-200 rounded">
+        <summary className="px-3 py-2 cursor-pointer text-xs font-mono uppercase hover:bg-neutral-50"
+                 data-testid={`featured-${prefix}-toggle-pool`}>
+          ▸ เลือก {label} ({pool.length} รายการ)
+        </summary>
+        <div className="max-h-72 overflow-auto border-t border-neutral-200">
+          {pool.map(item => {
+            const id = getId(item);
+            const picked = (cfg.ids || []).includes(id);
+            return (
+              <button key={id} onClick={() => toggleId(id)}
+                      data-testid={`featured-${prefix}-item-${id}`}
+                      className={`w-full text-left px-3 py-2 text-xs border-b border-neutral-100 hover:bg-neutral-50 ${picked ? 'bg-blue-50' : ''}`}>
+                <div className="font-serif text-sm">{getTitle(item)} {picked && <span className="text-blue-600">· ✓</span>}</div>
+                <div className="text-neutral-500">{getSubtitle(item)}</div>
+              </button>
+            );
+          })}
+          {pool.length === 0 && <div className="p-4 text-center text-neutral-400 text-xs">— ไม่มี {label} ใน pool —</div>}
+        </div>
+      </details>
     </div>
   );
 };

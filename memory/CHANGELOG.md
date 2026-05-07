@@ -1,6 +1,28 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — Featured Content Selector (Articles + Brands) 🎯
+- **User**: "ให้มีระบบเลือกได้ว่าจะเอา content ไหนขึ้นหน้าแรกบ้าง · บทความและแบรนด์ · อาจ random หรือ fix ได้"
+- **Backend** (`/app/backend/routes/cms.py`):
+  - `LandingDoc` ขยาย: `featured_articles` + `featured_brands` (each: `mode: 'auto'|'random'|'fixed'`, `count: int`, `ids: List[str]`)
+  - `DEFAULT_LANDING` seed: articles count=4 mode=auto, brands count=5 mode=auto
+  - `GET /cms/landing` backfills new fields for legacy docs
+- **Frontend Landing Manager** (`CmsLandingPage.jsx`):
+  - 2 ใหม่: `● FEATURED ARTICLES (หน้าแรก)` + `● FEATURED BRANDS (หน้าแรก)` cards
+  - **Mode selector**: Auto (ล่าสุด/popular) · Random · Fixed (admin เลือกเอง)
+  - **Count input**: จำนวนที่จะแสดง
+  - **Selected list**: chips with index `01..NN` + reorder ↑↓ + remove ×
+  - **Pool picker** (collapsed `<details>`): list ทั้งหมด, click toggle, ✓ marker
+  - Loads pool from `/cms/posts/public?type=article&limit=200` and `/brand-equity/showcase`
+- **HomePage logic** (`HomePage.jsx`):
+  - `applyFeatured()` helper applies mode:
+    - **fixed** → preserve admin order, drop missing
+    - **random** → shuffle (within fixed pool if any) → take N
+    - **auto** → sort by `autoSorter` (newest published_at for articles, response_count desc for brands) → take N
+  - Used for both Hero showcase (sortedBrands) and Knowledge Hub Featured Articles
+- **Tested**: Set articles to Fixed + pick 2 → Save → Homepage shows exactly 2 (not 4 default) → Reset → revert to auto → Homepage shows 4 newest. Lint clean.
+
+
 ## 2026-02-07 — Migration: hardcoded learnContent → CMS 🚚
 - **User**: "Migration script ย้าย hardcoded learnContent.js 10 บทความเข้า CMS (ลบ hardcoded ทิ้งหลัง verify)"
 - **Migration script** (`/app/scripts/migrate_learn_to_cms.mjs`):

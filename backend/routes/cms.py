@@ -134,12 +134,20 @@ class LandingSection(BaseModel):
     cta_path: Optional[str] = ""
 
 
+class FeaturedConfig(BaseModel):
+    mode: Literal["auto", "random", "fixed"] = "auto"
+    count: int = 4
+    ids: List[str] = []  # slugs for articles, study_ids for brands
+
+
 class LandingDoc(BaseModel):
     slides: List[LandingSlide]
     tools: List[LandingTool]
     knowledge_hub: LandingSection
     about_band: LandingSection
     rotation_ms: Optional[int] = 5500
+    featured_articles: Optional[FeaturedConfig] = None
+    featured_brands: Optional[FeaturedConfig] = None
 
 
 # Default landing content — mirrors current HomePage.jsx hardcoded values.
@@ -207,6 +215,8 @@ DEFAULT_LANDING: Dict[str, Any] = {
         "cta_label": "อ่านเรื่องเรา →",
         "cta_path": "/about/swu-marketing",
     },
+    "featured_articles": {"mode": "auto", "count": 4, "ids": []},
+    "featured_brands": {"mode": "auto", "count": 5, "ids": []},
 }
 
 
@@ -822,7 +832,14 @@ def get_cms_routes(db, get_current_user):
         """Public — HomePage uses this to render. No auth required."""
         await _seed_landing()
         doc = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
-        return doc or DEFAULT_LANDING
+        if not doc:
+            return DEFAULT_LANDING
+        # Backfill new fields for legacy docs created before this feature
+        if "featured_articles" not in doc:
+            doc["featured_articles"] = DEFAULT_LANDING["featured_articles"]
+        if "featured_brands" not in doc:
+            doc["featured_brands"] = DEFAULT_LANDING["featured_brands"]
+        return doc
 
     @cms_router.put("/landing")
     async def update_landing(data: LandingDoc, current_user=Depends(get_current_user)):
