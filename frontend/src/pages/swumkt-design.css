@@ -16,8 +16,13 @@
   --rule: #D1CCC2;
   --rule-strong: #1A1A1A;
 
-  --serif: 'IBM Plex Serif', 'Noto Serif Thai', 'Sarabun', Georgia, serif;
-  --sans: 'IBM Plex Sans Thai', 'IBM Plex Sans', 'Sarabun', system-ui, sans-serif;
+  /* NOTE (2026-02): Per user request, headline/body fonts are SWAPPED.
+     Headlines (h1/h2/.serif/.h-display) now render in IBM Plex Sans Thai for a
+     modern feel; long-form body uses IBM Plex Serif for editorial weight.
+     Variable names are kept (--serif / --sans) so existing classes still work,
+     but the values are intentionally inverted. */
+  --serif: 'IBM Plex Sans Thai', 'IBM Plex Sans', 'Sarabun', system-ui, sans-serif;
+  --sans: 'IBM Plex Serif', 'Noto Serif Thai', 'Sarabun', Georgia, serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
 
   --container: 1180px;
