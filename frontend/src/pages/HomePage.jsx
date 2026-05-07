@@ -5,6 +5,7 @@ import {
   Topbar, Footer, Eyebrow, BrandLogo, ScoreRing, gradientForBrand
 } from './swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
+import { getBrandHealthTier, getWeakestDimension } from '@/lib/brandHealthVerdict';
 import { SWU_LOGO_URL } from './brand-equity/be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -287,59 +288,92 @@ const HomePage = () => {
                       </div>
                     </div>
                   </div>
-                  {/* Score panel — Aaker 4 dimensions + Brand Equity Score */}
-                  {featured.scores && (
-                    <div data-testid="hero-featured-scores"
-                         style={{ borderTop: '1px solid rgba(26,26,26,0.08)',
-                                  paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {/* BES big number */}
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                                     gap: 12 }}>
-                        <span className="meta" style={{ fontSize: 9, color: 'var(--ink-3)' }}>
-                          BRAND EQUITY SCORE
-                        </span>
-                        <span className="serif" data-testid="featured-bes"
-                              style={{ fontSize: 36, fontWeight: 600, lineHeight: 1,
-                                        color: 'var(--logo-blue)', letterSpacing: '-0.02em' }}>
-                          {Number(featured.scores.overall || 0).toFixed(1)}
-                          <span style={{ fontSize: 14, color: 'var(--ink-3)', marginLeft: 4 }}>/100</span>
-                        </span>
-                      </div>
-                      {/* 4 dimension mini bars */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
-                                     gap: 8, fontSize: 10 }}>
-                        {[
-                          { k: 'awareness', label: 'Awareness', color: '#1B75BC' },
-                          { k: 'quality', label: 'Perceived Quality', color: '#F59E0B' },
-                          { k: 'identity', label: 'Identity vs Image', color: '#8B5CF6' },
-                          { k: 'loyalty', label: 'Loyalty', color: '#10B981' },
-                        ].map(d => {
-                          const v = Number(featured.scores[d.k] || 0);
-                          return (
-                            <div key={d.k} data-testid={`featured-score-${d.k}`}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between',
-                                              marginBottom: 3, alignItems: 'baseline' }}>
-                                <span style={{ fontFamily: 'var(--mono)', fontSize: 9,
-                                                color: 'var(--ink-2)', textTransform: 'uppercase',
-                                                letterSpacing: '0.06em' }}>
-                                  {d.label}
-                                </span>
-                                <span className="serif" style={{ fontSize: 14, fontWeight: 600,
-                                                                    color: d.color }}>
-                                  {v.toFixed(0)}
-                                </span>
-                              </div>
-                              <div style={{ height: 4, background: 'rgba(26,26,26,0.06)', borderRadius: 999 }}>
-                                <div style={{ width: `${Math.max(0, Math.min(100, v))}%`,
-                                                height: '100%', background: d.color,
-                                                borderRadius: 999, transition: 'width .8s ease' }}/>
-                              </div>
+                  {/* Score panel — Aaker 4 dimensions + Brand Equity Score + Health Verdict */}
+                  {featured.scores && (() => {
+                    const tier = getBrandHealthTier(featured.scores.overall);
+                    const weakest = getWeakestDimension(featured.scores);
+                    return (
+                      <div data-testid="hero-featured-scores"
+                           style={{ borderTop: '1px solid rgba(26,26,26,0.08)',
+                                    paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {/* BES + verdict pill */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start',
+                                       justifyContent: 'space-between', gap: 12 }}>
+                          <div>
+                            <div className="meta" style={{ fontSize: 9, color: 'var(--ink-3)' }}>
+                              BRAND EQUITY SCORE
                             </div>
-                          );
-                        })}
+                            <div className="serif" data-testid="featured-bes"
+                                  style={{ fontSize: 36, fontWeight: 600, lineHeight: 1,
+                                            color: tier.color, letterSpacing: '-0.02em', marginTop: 4 }}>
+                              {Number(featured.scores.overall || 0).toFixed(1)}
+                              <span style={{ fontSize: 14, color: 'var(--ink-3)', marginLeft: 4,
+                                              fontWeight: 400 }}>/100</span>
+                            </div>
+                          </div>
+                          {/* Verdict pill */}
+                          <div data-testid="featured-verdict"
+                               style={{ background: tier.bg, border: `1px solid ${tier.border}`,
+                                          borderRadius: 999, padding: '6px 12px',
+                                          textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontFamily: 'var(--mono)', fontSize: 9,
+                                            color: tier.color, textTransform: 'uppercase',
+                                            letterSpacing: '0.14em', fontWeight: 600 }}>
+                              ● {tier.label}
+                            </div>
+                            <div className="serif" style={{ fontSize: 14, color: tier.color,
+                                                                fontWeight: 600, marginTop: 1 }}>
+                              {tier.labelTh}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Tier note */}
+                        <div style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--ink-2)',
+                                       fontStyle: 'italic', paddingLeft: 1 }}>
+                          “{tier.note}”
+                          {weakest && Number(weakest.value) < 50 && (
+                            <span style={{ color: 'var(--ink-3)', fontStyle: 'normal',
+                                              marginLeft: 6 }}>
+                              · จุดที่ต้องดู: <strong style={{ color: 'var(--be-red)' }}>{weakest.labelTh}</strong>
+                            </span>
+                          )}
+                        </div>
+                        {/* 4 dimension mini bars */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+                                       gap: 8, fontSize: 10 }}>
+                          {[
+                            { k: 'awareness', label: 'Awareness', color: '#1B75BC' },
+                            { k: 'quality', label: 'Perceived Quality', color: '#F59E0B' },
+                            { k: 'identity', label: 'Identity vs Image', color: '#8B5CF6' },
+                            { k: 'loyalty', label: 'Loyalty', color: '#10B981' },
+                          ].map(d => {
+                            const v = Number(featured.scores[d.k] || 0);
+                            return (
+                              <div key={d.k} data-testid={`featured-score-${d.k}`}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between',
+                                                marginBottom: 3, alignItems: 'baseline' }}>
+                                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9,
+                                                    color: 'var(--ink-2)', textTransform: 'uppercase',
+                                                    letterSpacing: '0.06em' }}>
+                                    {d.label}
+                                  </span>
+                                  <span className="serif" style={{ fontSize: 14, fontWeight: 600,
+                                                                      color: d.color }}>
+                                    {v.toFixed(0)}
+                                  </span>
+                                </div>
+                                <div style={{ height: 4, background: 'rgba(26,26,26,0.06)', borderRadius: 999 }}>
+                                  <div style={{ width: `${Math.max(0, Math.min(100, v))}%`,
+                                                  height: '100%', background: d.color,
+                                                  borderRadius: 999, transition: 'width .8s ease' }}/>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                   {sideBrands.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {sideBrands.slice(0, 4).map((b) => (

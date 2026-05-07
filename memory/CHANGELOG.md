@@ -1,6 +1,26 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-07 — Brand Health Verdict Pill (At Watch / At Risk / Strong / Champion) 🚦
+- **User**: "มีค่าสรุปไหม เช่น At Watch · เฝ้าระวัง · ใส่เข้าไปให้น่าสนใจด้วย"
+- **New util** `/app/frontend/src/lib/brandHealthVerdict.js`:
+  - 5 tiers based on Brand Equity Score (0-100):
+    - **80-100** Champion · ผู้นำตลาด (blue) — "Top of mind, สร้าง defensive moat ได้"
+    - **65-79** Strong · แข็งแกร่ง (green) — "แบรนด์มี loyalty + identity ชัด"
+    - **50-64** Healthy · สุขภาพดี (cyan) — "มี base ดี · ต้องปั้น edge เพิ่ม"
+    - **35-49** At Watch · เฝ้าระวัง (amber) — "สัญญาณอ่อนใน 1-2 มิติ ต้องลงมือ"
+    - **0-34** At Risk · เสี่ยง (red) — "หลุดจากใจลูกค้าเร็ว · ต้อง reposition"
+  - `getBrandHealthTier(bes)` returns `{ label, labelTh, color, bg, border, note }`
+  - `getWeakestDimension(scores)` returns weakest of 4 dims for "watch this" callout
+- **HomePage Featured Card** ขยาย:
+  - BES ตัวเลขสีตาม tier (red/amber/cyan/green/blue) — ไม่ static blue อีกต่อไป
+  - **Verdict pill** ขวาบน: `● AT WATCH / เฝ้าระวัง` (background + border + 2 บรรทัด: EN tier + TH label)
+  - **Tier note** italic ใต้ — phrase สำหรับ marketer (`"สัญญาณอ่อนใน 1-2 มิติ ต้องลงมือ"`)
+  - หาก weakest dim < 50 → แสดง "จุดที่ต้องดู: **{ภาษาไทย}**" สีแดง
+  - 4 dimension bars (เดิม) ยังอยู่
+- **Tested**: TEST_UIBrand BES=0 → tier = At Risk → red pill rendered, note + weakest dim ("การรู้จัก") highlighted; lint clean
+
+
 ## 2026-02-07 — Featured Brand Scores on Hero Card 📊
 - **User**: "หน้าแรกของ brand featured card ให้ใส่ค่าผลลัพธ์ล่าสุดทั้ง 4 ค่าลงไปด้วย · Awareness · Perceived Quality · Identity vs Image · Loyalty + BRAND EQUITY SCORE · เพื่อสร้าง CTA"
 - **Backend** (`/app/backend/routes/brand_equity.py`):
