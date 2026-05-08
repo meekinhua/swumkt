@@ -106,16 +106,17 @@ const ShowcaseIndexPage = () => {
 
       <section style={{ background: '#FFFFFF', padding: '48px 0 88px' }}>
         <div className="swu-container" style={{ padding: '0 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16,
+          <div className="showcase-search-row" style={{ display: 'flex', alignItems: 'center', gap: 16,
                         background: 'var(--paper)', padding: '14px 18px',
-                        borderRadius: 999, marginBottom: 32 }}>
+                        borderRadius: 999, marginBottom: 32, flexWrap: 'wrap' }}>
             <span className="meta">🔍 Search</span>
             <input value={q} onChange={(e) => setQ(e.target.value)}
                    placeholder="ค้นหาแบรนด์ หมวด หรือคู่แข่ง…"
                    data-testid="showcase-search"
-                   style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent',
-                            fontFamily: 'var(--sans)', fontSize: 16, color: 'var(--ink)' }}/>
-            <span className="meta">{filtered.length} results</span>
+                   style={{ flex: '1 1 200px', minWidth: 0, border: 'none', outline: 'none',
+                            background: 'transparent', fontFamily: 'var(--sans)',
+                            fontSize: 16, color: 'var(--ink)' }}/>
+            <span className="meta" style={{ flexShrink: 0 }}>{filtered.length} results</span>
           </div>
           {loading ? (
             <div className="meta" style={{ padding: 60, textAlign: 'center' }}>Loading…</div>

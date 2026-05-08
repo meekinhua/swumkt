@@ -1,6 +1,27 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-08 — Showcase Index Mobile Responsive Fix 📱
+- **User**: "ในหน้า showcase ยังไม่เป็น responsive กับมือถือ แก้หน่อย"
+- **Root cause** (`BrandEquityShowcaseIndexPage.jsx`):
+  - Grid showcase ใช้ inline `gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'` แบบ fix 3 columns ทุก viewport — บน 390px ทำให้ card กว้างเพียง 103px → ตัวหนังสือบีบหลุด
+  - Search row (`display: flex` ไม่ wrap) — count badge "1 results" ถูกดันออกขอบ
+- **Fix**:
+  - **CSS** (`swumkt-design.css`): เพิ่ม `[data-testid="showcase-grid"]` เข้า media queries เดียวกันกับ home grids
+    - `@media (max-width: 900px)` → 2 cols
+    - `@media (max-width: 640px)` → 1 col + gap 12px
+  - **Frontend** (`BrandEquityShowcaseIndexPage.jsx`):
+    - Search row: `flex-wrap: wrap` + input `flex: '1 1 200px'` + count `flexShrink: 0` → wrap clean บน narrow
+    - Class `showcase-search-row` เผื่อใช้ในอนาคต
+- **Verified**:
+  - 360px (Android เล็ก): grid = 320px (1 col), bodyScrollW = docW ✅
+  - 390px (iPhone): grid = 350px (1 col) ✅
+  - 768px (Tablet): grid = `342px 342px` (2 cols) ✅
+  - Card showcase แสดง logo + Public badge + brand name + competitors + SHARE + View Report ครบเต็มกรอบ
+- หน้า Showcase Detail (`/showcase/{token}`) ที่แก้ centerpiece ในรอบก่อนยังทำงานปกติ
+
+
+
 ## 2026-02-08 — Brand Result Dashboard: Mobile Overflow Fix 📱
 - **User**: "ในหน้า brand result ยังมีปัญหาล้นจอในหลายส่วน เวลาใช้มือถือเข้า แก้ไขหน่อย"
 - **Root cause** (`/app/frontend/src/pages/brand-equity/BrandEquityDashboardPage.jsx` line 902):
