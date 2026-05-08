@@ -563,6 +563,11 @@ a { color: inherit; text-decoration: none; }
   .stat-strip__item { border-right: none !important; border-bottom: 1px solid var(--rule); }
   .stat-strip__item:last-child { border-bottom: none; }
   .tools-dark-grid { grid-template-columns: 1fr 1fr !important; }
+  /* Homepage bento grids — collapse to 2 cols on tablet */
+  [data-testid="home-tools-bento"],
+  [data-testid="home-articles-grid"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 @media (max-width: 640px) {
   .footer__cols { grid-template-columns: 1fr !important; }
@@ -570,6 +575,16 @@ a { color: inherit; text-decoration: none; }
   .topbar__nav a:not(.topbar__signin) { display: none; }
   .stat-strip__num { font-size: 40px; }
   .h-display { font-size: clamp(40px, 11vw, 64px) !important; }
+  /* Homepage bento grids — single column on phones */
+  [data-testid="home-tools-bento"],
+  [data-testid="home-articles-grid"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  /* Pad all section content so cards don't bleed to edges */
+  .swu-container { padding-left: 20px !important; padding-right: 20px !important; }
+  /* Knowledge Hub banner image — shrink height on phones */
+  .img-frame { height: auto !important; min-height: 220px; }
 }
 
 /* ============================================================
