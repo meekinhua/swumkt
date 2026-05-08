@@ -1,6 +1,25 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-08 — Filter UX: Empty Segment State Fix 🪄
+- **User**: "เห็นแต่ filter เวลา ไม่มีอย่างอื่น หรือว่าไม่มีข้อมูลก็ไม่รู้ ตรวจหน่อย"
+- **Root cause** (`BeFilterBar.jsx`):
+  - `segFields = Object.keys(segmentsAvailable)` → studies ที่ 0 responses ได้ key `age`/`gender` แต่ value เป็น `[]` → header "SEGMENTS" แสดง แต่ไม่มี chip ข้างใต้ ดูเหมือนหายไป
+  - Studies ที่ตั้ง `segments_to_capture: []` → `segments_available = {}` → SEGMENTS section หายเลย user งงว่ามีหรือไม่มี
+- **Fix** (`BeFilterBar.jsx`):
+  - `segFieldsWithData` filter เฉพาะ field ที่มีค่า ≥ 1
+  - SEGMENTS section แสดงเสมอ:
+    - ถ้ามี ≥1 ค่า → render chips ตามปกติ
+    - ถ้า 0 ค่า → render empty state card (dashed border, paper bg) อธิบายเหตุผล + วิธีแก้
+  - สำหรับ field ที่มีเพียง 1 ค่า → แสดง chip + hint "(มีเพียง 1 ค่า · เก็บข้อมูลเพิ่มเพื่อ filter)"
+- **CSS** (`brand-equity-styles.css`): `.be-filter-segments-empty` style — dashed border, paper bg, mono uppercase header
+- **Verified ผ่าน screenshot tool**:
+  - Mali (n=21, 3 fields × 5/3/5 vals) → 13 chips render ครบ ✅
+  - TEST_UIBrand (n=12, 1 val/field) → 2 chips + hint ✅
+  - SoloBrand (n=0) → empty state card "ยังไม่มี SEGMENT DATA ให้กรอง" ชัดเจน ✅
+
+
+
 ## 2026-02-08 — Brand Result: Filterable Analysis + Wave Compare + Y-axis Label Fix 📊
 **User**: "ใน result ส่วน Perceptual Map ที่แก้แกน X ก่อนหน้า ให้แก้แกน Y ด้วย เอาไปอยู่มุมซ้ายบน · และหาทางทำให้เลือก filter ข้อมูลในการวิเคราะห์ได้ด้วย โดยวิเคราะห์แยก ตามเวลา และตาม segment ของข้อมูลส่วนบุคคลของผู้ตอบ เพื่อในอนาคตสามารถทำ brand tracking health ได้ด้วย"
 

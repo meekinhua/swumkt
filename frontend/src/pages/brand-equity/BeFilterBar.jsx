@@ -24,7 +24,21 @@ export const BeFilterBar = ({
     return !!(value?.from || value?.to || Object.values(value?.segments || {}).some(v => (v || []).length));
   }, [value]);
 
-  const segFields = useMemo(() => Object.keys(segmentsAvailable || {}), [segmentsAvailable]);
+  // Only render fields that actually have ≥1 value collected from responses.
+  // Studies with 0 responses (or with `segments_to_capture: []`) get an empty
+  // state message instead of empty section headers.
+  const segFieldsWithData = useMemo(() => {
+    const out = [];
+    for (const [k, v] of Object.entries(segmentsAvailable || {})) {
+      if ((v || []).length > 0) out.push(k);
+    }
+    return out;
+  }, [segmentsAvailable]);
+
+  const totalSegmentValues = useMemo(
+    () => Object.values(segmentsAvailable || {}).reduce((s, v) => s + (v || []).length, 0),
+    [segmentsAvailable]
+  );
 
   const applyPreset = (days) => {
     if (!days) return onChange({ from: '', to: '', segments: value?.segments || {} });
@@ -108,7 +122,8 @@ export const BeFilterBar = ({
         <div className="be-filter-body">
           <WaveBlock label="WAVE A · Active" value={value} setRange={setRange}
                      applyPreset={applyPreset} isoToDateInput={isoToDateInput}
-                     segFields={segFields} segmentsAvailable={segmentsAvailable}
+                     segFields={segFieldsWithData} segmentsAvailable={segmentsAvailable}
+                     totalSegmentValues={totalSegmentValues}
                      toggleSeg={toggleSeg} testidPrefix="be-filter-a"/>
 
           <div className="be-filter-divider"/>
@@ -145,7 +160,8 @@ export const BeFilterBar = ({
                          });
                        }}
                        isoToDateInput={isoToDateInput}
-                       segFields={segFields} segmentsAvailable={segmentsAvailable}
+                       segFields={segFieldsWithData} segmentsAvailable={segmentsAvailable}
+                       totalSegmentValues={totalSegmentValues}
                        toggleSeg={(field, val) => {
                          const cur = (compareValue?.segments?.[field] || []);
                          const next = cur.includes(val) ? cur.filter(x => x !== val) : [...cur, val];
@@ -175,7 +191,8 @@ const SEGMENT_LABELS = {
 };
 
 const WaveBlock = ({ label, value, setRange, applyPreset, isoToDateInput,
-                    segFields, segmentsAvailable, toggleSeg, testidPrefix }) => (
+                    segFields, segmentsAvailable, totalSegmentValues = 0,
+                    toggleSeg, testidPrefix }) => (
   <div className="be-filter-wave" data-testid={testidPrefix}>
     <div className="be-mono be-tiny be-filter-wave-label">{label}</div>
 
@@ -203,10 +220,24 @@ const WaveBlock = ({ label, value, setRange, applyPreset, isoToDateInput,
       </div>
     </div>
 
-    {segFields.length > 0 && (
-      <div className="be-filter-section">
-        <div className="be-mono be-tiny be-muted">SEGMENTS · เลือกได้หลายค่า</div>
-        {segFields.map(field => {
+    <div className="be-filter-section">
+      <div className="be-mono be-tiny be-muted">SEGMENTS · เลือกได้หลายค่า</div>
+      {segFields.length === 0 ? (
+        <div className="be-filter-segments-empty"
+             data-testid={`${testidPrefix}-segments-empty`}>
+          {totalSegmentValues === 0 ? (
+            <>
+              <strong>ยังไม่มี segment data ให้กรอง</strong>
+              <p>ตอนนี้ยังไม่มี responses ที่มีข้อมูลส่วนบุคคล (อายุ / เพศ / ภูมิภาค ฯลฯ)
+                — เมื่อมีคนตอบและเลือก demographic แล้ว ตัวเลือกจะปรากฏที่นี่อัตโนมัติ
+                <br/>หรือถ้า study นี้ไม่ได้ตั้งค่าเก็บ segment ใน Wizard step 2 → กลับไปแก้ study เพื่อเปิด</p>
+            </>
+          ) : (
+            <strong>ไม่มี segment data ใหม่ในช่วงเวลานี้</strong>
+          )}
+        </div>
+      ) : (
+        segFields.map(field => {
           const opts = segmentsAvailable[field] || [];
           if (opts.length === 0) return null;
           const sel = (value?.segments?.[field] || []);
@@ -224,12 +255,17 @@ const WaveBlock = ({ label, value, setRange, applyPreset, isoToDateInput,
                     {opt}
                   </button>
                 ))}
+                {opts.length === 1 && (
+                  <span className="be-tiny be-muted" style={{ alignSelf: 'center', marginLeft: 4 }}>
+                    (มีเพียง 1 ค่า · เก็บข้อมูลเพิ่มเพื่อ filter)
+                  </span>
+                )}
               </div>
             </div>
           );
-        })}
-      </div>
-    )}
+        })
+      )}
+    </div>
   </div>
 );
 
