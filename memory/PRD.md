@@ -231,6 +231,17 @@ Admin-only Content Studio for publishing Articles, Insights, Case Stories powere
 - Override scoped via `[data-testid="home-tools-bento"]` and `[data-testid="home-articles-grid"]` in `swumkt-design.css` lines 557-588
 - Verified at 390px (single column) and 768px (2 columns)
 
+## Social Media Preview (Feb 2026 — VERIFIED)
+Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG tags invisible to them. Solution: SSR OG bridge.
+- Backend: `/app/backend/routes/share.py` (factory pattern, registered in server.py)
+  - `GET /api/share/showcase/{share_token}` → OG-rich HTML + meta-refresh
+  - `GET /api/share/learn/{slug}` → OG-rich HTML + meta-refresh
+  - `GET /api/share/og-image/learn/{slug}` → proxy for base64 data URI covers
+- Frontend share buttons (data-testid):
+  - `cms-article-share-top` / `cms-article-share-bottom` (Learn article)
+  - `showcase-card-share-{id}` (Showcase index per-card)
+  - Showcase Dashboard `Copy showcase URL` now uses bridge URL
+
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
 - Student: student1@swu.ac.th / student123

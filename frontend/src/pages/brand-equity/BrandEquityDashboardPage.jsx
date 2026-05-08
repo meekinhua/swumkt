@@ -169,8 +169,10 @@ const BrandEquityDashboardPage = () => {
   };
 
   const copyShowcaseLink = () => {
-    const url = `${window.location.origin}/showcase/${data.study.share_token}`;
-    copyToClipboard(url, { successMessage: 'คัดลอก showcase link แล้ว' });
+    // Use /api/share/... bridge so Facebook/LINE/Twitter previews show
+    // brand-specific OG title + image (bots don't run our React useDocumentMeta).
+    const url = `${window.location.origin}/api/share/showcase/${data.study.share_token}`;
+    copyToClipboard(url, { successMessage: 'คัดลอก showcase link พร้อม preview แล้ว' });
   };
 
   const toggleShowcase = async () => {

@@ -11865,6 +11865,13 @@ from routes.cms import get_cms_routes
 cms_routes = get_cms_routes(db, get_current_user)
 api_router.include_router(cms_routes)
 
+# ============ SHARE — OG / Social Media Preview Bridges ============
+from routes.share import get_share_routes
+from routes.brand_equity import _aggregate_responses as _be_aggregate_responses
+
+share_routes = get_share_routes(db, brand_aggregate_helper=_be_aggregate_responses)
+api_router.include_router(share_routes)
+
 app.include_router(api_router)
 
 app.add_middleware(

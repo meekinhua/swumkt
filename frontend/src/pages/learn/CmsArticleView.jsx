@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import { Topbar, Footer, Eyebrow } from '@/pages/swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -84,12 +85,36 @@ const CmsArticleView = () => {
 
       {/* Article header */}
       <section className="swu-container" style={{ padding: '40px 32px 56px', maxWidth: 920 }}>
-        <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap',
+                      alignItems: 'center' }}>
           <Eyebrow red>● {post.category || 'INSIGHTS'}</Eyebrow>
           <span className="meta">{post.read_min || 5} MIN READ</span>
           {post.published_at && (
             <span className="meta">PUBLISHED {String(post.published_at).slice(0, 10)}</span>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              const u = `${window.location.origin}/api/share/learn/${post.slug}`;
+              copyToClipboard(u, { successMessage: 'คัดลอกลิงก์บทความ พร้อม social preview แล้ว' });
+            }}
+            data-testid="cms-article-share-top"
+            className="meta"
+            style={{
+              marginLeft: 'auto', background: 'transparent', border: '1px solid var(--ink)',
+              borderRadius: 999, padding: '6px 14px', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--ink)',
+            }}
+            title="Copy share link with social preview"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            SHARE
+          </button>
         </div>
         <h1 className="h-article" style={{ fontSize: 'clamp(38px, 5.5vw, 60px)' }}>
           {post.title}
@@ -195,11 +220,33 @@ const CmsArticleView = () => {
         </section>
       )}
 
-      {/* Back to Learn */}
-      <section className="swu-container" style={{ padding: '0 32px 96px', maxWidth: 760 }}>
+      {/* Share + Back to Learn */}
+      <section className="swu-container" style={{ padding: '0 32px 96px', maxWidth: 760,
+                                                   display: 'flex', flexWrap: 'wrap',
+                                                   gap: 16, alignItems: 'center',
+                                                   justifyContent: 'space-between' }}>
         <Link to="/learn" className="btn-pill btn-pill--ghost" data-testid="cms-article-back">
           ← All Articles
         </Link>
+        <button
+          type="button"
+          onClick={() => {
+            const u = `${window.location.origin}/api/share/learn/${post.slug}`;
+            copyToClipboard(u, { successMessage: 'คัดลอกลิงก์บทความ พร้อม social preview แล้ว' });
+          }}
+          data-testid="cms-article-share-bottom"
+          className="btn-pill btn-pill--blue"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                   border: 'none' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          แชร์บทความนี้ →
+        </button>
       </section>
 
       <Footer/>

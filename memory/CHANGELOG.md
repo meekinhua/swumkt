@@ -1,6 +1,38 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-08 — Social Media Preview (OG Bridge) สำหรับ Showcase + Learn 📲
+- **User**: "เวลา share showcase url หรือ content learn ให้ทำ social media preview ที่ใส่ ทั้งหัวข้อ ที่เรียก CTA ได้ดี และ รูปภาพประกอบ เข้าไปด้วย เวลาแชร์ไปใน social media จะได้น่ากดมาอ่าน"
+- **Root cause**: React SPA ใช้ `useDocumentMeta` inject OG tags ฝั่ง client หลัง mount → Facebook/LINE/Twitter/WhatsApp/Slack bot ไม่ run JS → bot เห็นเฉพาะ default OG จาก `index.html` (โลโก้ทั่วไป + ข้อความเดียวกันทุกหน้า)
+- **Solution**: server-side rendered OG bridge endpoint
+  - **Backend** `/app/backend/routes/share.py` (ใหม่) — factory pattern register ใน `server.py`:
+    - `GET /api/share/showcase/{share_token}` → HTML พร้อม OG/Twitter tags + meta-refresh redirect ไป `/showcase/{token}`
+      - Title: `{Brand} · Brand Health Score {X}/100 — {Tier label} ({TH label})` (เช่น "TEST_UIBrand · Brand Health Score 0/100 — At Risk (เสี่ยง)")
+      - Description: tier note + 4 dimension scores + CTA "เปิดอ่านงานวิจัย Brand Equity ฉบับเต็ม"
+      - og:image: brand `logo_url` (URL only) → fallback SWUMKT logo (FB/LINE ตัด data: URI)
+      - Compute composite scores ผ่าน `_aggregate_responses` helper เมื่อ response_count ≥ 10
+    - `GET /api/share/learn/{slug}` → OG-rich HTML + meta-refresh redirect ไป `/learn/{slug}`
+      - Title: article title + " · SWU · Marketing Research"
+      - Description: excerpt (auto strip Markdown ถ้าไม่มี)
+      - og:image: cover_image URL → ถ้าเป็น base64 data URI → ผ่าน proxy `/api/share/og-image/learn/{slug}` (FB ไม่รับ data URI)
+    - `GET /api/share/og-image/learn/{slug}` → stream binary image bytes สำหรับ data URI cover_image
+    - 5 tier ของ Brand Health (Champion/Strong/Healthy/At Watch/At Risk) sync กับ frontend `brandHealthVerdict.js`
+    - HTML body เป็น mini editorial card (eyebrow + serif h1 + lede + dark pill CTA) สำหรับ humans ที่ JS ปิด
+  - **Frontend updates**:
+    - `BrandEquityDashboardPage.jsx` — `copyShowcaseLink` เปลี่ยนเป็น copy `<origin>/api/share/showcase/{token}`
+    - `BrandEquityShowcaseIndexPage.jsx` — เพิ่มปุ่ม `SHARE` icon + label ในการ์ด showcase แต่ละใบ (data-testid `showcase-card-share-{id}`) + import `copyToClipboard`
+    - `CmsArticleView.jsx` — เพิ่ม 2 ปุ่ม Share:
+      - Top-right ของ article header: pill outline + ไอคอน share (data-testid `cms-article-share-top`)
+      - Bottom band ข้าง "All Articles": blue pill "แชร์บทความนี้ →" (data-testid `cms-article-share-bottom`)
+- **Verified ผ่าน curl**:
+  - Facebookbot UA → ได้ OG title/description/image ครบ
+  - LineBot UA → ได้ Brand Health pill + scores + Thai CTA
+  - bad token/slug → 404
+  - existing `/api/brand-equity/showcase`, `/api/cms/posts/public`, `/api/cms/landing` → 200 (no regression)
+- **Frontend smoke test**: ปุ่ม Share top + bottom render บน `/learn/brand-equity` คลิกได้ปกติ
+
+
+
 ## 2026-02-08 — Mobile Responsive HomePage (VERIFIED) 📱
 - **User**: Tools + Knowledge Hub grids ถูกบีบบนมือถือเพราะ inline `gridTemplateColumns: 'repeat(4, 1fr)'`
 - **Fix** (`/app/frontend/src/pages/swumkt-design.css` lines 557-588):

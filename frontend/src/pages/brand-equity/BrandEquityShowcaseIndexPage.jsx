@@ -6,6 +6,7 @@ import {
 } from '@/pages/swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -160,9 +161,36 @@ const ShowcaseIndexPage = () => {
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between',
-                                alignItems: 'center', marginTop: 'auto' }}>
+                                alignItems: 'center', marginTop: 'auto', gap: 8 }}>
                     <span className="meta" style={{ color: 'var(--logo-blue)' }}>● Brand Equity</span>
-                    <span className="link-arrow link-arrow--red">View Report →</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const u = `${window.location.origin}/api/share/showcase/${b.share_token}`;
+                          copyToClipboard(u, { successMessage: `คัดลอกลิงก์ ${b.brand_name} แล้ว` });
+                        }}
+                        className="meta"
+                        data-testid={`showcase-card-share-${b.id}`}
+                        title="Copy share link with social preview"
+                        style={{
+                          background: 'transparent', border: 'none', cursor: 'pointer',
+                          color: 'var(--ink-2)', padding: '4px 6px', borderRadius: 6,
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                        }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                        </svg>
+                        SHARE
+                      </button>
+                      <span className="link-arrow link-arrow--red">View Report →</span>
+                    </div>
                   </div>
                 </Link>
               ))}
