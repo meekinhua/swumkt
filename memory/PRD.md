@@ -224,6 +224,13 @@ Admin-only Content Studio for publishing Articles, Insights, Case Stories powere
 - Soft delete + 30-day trash + restore + purge
 - Linked from `AdminSettings` ("Content Studio (CMS)" button)
 
+## Mobile Responsive (Feb 2026 — VERIFIED)
+- HomePage Tools/Knowledge Hub grids:
+  - `@media (max-width: 900px)` → 2 cols (tablet)
+  - `@media (max-width: 640px)` → 1 col (phone)
+- Override scoped via `[data-testid="home-tools-bento"]` and `[data-testid="home-articles-grid"]` in `swumkt-design.css` lines 557-588
+- Verified at 390px (single column) and 768px (2 columns)
+
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
 - Student: student1@swu.ac.th / student123

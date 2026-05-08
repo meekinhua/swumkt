@@ -1,6 +1,19 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-08 — Mobile Responsive HomePage (VERIFIED) 📱
+- **User**: Tools + Knowledge Hub grids ถูกบีบบนมือถือเพราะ inline `gridTemplateColumns: 'repeat(4, 1fr)'`
+- **Fix** (`/app/frontend/src/pages/swumkt-design.css` lines 557-588):
+  - `@media (max-width: 900px)` → `[data-testid="home-tools-bento"]` + `[data-testid="home-articles-grid"]` ใช้ `repeat(2, minmax(0, 1fr)) !important`
+  - `@media (max-width: 640px)` → ใช้ `1fr !important` + `gap: 12px`
+  - เพิ่ม `.swu-container` padding 20px และ `.img-frame` min-height 220px
+- **Verified via screenshot tool**:
+  - 390px viewport: tools_cols = `350px` (single), articles_cols = `350px` (single) ✅
+  - 768px viewport: tools_cols = `344px 344px` (2 cols), articles_cols = `344px 344px` (2 cols) ✅
+- Cards render full-width with title + description + CTA visible, ไม่บีบเนื้อหาแล้ว
+
+
+
 ## 2026-02-08 — Perceptual Map X-Axis Label Position Fix 📍
 - **User**: ส่งภาพ — "สบายผิว →" axis label ลอยอยู่กลางขวาในกล่อง chart, ขอย้ายลงมาใต้กล่อง (ล่างขวา)
 - **Bug** (`/app/frontend/src/pages/brand-equity/be-components.jsx` PerceptualMap component):
