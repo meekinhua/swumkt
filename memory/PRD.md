@@ -224,8 +224,18 @@ Admin-only Content Studio for publishing Articles, Insights, Case Stories powere
 - Soft delete + 30-day trash + restore + purge
 - Linked from `AdminSettings` ("Content Studio (CMS)" button)
 
+## Brand Health Filter & Tracking (Feb 2026 — NEW)
+- **Filter analysis** by time range + demographic segments (age/gender/region/usage_frequency) on both owner dashboard and public showcase
+- **Wave Compare** (owner only): side-by-side Wave A vs Wave B with delta indicators for BES + 4 Aaker dims — foundation for brand tracking health (compare quarters, segments, before/after)
+- **AI cache per filter**: unfiltered = `ai_cache.*`, filtered = `ai_cache_by_filter.<sig>` (SHA1 12-char); idempotency separate per signature
+- API contracts:
+  - `GET /studies/{id}/dashboard?from=&to=&segments=<JSON>` (owner)
+  - `GET /showcase/{token}?from=&to=&segments=<JSON>` (public)
+  - `POST /studies/{id}/compare` body `{wave_a, wave_b}` → `{wave_a, wave_b, deltas}`
+  - `POST /studies/{id}/ai-analyze?from=&to=&segments=` (per-filter AI)
+- Frontend component: `BeFilterBar.jsx` (sticky, presets 7D/30D/90D/ALL, segment chips, compare toggle)
+
 ## Mobile Responsive (Feb 2026 — VERIFIED)
-- HomePage Tools/Knowledge Hub grids:
   - `@media (max-width: 900px)` → 2 cols (tablet)
   - `@media (max-width: 640px)` → 1 col (phone)
 - Override scoped via `[data-testid="home-tools-bento"]` and `[data-testid="home-articles-grid"]` in `swumkt-design.css` lines 557-588

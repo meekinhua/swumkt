@@ -10,6 +10,7 @@ import {
   IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
   BrandLogo, SWU_LOGO_URL
 } from './be-components';
+import { BeFilterBar } from './BeFilterBar';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -86,16 +87,65 @@ const BrandEquityDashboardPage = () => {
   const [togglingShowcase, setTogglingShowcase] = useState(false);
   const pollRef = useRef(null);
 
+  // ---------- Filter state (time + segments + wave compare) ----------
+  // wave-A is the "active" filter applied to all stats/charts/AI.
+  const [filter, setFilter] = useState({ from: '', to: '', segments: {} });
+  const [compareFilter, setCompareFilter] = useState(null); // null = compare off
+  const [compareData, setCompareData] = useState(null);
+
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
-  useEffect(() => { load(); return () => clearInterval(pollRef.current); /* eslint-disable-next-line */ }, [studyId, shareToken]);
+  // Build query string from filter — empty values are skipped
+  const buildFilterQS = (f) => {
+    if (!f) return '';
+    const parts = [];
+    if (f.from) parts.push(`from=${encodeURIComponent(f.from)}`);
+    if (f.to)   parts.push(`to=${encodeURIComponent(f.to)}`);
+    const segs = Object.fromEntries(
+      Object.entries(f.segments || {}).filter(([, vs]) => (vs || []).length)
+    );
+    if (Object.keys(segs).length) {
+      parts.push(`segments=${encodeURIComponent(JSON.stringify(segs))}`);
+    }
+    return parts.length ? `?${parts.join('&')}` : '';
+  };
+
+  // Fetch dashboard data — refetches whenever the active filter changes
+  useEffect(() => {
+    load();
+    return () => clearInterval(pollRef.current);
+    /* eslint-disable-next-line */
+  }, [studyId, shareToken, filter.from, filter.to, JSON.stringify(filter.segments)]);
+
+  // Wave compare: fetch when compareFilter set (owner only)
+  useEffect(() => {
+    if (!compareFilter || isShowcase || !studyId) {
+      setCompareData(null);
+      return;
+    }
+    (async () => {
+      try {
+        const r = await axios.post(
+          `${API}/brand-equity/studies/${studyId}/compare`,
+          { wave_a: filter, wave_b: compareFilter },
+          authH,
+        );
+        setCompareData(r.data);
+      } catch (e) {
+        toast.error('โหลด wave comparison ไม่สำเร็จ');
+        setCompareData(null);
+      }
+    })();
+    /* eslint-disable-next-line */
+  }, [compareFilter, filter.from, filter.to, JSON.stringify(filter.segments)]);
 
   const load = async () => {
     setLoading(true);
     try {
+      const qs = buildFilterQS(filter);
       if (isShowcase) {
         // PUBLIC fetch — no auth header
-        const r = await axios.get(`${API}/brand-equity/showcase/${shareToken}`);
+        const r = await axios.get(`${API}/brand-equity/showcase/${shareToken}${qs}`);
         // Normalize the showcase payload to the same { study, aggregate, ai_cache, ready_for_dashboard }
         // shape the rest of this component already understands.
         const sd = r.data;
@@ -116,9 +166,13 @@ const BrandEquityDashboardPage = () => {
           aggregate: sd.aggregate,
           ai_cache: sd.ai_cache,
           ready_for_dashboard: sd.ready_for_dashboard,
+          responses_total: sd.responses_total,
+          responses_filtered: sd.responses_filtered,
+          segments_available: sd.segments_available,
+          filter: sd.filter,
         });
       } else {
-        const r = await axios.get(`${API}/brand-equity/studies/${studyId}/dashboard`, authH);
+        const r = await axios.get(`${API}/brand-equity/studies/${studyId}/dashboard${qs}`, authH);
         setData(r.data);
         if (r.data.ai_cache?.status === 'running' || r.data.ai_cache?.status === 'queued') {
           startPolling();
@@ -135,7 +189,8 @@ const BrandEquityDashboardPage = () => {
     setAiRunning(true);
     pollRef.current = setInterval(async () => {
       try {
-        const r = await axios.get(`${API}/brand-equity/studies/${studyId}/ai-status`, authH);
+        const qs = buildFilterQS(filter);
+        const r = await axios.get(`${API}/brand-equity/studies/${studyId}/ai-status${qs}`, authH);
         if (r.data.status === 'ready' || r.data.status === 'error' || r.data.status === 'no_data') {
           clearInterval(pollRef.current);
           setAiRunning(false);
@@ -147,8 +202,11 @@ const BrandEquityDashboardPage = () => {
 
   const runAI = async () => {
     try {
-      await axios.post(`${API}/brand-equity/studies/${studyId}/ai-analyze`, {}, authH);
-      toast.success('AI analysis queued');
+      const qs = buildFilterQS(filter);
+      await axios.post(`${API}/brand-equity/studies/${studyId}/ai-analyze${qs}`, {}, authH);
+      const sigNote = (filter.from || filter.to || Object.values(filter.segments || {}).some(v => v.length))
+        ? ' (สำหรับ filter นี้)' : '';
+      toast.success(`AI analysis queued${sigNote}`);
       startPolling();
     } catch (e) {
       toast.error('AI start ไม่สำเร็จ');
@@ -344,6 +402,23 @@ const BrandEquityDashboardPage = () => {
             </div>
           </div>
         </div>
+
+        {/* FILTER BAR — time + segments + wave compare (sticky) */}
+        <BeFilterBar
+          value={filter}
+          compareValue={compareFilter}
+          segmentsAvailable={data.segments_available || {}}
+          responsesTotal={data.responses_total ?? responseCount}
+          responsesFiltered={data.responses_filtered ?? responseCount}
+          onChange={setFilter}
+          onCompareChange={setCompareFilter}
+          isShowcase={isShowcase}
+        />
+
+        {/* WAVE COMPARE — side-by-side BES + 4 Aaker dims with delta */}
+        {compareData && !isShowcase && (
+          <WaveCompareCard data={compareData}/>
+        )}
 
         {/* NOT READY */}
         {!ready_for_dashboard && (
@@ -1368,3 +1443,63 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
 };
 
 export default BrandEquityDashboardPage;
+
+// ============ Wave Compare card ============
+// Renders 2 columns of headline metrics (BES + 4 Aaker dims) side-by-side
+// with a delta arrow + value between them. Used by owner dashboard for
+// brand-tracking-health comparisons (e.g. Q1 vs Q2, segment A vs segment B).
+const WaveCompareCard = ({ data }) => {
+  const { wave_a, wave_b, deltas } = data || {};
+  if (!wave_a || !wave_b) return null;
+
+  const rows = [
+    { key: 'overall',   label: 'BES',        thai: 'Brand Equity Score' },
+    { key: 'awareness', label: 'AWARENESS',  thai: 'การรู้จัก' },
+    { key: 'quality',   label: 'QUALITY',    thai: 'คุณภาพ' },
+    { key: 'identity',  label: 'IDENTITY',   thai: 'อัตลักษณ์' },
+    { key: 'loyalty',   label: 'LOYALTY',    thai: 'ความภักดี' },
+  ];
+
+  const fmt = (v) => (v == null ? '—' : (Number.isFinite(v) ? Math.round(v * 10) / 10 : '—'));
+  const fmtDelta = (d) => (d == null ? '—' : (d > 0 ? `+${d}` : `${d}`));
+
+  return (
+    <div className="be-wave-compare" data-testid="be-wave-compare">
+      <div className="be-wave-compare-col">
+        <h5>● WAVE A · ACTIVE</h5>
+        <div className="n">n = {wave_a.n}</div>
+        {rows.map(r => (
+          <div key={r.key} className="be-wave-compare-row">
+            <span className="label" title={r.thai}>{r.label}</span>
+            <span className="val">{fmt(wave_a.composite?.[r.key])}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 36 }}>
+        {rows.map(r => {
+          const d = deltas?.[r.key];
+          const dir = d == null ? 'flat' : (d > 0.1 ? 'up' : (d < -0.1 ? 'down' : 'flat'));
+          return (
+            <div key={r.key} className={`be-wave-compare-delta ${dir}`}
+                 data-testid={`be-wave-delta-${r.key}`}>
+              <span className="arrow">{dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'}</span>
+              <span className="be-mono be-tiny" style={{ fontWeight: 600 }}>{fmtDelta(d)}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="be-wave-compare-col">
+        <h5 style={{ color: 'var(--logo-blue)' }}>◆ WAVE B · COMPARE</h5>
+        <div className="n">n = {wave_b.n}</div>
+        {rows.map(r => (
+          <div key={r.key} className="be-wave-compare-row">
+            <span className="label" title={r.thai}>{r.label}</span>
+            <span className="val">{fmt(wave_b.composite?.[r.key])}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};

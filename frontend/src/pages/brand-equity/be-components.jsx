@@ -155,11 +155,12 @@ export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360,
             stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
       <line x1={pad} y1={pad + inner / 2} x2={size - pad} y2={pad + inner / 2}
             stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
-      {/* Axis labels with actual numeric ranges */}
+      {/* Axis labels — both placed OUTSIDE the chart box so they never overlap the grid:
+          X-axis at bottom-right, Y-axis at top-left (symmetric corners). */}
       <text x={size - pad} y={size - pad + 32} textAnchor="end" fontSize="10.5"
             fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
             style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>{xAxis} →</text>
-      <text x={pad + inner / 2 + 6} y={pad - 8} fontSize="10.5"
+      <text x={pad} y={pad - 18} textAnchor="start" fontSize="10.5"
             fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
             style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>↑ {yAxis}</text>
       {/* Axis range tickmarks (corners) */}

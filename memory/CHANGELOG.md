@@ -1,6 +1,47 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-08 — Brand Result: Filterable Analysis + Wave Compare + Y-axis Label Fix 📊
+**User**: "ใน result ส่วน Perceptual Map ที่แก้แกน X ก่อนหน้า ให้แก้แกน Y ด้วย เอาไปอยู่มุมซ้ายบน · และหาทางทำให้เลือก filter ข้อมูลในการวิเคราะห์ได้ด้วย โดยวิเคราะห์แยก ตามเวลา และตาม segment ของข้อมูลส่วนบุคคลของผู้ตอบ เพื่อในอนาคตสามารถทำ brand tracking health ได้ด้วย"
+
+### A. Y-axis label position (Perceptual Map)
+- **Before**: Y-axis label `↑ {yAxis}` อยู่ตำแหน่ง `(pad + inner/2 + 6, pad - 8)` — กลางบนใน chart, ทับ midline crosshair
+- **After**: ย้ายไป `(pad, pad - 18)` พร้อม `textAnchor="start"` → มุมซ้ายบนนอกกรอบ chart symmetric กับ X-axis ที่อยู่มุมขวาล่าง
+- File: `be-components.jsx` PerceptualMap component
+
+### B. Filter Analysis (Time + Segment)
+**Backend** (`/app/backend/routes/brand_equity.py`):
+- New helpers: `_parse_segments_param`, `_apply_response_filter`, `_segments_available`, `_filter_signature`, `_resolve_ai_cache`
+- `GET /studies/{id}/dashboard?from=&to=&segments=<JSON>` — filtered aggregate + `responses_total`/`responses_filtered`/`segments_available`/`filter.signature`
+- `GET /showcase/{token}` — same query params, public-facing filter (transparency mode)
+- `POST /studies/{id}/ai-analyze?from=&to=&segments=` — AI analysis scoped per filter signature
+- `GET /studies/{id}/ai-status?from=&to=&segments=` — status per signature
+- AI cache strategy: unfiltered = `ai_cache.*` (backward compat); filtered = `ai_cache_by_filter.<sig>` (12-char SHA1 hash); idempotency guard separate per signature
+
+### C. Wave Compare (Brand Tracking Health)
+- **Backend**: `POST /studies/{id}/compare` body `{wave_a: {from,to,segments}, wave_b: {...}}` returns `{wave_a, wave_b, deltas}` for BES + 4 Aaker dims
+- **Frontend**: Wave compare card — 2 columns × 5 metrics with delta arrows (▲ green / ▼ red / — flat)
+
+### D. Frontend Filter Bar
+- New component `BeFilterBar.jsx`:
+  - Sticky bar under topbar with summary "FILTER · ANALYSIS · X/Y responses · ● ACTIVE · ◆ WAVE COMPARE"
+  - Time presets: 7D/30D/90D/ALL + manual FROM/TO date inputs
+  - Segment chips per field (auto-derived from `segments_available`): age/gender/region/usage_frequency
+  - Compare Waves toggle reveals Wave B identical UI block (owner only — hidden on showcase)
+  - Reset button clears all filters
+  - AI hint banner when active filter on owner mode
+- All inputs have `data-testid` (`be-filter-a-preset-30d`, `be-filter-b-from`, `be-filter-a-seg-gender-F`, etc.)
+- Mobile responsive (sticky disabled, dates stack vertical)
+
+### Verified
+- Backend: `?from=2026-04-27` returns sig `a8316b2efa9d`, `?segments={"gender":["F"]}` returns sig `8c9a851d6e37`, all `signature: all`
+- Compare: A n=12 / B n=12 / deltas 0 (study TEST_UIBrand has all-0 scores) — structure works
+- Frontend showcase: Filter bar visible, expand → Wave A panel with presets + dates + chips (อายุ: 25-34, เพศ: F)
+- Frontend owner: Compare toggle shows Wave B block; selecting from-date triggers `/compare` API → renders side-by-side card
+- AI per-filter: `POST /ai-analyze?segments=...` returns `{status: "queued", signature: "8c9a851d6e37"}`
+
+
+
 ## 2026-02-08 — Showcase Index Mobile Responsive Fix 📱
 - **User**: "ในหน้า showcase ยังไม่เป็น responsive กับมือถือ แก้หน่อย"
 - **Root cause** (`BrandEquityShowcaseIndexPage.jsx`):

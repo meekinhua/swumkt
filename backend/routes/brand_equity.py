@@ -10,13 +10,14 @@ Aaker's 4-Dimension framework: Awareness, Perceived Quality, Brand Identity, Bra
 import os
 import uuid
 import json
+import hashlib
 import logging
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 from collections import Counter
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 
 brand_equity_router = APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
@@ -367,6 +368,94 @@ class ResponseSubmit(BaseModel):
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+# ============ FILTER HELPERS (time + segment) ============
+
+def _parse_segments_param(segments: Optional[str]) -> Dict[str, List[str]]:
+    """Parse `segments` query param (URL-encoded JSON) into {field: [values]}.
+    Returns empty dict on parse error / empty input."""
+    if not segments:
+        return {}
+    try:
+        raw = json.loads(segments)
+        if not isinstance(raw, dict):
+            return {}
+        return {
+            str(k): [str(v) for v in (vs or []) if v not in (None, "")]
+            for k, vs in raw.items()
+            if vs
+        }
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return {}
+
+
+def _apply_response_filter(
+    responses: List[dict],
+    from_iso: Optional[str] = None,
+    to_iso: Optional[str] = None,
+    segments: Optional[Dict[str, List[str]]] = None,
+) -> List[dict]:
+    """Filter a list of brand_responses by time + demographic segments.
+    `submitted_at` is ISO-8601 UTC string → lexicographic compare is valid.
+    Multiple segment fields combine AND; values within a field combine OR.
+    """
+    out = responses
+    if from_iso:
+        out = [r for r in out if (r.get("submitted_at") or "") >= from_iso]
+    if to_iso:
+        out = [r for r in out if (r.get("submitted_at") or "") <= to_iso]
+    if segments:
+        for field, allowed in segments.items():
+            if not allowed:
+                continue
+            allowed_set = set(allowed)
+            out = [
+                r for r in out
+                if str((r.get("demographics") or {}).get(field, "")) in allowed_set
+            ]
+    return out
+
+
+def _segments_available(responses: List[dict], capture: List[str]) -> Dict[str, List[str]]:
+    """Auto-derive distinct segment values from all responses for each captured field.
+    Sorted alphabetically per field. Used by frontend to build chip selectors."""
+    out: Dict[str, set] = {k: set() for k in (capture or [])}
+    for r in responses:
+        demo = r.get("demographics") or {}
+        for k in out.keys():
+            v = demo.get(k)
+            if v not in (None, ""):
+                out[k].add(str(v))
+    return {k: sorted(list(vs)) for k, vs in out.items()}
+
+
+def _filter_signature(
+    from_iso: Optional[str],
+    to_iso: Optional[str],
+    segments: Optional[Dict[str, List[str]]],
+) -> str:
+    """Stable short hash used as a key in `ai_cache_by_filter`.
+    Empty filter → constant 'all' so the unfiltered AI cache stays at the
+    canonical `ai_cache.*` path (backward compatible)."""
+    seg_norm: Dict[str, List[str]] = {
+        k: sorted(set(str(x) for x in (v or []))) for k, v in (segments or {}).items() if v
+    }
+    if not from_iso and not to_iso and not seg_norm:
+        return "all"
+    payload = json.dumps(
+        {"from": from_iso or "", "to": to_iso or "", "seg": seg_norm},
+        sort_keys=True, ensure_ascii=False,
+    )
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:12]
+
+
+def _resolve_ai_cache(study: dict, sig: str) -> dict:
+    """Return the AI cache for this filter signature. `all` reads top-level
+    `ai_cache`; other signatures read `ai_cache_by_filter.<sig>`."""
+    if sig == "all":
+        return study.get("ai_cache") or {}
+    return ((study.get("ai_cache_by_filter") or {}).get(sig)) or {}
 
 
 def _generate_questions_from_template(brand_setup: BrandSetup, identity: IdentitySetup) -> List[dict]:
@@ -1281,7 +1370,6 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     async def list_trashed_studies(current_user=Depends(get_current_user)):
         """Trashed studies (soft-deleted, restorable). Auto-purges items older than 30 days
         before listing. Honors the same admin-vs-owner scoping as the main list."""
-        from datetime import timedelta
         cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
 
         # Best-effort cleanup: hard-purge anything trashed > 30 days
@@ -1604,7 +1692,12 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         return {"showcases": out, "total": len(out)}
 
     @brand_equity_router.get("/showcase/{share_token}")
-    async def get_public_showcase(share_token: str):
+    async def get_public_showcase(
+        share_token: str,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None, description="JSON-encoded {field:[values]}"),
+    ):
         """Public — sanitized dashboard view of a study that the owner has marked as showcase.
         Returns aggregates + AI insights + brand info, but strips owner identity, raw responses,
         demographics breakdown, and any sensitive fields. Survey-taking is still possible via
@@ -1617,14 +1710,24 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(403, "This study is not published as a public showcase")
         # Need at least 10 responses before showcasing — same gate as the owner dashboard
         responses_count = await db.brand_responses.count_documents({"study_id": study["id"]})
-        responses = []
+        all_responses: List[dict] = []
         if responses_count >= 10:
-            cur = db.brand_responses.find({"study_id": study["id"]}, {"_id": 0})
-            responses = await cur.to_list(5000)
-        ai_cache = study.get("ai_cache", {}) or {}
-        agg = _aggregate_responses(study, responses,
-                                   normalized=ai_cache.get("normalized_by_question") or {}) \
-              if responses else {}
+            all_responses = await db.brand_responses.find(
+                {"study_id": study["id"]}, {"_id": 0}
+            ).to_list(5000)
+
+        seg_filter = _parse_segments_param(segments)
+        filtered_responses = _apply_response_filter(
+            all_responses, from_iso=from_iso, to_iso=to_iso, segments=seg_filter,
+        )
+        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        ai_cache_active = _resolve_ai_cache(study, sig)
+        normalized_active = ai_cache_active.get("normalized_by_question") or \
+                            (study.get("ai_cache") or {}).get("normalized_by_question") or {}
+
+        agg = _aggregate_responses(study, filtered_responses,
+                                   normalized=normalized_active) \
+              if filtered_responses else {}
 
         # Only logo asset is exposed (palette/design images are owner-internal)
         identity = study.get("identity") or {}
@@ -1639,10 +1742,12 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
         # Sanitize AI cache: keep only display-safe fields
         ai_safe = {
-            "themes_by_question": ai_cache.get("themes_by_question", {}),
-            "identity_image": ai_cache.get("identity_image", {}),
-            "master_insights": ai_cache.get("master_insights", []),
-            "normalized_by_question": ai_cache.get("normalized_by_question", {}),
+            "themes_by_question": ai_cache_active.get("themes_by_question", {}),
+            "identity_image": ai_cache_active.get("identity_image", {}),
+            "master_insights": ai_cache_active.get("master_insights", []),
+            "normalized_by_question": ai_cache_active.get("normalized_by_question", {}),
+            "status": ai_cache_active.get("status"),
+            "filter_signature": sig,
         }
 
         # Sanitize identity: include the brand-identity intent fields that the public
@@ -1673,11 +1778,20 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "estimated_minutes": max(5, len(study.get("questions") or []) // 4),
             "response_count": responses_count,
             "target_responses": study.get("target_responses", 100),
-            "ready_for_dashboard": responses_count >= 10,
+            "ready_for_dashboard": len(filtered_responses) >= 10,
             "aggregate": agg,
             "ai_cache": ai_safe,
             "created_at": study.get("created_at"),
             "updated_at": study.get("updated_at"),
+            "filter": {
+                "from": from_iso, "to": to_iso, "segments": seg_filter,
+                "signature": sig,
+            },
+            "responses_total": len(all_responses),
+            "responses_filtered": len(filtered_responses),
+            "segments_available": _segments_available(
+                all_responses, study.get("segments_to_capture") or []
+            ),
         }
 
     # ---- Responses (for owner) ----
@@ -1696,44 +1810,139 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     # ---- Dashboard / analysis ----
 
     @brand_equity_router.get("/studies/{study_id}/dashboard")
-    async def get_dashboard(study_id: str, current_user=Depends(get_current_user)):
+    async def get_dashboard(
+        study_id: str,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None, description="JSON-encoded {field:[values]}"),
+        current_user=Depends(get_current_user),
+    ):
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(404)
         if not _owns(current_user, study):
             raise HTTPException(403)
 
-        cur = db.brand_responses.find({"study_id": study_id}, {"_id": 0})
-        responses = await cur.to_list(5000)
+        all_responses = await db.brand_responses.find(
+            {"study_id": study_id}, {"_id": 0}
+        ).to_list(5000)
 
-        ai_cache = study.get("ai_cache", {})
-        normalized = ai_cache.get("normalized_by_question") or {}
-        agg = _aggregate_responses(study, responses, normalized=normalized)
+        seg_filter = _parse_segments_param(segments)
+        filtered = _apply_response_filter(
+            all_responses, from_iso=from_iso, to_iso=to_iso, segments=seg_filter,
+        )
+
+        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        ai_cache_active = _resolve_ai_cache(study, sig)
+        normalized = ai_cache_active.get("normalized_by_question") or \
+                     (study.get("ai_cache") or {}).get("normalized_by_question") or {}
+        agg = _aggregate_responses(study, filtered, normalized=normalized)
 
         return {
             "study": study,
             "aggregate": agg,
-            "ai_cache": ai_cache,
-            "ready_for_dashboard": len(responses) >= 10,
+            "ai_cache": ai_cache_active,
+            "ready_for_dashboard": len(filtered) >= 10,
+            "filter": {
+                "from": from_iso, "to": to_iso, "segments": seg_filter,
+                "signature": sig,
+            },
+            "responses_total": len(all_responses),
+            "responses_filtered": len(filtered),
+            "segments_available": _segments_available(
+                all_responses, study.get("segments_to_capture") or []
+            ),
         }
+
+    @brand_equity_router.post("/studies/{study_id}/compare")
+    async def compare_waves(
+        study_id: str,
+        body: Dict[str, Any],
+        current_user=Depends(get_current_user),
+    ):
+        """Wave comparison — body: { wave_a: {from, to, segments}, wave_b: {...} }
+        Returns BES + 4 Aaker scores + n for each wave + delta."""
+        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(404)
+        if not _owns(current_user, study):
+            raise HTTPException(403)
+
+        all_responses = await db.brand_responses.find(
+            {"study_id": study_id}, {"_id": 0}
+        ).to_list(5000)
+
+        normalized_all = (study.get("ai_cache") or {}).get("normalized_by_question") or {}
+
+        def _wave_summary(wave: Dict[str, Any]) -> Dict[str, Any]:
+            f_iso = (wave or {}).get("from")
+            t_iso = (wave or {}).get("to")
+            segs = (wave or {}).get("segments") or {}
+            if isinstance(segs, str):
+                segs = _parse_segments_param(segs)
+            filtered = _apply_response_filter(
+                all_responses, from_iso=f_iso, to_iso=t_iso, segments=segs,
+            )
+            agg = _aggregate_responses(study, filtered, normalized=normalized_all)
+            return {
+                "filter": {"from": f_iso, "to": t_iso, "segments": segs},
+                "n": len(filtered),
+                "composite": agg.get("composite") or {},
+            }
+
+        wave_a = _wave_summary(body.get("wave_a") or {})
+        wave_b = _wave_summary(body.get("wave_b") or {})
+
+        # Compute delta (b - a) for each shared dimension
+        deltas: Dict[str, Any] = {}
+        for k in set((wave_a["composite"] or {}).keys()) | set((wave_b["composite"] or {}).keys()):
+            a = wave_a["composite"].get(k)
+            b = wave_b["composite"].get(k)
+            if a is not None and b is not None:
+                deltas[k] = round(b - a, 1)
+            else:
+                deltas[k] = None
+
+        return {
+            "wave_a": wave_a,
+            "wave_b": wave_b,
+            "deltas": deltas,
+            "responses_total": len(all_responses),
+        }
+
 
     # ---- AI generation (background) ----
 
-    async def _run_ai_analysis(study_id: str):
-        """Background AI job: themes + identity-image + master insights."""
+    async def _run_ai_analysis(
+        study_id: str,
+        from_iso: Optional[str] = None,
+        to_iso: Optional[str] = None,
+        segments: Optional[Dict[str, List[str]]] = None,
+    ):
+        """Background AI job: themes + identity-image + master insights.
+        When filter params are provided, results are stored in
+        `ai_cache_by_filter.<sig>` instead of the top-level `ai_cache`."""
+        sig = _filter_signature(from_iso, to_iso, segments)
+        cache_path = "ai_cache" if sig == "all" else f"ai_cache_by_filter.{sig}"
         try:
             study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
             if not study:
                 return
-            cur = db.brand_responses.find({"study_id": study_id}, {"_id": 0})
-            responses = await cur.to_list(5000)
+            all_resp = await db.brand_responses.find(
+                {"study_id": study_id}, {"_id": 0}
+            ).to_list(5000)
+            responses = _apply_response_filter(
+                all_resp, from_iso=from_iso, to_iso=to_iso, segments=segments,
+            )
             if not responses:
                 await db.brand_studies.update_one({"id": study_id},
-                    {"$set": {"ai_cache.status": "no_data", "ai_cache.updated_at": _now_iso()}})
+                    {"$set": {f"{cache_path}.status": "no_data",
+                              f"{cache_path}.updated_at": _now_iso()}})
                 return
 
             await db.brand_studies.update_one({"id": study_id},
-                {"$set": {"ai_cache.status": "running", "ai_cache.updated_at": _now_iso()}})
+                {"$set": {f"{cache_path}.status": "running",
+                          f"{cache_path}.updated_at": _now_iso()}})
 
             # ---- Step 1: Normalize open-ended brand/concept responses ----
             normalized_by_q: Dict[str, dict] = {}
@@ -1797,53 +2006,84 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             # Master insights
             insights = await _ai_master_insights(study, agg)
 
+            cache_payload = {
+                "status": "ready",
+                "normalized_by_question": normalized_by_q,
+                "themes_by_question": themes_by_q,
+                "identity_image": identity_image,
+                "master_insights": insights,
+                "updated_at": _now_iso(),
+                "filter": {
+                    "from": from_iso, "to": to_iso, "segments": segments or {},
+                    "n": len(responses),
+                },
+            }
             await db.brand_studies.update_one({"id": study_id}, {
                 "$set": {
-                    "ai_cache": {
-                        "status": "ready",
-                        "normalized_by_question": normalized_by_q,
-                        "themes_by_question": themes_by_q,
-                        "identity_image": identity_image,
-                        "master_insights": insights,
-                        "updated_at": _now_iso(),
-                    },
+                    cache_path: cache_payload,
                     "updated_at": _now_iso(),
                 },
             })
-            logging.info(f"[BrandEquity] AI analysis done for {study_id}")
+            logging.info(f"[BrandEquity] AI analysis done for {study_id} (sig={sig}, n={len(responses)})")
         except Exception as e:
             logging.exception(f"[BrandEquity] AI analysis failed: {e}")
             await db.brand_studies.update_one({"id": study_id},
-                {"$set": {"ai_cache.status": "error", "ai_cache.error": str(e)}})
+                {"$set": {f"{cache_path}.status": "error", f"{cache_path}.error": str(e)}})
 
     @brand_equity_router.post("/studies/{study_id}/ai-analyze")
-    async def start_ai_analysis(study_id: str, bg: BackgroundTasks, current_user=Depends(get_current_user)):
+    async def start_ai_analysis(
+        study_id: str,
+        bg: BackgroundTasks,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
         study = await db.brand_studies.find_one({"id": study_id})
         if not study:
             raise HTTPException(404)
         if not _owns(current_user, study):
             raise HTTPException(403)
-        # Idempotency guard — refuse to enqueue another pipeline if one is already in-flight.
-        # Each pipeline can run 5-15 min and consume LLM bandwidth + memory; queueing duplicates
-        # caused the production overload reported by the user.
-        cur_status = (study.get("ai_cache") or {}).get("status")
+        seg_filter = _parse_segments_param(segments)
+        sig = _filter_signature(from_iso, to_iso, seg_filter)
+
+        # Idempotency guard — refuse to enqueue another pipeline if one is already in-flight
+        # FOR THIS FILTER SIGNATURE. Different filters can run in parallel.
+        cache_for_sig = _resolve_ai_cache(study, sig)
+        cur_status = cache_for_sig.get("status")
         if cur_status in ("queued", "running"):
-            return {"status": cur_status, "message": "AI analysis already in progress"}
+            return {"status": cur_status, "signature": sig,
+                    "message": "AI analysis already in progress for this filter"}
+
+        cache_path = "ai_cache" if sig == "all" else f"ai_cache_by_filter.{sig}"
         await db.brand_studies.update_one({"id": study_id},
-            {"$set": {"ai_cache.status": "queued", "ai_cache.updated_at": _now_iso()}})
-        bg.add_task(_run_ai_analysis, study_id)
-        return {"status": "queued"}
+            {"$set": {f"{cache_path}.status": "queued",
+                      f"{cache_path}.updated_at": _now_iso()}})
+        bg.add_task(_run_ai_analysis, study_id, from_iso, to_iso, seg_filter)
+        return {"status": "queued", "signature": sig}
 
     @brand_equity_router.get("/studies/{study_id}/ai-status")
-    async def ai_status(study_id: str, current_user=Depends(get_current_user)):
+    async def ai_status(
+        study_id: str,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
         study = await db.brand_studies.find_one(
             {"id": study_id},
-            {"_id": 0, "ai_cache": 1, "owner_id": 1, "owner_email": 1},
+            {"_id": 0, "ai_cache": 1, "ai_cache_by_filter": 1,
+             "owner_id": 1, "owner_email": 1},
         )
         if not study:
             raise HTTPException(404)
         if not _owns(current_user, study):
             raise HTTPException(403)
-        return study.get("ai_cache", {"status": "idle"})
+        seg_filter = _parse_segments_param(segments)
+        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        cache = _resolve_ai_cache(study, sig)
+        if not cache:
+            return {"status": "idle", "signature": sig}
+        return {**cache, "signature": sig}
 
     return brand_equity_router
