@@ -1,6 +1,16 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-08 — Perceptual Map X-Axis Label Position Fix 📍
+- **User**: ส่งภาพ — "สบายผิว →" axis label ลอยอยู่กลางขวาในกล่อง chart, ขอย้ายลงมาใต้กล่อง (ล่างขวา)
+- **Bug** (`/app/frontend/src/pages/brand-equity/be-components.jsx` PerceptualMap component):
+  - SVG text element สำหรับ xAxis label ใช้ `y={pad + inner / 2 - 6}` = ตำแหน่งกึ่งกลาง chart vertically (ทับ midline crosshair)
+- **Fix**: เปลี่ยน `y` เป็น `size - pad + 32` → อยู่ใต้กล่องชัดเจน 32px ใต้ chart bottom edge
+- เลื่อน midline note ขึ้นเล็กน้อย (y `size - pad + 28` → `size - pad + 18`) เพื่อให้ axis label มี gap 14px ไม่ทับ
+- Layout ใหม่ (top-down): chart box (56-304) → tickmarks (y=318) → midline note (y=322) → xAxis label (y=336)
+- Lint clean
+
+
 ## 2026-02-07 — Brand Health Verdict Pill (At Watch / At Risk / Strong / Champion) 🚦
 - **User**: "มีค่าสรุปไหม เช่น At Watch · เฝ้าระวัง · ใส่เข้าไปให้น่าสนใจด้วย"
 - **New util** `/app/frontend/src/lib/brandHealthVerdict.js`:
