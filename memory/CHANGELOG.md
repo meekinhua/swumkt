@@ -1,6 +1,24 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-08 — Brand Result Dashboard: Mobile Overflow Fix 📱
+- **User**: "ในหน้า brand result ยังมีปัญหาล้นจอในหลายส่วน เวลาใช้มือถือเข้า แก้ไขหน่อย"
+- **Root cause** (`/app/frontend/src/pages/brand-equity/BrandEquityDashboardPage.jsx` line 902):
+  - `SectionIdentity` component (centerpiece การ์ด `Identity vs Image`) ใช้ inline style `margin: '0 -32px'` เพื่อให้เอฟเฟกต์ full-bleed บน desktop
+  - บนมือถือ: parent `.be-page` padding=16px ทำให้ content area 358px แต่ `-32px×2` ดันออก 64px → section width = 422px ล้น viewport 32px ทุกหน้าจอ < 1100px
+  - `bodyScrollW=406` (ที่ 390px viewport) → page scroll horizontally
+- **Fix**:
+  - แทนที่ inline style → CSS class `be-section-centerpiece`
+  - ใน `brand-equity-styles.css`:
+    - Desktop default: เก็บ `margin: 0 -32px` + paper bg + border (เอฟเฟกต์เดิม)
+    - `@media (max-width: 1100px)`: `margin: 0` (เลิก bleed เมื่อจอแคบเพราะ dash-rail/ai พับเป็น 1 column แล้ว)
+    - `@media (max-width: 700px)`: ลด padding `40px 24px` → `24px 14px` ให้ฟิตจอเล็ก
+- **Verified**:
+  - 390px viewport: bodyScrollW = 390 (เท่ากับ docW), ไม่มี element ล้น ✅
+  - 360px viewport (mobile แคบ): bodyScrollW = 360, section identity render ครบใน viewport พร้อม palette swatches + visual keywords + AI summary ✅
+
+
+
 ## 2026-02-08 — Social Media Preview (OG Bridge) สำหรับ Showcase + Learn 📲
 - **User**: "เวลา share showcase url หรือ content learn ให้ทำ social media preview ที่ใส่ ทั้งหัวข้อ ที่เรียก CTA ได้ดี และ รูปภาพประกอบ เข้าไปด้วย เวลาแชร์ไปใน social media จะได้น่ากดมาอ่าน"
 - **Root cause**: React SPA ใช้ `useDocumentMeta` inject OG tags ฝั่ง client หลัง mount → Facebook/LINE/Twitter/WhatsApp/Slack bot ไม่ run JS → bot เห็นเฉพาะ default OG จาก `index.html` (โลโก้ทั่วไป + ข้อความเดียวกันทุกหน้า)

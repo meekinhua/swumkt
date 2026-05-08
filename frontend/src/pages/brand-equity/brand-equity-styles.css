@@ -657,6 +657,21 @@
   .be-wiz-side { position: static; }
   .be-hero-row2 { grid-template-columns: 1fr; }
 }
+
+/* Centerpiece (Identity vs Image) — full-bleed paper card on desktop,
+   collapses safely inside parent on mobile so it doesn't escape the viewport. */
+.be-root .be-section-centerpiece {
+  background: #FBF7F1;
+  padding: 40px 24px;
+  margin: 0 -32px;
+  border: 1px solid var(--rule-strong);
+}
+@media (max-width: 1100px) {
+  .be-root .be-section-centerpiece { margin: 0; }
+}
+@media (max-width: 700px) {
+  .be-root .be-section-centerpiece { padding: 24px 14px; }
+}
 @media (max-width: 900px) {
   .be-grid-2 { grid-template-columns: 1fr; }
   .be-grid-2-rail { grid-template-columns: 1fr; }

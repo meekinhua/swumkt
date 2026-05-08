@@ -899,8 +899,7 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
   }));
 
   return (
-    <div className="be-section" style={{ background: '#FBF7F1', padding: '40px 24px', margin: '0 -32px',
-                                           border: '1px solid var(--rule-strong)' }}
+    <div className="be-section be-section-centerpiece"
          data-testid="be-section-identity">
       <div className="be-section-head">
         <div>
