@@ -22,6 +22,12 @@ from pydantic import BaseModel, Field
 
 brand_equity_router = APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
 
+
+class BrandThesisExportRequest(BaseModel):
+    """Request body for AI thesis generation (chapters 1-5 + extra prompt)."""
+    chapters: List[int] = Field(default_factory=lambda: [3, 4, 5])
+    extra_prompt: str = ""
+
 DIMENSIONS = ["awareness", "quality", "identity", "loyalty"]
 DIM_LABELS = {
     "awareness": "Brand Awareness",
@@ -2157,6 +2163,275 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
+
+    # ========================================================================
+    # AI-POWERED THESIS EXPORT (chapters 1-5, Gemini-generated, async job)
+    # ========================================================================
+    # Mirrors the Conjoint thesis export workflow:
+    #   POST  /studies/{id}/thesis-ai-start   { chapters, extra_prompt, ?from, ?to, ?segments }
+    #   GET   /studies/{id}/thesis-ai-status/{job_id}
+    #   GET   /studies/{id}/thesis-ai-download?job_id=...
+    # Cache key combines study_id + chapters + extra_prompt hash + filter sig
+    # so identical requests reuse the AI markdown without re-billing.
+
+    async def _run_be_thesis_ai_generation(
+        study_id: str, job_id: str, cache_key: str,
+        chapters: List[int], extra_prompt: str,
+        from_iso: Optional[str], to_iso: Optional[str],
+        segments: Optional[Dict[str, List[str]]],
+    ):
+        """Background task: build per-chapter prompts → call Gemini → cache markdown."""
+        from .be_thesis_ai import build_be_thesis_prompts, references_section_md
+        try:
+            study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+            if not study:
+                await db.brand_thesis_jobs.update_one(
+                    {"job_id": job_id},
+                    {"$set": {"status": "failed", "error": "Study not found"}},
+                )
+                return
+
+            all_resp = await db.brand_responses.find(
+                {"study_id": study_id}, {"_id": 0}
+            ).to_list(5000)
+            filtered = _apply_response_filter(
+                all_resp, from_iso=from_iso, to_iso=to_iso, segments=segments,
+            )
+
+            sig = _filter_signature(from_iso, to_iso, segments)
+            ai_cache_active = _resolve_ai_cache(study, sig)
+            normalized = ai_cache_active.get("normalized_by_question") or \
+                         (study.get("ai_cache") or {}).get("normalized_by_question") or {}
+            agg = _aggregate_responses(study, filtered, normalized=normalized)
+
+            # Inject the active filter's AI cache so master_insights / identity-image
+            # reflect the slice the user is exporting
+            study_for_ai = {**study, "ai_cache": ai_cache_active or study.get("ai_cache") or {}}
+
+            sys_msg, prompts = build_be_thesis_prompts(
+                study=study_for_ai, aggregate=agg,
+                n_total=len(all_resp), n_filtered=len(filtered),
+                chapters=sorted(chapters), extra_prompt=extra_prompt,
+            )
+
+            # Lazy import — server.py owns the Gemini retry helper
+            from server import _call_gemini_with_retry
+
+            chapter_outputs: Dict[int, str] = {}
+            for ch in sorted(prompts.keys()):
+                logging.info(f"[BE-Thesis] job {job_id} generating ch{ch}")
+                # Mark progress in job doc so UI can show "กำลังสร้างบทที่ X"
+                await db.brand_thesis_jobs.update_one(
+                    {"job_id": job_id},
+                    {"$set": {"progress": f"chapter_{ch}",
+                              "updated_at": _now_iso()}},
+                )
+                content = await _call_gemini_with_retry(
+                    system_msg=sys_msg,
+                    prompt=prompts[ch],
+                    session_id=f"be-thesis-ch{ch}-{study_id}-{job_id}",
+                )
+                chapter_outputs[ch] = content or ""
+
+            # Stitch markdown — chapter break = ---
+            # (server's `_create_thesis_docx` treats `---` as page-break)
+            ai_md = "\n\n---\n\n".join(
+                chapter_outputs[ch] for ch in sorted(chapter_outputs.keys())
+            )
+            # Always append References at the end
+            ai_md += "\n\n---\n\n" + references_section_md()
+
+            # Cache and mark ready
+            await db.brand_thesis_cache.update_one(
+                {"cache_key": cache_key, "study_id": study_id},
+                {"$set": {
+                    "study_id": study_id,
+                    "cache_key": cache_key,
+                    "ai_content": ai_md,
+                    "chapters": sorted(chapters),
+                    "n_filtered": len(filtered),
+                    "n_total": len(all_resp),
+                    "created_at": _now_iso(),
+                }},
+                upsert=True,
+            )
+            await db.brand_thesis_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {"status": "ready",
+                          "cache_key": cache_key,
+                          "updated_at": _now_iso()}},
+            )
+            logging.info(f"[BE-Thesis] job {job_id} ready (chapters={chapters})")
+        except asyncio.TimeoutError:
+            await db.brand_thesis_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {"status": "failed",
+                          "error": "AI ใช้เวลานานเกินไป กรุณาลองใหม่"}},
+            )
+        except Exception as e:
+            logging.exception(f"[BE-Thesis] job {job_id} failed: {e}")
+            await db.brand_thesis_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {"status": "failed", "error": str(e)[:300]}},
+            )
+
+    @brand_equity_router.post("/studies/{study_id}/thesis-ai-start")
+    async def thesis_ai_start(
+        study_id: str,
+        request: BrandThesisExportRequest,
+        background_tasks: BackgroundTasks,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
+        """Kick off a Gemini-powered thesis generation. Returns job_id for polling."""
+        from server import UserRole
+        eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}
+        if not current_user or current_user.role not in eligible_roles:
+            raise HTTPException(403, "Thesis export not available for your role.")
+
+        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if not _owns(current_user, study):
+            raise HTTPException(403, "You do not own this study.")
+
+        chapters = sorted({int(c) for c in (request.chapters or []) if 1 <= int(c) <= 5})
+        if not chapters:
+            raise HTTPException(400, "เลือกบทที่ต้องการอย่างน้อย 1 บท")
+
+        # Need ≥ 10 responses (after filter) for chapters that cite real numbers (3,4,5).
+        # Chapters 1-2 only are allowed even with 0 responses (they're drafts).
+        seg_filter = _parse_segments_param(segments)
+        n_filtered = len(_apply_response_filter(
+            await db.brand_responses.find(
+                {"study_id": study_id}, {"_id": 0}
+            ).to_list(5000),
+            from_iso=from_iso, to_iso=to_iso, segments=seg_filter,
+        ))
+        if any(c >= 3 for c in chapters) and n_filtered < 10:
+            raise HTTPException(
+                400,
+                f"ต้องมีอย่างน้อย 10 responses สำหรับบทที่ 3/4/5 — ปัจจุบัน {n_filtered}",
+            )
+
+        # Build cache key from inputs (so identical requests reuse output)
+        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        ep_hash = ""
+        if request.extra_prompt and request.extra_prompt.strip():
+            ep_hash = hashlib.md5(request.extra_prompt.strip().encode()).hexdigest()[:8]
+        ch_key = "_".join(str(c) for c in chapters)
+        cache_key = f"be_thesis_{study_id}_{ch_key}_{sig}" + (f"_ep{ep_hash}" if ep_hash else "")
+
+        # Cache hit — return ready immediately
+        cached = await db.brand_thesis_cache.find_one(
+            {"cache_key": cache_key, "study_id": study_id}, {"_id": 0},
+        )
+        if cached and cached.get("ai_content"):
+            return {"status": "ready", "job_id": cache_key,
+                    "cache_key": cache_key, "cached": True}
+
+        job_id = f"be_thesis_{study_id[:8]}_{uuid.uuid4().hex[:8]}"
+        await db.brand_thesis_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {
+                "job_id": job_id,
+                "study_id": study_id,
+                "cache_key": cache_key,
+                "chapters": chapters,
+                "status": "processing",
+                "progress": "queued",
+                "created_at": _now_iso(),
+            }},
+            upsert=True,
+        )
+
+        background_tasks.add_task(
+            _run_be_thesis_ai_generation,
+            study_id, job_id, cache_key,
+            chapters, request.extra_prompt or "",
+            from_iso, to_iso, seg_filter,
+        )
+        return {"status": "processing", "job_id": job_id, "cache_key": cache_key}
+
+    @brand_equity_router.get("/studies/{study_id}/thesis-ai-status/{job_id}")
+    async def thesis_ai_status(
+        study_id: str, job_id: str,
+        current_user=Depends(get_current_user),
+    ):
+        """Poll job status. Returns status + progress (chapter_X) + error."""
+        from server import UserRole
+        if current_user.role not in {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}:
+            raise HTTPException(403)
+
+        # If job_id IS a cache_key (cache hit path), short-circuit to ready
+        if job_id.startswith("be_thesis_") and "_" in job_id and job_id.count("_") >= 4:
+            cached = await db.brand_thesis_cache.find_one(
+                {"cache_key": job_id, "study_id": study_id}, {"_id": 0},
+            )
+            if cached:
+                return {"status": "ready", "cache_key": job_id, "cached": True}
+        job = await db.brand_thesis_jobs.find_one({"job_id": job_id}, {"_id": 0})
+        if not job:
+            return {"status": "not_found"}
+        return {
+            "status": job.get("status", "unknown"),
+            "progress": job.get("progress"),
+            "cache_key": job.get("cache_key"),
+            "error": job.get("error"),
+        }
+
+    @brand_equity_router.get("/studies/{study_id}/thesis-ai-download")
+    async def thesis_ai_download(
+        study_id: str,
+        cache_key: str = Query(...),
+        current_user=Depends(get_current_user),
+    ):
+        """Download the generated DOCX (renders cached markdown via shared docx engine)."""
+        from fastapi.responses import Response
+        from server import UserRole, _create_thesis_docx
+        if current_user.role not in {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}:
+            raise HTTPException(403)
+
+        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(404)
+        if not _owns(current_user, study):
+            raise HTTPException(403)
+
+        cached = await db.brand_thesis_cache.find_one(
+            {"cache_key": cache_key, "study_id": study_id}, {"_id": 0},
+        )
+        if not cached or not cached.get("ai_content"):
+            raise HTTPException(404, "ยังไม่มีเนื้อหาวิทยานิพนธ์ — กรุณาสร้างก่อน")
+
+        ai_md = cached["ai_content"]
+        respondent_count = cached.get("n_filtered", 0)
+        title = study.get("brand", {}).get("name") or "Brand"
+
+        # CPU-heavy DOCX render in worker thread
+        docx_bytes = await asyncio.to_thread(
+            _create_thesis_docx, title, respondent_count, ai_md,
+        )
+
+        brand_safe = "".join(c if c.isalnum() else "_" for c in title) or "brand"
+        ch_label = ""
+        if "thesis" in cache_key:
+            # cache_key looks like be_thesis_{studyid}_{ch1_ch2_..}_{sig}[..]
+            parts = cache_key.split("_")
+            # find the chunk between studyid and sig — chapters are digits joined by _
+            digits = [p for p in parts if p.isdigit() and len(p) == 1]
+            if digits:
+                ch_label = "_Ch" + "Ch".join(digits)
+        filename = f"BE_Thesis_{brand_safe}{ch_label}.docx"
+
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
     @brand_equity_router.get("/studies/{study_id}/dashboard")
     async def get_dashboard(
         study_id: str,

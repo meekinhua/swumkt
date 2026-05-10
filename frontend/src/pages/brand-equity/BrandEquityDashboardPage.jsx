@@ -296,25 +296,89 @@ const BrandEquityDashboardPage = () => {
     /* eslint-disable-next-line */
   }, [studyId, isShowcase]);
 
-  const handleExportThesis = async () => {
+  // ---------- AI-powered thesis (chapters 1-5 + extra prompt + Gemini) ----------
+  const [thesisChapters, setThesisChapters] = useState([3, 4, 5]);
+  const [thesisExtraPrompt, setThesisExtraPrompt] = useState('');
+  const [thesisProgress, setThesisProgress] = useState('idle');
+  const [thesisError, setThesisError] = useState(null);
+  const thesisPollRef = useRef(null);
+
+  // Cleanup poll on unmount
+  useEffect(() => () => { if (thesisPollRef.current) clearInterval(thesisPollRef.current); }, []);
+
+  const downloadThesisDocx = async (cacheKey) => {
+    setThesisProgress('downloading');
     try {
-      toast.info('กำลังสร้างรายงานวิทยานิพนธ์ ...');
-      const qs = buildFilterQS(filter);
-      const r = await axios.post(
-        `${API}/brand-equity/studies/${studyId}/thesis-export${qs}`,
-        {}, { ...authH, responseType: 'blob' }
+      const r = await axios.get(
+        `${API}/brand-equity/studies/${studyId}/thesis-ai-download?cache_key=${encodeURIComponent(cacheKey)}`,
+        { ...authH, responseType: 'blob' },
       );
       const url = window.URL.createObjectURL(new Blob([r.data]));
       const a = document.createElement('a');
       a.href = url;
-      a.download = `thesis-${(data?.study?.brand?.name || 'brand').replace(/\s+/g, '_')}.docx`;
+      const brandSafe = (data?.study?.brand?.name || 'brand').replace(/\s+/g, '_');
+      const chSuffix = thesisChapters.map(c => `Ch${c}`).join('_');
+      a.download = `BE_Thesis_${brandSafe}_${chSuffix}.docx`;
       document.body.appendChild(a); a.click();
       window.URL.revokeObjectURL(url); a.remove();
-      toast.success('Export สำเร็จ');
+      toast.success('ดาวน์โหลดเรียบร้อย');
     } catch (e) {
-      toast.error(e?.response?.status === 403
-        ? 'ฟีเจอร์ยังไม่เปิดใช้งานสำหรับ role ของคุณ'
-        : 'Export ไม่สำเร็จ');
+      setThesisError('ดาวน์โหลดไม่สำเร็จ');
+      toast.error('ดาวน์โหลดไม่สำเร็จ');
+    } finally {
+      setThesisProgress('idle');
+    }
+  };
+
+  const handleStartThesisAI = async () => {
+    if (!thesisChapters || thesisChapters.length === 0) {
+      toast.error('กรุณาเลือกอย่างน้อย 1 บท');
+      return;
+    }
+    setThesisError(null);
+    setThesisProgress('starting');
+    try {
+      const qs = buildFilterQS(filter);
+      const startRes = await axios.post(
+        `${API}/brand-equity/studies/${studyId}/thesis-ai-start${qs}`,
+        { chapters: thesisChapters, extra_prompt: thesisExtraPrompt || '' },
+        authH,
+      );
+      const { status, job_id, cache_key, cached } = startRes.data || {};
+
+      if (status === 'ready' || cached) {
+        // Cache hit — download immediately
+        toast.info('พบ cache — ดาวน์โหลดทันที');
+        await downloadThesisDocx(cache_key);
+        return;
+      }
+
+      // Poll status
+      setThesisProgress('queued');
+      thesisPollRef.current = setInterval(async () => {
+        try {
+          const s = await axios.get(
+            `${API}/brand-equity/studies/${studyId}/thesis-ai-status/${job_id}`,
+            authH,
+          );
+          const st = s.data || {};
+          if (st.progress) setThesisProgress(st.progress);
+          if (st.status === 'ready') {
+            clearInterval(thesisPollRef.current);
+            await downloadThesisDocx(st.cache_key || cache_key);
+          } else if (st.status === 'failed') {
+            clearInterval(thesisPollRef.current);
+            setThesisError(st.error || 'AI generation failed');
+            setThesisProgress('failed');
+            toast.error('สร้างเอกสารไม่สำเร็จ');
+          }
+        } catch (e) { /* keep polling */ }
+      }, 4000);
+    } catch (e) {
+      const msg = e?.response?.data?.detail || 'เริ่มงานไม่สำเร็จ';
+      setThesisError(msg);
+      setThesisProgress('failed');
+      toast.error(msg);
     }
   };
 
@@ -638,7 +702,13 @@ const BrandEquityDashboardPage = () => {
         {ready_for_dashboard && (
           <BeMethodology
             canExportThesis={canExportThesis}
-            onExportThesis={handleExportThesis}
+            thesisProgress={thesisProgress}
+            thesisError={thesisError}
+            selectedChapters={thesisChapters}
+            onSelectedChaptersChange={setThesisChapters}
+            extraPrompt={thesisExtraPrompt}
+            onExtraPromptChange={setThesisExtraPrompt}
+            onStartThesisExport={handleStartThesisAI}
           />
         )}
       </div>

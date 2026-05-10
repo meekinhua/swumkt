@@ -1,6 +1,52 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — AI-Powered Thesis Export for Brand Equity 🎓✨
+
+### Full Conjoint-style thesis flow ported to Brand Equity
+- **5 chapters** ให้เลือก ตามความต้องการของผู้ใช้:
+  - บทที่ 1 (บทนำ) · บทที่ 2 (ทบทวนวรรณกรรม) — **ร่าง · DRAFT** (gold tag) — ผู้ใช้ต้อง fine-tune เอง
+  - บทที่ 3 (ระเบียบวิธีวิจัย) · บทที่ 4 (ผลการศึกษา) · บทที่ 5 (สรุป อภิปราย ข้อเสนอแนะ) — ใช้ **data จริง**
+- **Extra Prompt** textarea — AI นำคำสั่งเพิ่มเติมไปประกอบทุกบท
+- **Brand-focused references**: Aaker (1991/1996/1997), Keller (1993/2001/2013), Kapferer (2012),
+  Kotler & Keller (2016), Reichheld (2003/2011), Yoo & Donthu (2001), Pappu et al. (2005),
+  Christodoulides & de Chernatony (2010) — APA 7
+
+### Backend (`/app/backend/routes/`)
+- **NEW**: `be_thesis_ai.py` — `build_be_thesis_prompts(study, aggregate, n_total, n_filtered, chapters, extra_prompt)`
+  สร้าง system_msg + per-chapter prompts (1-5) ด้วย summary ที่ compact (≈1KB token-economy)
+- 3 endpoints ใหม่ใน `brand_equity.py`:
+  - `POST /api/brand-equity/studies/{id}/thesis-ai-start` — รับ `{chapters: [int], extra_prompt: str}` + filter qs
+    → return `{job_id, cache_key}` (cache hit ตอบ ready ทันที)
+  - `GET  /api/brand-equity/studies/{id}/thesis-ai-status/{job_id}` — return `{status, progress: "chapter_X", error}`
+  - `GET  /api/brand-equity/studies/{id}/thesis-ai-download?cache_key=...` — DOCX response
+- Background task `_run_be_thesis_ai_generation` เรียก Gemini ทีละบท ด้วย `_call_gemini_with_retry`
+  แล้ว stitch เป็น markdown blob เก็บใน `db.brand_thesis_cache`
+- DOCX render reuse `_create_thesis_docx` จาก server.py (รองรับ markdown headings, tables, LaTeX math)
+  รันใน `asyncio.to_thread` ป้องกัน event loop block
+- Role-gate: ADMIN / CURRENT_STUDENT / ALUMNI; ต้องมี ≥10 responses สำหรับ chapter 3/4/5
+  (chapters 1-2 อนุญาต n=0 เพราะเป็น draft)
+- Cache key: `be_thesis_{studyid}_{chapters}_{filter_sig}_ep{extra_prompt_md5}` — idempotent
+
+### Frontend (`/app/frontend/src/pages/brand-equity/`)
+- `BeMethodology.jsx`: เปลี่ยนจาก single static-export button เป็น **inline form**:
+  - 5 chapter checkboxes พร้อม draft tag กับบท 1-2
+  - Extra prompt textarea
+  - "สร้างวิทยานิพนธ์ X บท →" button (disabled ตอน working)
+  - Progress bar animated + "AI กำลังเขียนบทที่ X..." text
+  - Error display ถ้า failed
+- `BrandEquityDashboardPage.jsx`: ลบ static `handleExportThesis`, เพิ่ม:
+  - State: `thesisChapters`, `thesisExtraPrompt`, `thesisProgress`, `thesisError`
+  - `handleStartThesisAI`: POST start → poll every 4s → auto-download blob เมื่อ ready
+  - Cache hit fast-path: ถ้า server ตอบ ready ทันที ก็ดาวน์โหลดเลย
+- CSS: `.be-thesis-chapters`, `.be-thesis-chapter` (with `.draft` border-left gold),
+  `.be-thesis-draft-tag`, `.be-thesis-textarea`, `.be-thesis-progress-bar` (shimmer animation)
+
+### Verified end-to-end
+- Backend curl: `POST /thesis-ai-start` → `processing` → poll `chapter_5` → `ready` → download 44KB valid DOCX
+- Frontend Playwright: เลือกบท 5, ใส่ extra prompt, กด button → toast "ดาวน์โหลดเรียบร้อย" + DOCX downloaded
+
+
 ## 2026-02-11 — Partial-Data Warning UI + Dashboard 500 Hotfix 🔴
 
 ### 🔴 BUG (P0): Dashboard 500 — `score * w` TypeError

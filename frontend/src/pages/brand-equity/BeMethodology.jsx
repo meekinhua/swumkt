@@ -156,11 +156,59 @@ const SECTIONS = [
 ];
 
 
-export const BeMethodology = ({ canExportThesis = false, onExportThesis }) => {
+const CHAPTERS_META = [
+  { ch: 1, title: 'บทที่ 1 — บทนำ',
+    desc: 'ที่มา, วัตถุประสงค์, สมมติฐาน, ขอบเขต, ประโยชน์',
+    draft: true },
+  { ch: 2, title: 'บทที่ 2 — ทบทวนวรรณกรรม',
+    desc: 'ทฤษฎี Aaker · Keller · Kapferer + งานวิจัยที่เกี่ยวข้อง + กรอบแนวคิด',
+    draft: true },
+  { ch: 3, title: 'บทที่ 3 — ระเบียบวิธีวิจัย',
+    desc: 'Research design, สูตรการคำนวณทุกตัว, น้ำหนักของ signal, sampling',
+    draft: false },
+  { ch: 4, title: 'บทที่ 4 — ผลการศึกษา',
+    desc: 'BES + 4 มิติ พร้อมตารางสถิติจริง, Identity vs Image, NPS',
+    draft: false },
+  { ch: 5, title: 'บทที่ 5 — สรุป อภิปราย ข้อเสนอแนะ',
+    desc: 'อภิปรายผลกับทฤษฎี + ข้อเสนอแนะเชิงกลยุทธ์ 5-7 ข้อ + limitations',
+    draft: false },
+];
+
+export const BeMethodology = ({
+  canExportThesis = false,
+  thesisProgress,            // 'idle' | 'starting' | 'chapter_X' | 'rendering' | 'failed'
+  thesisError,               // optional error string
+  selectedChapters,          // array of int
+  onSelectedChaptersChange,  // (arr) => void
+  extraPrompt,               // string
+  onExtraPromptChange,       // (str) => void
+  onStartThesisExport,       // () => void
+}) => {
   const [openId, setOpenId] = useState(null);
   // Outer panels default closed — like the filter bar — to keep the report clean.
   const [methodOpen, setMethodOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+
+  const isWorking = thesisProgress && thesisProgress !== 'idle' && thesisProgress !== 'failed';
+  const progressLabel = (() => {
+    if (!thesisProgress || thesisProgress === 'idle') return '';
+    if (thesisProgress === 'starting') return 'กำลังเริ่มงาน...';
+    if (thesisProgress === 'queued')   return 'อยู่ในคิว...';
+    if (thesisProgress === 'rendering') return 'กำลังสร้างไฟล์ DOCX...';
+    if (thesisProgress === 'downloading') return 'กำลังดาวน์โหลด...';
+    if ((thesisProgress || '').startsWith('chapter_')) {
+      const ch = thesisProgress.replace('chapter_', '');
+      return `AI กำลังเขียนบทที่ ${ch}...`;
+    }
+    return thesisProgress;
+  })();
+
+  const toggleChapter = (ch) => {
+    if (!onSelectedChaptersChange) return;
+    const set = new Set(selectedChapters || []);
+    if (set.has(ch)) set.delete(ch); else set.add(ch);
+    onSelectedChaptersChange(Array.from(set).sort((a, b) => a - b));
+  };
 
   return (
     <section className="be-method-wrap" data-testid="be-methodology">
@@ -226,12 +274,12 @@ export const BeMethodology = ({ canExportThesis = false, onExportThesis }) => {
                 onClick={() => setExportOpen(!exportOpen)}>
           <div className="be-appendix-toggle-text">
             <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--logo-blue)' }}>
-              ◆ ACADEMIC EXPORT {canExportThesis ? '· READY' : '· LOCKED'}
+              ◆ ACADEMIC EXPORT {canExportThesis ? '· AI-POWERED' : '· LOCKED'}
             </span>
-            <span className="be-appendix-title">ส่งออกเป็นรายงานวิทยานิพนธ์ (DOCX)</span>
+            <span className="be-appendix-title">สร้างวิทยานิพนธ์ด้วย AI (DOCX, บทที่ 1-5)</span>
             <span className="be-appendix-short">
               {canExportThesis
-                ? 'พร้อม Methodology · Aaker breakdown · ตาราง score · AI insights · APA references'
+                ? 'เลือกบทที่ต้องการ · ใส่ Extra Prompt · AI Gemini เขียนเนื้อหาทุกบท + APA 7 references'
                 : 'เฉพาะ admin · อาจารย์ · นิสิต ที่ลงทะเบียนแล้ว'}
             </span>
           </div>
@@ -240,39 +288,108 @@ export const BeMethodology = ({ canExportThesis = false, onExportThesis }) => {
 
         {exportOpen && (
           <div className="be-appendix-body be-thesis-body" data-testid="be-thesis-export-body">
-            <p className="be-thesis-lede">
-              {canExportThesis ? (
-                <>
-                  ส่งออก data ทั้งหมดเป็น <strong>เอกสาร .docx</strong> พร้อมใส่ใน thesis chapter —
-                  มี cover, executive summary, methodology + scoring formulas, ตาราง score
-                  ทุก dimension, identity-image overlap, AI insights, และ APA 7 references
-                  (Aaker, Keller, Reichheld, DeVellis)
+            {!canExportThesis && (
+              <p className="be-thesis-lede">
+                ฟีเจอร์นี้เปิดใช้สำหรับ <strong>admin · อาจารย์ · นิสิต</strong> เท่านั้น
+                <br/>
+                <span className="be-tiny be-muted">
+                  หากท่านเป็นนิสิต/อาจารย์ — กรุณาลงทะเบียนกับระบบและ login ก่อน
+                </span>
+              </p>
+            )}
+
+            {canExportThesis && (
+              <>
+                <p className="be-thesis-lede">
+                  AI Gemini จะเขียนเนื้อหาวิทยานิพนธ์ตามบทที่เลือก โดยใช้ <strong>ข้อมูลจริง</strong> จาก
+                  study นี้ + อ้างอิงทฤษฎี <em>Aaker · Keller · Kapferer · Reichheld · Kotler</em>
+                  ในรูปแบบ APA 7
                   <br/>
                   <span className="be-tiny be-muted">
-                    หากเปิดใช้ filter อยู่ — รายงานจะ snapshot เฉพาะ slice นั้น
+                    หากเปิด filter อยู่ — รายงานจะ snapshot เฉพาะ slice นั้น
                   </span>
-                </>
-              ) : (
-                <>
-                  เลื่อน data + AI insights + Methodology ทั้งหมดออกเป็นเอกสารวิจัยพร้อมใส่ใน
-                  thesis chapter — มี citation, sample size, methodology section
-                  <br/>
-                  <span className="be-tiny be-muted">
-                    ฟีเจอร์นี้เปิดใช้สำหรับ <strong>admin · อาจารย์ · นิสิต</strong> เท่านั้น
-                  </span>
-                </>
-              )}
-            </p>
-            <button type="button"
-                    className="be-thesis-btn"
-                    disabled={!canExportThesis}
-                    data-testid="be-thesis-export-btn"
-                    onClick={canExportThesis ? onExportThesis : undefined}
-                    title={canExportThesis
-                      ? 'Generate thesis-ready report'
-                      : 'เปิดใช้สำหรับ admin / อาจารย์ / นิสิต'}>
-              {canExportThesis ? 'Export Thesis DOCX →' : '🔒 Locked'}
-            </button>
+                </p>
+
+                {/* ===== Chapter selection ===== */}
+                <div className="be-thesis-block">
+                  <div className="be-thesis-block-label">เลือกบทที่ต้องการ</div>
+                  <div className="be-thesis-chapters">
+                    {CHAPTERS_META.map(({ ch, title, desc, draft }) => {
+                      const checked = (selectedChapters || []).includes(ch);
+                      return (
+                        <label key={ch}
+                               className={`be-thesis-chapter ${checked ? 'on' : ''} ${draft ? 'draft' : ''}`}
+                               data-testid={`be-thesis-chapter-${ch}`}>
+                          <input type="checkbox"
+                                 checked={checked}
+                                 disabled={isWorking}
+                                 onChange={() => toggleChapter(ch)}
+                                 data-testid={`be-thesis-chapter-cb-${ch}`}/>
+                          <div className="be-thesis-chapter-text">
+                            <div className="be-thesis-chapter-title">
+                              {title}
+                              {draft && (
+                                <span className="be-thesis-draft-tag" title="AI ร่างให้เท่านั้น — ผู้เขียนต้องไป fine-tune / revise เอง">
+                                  ร่าง · DRAFT
+                                </span>
+                              )}
+                            </div>
+                            <div className="be-thesis-chapter-desc">{desc}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="be-tiny be-muted" style={{ marginTop: 6 }}>
+                    บทที่ 1-2 เป็น <strong>ร่าง</strong> ไม่ได้อ้างจากข้อมูลจริง — ต้องนำไป fine-tune /
+                    revise เองให้ตรงกับบริบทมหาวิทยาลัยและขอบเขตงาน
+                  </div>
+                </div>
+
+                {/* ===== Extra prompt ===== */}
+                <div className="be-thesis-block">
+                  <div className="be-thesis-block-label">
+                    คำสั่งเพิ่มเติม (Extra Prompt) — ไม่บังคับ
+                  </div>
+                  <textarea
+                    className="be-thesis-textarea"
+                    value={extraPrompt || ''}
+                    disabled={isWorking}
+                    onChange={(e) => onExtraPromptChange && onExtraPromptChange(e.target.value)}
+                    placeholder="เช่น: เน้น positioning ระดับพรีเมียม, อ้างอิง Kotler มากขึ้น, เพิ่มมุมมอง Gen Z, ใช้ภาษาทางการมากขึ้น..."
+                    data-testid="be-thesis-extra-prompt"/>
+                  <div className="be-tiny be-muted" style={{ marginTop: 4 }}>
+                    AI จะนำคำสั่งนี้ไปประกอบทุกบทที่เลือก
+                  </div>
+                </div>
+
+                {/* ===== Generate button + progress ===== */}
+                <div className="be-thesis-actions">
+                  <button type="button"
+                          className="be-thesis-btn"
+                          disabled={!canExportThesis || isWorking || (selectedChapters || []).length === 0}
+                          data-testid="be-thesis-export-btn"
+                          onClick={onStartThesisExport}>
+                    {isWorking
+                      ? '⏳ ' + progressLabel
+                      : `สร้างวิทยานิพนธ์ ${(selectedChapters || []).length} บท →`}
+                  </button>
+                  {isWorking && (
+                    <div className="be-thesis-progress" data-testid="be-thesis-progress">
+                      <div className="be-thesis-progress-bar"/>
+                      <div className="be-tiny be-muted" style={{ marginTop: 6 }}>
+                        {progressLabel} · ใช้เวลาประมาณ 30-90 วินาทีต่อบท
+                      </div>
+                    </div>
+                  )}
+                  {thesisProgress === 'failed' && thesisError && (
+                    <div className="be-thesis-error" data-testid="be-thesis-error">
+                      ✕ {thesisError}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

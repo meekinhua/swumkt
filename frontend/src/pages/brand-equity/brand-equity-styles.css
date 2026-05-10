@@ -895,8 +895,8 @@
   padding: 8px 22px 24px; border-top: 1px solid var(--rule);
 }
 .be-root .be-thesis-body {
-  display: flex; gap: 24px; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; padding: 22px 22px 24px;
+  display: flex; flex-direction: column;
+  padding: 22px 22px 24px;
 }
 
 /* Inner per-section accordion (inside Methodology body) */
@@ -949,15 +949,96 @@
 }
 
 .be-root .be-thesis-lede {
-  margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.6;
-  max-width: 560px; flex: 1 1 320px;
+  margin: 0 0 18px; color: var(--ink-2); font-size: 14px; line-height: 1.6;
+  max-width: 760px;
 }
+
+/* AI thesis form blocks: chapter checkboxes + extra prompt */
+.be-root .be-thesis-block { margin-top: 18px; }
+.be-root .be-thesis-block-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 10px; font-weight: 600;
+}
+.be-root .be-thesis-chapters {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--rule); border: 1px solid var(--rule-strong); padding: 1px;
+}
+.be-root .be-thesis-chapter {
+  display: flex; gap: 12px; padding: 12px 14px; background: var(--paper);
+  cursor: pointer; transition: background 0.12s;
+  align-items: flex-start;
+}
+.be-root .be-thesis-chapter:hover { background: var(--paper-2); }
+.be-root .be-thesis-chapter.on { background: rgba(27, 117, 188, 0.08); }
+.be-root .be-thesis-chapter.draft { border-left: 3px solid var(--be-gold); }
+.be-root .be-thesis-chapter.on.draft { border-left-color: var(--be-red); }
+.be-root .be-thesis-chapter input[type="checkbox"] {
+  margin-top: 3px; width: 16px; height: 16px;
+  accent-color: var(--be-red); cursor: pointer;
+}
+.be-root .be-thesis-chapter-text { flex: 1; min-width: 0; }
+.be-root .be-thesis-chapter-title {
+  font-family: 'IBM Plex Serif', Georgia, serif;
+  font-size: 14.5px; font-weight: 600; color: var(--ink);
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.be-root .be-thesis-draft-tag {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9.5px;
+  background: var(--be-gold); color: #fff; padding: 2px 7px;
+  letter-spacing: 0.10em; font-weight: 600;
+}
+.be-root .be-thesis-chapter-desc {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  color: var(--ink-3); margin-top: 4px; letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+.be-root .be-thesis-textarea {
+  width: 100%; min-height: 80px; padding: 10px 12px;
+  font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 13px;
+  background: var(--surface); border: 1px solid var(--rule-strong);
+  color: var(--ink); resize: vertical; line-height: 1.55;
+  box-sizing: border-box;
+}
+.be-root .be-thesis-textarea:focus {
+  outline: none; border-color: var(--be-red);
+  background: rgba(255, 255, 255, 1);
+}
+.be-root .be-thesis-textarea:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.be-root .be-thesis-actions {
+  margin-top: 22px; padding-top: 18px;
+  border-top: 1px dashed var(--rule);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.be-root .be-thesis-progress {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.be-root .be-thesis-progress-bar {
+  height: 3px; background: linear-gradient(90deg,
+    transparent 0%, var(--be-red) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: be-thesis-progress 1.4s linear infinite;
+}
+@keyframes be-thesis-progress {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.be-root .be-thesis-error {
+  padding: 10px 14px;
+  background: rgba(200, 16, 46, 0.08);
+  border-left: 3px solid var(--be-red);
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  color: var(--be-red); letter-spacing: 0.02em;
+}
+
 .be-root .be-thesis-btn {
   font-family: 'IBM Plex Mono', monospace; font-size: 13px;
   letter-spacing: 0.10em; padding: 14px 28px;
   background: var(--ink); color: var(--paper);
   border: none; border-radius: 999px; cursor: pointer;
   flex-shrink: 0; font-weight: 600;
+  align-self: flex-start;
 }
 .be-root .be-thesis-btn:hover:not(:disabled) {
   background: var(--logo-blue);
