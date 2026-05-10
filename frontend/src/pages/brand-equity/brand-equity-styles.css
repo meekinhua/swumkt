@@ -442,6 +442,60 @@
 .be-section-meta { display: flex; gap: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-3); flex-shrink: 0; }
 .be-section-meta strong { color: var(--ink); font-weight: 600; }
 
+/* ============ Partial Data Warning (Aaker dimension missing core questions) ============
+   Big red asterisk + plain-language explanation rendered between the section
+   head and the data cards. Uses the same red as section dividers so it reads
+   as an editorial annotation, not a generic UI banner. */
+.be-partial-warning {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 18px;
+  margin: 0 0 18px 0;
+  background: rgba(200, 16, 46, 0.05);
+  border-left: 3px solid var(--be-red);
+  border-top: 1px dashed rgba(200, 16, 46, 0.3);
+  border-bottom: 1px dashed rgba(200, 16, 46, 0.3);
+}
+.be-partial-asterisk {
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 38px; line-height: 1;
+  color: var(--be-red);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: -4px;
+  text-shadow: 0 1px 0 rgba(200, 16, 46, 0.15);
+}
+.be-partial-text { flex: 1; min-width: 0; }
+.be-partial-headline {
+  font-family: 'IBM Plex Sans Thai', sans-serif;
+  font-size: 13.5px; font-weight: 600;
+  color: var(--be-red);
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+.be-partial-detail {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+.be-partial-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  background: rgba(200, 16, 46, 0.08);
+  border: 1px solid rgba(200, 16, 46, 0.25);
+  color: var(--be-red);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+@media (max-width: 720px) {
+  .be-partial-warning { gap: 10px; padding: 12px 14px; }
+  .be-partial-asterisk { font-size: 28px; }
+  .be-partial-headline { font-size: 12.5px; }
+}
+
 /* ============ Studies list ============ */
 .be-page { padding: 28px 32px; max-width: 1440px; margin: 0 auto; }
 .be-page-narrow { max-width: 1080px; }

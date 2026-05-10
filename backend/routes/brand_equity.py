@@ -1091,13 +1091,16 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
             identity_alignment = float(a) if a > 1 else float(a) * 100.0
 
     composite: Dict[str, Optional[float]] = {}
+    composite_meta: Dict[str, dict] = {}
     intended_traits = (study.get("identity") or {}).get("traits") or []
     for d in DIMENSIONS:
-        composite[d] = _compute_dim_composite(
+        score_val, meta = _compute_dim_composite(
             d, out_questions, target_brand,
             intended_traits=intended_traits,
             identity_alignment=(identity_alignment if d == "identity" else None),
         )
+        composite[d] = score_val
+        composite_meta[d] = meta
 
     # Overall = weighted mean of dimensions that produced a score.
     weights = study.get("weights") or {"awareness": 25, "quality": 25, "identity": 25, "loyalty": 25}
@@ -1108,7 +1111,7 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         if score is None:
             continue
         w = float(weights.get(d, 25))
-        weighted_total += score * w
+        weighted_total += float(score) * w
         weight_sum += w
     composite["overall"] = round(weighted_total / weight_sum, 1) if weight_sum > 0 else None
 
@@ -1205,6 +1208,7 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         "total_responses": len(responses),
         "questions": out_questions,
         "composite": composite,
+        "composite_meta": composite_meta,
         "awareness_extras": awareness_extras,
         "association": association,
         "image_radar": image_radar,

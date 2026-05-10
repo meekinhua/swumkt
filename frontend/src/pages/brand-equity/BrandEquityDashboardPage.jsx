@@ -24,6 +24,72 @@ const findStat = (questions, kindOrType, dim) => {
   return questions.find(q => (q.kind === kindOrType || q.type === kindOrType) && (!dim || q.dimension === dim));
 };
 
+// ============ Partial-data warning ============
+// For every Aaker dimension we list the "core" question kinds that the scoring
+// formula expects. If any are missing from the study (e.g. user removed them
+// in the wizard), we surface a big red asterisk on the section header so the
+// reader understands why the score might look low/odd. The composite is still
+// computed from whatever signal IS present — only the warning is added.
+const EXPECTED_KINDS_BY_DIM = {
+  awareness: [
+    { kind: 'unaided_top_of_mind', label: 'Top-of-Mind (AW-1)' },
+    { kind: 'unaided_recall',      label: 'Unaided Recall (AW-2)' },
+    { kind: 'aided_recognition',   label: 'Aided Recognition (AW-3)' },
+    { kind: 'brand_familiarity',   label: 'Familiarity (AW-4)' },
+  ],
+  quality: [
+    { kind: 'overall_quality', label: 'Overall Quality (PQ-1)' },
+    { kind: '__attribute_any__', label: 'Quality attributes (PQ-2..)' },
+  ],
+  identity: [
+    { kind: 'image_traits_aided',    label: 'Trait pickup (BI-1)' },
+    { kind: 'brand_promise_match',   label: 'Brand Promise (BI-4)' },
+    { kind: 'image_one_word',        label: 'One-word image (BI-3)' },
+  ],
+  loyalty: [
+    { kind: 'nps',                  label: 'NPS (LY-1)' },
+    { kind: 'repeat_intent',        label: 'Repeat intent (LY-2)' },
+    { kind: 'switching_resistance', label: 'Switching resistance (LY-3)' },
+  ],
+};
+
+const getMissingKinds = (qs, dim) => {
+  const expected = EXPECTED_KINDS_BY_DIM[dim] || [];
+  const present = new Set();
+  (qs || []).forEach(q => {
+    if (q.dimension !== dim) return;
+    if (!q.stats || !q.stats.n) return;
+    if ((q.kind || '').startsWith('attribute_')) present.add('__attribute_any__');
+    if (q.kind) present.add(q.kind);
+  });
+  return expected.filter(e => !present.has(e.kind));
+};
+
+const PartialDataWarning = ({ missing, dimLabel }) => {
+  if (!missing || missing.length === 0) return null;
+  return (
+    <div className="be-partial-warning"
+         data-testid={`be-partial-warning-${(dimLabel || '').toLowerCase()}`}
+         role="note"
+         aria-label={`ข้อมูล ${dimLabel} ไม่ครบ`}>
+      <span className="be-partial-asterisk" aria-hidden="true">✱</span>
+      <div className="be-partial-text">
+        <div className="be-partial-headline">
+          ข้อมูลไม่ครบ — score คำนวณจากข้อมูลเท่าที่มี
+        </div>
+        <div className="be-partial-detail">
+          ขาดคำถามหลัก ({missing.length}) :{' '}
+          {missing.map((m, i) => (
+            <span key={m.kind} className="be-partial-chip" data-testid={`be-partial-missing-${m.kind}`}>
+              {m.label}{i < missing.length - 1 ? '' : ''}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Document head for public showcase pages — sets <title>, OG/Twitter cards,
 // and JSON-LD structured data so social shares (LINE, Facebook, Twitter) and
 // Google show a proper preview with brand name, logo, and key score.
@@ -651,6 +717,8 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
 
   const targetTomPct = tomCounts.find(c => c.label?.toLowerCase().includes(target?.toLowerCase() || '___'))?.pct || 0;
 
+  const missingKinds = getMissingKinds(qs, 'awareness');
+
   return (
     <div className="be-section" data-testid="be-section-awareness">
       <div className="be-section-head">
@@ -669,6 +737,8 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
           <div><strong>{qs.filter(q => q.dimension === 'awareness').length}</strong>q</div>
         </div>
       </div>
+
+      <PartialDataWarning missing={missingKinds} dimLabel="Awareness"/>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {tomCounts.length > 0 && (
@@ -834,6 +904,8 @@ const SectionQuality = ({ study, aggregate, ai }) => {
   const qualityOpen = qs.find(q => q.dimension === 'quality' && q.type === 'open_long');
   const themes = qualityOpen ? (qualityThemes[qualityOpen.id] || []) : [];
 
+  const missingKinds = getMissingKinds(qs, 'quality');
+
   return (
     <div className="be-section" data-testid="be-section-quality">
       <div className="be-section-head">
@@ -852,6 +924,8 @@ const SectionQuality = ({ study, aggregate, ai }) => {
           <div><strong>{qs.filter(q => q.dimension === 'quality').length}</strong>q</div>
         </div>
       </div>
+
+      <PartialDataWarning missing={missingKinds} dimLabel="Quality"/>
 
       <div className="be-grid-2">
         {radarSeries.length > 0 && (
@@ -1042,6 +1116,8 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
           <div><strong>{score}</strong>/100</div>
         </div>
       </div>
+
+      <PartialDataWarning missing={getMissingKinds(qs, 'identity')} dimLabel="Identity"/>
 
       {/* Visual identity setup (AI-derived from owner inputs in wizard) — show whenever populated */}
       {(study.identity?.ai_summary || (study.identity?.visual_palette || []).length > 0 || (study.identity?.visual_assets || []).length > 0) && (
@@ -1398,6 +1474,8 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
           <div><strong>{qs.filter(q => q.dimension === 'loyalty').length}</strong>q</div>
         </div>
       </div>
+
+      <PartialDataWarning missing={getMissingKinds(qs, 'loyalty')} dimLabel="Loyalty"/>
 
       <div className="be-grid-2">
         {nps && nps.stats?.n > 0 && (

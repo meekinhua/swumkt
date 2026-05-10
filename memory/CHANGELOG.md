@@ -1,6 +1,37 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Partial-Data Warning UI + Dashboard 500 Hotfix 🔴
+
+### 🔴 BUG (P0): Dashboard 500 — `score * w` TypeError
+- `_compute_dim_composite` ถูก refactor ให้ return `(score, meta)` tuple แต่ caller ใน `_aggregate_responses`
+  ยัง assign `composite[d] = _compute_dim_composite(...)` (ทั้ง tuple) → loop weighted-sum ทำ
+  `tuple * float` → `TypeError: can't multiply sequence by non-int of type 'float'`
+- **Fix**: unpack tuple → `score_val, meta = _compute_dim_composite(...)` + cast `float(score)` ก่อน weight
+- Impact: ทุก study ที่มี responses เคย 500 ที่ `/api/brand-equity/studies/{id}/dashboard` กลับมาทำงาน
+- File: `/app/backend/routes/brand_equity.py` (line 1093-1116)
+- เพิ่ม `composite_meta: {dim: {coverage, present_kinds, missing_kinds, designed_kinds}}` ใน aggregate response
+  เพื่อให้ frontend ใช้ตัดสินใจแสดง warning ในอนาคต (ตอนนี้ frontend มี logic แยกอยู่แล้ว)
+
+### Partial-Data Warning UI (frontend)
+- ทุก section บน Brand Equity dashboard (Awareness · Quality · Identity · Loyalty) แสดง
+  **เครื่องหมายดอกจันสีแดงขนาดใหญ่ (✱)** + ข้อความ "ข้อมูลไม่ครบ — score คำนวณจากข้อมูลเท่าที่มี"
+  พร้อม chip แสดงรายชื่อคำถามหลักที่ขาด (e.g. `Familiarity (AW-4)`, `NPS (LY-1)`)
+- Logic: `EXPECTED_KINDS_BY_DIM` กำหนดคำถามแกนหลักของแต่ละ Aaker dimension; `getMissingKinds(qs, dim)`
+  เทียบกับ kind ที่มี data จริง (`stats.n > 0`) → เฉพาะ kind ที่ขาดเท่านั้นถูกแสดง
+- Score ยังคำนวณจาก data ที่มี — warning เป็น UI metadata เท่านั้น ไม่กระทบสูตร
+- File: `/app/frontend/src/pages/brand-equity/BrandEquityDashboardPage.jsx`
+  (`PartialDataWarning`, `EXPECTED_KINDS_BY_DIM`, `getMissingKinds`)
+- Style: `/app/frontend/src/pages/brand-equity/brand-equity-styles.css` (`.be-partial-warning`,
+  `.be-partial-asterisk` 38px serif red, `.be-partial-chip`)
+
+### Thesis Export — Active for Admin
+- ยืนยันว่า `/api/brand-equity/thesis-eligible` คืน `{eligible: true}` สำหรับ role `admin`
+- Frontend `BeMethodology` แสดง "ACADEMIC EXPORT · READY" + ปุ่ม "Export Thesis DOCX →" (enabled)
+- ทดสอบด้วย admin@swu.ac.th — DOCX 40KB valid file (zipfile.is_zipfile = True)
+- ไม่ต้องเปลี่ยนโค้ดเพิ่มเติม — feature ทำงานแล้วเมื่อ user role = admin
+
+
 ## 2026-02-10 — Academic Audit + Thesis DOCX Export 🎓
 ### Audit fixes (academic correctness)
 - **🔴 BUG 1 (likert score normalization)** — `_likert_stats` ใช้ `mean / scale_max × 100` ซึ่งทำให้ floor ของคะแนนต่ำสุดเป็น 20 (1-5 scale) หรือ 14.3 (1-7 scale) แทนที่จะเป็น 0
