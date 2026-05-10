@@ -1,6 +1,52 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Thesis DOCX: All Dashboard Charts + Full Statistics Tables 📊🎓
+
+### ภาพประกอบทั้งหมดจาก Dashboard ฝัง DOCX แล้ว (request: "เอา output ทุกอันมา")
+- **NEW** `/app/backend/routes/be_thesis_charts.py` — render ทุก chart ผ่าน matplotlib (Loma font
+  สำหรับภาษาไทย เรนเดอร์ถูกหมดทั้งสระ-วรรณยุกต์):
+  - **TOM Brand Cloud** — แบรนด์เป้าหมายไฮไลต์สีแดง คู่แข่งสีเทา + % share
+  - **Quality Attributes Radar** — Likert 1-7 → 0-100, สีทอง brand
+  - **Multi-dim Image Radar** — แบรนด์ vs คู่แข่ง 3+ axes
+  - **Perceptual Map (2D)** — เลือก 2 axes ที่ spread มากสุดอัตโนมัติ + raw value labels
+  - **Identity vs Image Map** — สอง columns: intended (red bars) vs perceived (color-coded
+    aligned/lost/unintended) + alignment score
+  - **Aaker 4 Perspectives Bars** — Org/Person/Symbol/Product
+  - **NPS distribution bar** — Detractors/Passives/Promoters horizontal stack
+  - **Likert histograms** — Familiarity (5-pt) + Overall Quality (7-pt) ที่แสดง distribution
+
+### ตารางสถิติฉบับเต็ม + ภาคผนวกใหม่ใน DOCX (no placeholders)
+- **NEW** `/app/backend/routes/be_thesis_appendix.py` — ผนวก section ใหม่ที่ท้าย DOCX
+  หลัง References:
+  - **ภาคผนวก ก** — ภาพประกอบทุก chart (caption: "ภาพ ก-1 · TOM Cloud", "ภาพ ก-2 · Quality Radar"
+    ฯลฯ)
+  - **ภาคผนวก ข** — ตารางสถิติทุกคำถามแยกตาม 4 มิติ Aaker (id, kind, type, n, mean, sd, T2B,
+    B2B, net, score_100) + Comparative table แยก
+  - **ภาคผนวก ค** — ความถี่ open-ended TOM/Recall/Aided พร้อม AI-merged variants
+  - **ภาคผนวก ง** — Identity vs Image trait-by-trait status table + AI narrative
+  - **ภาคผนวก จ** — Aaker 4 Perspectives breakdown + per-question contributions
+  - **ภาคผนวก ฉ** — Composite summary recap + signal coverage
+
+### AI prompt hardening — ห้าม placeholder
+- `_system_msg` ใน `be_thesis_ai.py` เพิ่มกฎเข้มงวด:
+  - ห้ามใช้ `X.X`, `[ระบุค่า]`, placeholder ใดๆ
+  - ทุกค่าต้องมีหน่วย/บริบท เช่น "ค่าเฉลี่ย 4.95 จาก scale 1-7 (n=21)"
+  - ห้ามใช้ "ผู้ใช้จะใส่เอง" / "TBD" / "X" ในบท 3-5
+
+### Wired into download endpoint
+- `GET /api/brand-equity/studies/{id}/thesis-ai-download` ใน `brand_equity.py` ตอนนี้:
+  1. โหลด AI markdown จาก cache → render base DOCX ผ่าน `_create_thesis_docx`
+  2. recompute aggregate ด้วย `_aggregate_responses` เพื่อใช้สร้าง charts จริง (cache เก็บแค่ md)
+  3. เรียก `enrich_thesis_docx` เพื่อ append visual + data appendix
+  4. ทั้งสอง CPU-heavy steps wrap ด้วย `asyncio.to_thread` ป้องกัน event loop block
+
+### Verified
+- DOCX 311KB · valid zip · **6 charts embedded** · **15 data tables** · **211 paragraphs**
+- ภาคผนวก ก/ข/ค/ง/ฉ ครบทั้งหมด · Thai font Loma เรนเดอร์ถูกต้อง
+- AI cited real numbers: "Brand Awareness (71.3)", "Brand Identity (53.5)", "(Aaker, 1996)"
+
+
 ## 2026-02-11 — AI-Powered Thesis Export for Brand Equity 🎓✨
 
 ### Full Conjoint-style thesis flow ported to Brand Equity

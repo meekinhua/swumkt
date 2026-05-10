@@ -2390,7 +2390,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     ):
         """Download the generated DOCX (renders cached markdown via shared docx engine)."""
         from fastapi.responses import Response
-        from server import UserRole, _create_thesis_docx
+        from server import UserRole
         if current_user.role not in {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}:
             raise HTTPException(403)
 
@@ -2410,9 +2410,24 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         respondent_count = cached.get("n_filtered", 0)
         title = study.get("brand", {}).get("name") or "Brand"
 
-        # CPU-heavy DOCX render in worker thread
-        docx_bytes = await asyncio.to_thread(
+        # Recompute aggregate so the appendix has fresh chart-friendly stats
+        # (cache stores only the AI markdown text, not the numeric aggregate)
+        all_responses = await db.brand_responses.find(
+            {"study_id": study_id}, {"_id": 0}
+        ).to_list(5000)
+        agg_for_appendix = _aggregate_responses(study, all_responses, normalized=
+            (study.get("ai_cache") or {}).get("normalized_by_question") or {})
+
+        # CPU-heavy DOCX render in worker thread — first build base doc from AI markdown
+        from server import _create_thesis_docx
+        base_bytes = await asyncio.to_thread(
             _create_thesis_docx, title, respondent_count, ai_md,
+        )
+        # Then enrich with charts + comprehensive data tables
+        from .be_thesis_appendix import enrich_thesis_docx
+        docx_bytes = await asyncio.to_thread(
+            enrich_thesis_docx, base_bytes,
+            study=study, aggregate=agg_for_appendix,
         )
 
         brand_safe = "".join(c if c.isalnum() else "_" for c in title) or "brand"
