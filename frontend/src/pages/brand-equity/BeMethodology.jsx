@@ -226,11 +226,13 @@ export const BeMethodology = ({ canExportThesis = false, onExportThesis }) => {
                 onClick={() => setExportOpen(!exportOpen)}>
           <div className="be-appendix-toggle-text">
             <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--logo-blue)' }}>
-              ◆ ACADEMIC EXPORT · PREVIEW
+              ◆ ACADEMIC EXPORT {canExportThesis ? '· READY' : '· LOCKED'}
             </span>
-            <span className="be-appendix-title">ส่งออกเป็นรายงานวิทยานิพนธ์ (PDF / DOCX)</span>
+            <span className="be-appendix-title">ส่งออกเป็นรายงานวิทยานิพนธ์ (DOCX)</span>
             <span className="be-appendix-short">
-              เฉพาะ admin · อาจารย์ · นิสิต ที่ลงทะเบียนแล้ว — เร็วๆ นี้ (coming soon)
+              {canExportThesis
+                ? 'พร้อม Methodology · Aaker breakdown · ตาราง score · AI insights · APA references'
+                : 'เฉพาะ admin · อาจารย์ · นิสิต ที่ลงทะเบียนแล้ว'}
             </span>
           </div>
           <span className="be-appendix-arrow">{exportOpen ? 'COLLAPSE ▲' : 'EXPAND ▼'}</span>
@@ -239,9 +241,27 @@ export const BeMethodology = ({ canExportThesis = false, onExportThesis }) => {
         {exportOpen && (
           <div className="be-appendix-body be-thesis-body" data-testid="be-thesis-export-body">
             <p className="be-thesis-lede">
-              เลื่อน data + AI insights + Methodology ทั้งหมดออกเป็นเอกสารวิจัยพร้อมใส่ใน
-              thesis chapter — มี citation, sample size, methodology section, และตาราง
-              cross-tab ครบ
+              {canExportThesis ? (
+                <>
+                  ส่งออก data ทั้งหมดเป็น <strong>เอกสาร .docx</strong> พร้อมใส่ใน thesis chapter —
+                  มี cover, executive summary, methodology + scoring formulas, ตาราง score
+                  ทุก dimension, identity-image overlap, AI insights, และ APA 7 references
+                  (Aaker, Keller, Reichheld, DeVellis)
+                  <br/>
+                  <span className="be-tiny be-muted">
+                    หากเปิดใช้ filter อยู่ — รายงานจะ snapshot เฉพาะ slice นั้น
+                  </span>
+                </>
+              ) : (
+                <>
+                  เลื่อน data + AI insights + Methodology ทั้งหมดออกเป็นเอกสารวิจัยพร้อมใส่ใน
+                  thesis chapter — มี citation, sample size, methodology section
+                  <br/>
+                  <span className="be-tiny be-muted">
+                    ฟีเจอร์นี้เปิดใช้สำหรับ <strong>admin · อาจารย์ · นิสิต</strong> เท่านั้น
+                  </span>
+                </>
+              )}
             </p>
             <button type="button"
                     className="be-thesis-btn"
@@ -250,8 +270,8 @@ export const BeMethodology = ({ canExportThesis = false, onExportThesis }) => {
                     onClick={canExportThesis ? onExportThesis : undefined}
                     title={canExportThesis
                       ? 'Generate thesis-ready report'
-                      : 'เปิดใช้สำหรับ admin / อาจารย์ / นิสิต — เร็วๆ นี้'}>
-              {canExportThesis ? 'Export Thesis Report →' : '🔒 Locked'}
+                      : 'เปิดใช้สำหรับ admin / อาจารย์ / นิสิต'}>
+              {canExportThesis ? 'Export Thesis DOCX →' : '🔒 Locked'}
             </button>
           </div>
         )}

@@ -705,11 +705,18 @@ def _likert_stats(values: List[int], scale_max: int = 7) -> dict:
     b2b = sum(1 for v in values if v <= 2) / n * 100
     nq = (t2b - b2b)
     distribution = [sum(1 for v in values if v == i) for i in range(1, scale_max + 1)]
+    # Score normalization: standard psychometric (mean − 1) / (max − 1) × 100 so
+    # the lowest scale value maps to 0 and the highest to 100. The legacy formula
+    # `mean/max*100` left an arbitrary floor at (1/max)*100 (e.g. 20 for a 1-5
+    # likert) which inflated all scores ~20pts on the low end and broke
+    # cross-scale comparability. Confirmed correct per Aaker (1996) ch.7,
+    # Keller CBBE measurement, and DeVellis (Scale Development, 2017).
+    score_100 = (mean - 1) / (scale_max - 1) * 100 if scale_max > 1 else 0
     return {
         "n": n, "mean": round(mean, 2), "median": median,
         "std": round(std, 2), "t2b": round(t2b, 1), "b2b": round(b2b, 1),
         "net": round(nq, 1), "distribution": distribution,
-        "score_100": round(mean / scale_max * 100, 1),
+        "score_100": round(score_100, 1),
     }
 
 
@@ -751,7 +758,14 @@ def _frequency_stats(values: List[Any]) -> dict:
 
 
 def _comparative_stats(values: List[int]) -> dict:
-    """7-pt comparative: 1=brand_left ดีมาก, 4=เท่ากัน, 7=brand_right ดีมาก."""
+    """7-pt comparative: 1=brand_left ดีมาก, 4=เท่ากัน, 7=brand_right ดีมาก.
+
+    Convention in this codebase: focal_brand always sits on the LEFT of the scale
+    and the competitor (named in `compare_brand`) sits on the RIGHT. So:
+      mean = 1 → focal wins fully → score_100 = 100
+      mean = 4 → tie               → score_100 = 50
+      mean = 7 → competitor wins   → score_100 = 0
+    Formula: (7 − mean) / 6 × 100"""
     if not values:
         return {"n": 0}
     n = len(values)
@@ -759,11 +773,13 @@ def _comparative_stats(values: List[int]) -> dict:
     favor_left = sum(1 for v in values if v <= 3) / n * 100
     favor_right = sum(1 for v in values if v >= 5) / n * 100
     neutral = 100 - favor_left - favor_right
+    score_100 = (7 - mean) / 6 * 100
     return {
         "n": n, "mean": round(mean, 2),
         "favor_left_pct": round(favor_left, 1),
         "favor_right_pct": round(favor_right, 1),
         "neutral_pct": round(neutral, 1),
+        "score_100": round(max(0.0, min(100.0, score_100)), 1),
     }
 
 
@@ -2028,31 +2044,76 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     @brand_equity_router.get("/thesis-eligible")
     async def thesis_eligible(current_user=Depends(get_current_user)):
         """Returns whether the current user can use the thesis export feature.
-        Currently HARD-OFF (returns false for everyone) — will be flipped on once
-        we finalize the eligible-role list (admin / อาจารย์ / นิสิต ที่ลงทะเบียน)."""
-        # TODO(thesis-export): when ready, replace False with the role check below:
-        # eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT}  # +faculty when role exists
-        # eligible = (current_user.role in eligible_roles)
-        return {"eligible": False, "feature": "thesis_export", "status": "coming_soon"}
+        Currently open to ADMIN, CURRENT_STUDENT, ALUMNI. FACULTY role TBD."""
+        from server import UserRole
+        eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}
+        eligible = (current_user.role in eligible_roles) if current_user else False
+        return {"eligible": bool(eligible),
+                "feature": "thesis_export",
+                "role": getattr(current_user, "role", None)}
 
     @brand_equity_router.post("/studies/{study_id}/thesis-export")
-    async def thesis_export_stub(
+    async def thesis_export(
         study_id: str,
         from_iso: Optional[str] = Query(None, alias="from"),
         to_iso: Optional[str] = Query(None, alias="to"),
         segments: Optional[str] = Query(None),
         current_user=Depends(get_current_user),
     ):
-        """Thesis export — disabled placeholder. Returns 403 so the frontend toasts
-        'ฟีเจอร์ยังไม่เปิดใช้งาน'. Implementation TODO: render thesis-style DOCX with
-        methodology, sample size, full Aaker breakdown, AI insights, and citations."""
-        # Suppress unused-arg warnings — params kept for future use
-        _ = (study_id, from_iso, to_iso, segments, current_user)
-        raise HTTPException(
-            status_code=403,
-            detail="Thesis export is locked. Contact admin to enable for your role.",
+        """Generate a thesis-ready DOCX of this study (Aaker-aligned methodology).
+        Role-gated: ADMIN / CURRENT_STUDENT / ALUMNI only. Honors active filter
+        (from/to/segments) so users can export segment-specific reports."""
+        from fastapi.responses import StreamingResponse
+        from server import UserRole
+        from .thesis_renderer import render_thesis_docx
+
+        eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}
+        if not current_user or current_user.role not in eligible_roles:
+            raise HTTPException(403, "Thesis export not available for your role.")
+
+        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if not _owns(current_user, study):
+            raise HTTPException(403, "You do not own this study.")
+
+        all_responses = await db.brand_responses.find(
+            {"study_id": study_id}, {"_id": 0}
+        ).to_list(5000)
+        seg_filter = _parse_segments_param(segments)
+        filtered = _apply_response_filter(
+            all_responses, from_iso=from_iso, to_iso=to_iso, segments=seg_filter,
+        )
+        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        ai_cache_active = _resolve_ai_cache(study, sig)
+        normalized = ai_cache_active.get("normalized_by_question") or \
+                     (study.get("ai_cache") or {}).get("normalized_by_question") or {}
+        agg = _aggregate_responses(study, filtered, normalized=normalized)
+
+        # Inject the active filter's AI cache so identity-image / master_insights
+        # match the data slice in the report
+        study_for_report = {**study, "ai_cache": ai_cache_active or study.get("ai_cache") or {}}
+
+        # Render in a thread — python-docx is sync and CPU-bound
+        buf = await asyncio.to_thread(
+            render_thesis_docx,
+            study=study_for_report,
+            aggregate=agg,
+            sample_n_total=len(all_responses),
+            sample_n_filtered=len(filtered),
+            filter_info={"from": from_iso, "to": to_iso, "segments": seg_filter},
+            author_name=getattr(current_user, "email", None) or getattr(current_user, "id", None),
         )
 
+        brand_safe = (study.get("brand", {}).get("name") or "brand").strip()
+        brand_safe = "".join(c if c.isalnum() else "_" for c in brand_safe) or "brand"
+        filename = f"thesis-{brand_safe}-{datetime.now(timezone.utc).strftime('%Y%m%d')}.docx"
+
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
     @brand_equity_router.get("/studies/{study_id}/dashboard")
     async def get_dashboard(
         study_id: str,

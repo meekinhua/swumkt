@@ -1,6 +1,40 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-10 — Academic Audit + Thesis DOCX Export 🎓
+### Audit fixes (academic correctness)
+- **🔴 BUG 1 (likert score normalization)** — `_likert_stats` ใช้ `mean / scale_max × 100` ซึ่งทำให้ floor ของคะแนนต่ำสุดเป็น 20 (1-5 scale) หรือ 14.3 (1-7 scale) แทนที่จะเป็น 0
+  - **Fix**: เปลี่ยนเป็น `(mean − 1) / (scale_max − 1) × 100` (มาตรฐาน DeVellis 2017, Aaker 1996 ch.7)
+  - Impact: ทุก likert score ที่ต่ำเคยถูก inflate ~20pts — Mali Quality 70.1 → 63.2, Loyalty 59.7 → 56.2
+- **🔴 BUG 2 (comparative_7 ไม่ feed composite)** — `_comparative_stats` ไม่ return `score_100` → comparative questions ส่ง None เข้า `_compute_dim_composite` ทำให้ Quality "Comparative vs Competitor" weight 0.15 ถูก ignore
+  - **Fix**: เพิ่ม `score_100 = (7 − mean) / 6 × 100` (focal บน left convention)
+  - Impact: Mali Quality ตอนนี้รวม comparative 51.6 ที่ weight 0.15 → defensive
+- **✅ ผ่าน audit**: NPS formula, TOM/recall pct, trait_grid identity overlap, filter signature, owner auth, AI cache per signature
+
+### Thesis DOCX Export — ทำงานเต็มแล้ว
+- Backend `/app/backend/routes/thesis_renderer.py` (ใหม่):
+  - `render_thesis_docx(study, aggregate, sample_n_total, sample_n_filtered, filter_info, author_name)` → BytesIO
+  - 6 sections: Cover · Executive Summary · Methodology · Results by Dimension · Identity vs Image · Strategic Insights · References (APA 7)
+  - Tables: KV (brand info), data tables (per-dim with mean/std/n/score_100)
+  - Methodology section อธิบาย formulas + dimension weights table
+  - Comparative subsection แยก แสดง favor% vs competitor
+  - Identity vs Image: intended vs perceived traits + alignment score
+  - APA references: Aaker (1991, 1996), Keller (1993), Reichheld (2003), DeVellis (2017)
+- Endpoint `POST /api/brand-equity/studies/{id}/thesis-export?from=&to=&segments=`:
+  - Role-gated: ADMIN / CURRENT_STUDENT / ALUMNI (FACULTY role TBD)
+  - 403 ถ้า role ไม่ผ่าน
+  - Honors active filter — รายงาน snapshot เฉพาะ slice นั้น
+  - Renders ใน `asyncio.to_thread` (CPU-heavy DOCX rendering ไม่ block event loop)
+  - StreamingResponse with proper Content-Disposition + filename `thesis-{Brand}-{YYYYMMDD}.docx`
+- `GET /api/brand-equity/thesis-eligible` returns `{eligible: bool, role}` ตาม role ปัจจุบัน
+- Frontend (`BeMethodology.jsx`):
+  - Card title อัปเดต: `◆ ACADEMIC EXPORT · READY` (ผ่าน) / `· LOCKED`
+  - Caption เปลี่ยน: "พร้อม Methodology · Aaker breakdown · ตาราง score · AI insights · APA references"
+  - Button: "Export Thesis DOCX →" (active) / "🔒 Locked"
+- Verified: Mali export ได้ 40KB DOCX with all 6 sections ครบ, 403 สำหรับ no-auth, frontend admin login → button enabled
+
+
+
 ## 2026-02-10 — Methodology Appendix + Thesis Export Stub 📚
 - **User**: "ช่วยเพิ่ม expand box รายละเอียดและวิธีการวัด คำนวณค่าทั้งหมดไว้ท้าย report ... เผื่อคนไหนสนใจจะได้กดออกมาดูได้ และให้เตรียมส่วน export เป็นวิทยานิพนธ์ไว้ที่นี่ด้วย (ยังไม่ต้อง active)"
 - **New component** `BeMethodology.jsx` — appendix ที่ท้าย dashboard (เฉพาะเมื่อ ready_for_dashboard):
