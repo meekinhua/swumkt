@@ -1,6 +1,30 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-10 — Methodology Appendix + Thesis Export Stub 📚
+- **User**: "ช่วยเพิ่ม expand box รายละเอียดและวิธีการวัด คำนวณค่าทั้งหมดไว้ท้าย report ... เผื่อคนไหนสนใจจะได้กดออกมาดูได้ และให้เตรียมส่วน export เป็นวิทยานิพนธ์ไว้ที่นี่ด้วย (ยังไม่ต้อง active)"
+- **New component** `BeMethodology.jsx` — appendix ที่ท้าย dashboard (เฉพาะเมื่อ ready_for_dashboard):
+  - 6 collapsible expand boxes (`be-method-toggle-{id}` data-testids):
+    - **00 · BES (รวม)**: สูตร `BES = Σ(D × w) / Σw` + tier mapping (Champion ≥80 / Strong 65-79 / Healthy 50-64 / At Watch 35-49 / At Risk <35)
+    - **01 · Awareness Pyramid**: TOM 0.40 + Spontaneous 0.25 + Aided 0.20 + Familiarity 0.15 + Visual 0.05-0.10 — พร้อมอธิบายว่าแต่ละ signal ดึงจาก question kind ใด
+    - **02 · Perceived Quality**: Overall 0.35 + Reliability 0.20 + Value 0.20 + Comparative 0.15 + Design 0.10
+    - **03 · Identity vs Image**: Trait Overlap 0.20 + Brand Promise 0.15 + Aaker 4 Perspectives ~50% + AI Alignment 0.10
+    - **04 · Loyalty**: NPS 0.40 + Repurchase 0.30 + Switching Resistance 0.30
+    - **05 · Data Pipeline**: AI normalize → frequency stats → likert/NPS scoring → weighted composite + filter/wave-compare signature explanation
+  - Eyebrow + serif title + mono short summary + plus/minus toggle UX (Editorial Swiss style)
+  - References: Aaker (1991, 1996), Keller (1993), Reichheld (2003), Ehrenberg-Bass framework
+- **Thesis Export card** (placeholder, role-gated):
+  - Gradient cream/tan card "◆ ACADEMIC EXPORT · PREVIEW · ส่งออกเป็นรายงานวิทยานิพนธ์ (PDF / DOCX)"
+  - Disabled `🔒 Locked` button + "เปิดใช้งานเฉพาะ admin · อาจารย์ · นิสิต ที่ลงทะเบียนแล้ว — เร็วๆ นี้ (coming soon)"
+  - Frontend probes `GET /api/brand-equity/thesis-eligible` on mount; backend returns `{eligible: false}` for everyone today (TODO comment in code shows how to flip on per role)
+  - `handleExportThesis` ลง endpoint `POST /studies/{id}/thesis-export` — backend stub returns 403 with friendly toast "ฟีเจอร์ยังไม่เปิดใช้งานสำหรับ role ของคุณ"
+- **Backend additions** (`/app/backend/routes/brand_equity.py`):
+  - `GET /thesis-eligible` — returns `{eligible: false, status: "coming_soon"}`
+  - `POST /studies/{id}/thesis-export` — stub raises 403 with TODO scaffold
+- **Hidden on showcase mode** (anonymous public viewers don't see methodology toggle to keep showcase clean)
+
+
+
 ## 2026-02-10 — Aaker-Aligned Brand Equity Scoring (All 4 Dimensions) 🎯
 - **User**: "การศึกษาบางอันไม่ขึ้นค่า awareness เลย ... คำนวณค่าที่ดูถูกต้องที่สุดทางทฤษฎีมา ทุกค่าเลย"
 - **Root cause**: เดิม `_aggregate_responses` ใช้แค่ `likert_5/7`/`nps_0_10`/`comparative_7` ในการ feed `dim_aggregates` → ทุก dimension ถูก average เฉพาะ likert เท่านั้น

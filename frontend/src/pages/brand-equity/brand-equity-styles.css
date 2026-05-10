@@ -799,6 +799,100 @@
   margin: 0; color: var(--ink-3);
 }
 
+/* ============ Methodology / Appendix at bottom of report ============ */
+.be-root .be-method-wrap {
+  margin-top: 80px; padding-top: 40px;
+  border-top: 1px solid var(--rule-strong);
+}
+.be-root .be-method-header { margin-bottom: 24px; max-width: 760px; }
+.be-root .be-method-h3 {
+  font-family: 'IBM Plex Serif', Georgia, serif;
+  font-size: 32px; line-height: 1.2; letter-spacing: -0.01em;
+  margin: 8px 0 12px;
+}
+.be-root .be-method-lede {
+  margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.6;
+}
+.be-root .be-method-list {
+  display: flex; flex-direction: column; gap: 1px;
+  background: var(--rule); border: 1px solid var(--rule-strong);
+}
+.be-root .be-method-item { background: var(--paper); }
+.be-root .be-method-item.open { background: var(--paper-2); }
+.be-root .be-method-toggle {
+  width: 100%; display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 16px; padding: 18px 22px; background: transparent;
+  border: none; cursor: pointer; text-align: left; font-family: inherit;
+}
+.be-root .be-method-toggle:hover { background: rgba(20,22,26,0.025); }
+.be-root .be-method-toggle-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.be-root .be-method-title {
+  font-family: 'IBM Plex Serif', Georgia, serif;
+  font-size: 18px; color: var(--ink); font-weight: 600;
+  margin-top: 2px;
+}
+.be-root .be-method-short {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  color: var(--ink-3); letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.be-root .be-method-arrow {
+  font-family: 'IBM Plex Mono', monospace; font-size: 22px;
+  color: var(--be-red); width: 24px; text-align: center;
+  flex-shrink: 0; line-height: 1;
+}
+.be-root .be-method-body {
+  padding: 4px 22px 24px; color: var(--ink-2); font-size: 14px; line-height: 1.7;
+  border-top: 1px dashed var(--rule);
+}
+.be-root .be-method-body p, .be-root .be-method-body ul, .be-root .be-method-body ol {
+  margin: 12px 0; padding-left: 22px;
+}
+.be-root .be-method-body li { margin-bottom: 8px; }
+.be-root .be-method-body code {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  background: rgba(20,22,26,0.06); padding: 1px 5px; border-radius: 3px;
+}
+.be-root .be-method-body strong { color: var(--ink); font-weight: 600; }
+.be-root .be-method-body em { color: var(--ink-2); font-style: italic; }
+.be-root .be-muted-line {
+  color: var(--ink-3); font-size: 12.5px; font-style: italic;
+}
+
+.be-root .be-thesis-export {
+  display: flex; gap: 24px; align-items: center; justify-content: space-between;
+  padding: 28px 32px; margin-top: 32px;
+  background: linear-gradient(135deg, #FBF7F1 0%, #F7F0E0 100%);
+  border: 1px solid var(--ink); border-radius: 4px;
+  flex-wrap: wrap;
+}
+.be-root .be-thesis-h4 {
+  font-family: 'IBM Plex Serif', Georgia, serif;
+  font-size: 22px; line-height: 1.2; margin: 8px 0 10px;
+}
+.be-root .be-thesis-lede {
+  margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.6;
+  max-width: 560px;
+}
+.be-root .be-thesis-btn {
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  letter-spacing: 0.10em; padding: 14px 28px;
+  background: var(--ink); color: var(--paper);
+  border: none; border-radius: 999px; cursor: pointer;
+  flex-shrink: 0; font-weight: 600;
+}
+.be-root .be-thesis-btn:hover:not(:disabled) {
+  background: var(--logo-blue);
+}
+.be-root .be-thesis-btn:disabled {
+  background: var(--ink-3); color: var(--paper-2); cursor: not-allowed; opacity: 0.7;
+}
+@media (max-width: 700px) {
+  .be-root .be-thesis-export { flex-direction: column; align-items: flex-start; padding: 22px; }
+  .be-root .be-method-toggle { padding: 14px 16px; }
+  .be-root .be-method-body { padding: 4px 16px 20px; }
+}
+
 /* Wave comparison summary card */
 .be-root .be-wave-compare {
   display: grid; grid-template-columns: 1fr 80px 1fr; gap: 16px;

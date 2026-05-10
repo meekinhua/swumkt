@@ -11,6 +11,7 @@ import {
   BrandLogo, SWU_LOGO_URL
 } from './be-components';
 import { BeFilterBar } from './BeFilterBar';
+import { BeMethodology } from './BeMethodology';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -210,6 +211,44 @@ const BrandEquityDashboardPage = () => {
       startPolling();
     } catch (e) {
       toast.error('AI start ไม่สำเร็จ');
+    }
+  };
+
+  // ---------- Thesis Export — feature-flagged off until backend whitelist is enabled ----------
+  // The button is rendered by BeMethodology but DISABLED unless the current user is on the
+  // server-side whitelist (admin / อาจารย์ / นิสิต). Server stub at /api/brand-equity/thesis-eligible
+  // returns {eligible: false} for everyone today; flip when ready to roll out.
+  const [canExportThesis, setCanExportThesis] = useState(false);
+  useEffect(() => {
+    if (isShowcase || !studyId) { setCanExportThesis(false); return; }
+    (async () => {
+      try {
+        const r = await axios.get(`${API}/brand-equity/thesis-eligible`, authH);
+        setCanExportThesis(!!r.data?.eligible);
+      } catch (e) { setCanExportThesis(false); }
+    })();
+    /* eslint-disable-next-line */
+  }, [studyId, isShowcase]);
+
+  const handleExportThesis = async () => {
+    try {
+      toast.info('กำลังสร้างรายงานวิทยานิพนธ์ ...');
+      const qs = buildFilterQS(filter);
+      const r = await axios.post(
+        `${API}/brand-equity/studies/${studyId}/thesis-export${qs}`,
+        {}, { ...authH, responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([r.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `thesis-${(data?.study?.brand?.name || 'brand').replace(/\s+/g, '_')}.docx`;
+      document.body.appendChild(a); a.click();
+      window.URL.revokeObjectURL(url); a.remove();
+      toast.success('Export สำเร็จ');
+    } catch (e) {
+      toast.error(e?.response?.status === 403
+        ? 'ฟีเจอร์ยังไม่เปิดใช้งานสำหรับ role ของคุณ'
+        : 'Export ไม่สำเร็จ');
     }
   };
 
@@ -527,6 +566,14 @@ const BrandEquityDashboardPage = () => {
               )}
             </div>
           </div>
+        )}
+
+        {/* METHODOLOGY · Appendix at bottom of report — explains every score */}
+        {ready_for_dashboard && (
+          <BeMethodology
+            canExportThesis={canExportThesis}
+            onExportThesis={handleExportThesis}
+          />
         )}
       </div>
 

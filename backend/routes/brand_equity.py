@@ -2025,6 +2025,34 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     # ---- Dashboard / analysis ----
 
+    @brand_equity_router.get("/thesis-eligible")
+    async def thesis_eligible(current_user=Depends(get_current_user)):
+        """Returns whether the current user can use the thesis export feature.
+        Currently HARD-OFF (returns false for everyone) — will be flipped on once
+        we finalize the eligible-role list (admin / อาจารย์ / นิสิต ที่ลงทะเบียน)."""
+        # TODO(thesis-export): when ready, replace False with the role check below:
+        # eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT}  # +faculty when role exists
+        # eligible = (current_user.role in eligible_roles)
+        return {"eligible": False, "feature": "thesis_export", "status": "coming_soon"}
+
+    @brand_equity_router.post("/studies/{study_id}/thesis-export")
+    async def thesis_export_stub(
+        study_id: str,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
+        """Thesis export — disabled placeholder. Returns 403 so the frontend toasts
+        'ฟีเจอร์ยังไม่เปิดใช้งาน'. Implementation TODO: render thesis-style DOCX with
+        methodology, sample size, full Aaker breakdown, AI insights, and citations."""
+        # Suppress unused-arg warnings — params kept for future use
+        _ = (study_id, from_iso, to_iso, segments, current_user)
+        raise HTTPException(
+            status_code=403,
+            detail="Thesis export is locked. Contact admin to enable for your role.",
+        )
+
     @brand_equity_router.get("/studies/{study_id}/dashboard")
     async def get_dashboard(
         study_id: str,
