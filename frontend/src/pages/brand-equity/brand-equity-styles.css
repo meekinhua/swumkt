@@ -803,15 +803,52 @@
 .be-root .be-method-wrap {
   margin-top: 80px; padding-top: 40px;
   border-top: 1px solid var(--rule-strong);
+  display: flex; flex-direction: column; gap: 16px;
 }
-.be-root .be-method-header { margin-bottom: 24px; max-width: 760px; }
-.be-root .be-method-h3 {
+
+/* Outer collapsible appendix card (Methodology + Thesis Export both use this) */
+.be-root .be-appendix-card {
+  background: var(--paper); border: 1px solid var(--rule-strong);
+  border-radius: 6px; overflow: hidden;
+}
+.be-root .be-appendix-card--export {
+  background: linear-gradient(135deg, #FBF7F1 0%, #F7F0E0 100%);
+  border-color: var(--ink);
+}
+.be-root .be-appendix-toggle {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; padding: 16px 22px; background: transparent;
+  border: none; cursor: pointer; text-align: left; font-family: inherit;
+}
+.be-root .be-appendix-toggle:hover { background: rgba(20,22,26,0.025); }
+.be-root .be-appendix-toggle-text {
+  display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;
+}
+.be-root .be-appendix-title {
   font-family: 'IBM Plex Serif', Georgia, serif;
-  font-size: 32px; line-height: 1.2; letter-spacing: -0.01em;
-  margin: 8px 0 12px;
+  font-size: 18px; color: var(--ink); font-weight: 600; margin-top: 4px;
 }
+.be-root .be-appendix-short {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  color: var(--ink-3); letter-spacing: 0.04em; margin-top: 2px;
+}
+.be-root .be-appendix-arrow {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  color: var(--ink-3); letter-spacing: 0.14em; flex-shrink: 0;
+}
+.be-root .be-appendix-card.open .be-appendix-arrow { color: var(--be-red); }
+.be-root .be-appendix-body {
+  padding: 8px 22px 24px; border-top: 1px solid var(--rule);
+}
+.be-root .be-thesis-body {
+  display: flex; gap: 24px; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; padding: 22px 22px 24px;
+}
+
+/* Inner per-section accordion (inside Methodology body) */
 .be-root .be-method-lede {
-  margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.6;
+  margin: 0 0 16px; color: var(--ink-2); font-size: 14px; line-height: 1.6;
+  max-width: 760px;
 }
 .be-root .be-method-list {
   display: flex; flex-direction: column; gap: 1px;
@@ -821,20 +858,18 @@
 .be-root .be-method-item.open { background: var(--paper-2); }
 .be-root .be-method-toggle {
   width: 100%; display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 16px; padding: 18px 22px; background: transparent;
+  gap: 16px; padding: 14px 18px; background: transparent;
   border: none; cursor: pointer; text-align: left; font-family: inherit;
 }
 .be-root .be-method-toggle:hover { background: rgba(20,22,26,0.025); }
 .be-root .be-method-toggle-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .be-root .be-method-title {
   font-family: 'IBM Plex Serif', Georgia, serif;
-  font-size: 18px; color: var(--ink); font-weight: 600;
-  margin-top: 2px;
+  font-size: 16px; color: var(--ink); font-weight: 600; margin-top: 2px;
 }
 .be-root .be-method-short {
   font-family: 'IBM Plex Mono', monospace; font-size: 11px;
-  color: var(--ink-3); letter-spacing: 0.04em;
-  margin-top: 2px;
+  color: var(--ink-3); letter-spacing: 0.04em; margin-top: 2px;
 }
 .be-root .be-method-arrow {
   font-family: 'IBM Plex Mono', monospace; font-size: 22px;
@@ -842,7 +877,7 @@
   flex-shrink: 0; line-height: 1;
 }
 .be-root .be-method-body {
-  padding: 4px 22px 24px; color: var(--ink-2); font-size: 14px; line-height: 1.7;
+  padding: 4px 18px 20px; color: var(--ink-2); font-size: 14px; line-height: 1.7;
   border-top: 1px dashed var(--rule);
 }
 .be-root .be-method-body p, .be-root .be-method-body ul, .be-root .be-method-body ol {
@@ -859,20 +894,9 @@
   color: var(--ink-3); font-size: 12.5px; font-style: italic;
 }
 
-.be-root .be-thesis-export {
-  display: flex; gap: 24px; align-items: center; justify-content: space-between;
-  padding: 28px 32px; margin-top: 32px;
-  background: linear-gradient(135deg, #FBF7F1 0%, #F7F0E0 100%);
-  border: 1px solid var(--ink); border-radius: 4px;
-  flex-wrap: wrap;
-}
-.be-root .be-thesis-h4 {
-  font-family: 'IBM Plex Serif', Georgia, serif;
-  font-size: 22px; line-height: 1.2; margin: 8px 0 10px;
-}
 .be-root .be-thesis-lede {
   margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.6;
-  max-width: 560px;
+  max-width: 560px; flex: 1 1 320px;
 }
 .be-root .be-thesis-btn {
   font-family: 'IBM Plex Mono', monospace; font-size: 13px;
@@ -888,9 +912,11 @@
   background: var(--ink-3); color: var(--paper-2); cursor: not-allowed; opacity: 0.7;
 }
 @media (max-width: 700px) {
-  .be-root .be-thesis-export { flex-direction: column; align-items: flex-start; padding: 22px; }
-  .be-root .be-method-toggle { padding: 14px 16px; }
-  .be-root .be-method-body { padding: 4px 16px 20px; }
+  .be-root .be-thesis-body { flex-direction: column; align-items: flex-start; padding: 18px; }
+  .be-root .be-method-toggle { padding: 12px 14px; }
+  .be-root .be-method-body { padding: 4px 14px 18px; }
+  .be-root .be-appendix-toggle { padding: 14px 16px; }
+  .be-root .be-appendix-body { padding: 8px 16px 20px; }
 }
 
 /* Wave comparison summary card */

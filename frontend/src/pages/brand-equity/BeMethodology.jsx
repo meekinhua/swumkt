@@ -158,74 +158,103 @@ const SECTIONS = [
 
 export const BeMethodology = ({ canExportThesis = false, onExportThesis }) => {
   const [openId, setOpenId] = useState(null);
+  // Outer panels default closed — like the filter bar — to keep the report clean.
+  const [methodOpen, setMethodOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   return (
     <section className="be-method-wrap" data-testid="be-methodology">
-      <div className="be-method-header">
-        <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--be-red)' }}>
-          ● METHODOLOGY · APPENDIX
-        </span>
-        <h3 className="be-method-h3">วิธีคำนวณคะแนนทุกตัวบน dashboard นี้</h3>
-        <p className="be-method-lede">
-          เราใช้สูตร <strong>Aaker-aligned weighted composite</strong> ที่ trace กลับไปงานวิจัย
-          Aaker (1991, 1996) + Keller (1993) + Reichheld (2003) ได้ครบ
-          — กดที่หัวข้อด้านล่างเพื่อดูสูตร น้ำหนัก และเหตุผลที่ใช้
-        </p>
-      </div>
-
-      <div className="be-method-list">
-        {SECTIONS.map(s => (
-          <div key={s.id}
-               className={`be-method-item ${openId === s.id ? 'open' : ''}`}
-               data-testid={`be-method-item-${s.id}`}>
-            <button type="button"
-                    className="be-method-toggle"
-                    data-testid={`be-method-toggle-${s.id}`}
-                    onClick={() => setOpenId(openId === s.id ? null : s.id)}>
-              <div className="be-method-toggle-text">
-                <span className="be-mono be-tiny" style={{ color: 'var(--ink-3)' }}>{s.eyebrow}</span>
-                <span className="be-method-title">{s.title}</span>
-                <span className="be-method-short">{s.short}</span>
-              </div>
-              <span className="be-method-arrow">{openId === s.id ? '−' : '+'}</span>
-            </button>
-            {openId === s.id && (
-              <div className="be-method-body" data-testid={`be-method-body-${s.id}`}>
-                {s.body}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* ============ Thesis Export — currently disabled, role-gated ============ */}
-      <div className="be-thesis-export" data-testid="be-thesis-export-card">
-        <div>
-          <span className="be-mono be-tiny" style={{ letterSpacing: '0.14em', color: 'var(--logo-blue)' }}>
-            ◆ ACADEMIC EXPORT · PREVIEW
-          </span>
-          <h4 className="be-thesis-h4">ส่งออกเป็นรายงานวิทยานิพนธ์ (PDF / DOCX)</h4>
-          <p className="be-thesis-lede">
-            เลื่อน data + AI insights + Methodology ทั้งหมดออกเป็นเอกสารวิจัยพร้อมใส่ใน
-            thesis chapter — มี citation, sample size, methodology section, และตาราง
-            cross-tab ครบ
-            <br/>
-            <span className="be-tiny be-muted">
-              เปิดใช้งานเฉพาะ <strong>admin · อาจารย์ · นิสิต ที่ลงทะเบียนแล้ว</strong> —
-              เร็วๆ นี้ <span style={{ color: 'var(--be-red)' }}>(coming soon)</span>
-            </span>
-          </p>
-        </div>
+      {/* ============ Methodology — collapsed by default ============ */}
+      <div className={`be-appendix-card ${methodOpen ? 'open' : ''}`}>
         <button type="button"
-                className="be-thesis-btn"
-                disabled={!canExportThesis}
-                data-testid="be-thesis-export-btn"
-                onClick={canExportThesis ? onExportThesis : undefined}
-                title={canExportThesis
-                  ? 'Generate thesis-ready report'
-                  : 'เปิดใช้สำหรับ admin / อาจารย์ / นิสิต — เร็วๆ นี้'}>
-          {canExportThesis ? 'Export Thesis Report →' : '🔒 Locked'}
+                className="be-appendix-toggle"
+                data-testid="be-methodology-toggle"
+                onClick={() => setMethodOpen(!methodOpen)}>
+          <div className="be-appendix-toggle-text">
+            <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--be-red)' }}>
+              ● METHODOLOGY · APPENDIX
+            </span>
+            <span className="be-appendix-title">วิธีคำนวณคะแนนทุกตัวบน dashboard นี้</span>
+            <span className="be-appendix-short">
+              Aaker-aligned weighted composite · 6 sections — สูตร น้ำหนัก และเหตุผลที่ใช้
+            </span>
+          </div>
+          <span className="be-appendix-arrow">{methodOpen ? 'COLLAPSE ▲' : 'EXPAND ▼'}</span>
         </button>
+
+        {methodOpen && (
+          <div className="be-appendix-body" data-testid="be-methodology-body">
+            <p className="be-method-lede">
+              เราใช้สูตร <strong>Aaker-aligned weighted composite</strong> ที่ trace กลับไปงานวิจัย
+              Aaker (1991, 1996) + Keller (1993) + Reichheld (2003) ได้ครบ
+              — กดที่หัวข้อด้านล่างเพื่อดูสูตร น้ำหนัก และเหตุผลที่ใช้
+            </p>
+            <div className="be-method-list">
+              {SECTIONS.map(s => (
+                <div key={s.id}
+                     className={`be-method-item ${openId === s.id ? 'open' : ''}`}
+                     data-testid={`be-method-item-${s.id}`}>
+                  <button type="button"
+                          className="be-method-toggle"
+                          data-testid={`be-method-toggle-${s.id}`}
+                          onClick={() => setOpenId(openId === s.id ? null : s.id)}>
+                    <div className="be-method-toggle-text">
+                      <span className="be-mono be-tiny" style={{ color: 'var(--ink-3)' }}>{s.eyebrow}</span>
+                      <span className="be-method-title">{s.title}</span>
+                      <span className="be-method-short">{s.short}</span>
+                    </div>
+                    <span className="be-method-arrow">{openId === s.id ? '−' : '+'}</span>
+                  </button>
+                  {openId === s.id && (
+                    <div className="be-method-body" data-testid={`be-method-body-${s.id}`}>
+                      {s.body}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ============ Thesis Export — collapsed by default, role-gated ============ */}
+      <div className={`be-appendix-card be-appendix-card--export ${exportOpen ? 'open' : ''}`}
+           data-testid="be-thesis-export-card">
+        <button type="button"
+                className="be-appendix-toggle"
+                data-testid="be-thesis-export-toggle"
+                onClick={() => setExportOpen(!exportOpen)}>
+          <div className="be-appendix-toggle-text">
+            <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--logo-blue)' }}>
+              ◆ ACADEMIC EXPORT · PREVIEW
+            </span>
+            <span className="be-appendix-title">ส่งออกเป็นรายงานวิทยานิพนธ์ (PDF / DOCX)</span>
+            <span className="be-appendix-short">
+              เฉพาะ admin · อาจารย์ · นิสิต ที่ลงทะเบียนแล้ว — เร็วๆ นี้ (coming soon)
+            </span>
+          </div>
+          <span className="be-appendix-arrow">{exportOpen ? 'COLLAPSE ▲' : 'EXPAND ▼'}</span>
+        </button>
+
+        {exportOpen && (
+          <div className="be-appendix-body be-thesis-body" data-testid="be-thesis-export-body">
+            <p className="be-thesis-lede">
+              เลื่อน data + AI insights + Methodology ทั้งหมดออกเป็นเอกสารวิจัยพร้อมใส่ใน
+              thesis chapter — มี citation, sample size, methodology section, และตาราง
+              cross-tab ครบ
+            </p>
+            <button type="button"
+                    className="be-thesis-btn"
+                    disabled={!canExportThesis}
+                    data-testid="be-thesis-export-btn"
+                    onClick={canExportThesis ? onExportThesis : undefined}
+                    title={canExportThesis
+                      ? 'Generate thesis-ready report'
+                      : 'เปิดใช้สำหรับ admin / อาจารย์ / นิสิต — เร็วๆ นี้'}>
+              {canExportThesis ? 'Export Thesis Report →' : '🔒 Locked'}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
