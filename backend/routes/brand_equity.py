@@ -910,22 +910,43 @@ def _compute_dim_composite(
     dim: str, out_questions: List[dict], target_brand: str,
     intended_traits: Optional[List[str]] = None,
     identity_alignment: Optional[float] = None,
-) -> Optional[float]:
+) -> tuple:
     """Aaker-aligned weighted dimension composite.
+
+    Returns `(score, coverage_meta)` where:
+      score: 0-100 weighted composite (or None if no signals at all)
+      coverage_meta: {
+        'coverage': 0-1.0 (% of expected weight that had data),
+        'present_kinds': [list of kind strings that fed the score],
+        'missing_kinds': [list of expected kinds with no data],
+        'used_fallback': bool (true if non-DIMENSION_WEIGHTS kinds present),
+      }
 
     Each question is scored to 0-100 via `_question_signal_100`, then weighted
     by `DIMENSION_WEIGHTS[dim][kind]`. Weights renormalize over signals that
-    are actually present so partial studies still produce a defensible score.
-    Falls back to plain average of any 0-100 signal when no recognized kinds
-    are present (e.g. fully custom studies).
+    are actually present so partial studies still produce a defensible score
+    — but the coverage % lets the UI flag "data is incomplete" with a warning.
 
     For `identity`, `identity_alignment` (from AI cache identity_image, 0-100)
     is mixed in at 10% if available (qualitative open-ended overlap).
     """
     weight_map = DIMENSION_WEIGHTS.get(dim, {})
+    expected_weight_total = sum(weight_map.values()) if weight_map else 1.0
     weighted_sum = 0.0
     total_weight = 0.0
     fallback_signals: List[float] = []
+    present_kinds: List[str] = []
+    used_fallback = False
+
+    # Only kinds that this dim's questions actually carry — i.e. a study that
+    # never includes "logo_unaided" shouldn't be penalized for lacking it.
+    # We compute coverage relative to the SUBSET of dim weights that the
+    # study's questionnaire designed-in. This matches Aaker's "use what you
+    # collect" practice rather than the theoretical 1.0.
+    designed_kinds = {q.get("kind") for q in out_questions
+                      if q.get("dimension") == dim and not q.get("compare_brand")
+                      and q.get("kind") in weight_map}
+    designed_weight_total = sum(weight_map[k] for k in designed_kinds) if designed_kinds else expected_weight_total
 
     for q in out_questions:
         if q.get("dimension") != dim:
@@ -943,23 +964,41 @@ def _compute_dim_composite(
         if w is not None and w > 0:
             weighted_sum += signal * w
             total_weight += w
+            if kind:
+                present_kinds.append(kind)
         else:
             fallback_signals.append(signal)
+            used_fallback = True
 
     if dim == "identity" and identity_alignment is not None:
         align_w = 0.10
         weighted_sum += float(identity_alignment) * align_w
         total_weight += align_w
+        present_kinds.append("ai_identity_alignment")
+
+    # Coverage = actual_weight / designed_weight (1.0 = every designed signal had data)
+    coverage = (total_weight / designed_weight_total) if designed_weight_total > 0 else 0.0
+    coverage = round(min(1.0, max(0.0, coverage)), 3)
+
+    missing_kinds = sorted(designed_kinds - set(present_kinds))
+
+    meta = {
+        "coverage": coverage,
+        "present_kinds": present_kinds,
+        "missing_kinds": missing_kinds,
+        "used_fallback": used_fallback,
+        "designed_kinds": sorted(designed_kinds),
+    }
 
     if total_weight > 0:
         score = weighted_sum / total_weight
         if fallback_signals:
             fb_avg = sum(fallback_signals) / len(fallback_signals)
             score = score * 0.85 + fb_avg * 0.15
-        return round(score, 1)
+        return round(score, 1), meta
     if fallback_signals:
-        return round(sum(fallback_signals) / len(fallback_signals), 1)
-    return None
+        return round(sum(fallback_signals) / len(fallback_signals), 1), meta
+    return None, meta
 
 
 def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None) -> dict:
