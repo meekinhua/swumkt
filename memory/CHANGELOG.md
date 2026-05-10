@@ -1,6 +1,35 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-10 — Aaker-Aligned Brand Equity Scoring (All 4 Dimensions) 🎯
+- **User**: "การศึกษาบางอันไม่ขึ้นค่า awareness เลย ... คำนวณค่าที่ดูถูกต้องที่สุดทางทฤษฎีมา ทุกค่าเลย"
+- **Root cause**: เดิม `_aggregate_responses` ใช้แค่ `likert_5/7`/`nps_0_10`/`comparative_7` ในการ feed `dim_aggregates` → ทุก dimension ถูก average เฉพาะ likert เท่านั้น
+  - **Awareness** (4 questions: TOM, recall, aided, familiarity) — feed แค่ AW-4 likert เพียงตัวเดียว → ถ้า user ลบ AW-4 → composite=0 → UI แสดง "—"
+  - **Quality / Identity / Loyalty** — ตัด open-ended/mcq/trait_grid ออกหมด ไม่ใช้ Aaker framework
+- **Fix** (`/app/backend/routes/brand_equity.py`):
+  - **`_question_signal_100(q, stats, target_brand, intended_traits)`** — fn ใหม่ score ทุก question type 0-100:
+    - `likert_5/7`/`nps_0_10`/`comparative_7` → existing `score_100`
+    - `mcq_multi`/`mcq_single` → % respondents picked target_brand (aided recognition)
+    - `trait_grid` (image_traits_aided / as_person_personality) → mean pickup pct ของ **intended_traits** (Aaker identity-image overlap)
+    - `open_short`/`open_long` (extract_brand/extract_brands) → top-of-mind / unaided-recall share จาก AI normalized counts
+    - `word_cloud` & generic trait_grid → None (ไม่มี comparable signal)
+  - **`DIMENSION_WEIGHTS`** — Aaker-aligned weights ต่อ `kind`:
+    - **Awareness pyramid**: TOM 0.40, Spontaneous 0.25, Aided 0.20, Familiarity 0.15, +visual 0.05-0.10 ถ้ามี
+    - **Quality**: Overall 0.35, Reliability 0.20, Value 0.20, Comparative 0.15, Design 0.10
+    - **Identity**: Trait pickup vs intent 0.20, Brand promise 0.15, Aaker 4 perspectives (Org/Person/Symbol/Product likert grids) 0.04-0.07 each, +AI identity-image alignment 0.10
+    - **Loyalty**: NPS 0.40, Repurchase 0.30, Switching resistance 0.30
+  - **`_compute_dim_composite(dim, out_questions, target_brand, intended_traits, identity_alignment)`** — weighted avg over present signals, weights renormalize, fallback to plain mean for unrecognized kinds
+  - Composite "overall" computed from dimension scores ที่ผลิตได้จริง (skip None)
+- **Verified ด้วย Mali (n=21)**:
+  - **ก่อน**: A 75.2 / Q 71.5 / I 70.5 / L 60.5 / BES 69.4 (ใช้แค่ likert)
+  - **หลัง**: A 72.2 / Q 70.1 / I 56.2 / L 59.7 / BES 64.5
+  - Awareness math เช็คมือ: TOM 61.9×0.40 + Recall 76.2×0.25 + Aided 85.7×0.20 + Familiarity 75.2×0.15 = 72.23 ✅
+  - Identity ลด เพราะรวม trait pickup overlap (intended traits matched 5/5 avg 62.88%) + AI alignment ที่ AI cache สรุปไว้
+  - Frontend dashboard แสดงครบ 4 ค่าไม่มี "—", AI insights ปกติ
+- ใช้ได้กับ studies เก่าทั้งหมด (recompute on-the-fly, ไม่กระทบ data) + ทำงานกับทั้ง owner mode + showcase + filter + wave compare
+
+
+
 ## 2026-02-08 — Filter UX: Empty Segment State Fix 🪄
 - **User**: "เห็นแต่ filter เวลา ไม่มีอย่างอื่น หรือว่าไม่มีข้อมูลก็ไม่รู้ ตรวจหน่อย"
 - **Root cause** (`BeFilterBar.jsx`):

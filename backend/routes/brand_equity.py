@@ -767,6 +767,185 @@ def _comparative_stats(values: List[int]) -> dict:
     }
 
 
+def _question_signal_100(
+    q: dict, stats: dict, target_brand: str,
+    intended_traits: Optional[List[str]] = None,
+) -> Optional[float]:
+    """Return a 0-100 signal score for ANY question type (not just likert/nps).
+    Used by Aaker-aligned dimension scoring so we can include
+    aided-recognition, top-of-mind, recall — not only likert/nps.
+
+    `intended_traits` enables trait-grid identity-image alignment scoring
+    (e.g. BI-1 "Pick traits describing brand" — score = mean pickup of the
+    brand's *intended* traits, the core Aaker identity-image overlap metric).
+
+    Returns None when the question has no usable signal yet."""
+    s = stats or {}
+    qtype = q.get("type")
+    kind = q.get("kind")
+    counts = s.get("counts") or []
+    n = s.get("n") or 0
+    target_lower = (target_brand or "").strip().lower()
+
+    # Direct numeric scales
+    if qtype in ("likert_5", "likert_7", "nps_0_10", "comparative_7"):
+        return s.get("score_100")
+
+    # ---- Identity trait-grid: avg pickup of brand's *intended* traits ----
+    # Score = average % of respondents who picked each intended trait.
+    # This is the canonical identity-image overlap metric.
+    if qtype == "trait_grid" and kind in ("image_traits_aided", "as_person_personality") and intended_traits:
+        if not counts or not n:
+            return None
+        intended_lower = {t.strip().lower() for t in intended_traits if t}
+        if not intended_lower:
+            return None
+        matched_pcts = []
+        for c in counts:
+            label = (c.get("label") or "").strip().lower()
+            if label in intended_lower:
+                matched_pcts.append(float(c.get("pct") or 0))
+        if not matched_pcts:
+            return 0.0
+        # average pickup AMONG intended traits, capped 100
+        return min(100.0, sum(matched_pcts) / len(intended_lower))
+
+    # Brand-mention questions (aided / aided-logo) → % who picked target brand
+    if qtype in ("mcq_multi", "mcq_single"):
+        if not counts or not n:
+            return None
+        for c in counts:
+            if (c.get("label") or "").strip().lower() == target_lower:
+                return float(c.get("pct") or 0)
+        return 0.0
+
+    # Generic trait_grid without intended-trait context → not meaningful for scoring
+    if qtype == "trait_grid":
+        return None
+
+    # Open-ended brand/concept (TOM, recall, logo unaided, color recall) — pull share from AI-normalized counts
+    if qtype in ("open_short", "open_long"):
+        # word_cloud kinds (image_one_word, as_org_unaided, as_symbol_unaided) emit
+        # word counts not brand counts → can't score against a target_brand. Skip them.
+        if (q.get("ai_processing") or "") == "word_cloud":
+            return None
+        if not s.get("ai_normalized"):
+            return None
+        if not counts or not n:
+            return None
+        for c in counts:
+            if (c.get("label") or "").strip().lower() == target_lower:
+                count = float(c.get("count") or 0)
+                pct = float(c.get("pct") or (count / n * 100 if n else 0))
+                return min(100.0, pct)
+        return 0.0
+
+    return None
+
+
+# Aaker-aligned weights per dimension. Keys are question `kind` values from TEMPLATE_LIB.
+# Reflects the relative importance each signal carries in Aaker's brand-equity model.
+# When a kind is missing from a study, weights renormalize over what's present so a
+# study with only some signals still produces a defensible composite.
+DIMENSION_WEIGHTS: Dict[str, Dict[str, float]] = {
+    "awareness": {
+        # Aaker's awareness pyramid — TOM is the strongest signal.
+        "unaided_top_of_mind": 0.40,
+        "unaided_recall":      0.25,
+        "aided_recognition":   0.20,
+        "logo_aided":          0.10,    # visual recognition (when present)
+        "logo_unaided":        0.10,
+        "color_recall":        0.05,
+        "brand_familiarity":   0.15,
+    },
+    "quality": {
+        "overall_quality":       0.35,
+        "attribute_reliability": 0.20,
+        "attribute_value":       0.20,
+        "brand_vs_competitor":   0.15,
+        "attribute_design":      0.10,
+        "as_product_quality":    0.05,
+    },
+    "identity": {
+        # Aaker's "brand as ..." 4-perspective framework + identity-image overlap
+        "image_traits_aided":       0.20,   # Aaker identity-image overlap (key metric)
+        "brand_promise_match":      0.15,   # delivers on intended promise
+        "as_org_trust":             0.06,
+        "as_org_innovation":        0.06,
+        "as_org_responsibility":    0.05,
+        "as_person_personality":    0.06,   # trait_grid scored vs intent
+        "as_person_relatable":      0.05,
+        "as_person_aspirational":   0.06,
+        "as_symbol_recognizability":0.06,
+        "as_symbol_distinctive":    0.06,
+        "as_product_premium":       0.06,
+        "as_product_variety":       0.05,
+        "as_product_quality":       0.04,
+    },
+    "loyalty": {
+        "nps":                  0.40,
+        "repeat_intent":        0.30,
+        "switching_resistance": 0.30,
+    },
+}
+
+
+def _compute_dim_composite(
+    dim: str, out_questions: List[dict], target_brand: str,
+    intended_traits: Optional[List[str]] = None,
+    identity_alignment: Optional[float] = None,
+) -> Optional[float]:
+    """Aaker-aligned weighted dimension composite.
+
+    Each question is scored to 0-100 via `_question_signal_100`, then weighted
+    by `DIMENSION_WEIGHTS[dim][kind]`. Weights renormalize over signals that
+    are actually present so partial studies still produce a defensible score.
+    Falls back to plain average of any 0-100 signal when no recognized kinds
+    are present (e.g. fully custom studies).
+
+    For `identity`, `identity_alignment` (from AI cache identity_image, 0-100)
+    is mixed in at 10% if available (qualitative open-ended overlap).
+    """
+    weight_map = DIMENSION_WEIGHTS.get(dim, {})
+    weighted_sum = 0.0
+    total_weight = 0.0
+    fallback_signals: List[float] = []
+
+    for q in out_questions:
+        if q.get("dimension") != dim:
+            continue
+        if q.get("compare_brand"):
+            continue
+        signal = _question_signal_100(
+            q, q.get("stats", {}), target_brand,
+            intended_traits=intended_traits,
+        )
+        if signal is None:
+            continue
+        kind = q.get("kind")
+        w = weight_map.get(kind)
+        if w is not None and w > 0:
+            weighted_sum += signal * w
+            total_weight += w
+        else:
+            fallback_signals.append(signal)
+
+    if dim == "identity" and identity_alignment is not None:
+        align_w = 0.10
+        weighted_sum += float(identity_alignment) * align_w
+        total_weight += align_w
+
+    if total_weight > 0:
+        score = weighted_sum / total_weight
+        if fallback_signals:
+            fb_avg = sum(fallback_signals) / len(fallback_signals)
+            score = score * 0.85 + fb_avg * 0.15
+        return round(score, 1)
+    if fallback_signals:
+        return round(sum(fallback_signals) / len(fallback_signals), 1)
+    return None
+
+
 def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None) -> dict:
     """Compute stats per question.
     normalized: optional {question_id: {counts: [...], total: N, variants_map: {...}}}
@@ -836,17 +1015,54 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
             "stats": stats,
         })
 
-    # Composite scores per dimension
-    composite = {}
+    # ============ Aaker-aligned dimension composites ============
+    # Each dimension uses kind-aware weighted scoring (see DIMENSION_WEIGHTS).
+    # `_compute_dim_composite` renormalizes weights over signals that are present,
+    # so studies missing some questions still get a defensible score.
+    target_brand = study["brand"]["name"]
+
+    # Identity-Image alignment is computed by the AI pipeline (post-survey) and
+    # stored in study.ai_cache.identity_image.alignment_score (0-100). When
+    # available, it boosts identity composite at 10% weight.
+    identity_alignment = None
+    ai_cache_local = study.get("ai_cache") or {}
+    ii = ai_cache_local.get("identity_image") or {}
+    if isinstance(ii, dict):
+        a = ii.get("alignment_score")
+        if a is None:
+            # Some pipelines emit a 0-1 score under different keys
+            a = ii.get("alignment") or ii.get("match_score")
+        if isinstance(a, (int, float)):
+            identity_alignment = float(a) if a > 1 else float(a) * 100.0
+
+    composite: Dict[str, Optional[float]] = {}
+    intended_traits = (study.get("identity") or {}).get("traits") or []
     for d in DIMENSIONS:
-        if dim_aggregates[d]:
-            composite[d] = round(sum(dim_aggregates[d]) / len(dim_aggregates[d]), 1)
-        else:
-            composite[d] = 0
+        composite[d] = _compute_dim_composite(
+            d, out_questions, target_brand,
+            intended_traits=intended_traits,
+            identity_alignment=(identity_alignment if d == "identity" else None),
+        )
+
+    # Overall = weighted mean of dimensions that produced a score.
     weights = study.get("weights") or {"awareness": 25, "quality": 25, "identity": 25, "loyalty": 25}
-    total_w = sum(weights.values()) or 100
-    overall = sum(composite[d] * weights.get(d, 25) for d in DIMENSIONS) / total_w
-    composite["overall"] = round(overall, 1)
+    weighted_total = 0.0
+    weight_sum = 0.0
+    for d in DIMENSIONS:
+        score = composite.get(d)
+        if score is None:
+            continue
+        w = float(weights.get(d, 25))
+        weighted_total += score * w
+        weight_sum += w
+    composite["overall"] = round(weighted_total / weight_sum, 1) if weight_sum > 0 else None
+
+    # Cast missing dims back to 0 for backward-compat with frontends that expect numeric;
+    # the dashboard's `v > 0 ? v : '—'` will still render '—' but downstream sorting & exports
+    # don't choke on null. Keep `null` only for `overall` so a fully-empty study is identifiable.
+    for d in DIMENSIONS:
+        if composite.get(d) is None:
+            composite[d] = 0
 
     # Awareness extras
     awareness_extras = {}
