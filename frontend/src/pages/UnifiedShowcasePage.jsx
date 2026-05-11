@@ -40,7 +40,7 @@ const BrandMark = ({ topic, logoUrl, size = 56 }) => {
         <div style={{
           width: '100%', height: '100%',
           background: `linear-gradient(135deg, ${bg} 0%, rgba(10,10,10,0.65) 100%)`,
-          color: '#F4F0EA',
+          color: '#FAFAFA',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontFamily: 'IBM Plex Serif, serif',
           fontSize: Math.round(size * 0.42), fontWeight: 600,
@@ -193,7 +193,7 @@ const FeaturedTopicCard = ({ topic, onOpen }) => (
   >
     {/* LEFT: editorial intro */}
     <div style={{
-      background: '#F4F0EA', padding: '36px 32px',
+      background: '#FAFAFA', padding: '36px 32px',
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
       gap: 24, position: 'relative', minHeight: 260,
     }}>
@@ -234,7 +234,7 @@ const FeaturedTopicCard = ({ topic, onOpen }) => (
           onClick={() => onOpen(s)}
           data-testid={`featured-method-${s.method}-${s.id}`}
           style={{
-            padding: '20px 18px', background: '#F4F0EA',
+            padding: '20px 18px', background: '#FAFAFA',
             border: '1px solid rgba(10,10,10,0.15)',
             textAlign: 'left', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', gap: 10,
@@ -246,7 +246,7 @@ const FeaturedTopicCard = ({ topic, onOpen }) => (
             e.currentTarget.style.transform = 'translateY(-2px)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#F4F0EA';
+            e.currentTarget.style.background = '#FAFAFA';
             e.currentTarget.style.borderColor = 'rgba(10,10,10,0.15)';
             e.currentTarget.style.transform = 'none';
           }}
@@ -278,7 +278,7 @@ const FeaturedTopicCard = ({ topic, onOpen }) => (
 const MethodsPrimer = () => (
   <section style={{
     marginTop: 80, padding: '64px 32px',
-    background: '#0A0A0A', color: '#F4F0EA',
+    background: '#0A0A0A', color: '#FAFAFA',
     display: 'grid', gap: 48,
     gridTemplateColumns: 'minmax(0,1fr)',
   }} className="md:!grid-cols-[5fr_7fr] md:!p-20 md:!gap-24">
@@ -307,7 +307,7 @@ const MethodsPrimer = () => (
           Aaker 4-Dimension Framework
         </h4>
         <p style={{ fontSize: 13, opacity: 0.78, lineHeight: 1.7, margin: 0 }}>
-          วัด <strong style={{ color: '#F4F0EA' }}>สถานะ</strong> ของแบรนด์ผ่าน 4 มิติ:
+          วัด <strong style={{ color: '#FAFAFA' }}>สถานะ</strong> ของแบรนด์ผ่าน 4 มิติ:
           Awareness · Perceived Quality · Identity vs Image · Loyalty.
           เหมาะกับงานที่ต้องการ snapshot ภาพรวมและเทียบกับคู่แข่งบนแกนเดียวกัน
         </p>
@@ -322,7 +322,7 @@ const MethodsPrimer = () => (
           Choice-Based Trade-off
         </h4>
         <p style={{ fontSize: 13, opacity: 0.78, lineHeight: 1.7, margin: 0 }}>
-          วัด <strong style={{ color: '#F4F0EA' }}>trade-off</strong> ของผู้บริโภคโดยให้เลือก profile
+          วัด <strong style={{ color: '#FAFAFA' }}>trade-off</strong> ของผู้บริโภคโดยให้เลือก profile
           ที่มี attribute ต่างกัน. ระบบคำนวณ <em>part-worth utilities</em>
           ทำให้รู้ว่า attribute ไหนสำคัญสุด และตั้งราคา/ออกแบบสินค้าใหม่ได้แม่นยำ
         </p>
@@ -332,12 +332,124 @@ const MethodsPrimer = () => (
 );
 
 // ────────────────────────────────────────────────────────────────────────────
+// Editor's Pick — magazine-cover hero between page hero and catalog
+// ────────────────────────────────────────────────────────────────────────────
+const EditorPickHero = ({ pick, study, onOpen }) => {
+  const isBE = study.method === 'brand_equity';
+  const headline = pick.headline || study.topic || study.title || '(featured)';
+  const subhead  = pick.subhead  || study.description || (isBE
+    ? `Brand Equity study · ${study.response_count || 0} responses${study.category ? ' · ' + study.category : ''}`
+    : `Conjoint Analysis · ${study.attributes_count || 0} attributes${study.category ? ' · ' + study.category : ''}`);
+  const imgSrc = pick.image_base64
+    ? `data:${pick.image_mime || 'image/png'};base64,${pick.image_base64}`
+    : (pick.image_url || null);
+
+  return (
+    <section
+      data-testid="showcase-editor-pick"
+      style={{
+        marginTop: 64, position: 'relative',
+        display: 'grid', gap: 0,
+        gridTemplateColumns: 'minmax(0, 1fr)',
+        background: '#FFFFFF',
+        border: '1px solid rgba(10,10,10,0.15)',
+        overflow: 'hidden',
+      }}
+      className="md:!grid-cols-[6fr_6fr]"
+    >
+      {/* IMAGE side */}
+      <div style={{
+        position: 'relative', minHeight: 320,
+        background: imgSrc ? '#0A0A0A' : `linear-gradient(135deg, ${isBE ? '#0E5538' : '#C8102E'} 0%, #1D3557 100%)`,
+        overflow: 'hidden',
+      }}>
+        {imgSrc && (
+          <img src={imgSrc} alt={headline}
+               style={{ width: '100%', height: '100%', objectFit: 'cover',
+                        position: 'absolute', inset: 0,
+                        opacity: 0.92,
+                        transition: 'transform 700ms ease, opacity 400ms ease' }}/>
+        )}
+        {/* Diagonal stripe overlay for editorial feel */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(135deg, transparent 0%, transparent 55%, rgba(10,10,10,0.45) 100%)',
+        }}/>
+        <div style={{
+          position: 'absolute', top: 20, left: 20,
+          display: 'flex', gap: 8, alignItems: 'center',
+          background: '#0A0A0A', color: '#FFFFFF',
+          padding: '7px 12px', fontSize: 10,
+          fontFamily: 'JetBrains Mono, monospace',
+          letterSpacing: '0.18em', fontWeight: 700,
+        }}>
+          <span style={{ width: 6, height: 6, background: '#F6C445', borderRadius: '50%' }}/>
+          EDITOR'S PICK · 01
+        </div>
+      </div>
+
+      {/* TEXT side */}
+      <div style={{
+        padding: '40px 32px 32px',
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        gap: 20, position: 'relative', minHeight: 320,
+      }}>
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 4,
+          background: isBE ? '#0E5538' : '#C8102E',
+        }}/>
+        <div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18 }}>
+            <MethodTag method={study.method} short={study.method_short}/>
+            {study.category && (
+              <span style={{ fontSize: 10, color: '#8A8A8A', fontFamily: 'JetBrains Mono',
+                             letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                {study.category}
+              </span>
+            )}
+          </div>
+          <h2 style={{
+            margin: 0, fontFamily: 'IBM Plex Serif, serif',
+            fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 500,
+            lineHeight: 1.05, letterSpacing: '-0.025em', color: '#0A0A0A',
+          }}>
+            {headline}
+          </h2>
+          <p style={{ marginTop: 18, marginBottom: 0, fontSize: 15,
+                      color: '#4A4A4A', lineHeight: 1.65,
+                      fontFamily: 'IBM Plex Sans Thai, sans-serif' }}>
+            {subhead}
+          </p>
+        </div>
+        <button
+          onClick={onOpen}
+          data-testid="editor-pick-open-btn"
+          style={{
+            alignSelf: 'flex-start',
+            padding: '13px 22px', fontSize: 11, fontWeight: 700,
+            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.18em',
+            background: '#0A0A0A', color: '#FFFFFF', border: 'none',
+            cursor: 'pointer', transition: 'all 200ms ease',
+            textTransform: 'uppercase',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = isBE ? '#0E5538' : '#C8102E'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#0A0A0A'; }}
+        >
+          ดูงานวิจัยฉบับเต็ม →
+        </button>
+      </div>
+    </section>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 // MAIN
 // ────────────────────────────────────────────────────────────────────────────
 const UnifiedShowcasePage = () => {
   const [data, setData] = useState(null);
+  const [landing, setLanding] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('all');
+  const [tab, setTab] = useState('brand_equity');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -348,8 +460,12 @@ const UnifiedShowcasePage = () => {
     }
     (async () => {
       try {
-        const r = await axios.get(`${API}/showcase/index`);
+        const [r, l] = await Promise.all([
+          axios.get(`${API}/showcase/index`),
+          axios.get(`${API}/cms/landing`),
+        ]);
         setData(r.data);
+        setLanding(l.data);
       } catch (e) {
         console.error(e);
       } finally {
@@ -365,8 +481,8 @@ const UnifiedShowcasePage = () => {
 
   if (loading) {
     return (
-      <div style={{ background: '#F4F0EA', minHeight: '100vh' }}>
-        <BeTopbar subtitle="PUBLIC SHOWCASE" active="showcase" />
+      <div style={{ background: '#FFFFFF', minHeight: '100vh' }}>
+        <BeTopbar subtitle="PUBLIC SHOWCASE" publicMode />
         <BeLoading text="กำลังโหลด showcase..."/>
       </div>
     );
@@ -377,6 +493,13 @@ const UnifiedShowcasePage = () => {
   const beItems  = data.brand_equity || [];
   const cjItems  = data.conjoint || [];
   const totals   = data.totals || {};
+  const pick     = landing?.showcase_editor_pick;
+  const pickStudy = (() => {
+    if (!pick?.enabled || !pick?.study_id) return null;
+    if (pick.study_method === 'brand_equity') return beItems.find(b => b.id === pick.study_id) || null;
+    if (pick.study_method === 'conjoint')     return cjItems.find(c => c.id === pick.study_id) || null;
+    return null;
+  })();
 
   const filteredCombined = (() => {
     if (tab === 'brand_equity') return beItems;
@@ -394,8 +517,8 @@ const UnifiedShowcasePage = () => {
   };
 
   return (
-    <div style={{ background: '#F4F0EA', minHeight: '100vh', color: '#0A0A0A' }}>
-      <BeTopbar subtitle="PUBLIC SHOWCASE" active="showcase" />
+    <div style={{ background: '#FFFFFF', minHeight: '100vh', color: '#0A0A0A' }}>
+      <BeTopbar subtitle="PUBLIC SHOWCASE" publicMode />
 
       <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 24px' }} className="md:!px-12">
 
@@ -413,7 +536,7 @@ const UnifiedShowcasePage = () => {
           className="md:!grid-cols-[8fr_4fr]"
         >
           {/* Text panel */}
-          <div style={{ background: '#F4F0EA', padding: '48px 32px 48px 0' }}
+          <div style={{ background: '#FAFAFA', padding: '48px 32px 48px 0' }}
                className="md:!pr-12 md:!py-20">
             <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono', letterSpacing: '0.20em',
                            color: '#0A0A0A', fontWeight: 700, marginBottom: 24,
@@ -454,7 +577,7 @@ const UnifiedShowcasePage = () => {
                 style={{
                   padding: '13px 22px', fontSize: 11, fontWeight: 700,
                   fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.18em',
-                  background: '#0A0A0A', color: '#F4F0EA', border: 'none',
+                  background: '#0A0A0A', color: '#FAFAFA', border: 'none',
                   cursor: 'pointer', transition: 'all 200ms ease',
                   textTransform: 'uppercase',
                 }}
@@ -475,7 +598,7 @@ const UnifiedShowcasePage = () => {
                   textDecoration: 'none', transition: 'all 200ms ease',
                   textTransform: 'uppercase',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#0A0A0A'; e.currentTarget.style.color = '#F4F0EA'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#0A0A0A'; e.currentTarget.style.color = '#FAFAFA'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0A0A0A'; }}
               >
                 ← Back home
@@ -498,7 +621,7 @@ const UnifiedShowcasePage = () => {
                 key={s.key}
                 data-testid={`hero-stat-${s.key}`}
                 style={{
-                  background: '#F4F0EA', padding: '28px 24px',
+                  background: '#FAFAFA', padding: '28px 24px',
                   display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
                   minHeight: 130, position: 'relative',
                 }}
@@ -525,6 +648,17 @@ const UnifiedShowcasePage = () => {
             ))}
           </div>
         </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* EDITOR'S PICK — between hero and featured/catalog              */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {pickStudy && (
+          <EditorPickHero
+            pick={landing.showcase_editor_pick}
+            study={pickStudy}
+            onOpen={() => open(pickStudy)}
+          />
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* FEATURED — full-width split panel                               */}
@@ -581,7 +715,7 @@ const UnifiedShowcasePage = () => {
                     padding: '11px 18px', fontSize: 10.5, fontWeight: 700,
                     fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.16em',
                     background: tab === t.id ? '#0A0A0A' : 'transparent',
-                    color: tab === t.id ? '#F4F0EA' : '#4A4A4A',
+                    color: tab === t.id ? '#FAFAFA' : '#4A4A4A',
                     border: 'none', borderLeft: '1px solid rgba(10,10,10,0.15)',
                     cursor: 'pointer', transition: 'all 200ms ease',
                     textTransform: 'uppercase',

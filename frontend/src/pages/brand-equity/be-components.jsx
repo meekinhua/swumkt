@@ -628,7 +628,7 @@ export const StatusPill = ({ status }) => {
 // ============ Top bar ============
 export const SWU_LOGO_URL = 'https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png';
 
-export const BeTopbar = ({ user, onLogo, right, subtitle = 'BRAND HEALTH CHECK', active = 'brand_equity' }) => (
+export const BeTopbar = ({ user, onLogo, right, subtitle = 'BRAND HEALTH CHECK', active = 'brand_equity', publicMode = false }) => (
   <div className="be-topbar">
     <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
       <div className="be-logo" onClick={onLogo} data-testid="be-logo">
@@ -638,17 +638,26 @@ export const BeTopbar = ({ user, onLogo, right, subtitle = 'BRAND HEALTH CHECK',
           <span className="be-logo-sub be-mono">{subtitle}</span>
         </span>
       </div>
-      <div className="be-topnav be-mono">
-        {active === 'surveys'
-          ? <span className="on">Surveys</span>
-          : <a href="/dashboard">Surveys</a>}
-        {active === 'conjoint'
-          ? <span className="on">Conjoint</span>
-          : <a href="/market-research/conjoint-analysis">Conjoint</a>}
-        {active === 'brand_equity'
-          ? <span className="on">Brand Equity</span>
-          : <a href="/market-research/brand-equity">Brand Equity</a>}
-      </div>
+      {!publicMode && (
+        <div className="be-topnav be-mono">
+          {active === 'surveys'
+            ? <span className="on">Surveys</span>
+            : <a href="/dashboard">Surveys</a>}
+          {active === 'conjoint'
+            ? <span className="on">Conjoint</span>
+            : <a href="/market-research/conjoint-analysis">Conjoint</a>}
+          {active === 'brand_equity'
+            ? <span className="on">Brand Equity</span>
+            : <a href="/brand-equity">Brand Equity</a>}
+        </div>
+      )}
+      {publicMode && (
+        <div className="be-topnav be-mono">
+          <a href="/" data-testid="be-topnav-home">Home</a>
+          <a href="/learn" data-testid="be-topnav-learn">Learn</a>
+          <a href="/showcase" data-testid="be-topnav-showcase" className="on">Showcase</a>
+        </div>
+      )}
     </div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
       {right}

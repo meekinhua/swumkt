@@ -266,6 +266,15 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
   - Methods Primer footer: dark slab (#0A0A0A) with sectioned 01/02 columns
   - Mobile (≤390px): single-col cards, stats 2x2, hero text reflows; verified at 390px
 - Design guidelines saved to `/app/design_guidelines.json`
+- **Showcase polish (Feb 2026 — round 2)**:
+  - Logo fallback ครบ — backend `/showcase/index` ตอนนี้รองรับ 2 แหล่ง: `brand.logo_url` (URL) → fallback ไป `identity.visual_assets[].kind=='logo'` (base64 upload) → frontend monogram tile (hash-derived gradient)
+  - Topbar `publicMode` prop — แสดง HOME / LEARN / SHOWCASE สำหรับผู้ใช้สาธารณะแทน auth-only links; แก้ broken link `/market-research/brand-equity` → `/brand-equity`
+  - Theme เปลี่ยน beige (#F4F0EA) → bright white (#FFFFFF/#FAFAFA) ให้สดใสตรงกับ HomePage
+  - Default catalog tab = `brand_equity` (เดิม `all`)
+  - **Editor's Pick hero** — admin pick 1 study (BE/CJ) + custom headline + subhead + image (upload/AI Nano Banana/URL); แสดงระหว่าง main hero กับ catalog
+    - Schema: `cms_landing.showcase_editor_pick = {enabled, study_id, study_method, headline, subhead, image_base64/mime, image_url}`
+    - Admin UI: `/admin/cms/landing` มี section ★ Editor's Pick พร้อม Upload / ✨ AI Generate / URL input + preview
+    - Public render: magazine cover-style split panel (6/6) + diagonal stripe overlay + EDITOR'S PICK badge + colored top-bar (BE green / CJ red)
 - **OG/Social preview bridge**: `GET /api/share/showcase-index` returns OG-rich HTML (title + Thai description with live stats + meta-refresh) — paste link in FB/LINE/Slack/Discord/WhatsApp shows beautiful preview card. Frontend hero has `⤴ SHARE THIS PAGE` button that copies bridge URL.
 - **TTL cache (60–300s)** on all public read-only endpoints — instant response for repeat visitors + cuts DB load:
   - `/api/cms/landing` (120s, invalidated on PUT)

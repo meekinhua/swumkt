@@ -17,30 +17,40 @@ const emptyTool = () => ({ tag: '', t: '', s: '', p: '/' });
 
 const DEFAULT_FEATURED_ART = { mode: 'auto', count: 4, ids: [] };
 const DEFAULT_FEATURED_BR = { mode: 'auto', count: 5, ids: [] };
+const DEFAULT_EDITOR_PICK = {
+  enabled: false, study_id: null, study_method: null,
+  headline: null, subhead: null,
+  image_base64: null, image_mime: null, image_url: null,
+};
 
 const CmsLandingPage = () => {
   const [doc, setDoc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [genIdx, setGenIdx] = useState(-1);
+  const [pickGenLoading, setPickGenLoading] = useState(false);
   const [articlesPool, setArticlesPool] = useState([]);
   const [brandsPool, setBrandsPool] = useState([]);
+  const [cjPool, setCjPool] = useState([]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [r, ar, br] = await Promise.all([
+      const [r, ar, br, cj] = await Promise.all([
         axios.get(`${API}/cms/landing`),
         axios.get(`${API}/cms/posts/public?type=article&limit=200`),
         axios.get(`${API}/brand-equity/showcase`),
+        axios.get(`${API}/conjoint/showcase`),
       ]);
       const d = r.data;
       // Backfill defaults if missing
       if (!d.featured_articles) d.featured_articles = { ...DEFAULT_FEATURED_ART };
       if (!d.featured_brands) d.featured_brands = { ...DEFAULT_FEATURED_BR };
+      if (!d.showcase_editor_pick) d.showcase_editor_pick = { ...DEFAULT_EDITOR_PICK };
       setDoc(d);
       setArticlesPool(ar.data?.items || []);
       setBrandsPool(br.data?.showcases || []);
+      setCjPool(cj.data?.showcases || []);
     } catch { toast.error('โหลด landing ไม่สำเร็จ'); }
     finally { setLoading(false); }
   };
@@ -122,6 +132,58 @@ const CmsLandingPage = () => {
 
   const updateSection = (key, field, val) => {
     setDoc(d => ({ ...d, [key]: { ...d[key], [field]: val } }));
+  };
+
+  // ===== Editor's Pick (Showcase) =====
+  const updatePick = (field, val) => {
+    setDoc(d => ({
+      ...d,
+      showcase_editor_pick: { ...(d.showcase_editor_pick || DEFAULT_EDITOR_PICK), [field]: val },
+    }));
+  };
+  const uploadPickImage = async (file) => {
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) { toast.error('ไฟล์ใหญ่เกิน 4MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = String(e.target?.result || '');
+      const [head, b64] = dataUrl.split(',');
+      const mime = (head.match(/data:(.*?);/) || [])[1] || 'image/png';
+      updatePick('image_base64', b64);
+      updatePick('image_mime', mime);
+      updatePick('image_url', null);  // clear URL when uploading
+      toast.success('อัปโหลดภาพแล้ว');
+    };
+    reader.readAsDataURL(file);
+  };
+  const generatePickImage = async () => {
+    const pick = doc.showcase_editor_pick || {};
+    const headline = pick.headline || '';
+    const studyName = (() => {
+      if (pick.study_method === 'brand_equity') {
+        const s = brandsPool.find(x => x.id === pick.study_id);
+        return s?.brand_name || '';
+      }
+      if (pick.study_method === 'conjoint') {
+        const s = cjPool.find(x => x.id === pick.study_id);
+        return s?.brand_name || s?.title || '';
+      }
+      return '';
+    })();
+    const prompt = `Editorial magazine cover photo, ${studyName} ${headline}. Minimalist, Thai context, marketing research aesthetic, vibrant editorial colors, no text on image.`;
+    setPickGenLoading(true);
+    try {
+      const r = await cmsApi.aiImage({ prompt, aspect: '16:9' });
+      const dataUrl = r.data.image_data_url || '';
+      const [head, b64] = dataUrl.split(',');
+      const mime = (head.match(/data:(.*?);/) || [])[1] || 'image/png';
+      updatePick('image_base64', b64);
+      updatePick('image_mime', mime);
+      updatePick('image_url', null);
+      toast.success('สร้างภาพ AI สำเร็จ');
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'สร้างภาพไม่สำเร็จ');
+    } finally { setPickGenLoading(false); }
   };
 
   if (loading || !doc) return <div className="p-8 text-neutral-500">Loading...</div>;
@@ -316,6 +378,19 @@ const CmsLandingPage = () => {
           />
         </Card>
 
+        {/* Editor's Pick on /showcase */}
+        <Card title="★ Editor's Pick (หน้า Showcase)">
+          <EditorPickEditor
+            pick={doc.showcase_editor_pick || DEFAULT_EDITOR_PICK}
+            on={updatePick}
+            bePool={brandsPool}
+            cjPool={cjPool}
+            onUpload={uploadPickImage}
+            onGenerate={generatePickImage}
+            generating={pickGenLoading}
+          />
+        </Card>
+
         {/* About Band */}
         <Card title="● About Band (dark)">
           <SectionEditor data={doc.about_band} on={(f, v) => updateSection('about_band', f, v)} prefix="ab"/>
@@ -427,6 +502,114 @@ const FeaturedPicker = ({ label, config, on, pool, getId, getTitle, getSubtitle,
     </div>
   );
 };
+
+const EditorPickEditor = ({ pick, on, bePool, cjPool, onUpload, onGenerate, generating }) => {
+  const method = pick.study_method;
+  const pool = method === 'brand_equity' ? bePool : (method === 'conjoint' ? cjPool : []);
+  const previewSrc = pick.image_base64
+    ? `data:${pick.image_mime || 'image/png'};base64,${pick.image_base64}`
+    : (pick.image_url || '');
+  return (
+    <div className="space-y-4" data-testid="editor-pick-editor">
+      <div className="flex items-center gap-3 pb-3 border-b border-neutral-200">
+        <label className="inline-flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={!!pick.enabled}
+                 onChange={e => on('enabled', e.target.checked)}
+                 data-testid="editor-pick-enabled"/>
+          <span className="text-sm">เปิดใช้งานบนหน้า <code>/showcase</code></span>
+        </label>
+        <span className="text-[11px] text-neutral-500">
+          แสดง 1 งานวิจัยที่ admin เลือก เป็น hero card ดึงสายตาก่อนเข้า list
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <Label>วิธีวิจัย</Label>
+          <select value={method || ''} onChange={e => { on('study_method', e.target.value || null); on('study_id', null); }}
+                  data-testid="editor-pick-method"
+                  className="w-full border border-neutral-300 rounded px-3 py-1.5 text-sm">
+            <option value="">— เลือกวิธี —</option>
+            <option value="brand_equity">Brand Equity</option>
+            <option value="conjoint">Conjoint</option>
+          </select>
+        </div>
+        <div>
+          <Label>เลือกงานวิจัย ({pool.length})</Label>
+          <select value={pick.study_id || ''} onChange={e => on('study_id', e.target.value || null)}
+                  disabled={!method}
+                  data-testid="editor-pick-study"
+                  className="w-full border border-neutral-300 rounded px-3 py-1.5 text-sm disabled:bg-neutral-100">
+            <option value="">— เลือก study —</option>
+            {pool.map(s => (
+              <option key={s.id} value={s.id}>
+                {method === 'brand_equity'
+                  ? `${s.brand_name || '(no name)'} · ${s.category || '-'} · n=${s.response_count || 0}`
+                  : `${s.brand_name || s.title || '(no title)'} · ${s.category || '-'}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <Field label="หัวข้อ (ทับชื่อ study ถ้าใส่)" value={pick.headline || ''}
+               on={v => on('headline', v || null)} testid="editor-pick-headline"/>
+      </div>
+      <div>
+        <Label>คำโปรย / Subhead</Label>
+        <textarea value={pick.subhead || ''} rows={2}
+                  onChange={e => on('subhead', e.target.value || null)}
+                  data-testid="editor-pick-subhead"
+                  placeholder="คำโปรยสั้นๆ ดึงสายตาให้คนคลิกเข้าไปดู"
+                  className="w-full border border-neutral-300 rounded px-3 py-2 text-sm"/>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+        <div className="space-y-2">
+          <Label>ภาพประกอบ</Label>
+          <div className="flex flex-wrap gap-2">
+            <label className="px-3 py-1.5 text-xs font-mono uppercase border border-neutral-900 rounded-full cursor-pointer hover:bg-neutral-900 hover:text-white">
+              ↑ Upload
+              <input type="file" accept="image/*" hidden
+                     onChange={e => onUpload(e.target.files?.[0])}
+                     data-testid="editor-pick-upload"/>
+            </label>
+            <button onClick={onGenerate} disabled={generating}
+                    data-testid="editor-pick-generate"
+                    className="px-3 py-1.5 text-xs font-mono uppercase border border-blue-600 text-blue-600 rounded-full hover:bg-blue-600 hover:text-white disabled:opacity-50">
+              {generating ? 'AI กำลังสร้าง…' : '✨ AI Generate'}
+            </button>
+            {previewSrc && (
+              <button onClick={() => { on('image_base64', null); on('image_mime', null); on('image_url', null); }}
+                      data-testid="editor-pick-clear-image"
+                      className="px-3 py-1.5 text-xs font-mono uppercase border border-red-400 text-red-600 rounded-full hover:bg-red-50">
+                × Clear
+              </button>
+            )}
+          </div>
+          <Field label="หรือใส่ URL ภาพ" value={pick.image_url || ''}
+                 on={v => { on('image_url', v || null); if (v) { on('image_base64', null); on('image_mime', null); } }}
+                 testid="editor-pick-image-url"
+                 placeholder="https://..."/>
+        </div>
+        <div>
+          {previewSrc ? (
+            <img src={previewSrc} alt="editor pick preview"
+                 className="w-full aspect-[16/9] object-cover rounded border border-neutral-200"
+                 data-testid="editor-pick-preview"/>
+          ) : (
+            <div className="w-full aspect-[16/9] border-2 border-dashed border-neutral-300 rounded flex items-center justify-center text-neutral-400 text-xs">
+              ยังไม่มีภาพ — upload หรือ AI generate
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 
 const SectionEditor = ({ data, on, prefix }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

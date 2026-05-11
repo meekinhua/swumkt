@@ -142,6 +142,17 @@ class FeaturedConfig(BaseModel):
     ids: List[str] = []  # slugs for articles, study_ids for brands
 
 
+class EditorPickConfig(BaseModel):
+    enabled: bool = False
+    study_id: Optional[str] = None       # BE study_id or CJ study_id
+    study_method: Optional[Literal["brand_equity", "conjoint"]] = None
+    headline: Optional[str] = None       # custom title; if blank use the study name
+    subhead: Optional[str] = None        # short editorial blurb
+    image_base64: Optional[str] = None   # uploaded or AI-gen image (no data: prefix)
+    image_mime: Optional[str] = None     # e.g. image/png
+    image_url: Optional[str] = None      # alt: http URL
+
+
 class LandingDoc(BaseModel):
     slides: List[LandingSlide]
     tools: List[LandingTool]
@@ -150,6 +161,7 @@ class LandingDoc(BaseModel):
     rotation_ms: Optional[int] = 5500
     featured_articles: Optional[FeaturedConfig] = None
     featured_brands: Optional[FeaturedConfig] = None
+    showcase_editor_pick: Optional[EditorPickConfig] = None
 
 
 # Default landing content — mirrors current HomePage.jsx hardcoded values.
@@ -219,6 +231,16 @@ DEFAULT_LANDING: Dict[str, Any] = {
     },
     "featured_articles": {"mode": "auto", "count": 4, "ids": []},
     "featured_brands": {"mode": "auto", "count": 5, "ids": []},
+    "showcase_editor_pick": {
+        "enabled": False,
+        "study_id": None,
+        "study_method": None,
+        "headline": None,
+        "subhead": None,
+        "image_base64": None,
+        "image_mime": None,
+        "image_url": None,
+    },
 }
 
 
@@ -853,6 +875,8 @@ def get_cms_routes(db, get_current_user):
             doc["featured_articles"] = DEFAULT_LANDING["featured_articles"]
         if "featured_brands" not in doc:
             doc["featured_brands"] = DEFAULT_LANDING["featured_brands"]
+        if "showcase_editor_pick" not in doc:
+            doc["showcase_editor_pick"] = DEFAULT_LANDING["showcase_editor_pick"]
         return doc
 
     @cms_router.put("/landing")

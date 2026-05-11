@@ -8290,6 +8290,15 @@ async def _unified_showcase_index_cached():
         if not tok:
             continue
         brand = s.get("brand") or {}
+        # Resolve logo: prefer brand.logo_url, else fall back to uploaded
+        # visual asset of kind 'logo' (returned as data URI for direct <img> use)
+        logo = brand.get("logo_url")
+        if not logo:
+            for a in ((s.get("identity") or {}).get("visual_assets") or []):
+                if (a.get("kind") == "logo") and a.get("image_base64"):
+                    mime = a.get("mime_type") or "image/png"
+                    logo = f"data:{mime};base64,{a['image_base64']}"
+                    break
         n_resp = await db.brand_responses.count_documents({"study_id": s["id"]})
         be_items.append({
             "method": "brand_equity",
@@ -8297,7 +8306,7 @@ async def _unified_showcase_index_cached():
             "share_token": tok,
             "topic": brand.get("name") or "(unnamed brand)",
             "category": brand.get("category"),
-            "logo_url": brand.get("logo_url"),
+            "logo_url": logo,
             "competitors": (brand.get("competitors") or [])[:4],
             "response_count": n_resp,
             "ready": n_resp >= 10,
