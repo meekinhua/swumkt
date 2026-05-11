@@ -1,7 +1,7 @@
 /* Brand Equity — Shared Components
    Editorial / Swiss-grid analytics aesthetic.
    All components are scoped via .be-root parent. */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // ============ Inline icon system (line-art, 16px viewBox) ============
 const ICON_PATHS = {
@@ -295,49 +295,225 @@ export const Matrix2x2 = ({ dots = [], xLabel = 'Switching cost', yLabel = 'Loya
 );
 
 // ============ Identity vs Image connector ============
-export const IdentityImageMap = ({ intended = [], image = [], statusMap = {} }) => (
-  <div className="be-ident-map" data-testid="be-ident-map">
-    <div className="be-ident-col">
-      <div className="be-ident-col-h be-eyebrow">
-        <span className="be-dot-sm" style={{ background: '#0A0A0A' }}/>
-        Identity · ที่แบรนด์ตั้งใจ
-      </div>
-      {intended.map((t, i) => (
-        <div key={i} className={'be-ident-trait ' + (statusMap[t] === 'aligned' ? 'aligned' : 'lost')}>
-          <span>{t}</span>
-          <span className="be-mono be-tiny">{statusMap[t] === 'aligned' ? '✓ aligned' : '✕ lost'}</span>
-        </div>
-      ))}
-    </div>
-    <div className="be-ident-connector">
-      <svg width="100%" height="100%" viewBox="0 0 130 380" preserveAspectRatio="none">
-        {intended.slice(0, 5).map((t, i) => {
-          const startY = 30 + i * 60;
-          const endY = 30 + i * 50;
-          const status = statusMap[t];
-          if (status === 'aligned') {
-            return <path key={i} d={`M 0 ${startY} C 65 ${startY}, 65 ${endY}, 130 ${endY}`}
-                         fill="none" stroke="#10B981" strokeWidth="2" opacity="0.85"/>;
+// Lines connect the actual DOM y-positions of each row (measured at runtime),
+// so the curve endpoints anchor on the correct trait on each side regardless
+// of how many rows the column has. We keep recomputing on layout changes
+// (window resize, data updates, font load) so the diagram stays in sync.
+//
+//   • aligned intended trait → image row tagged kind='aligned' (or same name
+//                                fuzzy match if status tag missing)
+//     drawn as a solid GREEN Bezier curve.
+//   • lost intended trait    → short red dashed stub on LEFT only, no target.
+//   • unintended image trait → short gold dashed stub on RIGHT only, no source.
+const _norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[·•/(),.-]/g, '');
+
+const _findMatchingImageIdx = (intendedTrait, image) => {
+  if (!intendedTrait) return -1;
+  const target = _norm(intendedTrait);
+  // 1. exact match on kind=aligned + same trait
+  for (let i = 0; i < image.length; i++) {
+    if (image[i].kind === 'aligned' && _norm(image[i].trait) === target) return i;
+  }
+  // 2. fuzzy substring match within aligned items
+  for (let i = 0; i < image.length; i++) {
+    if (image[i].kind !== 'aligned') continue;
+    const im = _norm(image[i].trait);
+    if (im.includes(target) || target.includes(im)) return i;
+  }
+  // 3. fuzzy substring on ANY image row (the wizard often returns "Premium /
+  //    Expensive" as a perceived trait that AI didn't tag as `aligned` exactly,
+  //    but is clearly the intended "Premium"). Best-effort match so the user
+  //    sees a connector instead of a confusing "no-match" stub.
+  for (let i = 0; i < image.length; i++) {
+    const im = _norm(image[i].trait);
+    if (!im) continue;
+    if (im === target) return i;
+    if (im.includes(target) || target.includes(im)) return i;
+  }
+  return -1;
+};
+
+export const IdentityImageMap = ({ intended = [], image = [], statusMap = {} }) => {
+  const wrapRef = useRef(null);
+  const leftRefs = useRef([]);
+  const rightRefs = useRef([]);
+  const [paths, setPaths] = useState([]);
+  const [wrapH, setWrapH] = useState(380);
+
+  // Recompute every time data changes or layout shifts.
+  useLayoutEffect(() => {
+    const compute = () => {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      setWrapH(Math.max(120, wrapRect.height));
+      const claimed = new Set();
+      const next = [];
+      intended.forEach((t, i) => {
+        const el = leftRefs.current[i];
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const y = r.top - wrapRect.top + r.height / 2;
+        const status = statusMap[t];
+        if (status === 'aligned') {
+          // find matching right item
+          let matchIdx = _findMatchingImageIdx(t, image);
+          // skip already-claimed to keep crossings sane
+          while (matchIdx !== -1 && claimed.has(matchIdx)) {
+            const nextIdx = image.findIndex((im, idx) =>
+              idx > matchIdx && im.kind === 'aligned' && !claimed.has(idx));
+            matchIdx = nextIdx;
           }
-          return <path key={i} d={`M 0 ${startY} C 65 ${startY}, 65 ${endY + 80}, 130 ${endY + 80}`}
-                       fill="none" stroke="#C8102E" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.7"/>;
-        })}
-      </svg>
+          if (matchIdx !== -1 && rightRefs.current[matchIdx]) {
+            claimed.add(matchIdx);
+            const rr = rightRefs.current[matchIdx].getBoundingClientRect();
+            const y2 = rr.top - wrapRect.top + rr.height / 2;
+            next.push({ kind: 'aligned', y1: y, y2 });
+          } else {
+            // aligned but no match found — draw outgoing stub
+            next.push({ kind: 'aligned-stub', y1: y });
+          }
+        } else {
+          next.push({ kind: 'lost', y1: y });
+        }
+      });
+      // Right-side unintended stubs (incoming gold from right edge)
+      image.forEach((im, i) => {
+        if (im.kind !== 'unintended') return;
+        const el = rightRefs.current[i];
+        if (!el) return;
+        const rr = el.getBoundingClientRect();
+        const y2 = rr.top - wrapRect.top + rr.height / 2;
+        next.push({ kind: 'unintended', y2 });
+      });
+      setPaths(next);
+    };
+    compute();
+    // Refresh on resize + after any pending font load that shifts heights.
+    const ro = new ResizeObserver(compute);
+    if (wrapRef.current) ro.observe(wrapRef.current);
+    const onResize = () => compute();
+    window.addEventListener('resize', onResize);
+    const t = setTimeout(compute, 350);  // post-font-load nudge
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', onResize);
+      clearTimeout(t);
+    };
+  }, [intended, image, statusMap]);
+
+  const STROKE_GREEN  = '#10B981';
+  const STROKE_RED    = '#C8102E';
+  const STROKE_GOLD   = '#D4A017';
+
+  return (
+    <div>
+    <div className="be-ident-legend" data-testid="be-ident-legend">
+      <span className="be-ident-legend-item">
+        <svg width="28" height="10" aria-hidden="true">
+          <path d="M0 5 C 14 5, 14 5, 28 5" stroke="#10B981" strokeWidth="2" fill="none"/>
+          <circle cx="0" cy="5" r="2.5" fill="#10B981"/>
+          <circle cx="28" cy="5" r="2.5" fill="#10B981"/>
+        </svg>
+        <strong>Aligned</strong> — Identity ที่ผู้บริโภครับรู้ตรงตามที่ตั้งใจ
+      </span>
+      <span className="be-ident-legend-item">
+        <svg width="28" height="10" aria-hidden="true">
+          <path d="M0 5 L 22 5" stroke="#C8102E" strokeWidth="1.4" strokeDasharray="3 3" fill="none"/>
+          <text x="24" y="8" fontSize="9" fill="#C8102E" fontWeight="bold">✕</text>
+        </svg>
+        <strong>Lost</strong> — ตั้งใจสื่อแต่ไม่ถูกรับรู้
+      </span>
+      <span className="be-ident-legend-item">
+        <svg width="28" height="10" aria-hidden="true">
+          <path d="M28 5 L 6 5" stroke="#D4A017" strokeWidth="1.4" strokeDasharray="3 3" fill="none"/>
+          <text x="4" y="8" fontSize="9" fill="#D4A017" fontWeight="bold" textAnchor="end">+</text>
+        </svg>
+        <strong>Unintended</strong> — รับรู้แต่ไม่ได้ตั้งใจสื่อ
+      </span>
     </div>
-    <div className="be-ident-col">
-      <div className="be-ident-col-h be-eyebrow">
-        <span className="be-dot-sm" style={{ background: '#C8102E' }}/>
-        Image · ที่ผู้บริโภครับรู้
-      </div>
-      {image.map((t, i) => (
-        <div key={i} className={'be-ident-trait ' + (t.kind || 'unintended')}>
-          <span>{t.trait}</span>
-          <span className="be-mono be-tiny">{t.pct}%</span>
+    <div className="be-ident-map" data-testid="be-ident-map" ref={wrapRef}>
+      <div className="be-ident-col" data-testid="be-ident-col-intended">
+        <div className="be-ident-col-h be-eyebrow">
+          <span className="be-dot-sm" style={{ background: '#0A0A0A' }}/>
+          Identity · ที่แบรนด์ตั้งใจ
         </div>
-      ))}
+        {intended.map((t, i) => (
+          <div key={i}
+               ref={el => (leftRefs.current[i] = el)}
+               className={'be-ident-trait ' + (statusMap[t] === 'aligned' ? 'aligned' : 'lost')}
+               data-testid={`be-ident-intended-${i}`}>
+            <span>{t}</span>
+            <span className="be-mono be-tiny">{statusMap[t] === 'aligned' ? '✓ aligned' : '✕ lost'}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="be-ident-connector" aria-hidden="true">
+        <svg width="100%" height="100%" viewBox={`0 0 130 ${wrapH}`}
+             preserveAspectRatio="none">
+          {paths.map((p, i) => {
+            if (p.kind === 'aligned') {
+              const d = `M 0 ${p.y1} C 65 ${p.y1}, 65 ${p.y2}, 130 ${p.y2}`;
+              return (
+                <g key={i}>
+                  <path d={d} fill="none" stroke={STROKE_GREEN}
+                        strokeWidth="2" opacity="0.85"/>
+                  <circle cx="0"   cy={p.y1} r="3" fill={STROKE_GREEN}/>
+                  <circle cx="130" cy={p.y2} r="3" fill={STROKE_GREEN}/>
+                </g>
+              );
+            }
+            if (p.kind === 'aligned-stub') {
+              return (
+                <g key={i}>
+                  <path d={`M 0 ${p.y1} L 40 ${p.y1}`} fill="none"
+                        stroke={STROKE_GREEN} strokeWidth="2" opacity="0.7"/>
+                  <text x="44" y={p.y1 + 3} fontSize="8" fill={STROKE_GREEN}>✓ no-match</text>
+                </g>
+              );
+            }
+            if (p.kind === 'lost') {
+              return (
+                <g key={i}>
+                  <path d={`M 0 ${p.y1} L 36 ${p.y1}`} fill="none"
+                        stroke={STROKE_RED} strokeWidth="1.4" strokeDasharray="3 3" opacity="0.75"/>
+                  <text x="38" y={p.y1 + 3} fontSize="9" fill={STROKE_RED} fontWeight="bold">✕</text>
+                </g>
+              );
+            }
+            // unintended (incoming gold stub from right)
+            return (
+              <g key={i}>
+                <path d={`M 130 ${p.y2} L 94 ${p.y2}`} fill="none"
+                      stroke={STROKE_GOLD} strokeWidth="1.4" strokeDasharray="3 3" opacity="0.8"/>
+                <text x="84" y={p.y2 + 3} fontSize="9" fill={STROKE_GOLD} fontWeight="bold"
+                      textAnchor="end">+</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      <div className="be-ident-col" data-testid="be-ident-col-image">
+        <div className="be-ident-col-h be-eyebrow">
+          <span className="be-dot-sm" style={{ background: '#C8102E' }}/>
+          Image · ที่ผู้บริโภครับรู้
+        </div>
+        {image.map((t, i) => (
+          <div key={i}
+               ref={el => (rightRefs.current[i] = el)}
+               className={'be-ident-trait ' + (t.kind || 'unintended')}
+               data-testid={`be-ident-image-${i}`}>
+            <span>{t.trait}</span>
+            <span className="be-mono be-tiny">{t.pct}%</span>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 // ============ AI insight card ============
 export const AIInsightCard = ({ dimension = 'awareness', title, bullets = [], priority = false }) => {

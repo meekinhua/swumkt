@@ -1,6 +1,38 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Identity vs Image Connector: เส้นเชื่อมถูกต้องตามตำแหน่งจริง 🎯
+
+### User-reported: เส้นไม่ครบ + ไม่ตรงกับแต่ละจุด
+- **Root cause**: SVG ใช้พิกัด **hardcoded** (`startY = 30 + i * 60`) ที่ไม่
+  สัมพันธ์กับตำแหน่งจริงของ trait row บน DOM → เส้นปลาย/ต้น lag ออกนอกการ์ด
+  เมื่อจำนวน row ของซ้าย/ขวาไม่เท่ากัน + cubic Bezier ใช้ตัวเลขสุ่มทำให้เส้นเด้งผิดที่
+- **Fix**: rewrite `IdentityImageMap` ใน `be-components.jsx`:
+  1. ใส่ `ref` ทุก trait card ทั้ง 2 ฝั่ง
+  2. `useLayoutEffect` + `ResizeObserver` คำนวณ y-position จริงของแต่ละ row
+  3. SVG `viewBox` ขยายตาม wrapper height แบบ dynamic (`setWrapH`)
+  4. `_findMatchingImageIdx`: fuzzy match 3 รอบ
+     - exact match บน aligned row
+     - substring match บน aligned row
+     - substring match บน **ทุก** row (จับ "Premium" → "Premium / Expensive")
+  5. 4 line kinds:
+     - `aligned`     · เส้นโค้งเขียว + endpoints dots ทั้ง 2 ฝั่ง
+     - `aligned-stub`· stub เขียวสั้น "✓ no-match" (intended อยู่ใน aligned[]
+                       แต่หา image row ไม่เจอ)
+     - `lost`        · stub แดงประสั้น "✕" ทาง LEFT เท่านั้น
+     - `unintended`  · stub ทองประสั้น "+" ทาง RIGHT เท่านั้น
+
+### Legend ใหม่ที่ explainable
+- Inline legend ด้านบนของ map: aligned (เขียว) · lost (แดง) · unintended (ทอง)
+  มี SVG icons จริงข้างชื่อแต่ละ kind → user เข้าใจว่าเส้นแต่ละแบบหมายถึงอะไร
+
+### Verified
+- Mali study: 4/5 intended aligned (Modern, Artisanal, Premium, Mindful) + Local lost
+  → ทุกเส้นเชื่อมถูกต้อง · Premium fuzzy-match กับ "Premium / Expensive" สำเร็จ
+  · Mindful fuzzy-match กับ "Mindful / Slow Living" สำเร็จ
+- Unintended (Young & Hip, Aesthetic, Cozy, Sophisticated) → stub ทองด้านขวา
+
+
 ## 2026-02-11 — Bundle Thai Font (Loma.otf) with Codebase 🇹🇭📦
 
 ### User-reported: ภาษาไทยใน chart รูป thesis **บน production** ยังเป็นกล่อง □□□
