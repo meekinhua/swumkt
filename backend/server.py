@@ -8207,6 +8207,163 @@ async def toggle_public_result(
     }
 
 
+# =============================================================================
+# PUBLIC SHOWCASE — Conjoint (mirrors brand_equity /showcase pattern)
+# =============================================================================
+@api_router.get("/conjoint/showcase")
+async def list_conjoint_showcase():
+    """Public list of Conjoint studies the owner has marked `is_public_result=True`.
+    Returns lean metadata only for browsing — full data fetched via the
+    existing /conjoint/studies/{id} when is_public_result lets it through.
+
+    Used by the unified /api/showcase/index endpoint and the dedicated
+    Conjoint showcase index page on the frontend."""
+    cursor = db.conjoint_studies.find(
+        {"is_public_result": True, "deleted_at": {"$exists": False}},
+        {"_id": 0, "id": 1, "title": 1, "description": 1, "product_category": 1,
+         "brand_name": 1, "status": 1, "attributes": 1,
+         "created_at": 1, "updated_at": 1, "creator_id": 1,
+         "qualitative_summary": 1, "thumbnail_url": 1,
+         "responses_count": 1},
+    ).sort("updated_at", -1)
+    items = await cursor.to_list(500)
+    out = []
+    for s in items:
+        attrs = s.get("attributes") or []
+        out.append({
+            "id": s["id"],
+            "title": s.get("title") or "(untitled study)",
+            "description": (s.get("description") or "")[:240],
+            "brand_name": s.get("brand_name") or s.get("title"),
+            "category": s.get("product_category"),
+            "method": "conjoint",
+            "attributes_count": len(attrs),
+            "attribute_summary": [
+                {"name": a.get("name"), "levels": len(a.get("levels") or [])}
+                for a in attrs[:6]
+            ],
+            "thumbnail_url": s.get("thumbnail_url"),
+            "status": s.get("status"),
+            "created_at": s.get("created_at"),
+            "updated_at": s.get("updated_at"),
+        })
+    return {"showcases": out, "total": len(out), "method": "conjoint"}
+
+
+@api_router.get("/showcase/index")
+async def unified_showcase_index():
+    """Hybrid public showcase: combines Brand Equity + Conjoint studies by topic.
+
+    Response shape:
+        {
+          "featured_topics": [   # brand names studied with multiple methods
+            { "topic": "...", "logo_url": "...", "studies": [...] }
+          ],
+          "brand_equity": [...],   # BE-only studies
+          "conjoint": [...],       # Conjoint-only studies
+          "totals": { "brand_equity": N, "conjoint": M, "responses": K }
+        }
+
+    Used by the unified /showcase landing page. Each studies entry carries a
+    `method` field so the frontend can route to the right detail page."""
+    # BE studies
+    be_cur = db.brand_studies.find(
+        {"is_public_showcase": True, "deleted_at": {"$exists": False}},
+        {"_id": 0, "id": 1, "brand": 1, "share_token": 1,
+         "created_at": 1, "updated_at": 1, "identity.visual_assets": 1},
+    ).sort("updated_at", -1)
+    be_raw = await be_cur.to_list(500)
+    be_items = []
+    for s in be_raw:
+        tok = s.get("share_token")
+        if not tok:
+            continue
+        brand = s.get("brand") or {}
+        n_resp = await db.brand_responses.count_documents({"study_id": s["id"]})
+        be_items.append({
+            "method": "brand_equity",
+            "id": s["id"],
+            "share_token": tok,
+            "topic": brand.get("name") or "(unnamed brand)",
+            "category": brand.get("category"),
+            "logo_url": brand.get("logo_url"),
+            "competitors": (brand.get("competitors") or [])[:4],
+            "response_count": n_resp,
+            "ready": n_resp >= 10,
+            "created_at": s.get("created_at"),
+            "updated_at": s.get("updated_at"),
+            "url": f"/brand-equity/showcase/{tok}",
+            "method_label": "Brand Equity",
+            "method_short": "BE",
+        })
+
+    # Conjoint studies
+    cj_cur = db.conjoint_studies.find(
+        {"is_public_result": True, "deleted_at": {"$exists": False}},
+        {"_id": 0, "id": 1, "title": 1, "description": 1, "product_category": 1,
+         "brand_name": 1, "attributes": 1, "created_at": 1, "updated_at": 1,
+         "thumbnail_url": 1},
+    ).sort("updated_at", -1)
+    cj_raw = await cj_cur.to_list(500)
+    cj_items = []
+    for s in cj_raw:
+        topic = (s.get("brand_name") or s.get("title") or "(untitled)").strip()
+        cj_items.append({
+            "method": "conjoint",
+            "id": s["id"],
+            "topic": topic,
+            "title": s.get("title"),
+            "description": (s.get("description") or "")[:200],
+            "category": s.get("product_category"),
+            "thumbnail_url": s.get("thumbnail_url"),
+            "attributes_count": len(s.get("attributes") or []),
+            "created_at": s.get("created_at"),
+            "updated_at": s.get("updated_at"),
+            "url": f"/showcase/conjoint/{s['id']}",
+            "method_label": "Conjoint",
+            "method_short": "CJ",
+        })
+
+    # Cluster by topic — case/space-insensitive match
+    def topic_key(t: str) -> str:
+        return (t or "").strip().lower()
+    grouped: Dict[str, List[dict]] = {}
+    for it in be_items + cj_items:
+        grouped.setdefault(topic_key(it["topic"]), []).append(it)
+
+    featured = []
+    for _, studies in grouped.items():
+        methods = {s["method"] for s in studies}
+        if len(methods) >= 2:
+            # multi-method topic — featured!
+            logo = next((s.get("logo_url") for s in studies if s.get("logo_url")), None)
+            featured.append({
+                "topic": studies[0]["topic"],
+                "category": next((s.get("category") for s in studies if s.get("category")), None),
+                "logo_url": logo,
+                "methods_count": len(methods),
+                "studies": studies,
+            })
+    # Sort featured by total responses across BE entries (richer first)
+    featured.sort(
+        key=lambda f: sum(s.get("response_count", 0) for s in f["studies"]),
+        reverse=True,
+    )
+
+    total_be_responses = sum(s.get("response_count", 0) for s in be_items)
+    return {
+        "featured_topics": featured,
+        "brand_equity": be_items,
+        "conjoint": cj_items,
+        "totals": {
+            "brand_equity": len(be_items),
+            "conjoint": len(cj_items),
+            "responses": total_be_responses,
+            "topics": len({topic_key(s["topic"]) for s in be_items + cj_items}),
+        },
+    }
+
+
 
 # Admin: Get all LLM prompts
 @api_router.get("/admin/llm-prompts")
