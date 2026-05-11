@@ -252,6 +252,14 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
   - `showcase-card-share-{id}` (Showcase index per-card)
   - Showcase Dashboard `Copy showcase URL` now uses bridge URL
 
+## Unified Public Showcase (Feb 2026 — NEW)
+- **Route**: `/showcase` (public, no auth) → `UnifiedShowcasePage.jsx`
+- **Legacy**: `/showcase/brand-equity` keeps the old BE-only index for backward compat
+- **Backend**: `GET /api/showcase/index` merges public BE + Conjoint studies, returns `{featured_topics, brand_equity, conjoint, totals}`
+- **UI**: Hero with rotating stats (TOPICS/BE/CJ/RESPONSES), Featured multi-method topics, Tab filter (All/BE/CJ), Methods Primer footer (Aaker 4-dim vs Conjoint choice-based)
+- **Card navigation**: BE → `/showcase/{share_token}` (public BE dashboard) · CJ → `/conjoint/results/{id}` (public CJ results)
+- Verified via iteration_19: 9/9 backend pytest pass + frontend 100% flows pass
+
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
 - Student: student1@swu.ac.th / student123
