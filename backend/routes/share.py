@@ -348,4 +348,76 @@ def get_share_routes(db, brand_aggregate_helper=None):
             "Cache-Control": "public, max-age=86400",
         })
 
+    @share_router.get("/showcase-index", response_class=HTMLResponse)
+    async def share_showcase_index(request: Request):
+        """OG bridge for the unified public showcase landing (`/showcase`).
+        Crawlers see rich preview; humans get meta-refreshed to the React page."""
+        # Aggregate light stats — same filters as /api/showcase/index
+        be_count = await db.brand_studies.count_documents(
+            {"is_public_showcase": True, "deleted_at": {"$exists": False}}
+        )
+        cj_count = await db.conjoint_studies.count_documents(
+            {"is_public_result": True, "deleted_at": {"$exists": False}}
+        )
+        # Total BE responses across public studies
+        be_ids_cur = db.brand_studies.find(
+            {"is_public_showcase": True, "deleted_at": {"$exists": False}},
+            {"_id": 0, "id": 1, "brand.name": 1},
+        )
+        be_rows = await be_ids_cur.to_list(500)
+        be_ids = [r["id"] for r in be_rows]
+        total_responses = 0
+        if be_ids:
+            total_responses = await db.brand_responses.count_documents(
+                {"study_id": {"$in": be_ids}}
+            )
+        # Topic names — for the lede
+        be_topics = [
+            ((r.get("brand") or {}).get("name") or "").strip()
+            for r in be_rows
+        ]
+        cj_cur = db.conjoint_studies.find(
+            {"is_public_result": True, "deleted_at": {"$exists": False}},
+            {"_id": 0, "brand_name": 1, "title": 1},
+        )
+        cj_rows = await cj_cur.to_list(500)
+        cj_topics = [
+            (r.get("brand_name") or r.get("title") or "").strip()
+            for r in cj_rows
+        ]
+        unique_topics = {t.lower() for t in be_topics + cj_topics if t}
+        # Featured sample for the lede (up to 4)
+        sample = [t for t in (be_topics + cj_topics) if t][:4]
+        sample_str = " · ".join(sample) if sample else ""
+
+        origin = _request_origin(request)
+        canonical = f"{origin}/api/share/showcase-index"
+        redirect_url = f"{origin}/showcase"
+
+        title = (
+            f"SWU MKT Showcase · {be_count + cj_count} งานวิจัยเปิดสาธารณะ — "
+            f"Brand Equity & Conjoint Analysis"
+        )
+        lede_parts = [
+            f"งานวิจัยจริงจากนักศึกษา SWU เปิดให้คนทั่วไปดูได้",
+            f"{be_count} Brand Equity · {cj_count} Conjoint · "
+            f"{len(unique_topics)} topics · {total_responses}+ responses",
+        ]
+        if sample_str:
+            lede_parts.append(f"ตัวอย่าง: {sample_str}")
+        description = _truncate(" — ".join(lede_parts), 280)
+
+        return HTMLResponse(_build_og_html(
+            canonical_url=canonical,
+            redirect_url=redirect_url,
+            title=title,
+            description=description,
+            image_url=SWUMKT_LOGO_URL,
+            og_type="website",
+            body_eyebrow="PUBLIC RESEARCH SHOWCASE · OPEN ACCESS",
+            body_h1="Marketing research, publicly visible.",
+            body_lede=description,
+            cta_label="เข้าดู Showcase →",
+        ))
+
     return share_router

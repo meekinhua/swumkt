@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { BeTopbar, BeLoading } from './brand-equity/be-components';
+import copyToClipboard from '../lib/clipboard';
 import './brand-equity/brand-equity-styles.css';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -255,6 +256,27 @@ const UnifiedShowcasePage = () => {
                 <div style={{ color: 'var(--ink-3)', letterSpacing: '0.06em' }}>{s.label}</div>
               </div>
             ))}
+          </div>
+          <div style={{ marginTop: 22 }}>
+            <button
+              data-testid="showcase-share-btn"
+              onClick={() => {
+                const origin = window.location.origin;
+                copyToClipboard(`${origin}/api/share/showcase-index`, {
+                  successMessage: 'คัดลอกลิงก์แชร์แล้ว — paste ลง FB/LINE/Slack ได้เลย',
+                });
+              }}
+              style={{
+                padding: '9px 16px', fontSize: 12, fontWeight: 600,
+                fontFamily: 'JetBrains Mono', letterSpacing: '0.06em',
+                background: '#0E5538', color: '#fff', border: 'none',
+                borderRadius: 4, cursor: 'pointer', transition: 'all 180ms ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#0a3f29'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#0E5538'; }}
+            >
+              ⤴ SHARE THIS PAGE
+            </button>
           </div>
         </section>
 
