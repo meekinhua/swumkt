@@ -11969,8 +11969,114 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup_db_client():
-    """Initialize database indexes on startup"""
+    """Initialize database indexes on startup + run idempotent migrations."""
     await create_indexes()
+    # Brand Equity: ensure all existing studies have stable slot ids + legacy_ids
+    # mapping so dashboards keep showing prior responses after questions are
+    # regenerated. Safe to run on every boot — no-op if already migrated.
+    try:
+        from routes.brand_equity import (
+            _generate_questions_from_template,
+            _merge_questions_preserving_history,
+            BrandSetup, IdentitySetup,
+        )
+        from datetime import datetime, timezone
+        migrated = 0
+        relinked = 0
+        cursor = db.brand_studies.find({}, {"_id": 0})
+        async for s in cursor:
+            try:
+                brand = BrandSetup(**s["brand"])
+                identity = IdentitySetup(**s["identity"])
+            except Exception:
+                continue
+            old_questions = s.get("questions") or []
+            needs_phase1 = any(
+                ("legacy_ids" not in q or q.get("legacy_ids") is None)
+                and "--" not in (q.get("id") or "")
+                for q in old_questions
+            )
+
+            # PHASE 2 also runs if there are any responses whose qids aren't
+            # in the study (orphans). Cheap check via distinct on cap'd query.
+            study_known_ids = set()
+            for q in old_questions:
+                study_known_ids.add(q.get("id"))
+                for lid in (q.get("legacy_ids") or []):
+                    study_known_ids.add(lid)
+            sid = s["id"]
+            sample = await db.brand_responses.find(
+                {"study_id": sid}, {"_id": 0, "answers": 1}
+            ).to_list(50)
+            sample_qids = {
+                a.get("question_id")
+                for r in sample for a in (r.get("answers") or [])
+                if a.get("question_id")
+            }
+            needs_phase2 = bool(sample_qids - study_known_ids)
+            if not (needs_phase1 or needs_phase2):
+                continue
+
+            new_questions = _generate_questions_from_template(brand, identity)
+            new_questions = _merge_questions_preserving_history(old_questions, new_questions)
+
+            # PHASE 2: re-link orphaned response ids by template_id
+            full_resp_qids = set()
+            async for r in db.brand_responses.find(
+                {"study_id": sid}, {"_id": 0, "answers": 1}
+            ):
+                for a in (r.get("answers") or []):
+                    qid = a.get("question_id")
+                    if qid:
+                        full_resp_qids.add(qid)
+            known = set()
+            for q in new_questions:
+                known.add(q.get("id"))
+                for lid in (q.get("legacy_ids") or []):
+                    known.add(lid)
+            orphans = full_resp_qids - known
+            if orphans:
+                by_tmpl = {}
+                for i, q in enumerate(new_questions):
+                    t = q.get("template_id") or q.get("id", "").split("--")[0]
+                    by_tmpl.setdefault(t, []).append(i)
+                for orph in orphans:
+                    tmpl = orph.rsplit("-", 1)[0] if "-" in orph else orph
+                    candidates = by_tmpl.get(tmpl, [])
+                    if not candidates:
+                        continue
+                    chosen = candidates[0]
+                    for ci in candidates:
+                        if not new_questions[ci].get("compare_brand"):
+                            chosen = ci
+                            break
+                    q = new_questions[chosen]
+                    legacy = list(q.get("legacy_ids") or [])
+                    if orph not in legacy:
+                        legacy.append(orph)
+                        q["legacy_ids"] = legacy
+                        relinked += 1
+
+            await db.brand_studies.update_one(
+                {"id": sid},
+                {"$set": {
+                    "questions": new_questions,
+                    "current_wave": s.get("current_wave", 1),
+                    "wave_history": s.get("wave_history") or [
+                        {"wave": 1, "published_at": s.get("created_at"),
+                         "by": "system-auto-migrate", "note": "initial wave"}
+                    ],
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }},
+            )
+            migrated += 1
+        if migrated:
+            logging.info(
+                f"[BE-MIGRATE] Auto-relinked stable question ids on {migrated} "
+                f"studies (+ {relinked} cross-template orphan responses re-linked)"
+            )
+    except Exception as e:
+        logging.warning(f"[BE-MIGRATE] Skipped startup migration: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

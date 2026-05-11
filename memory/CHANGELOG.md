@@ -1,3 +1,52 @@
+## 2026-05-11 — Auto-migration on startup + Phase 2 cross-template orphan re-link
+
+### Why
+User asked whether they should visit `https://swumkt.org/admin/relink-stable-ids`
+in a browser — it's a POST endpoint so opening in browser doesn't work. To
+remove that friction (and avoid asking the user to run curl), the migration
+now runs **automatically on every backend startup**. Idempotent → no-op on
+subsequent boots when there's nothing left to migrate.
+
+### Phase 1 fix to the merge helper
+Previous `_merge_questions_preserving_history` reused the OLD id verbatim
+whenever `same_shape == True`. For migrating legacy studies that meant we
+KEPT the random-suffix ids forever (defeating the migration). Fix: only
+reuse the OLD id when it's already in the modern stable form (`--`
+separator). Otherwise adopt the new stable id and stash the legacy id in
+`legacy_ids`. Wave only bumps when wording/scale actually changed —
+migration-only swaps don't pollute the wave timeline.
+
+### Phase 2 — cross-template orphan re-link (new)
+Even with Phase 1 stable-id merging, some legacy studies had a more drastic
+issue: their *template structure itself* had been overhauled (e.g., old
+study used templates `BI-3`, `PQ-5`, `LY-1`; current study has `COMP-1`,
+`ASD-1`, `PQ-2`). Phase 1 only merges by slot key (template_id +
+compare_brand + dimension), so those responses were still orphaned.
+
+Phase 2 scans `brand_responses` for question_ids missing from
+`{q.id} ∪ q.legacy_ids` of the migrated study. For each orphan it derives
+the prior `template_id` (strip the trailing `-{4hex}`) and re-links into
+the new question with the matching template_id (preferring the
+non-`compare_brand` variant since legacy single-brand surveys had no
+per-competitor variants).
+
+### Where it runs
+- `@app.on_event("startup")` in `server.py` — runs both phases for every
+  study that needs them, logs `[BE-MIGRATE]` when work was done.
+- `POST /api/brand-equity/admin/relink-stable-ids` — same logic, available
+  for manual re-runs / admin tooling.
+
+### Verified
+- Study `0a0a1f3b` (12 responses w/ BI/PQ/LY ids but study uses COMP/ASD/PQ)
+  went from **0/42 questions with data** → **18/42** after Phase 2 re-link,
+  composite scores now visible (awareness 89.3, identity 42.5, loyalty 90,
+  overall 75).
+- Study `02a6ff40` had 6 truly unmappable orphans (template prefix no
+  longer exists at all in current study) — these are surfaced in
+  `phase2_unmappable_orphans` and require manual researcher review.
+- All 11 studies now have stable ids end-to-end (random=0 everywhere).
+
+
 ## 2026-05-11 — Fix: Regenerate Questions Drops All Old Responses (P0)
 
 ### Symptom
