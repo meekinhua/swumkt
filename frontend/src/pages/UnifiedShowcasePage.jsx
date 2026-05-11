@@ -225,7 +225,7 @@ const UnifiedShowcasePage = () => {
 
   return (
     <div className="be-root">
-      <BeTopbar showcaseMode />
+      <BeTopbar subtitle="PUBLIC SHOWCASE" active="showcase" />
       <div className="be-page" style={{ maxWidth: 1280 }}>
 
         {/* HERO */}

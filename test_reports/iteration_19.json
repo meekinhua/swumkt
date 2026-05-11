@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 19 — Verified the new Unified Public Showcase at /showcase. Backend: 9/9 pytest pass — GET /api/showcase/index returns correct shape {featured_topics, brand_equity, conjoint, totals:{brand_equity, conjoint, responses, topics}}, no auth required, no _id leaks, items carry method+share_token (BE) and method+id (CJ), totals consistent with arrays; legacy GET /api/conjoint/showcase still 200 with proper shape. Frontend: 100% — /showcase loads anonymously, hero 'Marketing research, publicly visible.' renders, hero stats show 4 topics / 1 BE / 3 CJ / 12 responses, all three tab filters work correctly (BE-only shows 1 BE 0 CJ, CJ-only shows 0 BE 3 CJ, ALL shows 1+3), Methods Primer section appears at bottom with Thai text for both Aaker 4-dim and Conjoint Analysis. Card navigation verified: first CJ card → /conjoint/results/{id} loads the Conjoint results page (Thai content, no 404); first BE card → /showcase/{share_token} loads the BE public dashboard. Legacy route /showcase/brand-equity still loads BrandEquityShowcaseIndexPage (no 404).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_unified_showcase.py",
+    "/app/test_reports/pytest/iter19_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor inconsistency: backend /api/showcase/index puts `url: '/showcase/conjoint/{id}'` on Conjoint items (line 8322), but the frontend ignores that field and routes to '/conjoint/results/{id}' instead (UnifiedShowcasePage.jsx line 206). The backend-provided url is dead code on Conjoint items — either remove it or wire a Route for /showcase/conjoint/:id for direct deep-link consistency.",
+    "Card data-testid uses prefix 'be-show-card-' for BOTH methods (e.g., be-show-card-conjoint-{id}). Mildly misleading naming — consider renaming to 'showcase-card-{method}-{id}' for clarity since this is no longer BE-only.",
+    "Hero stat data-testid uses .toLowerCase().replace(' ','-') with only first occurrence; works because labels currently have at most one space — fine but brittle if labels grow (use .replaceAll for safety).",
+    "UnifiedShowcasePage.jsx is 335 lines — still under the 700-line guideline. No split needed yet."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_unified_showcase.py (new test file)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 pytest)",
+    "frontend": "100% (hero, stats, 3 tabs, filter correctness, BE card nav, CJ card nav, legacy route, methods primer all verified)"
+  },
+  "test_credentials": "No auth needed for /showcase routes — all flows public. Admin (admin@swu.ac.th / admin123) was not required for this scope.",
+  "seed_data_creation": "None created. Used existing TEST_UIBrand BE study (1) + 3 existing CJ studies (นมหมี, ข้าว, Test Qualitative Analysis) already public in DB.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 19 verified /showcase (UnifiedShowcasePage), /showcase/brand-equity (legacy BE index), /showcase/:token (BE dashboard), and /conjoint/results/:id (CJ results) — all reachable without login. Backend endpoints: GET /api/showcase/index and GET /api/conjoint/showcase. Test data-testids: hero-stat-{topics|be-studies|cj-studies|be-responses}, showcase-tab-{all|brand_equity|conjoint}, be-show-card-{method}-{id}, method-tag-{method}, featured-topic-{topic}, featured-method-{method}-{id}. Note that the BE card testid prefix is 'be-show-card-' but it is used for BOTH BE and CJ items.",
+  "rca of the issue": "No bugs found. Wiring is correct end-to-end."
+}
