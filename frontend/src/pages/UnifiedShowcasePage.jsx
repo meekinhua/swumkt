@@ -288,7 +288,8 @@ const MethodsPrimer = () => (
         METHODS PRIMER · 01 — 02
       </div>
       <h3 style={{ fontFamily: 'IBM Plex Serif, serif', fontSize: 'clamp(28px, 4vw, 44px)',
-                   fontWeight: 500, margin: 0, lineHeight: 1.08, letterSpacing: '-0.02em' }}>
+                   fontWeight: 500, margin: 0, lineHeight: 1.08, letterSpacing: '-0.02em',
+                   color: '#FAFAFA' }}>
         เลือกใช้วิธีไหน<br/>กับงานวิจัยของคุณ?
       </h3>
       <p style={{ fontSize: 13, lineHeight: 1.7, marginTop: 24, opacity: 0.7, maxWidth: 360 }}>
@@ -303,7 +304,7 @@ const MethodsPrimer = () => (
           01 · BRAND EQUITY
         </div>
         <h4 style={{ fontSize: 22, margin: '0 0 16px', fontFamily: 'IBM Plex Serif, serif',
-                     fontWeight: 500, letterSpacing: '-0.01em' }}>
+                     fontWeight: 500, letterSpacing: '-0.01em', color: '#FAFAFA' }}>
           Aaker 4-Dimension Framework
         </h4>
         <p style={{ fontSize: 13, opacity: 0.78, lineHeight: 1.7, margin: 0 }}>
@@ -318,7 +319,7 @@ const MethodsPrimer = () => (
           02 · CONJOINT ANALYSIS
         </div>
         <h4 style={{ fontSize: 22, margin: '0 0 16px', fontFamily: 'IBM Plex Serif, serif',
-                     fontWeight: 500, letterSpacing: '-0.01em' }}>
+                     fontWeight: 500, letterSpacing: '-0.01em', color: '#FAFAFA' }}>
           Choice-Based Trade-off
         </h4>
         <p style={{ fontSize: 13, opacity: 0.78, lineHeight: 1.7, margin: 0 }}>
