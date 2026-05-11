@@ -1,115 +1,114 @@
 {
-  "theme_archetype": "Archetype 4 (Swiss & High-Contrast) mixed with Editorial Warmth",
-  "theme": "light",
-  "instructions_to_main_agent": "Implement these design guidelines exactly as specified. Ensure all interactive elements include the specified data-testid attributes. Focus on making the editorial layout feel brighter, more modern, and visually lively by relying on crisp contrast, large typography, photography insertions, and subtle CSS motion.",
-  "color_palette": {
-    "primary": "#3597E4",
-    "primary_description": "SWU Brand Blue. Use for primary CTAs, active states, and high-impact visual accents.",
-    "secondary": "#E22B37",
-    "secondary_description": "SWU Brand Red. Use sparingly for notifications, badges, and contrasting visual highlights.",
-    "neutral": "#8E8E93",
-    "neutral_description": "Brand Gray. Use for secondary text, metadata, and subtle borders.",
-    "background_main": "#FFFFFF",
-    "background_main_description": "Crisp White. Replaces the ubiquitous paper background in high-focus areas to increase brightness and modern feel.",
-    "background_alt": "#F7F4EE",
-    "background_alt_description": "Paper Tone. Retained from the original design but used strategically for section backgrounds, sidebars, and card fills to create warmth.",
-    "text_primary": "#1A1A1A",
-    "text_primary_description": "Ink Black. Used for all primary typography to maintain high-contrast legibility."
+  "theme": {
+    "archetype": "Archetype 4 (Swiss & High-Contrast) + Archetype 5 (Jewel & Luxury) blend",
+    "mode": "light",
+    "description": "Academic Brutalism meets High-Fashion Editorial. A stark, structural, text-heavy aesthetic that uses contrast, generous spacing, and rich typography to feel like a premium exhibition catalogue rather than a generic dashboard."
+  },
+  "colors": {
+    "background": {
+      "base": "#F4F0EA",
+      "card": "#FFFFFF",
+      "featured": "linear-gradient(135deg, rgba(244,240,234,1) 0%, rgba(255,255,255,0.4) 100%)",
+      "dark_surface": "#0A0A0A"
+    },
+    "text": {
+      "primary": "#0A0A0A",
+      "secondary": "#4A4A4A",
+      "tertiary": "#8A8A8A",
+      "inverse": "#F4F0EA"
+    },
+    "brand": {
+      "be_green": "#0E5538",
+      "cj_red": "#C8102E",
+      "border": "rgba(10,10,10,0.15)",
+      "border_strong": "rgba(10,10,10,0.3)"
+    }
   },
   "typography": {
-    "headlines": {
-      "font_family": "IBM Plex Serif, serif",
-      "style": "tracking-tight, leading-none to leading-tight",
-      "usage": "H1, H2, and large pull quotes. Emphasizes the scholarly/editorial trust signal."
+    "headings": {
+      "font": "IBM Plex Serif, serif",
+      "h1": "text-5xl md:text-7xl font-semibold tracking-tighter leading-[1.05] text-[#0A0A0A]",
+      "h2": "text-3xl md:text-4xl font-medium tracking-tight text-[#0A0A0A] leading-[1.1]",
+      "h3": "text-2xl font-medium tracking-tight text-[#0A0A0A]"
     },
-    "body_ui": {
-      "font_family": "IBM Plex Sans Thai, sans-serif",
-      "style": "tracking-normal, leading-relaxed",
-      "usage": "Body copy, UI elements, buttons, eyebrows (uppercase, tracking-widest)."
+    "body": {
+      "font": "IBM Plex Sans Thai, sans-serif",
+      "base": "text-base leading-relaxed text-[#4A4A4A]",
+      "small": "text-sm leading-relaxed text-[#4A4A4A]"
     },
-    "scale": {
-      "h1": "text-5xl sm:text-6xl lg:text-7xl font-semibold",
-      "h2": "text-4xl sm:text-5xl font-medium",
-      "h3": "text-2xl sm:text-3xl font-medium",
-      "body": "text-base sm:text-lg text-[#1A1A1A]/80",
-      "eyebrow": "text-xs font-bold uppercase tracking-[0.2em] text-[#3597E4]"
+    "labels": {
+      "font": "JetBrains Mono, monospace",
+      "style": "text-[10px] md:text-xs tracking-[0.15em] uppercase font-bold text-[#4A4A4A]"
     }
   },
-  "visual_liveliness_strategy": {
-    "color_temperature": "Shift from an all-paper (#F7F4EE) baseline to a crisp white (#FFFFFF) baseline. Use paper (#F7F4EE) for offset bento cards and alternate sections to create visual rhythm.",
-    "imagery_integration": "Inject photography directly into the grid. Use high-contrast, well-lit modern photography to break up dense text. Images should feel integrated, not like stock placeholders.",
-    "typography_moments": "Use oversized, editorial-style typography for section transitions instead of thin hairlines. A massive H2 or a bold pull quote acts as a visual anchor.",
-    "modern_indicators": "Subtle glassmorphism on sticky headers (backdrop-blur-xl bg-white/80). Bento grids with 1px border (#1A1A1A/10) and rounded-2xl to soften rigid Swiss layouts."
-  },
-  "imagery": {
-    "hero_portrait": {
-      "url": "https://images.unsplash.com/photo-1556560984-36a7ec2ba544?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjB1bml2ZXJzaXR5JTIwY2FtcHVzJTIwc3R1ZGVudHMlMjB2aWJyYW50fGVufDB8fHx8MTc3ODA5OTMzOXww&ixlib=rb-4.1.0&q=85",
-      "description": "Woman wearing blue sweater. Use inside a bento grid cell on the homepage hero to add a human, vibrant element."
-    },
-    "data_abstract": {
-      "url": "https://images.unsplash.com/photo-1686061593213-98dad7c599b9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxkYXRhJTIwYW5hbHl0aWNzJTIwbWFya2V0aW5nJTIwYWJzdHJhY3R8ZW58MHx8fHwxNzc4MDk5MzM5fDA&ixlib=rb-4.1.0&q=85",
-      "description": "Abstract colorful data screen. Use as a background for the 'Showcase' or 'Tools' section to inject color."
-    },
-    "knowledge_hub": {
-      "url": "https://images.unsplash.com/photo-1719726793997-5f520d89f695?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwyfHxlZGl0b3JpYWwlMjBtYWdhemluZSUyMGxheW91dCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3ODA5OTMzOXww&ixlib=rb-4.1.0&q=85",
-      "description": "Person holding a book. Use as the banner image for the /learn knowledge hub."
-    },
-    "about_hero": {
-      "url": "https://images.unsplash.com/photo-1663162550938-60f70fab5d31?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjB1bml2ZXJzaXR5JTIwY2FtcHVzJTIwc3R1ZGVudHMlMjB2aWJyYW50fGVufDB8fHx8MTc3ODA5OTMzOXww&ixlib=rb-4.1.0&q=85",
-      "description": "Group of students walking. Use as the hero image for /about/swu-marketing, treated with a subtle blue duotone or placed within a crisp border."
-    }
-  },
-  "pages": {
-    "homepage": {
-      "path": "/",
-      "layout_strategy": "Start with a 12-column Bento Grid hero. Cell 1 (span-8): Massive typography ('SWU Marketing Research Platform') with a dynamic 'network of dots' CSS background. Cell 2 (span-4, tall): The 'hero_portrait' image, full bleed. Below the fold, alternate between white and paper backgrounds. Tools bento should use 1px stroke borders on crisp white, hovering to reveal blue accents.",
-      "testid_requirements": ["homepage-hero-cta", "tools-bento-card", "knowledge-hub-teaser"]
-    },
-    "showcase": {
-      "path": "/showcase",
-      "layout_strategy": "Editorial gallery view. Instead of standard lists, use asymmetric masonry or a 3-column bento grid. Cards should have a pure white background, 1px border-ink/10, and a slight shadow on hover. Inject the 'data_abstract' image as a hero banner spanning the top.",
-      "testid_requirements": ["showcase-index-hero", "brand-research-card", "showcase-filter-button"]
-    },
-    "learn_index": {
-      "path": "/learn",
-      "layout_strategy": "Magazine index layout. The top featured article takes up 50% of the viewport height with the 'knowledge_hub' image on the left and a large serif headline on the right. Subsequent articles are presented in a clean 2-column list with generous padding (p-8).",
-      "testid_requirements": ["learn-featured-article", "learn-article-list-item"]
-    },
-    "learn_article": {
-      "path": "/learn/soft-delete-conjoint",
-      "layout_strategy": "Scholarly reading experience. Max-w-3xl for the main text column. Center the content but left-align the text. The background is pure white. Use the paper tone (#F7F4EE) for pull quotes and sidebar data tables to break the monotony. Use a large, bold Serif font for the title, followed by metadata (author, date) in neutral gray.",
-      "testid_requirements": ["article-header-title", "article-body-content", "article-pull-quote"]
-    },
-    "about": {
-      "path": "/about/swu-marketing",
-      "layout_strategy": "Pillar page. Large 'about_hero' image spanning the top with a gradient overlay (bg-gradient-to-t from-white to-transparent) fading into the text. Use the 'Swiss' layout: a 4-column grid where the left column (1 col) is sticky navigation/eyebrows, and the right (3 cols) is the main content.",
-      "testid_requirements": ["about-hero-section", "about-faculty-list", "about-mission-statement"]
-    }
+  "layout_and_spacing": {
+    "global_container": "max-w-[1440px] mx-auto px-6 md:px-12 py-12 md:py-24",
+    "bento_hero": "grid grid-cols-1 md:grid-cols-12 gap-px bg-black/15 border-b border-black/15 pb-16 md:pb-24",
+    "bento_hero_text": "col-span-1 md:col-span-8 flex flex-col justify-center bg-[#F4F0EA] pr-8",
+    "bento_hero_stats": "col-span-1 md:col-span-4 grid grid-cols-2 gap-px bg-black/15",
+    "study_cards_grid": "grid grid-cols-1 md:grid-cols-12 gap-6"
   },
   "components": {
-    "header": {
-      "style": "sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-[#1A1A1A]/10 transition-all duration-300",
-      "testid": "main-navigation-header"
+    "method_tag": {
+      "style": "inline-flex items-center px-2 py-1 text-[10px] tracking-[0.1em] uppercase font-mono font-bold rounded-[2px]",
+      "be_variant": "bg-[#0E5538]/10 text-[#0E5538]",
+      "cj_variant": "bg-[#C8102E]/10 text-[#C8102E]"
     },
-    "bento_card": {
-      "style": "bg-white border border-[#1A1A1A]/10 rounded-2xl p-8 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out flex flex-col gap-4 overflow-hidden relative",
-      "testid": "bento-ui-card"
+    "study_card": {
+      "container": "col-span-1 md:col-span-4 flex flex-col bg-white border border-black/15 p-6 md:p-8 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] transition-all duration-300 min-h-[240px] group relative overflow-hidden",
+      "header": "flex justify-between items-start mb-6 z-10 relative",
+      "body": "flex items-start gap-4 mb-4 z-10 relative",
+      "footer": "mt-auto pt-6 border-t border-black/10 flex justify-between items-center text-[10px] font-mono tracking-[0.15em] uppercase text-[#4A4A4A] group-hover:text-[#0A0A0A] transition-colors duration-300"
     },
-    "button_primary": {
-      "style": "bg-[#3597E4] text-white px-6 py-3 rounded-full font-sans font-medium hover:bg-[#2b7cbd] transition-colors duration-200 inline-flex items-center gap-2",
-      "testid": "primary-action-button"
+    "featured_topic_card": {
+      "container": "col-span-1 md:col-span-12 grid grid-cols-1 md:grid-cols-12 gap-px bg-black/15 border border-black/15 overflow-hidden my-8",
+      "left_panel": "col-span-1 md:col-span-5 bg-[#F4F0EA] p-8 md:p-12 flex flex-col justify-between relative",
+      "right_panel": "col-span-1 md:col-span-7 bg-white p-8 md:p-12 grid grid-cols-1 sm:grid-cols-2 gap-4"
     },
-    "section_transition": {
-      "style": "w-full py-24 sm:py-32 flex flex-col items-center justify-center text-center px-4"
+    "hero_stat_box": {
+      "container": "bg-[#F4F0EA] p-6 md:p-8 flex flex-col justify-center border-l border-b border-black/15",
+      "value": "text-4xl md:text-5xl font-serif text-[#0A0A0A] mb-1 tracking-tight",
+      "label": "text-[10px] font-mono tracking-[0.15em] text-[#4A4A4A]"
+    },
+    "tab_filter": {
+      "container": "flex flex-wrap gap-2 mb-8 items-end",
+      "button": "px-5 py-2.5 text-xs font-mono tracking-wider border border-black/15 transition-all duration-200 uppercase",
+      "active": "bg-[#0A0A0A] text-white border-[#0A0A0A]",
+      "inactive": "bg-transparent text-[#4A4A4A] hover:bg-black/5 hover:border-black/30"
+    },
+    "methods_primer": {
+      "container": "mt-24 md:mt-32 p-12 md:p-20 bg-[#0A0A0A] text-[#F4F0EA] grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-24",
+      "header": "col-span-1 md:col-span-5",
+      "content": "col-span-1 md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-12"
     }
   },
-  "motion_and_interactions": {
-    "hover_states": "All cards and buttons must have a clear hover state. Cards lift by 4px (-translate-y-1) and gain a soft shadow. Buttons slightly darken.",
-    "entry_animations": "On page load, use staggered CSS fade-up animations for the hero bento grid. Use simple keyframes: @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }.",
-    "no_parallax": "Strictly CSS transitions. No scroll-jacking or heavy javascript-based scroll animations to preserve Core Web Vitals."
+  "logo_fallback_algorithm": {
+    "description": "Deterministic 'Editorial Monogram' fallback for missing brand logos to prevent broken grid aesthetics.",
+    "pseudocode": [
+      "const topicStr = String(topic || title || 'Unknown').trim();",
+      "const initial = topicStr.charAt(0).toUpperCase();",
+      "const colors = ['#0E5538', '#C8102E', '#1D3557', '#0A0A0A', '#B45309', '#4338CA', '#0369A1', '#6D28D9'];",
+      "const hash = topicStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);",
+      "const bgColor = colors[hash % colors.length];",
+      "// Inline style implementation:",
+      "const fallbackStyle = { background: `linear-gradient(135deg, ${bgColor} 0%, rgba(10,10,10,0.6) 100%)`, color: '#F4F0EA', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', fontFamily: '\\'IBM Plex Serif\\', serif', fontSize: '24px', flexShrink: 0 };"
+    ],
+    "style": "w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-none md:rounded-sm border border-black/10 overflow-hidden"
   },
-  "css_utilities": {
-    "network_dots_pattern": ".bg-dots { background-image: radial-gradient(#3597E4 1px, transparent 1px); background-size: 24px 24px; opacity: 0.1; }",
-    "glass_panel": "backdrop-blur-xl bg-white/80 border border-[#1A1A1A]/10"
-  }
+  "motion_and_interactions": {
+    "hover_lift": "Standard study cards MUST elevate on hover (transform: translateY(-4px)) and project a deep, diffuse shadow (box-shadow: 0 16px 40px rgba(0,0,0,0.08)).",
+    "border_highlight": "Interactive elements like method sub-cards inside the featured section should transition their border from rgba(0,0,0,0.15) to #0A0A0A on hover.",
+    "image_scale": "Brand logos inside cards should scale up slightly (1.05x) within their hidden-overflow containers on card hover.",
+    "button_press": "Tabs and primary actions should scale-down (scale: 0.98) on active press state to feel tactile."
+  },
+  "instructions_to_main_agent": [
+    "OVERHAUL `UnifiedShowcasePage.jsx`: Ditch the current generic card grid. Implement the 'Academic Brutalism' bento-style layouts described above.",
+    "HERO SECTION: Convert to a bento grid structure where the left side is wide and text-heavy (H1), and the right side is a 2x2 strict grid of live stats separated by 1px dark borders. Use inline styles or Tailwind to achieve the `gap-px` border trick on a container with `bg-black/15`.",
+    "LOGO FALLBACK (CRITICAL FIX): Implement the `LogoFallback` logic EXACTLY as described in `logo_fallback_algorithm`. Replace the empty spaces with rich, deterministic gradient monograms using the `hash` method.",
+    "FEATURED SECTION: Redesign `FeaturedTopicCard` as a massive horizontal split-panel (Tetris grid) spanning full width, replacing the standard card.",
+    "STUDY CARDS: Place them in an asymmetric or 3-column grid (col-span-4). Apply the stark, flat-rectangular style with rich hover states.",
+    "TOPBAR: Make sure the `BeTopbar` background aligns visually with the new `#F4F0EA` page background.",
+    "DO NOT install any new libraries. DO NOT alter the backend API shape. DO NOT remove any `data-testid` attributes."
+  ],
+  "image_urls": {}
 }
