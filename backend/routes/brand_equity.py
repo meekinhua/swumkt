@@ -2286,6 +2286,15 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         to_iso: Optional[str] = Query(None, alias="to"),
         segments: Optional[str] = Query(None, description="JSON-encoded {field:[values]}"),
     ):
+        return await _get_public_showcase_cached(share_token, from_iso, to_iso, segments)
+
+    @async_ttl_cache(ttl_seconds=60)
+    async def _get_public_showcase_cached(
+        share_token: str,
+        from_iso: Optional[str],
+        to_iso: Optional[str],
+        segments: Optional[str],
+    ):
         """Public — sanitized dashboard view of a study that the owner has marked as showcase.
         Returns aggregates + AI insights + brand info, but strips owner identity, raw responses,
         demographics breakdown, and any sensitive fields. Survey-taking is still possible via

@@ -196,6 +196,11 @@ def get_share_routes(db, brand_aggregate_helper=None):
 
     @share_router.get("/showcase/{share_token}", response_class=HTMLResponse)
     async def share_showcase(share_token: str, request: Request):
+        origin = _request_origin(request)
+        return HTMLResponse(await _share_showcase_cached(share_token, origin))
+
+    @async_ttl_cache(ttl_seconds=120)
+    async def _share_showcase_cached(share_token: str, origin: str) -> str:
         study = await db.brand_studies.find_one(
             {"share_token": share_token, "deleted_at": {"$exists": False}},
             {"_id": 0},
@@ -229,7 +234,6 @@ def get_share_routes(db, brand_aggregate_helper=None):
         except Exception:
             scores = None
 
-        origin = _request_origin(request)
         canonical = f"{origin}/api/share/showcase/{share_token}"
         redirect_url = f"{origin}/showcase/{share_token}"
 
@@ -265,7 +269,7 @@ def get_share_routes(db, brand_aggregate_helper=None):
             eyebrow = "BRAND HEALTH · IN PUBLIC"
             cta_label = "เข้าดู Showcase →"
 
-        return HTMLResponse(_build_og_html(
+        return _build_og_html(
             canonical_url=canonical,
             redirect_url=redirect_url,
             title=title,
@@ -276,10 +280,15 @@ def get_share_routes(db, brand_aggregate_helper=None):
             body_h1=title,
             body_lede=description,
             cta_label=cta_label,
-        ))
+        )
 
     @share_router.get("/learn/{slug}", response_class=HTMLResponse)
     async def share_learn(slug: str, request: Request):
+        origin = _request_origin(request)
+        return HTMLResponse(await _share_learn_cached(slug, origin))
+
+    @async_ttl_cache(ttl_seconds=300)
+    async def _share_learn_cached(slug: str, origin: str) -> str:
         post = await db.cms_posts.find_one(
             {"slug": slug, "status": "published", "deleted_at": {"$exists": False}},
             {"_id": 0},
@@ -298,7 +307,6 @@ def get_share_routes(db, brand_aggregate_helper=None):
         category = (post.get("category") or post.get("type") or "ARTICLE").upper()
         eyebrow = f"KNOWLEDGE HUB · {category}"
 
-        origin = _request_origin(request)
         canonical = f"{origin}/api/share/learn/{slug}"
         redirect_url = f"{origin}/learn/{slug}"
 
@@ -313,7 +321,7 @@ def get_share_routes(db, brand_aggregate_helper=None):
         title_line = f"{title} · SWU · Marketing Research"
         description = _truncate(excerpt, 260)
 
-        return HTMLResponse(_build_og_html(
+        return _build_og_html(
             canonical_url=canonical,
             redirect_url=redirect_url,
             title=title_line,
@@ -324,7 +332,7 @@ def get_share_routes(db, brand_aggregate_helper=None):
             body_h1=title,
             body_lede=description,
             cta_label="อ่านบทความเต็ม →",
-        ))
+        )
 
     @share_router.get("/og-image/learn/{slug}")
     async def og_image_learn(slug: str):

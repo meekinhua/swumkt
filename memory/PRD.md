@@ -259,7 +259,18 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
 - **UI**: Hero with rotating stats (TOPICS/BE/CJ/RESPONSES), Featured multi-method topics, Tab filter (All/BE/CJ), Methods Primer footer (Aaker 4-dim vs Conjoint choice-based)
 - **Card navigation**: BE → `/showcase/{share_token}` (public BE dashboard) · CJ → `/conjoint/results/{id}` (public CJ results)
 - **OG/Social preview bridge**: `GET /api/share/showcase-index` returns OG-rich HTML (title + Thai description with live stats + meta-refresh) — paste link in FB/LINE/Slack/Discord/WhatsApp shows beautiful preview card. Frontend hero has `⤴ SHARE THIS PAGE` button that copies bridge URL.
-- **TTL cache (60s)** on aggregate endpoints to fix lag — `/api/brand-equity/showcase`, `/api/showcase/index`, `/api/share/showcase-index`. Helper: `/app/backend/lib/ttl_cache.py` with async-safe single-flight locking + `_skip_cache=True` escape hatch.
+- **TTL cache (60–300s)** on all public read-only endpoints — instant response for repeat visitors + cuts DB load:
+  - `/api/cms/landing` (120s, invalidated on PUT)
+  - `/api/cms/posts/public` (120s)
+  - `/api/cms/posts/public/by-slug/{slug}` (300s — articles rarely change)
+  - `/api/brand-equity/showcase` (60s — list)
+  - `/api/brand-equity/showcase/{token}` (60s — full sanitized dashboard, supports filter params in cache key)
+  - `/api/showcase/index` (60s — unified BE + CJ)
+  - `/api/conjoint/showcase` (60s)
+  - `/api/share/showcase-index` (60s — OG bridge index)
+  - `/api/share/showcase/{token}` (120s — OG bridge per BE)
+  - `/api/share/learn/{slug}` (300s — OG bridge per article)
+- Helper: `/app/backend/lib/ttl_cache.py` — async-safe, single-flight locking, `_skip_cache=True` escape, `invalidate_prefix()` for write hooks
 - Verified via iteration_19: 9/9 backend pytest pass + frontend 100% flows pass
 
 ## Credentials

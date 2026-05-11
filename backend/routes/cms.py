@@ -20,6 +20,8 @@ from typing import List, Optional, Dict, Any, Literal
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+from lib.ttl_cache import async_ttl_cache, invalidate_prefix
+
 cms_router = APIRouter(prefix="/cms", tags=["CMS"])
 
 # ============ MODELS ============
@@ -476,6 +478,10 @@ def get_cms_routes(db, get_current_user):
 
     @cms_router.get("/posts/public")
     async def list_public_posts(type: Optional[str] = None, limit: int = 50):
+        return await _list_public_posts_cached(type, limit)
+
+    @async_ttl_cache(ttl_seconds=120)
+    async def _list_public_posts_cached(type: Optional[str], limit: int):
         """Public list of published posts (no auth)."""
         query: Dict[str, Any] = {
             "deleted_at": {"$exists": False},
@@ -492,6 +498,10 @@ def get_cms_routes(db, get_current_user):
 
     @cms_router.get("/posts/public/by-slug/{slug}")
     async def get_public_post_by_slug(slug: str):
+        return await _get_public_post_by_slug_cached(slug)
+
+    @async_ttl_cache(ttl_seconds=300)
+    async def _get_public_post_by_slug_cached(slug: str):
         """Public single post by slug (no auth, only if published & not deleted)."""
         doc = await db.cms_posts.find_one(
             {"slug": slug, "status": "published", "deleted_at": {"$exists": False}},
@@ -829,8 +839,12 @@ def get_cms_routes(db, get_current_user):
 
     @cms_router.get("/landing")
     async def get_landing():
-        """Public — HomePage uses this to render. No auth required."""
         await _seed_landing()
+        return await _get_landing_cached()
+
+    @async_ttl_cache(ttl_seconds=120)
+    async def _get_landing_cached():
+        """Public — HomePage uses this to render. No auth required."""
         doc = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
         if not doc:
             return DEFAULT_LANDING
@@ -849,6 +863,7 @@ def get_cms_routes(db, get_current_user):
         upd = data.model_dump()
         upd["updated_at"] = _now()
         await db.cms_landing.update_one({"key": "home"}, {"$set": upd})
+        invalidate_prefix("get_cms_routes.<locals>._get_landing_cached")
         doc = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
         return doc
 
