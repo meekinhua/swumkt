@@ -25,23 +25,45 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm  # noqa: E402
 from matplotlib.patches import Circle  # noqa: F401
 import numpy as np
+import os
+import logging
 
 # Register Thai-capable font (Loma is shipped via fonts-thai-tlwg in the container).
 # We must use **explicit FontProperties** on every text call — matplotlib's rcParams
 # fallback chain does NOT reliably apply to polar tick labels, legend, etc., which
 # is why tofu boxes appeared on radar/perceptual axis labels.
-_THAI_FONT_FILE = "/usr/share/fonts/opentype/tlwg/Loma.otf"
-try:
-    fm.fontManager.addfont(_THAI_FONT_FILE)
-except Exception:
-    pass
-_FP        = fm.FontProperties(fname=_THAI_FONT_FILE, size=9)
-_FP_TITLE  = fm.FontProperties(fname=_THAI_FONT_FILE, size=11, weight="bold")
-_FP_LABEL  = fm.FontProperties(fname=_THAI_FONT_FILE, size=10)
-_FP_SMALL  = fm.FontProperties(fname=_THAI_FONT_FILE, size=8)
-_FP_BOLD   = fm.FontProperties(fname=_THAI_FONT_FILE, size=10, weight="bold")
-# Keep rcParams as a secondary safety net
-plt.rcParams["font.family"] = ["Loma", "DejaVu Sans"]
+#
+# Production containers may not have fonts-thai-tlwg installed — we degrade
+# gracefully to the default sans-serif so charts still render (just without
+# proper Thai shaping). Better than the whole DOCX pipeline crashing.
+_THAI_FONT_FILE = None
+for _candidate in (
+    "/usr/share/fonts/opentype/tlwg/Loma.otf",
+    "/usr/share/fonts/truetype/tlwg/Loma.ttf",
+    "/usr/share/fonts/truetype/thai/Loma.ttf",
+):
+    if os.path.exists(_candidate):
+        _THAI_FONT_FILE = _candidate
+        break
+if _THAI_FONT_FILE:
+    try:
+        fm.fontManager.addfont(_THAI_FONT_FILE)
+        _FP        = fm.FontProperties(fname=_THAI_FONT_FILE, size=9)
+        _FP_TITLE  = fm.FontProperties(fname=_THAI_FONT_FILE, size=11, weight="bold")
+        _FP_LABEL  = fm.FontProperties(fname=_THAI_FONT_FILE, size=10)
+        _FP_SMALL  = fm.FontProperties(fname=_THAI_FONT_FILE, size=8)
+        _FP_BOLD   = fm.FontProperties(fname=_THAI_FONT_FILE, size=10, weight="bold")
+        plt.rcParams["font.family"] = ["Loma", "DejaVu Sans"]
+    except Exception as e:
+        logging.warning(f"[be_thesis_charts] Failed to load Thai font: {e}")
+        _THAI_FONT_FILE = None
+if not _THAI_FONT_FILE:
+    logging.warning("[be_thesis_charts] Thai font NOT found — Thai glyphs may show as boxes")
+    _FP        = fm.FontProperties(size=9)
+    _FP_TITLE  = fm.FontProperties(size=11, weight="bold")
+    _FP_LABEL  = fm.FontProperties(size=10)
+    _FP_SMALL  = fm.FontProperties(size=8)
+    _FP_BOLD   = fm.FontProperties(size=10, weight="bold")
 plt.rcParams["axes.unicode_minus"] = False
 
 # Brand-equity dashboard palette (matches frontend CSS)
@@ -107,8 +129,12 @@ def render_tom_cloud(
         # Size scales 14..42 with sqrt of pct
         size = max(14, min(42, 14 + (pct ** 0.55) * 4.0))
         is_target = target_low and target_low in label.lower()
-        fp = fm.FontProperties(fname=_THAI_FONT_FILE, size=size,
-                                weight="bold" if is_target else "normal")
+        if _THAI_FONT_FILE:
+            fp = fm.FontProperties(fname=_THAI_FONT_FILE, size=size,
+                                    weight="bold" if is_target else "normal")
+        else:
+            fp = fm.FontProperties(size=size,
+                                    weight="bold" if is_target else "normal")
         ax.text(
             x, y, label,
             color=BE_RED if is_target else INK_3,
@@ -304,7 +330,8 @@ def render_identity_image_map(
     # LEFT — intended traits
     n_left = len(intended_traits) or 1
     spacing_l = min(1.0, 8.0 / n_left)
-    _FP_TRAIT = fm.FontProperties(fname=_THAI_FONT_FILE, size=11)
+    _FP_TRAIT = (fm.FontProperties(fname=_THAI_FONT_FILE, size=11)
+                 if _THAI_FONT_FILE else fm.FontProperties(size=11))
     for i, t in enumerate(intended_traits):
         y = 9.0 - (i + 1) * spacing_l
         ax.text(2.0, y, t, color=INK_2, ha="center", fontproperties=_FP_TRAIT)
@@ -315,7 +342,8 @@ def render_identity_image_map(
     color_for = {"aligned": BE_GREEN, "lost": INK_3, "unintended": BE_GOLD}
     n_right = len(image_col) or 1
     spacing_r = min(1.0, 8.0 / n_right)
-    _FP_TRAIT_BOLD = fm.FontProperties(fname=_THAI_FONT_FILE, size=11, weight="bold")
+    _FP_TRAIT_BOLD = (fm.FontProperties(fname=_THAI_FONT_FILE, size=11, weight="bold")
+                     if _THAI_FONT_FILE else fm.FontProperties(size=11, weight="bold"))
     for i, p in enumerate(image_col):
         y = 9.0 - (i + 1) * spacing_r
         c = color_for.get(p.get("kind", "lost"), INK_3)

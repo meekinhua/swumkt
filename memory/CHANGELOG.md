@@ -1,6 +1,36 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Graceful Degradation: Download Always Succeeds 🛟
+
+### User-reported: "ดาวน์โหลดไม่สำเร็จ" บน production แม้ cache hit
+- **Root cause hypothesis**: Production container อาจไม่มี `Loma.otf` (fonts-thai-tlwg) หรือ
+  `mmdc` (mermaid-cli) → matplotlib/python-docx ขัดข้องตอน render appendix → entire
+  endpoint return 500 → frontend ขึ้น "ดาวน์โหลดไม่สำเร็จ"
+- **Fix**: 3-level graceful fallback ใน `thesis-ai-download` endpoint:
+  1. **Mermaid pipeline**: ถ้า mmdc ไม่มี/fail → skip diagrams ทุกอัน, ดำเนินงานต่อ
+  2. **Base DOCX render**: ถ้า fail → 500 (เป็น critical step, ไม่ degrade ได้)
+  3. **Appendix enrichment** (charts + tables): ถ้า fail → fall back ไป base DOCX
+     เท่านั้น user ยังได้ thesis ที่ใช้งานได้
+- เพิ่ม logging:
+  - `[BE-Thesis-DL] cache_key=... ai_md_len=...`
+  - `[BE-Thesis-DL] base docx rendered: N bytes`
+  - `[BE-Thesis-DL] enriched docx: N bytes (+M from appendix)`
+  - บน production สามารถ check logs เพื่อ trace ปัญหาได้
+
+### Thai font: graceful detection
+- `be_thesis_charts.py` ตอน import ค้นหา Loma ใน 3 paths:
+  - `/usr/share/fonts/opentype/tlwg/Loma.otf`
+  - `/usr/share/fonts/truetype/tlwg/Loma.ttf`
+  - `/usr/share/fonts/truetype/thai/Loma.ttf`
+- ถ้าไม่เจอ → ใช้ default sans-serif แทน + log warning (charts ยัง render ได้,
+  แค่ภาษาไทยอาจเป็น tofu — ดีกว่าทั้ง pipeline พัง)
+
+### Verified บน preview
+- Download: 200 OK, 311KB DOCX valid
+- Logs ใหม่ครบ — สามารถ trace step-by-step ได้บน production
+
+
 ## 2026-02-11 — Thai Font (chart): Explicit FontProperties Fix + Mobile AI Overflow 🇹🇭📱
 
 ### 🇹🇭 Thai font in charts — root cause + fix

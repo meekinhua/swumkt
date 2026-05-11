@@ -2409,39 +2409,64 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         ai_md = cached["ai_content"]
         respondent_count = cached.get("n_filtered", 0)
         title = study.get("brand", {}).get("name") or "Brand"
+        logging.info(f"[BE-Thesis-DL] cache_key={cache_key[:60]} ai_md_len={len(ai_md or '')}")
 
         # Extract & replace mermaid blocks BEFORE the markdown→docx engine sees them,
         # otherwise raw `mermaid` source would be rendered as a code block.
-        from .be_thesis_mermaid import replace_mermaid_blocks_with_markers, render_mermaid_to_png
-        ai_md_clean, mermaid_blocks = replace_mermaid_blocks_with_markers(ai_md)
-
-        # Render every mermaid block in parallel-ish via to_thread (each is a chromium spawn)
+        # If mermaid-cli is missing on the host (e.g. production container without
+        # mmdc setup), we still let render proceed — just no diagrams in appendix.
+        ai_md_clean = ai_md
         rendered_mermaids = []
-        for bid, code in mermaid_blocks:
-            png = await asyncio.to_thread(render_mermaid_to_png, code)
-            if png:
-                rendered_mermaids.append((bid, png))
+        try:
+            from .be_thesis_mermaid import replace_mermaid_blocks_with_markers, render_mermaid_to_png
+            ai_md_clean, mermaid_blocks = replace_mermaid_blocks_with_markers(ai_md)
+            for bid, code in mermaid_blocks:
+                try:
+                    png = await asyncio.to_thread(render_mermaid_to_png, code)
+                    if png:
+                        rendered_mermaids.append((bid, png))
+                except Exception as e:
+                    logging.warning(f"[BE-Thesis-DL] mermaid block {bid} failed: {e}")
+        except Exception as e:
+            logging.warning(f"[BE-Thesis-DL] mermaid pipeline disabled: {e}")
+            ai_md_clean = ai_md  # fall back to original markdown if pipeline broken
 
-        # Recompute aggregate so the appendix has fresh chart-friendly stats
-        # (cache stores only the AI markdown text, not the numeric aggregate)
-        all_responses = await db.brand_responses.find(
-            {"study_id": study_id}, {"_id": 0}
-        ).to_list(5000)
-        agg_for_appendix = _aggregate_responses(study, all_responses, normalized=
-            (study.get("ai_cache") or {}).get("normalized_by_question") or {})
+        # Render base DOCX from AI markdown — this is the CRITICAL step.
+        # If THIS fails we cannot serve anything, so do NOT swallow that error.
+        try:
+            from server import _create_thesis_docx
+            base_bytes = await asyncio.to_thread(
+                _create_thesis_docx, title, respondent_count, ai_md_clean,
+            )
+            logging.info(f"[BE-Thesis-DL] base docx rendered: {len(base_bytes)} bytes")
+        except Exception as e:
+            logging.exception(f"[BE-Thesis-DL] BASE DOCX render failed: {e}")
+            raise HTTPException(500, f"DOCX render error: {str(e)[:200]}")
 
-        # CPU-heavy DOCX render in worker thread — first build base doc from AI markdown
-        from server import _create_thesis_docx
-        base_bytes = await asyncio.to_thread(
-            _create_thesis_docx, title, respondent_count, ai_md_clean,
-        )
-        # Then enrich with charts + comprehensive data tables + mermaid figures
-        from .be_thesis_appendix import enrich_thesis_docx
-        docx_bytes = await asyncio.to_thread(
-            enrich_thesis_docx, base_bytes,
-            study=study, aggregate=agg_for_appendix,
-            mermaid_figures=rendered_mermaids,
-        )
+        # Enrich with charts + comprehensive data tables + mermaid figures.
+        # If THIS fails (e.g. missing Thai font on host, matplotlib backend issue),
+        # we fall back to the base DOCX — user still gets a usable thesis.
+        docx_bytes = base_bytes
+        try:
+            # Recompute aggregate so the appendix has fresh chart-friendly stats
+            all_responses = await db.brand_responses.find(
+                {"study_id": study_id}, {"_id": 0}
+            ).to_list(5000)
+            agg_for_appendix = _aggregate_responses(
+                study, all_responses,
+                normalized=(study.get("ai_cache") or {}).get("normalized_by_question") or {},
+            )
+            from .be_thesis_appendix import enrich_thesis_docx
+            docx_bytes = await asyncio.to_thread(
+                enrich_thesis_docx, base_bytes,
+                study=study, aggregate=agg_for_appendix,
+                mermaid_figures=rendered_mermaids,
+            )
+            logging.info(f"[BE-Thesis-DL] enriched docx: {len(docx_bytes)} bytes "
+                         f"(+{len(docx_bytes) - len(base_bytes)} from appendix)")
+        except Exception as e:
+            logging.exception(f"[BE-Thesis-DL] appendix enrich failed — falling back to base: {e}")
+            docx_bytes = base_bytes  # graceful degradation
 
         brand_safe = "".join(c if c.isalnum() else "_" for c in title) or "brand"
         ch_label = ""
