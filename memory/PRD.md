@@ -258,6 +258,14 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
 - **Backend**: `GET /api/showcase/index` merges public BE + Conjoint studies, returns `{featured_topics, brand_equity, conjoint, totals}`
 - **UI**: Hero with rotating stats (TOPICS/BE/CJ/RESPONSES), Featured multi-method topics, Tab filter (All/BE/CJ), Methods Primer footer (Aaker 4-dim vs Conjoint choice-based)
 - **Card navigation**: BE → `/showcase/{share_token}` (public BE dashboard) · CJ → `/conjoint/results/{id}` (public CJ results)
+- **Visual redesign (Feb 2026)** — "Academic Brutalism × Editorial" by design agent:
+  - Bento hero: 8/4 split, italic accent + red square mark on headline, 2x2 stats grid with 01/02/03/04 numbering
+  - **Editorial Monogram logo fallback** — deterministic hash-derived gradient + initial letter for any study missing `logo_url` (fixes inconsistent brand image issue); 8-color palette, radial noise overlay
+  - Study cards: top accent bar (BE green / CJ red), translateY hover lift + deep shadow, dashed "OPEN →" footer
+  - Featured topics: full-width split panel (5fr/7fr) with method sub-tiles
+  - Methods Primer footer: dark slab (#0A0A0A) with sectioned 01/02 columns
+  - Mobile (≤390px): single-col cards, stats 2x2, hero text reflows; verified at 390px
+- Design guidelines saved to `/app/design_guidelines.json`
 - **OG/Social preview bridge**: `GET /api/share/showcase-index` returns OG-rich HTML (title + Thai description with live stats + meta-refresh) — paste link in FB/LINE/Slack/Discord/WhatsApp shows beautiful preview card. Frontend hero has `⤴ SHARE THIS PAGE` button that copies bridge URL.
 - **TTL cache (60–300s)** on all public read-only endpoints — instant response for repeat visitors + cuts DB load:
   - `/api/cms/landing` (120s, invalidated on PUT)
