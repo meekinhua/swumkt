@@ -154,12 +154,33 @@ def _kind_label(k: Optional[str]) -> str:
 def enrich_thesis_docx(
     docx_bytes: bytes,
     *, study: Dict[str, Any], aggregate: Dict[str, Any],
+    mermaid_figures: Optional[List[tuple]] = None,
 ) -> bytes:
-    """Open the AI-generated DOCX, append visual + data appendices, return new bytes."""
+    """Open the AI-generated DOCX, append visual + data appendices, return new bytes.
+
+    mermaid_figures: list of (block_id, png_bytes) from be_thesis_mermaid — rendered
+                     before this function is called so the appendix can embed them.
+    """
     doc = Document(io.BytesIO(docx_bytes))
 
     # Page break before appendix block so it doesn't collide with References
     doc.add_page_break()
+
+    # =====================================================================
+    # ภาคผนวก ก-mermaid — Conceptual / Framework diagrams from AI
+    # =====================================================================
+    if mermaid_figures:
+        _h_section(doc, "ภาคผนวก ก-mermaid — แผนภาพ Conceptual / Framework", level=0)
+        _para(doc,
+              "แผนภาพ mermaid ที่ AI สร้างขึ้นในเนื้อหา (อาจอยู่ใน conceptual framework "
+              "ของบทที่ 2 หรือ research methodology flowchart ของบทที่ 3) — "
+              "ถูกเรนเดอร์เป็นภาพและฝังไว้ที่นี่.",
+              italic=True)
+        for bid, png_bytes in mermaid_figures:
+            buf = io.BytesIO(png_bytes)
+            _add_image(doc, buf, width_inches=6.2,
+                       caption=f"ภาพ {bid} · แผนภาพแนวคิดจาก AI")
+        doc.add_page_break()
 
     # =====================================================================
     # ภาคผนวก ก — ภาพประกอบจาก Dashboard

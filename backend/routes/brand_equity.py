@@ -2410,6 +2410,18 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         respondent_count = cached.get("n_filtered", 0)
         title = study.get("brand", {}).get("name") or "Brand"
 
+        # Extract & replace mermaid blocks BEFORE the markdown→docx engine sees them,
+        # otherwise raw `mermaid` source would be rendered as a code block.
+        from .be_thesis_mermaid import replace_mermaid_blocks_with_markers, render_mermaid_to_png
+        ai_md_clean, mermaid_blocks = replace_mermaid_blocks_with_markers(ai_md)
+
+        # Render every mermaid block in parallel-ish via to_thread (each is a chromium spawn)
+        rendered_mermaids = []
+        for bid, code in mermaid_blocks:
+            png = await asyncio.to_thread(render_mermaid_to_png, code)
+            if png:
+                rendered_mermaids.append((bid, png))
+
         # Recompute aggregate so the appendix has fresh chart-friendly stats
         # (cache stores only the AI markdown text, not the numeric aggregate)
         all_responses = await db.brand_responses.find(
@@ -2421,13 +2433,14 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         # CPU-heavy DOCX render in worker thread — first build base doc from AI markdown
         from server import _create_thesis_docx
         base_bytes = await asyncio.to_thread(
-            _create_thesis_docx, title, respondent_count, ai_md,
+            _create_thesis_docx, title, respondent_count, ai_md_clean,
         )
-        # Then enrich with charts + comprehensive data tables
+        # Then enrich with charts + comprehensive data tables + mermaid figures
         from .be_thesis_appendix import enrich_thesis_docx
         docx_bytes = await asyncio.to_thread(
             enrich_thesis_docx, base_bytes,
             study=study, aggregate=agg_for_appendix,
+            mermaid_figures=rendered_mermaids,
         )
 
         brand_safe = "".join(c if c.isalnum() else "_" for c in title) or "brand"

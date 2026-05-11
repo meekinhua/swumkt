@@ -1,6 +1,38 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Mermaid Diagrams + Thai Font Hardening 📐🇹🇭
+
+### Mermaid rendering (server-side via mmdc + Chromium headless)
+- ติดตั้ง `@mermaid-js/mermaid-cli@10.9.1` ที่ `/opt/mmdc/` ใช้ระบบ Chromium ที่มีอยู่แล้ว
+  (Playwright dependency) ไม่ต้องโหลด chromium เพิ่ม
+- **NEW** `/app/backend/routes/be_thesis_mermaid.py`:
+  - `extract_mermaid_blocks(md)` — regex หา ` ```mermaid ... ``` ` ใน markdown
+  - `replace_mermaid_blocks_with_markers(md)` — แทนที่ block ด้วยข้อความ "ภาพประกอบ M-01"
+    เพื่อให้ markdown→docx engine ไม่ render เป็น code block
+  - `render_mermaid_to_png(code)` — shell out ไป `mmdc -i in.mmd -o out.png`
+    พร้อม puppeteer config ใช้ `/usr/bin/chromium` + `--no-sandbox`
+- Wired into download endpoint: extract → render PNG → ส่งให้ `enrich_thesis_docx` เพิ่ม
+  **ภาคผนวก ก-mermaid** section ที่ embed ทุกแผนภาพ
+- AI prompts (Ch 2, 3) ได้รับการ update ให้ใส่ mermaid:
+  - Ch 2 — conceptual framework: `flowchart LR` แสดง Aaker 4 dimensions → BES
+  - Ch 3 — methodology: `flowchart TD` แสดง Survey → Collection → Normalization → Composite
+- **กฎสำคัญ**: AI ใช้ภาษาอังกฤษใน mermaid node labels (Chromium ภายใน mmdc render ไทยไม่ครบ)
+  แต่อธิบายเป็นไทยใน narrative text — ภาพประกอบจึงเป็น English ในขณะที่เนื้อหารอบๆ เป็นไทย
+- Verified: ทดสอบสร้าง thesis (Ch 2-5) — **17 images embedded** รวม mermaid flowcharts หลายชิ้น
+  + ทุก matplotlib chart + ทุกตาราง
+
+### Thai font hardening
+- Test ใหม่ทุก chart (TOM cloud, radar, perceptual map, identity-image) ด้วยข้อมูลภาษาไทย
+  ระดับยาก (สระ-วรรณยุกต์ครบ) — **ไม่มี tofu boxes**
+- Loma font (`/usr/share/fonts/opentype/tlwg/Loma.otf`) ถูก register ตอน module import
+- ผู้ใช้ที่ยังเห็น box อาจดาวน์โหลด DOCX cache เก่าก่อนที่ font fix จะ deploy — แนะนำ
+  ดาวน์โหลดใหม่ (cache ถูกเคลียร์แล้ว)
+
+### Verified
+- DOCX 482KB · 17 images · mermaid + matplotlib charts ครบ · Thai font ถูกต้อง
+
+
 ## 2026-02-11 — Thesis DOCX: All Dashboard Charts + Full Statistics Tables 📊🎓
 
 ### ภาพประกอบทั้งหมดจาก Dashboard ฝัง DOCX แล้ว (request: "เอา output ทุกอันมา")

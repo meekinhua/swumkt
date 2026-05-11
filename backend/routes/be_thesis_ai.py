@@ -163,6 +163,24 @@ def _system_msg(extra_prompt: str = "") -> str:
         "2. ถ้า data field ไหนเป็น '—' หรือไม่มี — ให้เขียนตามข้อมูลที่มี อย่ายัด placeholder\n"
         "3. ทุกครั้งที่อ้างค่า ต้องมีหน่วย/บริบท เช่น 'ค่าเฉลี่ย 4.95 จาก scale 1-7 (n=21)'\n"
         "4. ห้ามใช้คำว่า 'ผู้ใช้จะใส่เอง' หรือ 'TBD' หรือ 'X' ใน chapter 3-5 (data-driven)\n\n"
+        "**กฎ Mermaid Diagrams — ใช้ทุกครั้งที่ควรมีแผนภาพ**:\n"
+        "- เมื่อกล่าวถึง conceptual framework / กรอบแนวคิด ให้สร้าง mermaid flowchart\n"
+        "- เมื่อกล่าวถึง research methodology / ขั้นตอนการวิจัย ให้สร้าง mermaid flowchart\n"
+        "- เมื่อกล่าวถึง Aaker Brand Equity Model หรือ Keller CBBE Pyramid ให้สร้าง mermaid\n"
+        "- ใช้ syntax `flowchart TD` หรือ `flowchart LR` เท่านั้น\n"
+        "- **ห้ามใช้ภาษาไทยใน node labels** (เนื่องจาก mmdc/Chromium ยังไม่รองรับเต็มที่) — "
+        "ใช้ภาษาอังกฤษใน label แต่อธิบายเป็นไทยในย่อหน้า\n"
+        "- ใช้ syntax ที่ valid 100% — ห้าม custom theme, ห้าม unicode escape, "
+        "ห้าม `subgraph` ที่ซับซ้อน\n"
+        "- ตัวอย่าง syntax ที่ถูกต้อง:\n"
+        "  ```mermaid\n"
+        "  flowchart TD\n"
+        "      A[Brand Identity] --> B[Brand Awareness]\n"
+        "      B --> C[Perceived Quality]\n"
+        "      C --> D[Brand Loyalty]\n"
+        "      D --> E[Brand Equity Score]\n"
+        "  ```\n"
+        "- AI ของเราจะ render mermaid เป็นภาพ PNG ฝังใน DOCX อัตโนมัติ ผู้ใช้จึงจะได้แผนภาพจริง\n\n"
         "**กฎการเขียนสมการ**: ใช้ LaTeX inline `$...$` หรือ display `$$...$$`\n\n"
         "**กฎการเขียน format**:\n"
         "- หัวข้อใช้ Markdown: ## ชื่อบท, ### หัวข้อย่อย\n"
@@ -284,6 +302,15 @@ def build_be_thesis_prompts(
 ### 2.5 กรอบแนวคิดของการวิจัย
 - เขียนคำบรรยาย conceptual framework ที่นำ Aaker's 4 dimensions มาใช้กับ "{brand_name}"
 - ตัวแปรอิสระ: 4 มิติ; ตัวแปรตาม: Brand Equity Score (BES)
+- **สำคัญ**: สร้างแผนภาพ mermaid flowchart แสดงกรอบแนวคิดวิจัย (Aaker 4 dimensions → BES)
+  เช่น:
+  ```mermaid
+  flowchart LR
+      A[Brand Awareness] --> Z[Brand Equity Score]
+      B[Perceived Quality] --> Z
+      C[Brand Identity] --> Z
+      D[Brand Loyalty] --> Z
+  ```
 
 ข้อกำหนด: ภาษาไทยวิชาการ, in-text citation APA 7 ทุกย่อหน้า, ขึ้นต้นด้วย "*(ร่างจาก AI — กรุณานำไป fine-tune / revise เอง...)*" หลัง heading
 """
@@ -368,6 +395,7 @@ $$\\text{{BES}} = \\frac{{\\sum_{{i \\in \\{{aw,q,id,ly\\}}}} D_i \\cdot W_i}}{{
 - Descriptive: mean, std, T2B/B2B, frequency, distribution
 - AI normalization: Gemini canonicalization สำหรับ open-ended brand mentions
 - Theme extraction และ Identity-Image alignment ผ่าน LLM
+- **สำคัญ**: สร้างแผนภาพ mermaid flowchart แสดงขั้นตอนการวิจัยทั้งกระบวนการ (Survey design → Data collection → AI normalization → Aggregate → Composite calculation → Report)
 
 ### 3.7 สมมติฐานของแบบจำลอง
 - ความเที่ยง (reliability) ของ scale: Cronbach's α ≥ 0.7
