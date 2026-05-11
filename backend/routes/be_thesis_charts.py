@@ -33,11 +33,14 @@ import logging
 # fallback chain does NOT reliably apply to polar tick labels, legend, etc., which
 # is why tofu boxes appeared on radar/perceptual axis labels.
 #
-# Production containers may not have fonts-thai-tlwg installed — we degrade
-# gracefully to the default sans-serif so charts still render (just without
-# proper Thai shaping). Better than the whole DOCX pipeline crashing.
+# **Production reliability**: We bundle Loma.otf inside the repo at
+# `/app/backend/fonts/Loma.otf` so the font is ALWAYS available regardless of
+# whether the production container has `fonts-thai-tlwg` installed. System-installed
+# Loma is kept as a secondary fallback in case the bundled file moves.
+_BUNDLED_FONT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fonts")
 _THAI_FONT_FILE = None
 for _candidate in (
+    os.path.join(_BUNDLED_FONT_DIR, "Loma.otf"),
     "/usr/share/fonts/opentype/tlwg/Loma.otf",
     "/usr/share/fonts/truetype/tlwg/Loma.ttf",
     "/usr/share/fonts/truetype/thai/Loma.ttf",

@@ -1,6 +1,25 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Bundle Thai Font (Loma.otf) with Codebase 🇹🇭📦
+
+### User-reported: ภาษาไทยใน chart รูป thesis **บน production** ยังเป็นกล่อง □□□
+- **Root cause**: Production container ไม่มี `fonts-thai-tlwg` package → Loma.otf
+  ไม่อยู่ใน `/usr/share/fonts/` → matplotlib fallback ไป DejaVu (ไม่มี Thai glyphs)
+- **Fix**: คัดลอก `Loma.otf` + `Loma-Bold.otf` ลงใน **`/app/backend/fonts/`** ของ
+  codebase → font จะถูก deploy ไปด้วยทุกครั้งที่ push code ขึ้น production
+- `be_thesis_charts.py` ค้นหา font ตามลำดับ:
+  1. `<backend>/fonts/Loma.otf` (bundled, ALWAYS works) ⭐
+  2. `/usr/share/fonts/opentype/tlwg/Loma.otf` (system package)
+  3. `/usr/share/fonts/truetype/tlwg/Loma.ttf` (alt path)
+- Verified: `Active Thai font path: /app/backend/fonts/Loma.otf` หลัง restart →
+  Thai chars (ส, ถ, า, น, ะ, ห, ร, ู, ห, ร, า, ฯลฯ) render ถูก 100%
+
+### Files added
+- `/app/backend/fonts/Loma.otf` (50KB, 363 glyphs ครอบคลุม Thai + Latin)
+- `/app/backend/fonts/Loma-Bold.otf` (48KB)
+
+
 ## 2026-02-11 — Graceful Degradation: Download Always Succeeds 🛟
 
 ### User-reported: "ดาวน์โหลดไม่สำเร็จ" บน production แม้ cache hit
