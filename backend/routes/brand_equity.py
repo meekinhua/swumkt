@@ -3082,6 +3082,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         from_iso: Optional[str] = Query(None, alias="from"),
         to_iso: Optional[str] = Query(None, alias="to"),
         segments: Optional[str] = Query(None),
+        wave: Optional[str] = Query(None, description="latest | all | <wave_number>"),
         current_user=Depends(get_current_user),
     ):
         study = await db.brand_studies.find_one({"id": study_id})
@@ -3090,10 +3091,16 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         if not _owns(current_user, study):
             raise HTTPException(403)
         seg_filter = _parse_segments_param(segments)
-        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        # Translate `wave` into time bounds so the cache signature reflects
+        # the wave — each wave gets its own AI insights set, refreshable
+        # independently, no cross-wave contamination.
+        wave_from, wave_to, _ = _wave_bounds(study.get("wave_history") or [], wave)
+        eff_from = from_iso or wave_from
+        eff_to = to_iso or wave_to
+        sig = _filter_signature(eff_from, eff_to, seg_filter)
 
         # Idempotency guard — refuse to enqueue another pipeline if one is already in-flight
-        # FOR THIS FILTER SIGNATURE. Different filters can run in parallel.
+        # FOR THIS FILTER SIGNATURE. Different filters / waves can run in parallel.
         cache_for_sig = _resolve_ai_cache(study, sig)
         cur_status = cache_for_sig.get("status")
         if cur_status in ("queued", "running"):
@@ -3104,8 +3111,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         await db.brand_studies.update_one({"id": study_id},
             {"$set": {f"{cache_path}.status": "queued",
                       f"{cache_path}.updated_at": _now_iso()}})
-        bg.add_task(_run_ai_analysis, study_id, from_iso, to_iso, seg_filter)
-        return {"status": "queued", "signature": sig}
+        bg.add_task(_run_ai_analysis, study_id, eff_from, eff_to, seg_filter)
+        return {"status": "queued", "signature": sig, "wave": wave or "all"}
 
     @brand_equity_router.get("/studies/{study_id}/ai-status")
     async def ai_status(
@@ -3113,22 +3120,26 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         from_iso: Optional[str] = Query(None, alias="from"),
         to_iso: Optional[str] = Query(None, alias="to"),
         segments: Optional[str] = Query(None),
+        wave: Optional[str] = Query(None, description="latest | all | <wave_number>"),
         current_user=Depends(get_current_user),
     ):
         study = await db.brand_studies.find_one(
             {"id": study_id},
             {"_id": 0, "ai_cache": 1, "ai_cache_by_filter": 1,
-             "owner_id": 1, "owner_email": 1},
+             "owner_id": 1, "owner_email": 1, "wave_history": 1},
         )
         if not study:
             raise HTTPException(404)
         if not _owns(current_user, study):
             raise HTTPException(403)
         seg_filter = _parse_segments_param(segments)
-        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        wave_from, wave_to, _ = _wave_bounds(study.get("wave_history") or [], wave)
+        eff_from = from_iso or wave_from
+        eff_to = to_iso or wave_to
+        sig = _filter_signature(eff_from, eff_to, seg_filter)
         cache = _resolve_ai_cache(study, sig)
         if not cache:
-            return {"status": "idle", "signature": sig}
-        return {**cache, "signature": sig}
+            return {"status": "idle", "signature": sig, "wave": wave or "all"}
+        return {**cache, "signature": sig, "wave": wave or "all"}
 
     return brand_equity_router

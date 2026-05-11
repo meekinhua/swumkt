@@ -1,3 +1,43 @@
+## 2026-05-11 — AI insight cache keyed by wave
+
+### Why
+The dashboard's "Run AI analysis" had been generating a SINGLE master-insights
+set per study (keyed by filter signature only) — so switching the new Wave
+Selector chip between Wave 1 and Wave 2 showed identical AI recommendations
+even though the underlying response sets were entirely different. Insights
+couldn't pick up shifts driven by a new wave's campaign / questionnaire
+revision.
+
+### Fix
+`/studies/{id}/ai-analyze` and `/studies/{id}/ai-status` now accept the
+same `wave` query param the dashboard endpoint uses. Both endpoints:
+1. Translate `wave` via `_wave_bounds()` into ISO time bounds.
+2. Apply those bounds (only if the caller didn't supply explicit from/to)
+   when computing the cache signature.
+3. Background `_run_ai_analysis` receives the effective from/to and writes
+   its result to a signature-specific cache slot in
+   `ai_cache_by_filter.<sig>`.
+
+This piggybacks on the existing per-filter caching infrastructure — Wave 1,
+Wave 2, "all waves" each become a distinct sig hash with its own cache
+slot, all refreshable independently.
+
+### UI signal
+Master Insights rail now shows:
+- A small `WAVE N` badge next to the eyebrow when filter.wave isn't `all`.
+- "**Insights scoped to wave N** — switch wave above to refresh." appended
+  to the subtitle so researchers don't get confused about scope.
+
+### Verified
+- `ai-status?wave=all` → sig `all`, status `ready`, 5 insights (existing).
+- `ai-status?wave=1` → sig `89810edc3b3c`, status `idle` (fresh slot).
+- `ai-status?wave=latest` → sig `d9c50ea29e74`, status `idle` (distinct).
+- `POST ai-analyze?wave=1` → status `queued`, sig `89810edc3b3c`
+  (runs independently from the wave=all run).
+- Screenshot confirmed: clicking Wave 1 chip surfaces "WAVE 1" badge on
+  the AI insights card.
+
+
 ## 2026-05-11 — Wave Selector UI + Migration Orphan Banner
 
 ### Wave Selector (backend + frontend)

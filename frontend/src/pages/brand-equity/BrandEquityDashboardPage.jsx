@@ -717,7 +717,18 @@ const BrandEquityDashboardPage = () => {
 
             {/* RIGHT RAIL — Master AI Insights */}
             <div className="be-dash-ai" data-testid="be-dashboard-ai-rail">
-              <div className="be-eyebrow" style={{ marginBottom: 8 }}>MASTER AI INSIGHTS</div>
+              <div className="be-eyebrow" style={{ marginBottom: 8 }}>
+                MASTER AI INSIGHTS
+                {filter.wave && filter.wave !== 'all' && (
+                  <span style={{
+                    marginLeft: 8, padding: '2px 8px', fontSize: 9,
+                    background: 'rgba(14,85,56,0.10)', color: '#0E5538',
+                    borderRadius: 3, letterSpacing: '0.04em',
+                  }} data-testid="be-ai-wave-tag">
+                    {filter.wave === 'latest' ? 'WAVE LATEST' : `WAVE ${filter.wave}`}
+                  </span>
+                )}
+              </div>
               <div style={{ fontFamily: 'IBM Plex Serif', fontSize: 18, fontWeight: 600, marginBottom: 4,
                             display: 'flex', gap: 8, alignItems: 'center' }}>
                 <Icon name="sparkle" size={14} stroke="#C8102E"/>
@@ -726,6 +737,9 @@ const BrandEquityDashboardPage = () => {
               <div className="be-tiny be-muted" style={{ marginBottom: 16, lineHeight: 1.5,
                      paddingBottom: 14, borderBottom: '1px dashed var(--rule)' }}>
                 Generated from {responseCount} responses + 4 dimension stats · cited to specific questions.
+                {filter.wave && filter.wave !== 'all' && (
+                  <> · <strong>Insights scoped to {filter.wave === 'latest' ? 'the latest wave' : `wave ${filter.wave}`}</strong> — switch wave above to refresh.</>
+                )}
               </div>
 
               {(ai_cache?.master_insights || []).length === 0 ? (
