@@ -36,6 +36,72 @@ from io import BytesIO
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# ============================================================================
+# GLOBAL LLM CONCURRENCY GUARD — monkey-patch emergentintegrations.LlmChat
+# ============================================================================
+# WHY: `LlmChat.send_message` (and `send_message_multimodal_response`) is
+# declared `async`, but internally it ends up calling `litellm.completion(...)`
+# which is the SYNC httpx path. Awaiting it from FastAPI's single event-loop
+# worker **blocks the entire process** for the full Gemini latency (5-30s).
+# A single user running Brand-Equity / Conjoint / thesis-export AI fires
+# 4-10 calls back-to-back — freezing every other user for minutes.
+#
+# Patching at the library level catches all 30+ call sites (CMS, citations,
+# Brand Equity, Conjoint, image gen, thesis, doc formatter, ref extract, …)
+# automatically. Two protections per call:
+#   1. `asyncio.to_thread` runs the (sync-inside-async) flow in a worker
+#      thread so FastAPI's event loop keeps serving other requests.
+#   2. `_LLM_GLOBAL_SEM` caps concurrent in-flight LLM calls process-wide,
+#      so a busy AI job cannot exhaust the LLM proxy or thread pool.
+# `asyncio.wait_for` releases the slot even if Gemini hangs.
+# ----------------------------------------------------------------------------
+_LLM_GLOBAL_SEM = asyncio.Semaphore(3)
+_LLM_CALL_TIMEOUT = 90.0  # seconds per call
+
+def _install_llm_concurrency_patch() -> None:
+    try:
+        import emergentintegrations.llm.chat as _ec
+    except Exception as e:
+        logging.error(f"[LLM-PATCH] emergentintegrations not importable: {e}")
+        return
+    if getattr(_ec.LlmChat, "_emrg_patched", False):
+        return  # idempotent — already patched (e.g., on hot-reload)
+    _orig_send = _ec.LlmChat.send_message
+    _orig_send_mm = getattr(_ec.LlmChat, "send_message_multimodal_response", None)
+
+    async def _wrapped_send(self, user_message):
+        """Thread-offloaded send_message with global throttle + 90s timeout."""
+        def _run():
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(_orig_send(self, user_message))
+            finally:
+                loop.close()
+        async with _LLM_GLOBAL_SEM:
+            return await asyncio.wait_for(asyncio.to_thread(_run), timeout=_LLM_CALL_TIMEOUT)
+
+    async def _wrapped_send_mm(self, user_message):
+        """Thread-offloaded send_message_multimodal_response (image gen etc.)."""
+        def _run():
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(_orig_send_mm(self, user_message))
+            finally:
+                loop.close()
+        async with _LLM_GLOBAL_SEM:
+            # Image generation can be slower; allow 2x the normal cap.
+            return await asyncio.wait_for(asyncio.to_thread(_run), timeout=_LLM_CALL_TIMEOUT * 2)
+
+    _ec.LlmChat.send_message = _wrapped_send
+    if _orig_send_mm:
+        _ec.LlmChat.send_message_multimodal_response = _wrapped_send_mm
+    _ec.LlmChat._emrg_patched = True
+    logging.info("[LLM-PATCH] Installed asyncio.to_thread + Semaphore(3) "
+                 "wrappers on LlmChat.send_message{,_multimodal_response}")
+
+_install_llm_concurrency_patch()
+# ============================================================================
+
 # Helper function to generate ETag for caching
 def generate_etag(data: dict) -> str:
     """
@@ -11024,29 +11090,19 @@ async def generate_interpretation_prompt(
 
 
 # ============ AI HELPER WITH RETRY ============
-
-# Process-wide concurrency cap for any Gemini call routed through this helper.
-# Combined with the equivalent cap inside `routes/brand_equity.py`, this keeps
-# total in-flight Gemini calls bounded so heavy AI work cannot freeze the
-# FastAPI event loop or saturate the LLM proxy.
-_GLOBAL_GEMINI_SEM = asyncio.Semaphore(2)
+# Note: concurrency throttling + thread-offloading is enforced GLOBALLY by the
+# monkey-patch installed at the top of this file. This helper only adds retry
+# semantics for transient 502/timeout errors.
 
 
 async def _call_gemini_with_retry(system_msg: str, prompt: str, session_id: str, max_retries: int = 3) -> str:
-    """Call Gemini 2.5 Flash with retry + exponential backoff to handle 502 errors.
+    """Call Gemini 2.5 Flash with retry + exponential backoff.
 
-    CRITICAL: emergentintegrations' LlmChat.send_message internally invokes
-    `litellm.completion(...)` synchronously inside an async coroutine. Awaiting
-    it from the FastAPI event loop blocks ALL concurrent HTTP requests (login,
-    dashboard, even static asset proxying) for the whole 5-30s Gemini latency.
-    During a single-user Brand-Equity / Conjoint AI run that fires ~6+ calls
-    back-to-back, the entire platform appears frozen.
-
-    Two-part remedy:
-      1. Throttle concurrent Gemini calls process-wide via `_GLOBAL_GEMINI_SEM`
-         (2 in flight max) so one busy user can't queue 20 calls.
-      2. Run the underlying sync call inside `asyncio.to_thread` — the worker
-         thread carries the block, the FastAPI event loop stays responsive.
+    Concurrency / event-loop safety is enforced globally by the
+    `_install_llm_concurrency_patch` monkey-patch installed at server import
+    time (top of this file). Every `chat.send_message(...)` automatically
+    runs inside a worker thread under `Semaphore(3)`, so this function can
+    stay simple and focus on retry semantics.
     """
     import asyncio
     from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -11055,34 +11111,23 @@ async def _call_gemini_with_retry(system_msg: str, prompt: str, session_id: str,
     if not api_key:
         raise Exception("AI service not configured (EMERGENT_LLM_KEY missing)")
 
-    def _sync_send(att_id: int) -> str:
-        """Build a fresh LlmChat + event loop inside this worker thread."""
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"{session_id}-{att_id}",
-            system_message=system_msg,
-        ).with_model("gemini", "gemini-2.5-flash").with_params(timeout=120, num_retries=0)
-        loop = asyncio.new_event_loop()
-        try:
-            return loop.run_until_complete(
-                chat.send_message(UserMessage(text=prompt))
-            )
-        finally:
-            loop.close()
-
     last_error = None
     for attempt in range(max_retries):
         try:
-            async with _GLOBAL_GEMINI_SEM:
-                response = await asyncio.wait_for(
-                    asyncio.to_thread(_sync_send, attempt),
-                    timeout=90,
-                )
-            return response
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"{session_id}-{attempt}",
+                system_message=system_msg,
+            ).with_model("gemini", "gemini-2.5-flash").with_params(timeout=120, num_retries=0)
+            # The patched send_message already wraps the call in a worker
+            # thread + 90s timeout, so we don't need our own wait_for here.
+            return await chat.send_message(UserMessage(text=prompt))
         except Exception as e:
             last_error = e
             error_str = str(e).lower()
-            is_retryable = any(k in error_str for k in ['502', 'bad gateway', 'timeout', 'timed out', 'connection'])
+            is_retryable = any(k in error_str for k in [
+                '502', 'bad gateway', 'timeout', 'timed out', 'connection',
+            ])
             if not is_retryable or attempt == max_retries - 1:
                 raise
             wait_time = (attempt + 1) * 5

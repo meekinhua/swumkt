@@ -1,3 +1,51 @@
+## 2026-05-11 — Global LLM Concurrency Patch (catches ALL 30+ call sites)
+
+### Why this matters
+Previous fix only protected `_gemini_call` (brand_equity.py) and
+`_call_gemini_with_retry` (server.py) — two of ~32 places that call
+`chat.send_message(...)` directly. The other 30 (CMS, citation formatter,
+doc formatter, ref extract, image gen, vision, thesis ai, etc.) still
+blocked the FastAPI event loop on every Gemini latency.
+
+### Fix
+Installed a **library-level monkey-patch** at server.py top-of-module that
+wraps `emergentintegrations.LlmChat.send_message` and
+`send_message_multimodal_response` with:
+- `asyncio.to_thread(...)` — runs the sync-inside-async flow in a worker
+  thread so the event loop keeps serving HTTP traffic.
+- Process-wide `asyncio.Semaphore(3)` — caps concurrent in-flight LLM calls
+  (was 2 in old per-route guards; bumped to 3 since one user's AI analysis
+  also benefits from a little intra-job parallelism).
+- `asyncio.wait_for` timeout (90s for text, 180s for multimodal/image gen)
+  so a hanging Gemini call cannot reserve a semaphore slot forever.
+- Idempotent (`_emrg_patched` flag) — survives uvicorn hot-reload.
+
+### Cleanup
+Removed the now-redundant per-module guards (`_GEMINI_SEM`,
+`_GLOBAL_GEMINI_SEM`) and the manual `_sync_call` thread wrappers in
+`brand_equity._gemini_call` and `server._call_gemini_with_retry`. They
+were also a foot-gun: with the global patch, the old wrappers would have
+been "thread inside thread + new event loop inside new event loop" which
+deadlocks worker pool.
+
+### Verified
+- Patch confirmed via `LlmChat._emrg_patched == True` and
+  `LlmChat.send_message.__name__ == '_wrapped_send'`.
+- 5 parallel `/auth/me` calls fired immediately after triggering AI
+  analysis: 173 ms, 175 ms, 188 ms, 195 ms, 269 ms.
+- Sustained over 24 s of AI running: every concurrent `/auth/me` returned
+  in 107-192 ms.
+
+### Coverage now includes
+- ✅ Brand Equity `/ai-analyze` (4 sequential phases × multiple sub-calls)
+- ✅ Brand Equity `/thesis-ai-start` (AI chapters 1-5)
+- ✅ Conjoint AI insights + AI-generated DOCX
+- ✅ CMS AI assist (routes/cms.py)
+- ✅ Citation style formatter, doc_formatter, ref_extract
+- ✅ Vision (image description), translation, image generation paths
+- ✅ Any future `chat.send_message(...)` — automatic.
+
+
 ## 2026-05-11 — AI Job Progress Bar + P0/P1 verified
 
 ### Verified P0 (Brand X) — already resolved
