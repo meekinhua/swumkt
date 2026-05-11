@@ -11025,8 +11025,29 @@ async def generate_interpretation_prompt(
 
 # ============ AI HELPER WITH RETRY ============
 
+# Process-wide concurrency cap for any Gemini call routed through this helper.
+# Combined with the equivalent cap inside `routes/brand_equity.py`, this keeps
+# total in-flight Gemini calls bounded so heavy AI work cannot freeze the
+# FastAPI event loop or saturate the LLM proxy.
+_GLOBAL_GEMINI_SEM = asyncio.Semaphore(2)
+
+
 async def _call_gemini_with_retry(system_msg: str, prompt: str, session_id: str, max_retries: int = 3) -> str:
-    """Call Gemini 2.5 Flash with retry + exponential backoff to handle 502 errors."""
+    """Call Gemini 2.5 Flash with retry + exponential backoff to handle 502 errors.
+
+    CRITICAL: emergentintegrations' LlmChat.send_message internally invokes
+    `litellm.completion(...)` synchronously inside an async coroutine. Awaiting
+    it from the FastAPI event loop blocks ALL concurrent HTTP requests (login,
+    dashboard, even static asset proxying) for the whole 5-30s Gemini latency.
+    During a single-user Brand-Equity / Conjoint AI run that fires ~6+ calls
+    back-to-back, the entire platform appears frozen.
+
+    Two-part remedy:
+      1. Throttle concurrent Gemini calls process-wide via `_GLOBAL_GEMINI_SEM`
+         (2 in flight max) so one busy user can't queue 20 calls.
+      2. Run the underlying sync call inside `asyncio.to_thread` — the worker
+         thread carries the block, the FastAPI event loop stays responsive.
+    """
     import asyncio
     from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -11034,19 +11055,29 @@ async def _call_gemini_with_retry(system_msg: str, prompt: str, session_id: str,
     if not api_key:
         raise Exception("AI service not configured (EMERGENT_LLM_KEY missing)")
 
+    def _sync_send(att_id: int) -> str:
+        """Build a fresh LlmChat + event loop inside this worker thread."""
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"{session_id}-{att_id}",
+            system_message=system_msg,
+        ).with_model("gemini", "gemini-2.5-flash").with_params(timeout=120, num_retries=0)
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(
+                chat.send_message(UserMessage(text=prompt))
+            )
+        finally:
+            loop.close()
+
     last_error = None
     for attempt in range(max_retries):
         try:
-            chat = LlmChat(
-                api_key=api_key,
-                session_id=f"{session_id}-{attempt}",
-                system_message=system_msg
-            ).with_model("gemini", "gemini-2.5-flash").with_params(timeout=120, num_retries=0)
-
-            response = await asyncio.wait_for(
-                chat.send_message(UserMessage(text=prompt)),
-                timeout=90
-            )
+            async with _GLOBAL_GEMINI_SEM:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(_sync_send, attempt),
+                    timeout=90,
+                )
             return response
         except Exception as e:
             last_error = e

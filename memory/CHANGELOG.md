@@ -1,3 +1,45 @@
+## 2026-05-11 — Fix: AI Analysis Freezing Entire Platform (P0)
+
+### Symptom
+User reported: clicking "วิเคราะห์ด้วย AI" on a Brand Equity study would freeze
+the entire app — other users couldn't login, load dashboards, or do anything
+until the AI job finished (60-120s).
+
+### Root cause
+`emergentintegrations.LlmChat.send_message` (used by both
+`routes/brand_equity._gemini_call` and `server._call_gemini_with_retry`)
+internally invokes `litellm.completion(...)` — the **synchronous** httpx call —
+from inside an `async def`. There is no real `await`-able I/O at the bottom
+of the stack, so `await chat.send_message(...)` actually **blocks the FastAPI
+event loop** for the full Gemini latency. A single AI analysis fires ~6+
+Gemini calls back-to-back; while any one is in flight, every other HTTP
+request the worker is supposed to handle (login, dashboard fetch, even
+static-asset proxying through ingress) queues up and times out.
+
+### Fix
+Wrapped every Gemini call with **two layers** of protection:
+1. **`asyncio.to_thread`** — push the blocking sync call into the default
+   worker-thread pool. The FastAPI event loop is freed within microseconds
+   and keeps servicing other requests in parallel.
+2. **Process-wide `asyncio.Semaphore(2)`** — at most 2 Gemini calls in flight
+   simultaneously system-wide (`_GEMINI_SEM` in brand_equity.py + a separate
+   `_GLOBAL_GEMINI_SEM` in server.py for the shared retry helper). Prevents
+   a single user's analysis from spawning 20 threads / saturating the proxy.
+3. **60s / 90s `asyncio.wait_for` timeouts** — releases semaphore slots even
+   if Gemini hangs.
+
+### Verification
+Triggered AI analysis on study `Mali` and timed parallel `/auth/me` calls
+every 5 s for 30 s. Result: every concurrent call returned in 100-200 ms
+while `ai-status: running` — the platform stayed fully responsive end-to-end.
+
+### Files touched
+- `/app/backend/routes/brand_equity.py` — rewrote `_gemini_call`, added
+  `_GEMINI_SEM = asyncio.Semaphore(2)` at AI Integration section top.
+- `/app/backend/server.py` — rewrote `_call_gemini_with_retry`, added
+  `_GLOBAL_GEMINI_SEM = asyncio.Semaphore(2)` above it.
+
+
 ## 2026-05-11 — Mobile Layout Fix + 5 More Charts in Thesis DOCX
 
 ### Mobile Layout (P0 — RESOLVED)

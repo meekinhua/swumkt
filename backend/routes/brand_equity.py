@@ -1223,22 +1223,76 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
 
 # ============ AI INTEGRATION ============
 
+# Process-wide concurrency guard for Gemini calls. Even though each individual
+# call now runs in a worker thread (see `_gemini_call`), without a cap a busy
+# AI analysis would spin up dozens of threads — exhausting the LLM proxy quota
+# and starving the FastAPI thread pool. 2 concurrent calls is a sweet spot:
+# fast enough that one analysis finishes in reasonable time, slow enough that
+# concurrent users can still get their own AI work scheduled without queueing
+# behind a giant batch.
+_GEMINI_SEM = asyncio.Semaphore(2)
+
 async def _gemini_call(prompt: str, system: str = "You are a brand strategy expert. Respond in Thai unless asked otherwise.") -> str:
-    """Call Gemini via emergentintegrations. Returns text."""
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
+    """Call Gemini via emergentintegrations. Returns text.
+
+    CRITICAL fix: The underlying `emergentintegrations.LlmChat.send_message` ends
+    up calling `litellm.completion(...)` which is the **SYNC** httpx call. Inside
+    `async def`, that sync call blocks the *entire* FastAPI event loop for the
+    full Gemini latency (5-30s × many calls per analysis run). While one user
+    runs a Brand Equity "AI insight" job, every other user — login, dashboard
+    fetch, even static asset proxying — freezes until the AI finishes.
+
+    The two-part fix in this function:
+      1. **Hard-throttle** concurrent Gemini calls process-wide via
+         `_GEMINI_SEM` (asyncio.Semaphore). At most N at a time can be in
+         flight, so a single user cannot exhaust the proxy.
+      2. **Run the actual call in a worker thread** via `asyncio.to_thread`.
+         The thread carries the sync block — the main event loop keeps
+         servicing other HTTP requests in the meantime.
+
+    A 60-second per-call timeout prevents a hanging Gemini response from
+    keeping the semaphore slot reserved indefinitely.
+    """
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        return ""
+
+    def _sync_call() -> str:
+        # NOTE: This MUST be the sync path. We avoid `await` here because the
+        # underlying LlmChat internally uses sync litellm; pushing the whole
+        # call into a thread is the only way to keep the event loop free.
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import asyncio as _ay
+            # LlmChat exposes only an async API; build a fresh event loop in
+            # this worker thread so we don't touch the FastAPI one.
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"brand-equity-{uuid.uuid4().hex[:8]}",
+                system_message=system,
+            ).with_model("gemini", "gemini-2.5-flash")
+            loop = _ay.new_event_loop()
+            try:
+                resp = loop.run_until_complete(
+                    chat.send_message(UserMessage(text=prompt))
+                )
+            finally:
+                loop.close()
+            return resp if isinstance(resp, str) else str(resp)
+        except Exception as e:
+            logging.error(f"[BrandEquity] Gemini error (thread): {e}")
             return ""
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"brand-equity-{uuid.uuid4().hex[:8]}",
-            system_message=system,
-        ).with_model("gemini", "gemini-2.5-flash")
-        resp = await chat.send_message(UserMessage(text=prompt))
-        return resp if isinstance(resp, str) else str(resp)
+
+    try:
+        async with _GEMINI_SEM:
+            return await asyncio.wait_for(
+                asyncio.to_thread(_sync_call), timeout=60.0
+            )
+    except asyncio.TimeoutError:
+        logging.error("[BrandEquity] Gemini call timed out after 60s")
+        return ""
     except Exception as e:
-        logging.error(f"[BrandEquity] Gemini error: {e}")
+        logging.error(f"[BrandEquity] Gemini wrapper error: {e}")
         return ""
 
 
