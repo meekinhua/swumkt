@@ -397,6 +397,42 @@ def _parse_segments_param(segments: Optional[str]) -> Dict[str, List[str]]:
         return {}
 
 
+def _wave_bounds(wave_history: List[dict], wave_param: Optional[str]) -> tuple:
+    """Translate a `wave` query param into ISO time bounds.
+
+    Returns (from_iso, to_iso, label) where any may be None for open-ended.
+
+    `wave_param` values:
+      - None / "all"     → no bounds (pool every wave; full longitudinal view)
+      - "latest"         → from the most recent wave_history.published_at, no upper bound
+      - "<N>" (1-based)  → from waves[N-1].published_at to waves[N].published_at
+                           (or no upper bound if N is the latest)
+
+    Falls back to (None, None, "all") if wave_history is empty/missing.
+    """
+    wh = sorted(
+        [w for w in (wave_history or []) if w and w.get("published_at")],
+        key=lambda x: x.get("published_at") or "",
+    )
+    if not wh or wave_param in (None, "", "all"):
+        return (None, None, "all")
+    if wave_param == "latest":
+        return (wh[-1].get("published_at"), None, f"wave {wh[-1].get('wave')}")
+    try:
+        n = int(wave_param)
+    except (TypeError, ValueError):
+        return (None, None, "all")
+    # Index n is 1-based — find matching wave entry
+    target = next((w for w in wh if int(w.get("wave", 0)) == n), None)
+    if not target:
+        return (None, None, "all")
+    from_iso = target.get("published_at")
+    # Upper bound = next wave's published_at, or open-ended if last
+    idx = wh.index(target)
+    to_iso = wh[idx + 1].get("published_at") if idx + 1 < len(wh) else None
+    return (from_iso, to_iso, f"wave {n}")
+
+
 def _apply_response_filter(
     responses: List[dict],
     from_iso: Optional[str] = None,
@@ -2008,6 +2044,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                         {"wave": 1, "published_at": s.get("created_at"),
                          "by": "system-backfill", "note": "initial wave"}
                     ],
+                    "migration_meta": {
+                        "last_migrated_at": _now_iso(),
+                        "phase2_orphan_relinked": phase2_links,
+                        "phase2_unmappable_orphans": len(orphans) - phase2_links,
+                    },
                     "updated_at": _now_iso(),
                 }},
             )
@@ -2751,6 +2792,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         from_iso: Optional[str] = Query(None, alias="from"),
         to_iso: Optional[str] = Query(None, alias="to"),
         segments: Optional[str] = Query(None, description="JSON-encoded {field:[values]}"),
+        wave: Optional[str] = Query(None, description="latest | all | <wave_number>"),
         current_user=Depends(get_current_user),
     ):
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
@@ -2764,15 +2806,38 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         ).to_list(5000)
 
         seg_filter = _parse_segments_param(segments)
+
+        # Resolve wave param → adjust from_iso/to_iso accordingly.
+        # Explicit from/to passed via query take precedence over the wave bounds
+        # (so the existing date-range filter UI continues to work intact).
+        wave_history = study.get("wave_history") or []
+        wave_from, wave_to, wave_label = _wave_bounds(wave_history, wave)
+        eff_from = from_iso or wave_from
+        eff_to = to_iso or wave_to
+
         filtered = _apply_response_filter(
-            all_responses, from_iso=from_iso, to_iso=to_iso, segments=seg_filter,
+            all_responses, from_iso=eff_from, to_iso=eff_to, segments=seg_filter,
         )
 
-        sig = _filter_signature(from_iso, to_iso, seg_filter)
+        sig = _filter_signature(eff_from, eff_to, seg_filter)
         ai_cache_active = _resolve_ai_cache(study, sig)
         normalized = ai_cache_active.get("normalized_by_question") or \
                      (study.get("ai_cache") or {}).get("normalized_by_question") or {}
         agg = _aggregate_responses(study, filtered, normalized=normalized)
+
+        # Per-wave response counts for the UI selector.
+        waves_summary = []
+        for w in (wave_history or []):
+            wf, wt, _ = _wave_bounds(wave_history, str(w.get("wave")))
+            wn = len(_apply_response_filter(all_responses, from_iso=wf, to_iso=wt))
+            waves_summary.append({
+                "wave": w.get("wave"),
+                "published_at": w.get("published_at"),
+                "by": w.get("by"),
+                "questions_changed": w.get("questions_changed"),
+                "questions_total": w.get("questions_total"),
+                "n_responses": wn,
+            })
 
         return {
             "study": study,
@@ -2780,14 +2845,16 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "ai_cache": ai_cache_active,
             "ready_for_dashboard": len(filtered) >= 10,
             "filter": {
-                "from": from_iso, "to": to_iso, "segments": seg_filter,
-                "signature": sig,
+                "from": eff_from, "to": eff_to, "segments": seg_filter,
+                "signature": sig, "wave": wave or "all", "wave_label": wave_label,
             },
             "responses_total": len(all_responses),
             "responses_filtered": len(filtered),
             "segments_available": _segments_available(
                 all_responses, study.get("segments_to_capture") or []
             ),
+            "waves": waves_summary,
+            "migration_meta": study.get("migration_meta") or {},
         }
 
     @brand_equity_router.post("/studies/{study_id}/compare")

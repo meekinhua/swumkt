@@ -791,3 +791,122 @@ export const AIProgressCard = ({ step = 0, total = 4, phase = '', elapsed = 0, p
     </div>
   );
 };
+
+// ============ Wave Selector ============
+// Lets researchers pivot the dashboard across survey waves.
+// Choices: All (default, longitudinal view), Latest (only current questionnaire),
+// or any specific wave N (responses collected between wave N and wave N+1).
+// Hidden entirely when the study has only 1 wave (no need to choose).
+export const BeWaveSelector = ({ waves = [], value = 'all', onChange = () => {} }) => {
+  if (!waves || waves.length <= 1) return null;
+  const latest = waves[waves.length - 1];
+  const opts = [
+    { id: 'all',    label: 'รวมทุก Wave',   sub: `n=${waves.reduce((s, w) => s + (w.n_responses || 0), 0)}` },
+    { id: 'latest', label: `Wave ${latest.wave} (ล่าสุด)`, sub: `n=${latest.n_responses || 0}` },
+    ...waves.map(w => ({
+      id: String(w.wave),
+      label: `Wave ${w.wave}`,
+      sub: `n=${w.n_responses || 0} · ${(w.published_at || '').slice(0, 10)}`,
+    })),
+  ];
+  return (
+    <div className="be-card" data-testid="be-wave-selector" style={{
+      marginTop: 12, padding: 14,
+      background: 'linear-gradient(120deg, rgba(14,85,56,0.04), rgba(248,247,242,1))',
+      borderLeft: '4px solid #0E5538',
+    }}>
+      <div className="be-eyebrow" style={{ marginBottom: 8 }}>
+        <span className="be-dot-sm" style={{ background: '#0E5538' }}/>
+        SURVEY WAVE
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'stretch' }}>
+        {opts.map(o => {
+          const active = value === o.id;
+          return (
+            <button
+              key={o.id}
+              data-testid={`be-wave-chip-${o.id}`}
+              onClick={() => onChange(o.id)}
+              style={{
+                padding: '8px 14px', borderRadius: 6,
+                border: '1px solid ' + (active ? '#0E5538' : 'var(--rule, rgba(0,0,0,0.12))'),
+                background: active ? '#0E5538' : 'transparent',
+                color: active ? '#fff' : 'var(--ink, #1a1a1a)',
+                cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+                transition: 'all 200ms ease', minWidth: 130,
+              }}
+            >
+              <span>{o.label}</span>
+              <span style={{
+                fontSize: 10, fontWeight: 500,
+                color: active ? 'rgba(255,255,255,0.85)' : 'var(--ink-3, #666)',
+                letterSpacing: 0.2,
+              }}>{o.sub}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="be-tiny" style={{ marginTop: 8, color: 'var(--ink-3)' }}>
+        ทุก wave คือผลรวมของ responses ที่ส่งระหว่างวันที่ republish ครั้งก่อนกับครั้งถัดไป — เหมาะกับงานวิจัย longitudinal ที่ต้องเทียบก่อน/หลังเปลี่ยนแคมเปญ
+      </div>
+    </div>
+  );
+};
+
+// ============ Migration Orphan Banner ============
+// Surfaces responses that can't be re-linked to any current question slot
+// (template structure was overhauled so no matching template_id exists in the
+// new study). Researcher gets a clear count + reassuring next-step note —
+// the orphans are still safe in the DB, just not aggregated into composite scores.
+export const MigrationOrphanBanner = ({ migrationMeta }) => {
+  const orph = migrationMeta?.phase2_unmappable_orphans || 0;
+  const relinked = migrationMeta?.phase2_orphan_relinked || 0;
+  if (orph <= 0 && relinked <= 0) return null;
+  const hasOrph = orph > 0;
+  return (
+    <div
+      className="be-card"
+      data-testid="be-migration-banner"
+      style={{
+        marginTop: 12, padding: 14, fontSize: 12,
+        background: hasOrph
+          ? 'linear-gradient(120deg, rgba(245,158,11,0.08), rgba(248,247,242,1))'
+          : 'linear-gradient(120deg, rgba(16,185,129,0.05), rgba(248,247,242,1))',
+        borderLeft: `4px solid ${hasOrph ? '#F59E0B' : '#10B981'}`,
+      }}
+    >
+      <div className="be-eyebrow" style={{ marginBottom: 4 }}>
+        <span className="be-dot-sm" style={{ background: hasOrph ? '#F59E0B' : '#10B981' }}/>
+        DATA LINEAGE NOTICE
+      </div>
+      <div className="be-card-t" style={{ marginBottom: 4 }}>
+        {hasOrph
+          ? `มี response เก่า ${orph} รายการที่ link เข้าแบบสอบถามใหม่ไม่ได้`
+          : `Re-link สำเร็จ: response เก่า ${relinked} รายการกลับมาแสดงผลบน dashboard`}
+      </div>
+      <div className="be-tiny" style={{ color: 'var(--ink-3)', lineHeight: 1.5 }}>
+        {hasOrph ? (
+          <>
+            สาเหตุ: เคยใช้ template คำถามแบบเดิม (เช่น <code>BI-3</code>) แต่ระบบรุ่นใหม่
+            เปลี่ยนเป็น <code>COMP-1</code> / <code>ASD-1</code> ฯลฯ ทำให้ ID เก่าจับคู่กับคำถามใหม่
+            ไม่ได้ — ข้อมูลยังอยู่ครบใน <code>brand_responses</code> เพียงแต่ไม่เข้าค่าเฉลี่ยรวม. หากต้องการดึงกลับ
+            แนะนำให้ <strong>regenerate questions ครั้งเดียว</strong> ด้วย competitors / brand setup เดิม
+            หรือติดต่อแอดมินเพื่อ manual relink.
+          </>
+        ) : (
+          <>
+            ระบบทำการ re-link ID เก่าให้กับ slot คำถามที่ตรงกันตาม template เดียวกัน — composite ทั้งหมดที่เห็น
+            ตอนนี้รวมข้อมูลย้อนหลังแล้ว.
+          </>
+        )}
+      </div>
+      {migrationMeta?.last_migrated_at && (
+        <div className="be-tiny be-mono" style={{ marginTop: 6, color: 'var(--ink-3)' }}>
+          Last migrated: {(migrationMeta.last_migrated_at || '').slice(0, 19).replace('T', ' ')}
+        </div>
+      )}
+    </div>
+  );
+};
+

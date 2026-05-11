@@ -1,3 +1,54 @@
+## 2026-05-11 — Wave Selector UI + Migration Orphan Banner
+
+### Wave Selector (backend + frontend)
+- **Backend** (`/studies/{id}/dashboard`):
+  - New `wave` query param: `all` | `latest` | `<N>`.
+  - New helper `_wave_bounds(wave_history, param)` translates the param into
+    ISO time bounds (from prior wave's `published_at` → next wave's
+    `published_at` or open-ended for the latest).
+  - Wave bounds are applied as `from_iso`/`to_iso` overlay on top of the
+    existing `_apply_response_filter`; explicit date params from the UI
+    take precedence so the date-range filter still works in tandem.
+  - Response always includes a `waves: [{wave, published_at, by,
+    questions_changed, questions_total, n_responses}]` summary for the UI.
+- **Frontend** — new `BeWaveSelector` (`be-components.jsx`):
+  - Hidden when study has only 1 wave (no choice to make).
+  - Chips: รวมทุก Wave / Wave N (ล่าสุด) / Wave 1 / Wave 2 … each with
+    `n=<count>` + publish date sub-label.
+  - Active chip rendered in solid dark green (`#0E5538`); inactive chips
+    are outlined.
+  - Wire-up: `filter.wave` added to filter state, included in `buildFilterQS`,
+    triggers `load()` via `useEffect` dep.
+  - Verified end-to-end: `wave=all` returns 21 responses (Mali study);
+    `wave=1` returns 21 with composite scores; `wave=2` correctly returns 0
+    because nothing was collected after the wave-2 republish.
+
+### Migration Orphan Banner
+- **Backend** — migrate now persists `migration_meta` on the study doc:
+  `{last_migrated_at, phase2_orphan_relinked, phase2_unmappable_orphans}`.
+  Surfaced verbatim in the dashboard response.
+- **Frontend** — new `MigrationOrphanBanner` (`be-components.jsx`):
+  - Amber border + "DATA LINEAGE NOTICE" badge when
+    `phase2_unmappable_orphans > 0`.
+  - Plain-language explanation that orphan rows are safe in DB but excluded
+    from composites, plus actionable suggestion (regenerate questions or
+    contact admin for manual relink).
+  - Shows last migration timestamp for audit trail.
+  - Hidden entirely on healthy studies (orphans=0 AND relinked=0).
+- Verified on study `02a6ff40` (6 unmappable orphans): banner renders
+  with full explanation; verified hidden on study `c5b3458f` (no orphans).
+
+### Files touched
+- `/app/backend/routes/brand_equity.py` — `_wave_bounds`, dashboard
+  `wave` param, `migration_meta` written by admin endpoint.
+- `/app/backend/server.py` — `migration_meta` written by startup migration.
+- `/app/frontend/src/pages/brand-equity/be-components.jsx` —
+  `BeWaveSelector`, `MigrationOrphanBanner`.
+- `/app/frontend/src/pages/brand-equity/BrandEquityDashboardPage.jsx` —
+  `filter.wave` state, `wave` in `buildFilterQS`, imports + render slot
+  above the BeFilterBar.
+
+
 ## 2026-05-11 — Auto-migration on startup + Phase 2 cross-template orphan re-link
 
 ### Why

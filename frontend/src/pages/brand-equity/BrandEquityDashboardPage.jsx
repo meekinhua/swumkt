@@ -8,7 +8,7 @@ import './brand-equity-styles.css';
 import {
   BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
   IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
-  BrandLogo, SWU_LOGO_URL, AIProgressCard
+  BrandLogo, SWU_LOGO_URL, AIProgressCard, BeWaveSelector, MigrationOrphanBanner
 } from './be-components';
 import { BeFilterBar } from './BeFilterBar';
 import { BeMethodology } from './BeMethodology';
@@ -154,9 +154,9 @@ const BrandEquityDashboardPage = () => {
   const [togglingShowcase, setTogglingShowcase] = useState(false);
   const pollRef = useRef(null);
 
-  // ---------- Filter state (time + segments + wave compare) ----------
+  // ---------- Filter state (time + segments + wave) ----------
   // wave-A is the "active" filter applied to all stats/charts/AI.
-  const [filter, setFilter] = useState({ from: '', to: '', segments: {} });
+  const [filter, setFilter] = useState({ from: '', to: '', segments: {}, wave: 'all' });
   const [compareFilter, setCompareFilter] = useState(null); // null = compare off
   const [compareData, setCompareData] = useState(null);
 
@@ -168,6 +168,9 @@ const BrandEquityDashboardPage = () => {
     const parts = [];
     if (f.from) parts.push(`from=${encodeURIComponent(f.from)}`);
     if (f.to)   parts.push(`to=${encodeURIComponent(f.to)}`);
+    if (f.wave && f.wave !== 'all') {
+      parts.push(`wave=${encodeURIComponent(f.wave)}`);
+    }
     const segs = Object.fromEntries(
       Object.entries(f.segments || {}).filter(([, vs]) => (vs || []).length)
     );
@@ -182,7 +185,7 @@ const BrandEquityDashboardPage = () => {
     load();
     return () => clearInterval(pollRef.current);
     /* eslint-disable-next-line */
-  }, [studyId, shareToken, filter.from, filter.to, JSON.stringify(filter.segments)]);
+  }, [studyId, shareToken, filter.from, filter.to, filter.wave, JSON.stringify(filter.segments)]);
 
   // Wave compare: fetch when compareFilter set (owner only)
   useEffect(() => {
@@ -619,6 +622,14 @@ const BrandEquityDashboardPage = () => {
         </div>
 
         {/* FILTER BAR — time + segments + wave compare (sticky) */}
+        <BeWaveSelector
+          waves={data.waves || []}
+          value={filter.wave || 'all'}
+          onChange={(w) => setFilter(prev => ({ ...prev, wave: w }))}
+        />
+
+        <MigrationOrphanBanner migrationMeta={data.migration_meta} />
+
         <BeFilterBar
           value={filter}
           compareValue={compareFilter}

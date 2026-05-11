@@ -12035,6 +12035,7 @@ async def startup_db_client():
                 for lid in (q.get("legacy_ids") or []):
                     known.add(lid)
             orphans = full_resp_qids - known
+            relinked_before = relinked
             if orphans:
                 by_tmpl = {}
                 for i, q in enumerate(new_questions):
@@ -12066,6 +12067,11 @@ async def startup_db_client():
                         {"wave": 1, "published_at": s.get("created_at"),
                          "by": "system-auto-migrate", "note": "initial wave"}
                     ],
+                    "migration_meta": {
+                        "last_migrated_at": datetime.now(timezone.utc).isoformat(),
+                        "phase2_orphan_relinked": relinked - relinked_before,
+                        "phase2_unmappable_orphans": len(orphans) - (relinked - relinked_before),
+                    },
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                 }},
             )
