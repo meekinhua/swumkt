@@ -2643,17 +2643,41 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     # ---- AI generation (background) ----
 
+    async def _set_progress(study_id: str, cache_path: str, *,
+                            step: int, total: int, phase: str,
+                            started_at: Optional[float] = None):
+        """Write live progress to the study's ai_cache for the UI polling loop.
+        `phase` is a short Thai label shown in the progress card."""
+        import time as _t
+        elapsed = round(_t.time() - started_at, 1) if started_at else 0
+        await db.brand_studies.update_one({"id": study_id}, {
+            "$set": {
+                f"{cache_path}.progress": {
+                    "step": step, "total": total, "phase": phase,
+                    "elapsed_sec": elapsed, "pct": round(step / max(total, 1) * 100, 1),
+                },
+                f"{cache_path}.updated_at": _now_iso(),
+            }
+        })
+
     async def _run_ai_analysis(
         study_id: str,
         from_iso: Optional[str] = None,
         to_iso: Optional[str] = None,
         segments: Optional[Dict[str, List[str]]] = None,
     ):
-        """Background AI job: themes + identity-image + master insights.
+        """Background AI job: normalize → themes → identity-image → master insights.
+        Each phase publishes a `progress` dict (step/total/phase/elapsed_sec/pct) to
+        the same ai_cache the dashboard polls, so the UI can render a live status
+        card without any extra round-trips.
+
         When filter params are provided, results are stored in
         `ai_cache_by_filter.<sig>` instead of the top-level `ai_cache`."""
+        import time as _t
+        started = _t.time()
         sig = _filter_signature(from_iso, to_iso, segments)
         cache_path = "ai_cache" if sig == "all" else f"ai_cache_by_filter.{sig}"
+        TOTAL_STEPS = 4
         try:
             study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
             if not study:
@@ -2674,7 +2698,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 {"$set": {f"{cache_path}.status": "running",
                           f"{cache_path}.updated_at": _now_iso()}})
 
-            # ---- Step 1: Normalize open-ended brand/concept responses ----
+            # ---- Phase 1/4: Normalize open-ended brand/concept responses ----
+            await _set_progress(study_id, cache_path, step=1, total=TOTAL_STEPS,
+                                phase="Normalize · จัดกลุ่มชื่อแบรนด์/คำใกล้เคียง",
+                                started_at=started)
             normalized_by_q: Dict[str, dict] = {}
             brand_list = [study["brand"]["name"]] + (study["brand"].get("competitors") or [])
             category = study["brand"].get("category", "")
@@ -2698,7 +2725,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             # Recompute aggregate WITH normalized counts (so master insights see canonical buckets)
             agg = _aggregate_responses(study, responses, normalized=normalized_by_q)
 
-            # Theme extraction per open question
+            # ---- Phase 2/4: Extract themes per open question ----
+            await _set_progress(study_id, cache_path, step=2, total=TOTAL_STEPS,
+                                phase="Themes · สกัด theme จากคำตอบเปิด",
+                                started_at=started)
             themes_by_q: Dict[str, List[dict]] = {}
             for q in study["questions"]:
                 if q.get("ai_processing") == "theme_extraction" and q["type"] == "open_long":
@@ -2711,7 +2741,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                         themes = await _ai_extract_themes(open_resps, context=q.get("prompt", ""))
                         themes_by_q[q["id"]] = themes
 
-            # Identity-Image
+            # ---- Phase 3/4: Identity vs Image alignment ----
+            await _set_progress(study_id, cache_path, step=3, total=TOTAL_STEPS,
+                                phase="Identity ↔ Image · เทียบอัตลักษณ์ vs ภาพลักษณ์",
+                                started_at=started)
             personality_q = next((q for q in study["questions"]
                                   if q.get("ai_processing") == "extract_personality"), None)
             identity_image = {}
@@ -2733,7 +2766,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                         study["identity"]["traits"], p_resps, study["brand"]["name"],
                     )
 
-            # Master insights
+            # ---- Phase 4/4: Master Insights ----
+            await _set_progress(study_id, cache_path, step=4, total=TOTAL_STEPS,
+                                phase="Master Insights · สรุปข้อเสนอแนะเชิงกลยุทธ์",
+                                started_at=started)
             insights = await _ai_master_insights(study, agg)
 
             cache_payload = {
@@ -2743,6 +2779,12 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 "identity_image": identity_image,
                 "master_insights": insights,
                 "updated_at": _now_iso(),
+                "progress": {
+                    "step": TOTAL_STEPS, "total": TOTAL_STEPS,
+                    "phase": "เสร็จสมบูรณ์",
+                    "elapsed_sec": round(_t.time() - started, 1),
+                    "pct": 100.0,
+                },
                 "filter": {
                     "from": from_iso, "to": to_iso, "segments": segments or {},
                     "n": len(responses),

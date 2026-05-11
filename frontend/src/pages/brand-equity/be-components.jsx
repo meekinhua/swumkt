@@ -661,3 +661,133 @@ export const BeTopbar = ({ user, onLogo, right, subtitle = 'BRAND HEALTH CHECK',
 export const BeLoading = ({ text = 'Loading…' }) => (
   <div className="be-loading"><span className="be-spinner"/><span className="be-mono be-tiny">{text}</span></div>
 );
+
+
+// ============ AI Progress Card ============
+// Shows live progress of the Brand Equity AI analysis background job.
+// The 4 phases match `_run_ai_analysis` in routes/brand_equity.py.
+const PHASE_STEPS = [
+  { num: 1, label: 'Normalize',        sub: 'จัดกลุ่มชื่อแบรนด์ที่ผู้ตอบพิมพ์อิสระ' },
+  { num: 2, label: 'Themes',           sub: 'สกัด theme จากคำตอบเปิด' },
+  { num: 3, label: 'Identity ↔ Image', sub: 'เทียบอัตลักษณ์ที่ตั้งใจ vs ภาพลักษณ์ที่รับรู้' },
+  { num: 4, label: 'Master Insights',  sub: 'สรุปข้อเสนอแนะเชิงกลยุทธ์' },
+];
+
+export const AIProgressCard = ({ step = 0, total = 4, phase = '', elapsed = 0, pct = 0, done = false }) => {
+  const safePct = Math.max(0, Math.min(100, Number(pct) || 0));
+  const mins = Math.floor((elapsed || 0) / 60);
+  const secs = Math.round((elapsed || 0) % 60);
+  const timeStr = mins > 0 ? `${mins}น ${secs}ว` : `${secs}ว`;
+
+  return (
+    <div
+      className="be-card be-ai-progress"
+      data-testid="be-ai-progress"
+      style={{
+        marginTop: 16, padding: 20,
+        background: done
+          ? 'linear-gradient(120deg, rgba(16,185,129,0.06) 0%, rgba(125,221,177,0.10) 100%)'
+          : 'linear-gradient(120deg, rgba(248,247,242,1) 0%, rgba(240,237,228,1) 100%)',
+        borderLeft: `4px solid ${done ? '#10B981' : '#0E5538'}`,
+        position: 'relative', overflow: 'hidden',
+      }}
+    >
+      {!done && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(14,85,56,0.06) 50%, transparent 100%)',
+          backgroundSize: '200% 100%', animation: 'be-ai-shimmer 2.2s linear infinite',
+        }}/>
+      )}
+
+      <div className="be-card-h" style={{ marginBottom: 14, alignItems: 'flex-start' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="be-eyebrow" style={{ marginBottom: 6 }}>
+            <span className="be-dot-sm" style={{ background: done ? '#10B981' : '#0E5538' }}/>
+            AI ANALYSIS {done ? '· DONE' : '· RUNNING'}
+          </div>
+          <h3 className="be-card-t" style={{ marginBottom: 4 }}>
+            {done ? 'AI วิเคราะห์เสร็จเรียบร้อย' : phase || 'กำลังเริ่ม…'}
+          </h3>
+          <div className="be-card-d">
+            ระบบยังให้บริการผู้ใช้คนอื่นได้ตามปกติระหว่าง AI ทำงาน · เวลาที่ใช้แล้ว {timeStr}
+          </div>
+        </div>
+        <div className="be-mono" style={{
+          fontSize: 36, fontWeight: 700, color: done ? '#10B981' : '#0E5538',
+          letterSpacing: '-0.02em', minWidth: 80, textAlign: 'right',
+        }} data-testid="be-ai-progress-pct">
+          {Math.round(safePct)}%
+        </div>
+      </div>
+
+      <div style={{
+        height: 8, background: 'rgba(14,85,56,0.10)', borderRadius: 4,
+        overflow: 'hidden', position: 'relative',
+      }}>
+        <div
+          data-testid="be-ai-progress-fill"
+          style={{
+            height: '100%',
+            width: `${safePct}%`,
+            background: done
+              ? 'linear-gradient(90deg, #10B981, #7DDDB1)'
+              : 'linear-gradient(90deg, #0E5538, #10B981)',
+            transition: 'width 600ms cubic-bezier(0.4, 0, 0.2, 1)',
+            borderRadius: 4,
+          }}
+        />
+      </div>
+
+      <div className="be-ai-steps" style={{
+        display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+        gap: 8, marginTop: 14,
+      }}>
+        {PHASE_STEPS.map(s => {
+          const active = step === s.num && !done;
+          const completed = done || step > s.num;
+          return (
+            <div key={s.num} className="be-ai-step" style={{
+              padding: '8px 10px', borderRadius: 6,
+              background: active ? 'rgba(16,185,129,0.10)' : completed ? 'rgba(16,185,129,0.04)' : 'transparent',
+              border: '1px solid ' + (active ? '#10B981' : completed ? 'rgba(16,185,129,0.30)' : 'var(--rule, rgba(0,0,0,0.08))'),
+              opacity: active || completed ? 1 : 0.55,
+              transition: 'all 300ms ease',
+            }}>
+              <div className="be-mono be-tiny" style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                color: active ? '#0E5538' : completed ? '#10B981' : 'var(--ink-3)',
+                fontWeight: 600,
+              }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: '50%',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  background: active ? '#0E5538' : completed ? '#10B981' : 'transparent',
+                  color: active || completed ? '#fff' : 'var(--ink-3)',
+                  border: '1px solid ' + (active || completed ? 'transparent' : 'var(--rule, rgba(0,0,0,0.15))'),
+                  fontSize: 9, fontWeight: 700,
+                }}>{completed ? '✓' : s.num}</span>
+                {s.label}
+              </div>
+              <div className="be-tiny" style={{
+                color: 'var(--ink-3)', marginTop: 4, fontSize: 10.5, lineHeight: 1.35,
+              }}>
+                {s.sub}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <style>{`
+        @keyframes be-ai-shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @media (max-width: 700px) {
+          .be-ai-steps { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        }
+      `}</style>
+    </div>
+  );
+};

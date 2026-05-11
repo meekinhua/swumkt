@@ -1,3 +1,38 @@
+## 2026-05-11 — AI Job Progress Bar + P0/P1 verified
+
+### Verified P0 (Brand X) — already resolved
+- `_generate_questions_from_template` already builds options dynamically from
+  `brand_list = [brand_setup.name] + competitors`. No hardcoded decoy strings.
+- Admin cleanup endpoint exists to scrub legacy studies. DB scan confirms
+  **0 studies** in production with stale "Brand X/Y/Z" options.
+
+### Verified P1 (Conjoint Trash) — already resolved
+- Backend endpoints exist: `/conjoint/studies/trash`, `/restore`, `/purge`.
+- Frontend `ConjointAnalysisTool.js` ships `view='active'|'trash'` toggle and
+  Trash UI parity with Brand Equity.
+
+### NEW: Live AI progress bar
+- Backend (`_run_ai_analysis`): writes a `progress` dict to `ai_cache.progress`
+  on every phase transition with `step / total / phase / elapsed_sec / pct`.
+  4 phases: Normalize → Themes → Identity↔Image → Master Insights. Final
+  state pinned to 100% / "เสร็จสมบูรณ์" so the UI can flash the success state.
+- Frontend `BrandEquityDashboardPage`: polling every 2.5 s instead of 3 s,
+  captures `progress` field into `aiProgress` state, optimistically seeds
+  `step=0` immediately on click so the card appears before the first poll
+  lands. Card auto-fades 2.2 s after completion.
+- New component `AIProgressCard` in `be-components.jsx`: gradient progress
+  bar, 4 stepper pills with active/completed states + check marks, shimmer
+  band while running, live elapsed-time counter, prominent reassurance:
+  "ระบบยังให้บริการผู้ใช้คนอื่นได้ตามปกติระหว่าง AI ทำงาน". Stacks 2×2
+  pills on mobile via internal `<style>` tag (≤700 px).
+
+### Verified end-to-end
+- API: `POST /ai-analyze` → `GET /ai-status` returned progress 1/4 → 2/4 →
+  3/4 → 4/4 with correct Thai phase labels and rising elapsed seconds.
+- UI screenshot (1440×900): card renders at 100% with all 4 steps checked,
+  reassurance text visible, elapsed time "1น 29ว".
+
+
 ## 2026-05-11 — Fix: AI Analysis Freezing Entire Platform (P0)
 
 ### Symptom

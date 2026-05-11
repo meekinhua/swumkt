@@ -8,7 +8,7 @@ import './brand-equity-styles.css';
 import {
   BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
   IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
-  BrandLogo, SWU_LOGO_URL
+  BrandLogo, SWU_LOGO_URL, AIProgressCard
 } from './be-components';
 import { BeFilterBar } from './BeFilterBar';
 import { BeMethodology } from './BeMethodology';
@@ -251,6 +251,8 @@ const BrandEquityDashboardPage = () => {
     setLoading(false);
   };
 
+  const [aiProgress, setAiProgress] = useState(null);
+
   const startPolling = () => {
     if (pollRef.current) clearInterval(pollRef.current);
     setAiRunning(true);
@@ -258,13 +260,16 @@ const BrandEquityDashboardPage = () => {
       try {
         const qs = buildFilterQS(filter);
         const r = await axios.get(`${API}/brand-equity/studies/${studyId}/ai-status${qs}`, authH);
+        if (r.data?.progress) setAiProgress(r.data.progress);
         if (r.data.status === 'ready' || r.data.status === 'error' || r.data.status === 'no_data') {
           clearInterval(pollRef.current);
           setAiRunning(false);
+          // keep final progress visible for 2s so user sees "100% เสร็จสมบูรณ์" pulse
+          setTimeout(() => setAiProgress(null), 2200);
           load();
         }
       } catch (e) {/* keep polling */}
-    }, 3000);
+    }, 2500);
   };
 
   const runAI = async () => {
@@ -274,6 +279,8 @@ const BrandEquityDashboardPage = () => {
       const sigNote = (filter.from || filter.to || Object.values(filter.segments || {}).some(v => v.length))
         ? ' (สำหรับ filter นี้)' : '';
       toast.success(`AI analysis queued${sigNote}`);
+      // seed progress so the bar appears instantly even before first poll lands
+      setAiProgress({ step: 0, total: 4, phase: 'รอเริ่ม…', pct: 0, elapsed_sec: 0 });
       startPolling();
     } catch (e) {
       toast.error('AI start ไม่สำเร็จ');
@@ -623,6 +630,17 @@ const BrandEquityDashboardPage = () => {
           isShowcase={isShowcase}
         />
 
+        {/* AI PROGRESS CARD — live status while background job is running */}
+        {aiProgress && (
+          <AIProgressCard
+            step={aiProgress.step}
+            total={aiProgress.total}
+            phase={aiProgress.phase}
+            elapsed={aiProgress.elapsed_sec}
+            pct={aiProgress.pct}
+            done={!aiRunning}
+          />
+        )}
         {/* WAVE COMPARE — side-by-side BES + 4 Aaker dims with delta */}
         {compareData && !isShowcase && (
           <WaveCompareCard data={compareData}/>
