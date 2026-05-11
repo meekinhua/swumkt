@@ -26,17 +26,21 @@ import matplotlib.font_manager as fm  # noqa: E402
 from matplotlib.patches import Circle  # noqa: F401
 import numpy as np
 
-# Register Thai-capable font (Loma is shipped via fonts-thai-tlwg in the container)
-_THAI_FONT_PATHS = [
-    "/usr/share/fonts/opentype/tlwg/Loma.otf",
-    "/usr/share/fonts/truetype/tlwg/Loma.ttf",
-]
-for _p in _THAI_FONT_PATHS:
-    try:
-        fm.fontManager.addfont(_p)
-    except Exception:
-        pass
-# Use Loma as primary (Thai); fall back to DejaVu Sans for Latin glyphs.
+# Register Thai-capable font (Loma is shipped via fonts-thai-tlwg in the container).
+# We must use **explicit FontProperties** on every text call — matplotlib's rcParams
+# fallback chain does NOT reliably apply to polar tick labels, legend, etc., which
+# is why tofu boxes appeared on radar/perceptual axis labels.
+_THAI_FONT_FILE = "/usr/share/fonts/opentype/tlwg/Loma.otf"
+try:
+    fm.fontManager.addfont(_THAI_FONT_FILE)
+except Exception:
+    pass
+_FP        = fm.FontProperties(fname=_THAI_FONT_FILE, size=9)
+_FP_TITLE  = fm.FontProperties(fname=_THAI_FONT_FILE, size=11, weight="bold")
+_FP_LABEL  = fm.FontProperties(fname=_THAI_FONT_FILE, size=10)
+_FP_SMALL  = fm.FontProperties(fname=_THAI_FONT_FILE, size=8)
+_FP_BOLD   = fm.FontProperties(fname=_THAI_FONT_FILE, size=10, weight="bold")
+# Keep rcParams as a secondary safety net
 plt.rcParams["font.family"] = ["Loma", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
@@ -103,17 +107,19 @@ def render_tom_cloud(
         # Size scales 14..42 with sqrt of pct
         size = max(14, min(42, 14 + (pct ** 0.55) * 4.0))
         is_target = target_low and target_low in label.lower()
+        fp = fm.FontProperties(fname=_THAI_FONT_FILE, size=size,
+                                weight="bold" if is_target else "normal")
         ax.text(
             x, y, label,
-            fontsize=size,
             color=BE_RED if is_target else INK_3,
-            weight="bold" if is_target else "normal",
             ha="center", va="center",
+            fontproperties=fp,
         )
         # small % tag below
         ax.text(
             x, y - size * 0.4, f"{round(pct, 1)}%",
-            fontsize=7.5, color=INK_3, ha="center", va="center",
+            color=INK_3, ha="center", va="center",
+            fontproperties=_FP_SMALL,
         )
     fig.tight_layout(pad=0.3)
     return _save_fig(fig)
@@ -141,12 +147,20 @@ def _radar(
     ax.set_theta_offset(np.pi / 2)
     ax.set_theta_direction(-1)
 
-    # axis labels
+    # axis labels — use explicit fontproperties to force Thai-capable font
     ax.set_xticks(angles)
-    ax.set_xticklabels([a.upper() for a in axes], fontsize=8.5, color=INK)
+    # Wrap long bilingual labels onto 2 lines so they don't crash into the polygon
+    def _wrap(s: str, max_len: int = 18) -> str:
+        if "(" in s and len(s) > max_len:
+            # Split right before the "(" for "ENG (ไทย)" style
+            i = s.rfind("(")
+            return s[:i].strip() + "\n" + s[i:]
+        return s
+    wrapped = [_wrap(a.upper()) for a in axes]
+    ax.set_xticklabels(wrapped, color=INK, fontproperties=_FP_LABEL)
     ax.set_ylim(0, 100)
     ax.set_yticks([20, 40, 60, 80])
-    ax.set_yticklabels(["20", "40", "60", "80"], fontsize=7, color=INK_3)
+    ax.set_yticklabels(["20", "40", "60", "80"], color=INK_3, fontproperties=_FP_SMALL)
     ax.tick_params(axis="x", pad=10)
     ax.grid(color=RULE, linewidth=0.7)
     ax.spines["polar"].set_color(RULE)
@@ -164,10 +178,12 @@ def _radar(
         ax.fill(angles_loop, vals_loop, alpha=alpha_fill, color=color)
 
     if title:
-        ax.set_title(title, fontsize=11, color=INK, weight="bold", pad=20)
+        ax.set_title(title, color=INK, pad=20, fontproperties=_FP_TITLE)
     if len(series) > 1:
-        ax.legend(loc="lower center", bbox_to_anchor=(0.5, -0.15),
-                  ncol=min(4, len(series)), fontsize=8.5, frameon=False)
+        leg = ax.legend(loc="lower center", bbox_to_anchor=(0.5, -0.15),
+                        ncol=min(4, len(series)), frameon=False, prop=_FP_LABEL)
+        for t in leg.get_texts():
+            t.set_color(INK)
     return _save_fig(fig)
 
 
@@ -243,22 +259,21 @@ def render_perceptual_map(
             d.get("name", "?"),
             (d.get("rawX", 0), d.get("rawY", 0)),
             xytext=(8, 6), textcoords="offset points",
-            fontsize=10 if is_brand else 9,
-            weight="bold" if is_brand else "normal",
             color=INK,
+            fontproperties=(_FP_BOLD if is_brand else _FP_LABEL),
         )
         # raw value label
         ax.annotate(
             f"({round(d.get('rawX', 0), 1)}, {round(d.get('rawY', 0), 1)})",
             (d.get("rawX", 0), d.get("rawY", 0)),
             xytext=(8, -10), textcoords="offset points",
-            fontsize=7.5, color=INK_3,
+            color=INK_3, fontproperties=_FP_SMALL,
         )
 
-    ax.set_xlabel(f"X · {x_axis_label}", fontsize=10, color=INK_2)
-    ax.set_ylabel(f"Y · {y_axis_label}", fontsize=10, color=INK_2)
+    ax.set_xlabel(f"X · {x_axis_label}", color=INK_2, fontproperties=_FP_LABEL)
+    ax.set_ylabel(f"Y · {y_axis_label}", color=INK_2, fontproperties=_FP_LABEL)
     ax.set_title(f"Perceptual Map · {x_axis_label} × {y_axis_label}",
-                 fontsize=11.5, weight="bold", color=INK, pad=12)
+                 color=INK, pad=12, fontproperties=_FP_TITLE)
     ax.tick_params(colors=INK_3, labelsize=8)
     for sp in ax.spines.values():
         sp.set_color(RULE)
@@ -280,18 +295,19 @@ def render_identity_image_map(
     ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
 
     # Headers
-    ax.text(2.0, 9.6, "IDENTITY · ที่แบรนด์ตั้งใจ", fontsize=10,
-            color=INK, weight="bold")
-    ax.text(7.0, 9.6, "IMAGE · ที่ผู้บริโภครับรู้", fontsize=10,
-            color=INK, weight="bold")
+    ax.text(2.0, 9.6, "IDENTITY · ที่แบรนด์ตั้งใจ",
+            color=INK, fontproperties=_FP_BOLD)
+    ax.text(7.0, 9.6, "IMAGE · ที่ผู้บริโภครับรู้",
+            color=INK, fontproperties=_FP_BOLD)
     ax.plot([5, 5], [0.3, 9.3], color=RULE, linewidth=0.8, linestyle="--")
 
     # LEFT — intended traits
     n_left = len(intended_traits) or 1
     spacing_l = min(1.0, 8.0 / n_left)
+    _FP_TRAIT = fm.FontProperties(fname=_THAI_FONT_FILE, size=11)
     for i, t in enumerate(intended_traits):
         y = 9.0 - (i + 1) * spacing_l
-        ax.text(2.0, y, t, fontsize=11, color=INK_2, ha="center")
+        ax.text(2.0, y, t, color=INK_2, ha="center", fontproperties=_FP_TRAIT)
         ax.add_patch(plt.Rectangle((0.5, y - 0.18), 3.0, 0.05,
                                    facecolor=BE_RED, edgecolor="none"))
 
@@ -299,22 +315,24 @@ def render_identity_image_map(
     color_for = {"aligned": BE_GREEN, "lost": INK_3, "unintended": BE_GOLD}
     n_right = len(image_col) or 1
     spacing_r = min(1.0, 8.0 / n_right)
+    _FP_TRAIT_BOLD = fm.FontProperties(fname=_THAI_FONT_FILE, size=11, weight="bold")
     for i, p in enumerate(image_col):
         y = 9.0 - (i + 1) * spacing_r
         c = color_for.get(p.get("kind", "lost"), INK_3)
         trait = str(p.get("trait", ""))
         pct = float(p.get("pct") or 0)
-        ax.text(7.0, y, trait, fontsize=11, color=c, ha="center",
-                weight="bold" if p.get("kind") == "aligned" else "normal")
+        ax.text(7.0, y, trait, color=c, ha="center",
+                fontproperties=(_FP_TRAIT_BOLD if p.get("kind") == "aligned" else _FP_TRAIT))
         # bar showing pct
         ax.add_patch(plt.Rectangle((6.0, y - 0.2), 2.0 * (pct / 100), 0.05,
                                    facecolor=c, edgecolor="none"))
-        ax.text(8.4, y, f"{int(round(pct))}%", fontsize=8, color=INK_3, ha="left")
+        ax.text(8.4, y, f"{int(round(pct))}%", color=INK_3, ha="left",
+                fontproperties=_FP_SMALL)
 
     if alignment_score is not None:
         ax.text(5.0, 0.3,
                 f"Alignment Score: {round(alignment_score, 1)} / 100",
-                fontsize=11, color=INK, ha="center", weight="bold")
+                color=INK, ha="center", fontproperties=_FP_BOLD)
 
     # Legend
     legend_y = 0.85
@@ -326,7 +344,8 @@ def render_identity_image_map(
         x = 0.5 + i * 3.3
         ax.add_patch(plt.Rectangle((x, legend_y - 0.05), 0.25, 0.1,
                                     facecolor=color_for[kind], edgecolor="none"))
-        ax.text(x + 0.35, legend_y, label, fontsize=8, color=INK_2, va="center")
+        ax.text(x + 0.35, legend_y, label, color=INK_2, va="center",
+                fontproperties=_FP_SMALL)
 
     return _save_fig(fig)
 
@@ -355,12 +374,17 @@ def render_perspective_bars(
     bars = ax.bar([labels[k] for k in keys], vals,
                   color=BE_RED, alpha=0.85, edgecolor=INK, linewidth=0.6)
     ax.set_ylim(0, 100)
-    ax.set_ylabel("Score (0-100)", fontsize=9, color=INK_2)
+    ax.set_ylabel("Score (0-100)", color=INK_2, fontproperties=_FP_LABEL)
     ax.set_title("Brand Association — Aaker 4 Perspectives",
-                 fontsize=11, weight="bold", color=INK, pad=10)
+                 color=INK, pad=10, fontproperties=_FP_TITLE)
     for b, v in zip(bars, vals):
         ax.text(b.get_x() + b.get_width() / 2, v + 2, f"{v}",
-                ha="center", fontsize=9.5, color=INK, weight="bold")
+                ha="center", color=INK, fontproperties=_FP_BOLD)
+    # ticklabels (bar labels) — apply Thai font
+    for lbl in ax.get_xticklabels():
+        lbl.set_fontproperties(_FP_LABEL)
+    for lbl in ax.get_yticklabels():
+        lbl.set_fontproperties(_FP_SMALL)
     ax.tick_params(colors=INK_3, labelsize=8.5)
     for sp in ax.spines.values():
         sp.set_color(RULE)
@@ -384,17 +408,17 @@ def render_nps_bar(
     ax.barh([0.5], [promoters_pct], left=detractors_pct + passives_pct,
             color=BE_GREEN, height=0.6)
     ax.text(detractors_pct / 2, 0.5, f"Detractors\n{round(detractors_pct,1)}%",
-            ha="center", va="center", color="white", fontsize=8.5, weight="bold")
+            ha="center", va="center", color="white", fontproperties=_FP_BOLD)
     ax.text(detractors_pct + passives_pct / 2, 0.5,
             f"Passives\n{round(passives_pct,1)}%",
-            ha="center", va="center", color="white", fontsize=8.5, weight="bold")
+            ha="center", va="center", color="white", fontproperties=_FP_BOLD)
     ax.text(detractors_pct + passives_pct + promoters_pct / 2, 0.5,
             f"Promoters\n{round(promoters_pct,1)}%",
-            ha="center", va="center", color="white", fontsize=8.5, weight="bold")
+            ha="center", va="center", color="white", fontproperties=_FP_BOLD)
     title = "Net Promoter Score Breakdown"
     if nps_score is not None:
         title += f" — NPS = {round(nps_score, 1)}"
-    ax.set_title(title, fontsize=10.5, weight="bold", color=INK, pad=8)
+    ax.set_title(title, color=INK, pad=8, fontproperties=_FP_TITLE)
     return _save_fig(fig)
 
 
@@ -416,12 +440,17 @@ def render_likert_histogram(
     bars = ax.bar(labels, distribution,
                   color=[color if i == peak_idx else "#CDCCC8" for i in range(n_bins)],
                   edgecolor=INK, linewidth=0.5)
-    ax.set_ylabel("คน", fontsize=9, color=INK_2)
-    ax.set_title(title, fontsize=10.5, weight="bold", color=INK, pad=8)
+    ax.set_ylabel("คน", color=INK_2, fontproperties=_FP_LABEL)
+    ax.set_title(title, color=INK, pad=8, fontproperties=_FP_TITLE)
     for b, v in zip(bars, distribution):
         if v > 0:
             ax.text(b.get_x() + b.get_width() / 2, v + 0.3, str(int(v)),
-                    ha="center", fontsize=8.5, color=INK)
+                    ha="center", color=INK, fontproperties=_FP_SMALL)
+    # tick labels (may contain Thai e.g. "ไม่รู้จัก", "เคยได้ยิน")
+    for lbl in ax.get_xticklabels():
+        lbl.set_fontproperties(_FP_SMALL)
+    for lbl in ax.get_yticklabels():
+        lbl.set_fontproperties(_FP_SMALL)
     ax.tick_params(colors=INK_3, labelsize=8)
     for sp in ax.spines.values():
         sp.set_color(RULE)

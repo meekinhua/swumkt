@@ -1,6 +1,37 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Thai Font (chart): Explicit FontProperties Fix + Mobile AI Overflow 🇹🇭📱
+
+### 🇹🇭 Thai font in charts — root cause + fix
+- **สาเหตุ**: matplotlib's `rcParams["font.family"]` ไม่ propagate ไปยัง polar tick labels,
+  legend, และ tick labels บางจุด — ทำให้ axes ของ radar chart ยังใช้ font fallback
+  (DejaVu) ที่ไม่มี glyph ภาษาไทย → tofu boxes
+- **Fix**: ใช้ `FontProperties(fname='/usr/share/fonts/opentype/tlwg/Loma.otf')`
+  เป็น instance ระดับ module + apply ผ่าน `fontproperties=` argument โดยตรงทุก text call:
+  - `ax.set_xticklabels(..., fontproperties=_FP_LABEL)` (สำคัญสุด — fix user's reported issue)
+  - `ax.set_yticklabels(...)`, `ax.set_title(...)`, `ax.set_xlabel/ylabel(...)`
+  - `ax.text(...)`, `ax.annotate(...)` ทุกตัว
+  - `ax.legend(prop=_FP_LABEL)` ใน legend
+  - Bar chart tick labels via `lbl.set_fontproperties(...)` loop
+- **Auto-wrap**: เพิ่ม `_wrap()` helper สำหรับ radar axis labels ที่ยาว เช่น
+  `"SOCIAL STATUS (สถานะทางสังคม/ความหรูหรา)"` → 2 บรรทัด เพื่อไม่ทับ polygon
+- **Verified**: re-rendered user's exact failing radar (Starbucks vs Café Amazon vs Punthai Coffee
+  with Thai parenthetical labels) — ภาษาไทยขึ้นถูกต้องไม่มี tofu
+
+### 📱 Mobile overflow — AI Insights rail (`be-dash-ai`)
+- **สาเหตุ**: long Thai text ใน `master_insights` headlines/evidence ไม่ break บน mobile
+  → ดันให้ flex/grid parent ขยายเกิน viewport
+- **Fix** (CSS):
+  - `.be-dash-main`, `.be-dash-ai`, `.be-ai-rec` ได้ `min-width: 0` (กัน flex/grid ขยายเกิน)
+  - `.be-ai-rec-headline`, `.be-ai-rec-body` ได้ `word-break: break-word;
+    overflow-wrap: anywhere;` (Thai words wrap ที่ไหนก็ได้)
+  - `@media (max-width: 1100px)`: `.be-dash-ai` ได้ `width: 100%; box-sizing: border-box`
+  - `@media (max-width: 600px)`: ลด font + padding
+- **Verified** บน viewport 390×800: `railRight: 374` (16px margin), ทุก `.be-ai-rec` fit
+  ใน viewport ไม่มี overflow
+
+
 ## 2026-02-11 — Hotfix: Thesis Export Triggered 5 Downloads 🔴
 
 ### Race condition: polling fires every 4s but each poll takes >4s
