@@ -21,6 +21,8 @@ from collections import Counter
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 
+from lib.ttl_cache import async_ttl_cache
+
 brand_equity_router = APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
 
 
@@ -2214,6 +2216,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
     @brand_equity_router.get("/showcase")
     async def list_public_showcases():
+        return await _list_public_showcases_cached()
+
+    @async_ttl_cache(ttl_seconds=60)
+    async def _list_public_showcases_cached():
         """Public — list all studies the owner has marked as `is_public_showcase`.
         Returns lean metadata only (no aggregates). Anyone can browse;
         clicking into /showcase/{token} loads the full sanitized dashboard."""

@@ -30,6 +30,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from lib.ref_extract import RefExtract
 from lib.citation_replacer import CitationReplacer
 from lib.doc_formatter import DocFormatter
+from lib.ttl_cache import async_ttl_cache
 from PIL import Image
 from io import BytesIO
 
@@ -8212,6 +8213,11 @@ async def toggle_public_result(
 # =============================================================================
 @api_router.get("/conjoint/showcase")
 async def list_conjoint_showcase():
+    return await _conjoint_showcase_cached()
+
+
+@async_ttl_cache(ttl_seconds=60)
+async def _conjoint_showcase_cached():
     """Public list of Conjoint studies the owner has marked `is_public_result=True`.
     Returns lean metadata only for browsing — full data fetched via the
     existing /conjoint/studies/{id} when is_public_result lets it through.
@@ -8252,6 +8258,11 @@ async def list_conjoint_showcase():
 
 @api_router.get("/showcase/index")
 async def unified_showcase_index():
+    return await _unified_showcase_index_cached()
+
+
+@async_ttl_cache(ttl_seconds=60)
+async def _unified_showcase_index_cached():
     """Hybrid public showcase: combines Brand Equity + Conjoint studies by topic.
 
     Response shape:

@@ -25,6 +25,8 @@ from typing import Any, Dict
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 
+from lib.ttl_cache import async_ttl_cache
+
 share_router = APIRouter(prefix="/share", tags=["Share"])
 
 SWUMKT_LOGO_URL = (
@@ -350,6 +352,11 @@ def get_share_routes(db, brand_aggregate_helper=None):
 
     @share_router.get("/showcase-index", response_class=HTMLResponse)
     async def share_showcase_index(request: Request):
+        origin = _request_origin(request)
+        return HTMLResponse(await _build_showcase_index_og(origin))
+
+    @async_ttl_cache(ttl_seconds=60)
+    async def _build_showcase_index_og(origin: str) -> str:
         """OG bridge for the unified public showcase landing (`/showcase`).
         Crawlers see rich preview; humans get meta-refreshed to the React page."""
         # Aggregate light stats — same filters as /api/showcase/index
@@ -390,7 +397,6 @@ def get_share_routes(db, brand_aggregate_helper=None):
         sample = [t for t in (be_topics + cj_topics) if t][:4]
         sample_str = " · ".join(sample) if sample else ""
 
-        origin = _request_origin(request)
         canonical = f"{origin}/api/share/showcase-index"
         redirect_url = f"{origin}/showcase"
 
@@ -399,7 +405,7 @@ def get_share_routes(db, brand_aggregate_helper=None):
             f"Brand Equity & Conjoint Analysis"
         )
         lede_parts = [
-            f"งานวิจัยจริงจากนักศึกษา SWU เปิดให้คนทั่วไปดูได้",
+            "งานวิจัยจริงจากนักศึกษา SWU เปิดให้คนทั่วไปดูได้",
             f"{be_count} Brand Equity · {cj_count} Conjoint · "
             f"{len(unique_topics)} topics · {total_responses}+ responses",
         ]
@@ -407,7 +413,7 @@ def get_share_routes(db, brand_aggregate_helper=None):
             lede_parts.append(f"ตัวอย่าง: {sample_str}")
         description = _truncate(" — ".join(lede_parts), 280)
 
-        return HTMLResponse(_build_og_html(
+        return _build_og_html(
             canonical_url=canonical,
             redirect_url=redirect_url,
             title=title,
@@ -418,6 +424,6 @@ def get_share_routes(db, brand_aggregate_helper=None):
             body_h1="Marketing research, publicly visible.",
             body_lede=description,
             cta_label="เข้าดู Showcase →",
-        ))
+        )
 
     return share_router
