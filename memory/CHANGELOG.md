@@ -1,6 +1,28 @@
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 
+## 2026-02-11 — Hotfix: Thesis Export Triggered 5 Downloads 🔴
+
+### Race condition: polling fires every 4s but each poll takes >4s
+- เมื่อกด "สร้างวิทยานิพนธ์" → frontend ตั้ง `setInterval(... , 4000)` polling status
+- Backend ใช้เวลามากกว่า 4 วินาทีต่อ poll → multiple poll requests in-flight พร้อมกัน
+- เมื่อ status → "ready" — **ทุก poll ที่ pending** เห็น "ready" → call `clearInterval` (ไม่ทันแล้ว) + `downloadThesisDocx`
+- ผลลัพธ์: ดาวน์โหลดไฟล์เดียวกัน 2-5 ครั้ง
+
+### Fix (BrandEquityDashboardPage.jsx)
+- เพิ่ม `thesisDownloadStartedRef` (boolean guard) — claim slot atomically
+- Guard ที่ **3 จุด**:
+  1. ด้านบน setInterval callback — skip ทันทีถ้า ref ถูก set แล้ว
+  2. หลัง `await axios.get` — re-check (อาจมีอีก poll ชิงไปก่อน)
+  3. ใน `handleStartThesisAI` — reset เป็น false ทุกครั้งที่กด Generate ใหม่
+- ก่อน `await downloadThesisDocx` — set ref=true + clearInterval ก่อนเสมอ
+- กัน double-click: ถ้า `thesisProgress` ไม่ใช่ idle/failed → return
+- กัน stale interval: clear interval เก่าทุกครั้งที่กด Generate ใหม่
+
+### Verified
+- Playwright test: กด Generate → **1 download URL fetch เท่านั้น** (รอ 20 วินาทีเช็คซ้ำ)
+
+
 ## 2026-02-11 — Mermaid Diagrams + Thai Font Hardening 📐🇹🇭
 
 ### Mermaid rendering (server-side via mmdc + Chromium headless)

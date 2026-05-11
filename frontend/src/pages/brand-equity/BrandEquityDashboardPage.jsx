@@ -302,6 +302,10 @@ const BrandEquityDashboardPage = () => {
   const [thesisProgress, setThesisProgress] = useState('idle');
   const [thesisError, setThesisError] = useState(null);
   const thesisPollRef = useRef(null);
+  // Guards against double-downloads when multiple poll requests are in-flight
+  // simultaneously (each request takes >4s to come back, but interval fires every 4s,
+  // so 2-5 polls can each independently see status='ready' and trigger a download).
+  const thesisDownloadStartedRef = useRef(false);
 
   // Cleanup poll on unmount
   useEffect(() => () => { if (thesisPollRef.current) clearInterval(thesisPollRef.current); }, []);
@@ -335,8 +339,19 @@ const BrandEquityDashboardPage = () => {
       toast.error('กรุณาเลือกอย่างน้อย 1 บท');
       return;
     }
+    // Guard against double-clicks
+    if (thesisProgress && thesisProgress !== 'idle' && thesisProgress !== 'failed') {
+      return;
+    }
     setThesisError(null);
     setThesisProgress('starting');
+    // Reset download guard for this fresh attempt
+    thesisDownloadStartedRef.current = false;
+    // Clear any stale interval from a previous failed attempt
+    if (thesisPollRef.current) {
+      clearInterval(thesisPollRef.current);
+      thesisPollRef.current = null;
+    }
     try {
       const qs = buildFilterQS(filter);
       const startRes = await axios.post(
@@ -347,27 +362,51 @@ const BrandEquityDashboardPage = () => {
       const { status, job_id, cache_key, cached } = startRes.data || {};
 
       if (status === 'ready' || cached) {
-        // Cache hit — download immediately
-        toast.info('พบ cache — ดาวน์โหลดทันที');
-        await downloadThesisDocx(cache_key);
+        // Cache hit — download immediately (set guard so any racing path can't re-trigger)
+        if (!thesisDownloadStartedRef.current) {
+          thesisDownloadStartedRef.current = true;
+          toast.info('พบ cache — ดาวน์โหลดทันที');
+          await downloadThesisDocx(cache_key);
+        }
         return;
       }
 
       // Poll status
       setThesisProgress('queued');
       thesisPollRef.current = setInterval(async () => {
+        // If a download already started (e.g. previous in-flight poll just saw ready),
+        // skip this poll entirely. Also clear our interval in case clearInterval
+        // didn't propagate before this callback fired.
+        if (thesisDownloadStartedRef.current) {
+          if (thesisPollRef.current) {
+            clearInterval(thesisPollRef.current);
+            thesisPollRef.current = null;
+          }
+          return;
+        }
         try {
           const s = await axios.get(
             `${API}/brand-equity/studies/${studyId}/thesis-ai-status/${job_id}`,
             authH,
           );
+          // Re-check guard AFTER await — another in-flight poll may have just won the race
+          if (thesisDownloadStartedRef.current) return;
           const st = s.data || {};
           if (st.progress) setThesisProgress(st.progress);
           if (st.status === 'ready') {
-            clearInterval(thesisPollRef.current);
+            // Win the race: claim the download slot atomically, THEN clearInterval.
+            thesisDownloadStartedRef.current = true;
+            if (thesisPollRef.current) {
+              clearInterval(thesisPollRef.current);
+              thesisPollRef.current = null;
+            }
             await downloadThesisDocx(st.cache_key || cache_key);
           } else if (st.status === 'failed') {
-            clearInterval(thesisPollRef.current);
+            thesisDownloadStartedRef.current = true;  // prevent any other path
+            if (thesisPollRef.current) {
+              clearInterval(thesisPollRef.current);
+              thesisPollRef.current = null;
+            }
             setThesisError(st.error || 'AI generation failed');
             setThesisProgress('failed');
             toast.error('สร้างเอกสารไม่สำเร็จ');
