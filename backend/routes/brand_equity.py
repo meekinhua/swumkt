@@ -8,6 +8,7 @@ Aaker's 4-Dimension framework: Awareness, Perceived Quality, Brand Identity, Bra
 """
 
 import os
+import re
 import uuid
 import json
 import hashlib
@@ -464,6 +465,90 @@ def _resolve_ai_cache(study: dict, sig: str) -> dict:
     return ((study.get("ai_cache_by_filter") or {}).get(sig)) or {}
 
 
+def _slugify_slot(s: str) -> str:
+    """ASCII-safe slot suffix used in deterministic question ids.
+
+    Lowercased, alphanumerics + hyphen kept, anything else collapsed to '_'.
+    Keeps Thai-language competitor names usable inside ids by hashing them
+    short (8-char md5) when they are not ASCII-clean.
+    """
+    if not s:
+        return "self"
+    base = s.strip()
+    safe = re.sub(r"[^A-Za-z0-9-]+", "_", base).strip("_")
+    if not safe:
+        # Thai / unicode competitor name → use a stable short hash
+        import hashlib as _h
+        safe = _h.md5(base.encode("utf-8")).hexdigest()[:8]
+    return safe.lower()[:32]
+
+
+def _question_slot_key(q: dict) -> tuple:
+    """Identity for a semantic 'slot' — same across regenerates as long as
+    the same template + competitor variant is in use. Used to inherit ids
+    and accumulate legacy_ids when republishing."""
+    return (
+        q.get("template_id") or q.get("id", "").split("--")[0],
+        (q.get("compare_brand") or "").strip().lower(),
+        q.get("dimension") or "",
+    )
+
+
+def _merge_questions_preserving_history(
+    old_questions: List[dict], new_questions: List[dict],
+) -> List[dict]:
+    """For each NEW question, find any OLD question(s) with the same slot key.
+       Two academically-defensible behaviours:
+
+       * **Same shape** (prompt_th + scale + type unchanged) → re-use the old
+         id verbatim. Old responses still link without any remapping. wave
+         stays the same. Existing legacy_ids carried over.
+       * **Shape changed** (prompt rewritten, scale changed, etc.) → keep the
+         NEW deterministic id but stash the old id into `legacy_ids` so the
+         aggregator still includes old responses (clearly labelled as a
+         prior wave). `wave` increments by 1 and old prompt stored for audit
+         in `prev_prompt_th`.
+
+       If no slot match exists at all (entirely new question), wave starts
+       at 1 with empty legacy_ids — same as a fresh study.
+    """
+    old_by_slot: Dict[tuple, List[dict]] = {}
+    for oq in (old_questions or []):
+        old_by_slot.setdefault(_question_slot_key(oq), []).append(oq)
+
+    for nq in new_questions:
+        slot = _question_slot_key(nq)
+        olds = old_by_slot.get(slot, [])
+        if not olds:
+            nq.setdefault("wave", 1)
+            nq.setdefault("legacy_ids", [])
+            continue
+        oq = olds[0]  # only one expected per slot
+        prev_legacy = list(oq.get("legacy_ids") or [])
+        same_shape = (
+            oq.get("prompt_th") == nq.get("prompt_th")
+            and oq.get("scale") == nq.get("scale")
+            and oq.get("type") == nq.get("type")
+        )
+        if same_shape and oq.get("id"):
+            # Identical question — reuse the old id, no wave bump.
+            nq["id"] = oq["id"]
+            nq["slot_key"] = nq.get("slot_key") or oq.get("slot_key") or oq["id"]
+            nq["wave"] = oq.get("wave", 1)
+            nq["legacy_ids"] = prev_legacy
+        else:
+            # Question wording / scale / type changed — clearly a new wave.
+            nq["wave"] = (oq.get("wave", 1) or 1) + 1
+            # Accumulate ALL prior ids so aggregator still reads old responses.
+            extra = []
+            if oq.get("id") and oq["id"] != nq["id"]:
+                extra.append(oq["id"])
+            nq["legacy_ids"] = prev_legacy + extra
+            if oq.get("prompt_th") and oq.get("prompt_th") != nq.get("prompt_th"):
+                nq["prev_prompt_th"] = oq.get("prompt_th")
+    return new_questions
+
+
 def _generate_questions_from_template(brand_setup: BrandSetup, identity: IdentitySetup) -> List[dict]:
     """Generate question objects from template, filling in brand/competitors/etc."""
     questions = []
@@ -499,9 +584,20 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
         prompt_th = fill(tmpl["prompt_t"], comp)
         en_template = PROMPT_EN.get(tmpl["id"])
         prompt_en = fill(en_template, comp) if en_template else prompt_th
+        # Deterministic id derived from template_id + competitor variant.
+        # CRITICAL: stable IDs across regenerates so old responses keep linking
+        # to the right question. Random-suffix ids (the prior scheme) caused
+        # responses to orphan whenever questions were regenerated.
+        slot_suffix = "self"
+        if override_competitor:
+            slot_suffix = _slugify_slot(override_competitor)
+        slot_id = f"{tmpl['id']}--{slot_suffix}"
         q = {
-            "id": f"{tmpl['id']}-{uuid.uuid4().hex[:4]}",
+            "id": slot_id,
             "template_id": tmpl["id"],
+            "slot_key": slot_id,           # canonical academic-slot identifier
+            "wave": 1,                      # filled in by _merge_questions_preserving_history
+            "legacy_ids": [],               # filled in by _merge_questions_preserving_history
             "dimension": dim,
             "type": tmpl["type"],
             "kind": tmpl["kind"],
@@ -1026,7 +1122,18 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
 
     for q in questions:
         qid = q["id"]
-        values = by_q.get(qid, [])
+        # Academic hybrid: also pull values from any legacy_ids (prior waves of
+        # the SAME semantic slot, stashed by `_merge_questions_preserving_history`
+        # when the question wording was changed on regenerate). This is the
+        # standard "stable slot, evolving instrument" pattern used in survey
+        # research — responses that targeted the same construct are pooled.
+        legacy_ids = q.get("legacy_ids") or []
+        if legacy_ids:
+            values = list(by_q.get(qid, []))
+            for lid in legacy_ids:
+                values.extend(by_q.get(lid, []))
+        else:
+            values = by_q.get(qid, [])
         stats: Dict[str, Any] = {"n": len(values)}
 
         if q["type"] in ("likert_5", "likert_7"):
@@ -1766,12 +1873,86 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         # Ensure custom attrs have EN translation (lazy backfill for old studies)
         if brand.custom_quality_attributes and not brand.custom_quality_attributes_en:
             brand.custom_quality_attributes_en = await _translate_attrs_to_en(brand.custom_quality_attributes)
-        questions = _generate_questions_from_template(brand, identity)
+
+        old_questions = study.get("questions") or []
+        new_questions = _generate_questions_from_template(brand, identity)
+        # HYBRID HISTORY MERGE — preserve ids of unchanged questions so prior
+        # responses keep linking; stash old ids in legacy_ids for changed ones;
+        # bump per-question wave only when the wording/scale actually changed.
+        new_questions = _merge_questions_preserving_history(old_questions, new_questions)
+
+        # Did anything materially change? If yes, bump study-level wave.
+        bump = any(q.get("legacy_ids") or q.get("wave", 1) > 1 for q in new_questions)
+        wave_history = list(study.get("wave_history") or [])
+        current_wave = study.get("current_wave", 1)
+        if bump or not wave_history:
+            current_wave = current_wave + 1 if wave_history else 1
+            wave_history.append({
+                "wave": current_wave,
+                "published_at": _now_iso(),
+                "by": (current_user.email if hasattr(current_user, 'email') else str(current_user)),
+                "questions_changed": sum(1 for q in new_questions if q.get("wave", 1) > 1 or q.get("legacy_ids")),
+                "questions_total": len(new_questions),
+            })
+
         await db.brand_studies.update_one({"id": study_id},
-            {"$set": {"questions": questions,
-                      "brand.custom_quality_attributes_en": brand.custom_quality_attributes_en,
-                      "updated_at": _now_iso()}})
-        return {"questions": questions}
+            {"$set": {
+                "questions": new_questions,
+                "brand.custom_quality_attributes_en": brand.custom_quality_attributes_en,
+                "current_wave": current_wave,
+                "wave_history": wave_history,
+                "updated_at": _now_iso(),
+            }})
+        return {
+            "questions": new_questions,
+            "current_wave": current_wave,
+            "merged_from_prior_wave": bump,
+            "questions_with_history": sum(1 for q in new_questions if q.get("legacy_ids")),
+        }
+
+    @brand_equity_router.post("/admin/relink-stable-ids")
+    async def admin_relink_stable_question_ids(current_user=Depends(get_current_user)):
+        """One-shot backfill: for every existing study, regenerate the question
+        list to deterministic slot-based ids, then `_merge_questions_preserving_history`
+        against the CURRENT questions so the old random ids end up in
+        `legacy_ids`. After this runs the dashboard will rejoin existing
+        responses (which still reference the old random ids) to the new
+        deterministic ids without any data loss.
+
+        Admin-only. Idempotent — safe to run repeatedly."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        migrated = []
+        cursor = db.brand_studies.find({}, {"_id": 0})
+        async for s in cursor:
+            try:
+                brand = BrandSetup(**s["brand"])
+                identity = IdentitySetup(**s["identity"])
+            except Exception:
+                continue
+            old_questions = s.get("questions") or []
+            # Generate fresh (deterministic) ids
+            new_questions = _generate_questions_from_template(brand, identity)
+            new_questions = _merge_questions_preserving_history(old_questions, new_questions)
+            await db.brand_studies.update_one(
+                {"id": s["id"]},
+                {"$set": {
+                    "questions": new_questions,
+                    "current_wave": s.get("current_wave", 1),
+                    "wave_history": s.get("wave_history") or [
+                        {"wave": 1, "published_at": s.get("created_at"),
+                         "by": "system-backfill", "note": "initial wave"}
+                    ],
+                    "updated_at": _now_iso(),
+                }},
+            )
+            migrated.append({
+                "study_id": s["id"],
+                "questions_with_legacy_ids": sum(
+                    1 for q in new_questions if q.get("legacy_ids")
+                ),
+            })
+        return {"migrated_count": len(migrated), "studies": migrated}
 
     @brand_equity_router.post("/admin/cleanup-decoys")
     async def admin_cleanup_decoys(current_user=Depends(get_current_user)):

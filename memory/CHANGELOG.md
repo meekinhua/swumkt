@@ -1,3 +1,65 @@
+## 2026-05-11 — Fix: Regenerate Questions Drops All Old Responses (P0)
+
+### Symptom
+User reported: clicking "Regenerate questions" + Save&Republish on a Brand
+Equity study caused the dashboard to come back **empty** — even though 21
+responses were definitely already in the DB.
+
+### Root cause
+`_generate_questions_from_template` generated question ids of the form
+`f"{tmpl_id}-{uuid4.hex[:4]}"` — a NEW random suffix on every regenerate.
+The dashboard aggregator (`_aggregate_responses`) groups answers by
+`question_id` and matches against the CURRENT `study.questions[i].id`, so
+every old response (which still pointed at the prior random suffix) became
+an orphan that wasn't visible anywhere.
+
+### Hybrid Solution (option C as agreed with user)
+Academic-research best practice: **stable slot identity + visible wave
+history + non-destructive legacy linkage**.
+
+1. **Deterministic ids** in `_generate_questions_from_template`:
+   `f"{tmpl_id}--{slugify(override_competitor or 'self')}"` →
+   same template + same competitor variant always produces the same id.
+   New helper `_slugify_slot` keeps Thai competitor names safe via 8-char
+   md5 hash when not ASCII-clean.
+2. **`_merge_questions_preserving_history(old, new)`** (new helper):
+   - Matches by slot key = (template_id, compare_brand, dimension).
+   - Same shape (prompt_th + scale + type unchanged) → reuse OLD id verbatim,
+     wave stays the same.
+   - Shape changed → keep NEW deterministic id, stash old id in
+     `legacy_ids: List[str]`, bump per-question `wave`, archive prior prompt
+     into `prev_prompt_th` for audit.
+3. **`_aggregate_responses`** now pools values from `[qid] + legacy_ids`
+   when collecting answers for a question. This is the standard
+   "stable construct, evolving instrument" survey-research pattern.
+4. **Study-level wave tracking**:
+   `current_wave: int` + `wave_history: [{wave, published_at, by, questions_changed, questions_total}]`
+   auto-appended on every regenerate that materially changes any question.
+5. **Backfill endpoint** `POST /api/brand-equity/admin/relink-stable-ids`
+   (admin-only, idempotent): walks every existing study, regenerates ids
+   to the new deterministic form, captures the prior random ids into
+   `legacy_ids`. After running this once, all existing studies' dashboards
+   pick up their historical data seamlessly.
+
+### Verified
+- Migration: 11 studies migrated; study `c5b3458f` got 18 questions with
+  legacy_ids, study `a407a08f` got 41.
+- BEFORE: 21 responses, 18/18 questions with data, composite normal.
+- AFTER migration + regenerate (wave 2): still 21 responses, 18/51
+  questions with data (51 because the new generation expanded competitor
+  coverage), composite scores stable.
+- `wave_history` correctly logged: wave 1 system-backfill →
+  wave 2 admin republished 2026-05-11 (18 changed / 51 total).
+
+### Files touched
+- `/app/backend/routes/brand_equity.py`:
+  - new `_slugify_slot`, `_question_slot_key`, `_merge_questions_preserving_history`
+  - rewrote `build()` to use deterministic ids + stamp `wave / legacy_ids`
+  - rewrote `regenerate_questions` to call merge helper + maintain wave_history
+  - new admin endpoint `/admin/relink-stable-ids`
+  - `_aggregate_responses` now reads `legacy_ids`
+
+
 ## 2026-05-11 — Global LLM Concurrency Patch (catches ALL 30+ call sites)
 
 ### Why this matters
