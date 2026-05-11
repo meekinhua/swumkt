@@ -227,7 +227,7 @@ def render_quality_radar(
     return _radar(axes,
                   [{"name": brand_name, "kind": "brand",
                     "color": BE_GOLD, "values": vals}],
-                  title="Quality attributes — radar (Likert 1-7 → 0-100)")
+                  title="Quality attributes — radar (Likert 1-7 normalized to 0-100)")
 
 
 def render_image_radar(
@@ -489,6 +489,225 @@ def render_likert_histogram(
 
 
 # ============================================================================
+# 8) Horizontal bar chart for AW recall/aided
+# ============================================================================
+def render_hbar_counts(
+    *, rows: List[Dict[str, Any]], target_brand: str = "",
+    title: str, color: str = BE_BLUE,
+    width: float = 8, height: float = None,
+) -> Optional[io.BytesIO]:
+    """rows: [{label, pct, count?}]. Renders horizontal bars, target highlighted."""
+    if not rows:
+        return None
+    rows = [r for r in rows if r.get("label")][:10]
+    if not rows:
+        return None
+    labels = [str(r.get("label") or "?") for r in rows]
+    vals = [float(r.get("pct") or r.get("value") or 0) for r in rows]
+    target_low = (target_brand or "").lower().strip()
+
+    h = height or max(2.4, 0.45 * len(rows) + 0.9)
+    fig, ax = plt.subplots(figsize=(width, h))
+    ax.set_facecolor(PAPER)
+    y_pos = np.arange(len(labels))[::-1]  # reverse so #1 is on top
+    bar_colors = [
+        BE_RED if (target_low and target_low in lbl.lower()) else color
+        for lbl in labels
+    ]
+    bars = ax.barh(y_pos, vals, color=bar_colors, edgecolor=INK, linewidth=0.4,
+                   alpha=0.92)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, color=INK, fontproperties=_FP_LABEL)
+    ax.set_xlim(0, max(100, max(vals) * 1.15 if vals else 100))
+    ax.set_xlabel("% ของผู้ตอบ", color=INK_2, fontproperties=_FP_LABEL)
+    ax.set_title(title, color=INK, pad=10, fontproperties=_FP_TITLE)
+    for b, v in zip(bars, vals):
+        ax.text(v + 1.5, b.get_y() + b.get_height() / 2,
+                f"{round(v, 1)}%", va="center", color=INK_2,
+                fontproperties=_FP_SMALL)
+    for lbl in ax.get_xticklabels():
+        lbl.set_fontproperties(_FP_SMALL)
+    ax.tick_params(colors=INK_3, labelsize=8)
+    for sp in ax.spines.values():
+        sp.set_color(RULE)
+    ax.invert_yaxis()  # but we already reversed y_pos — invert again so #1 is top
+    return _save_fig(fig)
+
+
+# ============================================================================
+# 9) One-word identity cloud (sized by frequency, target words highlighted)
+# ============================================================================
+def render_one_word_cloud(
+    counts: List[Dict[str, Any]], aligned_traits: List[str], *,
+    width: float = 9, height: float = 4.2,
+) -> Optional[io.BytesIO]:
+    """counts: [{label, pct, count?}], aligned_traits: list of intended traits
+    (rendered green if matched)."""
+    counts = [c for c in (counts or []) if c.get("label")][:14]
+    if not counts:
+        return None
+    aligned_low = {str(t).lower().strip() for t in (aligned_traits or [])}
+    fig, ax = plt.subplots(figsize=(width, height))
+    ax.set_xlim(0, 100); ax.set_ylim(0, 100); ax.axis("off")
+    cols = 4
+    pad_x = 100 / (cols + 1)
+    rows_n = math.ceil(len(counts) / cols)
+    pad_y = 100 / (rows_n + 1)
+    for i, c in enumerate(counts):
+        label = str(c.get("label") or "")
+        pct = float(c.get("pct") or 0)
+        col = i % cols
+        row = i // cols
+        x = pad_x * (col + 1) + np.random.uniform(-3, 3)
+        y = 100 - pad_y * (row + 0.7) + np.random.uniform(-2, 2)
+        size = max(12, min(38, 12 + (pct ** 0.55) * 3.5))
+        is_aligned = label.lower().strip() in aligned_low
+        if _THAI_FONT_FILE:
+            fp = fm.FontProperties(fname=_THAI_FONT_FILE, size=size,
+                                    weight="bold" if is_aligned else "normal")
+        else:
+            fp = fm.FontProperties(size=size,
+                                    weight="bold" if is_aligned else "normal")
+        ax.text(x, y, label,
+                color=BE_GREEN if is_aligned else INK_3,
+                ha="center", va="center", fontproperties=fp)
+        ax.text(x, y - size * 0.42, f"{round(pct, 1)}%",
+                color=INK_3, ha="center", va="center",
+                fontproperties=_FP_SMALL)
+    fig.tight_layout(pad=0.3)
+    return _save_fig(fig)
+
+
+# ============================================================================
+# 10) Loyalty: Repeat intent + Switching resistance (mean / 7 bars)
+# ============================================================================
+def render_loyalty_means(
+    *, repeat_mean: Optional[float] = None,
+    switching_mean: Optional[float] = None,
+    repeat_n: Optional[int] = None,
+    switching_n: Optional[int] = None,
+) -> Optional[io.BytesIO]:
+    items = []
+    if repeat_mean is not None:
+        items.append(("Repeat Intent\n(ตั้งใจกลับมาซื้อ)",
+                       float(repeat_mean), BE_GREEN, repeat_n))
+    if switching_mean is not None:
+        items.append(("Switching Resistance\n(ต้านการเปลี่ยน)",
+                       float(switching_mean), BE_GOLD, switching_n))
+    if not items:
+        return None
+    fig, ax = plt.subplots(figsize=(7.5, 3))
+    ax.set_facecolor(PAPER)
+    labels = [it[0] for it in items]
+    vals_pct = [round(it[1] / 7 * 100, 1) for it in items]
+    colors = [it[2] for it in items]
+    y_pos = np.arange(len(items))
+    bars = ax.barh(y_pos, vals_pct, color=colors, edgecolor=INK, linewidth=0.4,
+                   alpha=0.92, height=0.55)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, color=INK, fontproperties=_FP_LABEL)
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("Score (0-100, จาก Likert 1-7)", color=INK_2, fontproperties=_FP_LABEL)
+    ax.set_title("Loyalty — Repeat Intent & Switching Resistance",
+                 color=INK, pad=10, fontproperties=_FP_TITLE)
+    for b, v, raw in zip(bars, vals_pct, items):
+        suffix = f"  (mean={round(raw[1], 2)}/7"
+        if raw[3]: suffix += f" · n={raw[3]}"
+        suffix += ")"
+        ax.text(v + 1.5, b.get_y() + b.get_height() / 2,
+                f"{v}%{suffix}", va="center", color=INK_2,
+                fontproperties=_FP_SMALL)
+    for lbl in ax.get_xticklabels():
+        lbl.set_fontproperties(_FP_SMALL)
+    ax.tick_params(colors=INK_3, labelsize=8)
+    for sp in ax.spines.values():
+        sp.set_color(RULE)
+    ax.invert_yaxis()
+    return _save_fig(fig)
+
+
+# ============================================================================
+# 11) Open-end themes (loyalty / quality reasons) — horizontal bar with quotes
+# ============================================================================
+def render_open_end_themes(
+    themes: List[Dict[str, Any]], *,
+    title: str, color: str = BE_GREEN,
+    max_themes: int = 6,
+) -> Optional[io.BytesIO]:
+    """themes: [{name, count, sample_quotes:[...]}]"""
+    themes = [t for t in (themes or []) if t.get("name")][:max_themes]
+    if not themes:
+        return None
+    labels = [str(t.get("name") or "?")[:48] for t in themes]
+    counts = [int(t.get("count") or 0) for t in themes]
+    max_c = max(counts) if counts else 1
+    h = max(2.6, 0.55 * len(themes) + 1.0)
+    fig, ax = plt.subplots(figsize=(8.2, h))
+    ax.set_facecolor(PAPER)
+    y_pos = np.arange(len(labels))
+    bars = ax.barh(y_pos, counts, color=color, alpha=0.78,
+                   edgecolor=INK, linewidth=0.4, height=0.55)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, color=INK, fontproperties=_FP_LABEL)
+    ax.set_xlim(0, max_c * 1.25)
+    ax.set_xlabel("จำนวนผู้ตอบที่กล่าวถึง (n)", color=INK_2, fontproperties=_FP_LABEL)
+    ax.set_title(title, color=INK, pad=10, fontproperties=_FP_TITLE)
+    for b, c in zip(bars, counts):
+        ax.text(c + max_c * 0.02, b.get_y() + b.get_height() / 2,
+                f"n={c}", va="center", color=INK_2, fontproperties=_FP_SMALL)
+    for lbl in ax.get_xticklabels():
+        lbl.set_fontproperties(_FP_SMALL)
+    ax.tick_params(colors=INK_3, labelsize=8)
+    for sp in ax.spines.values():
+        sp.set_color(RULE)
+    ax.invert_yaxis()
+    return _save_fig(fig)
+
+
+# ============================================================================
+# 12) Brand Equity Score breakdown — overall + 4 dims composite ring/bars
+# ============================================================================
+def render_bes_breakdown(
+    *, overall: Optional[float] = None,
+    awareness: Optional[float] = None,
+    quality: Optional[float] = None,
+    identity: Optional[float] = None,
+    loyalty: Optional[float] = None,
+) -> Optional[io.BytesIO]:
+    dims = [
+        ("Awareness\n(การจดจำ)", awareness, BE_BLUE),
+        ("Quality\n(คุณภาพ)",     quality,   BE_GOLD),
+        ("Identity\n(อัตลักษณ์)",  identity,  BE_RED),
+        ("Loyalty\n(ความภักดี)",   loyalty,   BE_GREEN),
+    ]
+    if not any(v is not None for _, v, _ in dims) and overall is None:
+        return None
+    labels = [d[0] for d in dims]
+    vals = [round(float(d[1]) if d[1] is not None else 0, 1) for d in dims]
+    colors = [d[2] for d in dims]
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.set_facecolor(PAPER)
+    bars = ax.bar(labels, vals, color=colors, alpha=0.88,
+                  edgecolor=INK, linewidth=0.5, width=0.62)
+    ax.set_ylim(0, 100)
+    ax.set_ylabel("Composite Score (0-100)", color=INK_2, fontproperties=_FP_LABEL)
+    overall_str = f" · Brand Equity Score = {round(float(overall), 1)}/100" if overall is not None else ""
+    ax.set_title(f"Brand Equity Score — 4-Dimension Composite{overall_str}",
+                 color=INK, pad=10, fontproperties=_FP_TITLE)
+    for b, v in zip(bars, vals):
+        ax.text(b.get_x() + b.get_width() / 2, v + 2,
+                f"{v}", ha="center", color=INK, fontproperties=_FP_BOLD)
+    for lbl in ax.get_xticklabels():
+        lbl.set_fontproperties(_FP_LABEL)
+    for lbl in ax.get_yticklabels():
+        lbl.set_fontproperties(_FP_SMALL)
+    ax.tick_params(colors=INK_3, labelsize=8.5)
+    for sp in ax.spines.values():
+        sp.set_color(RULE)
+    return _save_fig(fig)
+
+
+# ============================================================================
 # Convenience: build all charts from a study + aggregate
 # ============================================================================
 def collect_all_charts(
@@ -627,9 +846,96 @@ def collect_all_charts(
         if s.get("distribution"):
             b = render_likert_histogram(
                 distribution=s["distribution"],
-                title=f"Overall Quality (7-pt) · n={s.get('n', 0)} · mean={s.get('mean', 0)} · σ={s.get('std', 0)}",
+                title=f"Overall Quality (7-pt) · n={s.get('n', 0)} · mean={s.get('mean', 0)} · SD={s.get('std', 0)}",
                 color=BE_GOLD,
             )
             if b: out["overall_quality_hist"] = b
+
+    # 9. Unaided recall bars (top 8 brands respondents named spontaneously)
+    recall_q = next((q for q in questions if q.get("kind") == "unaided_recall"), None)
+    if recall_q:
+        counts = (recall_q.get("stats") or {}).get("counts") or []
+        b = render_hbar_counts(
+            rows=counts, target_brand=target,
+            title="Unaided Recall — แบรนด์อื่นที่นึกถึงเอง (Top 10)",
+            color=BE_BLUE,
+        )
+        if b: out["unaided_recall_bars"] = b
+
+    # 10. Aided recognition bars (which brands respondents recognized when shown)
+    aided_q = next((q for q in questions if q.get("kind") == "aided_recognition"), None)
+    if aided_q:
+        counts = (aided_q.get("stats") or {}).get("counts") or []
+        b = render_hbar_counts(
+            rows=counts, target_brand=target,
+            title="Aided Recognition — แบรนด์ที่ผู้ตอบรู้จักเมื่อถูกแสดงรายชื่อ",
+            color=BE_BLUE,
+        )
+        if b: out["aided_recognition_bars"] = b
+
+    # 11. One-word identity cloud (BI-3 image_one_word) — aligned words rendered green
+    oneword_q = next((q for q in questions if q.get("kind") == "image_one_word"), None)
+    if oneword_q:
+        counts = (oneword_q.get("stats") or {}).get("counts") or []
+        aligned_traits = (ii.get("aligned") or []) + (intended or [])
+        b = render_one_word_cloud(counts, aligned_traits)
+        if b: out["one_word_cloud"] = b
+
+    # 12. Loyalty bars (repeat intent + switching resistance)
+    repeat_q = next((q for q in questions if q.get("kind") == "repeat_intent"), None)
+    switch_q = next((q for q in questions if q.get("kind") == "switching_resistance"), None)
+    if repeat_q or switch_q:
+        b = render_loyalty_means(
+            repeat_mean=(repeat_q or {}).get("stats", {}).get("mean"),
+            switching_mean=(switch_q or {}).get("stats", {}).get("mean"),
+            repeat_n=(repeat_q or {}).get("stats", {}).get("n"),
+            switching_n=(switch_q or {}).get("stats", {}).get("n"),
+        )
+        if b: out["loyalty_means"] = b
+
+    # 13. Loyalty themes (Why customers stay — open-end clustered by AI)
+    themes_map = (ai_cache.get("themes_by_question") or {})
+    _OPEN_TYPES = {"open_text", "open_long", "text", "textarea", "open"}
+    # find loyalty open-end question id
+    loy_open = next((q for q in questions
+                     if q.get("dimension") == "loyalty"
+                     and (q.get("type") in _OPEN_TYPES
+                          or q.get("kind") in ("reason_to_stay", "loyalty_reasons"))),
+                    None)
+    if loy_open:
+        themes = themes_map.get(loy_open.get("id")) or []
+        b = render_open_end_themes(
+            themes,
+            title="Why Customers Stay — เหตุผลที่ลูกค้าอยู่กับแบรนด์ (Themes)",
+            color=BE_GREEN,
+        )
+        if b: out["loyalty_themes"] = b
+
+    # 14. Quality reasons themes (Voice of respondent — open-end clustered by AI)
+    qual_open = next((q for q in questions
+                      if q.get("dimension") == "quality"
+                      and (q.get("type") in _OPEN_TYPES
+                           or q.get("kind") in ("quality_reasons", "quality_voice"))),
+                     None)
+    if qual_open:
+        themes = themes_map.get(qual_open.get("id")) or []
+        b = render_open_end_themes(
+            themes,
+            title="Voice of Respondent — เหตุผลด้านคุณภาพ (Themes)",
+            color=BE_GOLD,
+        )
+        if b: out["quality_reason_themes"] = b
+
+    # 15. Brand Equity Score breakdown (overall + 4 dims composite)
+    comp = aggregate.get("composite") or {}
+    if comp:
+        b = render_bes_breakdown(
+            overall=comp.get("overall"),
+            awareness=comp.get("awareness"),
+            quality=comp.get("quality"),
+            identity=comp.get("identity"),
+            loyalty=comp.get("loyalty"),
+        )
+        if b: out["bes_breakdown"] = b
 
     return out

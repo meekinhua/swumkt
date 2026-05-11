@@ -849,9 +849,9 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
 
       <PartialDataWarning missing={missingKinds} dimLabel="Awareness"/>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="be-stack-2">
         {tomCounts.length > 0 && (
-          <div className="be-card" style={{ gridColumn: 'span 2' }}>
+          <div className="be-card be-span-2">
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Top-of-Mind brand cloud</h3>
@@ -1036,7 +1036,7 @@ const SectionQuality = ({ study, aggregate, ai }) => {
 
       <PartialDataWarning missing={missingKinds} dimLabel="Quality"/>
 
-      <div className="be-grid-2">
+      <div className="be-stack-2">
         {radarSeries.length > 0 && (
           <div className="be-card">
             <div className="be-card-h">
@@ -1116,7 +1116,7 @@ const SectionQuality = ({ study, aggregate, ai }) => {
         )}
 
         {themes.length > 0 && (
-          <div className="be-card" style={{ gridColumn: 'span 2' }}>
+          <div className="be-card be-span-2">
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Voice of respondent · quality reasons</h3>
@@ -1586,7 +1586,7 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
 
       <PartialDataWarning missing={getMissingKinds(qs, 'loyalty')} dimLabel="Loyalty"/>
 
-      <div className="be-grid-2">
+      <div className="be-stack-2">
         {nps && nps.stats?.n > 0 && (
           <div className="be-card">
             <div className="be-card-h">
@@ -1644,7 +1644,7 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
         )}
 
         {loyThemes.length > 0 && (
-          <div className="be-card" style={{ gridColumn: 'span 2' }}>
+          <div className="be-card be-span-2">
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Why customers stay</h3>

@@ -1,3 +1,38 @@
+## 2026-05-11 — Mobile Layout Fix + 5 More Charts in Thesis DOCX
+
+### Mobile Layout (P0 — RESOLVED)
+- Root cause discovered: 3 cards (`gridColumn: 'span 2'`) inside `.be-grid-2` parents
+  were forcing the implicit grid to expand to 2 columns even when CSS specified single
+  column on mobile. The previous agent's CSS overrides were correct but defeated by
+  `span 2` items creating implicit columns.
+- Fix:
+  1. New defensive class `.be-stack-2` (mobile: `grid-template-columns: minmax(0,1fr)`,
+     desktop ≥901px: `1fr 1fr`) used on the awareness / quality / loyalty wrappers.
+  2. New `.be-span-2` utility (mobile: `grid-column: 1`, desktop: `span 2`) replaces
+     the inline `style={{ gridColumn: 'span 2' }}` so full-bleed cards behave correctly
+     on both viewports.
+  3. `.be-card` now has `overflow-x: hidden`; `.be-page` clamps to viewport — defensive
+     overflow guards.
+- Verified at 390×844 (iPhone) and 1440×900 (desktop). Identity Map stacks vertically
+  with all 5 intended + 9 perceived traits visible; NPS card no longer collapses to
+  ~30px wide.
+
+### Brand Equity Thesis DOCX — 5 new charts + themes appendix
+Brand Equity AI Thesis (`enrich_thesis_docx`) now embeds **16 chart slots** (was 9),
+covering every visible dashboard chart:
+- ก-1 Brand Equity Score 4-dim breakdown (NEW, `render_bes_breakdown`)
+- ก-3 Unaided Recall HBar (NEW, `render_hbar_counts`)
+- ก-4 Aided Recognition HBar (NEW, `render_hbar_counts`)
+- ก-8 Voice of Respondent · quality themes (NEW, `render_open_end_themes`)
+- ก-13 One-word Identity Cloud (NEW, `render_one_word_cloud`)
+- ก-15 Loyalty Means — Repeat Intent + Switching Resistance (NEW, `render_loyalty_means`)
+- ก-16 Why Customers Stay · loyalty themes (NEW, `render_open_end_themes`)
+- New appendix **ฉ — Open-end Themes & Sample Quotes** with verbatim quotes table.
+- Replaced unsupported glyphs (σ, →) with ASCII to avoid Loma font tofu warnings.
+- Verified end-to-end on study `Mali` (21 responses): 13 charts + 18 tables embedded,
+  595 KB DOCX, all Thai labels render with bundled Loma.otf.
+
+
 # CHANGELOG — SWU Marketing Research & Alumni Platform
 
 

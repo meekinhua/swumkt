@@ -12,6 +12,8 @@ The appendix is injected at the end (after AI chapters + References):
   · ภาคผนวก ค — ตารางความถี่ open-ended (TOM, Recall, Aided)
   · ภาคผนวก ง — Identity vs Image trait-by-trait status
   · ภาคผนวก จ — Aaker 4 Perspectives composite breakdown
+  · ภาคผนวก ฉ — Open-end Themes & Sample Quotes (Quality + Loyalty)
+  · ภาคผนวก ช — Composite Summary recap
 """
 import io
 from typing import Any, Dict, List, Optional
@@ -193,20 +195,34 @@ def enrich_thesis_docx(
 
     charts = collect_all_charts(study, aggregate)
     chart_meta = [
-        ("tom_cloud",          "ภาพ ก-1",  "Top-of-Mind Brand Cloud — แบรนด์เป้าหมาย "
+        ("bes_breakdown",       "ภาพ ก-1",  "Brand Equity Score — สรุปองค์ประกอบ 4 มิติ "
+                                            "(Awareness · Quality · Identity · Loyalty)"),
+        ("tom_cloud",          "ภาพ ก-2",  "Top-of-Mind Brand Cloud — แบรนด์เป้าหมาย "
                                             "(สีแดง) เทียบกับคู่แข่ง (สีเทา)"),
-        ("quality_radar",      "ภาพ ก-2",  "Quality Attributes Radar — ค่าเฉลี่ย Likert "
+        ("unaided_recall_bars", "ภาพ ก-3", "Unaided Recall — แบรนด์อื่นที่ผู้ตอบนึกถึงเอง "
+                                            "(ปกติแสดง 8-10 อันดับแรก)"),
+        ("aided_recognition_bars", "ภาพ ก-4", "Aided Recognition — แบรนด์ที่ผู้ตอบรู้จัก "
+                                            "เมื่อถูกแสดงรายชื่อให้เลือก"),
+        ("familiarity_hist",   "ภาพ ก-5",  "Brand Familiarity Distribution (Likert-5)"),
+        ("quality_radar",      "ภาพ ก-6",  "Quality Attributes Radar — ค่าเฉลี่ย Likert "
                                             "(1-7) ปรับเป็น 0-100"),
-        ("image_radar",        "ภาพ ก-3",  "Multi-dimensional Image Radar — แบรนด์ vs คู่แข่ง"),
-        ("perceptual_map",     "ภาพ ก-4",  "Perceptual Map 2 มิติ — เลือกแกนที่แสดงความ "
-                                            "ต่างของแบรนด์ในตลาด"),
-        ("identity_image",     "ภาพ ก-5",  "Identity (ที่แบรนด์ตั้งใจ) vs Image "
-                                            "(ที่ผู้บริโภครับรู้)"),
-        ("perspective_bars",   "ภาพ ก-6",  "Aaker 4 Perspectives — Brand Association "
+        ("overall_quality_hist","ภาพ ก-7", "Overall Quality Distribution (Likert-7)"),
+        ("quality_reason_themes","ภาพ ก-8","Voice of Respondent — เหตุผลด้านคุณภาพ "
+                                            "(Themes จาก open-end ที่ AI cluster)"),
+        ("perspective_bars",   "ภาพ ก-9",  "Aaker 4 Perspectives — Brand Association "
                                             "(Org / Person / Symbol / Product)"),
-        ("nps_bar",            "ภาพ ก-7",  "Net Promoter Score Distribution"),
-        ("familiarity_hist",   "ภาพ ก-8",  "Brand Familiarity Distribution (Likert-5)"),
-        ("overall_quality_hist","ภาพ ก-9", "Overall Quality Distribution (Likert-7)"),
+        ("image_radar",        "ภาพ ก-10", "Multi-dimensional Image Radar — แบรนด์ vs คู่แข่ง"),
+        ("perceptual_map",     "ภาพ ก-11", "Perceptual Map 2 มิติ — เลือกแกนที่แสดงความ "
+                                            "ต่างของแบรนด์ในตลาด"),
+        ("identity_image",     "ภาพ ก-12", "Identity (ที่แบรนด์ตั้งใจ) vs Image "
+                                            "(ที่ผู้บริโภครับรู้)"),
+        ("one_word_cloud",     "ภาพ ก-13", "One-word Identity Cloud — คำเดียวที่ผู้บริโภค "
+                                            "ใช้บรรยายแบรนด์ (คำเขียวคือคำที่ตรงกับ Identity ตั้งใจ)"),
+        ("nps_bar",            "ภาพ ก-14", "Net Promoter Score Distribution"),
+        ("loyalty_means",      "ภาพ ก-15", "Loyalty Behaviour — Repeat Intent & "
+                                            "Switching Resistance (mean ปรับเป็น 0-100)"),
+        ("loyalty_themes",     "ภาพ ก-16", "Why Customers Stay — เหตุผลที่ลูกค้าอยู่ "
+                                            "(Themes จาก open-end ที่ AI cluster)"),
     ]
     appended = 0
     for key, fig_label, caption in chart_meta:
@@ -418,10 +434,57 @@ def enrich_thesis_docx(
                 rows, font_size=11)
 
     # =====================================================================
+    # ภาคผนวก ฉ — Open-end Themes & Sample Quotes (Quality + Loyalty)
+    # =====================================================================
+    themes_map = (ai_cache.get("themes_by_question") or {})
+    _OPEN_TYPES = {"open_text", "open_long", "text", "textarea", "open"}
+    if themes_map:
+        themes_appendix_added = False
+        for dim_label, dim_key, kind_aliases in [
+            ("ฉ.1  Quality — Open-end themes (เหตุผลด้านคุณภาพ)",
+             "quality", ("quality_reasons", "quality_voice")),
+            ("ฉ.2  Loyalty — Open-end themes (Why customers stay)",
+             "loyalty", ("reason_to_stay", "loyalty_reasons")),
+        ]:
+            open_q = next((q for q in questions
+                           if q.get("dimension") == dim_key
+                           and (q.get("type") in _OPEN_TYPES
+                                or q.get("kind") in kind_aliases)), None)
+            if not open_q:
+                continue
+            themes_list = themes_map.get(open_q.get("id")) or []
+            if not themes_list:
+                continue
+            if not themes_appendix_added:
+                doc.add_page_break()
+                _h_section(doc, "ภาคผนวก ฉ — Open-end Themes & Quotes "
+                                "(เหตุผลที่ AI cluster จากคำตอบเปิด)", level=0)
+                _para(doc,
+                      "AI จัดกลุ่มคำตอบ open-end ออกเป็น 3-7 themes พร้อมยกตัวอย่างคำพูดจริง "
+                      "(verbatim quotes) เพื่อให้ผู้อ่านงานวิจัยเข้าใจ texture ของข้อมูลเชิงคุณภาพ.",
+                      italic=True)
+                themes_appendix_added = True
+            _h_sub(doc, dim_label)
+            rows = []
+            for t in themes_list:
+                quote = ""
+                quotes = t.get("sample_quotes") or []
+                if quotes:
+                    quote = str(quotes[0])[:160]
+                rows.append([
+                    str(t.get("name") or "—")[:60],
+                    _fmt(t.get("count")),
+                    quote or "—",
+                ])
+            _data_table(doc,
+                ["Theme", "n", "Sample quote (verbatim)"],
+                rows, font_size=11)
+
+    # =====================================================================
     # Composite summary recap (last sanity table)
     # =====================================================================
     doc.add_page_break()
-    _h_section(doc, "ภาคผนวก ฉ — สรุป Composite ทุกมิติ (Summary)", level=0)
+    _h_section(doc, "ภาคผนวก ช — สรุป Composite ทุกมิติ (Summary)", level=0)
     cm = aggregate.get("composite_meta") or {}
     rows = [
         ["BES (Overall Brand Equity)", _fmt(composite.get("overall")), "—", "—"],
