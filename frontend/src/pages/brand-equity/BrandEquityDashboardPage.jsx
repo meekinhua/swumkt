@@ -784,6 +784,7 @@ const BrandEquityDashboardPage = () => {
         {ready_for_dashboard && (
           <BeMethodology
             canExportThesis={canExportThesis}
+            showExport={!isShowcase}
             thesisProgress={thesisProgress}
             thesisError={thesisError}
             selectedChapters={thesisChapters}

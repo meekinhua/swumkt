@@ -176,6 +176,7 @@ const CHAPTERS_META = [
 
 export const BeMethodology = ({
   canExportThesis = false,
+  showExport = true,         // hide the export card entirely (e.g. on /showcase)
   thesisProgress,            // 'idle' | 'starting' | 'chapter_X' | 'rendering' | 'failed'
   thesisError,               // optional error string
   selectedChapters,          // array of int
@@ -265,7 +266,8 @@ export const BeMethodology = ({
         )}
       </div>
 
-      {/* ============ Thesis Export — collapsed by default, role-gated ============ */}
+      {/* ============ Thesis Export — collapsed by default, role-gated, hidden on /showcase ============ */}
+      {showExport && (
       <div className={`be-appendix-card be-appendix-card--export ${exportOpen ? 'open' : ''}`}
            data-testid="be-thesis-export-card">
         <button type="button"
@@ -393,6 +395,7 @@ export const BeMethodology = ({
           </div>
         )}
       </div>
+      )}
     </section>
   );
 };

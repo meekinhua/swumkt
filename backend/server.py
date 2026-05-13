@@ -11929,8 +11929,15 @@ async def export_thesis_start(
     is_owner = study["creator_id"] == current_user.id
     is_admin = current_user.role == UserRole.ADMIN
     is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
-    if not (is_owner or is_admin or is_whitelisted):
-        raise HTTPException(status_code=403, detail="ไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin")
+    # Rule: (owner AND whitelisted) OR admin
+    if is_admin:
+        pass
+    elif is_owner and is_whitelisted:
+        pass
+    elif is_owner and not is_whitelisted:
+        raise HTTPException(status_code=403, detail="คุณเป็นเจ้าของ study แต่ยังไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin")
+    else:
+        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ study (ที่ได้รับสิทธิ์แล้ว) หรือ admin เท่านั้น")
 
     respondent_count = study.get("respondent_count", 0)
     methods_key = "_".join(sorted(request.methods))

@@ -2446,8 +2446,16 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         if not study:
             raise HTTPException(404, "Study not found")
 
-        if not (is_admin or is_whitelisted or _owns(current_user, study)):
-            raise HTTPException(403, "ไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin หรือเป็นเจ้าของ study เท่านั้น")
+        is_owner = _owns(current_user, study)
+        # Rule: owner-with-permission OR admin (non-owners must be admin)
+        if is_admin:
+            pass  # admins can export anything
+        elif is_owner and is_whitelisted:
+            pass  # owners with whitelist can export their own
+        elif is_owner and not is_whitelisted:
+            raise HTTPException(403, "คุณเป็นเจ้าของ study แต่ยังไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin")
+        else:
+            raise HTTPException(403, "เฉพาะเจ้าของ study (ที่ได้รับสิทธิ์แล้ว) หรือ admin เท่านั้น")
 
         all_responses = await db.brand_responses.find(
             {"study_id": study_id}, {"_id": 0}

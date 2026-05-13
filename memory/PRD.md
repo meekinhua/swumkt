@@ -293,7 +293,14 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
 ## Thesis Export Permission Whitelist (Feb 2026 — NEW)
 - **Schema**: `users.can_export_thesis: bool = False` — central whitelist flag (instead of separate teacher role)
 - **Backend**: `PUT /api/admin/users/{user_id}/thesis-export-permission` body `{enabled: bool}` — admin only; invalidates in-memory user cache so flag takes effect immediately (no re-login needed)
-- **Gates**: BE `/brand-equity/studies/{id}/thesis-export` + CJ `/conjoint/studies/{id}/export-thesis` now allow: owner ∪ admin ∪ whitelisted users (same rule for both modules)
+- **Gates updated (Feb 2026 round 2)**: New rule = **(owner AND whitelisted) OR admin**
+  - Owner without whitelist → 403 "คุณเป็นเจ้าของ study แต่ยังไม่ได้รับสิทธิ์ Export Thesis"
+  - Non-owner non-admin → 403 "เฉพาะเจ้าของ study (ที่ได้รับสิทธิ์แล้ว) หรือ admin"
+  - Non-owner admin → ✓ (40KB DOCX verified via curl)
+- **Frontend hide policy**:
+  - `/showcase/{token}` (public BE dashboard) — Export card completely hidden via `showExport={!isShowcase}` prop on `BeMethodology`; rest of methodology content preserved
+  - `/conjoint/results/{id}` — Export buttons (both `export-thesis-btn` + `export-thesis-after-ai-btn`) gated by `isOwnerOrAdmin`
+- Export available only on tools pages: `/brand-equity/studies/{id}` and `/conjoint/results/{id}` (owner view)
 - **`/thesis-eligible` endpoint**: returns `{eligible, role, can_export_thesis}` — frontend uses to show/hide export button
 - **Admin UI** at `/admin/users`: each user card has `🎓 Allow Thesis` button (toggle to `Thesis: ON` green) + `🎓 THESIS` badge next to name when granted; supports 24 users with auto-pagination via `?limit=500`
 - Verified end-to-end: grant via UI → toast → badge appears → student's `/thesis-eligible` flips to `true`

@@ -1202,6 +1202,7 @@ const ConjointResultsPage = () => {
                     </>
                   )}
                 </Button>
+                {isOwnerOrAdmin && (
                 <Button
                   onClick={handleExportThesis}
                   disabled={loadingThesis || loadingAI || loadingPrompt}
@@ -1220,6 +1221,7 @@ const ConjointResultsPage = () => {
                     </>
                   )}
                 </Button>
+                )}
               </div>
               {generatedPrompt && !aiInterpretation && (
                 <div className="mt-6 text-left" data-testid="generated-prompt-section">
@@ -1296,6 +1298,7 @@ const ConjointResultsPage = () => {
                       </>
                     )}
                   </Button>
+                  {isOwnerOrAdmin && (
                   <Button
                     onClick={handleExportThesis}
                     disabled={loadingThesis}
@@ -1315,6 +1318,7 @@ const ConjointResultsPage = () => {
                       </>
                     )}
                   </Button>
+                  )}
                 </div>
               </div>
               <div className="prose max-w-none">
