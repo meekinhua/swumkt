@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '@/App';
 
+const PAGE_SIZE = 100;
+
 const AdminUserManagement = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
@@ -23,6 +25,10 @@ const AdminUserManagement = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [hardcodedAdmins, setHardcodedAdmins] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // debounced search term to avoid hammering backend on every keystroke
+  const [debouncedQ, setDebouncedQ] = useState('');
 
   useEffect(() => {
     if (user && user.role === 'admin') {
@@ -33,45 +39,56 @@ const AdminUserManagement = () => {
   }, [user]);
 
   useEffect(() => {
-    // Filter users based on search query
-    if (!allUsers || allUsers.length === 0) {
-      setFilteredUsers([]);
-      return;
+    const t = setTimeout(() => setDebouncedQ(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    // When the debounced search changes (or on initial mount after admins load),
+    // re-query the server from page 0.
+    if (!user || user.role !== 'admin') return;
+    reloadUsersFromServer();
+  }, [debouncedQ]);
+
+  const reloadUsersFromServer = async (append = false) => {
+    try {
+      if (append) setLoadingMore(true);
+      const skip = append ? allUsers.length : 0;
+      const params = new URLSearchParams({ skip: String(skip), limit: String(PAGE_SIZE) });
+      if (debouncedQ) params.set('q', debouncedQ);
+      const [usersR, countR] = await Promise.all([
+        axios.get(`${API}/admin/users?${params.toString()}`,
+                  { headers: { Authorization: `Bearer ${token}` } }),
+        append ? Promise.resolve({ data: { total: totalCount } })
+               : axios.get(`${API}/admin/users/count${debouncedQ ? `?q=${encodeURIComponent(debouncedQ)}` : ''}`,
+                           { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const list = Array.isArray(usersR.data) ? usersR.data : (usersR.data?.users || []);
+      const next = append ? [...allUsers, ...list] : list;
+      setAllUsers(next);
+      setFilteredUsers(next);
+      setTotalCount(countR.data?.total ?? next.length);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast.error('โหลดผู้ใช้ไม่สำเร็จ: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoadingMore(false);
     }
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const filtered = allUsers.filter(u => 
-        u?.full_name?.toLowerCase().includes(query) ||
-        u?.email?.toLowerCase().includes(query)
-      );
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers(allUsers);
-    }
-  }, [searchQuery, allUsers]);
+  };
 
   const loadData = async () => {
     try {
-      // Load admins
+      // Load admins (separate endpoint — always returns ALL admins, no pagination needed)
       const adminsResponse = await axios.get(`${API}/admin/users/admins`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAdmins(adminsResponse.data.admins || []);
       setHardcodedAdmins(adminsResponse.data.hardcoded_admins || []);
-
-      // Load all users — backend route returns a plain list
-      const usersResponse = await axios.get(`${API}/admin/users?limit=500`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const raw = usersResponse.data;
-      const usersList = Array.isArray(raw) ? raw : (raw?.users || []);
-      setAllUsers(usersList);
-      setFilteredUsers(usersList);
+      // Initial users page
+      await reloadUsersFromServer(false);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('ไม่สามารถโหลดข้อมูลได้: ' + (error.response?.data?.detail || error.message));
-      // Set empty arrays on error
       setAdmins([]);
       setAllUsers([]);
       setFilteredUsers([]);
@@ -257,7 +274,7 @@ const AdminUserManagement = () => {
         <Card className="p-6 bg-white/98 border-2 border-gray-300 shadow-xl">
           <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-2">
             <UserCheck className="w-6 h-6 text-[#00A9CE]" />
-            ผู้ใช้ทั้งหมด ({allUsers.length})
+            ผู้ใช้ทั้งหมด ({allUsers.length}{totalCount > allUsers.length ? ` / ${totalCount}` : ''})
           </h2>
 
           {/* Search */}
@@ -354,6 +371,22 @@ const AdminUserManagement = () => {
               ))
             )}
           </div>
+          {/* Load more */}
+          {allUsers.length < totalCount && (
+            <div className="pt-4 mt-3 border-t border-gray-200 flex justify-center">
+              <Button
+                onClick={() => reloadUsersFromServer(true)}
+                disabled={loadingMore}
+                variant="outline"
+                className="border-2 border-[#007B9A] text-[#007B9A] font-bold hover:bg-[#007B9A] hover:text-white"
+                data-testid="load-more-users-btn"
+              >
+                {loadingMore
+                  ? 'กำลังโหลด...'
+                  : `โหลดเพิ่มอีก ${Math.min(PAGE_SIZE, totalCount - allUsers.length)} คน (เหลือ ${totalCount - allUsers.length})`}
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
     </div>

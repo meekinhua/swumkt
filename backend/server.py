@@ -1342,17 +1342,49 @@ async def promote_trust_user(
 @api_router.get("/admin/users", response_model=List[UserProfile])
 async def list_users(
     user_type: Optional[UserType] = None,
+    q: Optional[str] = None,        # search query (email or full_name, case-insensitive)
     skip: int = 0,
     limit: int = 50,
     admin_user: User = Depends(get_admin_user)
 ):
-    """List all users with optional filtering (Admin only)"""
-    query = {}
+    """List all users with optional filtering + search (Admin only).
+    `q` matches against email or full_name (case-insensitive substring).
+    Cap limit at 1000 to protect the DB; use `skip` for pagination."""
+    query: Dict[str, Any] = {}
     if user_type:
         query["user_type"] = user_type
-    
-    users = await db.users.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    if q and q.strip():
+        # Escape regex special chars to avoid ReDoS / accidental wildcards
+        import re as _re
+        safe = _re.escape(q.strip())
+        query["$or"] = [
+            {"email":     {"$regex": safe, "$options": "i"}},
+            {"full_name": {"$regex": safe, "$options": "i"}},
+        ]
+    capped = max(1, min(int(limit or 50), 1000))
+    users = await db.users.find(query, {"_id": 0}).skip(int(skip or 0)).limit(capped).to_list(capped)
     return [UserProfile(**User(**u).model_dump()) for u in users]
+
+
+@api_router.get("/admin/users/count")
+async def count_users(
+    user_type: Optional[UserType] = None,
+    q: Optional[str] = None,
+    admin_user: User = Depends(get_admin_user),
+):
+    """Total user count matching the same filter — for pagination UI."""
+    query: Dict[str, Any] = {}
+    if user_type:
+        query["user_type"] = user_type
+    if q and q.strip():
+        import re as _re
+        safe = _re.escape(q.strip())
+        query["$or"] = [
+            {"email":     {"$regex": safe, "$options": "i"}},
+            {"full_name": {"$regex": safe, "$options": "i"}},
+        ]
+    total = await db.users.count_documents(query)
+    return {"total": total}
 
 # ============ SURVEY ROUTES ============
 @api_router.post("/surveys", response_model=Survey)

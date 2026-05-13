@@ -302,7 +302,8 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
   - `/conjoint/results/{id}` — Export buttons (both `export-thesis-btn` + `export-thesis-after-ai-btn`) gated by `isOwnerOrAdmin`
 - Export available only on tools pages: `/brand-equity/studies/{id}` and `/conjoint/results/{id}` (owner view)
 - **`/thesis-eligible` endpoint**: returns `{eligible, role, can_export_thesis}` — frontend uses to show/hide export button
-- **Admin UI** at `/admin/users`: each user card has `🎓 Allow Thesis` button (toggle to `Thesis: ON` green) + `🎓 THESIS` badge next to name when granted; supports 24 users with auto-pagination via `?limit=500`
+- **Admin UI** at `/admin/users`: each user card has `🎓 Allow Thesis` button (toggle to `Thesis: ON` green) + `🎓 THESIS` badge next to name when granted; server-side search (`?q=`, debounced 300ms) + Load More pagination (100/page, cap 1000) — scales to any user count
+- **Admin Users API**: `/api/admin/users?q={search}&skip={n}&limit={n}` (cap 1000) + `/api/admin/users/count?q={search}` for pagination UI
 - Verified end-to-end: grant via UI → toast → badge appears → student's `/thesis-eligible` flips to `true`
 
 ## Credentials
