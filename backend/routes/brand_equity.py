@@ -2409,13 +2409,18 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     @brand_equity_router.get("/thesis-eligible")
     async def thesis_eligible(current_user=Depends(get_current_user)):
         """Returns whether the current user can use the thesis export feature.
-        Currently open to ADMIN, CURRENT_STUDENT, ALUMNI. FACULTY role TBD."""
+        Eligible: ADMIN, or any user with `can_export_thesis=True` whitelist flag."""
         from server import UserRole
-        eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}
-        eligible = (current_user.role in eligible_roles) if current_user else False
-        return {"eligible": bool(eligible),
-                "feature": "thesis_export",
-                "role": getattr(current_user, "role", None)}
+        if not current_user:
+            return {"eligible": False, "feature": "thesis_export", "role": None}
+        is_admin = current_user.role == UserRole.ADMIN
+        is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
+        return {
+            "eligible": bool(is_admin or is_whitelisted),
+            "feature": "thesis_export",
+            "role": getattr(current_user, "role", None),
+            "can_export_thesis": is_whitelisted,
+        }
 
     @brand_equity_router.post("/studies/{study_id}/thesis-export")
     async def thesis_export(
@@ -2426,21 +2431,23 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         current_user=Depends(get_current_user),
     ):
         """Generate a thesis-ready DOCX of this study (Aaker-aligned methodology).
-        Role-gated: ADMIN / CURRENT_STUDENT / ALUMNI only. Honors active filter
-        (from/to/segments) so users can export segment-specific reports."""
+        Permission: ADMIN, owner of study, or user with `can_export_thesis=True`.
+        Honors active filter (from/to/segments) so users can export segment-specific reports."""
         from fastapi.responses import StreamingResponse
         from server import UserRole
         from .thesis_renderer import render_thesis_docx
 
-        eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}
-        if not current_user or current_user.role not in eligible_roles:
-            raise HTTPException(403, "Thesis export not available for your role.")
+        if not current_user:
+            raise HTTPException(403, "Login required")
+        is_admin = current_user.role == UserRole.ADMIN
+        is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
 
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(404, "Study not found")
-        if not _owns(current_user, study):
-            raise HTTPException(403, "You do not own this study.")
+
+        if not (is_admin or is_whitelisted or _owns(current_user, study)):
+            raise HTTPException(403, "ไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin หรือเป็นเจ้าของ study เท่านั้น")
 
         all_responses = await db.brand_responses.find(
             {"study_id": study_id}, {"_id": 0}

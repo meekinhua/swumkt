@@ -290,6 +290,14 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
 - Helper: `/app/backend/lib/ttl_cache.py` — async-safe, single-flight locking, `_skip_cache=True` escape, `invalidate_prefix()` for write hooks
 - Verified via iteration_19: 9/9 backend pytest pass + frontend 100% flows pass
 
+## Thesis Export Permission Whitelist (Feb 2026 — NEW)
+- **Schema**: `users.can_export_thesis: bool = False` — central whitelist flag (instead of separate teacher role)
+- **Backend**: `PUT /api/admin/users/{user_id}/thesis-export-permission` body `{enabled: bool}` — admin only; invalidates in-memory user cache so flag takes effect immediately (no re-login needed)
+- **Gates**: BE `/brand-equity/studies/{id}/thesis-export` + CJ `/conjoint/studies/{id}/export-thesis` now allow: owner ∪ admin ∪ whitelisted users (same rule for both modules)
+- **`/thesis-eligible` endpoint**: returns `{eligible, role, can_export_thesis}` — frontend uses to show/hide export button
+- **Admin UI** at `/admin/users`: each user card has `🎓 Allow Thesis` button (toggle to `Thesis: ON` green) + `🎓 THESIS` badge next to name when granted; supports 24 users with auto-pagination via `?limit=500`
+- Verified end-to-end: grant via UI → toast → badge appears → student's `/thesis-eligible` flips to `true`
+
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
 - Student: student1@swu.ac.th / student123

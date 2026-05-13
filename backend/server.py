@@ -566,6 +566,7 @@ class User(BaseModel):
     demographics_profile: Optional[DemographicsProfile] = None
     user_rating: UserRating = Field(default_factory=UserRating)
     promoted_to_trust: Optional[TrustPromotion] = None
+    can_export_thesis: bool = False  # Whitelist flag — admin grants thesis export privilege
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -584,6 +585,7 @@ class UserProfile(BaseModel):
     demographics_profile: Optional[DemographicsProfile] = None
     user_rating: Optional[UserRating] = None
     promoted_to_trust: Optional[TrustPromotion] = None
+    can_export_thesis: bool = False
 
 class AuthResponse(BaseModel):
     access_token: str
@@ -7440,6 +7442,39 @@ async def demote_from_admin(
     
     return {"message": f"User {user['full_name']} demoted from admin"}
 
+
+# Toggle thesis-export whitelist permission (admin only)
+class ThesisExportPermissionUpdate(BaseModel):
+    enabled: bool
+
+
+@api_router.put("/admin/users/{user_id}/thesis-export-permission")
+async def set_thesis_export_permission(
+    user_id: str,
+    body: ThesisExportPermissionUpdate,
+    current_user: User = Depends(get_admin_user),
+):
+    """Grant or revoke thesis-export privilege on a per-user basis.
+    Admins always have permission regardless of this flag."""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "can_export_thesis": bool(body.enabled),
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+    # Invalidate cached User so the next request sees the new flag immediately
+    _user_cache.pop(user_id, None)
+    return {
+        "message": f"User {user['full_name']} thesis-export permission "
+                   f"{'granted' if body.enabled else 'revoked'}",
+        "can_export_thesis": bool(body.enabled),
+    }
+
+
 # Include the router
 
 # ============================================================================
@@ -11891,8 +11926,11 @@ async def export_thesis_start(
     study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
-    if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    is_owner = study["creator_id"] == current_user.id
+    is_admin = current_user.role == UserRole.ADMIN
+    is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
+    if not (is_owner or is_admin or is_whitelisted):
+        raise HTTPException(status_code=403, detail="ไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin")
 
     respondent_count = study.get("respondent_count", 0)
     methods_key = "_".join(sorted(request.methods))

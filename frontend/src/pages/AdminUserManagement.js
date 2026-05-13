@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, Shield, UserCheck, UserX, Search, Crown, 
-  ChevronUp, ChevronDown, AlertTriangle 
+  ChevronUp, ChevronDown, AlertTriangle, GraduationCap 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -60,12 +60,14 @@ const AdminUserManagement = () => {
       setAdmins(adminsResponse.data.admins || []);
       setHardcodedAdmins(adminsResponse.data.hardcoded_admins || []);
 
-      // Load all users
-      const usersResponse = await axios.get(`${API}/admin/users`, {
+      // Load all users — backend route returns a plain list
+      const usersResponse = await axios.get(`${API}/admin/users?limit=500`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAllUsers(usersResponse.data.users || []);
-      setFilteredUsers(usersResponse.data.users || []);
+      const raw = usersResponse.data;
+      const usersList = Array.isArray(raw) ? raw : (raw?.users || []);
+      setAllUsers(usersList);
+      setFilteredUsers(usersList);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('ไม่สามารถโหลดข้อมูลได้: ' + (error.response?.data?.detail || error.message));
@@ -116,6 +118,23 @@ const AdminUserManagement = () => {
     } catch (error) {
       console.error('Error demoting user:', error);
       toast.error(error.response?.data?.detail || 'ไม่สามารถลดตำแหน่งได้');
+    }
+  };
+
+  const handleToggleThesisExport = async (userId, userName, currentlyEnabled) => {
+    const action = currentlyEnabled ? 'ยกเลิก' : 'อนุญาต';
+    if (!window.confirm(`${action}สิทธิ์ Export Thesis ของ ${userName}?`)) return;
+    try {
+      await axios.put(
+        `${API}/admin/users/${userId}/thesis-export-permission`,
+        { enabled: !currentlyEnabled },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`✅ ${action}สิทธิ์ Export Thesis ของ ${userName} แล้ว`);
+      loadData();
+    } catch (error) {
+      console.error('Error toggling thesis-export permission:', error);
+      toast.error(error.response?.data?.detail || 'ไม่สามารถปรับสิทธิ์ได้');
     }
   };
 
@@ -289,6 +308,13 @@ const AdminUserManagement = () => {
                               SUPER
                             </span>
                           )}
+                          {u.can_export_thesis && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded"
+                                  data-testid={`thesis-badge-${u.id}`}>
+                              <GraduationCap className="w-3 h-3" />
+                              THESIS
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600 truncate">{u.email}</p>
                         <div className="flex items-center gap-2 mt-1">
@@ -302,7 +328,17 @@ const AdminUserManagement = () => {
                       </div>
                     </div>
                     
-                    <div className="ml-4 flex-shrink-0">
+                    <div className="ml-4 flex-shrink-0 flex flex-col gap-2 items-end">
+                      <Button
+                        onClick={() => handleToggleThesisExport(u.id, u.full_name, !!u.can_export_thesis)}
+                        data-testid={`toggle-thesis-${u.id}`}
+                        className={u.can_export_thesis
+                          ? 'bg-emerald-600 text-white font-bold hover:bg-emerald-700'
+                          : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50'}
+                      >
+                        <GraduationCap className="w-4 h-4 mr-2" />
+                        {u.can_export_thesis ? 'Thesis: ON' : 'Allow Thesis'}
+                      </Button>
                       {u.role !== 'admin' && (
                         <Button
                           onClick={() => handlePromoteToAdmin(u.id, u.full_name)}
