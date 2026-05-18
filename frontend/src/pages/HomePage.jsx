@@ -33,6 +33,42 @@ const FALLBACK_HEADLINES = [
   },
 ];
 
+// Hero typography wrapper — wraps H1+lede in a clickable region when ctaUrl is set.
+// External URLs (http(s)://) open in new tab via <a>; internal paths use react-router <Link>.
+// When no ctaUrl, renders a plain <div> (no click affordance, no underline).
+const HeroClickable = ({ href, children, testid }) => {
+  if (!href) {
+    return <div data-testid={testid}>{children}</div>;
+  }
+  const isExternal = /^https?:\/\//i.test(href);
+  const sharedStyle = {
+    display: 'block',
+    color: 'inherit',
+    textDecoration: 'none',
+    cursor: 'pointer',
+  };
+  if (isExternal) {
+    return (
+      <a href={href}
+         target="_blank"
+         rel="noopener noreferrer"
+         data-testid={testid}
+         data-cta-external="true"
+         style={sharedStyle}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link to={href}
+          data-testid={testid}
+          data-cta-internal="true"
+          style={sharedStyle}>
+      {children}
+    </Link>
+  );
+};
+
 const HomePage = () => {
   const [showcases, setShowcases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,12 +111,19 @@ const HomePage = () => {
       imageAlt: p.title,
       imageCaption: p.category || 'PR',
       media: p.media || [],
-      _announcement: { id: p.id, slug: p.slug },  // hint: clickable to detail page
+      // CTA — admin-defined cta_url takes precedence; fallback ไปหน้ารายละเอียดข่าว /learn/{slug}
+      ctaUrl: (p.cta_url && String(p.cta_url).trim()) || (p.slug ? `/learn/${p.slug}` : ''),
+      _announcement: { id: p.id, slug: p.slug },
     }));
   }, [pinnedAnnouncements]);
 
   // Combine: pinned announcements first, then static landing slides
-  const STATIC_HEADLINES = (landing?.slides && landing.slides.length > 0) ? landing.slides : FALLBACK_HEADLINES;
+  const _STATIC_RAW = (landing?.slides && landing.slides.length > 0) ? landing.slides : FALLBACK_HEADLINES;
+  // Normalise cta_url → ctaUrl so the renderer reads one consistent field
+  const STATIC_HEADLINES = _STATIC_RAW.map((s) => ({
+    ...s,
+    ctaUrl: s.ctaUrl || (s.cta_url && String(s.cta_url).trim()) || '',
+  }));
   const HEADLINES = announcementSlides.length > 0
     ? [...announcementSlides, ...STATIC_HEADLINES]
     : STATIC_HEADLINES;
@@ -205,28 +248,40 @@ const HomePage = () => {
 
             {/* Left — typography */}
             <div className="fade-up fade-up-2">
-              <h1 className="h-display rotator-shell"
-                  data-testid="hero-h1"
-                  style={{ fontSize: 'clamp(48px, 7vw, 96px)', minHeight: '3.4em' }}>
-                <span key={`h-${headIdx}`} className="rotate-in rotate-stack">
-                  {head.heroPre.map((line, i) => (
-                    <React.Fragment key={i}>
-                      {i === head.heroAccentIdx ? (
-                        <span className="italic-accent">{line}</span>
-                      ) : (
-                        <span>{line}</span>
-                      )}
-                      {i < head.heroPre.length - 1 && <br/>}
-                    </React.Fragment>
-                  ))}
-                  <span>.</span>
-                </span>
-              </h1>
-              <p key={`l-${headIdx}`} className="lede rotate-in-slow"
-                 data-testid="hero-lede"
-                 style={{ marginTop: 32, maxWidth: '46ch', minHeight: '5.2em' }}>
-                {head.lede}
-              </p>
+              <HeroClickable href={head.ctaUrl} testid="hero-cta-wrap">
+                <h1 className="h-display rotator-shell"
+                    data-testid="hero-h1"
+                    style={{ fontSize: 'clamp(48px, 7vw, 96px)', minHeight: '3.4em' }}>
+                  <span key={`h-${headIdx}`} className="rotate-in rotate-stack">
+                    {head.heroPre.map((line, i) => (
+                      <React.Fragment key={i}>
+                        {i === head.heroAccentIdx ? (
+                          <span className="italic-accent">{line}</span>
+                        ) : (
+                          <span>{line}</span>
+                        )}
+                        {i < head.heroPre.length - 1 && <br/>}
+                      </React.Fragment>
+                    ))}
+                    <span>.</span>
+                  </span>
+                </h1>
+                <p key={`l-${headIdx}`} className="lede rotate-in-slow"
+                   data-testid="hero-lede"
+                   style={{ marginTop: 32, maxWidth: '46ch', minHeight: '5.2em' }}>
+                  {head.lede}
+                </p>
+                {head.ctaUrl && (
+                  <div data-testid="hero-cta-hint"
+                       style={{ marginTop: 16, fontFamily: 'IBM Plex Mono, monospace',
+                                fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
+                                color: 'var(--logo-red, #C8102E)', display: 'inline-flex',
+                                alignItems: 'center', gap: 6 }}>
+                    <span>อ่านต่อ</span>
+                    <span aria-hidden>↗</span>
+                  </div>
+                )}
+              </HeroClickable>
               <div style={{ display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
                 <Link to="/showcase" className="btn-pill btn-pill--blue" data-testid="hero-showcase-btn">
                   ดูผลงานทั้งหมด <span>→</span>

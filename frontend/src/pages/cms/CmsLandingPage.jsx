@@ -315,6 +315,20 @@ const CmsLandingPage = () => {
                   onChange={(next) => updateSlide(i, 'media', next)}
                   prefix={`slide-${i}-media`}
                 />
+
+                {/* CTA URL — make the whole hero slide clickable to this destination */}
+                <div className="mt-3 p-3 rounded border-2 border-red-200 bg-red-50/50"
+                     data-testid={`slide-${i}-cta-block`}>
+                  <Label>🔗 CTA URL — ลิงก์ปลายทางเมื่อคลิก hero สไลด์นี้ (ว่างไว้ = ไม่ clickable)</Label>
+                  <input value={s.cta_url || ''}
+                         onChange={e => updateSlide(i, 'cta_url', e.target.value)}
+                         placeholder="/learn/my-article  หรือ  https://example.com/news"
+                         data-testid={`slide-${i}-cta-url`}
+                         className="w-full border border-neutral-300 rounded px-3 py-2 text-sm font-mono"/>
+                  <p className="text-[11px] text-neutral-500 mt-1 italic">
+                    รองรับทั้ง internal path (เริ่มด้วย <code className="font-mono">/</code>) และ external URL (เริ่มด้วย <code className="font-mono">http(s)://</code> เปิดแท็บใหม่)
+                  </p>
+                </div>
               </div>
             ))}
           </div>

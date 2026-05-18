@@ -13,7 +13,7 @@ const CmsEditorPage = () => {
     type: 'article', title: '', title_en: '', slug: '', category: 'Brand Strategy',
     excerpt: '', body_md: '', cover_image: null, cover_caption: '', read_min: 5,
     tags: [], source_refs: [], status: 'draft',
-    media: [], pinned_to_home: false, pinned_order: 0,
+    media: [], pinned_to_home: false, pinned_order: 0, cta_url: '',
   });
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState({ text: false, image: false, summary: false, translate: false });
@@ -210,26 +210,43 @@ const CmsEditorPage = () => {
 
             {/* Announcement-specific: pin to home hero */}
             {post.type === 'announcement' && (
-              <div className="mt-4 p-3 rounded border-2 border-yellow-300 bg-yellow-50 flex flex-wrap items-center gap-4"
-                   data-testid="cms-announcement-pin-block">
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={!!post.pinned_to_home}
-                         onChange={e => setPost({...post, pinned_to_home: e.target.checked})}
-                         data-testid="cms-pin-toggle"/>
-                  <span className="text-sm font-bold">📌 ปักหมุดบนหน้าแรก (Hero)</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-600">ลำดับ:</span>
-                  <input type="number" value={post.pinned_order ?? 0}
-                         onChange={e => setPost({...post, pinned_order: parseInt(e.target.value) || 0})}
-                         data-testid="cms-pin-order"
-                         className="w-20 border border-neutral-300 rounded px-2 py-1 text-sm"/>
-                  <span className="text-[11px] text-neutral-500">เลขน้อย = แสดงก่อน</span>
+              <>
+                <div className="mt-4 p-3 rounded border-2 border-yellow-300 bg-yellow-50 flex flex-wrap items-center gap-4"
+                     data-testid="cms-announcement-pin-block">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!post.pinned_to_home}
+                           onChange={e => setPost({...post, pinned_to_home: e.target.checked})}
+                           data-testid="cms-pin-toggle"/>
+                    <span className="text-sm font-bold">📌 ปักหมุดบนหน้าแรก (Hero)</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-neutral-600">ลำดับ:</span>
+                    <input type="number" value={post.pinned_order ?? 0}
+                           onChange={e => setPost({...post, pinned_order: parseInt(e.target.value) || 0})}
+                           data-testid="cms-pin-order"
+                           className="w-20 border border-neutral-300 rounded px-2 py-1 text-sm"/>
+                    <span className="text-[11px] text-neutral-500">เลขน้อย = แสดงก่อน</span>
+                  </div>
+                  <span className="text-[11px] text-neutral-500 italic">
+                    เลิกปักหมุดได้ตลอด — เนื้อหายังเก็บไว้ในหน้า ประชาสัมพันธ์
+                  </span>
                 </div>
-                <span className="text-[11px] text-neutral-500 italic">
-                  เลิกปักหมุดได้ตลอด — เนื้อหายังเก็บไว้ในหน้า ประชาสัมพันธ์
-                </span>
-              </div>
+
+                {/* CTA URL for announcement — overrides default /learn/{slug} */}
+                <div className="mt-3 p-3 rounded border-2 border-red-200 bg-red-50/50"
+                     data-testid="cms-announcement-cta-block">
+                  <Label>🔗 CTA URL — ลิงก์ปลายทางเมื่อคลิก hero ของข่าวนี้</Label>
+                  <input value={post.cta_url || ''}
+                         onChange={e => setPost({...post, cta_url: e.target.value})}
+                         placeholder="/learn/my-slug  หรือ  https://example.com/news"
+                         data-testid="cms-input-cta-url"
+                         className="w-full border border-neutral-300 rounded px-3 py-2 text-sm font-mono"/>
+                  <p className="text-[11px] text-neutral-500 mt-1 italic">
+                    ว่างไว้ = ไปหน้ารายละเอียดอัตโนมัติ (<code className="font-mono">/learn/{post.slug || '{slug}'}</code>) ·
+                    รองรับทั้ง internal path และ external URL (เปิดแท็บใหม่)
+                  </p>
+                </div>
+              </>
             )}
 
             <div className="mt-4">

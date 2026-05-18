@@ -281,6 +281,20 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
   - `/announcements` แสดง card พร้อม badge "PINNED ON HOME"
   - Cache invalidation ทำงาน — ไม่ต้องรอ 60s
 
+### Hero Clickable CTA (Feb 2026 — NEW)
+- **Schema**: `CmsPost.cta_url` + `LandingSlide.cta_url` (string, optional) — admin-defined destination URL
+- **Backend**: `create_post` now persists `cta_url` (bug fix: เคยถูก drop ตอน insert); `update_post` ใช้ `model_dump(exclude_unset=True)` ผ่านได้อยู่แล้ว
+- **Frontend HomePage**: `HeroClickable` helper wraps H1+lede+"อ่านต่อ ↗" hint
+  - External URL (เริ่มด้วย `http(s)://`) → `<a target="_blank" rel="noopener noreferrer">`
+  - Internal path → react-router `<Link>` (SPA navigation)
+  - ถ้าไม่มี cta_url ใน announcement → fallback ไป `/learn/{slug}` อัตโนมัติ
+  - ถ้าไม่มี cta_url ใน static landing slide → ไม่ clickable (ไม่แสดง hint)
+  - Buttons (`ดูผลงานทั้งหมด`, `เริ่มอ่านใจตลาดฟรี`), rotation dots, และ SlideMedia (YouTube play) ทำงานปกติไม่ถูกครอบ
+- **Admin UI**:
+  - `/admin/cms/landing` per slide: red CTA URL block พร้อม placeholder รองรับทั้ง internal/external
+  - `/admin/cms/posts/:id` (type=announcement): red CTA URL block ใต้ pin block พร้อม hint default `/learn/{slug}`
+- **Verified E2E**: สร้าง announcement พร้อม `cta_url=https://example.com/news/123` → publish → pinned → ขึ้น slide ที่ 2 ของ hero พร้อม `<a target="_blank" href="https://...">` ครอบ H1+lede ✓
+
 ## Hero Multi-Media Announcement Slides (Feb 2026 — superseded)
 - **Backend schema**: `LandingSlide.media: List[SlideMediaItem]` where `{kind: 'image'|'youtube', src, alt, caption}` — multiple per slide; legacy `image` field kept as fallback
 - **Frontend rendering** (`/app/frontend/src/components/SlideMedia.jsx`): auto-rotating intra-slide carousel (4.5s). **Lazy-load YouTube**: shows hqdefault thumbnail + red ▶ play button by default so outer hero carousel keeps rotating; iframe loads on click with `autoplay=1` and pause becomes sticky until user navigates away. Clicking inner dot = 30s grace pause + dwell. Hover also pauses outer rotation. ▶ VIDEO red badge for YT items; dots top-right with red active marker for YT, black for image
