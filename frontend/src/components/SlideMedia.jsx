@@ -48,32 +48,34 @@ export const SlideMedia = ({
 
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
-  // Sticky pause stays on after user interaction so outer carousel doesn't yank away mid-view
+  // Sticky pause turns on ONLY when the user explicitly interacts (clicks dot, hits play, etc.)
+  // Simply auto-rotating onto a YouTube slide should NOT pause — show the thumbnail and keep going.
   const [stickyPause, setStickyPause] = useState(false);
+  // Whether the YouTube iframe at the current slot has actually been activated by user click
+  const [activatedYT, setActivatedYT] = useState({});
+
+  // Reset YT activation when items collection changes
+  useEffect(() => { setActivatedYT({}); }, [items]);
 
   // Keep idx in bounds when items change
   useEffect(() => { if (idx >= items.length) setIdx(0); }, [items.length, idx]);
 
-  // Whenever the active item is a YouTube video, lock pause to true permanently
-  // (user clicks a different dot to release). For images, sticky resets when
-  // user clicks an image dot — pauses for 30s of dwell time then resumes.
+  // Sticky pause auto-releases after 30s — except when a YouTube has been activated (user is watching)
   useEffect(() => {
-    if (items[idx]?.kind === 'youtube') {
-      setStickyPause(true);
-      return undefined;
-    }
-    // image item — release sticky after 30s if no further interaction
-    if (stickyPause) {
-      const t = setTimeout(() => setStickyPause(false), 30000);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [idx, items, stickyPause]);
+    if (!stickyPause) return undefined;
+    if (activatedYT[idx]) return undefined;  // keep sticky while video is loaded
+    const t = setTimeout(() => setStickyPause(false), 30000);
+    return () => clearTimeout(t);
+  }, [stickyPause, activatedYT, idx]);
 
-  // User clicked a dot → set sticky pause so neither inner nor outer carousels move on them
+  // User clicked a dot → freeze both inner + outer briefly so they can look
   const onDotClick = (i, e) => {
     e.stopPropagation();
     setIdx(i);
+    setStickyPause(true);
+  };
+  const onYTPlay = (i) => {
+    setActivatedYT(prev => ({ ...prev, [i]: true }));
     setStickyPause(true);
   };
 
@@ -84,13 +86,15 @@ export const SlideMedia = ({
     }
   }, [paused, stickyPause, onPauseRequest]);
 
-  // Auto-rotate inner items
+  // Auto-rotate inner items — only halts if user is hovering, sticky pause is active,
+  // or a YouTube video has actually been activated for playback. A YouTube thumbnail
+  // by itself is just a static image as far as rotation is concerned.
   useEffect(() => {
     if (paused || stickyPause || items.length <= 1) return undefined;
-    if (items[idx]?.kind === 'youtube') return undefined;
+    if (items[idx]?.kind === 'youtube' && activatedYT[idx]) return undefined;
     const t = setInterval(() => setIdx(i => (i + 1) % items.length), interval);
     return () => clearInterval(t);
-  }, [items, idx, interval, paused, stickyPause]);
+  }, [items, idx, interval, paused, stickyPause, activatedYT]);
 
   if (items.length === 0) {
     return (
@@ -120,14 +124,39 @@ export const SlideMedia = ({
                       width: '100%', height: '100%', objectFit: 'cover',
                       position: 'absolute', inset: 0 }}/>
       ) : ytId ? (
-        <iframe key={`m-${idx}`}
-                title={cur.alt || 'YouTube video'}
-                src={`https://www.youtube-nocookie.com/embed/${ytId}?modestbranding=1&rel=0`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                data-testid={`${testid}-yt-${idx}`}
-                style={{ width: '100%', height: '100%', border: 0,
-                         position: 'absolute', inset: 0 }}/>
+        activatedYT[idx] ? (
+          <iframe key={`m-${idx}`}
+                  title={cur.alt || 'YouTube video'}
+                  src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&modestbranding=1&rel=0`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  data-testid={`${testid}-yt-${idx}`}
+                  style={{ width: '100%', height: '100%', border: 0,
+                           position: 'absolute', inset: 0 }}/>
+        ) : (
+          // Lazy-loaded YouTube — show thumbnail + play overlay so the outer carousel
+          // keeps rotating until the user actually wants to watch.
+          <button
+            type="button"
+            onClick={() => onYTPlay(idx)}
+            data-testid={`${testid}-yt-play-${idx}`}
+            aria-label="Play video"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%',
+                     padding: 0, border: 0, cursor: 'pointer', background: '#000' }}
+          >
+            <img src={youtubeThumb(ytId)} alt={cur.alt || 'YouTube thumbnail'}
+                 className="rotate-in-slow"
+                 style={{ width: '100%', height: '100%', objectFit: 'cover',
+                          opacity: 0.85 }}/>
+            <span style={{ position: 'absolute', top: '50%', left: '50%',
+                           transform: 'translate(-50%, -50%)',
+                           width: 64, height: 64, borderRadius: '50%',
+                           background: 'rgba(200, 16, 46, 0.95)',
+                           color: '#fff', fontSize: 28, lineHeight: '64px',
+                           textAlign: 'center', paddingLeft: 6,
+                           boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>▶</span>
+          </button>
+        )
       ) : (
         <div style={{ position: 'absolute', inset: 0, display: 'flex',
                       alignItems: 'center', justifyContent: 'center',
