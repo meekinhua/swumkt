@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cmsApi, POST_TYPE_LABEL, SOURCE_TYPE_LABEL } from './cmsApi';
+import { youtubeId } from '../../components/SlideMedia';
 
 const CmsEditorPage = () => {
   const { id } = useParams();
@@ -12,6 +13,7 @@ const CmsEditorPage = () => {
     type: 'article', title: '', title_en: '', slug: '', category: 'Brand Strategy',
     excerpt: '', body_md: '', cover_image: null, cover_caption: '', read_min: 5,
     tags: [], source_refs: [], status: 'draft',
+    media: [], pinned_to_home: false, pinned_order: 0,
   });
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState({ text: false, image: false, summary: false, translate: false });
@@ -197,7 +199,7 @@ const CmsEditorPage = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               <SelectField label="ประเภท" value={post.type} testid="cms-input-type"
                            on={v => setPost({...post, type: v})}
-                           options={[['article','บทความ'],['insight','Insight'],['case_story','Case Story']]}/>
+                           options={[['article','บทความ'],['insight','Insight'],['case_story','Case Story'],['announcement','📣 ประชาสัมพันธ์']]}/>
               <Field label="Category" value={post.category} testid="cms-input-category"
                      on={v => setPost({...post, category: v})}/>
               <Field label="Slug (auto)" value={post.slug || ''} testid="cms-input-slug"
@@ -205,6 +207,30 @@ const CmsEditorPage = () => {
               <Field label="Read min" value={post.read_min} testid="cms-input-readmin"
                      type="number" on={v => setPost({...post, read_min: parseInt(v) || 5})}/>
             </div>
+
+            {/* Announcement-specific: pin to home hero */}
+            {post.type === 'announcement' && (
+              <div className="mt-4 p-3 rounded border-2 border-yellow-300 bg-yellow-50 flex flex-wrap items-center gap-4"
+                   data-testid="cms-announcement-pin-block">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!post.pinned_to_home}
+                         onChange={e => setPost({...post, pinned_to_home: e.target.checked})}
+                         data-testid="cms-pin-toggle"/>
+                  <span className="text-sm font-bold">📌 ปักหมุดบนหน้าแรก (Hero)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-600">ลำดับ:</span>
+                  <input type="number" value={post.pinned_order ?? 0}
+                         onChange={e => setPost({...post, pinned_order: parseInt(e.target.value) || 0})}
+                         data-testid="cms-pin-order"
+                         className="w-20 border border-neutral-300 rounded px-2 py-1 text-sm"/>
+                  <span className="text-[11px] text-neutral-500">เลขน้อย = แสดงก่อน</span>
+                </div>
+                <span className="text-[11px] text-neutral-500 italic">
+                  เลิกปักหมุดได้ตลอด — เนื้อหายังเก็บไว้ในหน้า ประชาสัมพันธ์
+                </span>
+              </div>
+            )}
 
             <div className="mt-4">
               <Label>Excerpt</Label>
@@ -261,6 +287,18 @@ const CmsEditorPage = () => {
               )}
             </div>
           </Card>
+
+          {/* Media gallery — visible for announcements + optional for any post */}
+          {post.type === 'announcement' && (
+            <Card>
+              <div className="flex items-center justify-between mb-3">
+                <Label>📣 Media Gallery — ภาพ + วิดีโอ (สลับใน hero แต่ละสไลด์)</Label>
+                <span className="text-[11px] text-neutral-500">{(post.media || []).length} items</span>
+              </div>
+              <PostMediaEditor items={post.media || []}
+                               onChange={(next) => setPost({...post, media: next})}/>
+            </Card>
+          )}
 
           {/* Body editor */}
           <Card>
@@ -406,5 +444,102 @@ const SelectField = ({ label, value, on, options, testid }) => (
     </select>
   </div>
 );
+
+// Multi-media editor for announcement posts (Image + YouTube)
+const PostMediaEditor = ({ items, onChange }) => {
+  const update = (idx, key, val) => onChange(items.map((m, i) => i === idx ? { ...m, [key]: val } : m));
+  const remove = (idx) => onChange(items.filter((_, i) => i !== idx));
+  const move = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
+  const addImage = () => onChange([...items, { kind: 'image', src: '', alt: '', caption: '' }]);
+  const addYoutube = () => onChange([...items, { kind: 'youtube', src: '', alt: '', caption: '' }]);
+  const onUpload = (idx, file) => {
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) { toast.error('ไฟล์ใหญ่เกิน 4MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => update(idx, 'src', String(e.target?.result || ''));
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-3" data-testid="post-media-editor">
+      <div className="flex gap-2">
+        <button onClick={addImage} data-testid="post-media-add-image"
+                className="px-3 py-1.5 text-xs font-mono uppercase border border-neutral-900 rounded-full hover:bg-neutral-900 hover:text-white">
+          + Image
+        </button>
+        <button onClick={addYoutube} data-testid="post-media-add-youtube"
+                className="px-3 py-1.5 text-xs font-mono uppercase border border-red-600 text-red-600 rounded-full hover:bg-red-600 hover:text-white">
+          + YouTube
+        </button>
+      </div>
+      {items.length === 0 && (
+        <div className="text-xs text-neutral-500 italic py-3">
+          ยังไม่มี media — กดปุ่ม + Image หรือ + YouTube เพื่อแนบ
+        </div>
+      )}
+      {items.map((m, i) => {
+        const ytId = m.kind === 'youtube' ? youtubeId(m.src) : '';
+        return (
+          <div key={i} className="grid grid-cols-12 gap-2 items-start p-2 border border-neutral-200 rounded bg-neutral-50"
+               data-testid={`post-media-item-${i}`}>
+            <div className="col-span-12 md:col-span-1 flex md:flex-col items-center gap-1">
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded
+                                ${m.kind === 'youtube' ? 'bg-red-100 text-red-700' : 'bg-neutral-200 text-neutral-700'}`}>
+                {m.kind === 'youtube' ? 'YT' : 'IMG'}
+              </span>
+              <button onClick={() => move(i, -1)} disabled={i === 0} className="text-xs px-1 disabled:opacity-30">▲</button>
+              <button onClick={() => move(i, 1)} disabled={i === items.length - 1} className="text-xs px-1 disabled:opacity-30">▼</button>
+            </div>
+            <div className="col-span-12 md:col-span-7 space-y-1">
+              <input value={m.src || ''} onChange={e => update(i, 'src', e.target.value)}
+                     placeholder={m.kind === 'youtube' ? 'https://youtube.com/watch?v=...' : 'https://... หรือ data:image/...;base64,...'}
+                     data-testid={`post-media-src-${i}`}
+                     className="w-full border border-neutral-300 rounded px-2 py-1 text-xs font-mono"/>
+              <input value={m.caption || ''} onChange={e => update(i, 'caption', e.target.value)}
+                     placeholder="คำบรรยายภาพ (ไม่บังคับ)"
+                     data-testid={`post-media-caption-${i}`}
+                     className="w-full border border-neutral-300 rounded px-2 py-1 text-xs"/>
+              {m.kind === 'image' && (
+                <label className="inline-flex text-[10px] font-mono uppercase border border-neutral-400 rounded px-2 py-1 cursor-pointer hover:bg-neutral-900 hover:text-white">
+                  ↑ Upload (≤ 4MB)
+                  <input type="file" accept="image/*" hidden onChange={e => onUpload(i, e.target.files?.[0])}
+                         data-testid={`post-media-upload-${i}`}/>
+                </label>
+              )}
+              {m.kind === 'youtube' && m.src && !ytId && (
+                <div className="text-[10px] text-red-600">⚠ URL/ID ไม่ valid</div>
+              )}
+            </div>
+            <div className="col-span-12 md:col-span-3">
+              {m.kind === 'image' && m.src && (
+                <img src={m.src} alt="preview" className="w-full aspect-video object-cover rounded border border-neutral-200"/>
+              )}
+              {m.kind === 'youtube' && ytId && (
+                <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt="yt preview"
+                     className="w-full aspect-video object-cover rounded border border-red-200"/>
+              )}
+              {(!m.src || (m.kind === 'youtube' && !ytId)) && (
+                <div className="w-full aspect-video border-2 border-dashed border-neutral-300 rounded flex items-center justify-center text-[10px] text-neutral-400">
+                  no preview
+                </div>
+              )}
+            </div>
+            <div className="col-span-12 md:col-span-1 flex justify-end">
+              <button onClick={() => remove(i)} title="Remove" className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded">✕</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+
 
 export default CmsEditorPage;

@@ -655,6 +655,7 @@ export const BeTopbar = ({ user, onLogo, right, subtitle = 'BRAND HEALTH CHECK',
         <div className="be-topnav be-mono">
           <a href="/" data-testid="be-topnav-home">Home</a>
           <a href="/learn" data-testid="be-topnav-learn">Learn</a>
+          <a href="/announcements" data-testid="be-topnav-announce">ประชาสัมพันธ์</a>
           <a href="/showcase" data-testid="be-topnav-showcase" className="on">Showcase</a>
         </div>
       )}

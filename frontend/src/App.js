@@ -56,6 +56,7 @@ import BrandEquityRespondentPage from '@/pages/brand-equity/BrandEquityResponden
 import BrandEquityDashboardPage from '@/pages/brand-equity/BrandEquityDashboardPage';
 import BrandEquityShowcaseIndexPage from '@/pages/brand-equity/BrandEquityShowcaseIndexPage';
 import UnifiedShowcasePage from '@/pages/UnifiedShowcasePage';
+import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -489,6 +490,11 @@ function App() {
             <Route
               path="/showcase"
               element={<UnifiedShowcasePage />}
+            />
+            {/* Public announcements archive — no auth */}
+            <Route
+              path="/announcements"
+              element={<AnnouncementsPage />}
             />
             {/* Legacy BE-only showcase index — kept for backward compat */}
             <Route

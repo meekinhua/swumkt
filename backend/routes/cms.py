@@ -26,7 +26,7 @@ cms_router = APIRouter(prefix="/cms", tags=["CMS"])
 
 # ============ MODELS ============
 
-POST_TYPES = ["article", "insight", "case_story"]
+POST_TYPES = ["article", "insight", "case_story", "announcement"]
 PROMPT_SCOPES = ["text", "image", "summary", "translate"]
 
 
@@ -37,7 +37,7 @@ class SourceRef(BaseModel):
 
 
 class CmsPostCreate(BaseModel):
-    type: Literal["article", "insight", "case_story"] = "article"
+    type: Literal["article", "insight", "case_story", "announcement"] = "article"
     title: str
     title_en: Optional[str] = None
     slug: Optional[str] = None
@@ -50,6 +50,10 @@ class CmsPostCreate(BaseModel):
     tags: Optional[List[str]] = []
     source_refs: Optional[List[SourceRef]] = []
     generation_meta: Optional[Dict[str, Any]] = None
+    # Announcement-specific (also usable on any post type, but ignored by Learn UI)
+    media: Optional[List["SlideMediaItem"]] = []          # multi-image + YouTube
+    pinned_to_home: Optional[bool] = False                # surface on HomePage hero
+    pinned_order: Optional[int] = 0                       # sort within pinned
 
 
 class CmsPostUpdate(BaseModel):
@@ -65,6 +69,9 @@ class CmsPostUpdate(BaseModel):
     tags: Optional[List[str]] = None
     source_refs: Optional[List[SourceRef]] = None
     status: Optional[Literal["draft", "published"]] = None
+    media: Optional[List["SlideMediaItem"]] = None
+    pinned_to_home: Optional[bool] = None
+    pinned_order: Optional[int] = None
 
 
 class PromptTemplateCreate(BaseModel):
@@ -530,6 +537,25 @@ def get_cms_routes(db, get_current_user):
         items = await cur.to_list(length=limit)
         return {"items": items, "total": len(items)}
 
+    @cms_router.get("/announcements/pinned")
+    async def list_pinned_announcements():
+        """Public — pinned announcements for the homepage hero (auto-shown as extra slides)."""
+        return await _list_pinned_announcements_cached()
+
+    @async_ttl_cache(ttl_seconds=60)
+    async def _list_pinned_announcements_cached():
+        cur = db.cms_posts.find(
+            {
+                "type": "announcement",
+                "status": "published",
+                "pinned_to_home": True,
+                "deleted_at": {"$exists": False},
+            },
+            {"_id": 0, "body_md": 0},
+        ).sort([("pinned_order", 1), ("published_at", -1)]).limit(8)
+        items = await cur.to_list(length=8)
+        return {"items": items, "total": len(items)}
+
     @cms_router.get("/posts/public/by-slug/{slug}")
     async def get_public_post_by_slug(slug: str):
         return await _get_public_post_by_slug_cached(slug)
@@ -614,6 +640,9 @@ def get_cms_routes(db, get_current_user):
             "tags": data.tags or [],
             "source_refs": [s.model_dump() for s in (data.source_refs or [])],
             "generation_meta": data.generation_meta,
+            "media": [m.model_dump() for m in (data.media or [])],
+            "pinned_to_home": bool(data.pinned_to_home),
+            "pinned_order": int(data.pinned_order or 0),
             "status": "draft",
             "author_id": getattr(current_user, "id", None),
             "author_name": getattr(current_user, "full_name", None) or getattr(current_user, "email", "admin"),
@@ -622,6 +651,8 @@ def get_cms_routes(db, get_current_user):
         }
         await db.cms_posts.insert_one(doc)
         doc.pop("_id", None)
+        invalidate_prefix("get_cms_routes.<locals>._list_pinned_announcements_cached")
+        invalidate_prefix("get_cms_routes.<locals>._list_public_posts_cached")
         return doc
 
     @cms_router.put("/posts/{post_id}")
@@ -635,6 +666,8 @@ def get_cms_routes(db, get_current_user):
         for k, v in data.model_dump(exclude_unset=True).items():
             if k == "source_refs" and v is not None:
                 upd[k] = [SourceRef(**s).model_dump() if isinstance(s, dict) else s.model_dump() for s in v]
+            elif k == "media" and v is not None:
+                upd[k] = [SlideMediaItem(**m).model_dump() if isinstance(m, dict) else m.model_dump() for m in v]
             elif k == "status" and v == "published" and existing.get("status") != "published":
                 upd[k] = v
                 upd["published_at"] = _now()
@@ -642,6 +675,9 @@ def get_cms_routes(db, get_current_user):
                 upd[k] = v
         await db.cms_posts.update_one({"id": post_id}, {"$set": upd})
         doc = await db.cms_posts.find_one({"id": post_id}, {"_id": 0})
+        invalidate_prefix("get_cms_routes.<locals>._list_pinned_announcements_cached")
+        invalidate_prefix("get_cms_routes.<locals>._list_public_posts_cached")
+        invalidate_prefix("get_cms_routes.<locals>._get_public_post_by_slug_cached")
         return doc
 
     @cms_router.delete("/posts/{post_id}")

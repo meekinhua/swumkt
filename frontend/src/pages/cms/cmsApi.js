@@ -38,6 +38,7 @@ export const POST_TYPE_LABEL = {
   article: 'บทความ',
   insight: 'Insight Post',
   case_story: 'Case Story',
+  announcement: 'ประชาสัมพันธ์',
 };
 
 export const SOURCE_TYPE_LABEL = {

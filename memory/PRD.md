@@ -259,7 +259,29 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
 - **UI**: Hero with rotating stats (TOPICS/BE/CJ/RESPONSES), Featured multi-method topics, Tab filter (All/BE/CJ), Methods Primer footer (Aaker 4-dim vs Conjoint choice-based)
 - **Card navigation**: BE → `/showcase/{share_token}` (public BE dashboard) · CJ → `/conjoint/results/{id}` (public CJ results)
 
-## Hero Multi-Media Announcement Slides (Feb 2026 — NEW)
+## Announcement System — News Posts + Pin to Home (Feb 2026 — NEW)
+
+**Concept**: ประชาสัมพันธ์เป็น proper post type ใน CMS — เก็บถาวรได้ตลอด, admin ปักหมุดอันไหนขึ้นหน้าแรกก็ได้ พอ unpin เนื้อหายังอยู่
+
+- **Schema**: เพิ่ม `announcement` ใน `POST_TYPES`. ทุก post รองรับ `media: List[SlideMediaItem]` + `pinned_to_home: bool` + `pinned_order: int`
+- **Public endpoints**:
+  - `GET /cms/announcements/pinned` (60s cache) — สำหรับ HomePage hero
+  - `GET /cms/posts/public?type=announcement&limit=100` — archive
+  - Cache invalidate อัตโนมัติเมื่อ create/update post
+- **Admin UI** (`/admin/cms`):
+  - List page มี tab "📣 ประชาสัมพันธ์" + badge "📌 PIN" ในแถวที่ pinned
+  - Editor page (type=announcement) มี yellow pin block: checkbox "ปักหมุดบนหน้าแรก" + input order + media gallery (ภาพ+YouTube) ด้านล่าง cover image
+- **HomePage**: prepend pinned announcements เป็น slides แรกของ hero (sort by `pinned_order` → `published_at`), หมุนปกติ
+- **Public archive page** `/announcements`:
+  - Editorial layout (5/7 split panel per card)
+  - Topbar publicMode มี link "ประชาสัมพันธ์" ใหม่
+  - แต่ละ card มี SlideMedia gallery รองรับ image+YouTube + 📌 PINNED ON HOME badge + "อ่านต่อ →" ไปหน้า learn/{slug}
+- **Verified E2E**:
+  - Create announcement → publish → pinned_to_home=true → ขึ้นเป็น slide แรกในหน้าแรก (eyebrow "📣 กิจกรรมนิสิต", media 2 dots: image+YT)
+  - `/announcements` แสดง card พร้อม badge "PINNED ON HOME"
+  - Cache invalidation ทำงาน — ไม่ต้องรอ 60s
+
+## Hero Multi-Media Announcement Slides (Feb 2026 — superseded)
 - **Backend schema**: `LandingSlide.media: List[SlideMediaItem]` where `{kind: 'image'|'youtube', src, alt, caption}` — multiple per slide; legacy `image` field kept as fallback
 - **Frontend rendering** (`/app/frontend/src/components/SlideMedia.jsx`): auto-rotating intra-slide carousel (4.5s). **Lazy-load YouTube**: shows hqdefault thumbnail + red ▶ play button by default so outer hero carousel keeps rotating; iframe loads on click with `autoplay=1` and pause becomes sticky until user navigates away. Clicking inner dot = 30s grace pause + dwell. Hover also pauses outer rotation. ▶ VIDEO red badge for YT items; dots top-right with red active marker for YT, black for image
 - **Admin UI** in `/admin/cms/landing` per slide: 📣 MEDIA GALLERY card with `+ Image` (upload ≤4MB OR URL OR AI gen via Cover Image button) and `+ YouTube` (URL or video id auto-extracted); reorder ▲▼, remove ✕, live preview (image or YT thumbnail). Cache invalidated on save

@@ -8,6 +8,7 @@ const TABS = [
   { id: 'article', label: 'บทความ' },
   { id: 'insight', label: 'Insight' },
   { id: 'case_story', label: 'Case Story' },
+  { id: 'announcement', label: '📣 ประชาสัมพันธ์' },
   { id: 'trash', label: 'ถังขยะ' },
 ];
 
@@ -120,6 +121,12 @@ const CmsListPage = () => {
                   <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
                     · {p.status} · {p.category}
                   </span>
+                  {p.pinned_to_home && (
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-yellow-700 bg-yellow-100 px-1.5 py-0.5 rounded"
+                          data-testid={`cms-pin-badge-${p.id}`} title="ปักหมุดอยู่บนหน้าแรก">
+                      📌 PIN
+                    </span>
+                  )}
                 </div>
                 <div className="font-serif text-lg leading-tight truncate">{p.title}</div>
                 <div className="text-xs text-neutral-500 truncate">{p.slug} · {(p.excerpt || '').slice(0, 80)}</div>

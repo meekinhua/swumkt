@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -39,28 +39,51 @@ const HomePage = () => {
   const [headIdx, setHeadIdx] = useState(0);
   const [landing, setLanding] = useState(null);
   const [articles, setArticles] = useState([]);
+  const [pinnedAnnouncements, setPinnedAnnouncements] = useState([]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [showcaseRes, landingRes, articlesRes] = await Promise.all([
+        const [showcaseRes, landingRes, articlesRes, pinnedRes] = await Promise.all([
           axios.get(`${API}/brand-equity/showcase`),
           axios.get(`${API}/cms/landing`),
           axios.get(`${API}/cms/posts/public?type=article&limit=12`),
+          axios.get(`${API}/cms/announcements/pinned`),
         ]);
         if (!alive) return;
         setShowcases(showcaseRes.data?.showcases || []);
         setLanding(landingRes.data || null);
         setArticles(articlesRes.data?.items || []);
+        setPinnedAnnouncements(pinnedRes.data?.items || []);
       } catch (e) { console.error(e); }
       finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
   }, []);
 
-  // Use API-driven headlines if available, else hardcoded fallback
-  const HEADLINES = (landing?.slides && landing.slides.length > 0) ? landing.slides : FALLBACK_HEADLINES;
+  // Convert a pinned announcement post → hero slide shape so the existing renderer just works
+  const announcementSlides = useMemo(() => {
+    return (pinnedAnnouncements || []).map((p) => ({
+      eyebrow: `📣 ${(p.category || 'ANNOUNCEMENT').toUpperCase()}`,
+      heroPre: [(p.title || '').slice(0, 80)],
+      heroAccentIdx: 0,
+      lede: p.excerpt || '',
+      mantra: ['ประชาสัมพันธ์', 'จาก SWU MKT'],
+      mantraAccentIdx: 1,
+      image: p.cover_image || '',
+      imageAlt: p.title,
+      imageCaption: p.category || 'PR',
+      media: p.media || [],
+      _announcement: { id: p.id, slug: p.slug },  // hint: clickable to detail page
+    }));
+  }, [pinnedAnnouncements]);
+
+  // Combine: pinned announcements first, then static landing slides
+  const STATIC_HEADLINES = (landing?.slides && landing.slides.length > 0) ? landing.slides : FALLBACK_HEADLINES;
+  const HEADLINES = announcementSlides.length > 0
+    ? [...announcementSlides, ...STATIC_HEADLINES]
+    : STATIC_HEADLINES;
   const TOOLS_LIVE = (landing?.tools && landing.tools.length > 0) ? landing.tools : FALLBACK_TOOLS;
   const KH = landing?.knowledge_hub || {
     eyebrow: '● Knowledge Hub', heading: 'อ่านเทรนด์', accent: 'ก่อนคนอื่น',
