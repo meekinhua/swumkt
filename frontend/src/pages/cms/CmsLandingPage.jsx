@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { cmsApi } from './cmsApi';
+import { youtubeId } from '../../components/SlideMedia';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -279,10 +280,10 @@ const CmsLandingPage = () => {
                          testid={`slide-${i}-mantraaccentidx`}/>
                 </div>
 
-                {/* Image */}
+                {/* Image (legacy single — used as fallback when no `media` items) */}
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="md:col-span-2">
-                    <Label>Image URL or AI-generated data URL</Label>
+                    <Label>Cover image (URL / data URI / AI gen) — used as fallback if no media items below</Label>
                     <input value={s.image || ''}
                            onChange={e => updateSlide(i, 'image', e.target.value)}
                            data-testid={`slide-${i}-image`}
@@ -307,6 +308,13 @@ const CmsLandingPage = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Multi-media gallery — images + YouTube videos auto-rotated in the hero */}
+                <SlideMediaEditor
+                  items={s.media || []}
+                  onChange={(next) => updateSlide(i, 'media', next)}
+                  prefix={`slide-${i}-media`}
+                />
               </div>
             ))}
           </div>
@@ -605,6 +613,135 @@ const EditorPickEditor = ({ pick, on, bePool, cjPool, onUpload, onGenerate, gene
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+
+
+// ─────────────────────────────────────────────────────────────────────
+// Multi-media editor for a single slide — handles images + YouTube URLs
+// ─────────────────────────────────────────────────────────────────────
+const SlideMediaEditor = ({ items, onChange, prefix }) => {
+  const update = (idx, key, val) => {
+    const next = items.map((m, i) => i === idx ? { ...m, [key]: val } : m);
+    onChange(next);
+  };
+  const remove = (idx) => onChange(items.filter((_, i) => i !== idx));
+  const move = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
+  const addImage = () => onChange([...items, { kind: 'image', src: '', alt: '', caption: '' }]);
+  const addYoutube = () => onChange([...items, { kind: 'youtube', src: '', alt: '', caption: '' }]);
+
+  const onUpload = (idx, file) => {
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) { toast.error('ไฟล์ใหญ่เกิน 4MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => update(idx, 'src', String(e.target?.result || ''));
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="mt-4 border-t border-neutral-200 pt-3 space-y-2"
+         data-testid={prefix}>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="text-xs font-mono uppercase tracking-wider text-neutral-700">
+          📣 Media Gallery ({items.length}) — ภาพและวิดีโอ auto-rotate ภายใน slide นี้
+        </div>
+        <div className="flex gap-2">
+          <button onClick={addImage}
+                  data-testid={`${prefix}-add-image`}
+                  className="px-3 py-1.5 text-xs font-mono uppercase border border-neutral-900 rounded-full hover:bg-neutral-900 hover:text-white">
+            + Image
+          </button>
+          <button onClick={addYoutube}
+                  data-testid={`${prefix}-add-youtube`}
+                  className="px-3 py-1.5 text-xs font-mono uppercase border border-red-600 text-red-600 rounded-full hover:bg-red-600 hover:text-white">
+            + YouTube
+          </button>
+        </div>
+      </div>
+
+      {items.length === 0 && (
+        <div className="text-xs text-neutral-500 italic py-2">
+          ยังไม่มี media — ใช้ Cover image ด้านบนเป็น fallback (ดูปกติ)
+        </div>
+      )}
+
+      {items.map((m, i) => {
+        const ytId = m.kind === 'youtube' ? youtubeId(m.src) : '';
+        return (
+          <div key={i} className="grid grid-cols-12 gap-2 items-start p-2 border border-neutral-200 rounded bg-neutral-50"
+               data-testid={`${prefix}-item-${i}`}>
+            <div className="col-span-12 md:col-span-1 flex md:flex-col items-center gap-1">
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded
+                                ${m.kind === 'youtube' ? 'bg-red-100 text-red-700' : 'bg-neutral-200 text-neutral-700'}`}>
+                {m.kind === 'youtube' ? 'YT' : 'IMG'}
+              </span>
+              <button onClick={() => move(i, -1)} disabled={i === 0}
+                      data-testid={`${prefix}-up-${i}`}
+                      className="text-xs px-1 disabled:opacity-30">▲</button>
+              <button onClick={() => move(i, 1)} disabled={i === items.length - 1}
+                      data-testid={`${prefix}-down-${i}`}
+                      className="text-xs px-1 disabled:opacity-30">▼</button>
+            </div>
+            <div className="col-span-12 md:col-span-7 space-y-1">
+              <input value={m.src || ''}
+                     onChange={e => update(i, 'src', e.target.value)}
+                     placeholder={m.kind === 'youtube'
+                                  ? 'https://www.youtube.com/watch?v=...   (หรือใส่ video id)'
+                                  : 'https://... หรือ data:image/...;base64,...'}
+                     data-testid={`${prefix}-src-${i}`}
+                     className="w-full border border-neutral-300 rounded px-2 py-1 text-xs font-mono"/>
+              <input value={m.caption || ''}
+                     onChange={e => update(i, 'caption', e.target.value)}
+                     placeholder="คำบรรยายภาพ (ไม่บังคับ)"
+                     data-testid={`${prefix}-caption-${i}`}
+                     className="w-full border border-neutral-300 rounded px-2 py-1 text-xs"/>
+              {m.kind === 'image' && (
+                <label className="inline-flex text-[10px] font-mono uppercase border border-neutral-400 rounded px-2 py-1 cursor-pointer hover:bg-neutral-900 hover:text-white">
+                  ↑ Upload (≤ 4MB)
+                  <input type="file" accept="image/*" hidden
+                         onChange={e => onUpload(i, e.target.files?.[0])}
+                         data-testid={`${prefix}-upload-${i}`}/>
+                </label>
+              )}
+              {m.kind === 'youtube' && m.src && !ytId && (
+                <div className="text-[10px] text-red-600">⚠ URL/ID ไม่ valid — ใส่ลิงก์ YouTube ที่ถูกต้อง</div>
+              )}
+            </div>
+            <div className="col-span-12 md:col-span-3">
+              {m.kind === 'image' && m.src && (
+                <img src={m.src} alt="preview"
+                     data-testid={`${prefix}-preview-${i}`}
+                     className="w-full aspect-video object-cover rounded border border-neutral-200"/>
+              )}
+              {m.kind === 'youtube' && ytId && (
+                <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt="yt preview"
+                     data-testid={`${prefix}-yt-thumb-${i}`}
+                     className="w-full aspect-video object-cover rounded border border-red-200"/>
+              )}
+              {(!m.src || (m.kind === 'youtube' && !ytId)) && (
+                <div className="w-full aspect-video border-2 border-dashed border-neutral-300 rounded
+                                flex items-center justify-center text-[10px] text-neutral-400">
+                  no preview
+                </div>
+              )}
+            </div>
+            <div className="col-span-12 md:col-span-1 flex justify-end">
+              <button onClick={() => remove(i)}
+                      data-testid={`${prefix}-remove-${i}`}
+                      title="Remove"
+                      className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded">✕</button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

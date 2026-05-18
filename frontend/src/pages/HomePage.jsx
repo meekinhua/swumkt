@@ -7,6 +7,7 @@ import {
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { getBrandHealthTier, getWeakestDimension } from '@/lib/brandHealthVerdict';
 import { SWU_LOGO_URL } from './brand-equity/be-components';
+import SlideMedia from '../components/SlideMedia';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -235,25 +236,15 @@ const HomePage = () => {
             <div className="fade-up fade-up-3"
                  style={{ display: 'grid', gridTemplateRows: '0.9fr 1.1fr', gap: 16,
                           minHeight: 480 }}>
-              {/* Photo cell — rotates sync'd with headline */}
-              <div className="img-frame rotator-shell"
-                   data-testid="hero-image-cell"
-                   style={{ background: '#fff', position: 'relative', overflow: 'hidden' }}>
-                <img key={`img-${headIdx}`} src={head.image} alt={head.imageAlt}
-                     className="rotate-in-slow"
-                     style={{ filter: 'saturate(1.08) contrast(1.04)',
-                              width: '100%', height: '100%', objectFit: 'cover',
-                              position: 'absolute', inset: 0 }}/>
-                <div key={`cap-${headIdx}`} className="rotate-in"
-                     style={{ position: 'absolute', bottom: 12, left: 12,
-                              padding: '6px 10px', background: 'rgba(255,255,255,0.92)',
-                              borderRadius: 999, fontFamily: 'var(--mono)',
-                              fontSize: 10, letterSpacing: '0.14em',
-                              textTransform: 'uppercase', color: 'var(--ink)',
-                              zIndex: 2 }}>
-                  {head.imageCaption}
-                </div>
-              </div>
+              {/* Photo cell — rotates sync'd with headline + supports multi-image + YouTube via slide.media[] */}
+              <SlideMedia
+                key={`media-${headIdx}`}
+                media={head.media || []}
+                fallbackImage={head.image}
+                fallbackAlt={head.imageAlt}
+                fallbackCaption={head.imageCaption}
+                testid="hero-image-cell"
+              />
 
               {/* Featured brand cell */}
               {loading ? (

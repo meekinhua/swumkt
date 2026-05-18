@@ -108,6 +108,17 @@ class AITranslateRequest(BaseModel):
 
 # ============ LANDING PAGE MODELS ============
 
+class SlideMediaItem(BaseModel):
+    """A single media item attached to a hero slide.
+    kind=`image` → src is URL (https://) or data: URI
+    kind=`youtube` → src is YouTube URL or video id (we extract id at render)
+    """
+    kind: Literal["image", "youtube"] = "image"
+    src: str
+    alt: Optional[str] = ""
+    caption: Optional[str] = ""
+
+
 class LandingSlide(BaseModel):
     eyebrow: str
     heroPre: List[str]
@@ -115,9 +126,10 @@ class LandingSlide(BaseModel):
     lede: str
     mantra: List[str]
     mantraAccentIdx: int = 1
-    image: str = ""
+    image: str = ""  # legacy — single image fallback when `media` is empty
     imageAlt: Optional[str] = ""
     imageCaption: Optional[str] = ""
+    media: List[SlideMediaItem] = []  # NEW — multi-image + YouTube; takes precedence over `image`
 
 
 class LandingTool(BaseModel):
