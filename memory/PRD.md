@@ -261,7 +261,7 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
 
 ## Hero Multi-Media Announcement Slides (Feb 2026 — NEW)
 - **Backend schema**: `LandingSlide.media: List[SlideMediaItem]` where `{kind: 'image'|'youtube', src, alt, caption}` — multiple per slide; legacy `image` field kept as fallback
-- **Frontend rendering** (`/app/frontend/src/components/SlideMedia.jsx`): auto-rotating intra-slide carousel (4.5s); YouTube uses `youtube-nocookie` embed; pauses rotation on YouTube to not yank away from playback; pauses on hover; ▶ VIDEO red badge for YT items; dots top-right with red active marker for YT, black for image
+- **Frontend rendering** (`/app/frontend/src/components/SlideMedia.jsx`): auto-rotating intra-slide carousel (4.5s); YouTube uses `youtube-nocookie` embed; **sticky pause + parent signal**: clicking ANY dot OR landing on a YouTube item bubbles `onPauseRequest(true)` up to HomePage which freezes the outer 5.5s hero rotation — so video/image stays put until user moves on (YouTube = pause permanent until dot change; image dot click = 30s grace pause); pauses on hover too; ▶ VIDEO red badge for YT items; dots top-right with red active marker for YT, black for image
 - **Admin UI** in `/admin/cms/landing` per slide: 📣 MEDIA GALLERY card with `+ Image` (upload ≤4MB OR URL OR AI gen via Cover Image button) and `+ YouTube` (URL or video id auto-extracted); reorder ▲▼, remove ✕, live preview (image or YT thumbnail). Cache invalidated on save
 - **Visual redesign (Feb 2026)** — "Academic Brutalism × Editorial" by design agent:
   - Bento hero: 8/4 split, italic accent + red square mark on headline, 2x2 stats grid with 01/02/03/04 numbering

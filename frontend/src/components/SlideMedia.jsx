@@ -34,6 +34,7 @@ export const SlideMedia = ({
   fallbackAlt = '',
   fallbackCaption = '',
   interval = 4500,
+  onPauseRequest,        // (paused: bool) — bubble up so parent can pause outer rotation
   testid = 'slide-media',
 }) => {
   const items = useMemo(() => {
@@ -47,18 +48,49 @@ export const SlideMedia = ({
 
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Sticky pause stays on after user interaction so outer carousel doesn't yank away mid-view
+  const [stickyPause, setStickyPause] = useState(false);
 
   // Keep idx in bounds when items change
   useEffect(() => { if (idx >= items.length) setIdx(0); }, [items.length, idx]);
 
-  // Auto-rotate
+  // Whenever the active item is a YouTube video, lock pause to true permanently
+  // (user clicks a different dot to release). For images, sticky resets when
+  // user clicks an image dot — pauses for 30s of dwell time then resumes.
   useEffect(() => {
-    if (paused || items.length <= 1) return undefined;
-    // Don't auto-rotate while a YouTube video is shown — let user watch it
+    if (items[idx]?.kind === 'youtube') {
+      setStickyPause(true);
+      return undefined;
+    }
+    // image item — release sticky after 30s if no further interaction
+    if (stickyPause) {
+      const t = setTimeout(() => setStickyPause(false), 30000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [idx, items, stickyPause]);
+
+  // User clicked a dot → set sticky pause so neither inner nor outer carousels move on them
+  const onDotClick = (i, e) => {
+    e.stopPropagation();
+    setIdx(i);
+    setStickyPause(true);
+  };
+
+  // Bubble up the effective pause state so the parent can freeze outer rotations
+  useEffect(() => {
+    if (typeof onPauseRequest === 'function') {
+      onPauseRequest(paused || stickyPause);
+    }
+  }, [paused, stickyPause, onPauseRequest]);
+
+  // Auto-rotate inner items
+  useEffect(() => {
+    if (paused || stickyPause || items.length <= 1) return undefined;
     if (items[idx]?.kind === 'youtube') return undefined;
     const t = setInterval(() => setIdx(i => (i + 1) % items.length), interval);
     return () => clearInterval(t);
-  }, [items, idx, interval, paused]);
+  }, [items, idx, interval, paused, stickyPause]);
 
   if (items.length === 0) {
     return (
@@ -121,7 +153,7 @@ export const SlideMedia = ({
              style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 6 }}>
           {items.map((m, i) => (
             <button key={i} aria-label={`Media ${i + 1}`}
-                    onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                    onClick={(e) => onDotClick(i, e)}
                     data-testid={`${testid}-dot-${i}`}
                     title={m.kind === 'youtube' ? 'YouTube' : 'Image'}
                     style={{

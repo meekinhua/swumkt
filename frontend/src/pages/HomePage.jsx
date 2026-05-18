@@ -71,14 +71,16 @@ const HomePage = () => {
     cta_label: 'อ่านเรื่องเรา →', cta_path: '/about/swu-marketing',
   };
   const ROTATION_MS = landing?.rotation_ms || 5500;
+  const [heroPaused, setHeroPaused] = useState(false);  // SlideMedia signals pause when user watches video / interacts
 
-  // Auto-rotate hero copy
+  // Auto-rotate hero copy — pauses when user is actively viewing media (YouTube playback)
   useEffect(() => {
+    if (heroPaused) return undefined;
     const id = setInterval(() => {
       setHeadIdx((i) => (i + 1) % HEADLINES.length);
     }, ROTATION_MS);
     return () => clearInterval(id);
-  }, [HEADLINES.length, ROTATION_MS]);
+  }, [HEADLINES.length, ROTATION_MS, heroPaused]);
 
   // Preload all rotation images so transitions don't flash blank
   useEffect(() => {
@@ -243,6 +245,7 @@ const HomePage = () => {
                 fallbackImage={head.image}
                 fallbackAlt={head.imageAlt}
                 fallbackCaption={head.imageCaption}
+                onPauseRequest={setHeroPaused}
                 testid="hero-image-cell"
               />
 
