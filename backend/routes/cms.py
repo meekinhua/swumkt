@@ -54,6 +54,7 @@ class CmsPostCreate(BaseModel):
     media: Optional[List["SlideMediaItem"]] = []          # multi-image + YouTube
     pinned_to_home: Optional[bool] = False                # surface on HomePage hero
     pinned_order: Optional[int] = 0                       # sort within pinned
+    cta_url: Optional[str] = None                         # destination link (overrides default /learn/{slug})
 
 
 class CmsPostUpdate(BaseModel):
@@ -72,6 +73,7 @@ class CmsPostUpdate(BaseModel):
     media: Optional[List["SlideMediaItem"]] = None
     pinned_to_home: Optional[bool] = None
     pinned_order: Optional[int] = None
+    cta_url: Optional[str] = None
 
 
 class PromptTemplateCreate(BaseModel):
@@ -137,6 +139,7 @@ class LandingSlide(BaseModel):
     imageAlt: Optional[str] = ""
     imageCaption: Optional[str] = ""
     media: List[SlideMediaItem] = []  # NEW — multi-image + YouTube; takes precedence over `image`
+    cta_url: Optional[str] = None     # NEW — clickable destination for the whole slide (internal path or external URL)
 
 
 class LandingTool(BaseModel):
