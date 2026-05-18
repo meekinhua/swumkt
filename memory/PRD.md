@@ -326,6 +326,19 @@ Admin UX (`CmsEditorPage`):
 - Backend: schema `media: List[SlideMediaItem]` มีอยู่แล้ว, persist + return ครบทุก endpoint
 - Verified E2E: สร้าง article ที่มี 2 image + 1 YouTube → publish → `/learn/{slug}` แสดง MEDIA (3) ครบ + YouTube playable ✓
 
+### Hero Short Headline สำหรับ Announcement (Feb 2026 — NEW)
+ก่อนหน้านี้ HomePage hero เอา `post.title` มา `.slice(0, 80)` เลย → ถ้า title ยาว/มีรายละเอียดเยอะ พาดหัวก็ดูยาว/ไม่สวย และ admin ไม่สามารถเลือก italic-accent ที่บรรทัดไหนได้
+
+- **Schema** (CmsPost): เพิ่ม
+  - `hero_title_lines: Optional[List[str]]` (สูงสุด 2 บรรทัด, trim+filter empty)
+  - `hero_accent_idx: Optional[int]` (0 หรือ 1 — ระบุบรรทัดที่ italic-accent สีแดง)
+- **Admin (CmsEditorPage)**: ใต้ CTA URL block (post type=announcement) มี blue block ใหม่ "✨ พาดหัวสั้นสำหรับ Hero หน้าแรก"
+  - 2 input บรรทัดละ 60 chars + radio "เน้นสีแดงที่: บรรทัด 1 / บรรทัด 2"
+  - Live label แสดงว่าบรรทัดไหนกำลังเป็น accent
+- **HomePage**: `announcementSlides` ใช้ `hero_title_lines` ถ้ามี (filter empty), fallback ไป `title.slice(0,80)`; clamp `hero_accent_idx` ตาม length
+- Verified E2E: สร้าง announcement พร้อม `hero_title_lines=["งานสัมมนา","Brand Equity 2026"]` + `hero_accent_idx=1` → hero แสดง 2 บรรทัด, บรรทัด 2 = italic-accent ✓
+
+
 ## Hero Multi-Media Announcement Slides (Feb 2026 — superseded)
 - **Backend schema**: `LandingSlide.media: List[SlideMediaItem]` where `{kind: 'image'|'youtube', src, alt, caption}` — multiple per slide; legacy `image` field kept as fallback
 - **Frontend rendering** (`/app/frontend/src/components/SlideMedia.jsx`): auto-rotating intra-slide carousel (4.5s). **Lazy-load YouTube**: shows hqdefault thumbnail + red ▶ play button by default so outer hero carousel keeps rotating; iframe loads on click with `autoplay=1` and pause becomes sticky until user navigates away. Clicking inner dot = 30s grace pause + dwell. Hover also pauses outer rotation. ▶ VIDEO red badge for YT items; dots top-right with red active marker for YT, black for image

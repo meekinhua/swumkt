@@ -14,6 +14,7 @@ const CmsEditorPage = () => {
     excerpt: '', body_md: '', cover_image: null, cover_caption: '', read_min: 5,
     tags: [], source_refs: [], status: 'draft',
     media: [], pinned_to_home: false, pinned_order: 0, cta_url: '',
+    hero_title_lines: ['', ''], hero_accent_idx: 1,
   });
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState({ text: false, image: false, summary: false, translate: false });
@@ -267,6 +268,67 @@ const CmsEditorPage = () => {
                     รองรับทั้ง internal path และ external URL (เปิดแท็บใหม่)
                   </p>
                 </div>
+
+                {/* Hero short headline — overrides post.title when shown in homepage hero */}
+                {(() => {
+                  const lines = post.hero_title_lines && post.hero_title_lines.length
+                    ? post.hero_title_lines
+                    : ['', ''];
+                  const setLine = (idx, v) => {
+                    const next = [lines[0] || '', lines[1] || ''];
+                    next[idx] = v;
+                    setPost({ ...post, hero_title_lines: next });
+                  };
+                  const accent = post.hero_accent_idx ?? 1;
+                  return (
+                    <div className="mt-3 p-3 rounded border-2 border-blue-200 bg-blue-50/50"
+                         data-testid="cms-hero-title-block">
+                      <Label>✨ พาดหัวสั้นสำหรับ Hero หน้าแรก (ถ้าเว้นว่างจะใช้ title ปกติ)</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
+                        <div>
+                          <div className="text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                            บรรทัด 1 {accent === 0 && <span className="text-red-600">(เน้นสีแดง · italic)</span>}
+                          </div>
+                          <input value={lines[0] || ''}
+                                 onChange={e => setLine(0, e.target.value)}
+                                 placeholder="เช่น งานสัมมนา"
+                                 maxLength={60}
+                                 data-testid="cms-hero-line-0"
+                                 className="w-full border border-neutral-300 rounded px-3 py-2 text-sm font-serif"/>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                            บรรทัด 2 {accent === 1 && <span className="text-red-600">(เน้นสีแดง · italic)</span>}
+                          </div>
+                          <input value={lines[1] || ''}
+                                 onChange={e => setLine(1, e.target.value)}
+                                 placeholder="เช่น Brand Equity 2026"
+                                 maxLength={60}
+                                 data-testid="cms-hero-line-1"
+                                 className="w-full border border-neutral-300 rounded px-3 py-2 text-sm font-serif"/>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <span className="text-[11px] font-mono uppercase text-neutral-600">เน้นสีแดงที่:</span>
+                        <label className="inline-flex items-center gap-1 text-xs cursor-pointer">
+                          <input type="radio" name="hero-accent" checked={accent === 0}
+                                 onChange={() => setPost({ ...post, hero_accent_idx: 0 })}
+                                 data-testid="cms-hero-accent-0"/>
+                          บรรทัด 1
+                        </label>
+                        <label className="inline-flex items-center gap-1 text-xs cursor-pointer">
+                          <input type="radio" name="hero-accent" checked={accent === 1}
+                                 onChange={() => setPost({ ...post, hero_accent_idx: 1 })}
+                                 data-testid="cms-hero-accent-1"/>
+                          บรรทัด 2
+                        </label>
+                        <span className="text-[11px] text-neutral-500 italic">
+                          (สูงสุดบรรทัดละ 60 ตัวอักษร)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
 

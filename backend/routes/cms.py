@@ -55,6 +55,8 @@ class CmsPostCreate(BaseModel):
     pinned_to_home: Optional[bool] = False                # surface on HomePage hero
     pinned_order: Optional[int] = 0                       # sort within pinned
     cta_url: Optional[str] = None                         # destination link (overrides default /learn/{slug})
+    hero_title_lines: Optional[List[str]] = None          # 1-2 short lines shown in homepage hero (overrides title)
+    hero_accent_idx: Optional[int] = 1                    # which hero line gets italic-accent red (0 or 1)
 
 
 class CmsPostUpdate(BaseModel):
@@ -74,6 +76,8 @@ class CmsPostUpdate(BaseModel):
     pinned_to_home: Optional[bool] = None
     pinned_order: Optional[int] = None
     cta_url: Optional[str] = None
+    hero_title_lines: Optional[List[str]] = None
+    hero_accent_idx: Optional[int] = None
 
 
 class PromptTemplateCreate(BaseModel):
@@ -735,6 +739,10 @@ def get_cms_routes(db, get_current_user):
             "pinned_to_home": bool(data.pinned_to_home),
             "pinned_order": int(data.pinned_order or 0),
             "cta_url": (data.cta_url or "").strip() or None,
+            "hero_title_lines": [
+                str(s).strip() for s in (data.hero_title_lines or []) if str(s).strip()
+            ][:2] or None,
+            "hero_accent_idx": int(data.hero_accent_idx) if data.hero_accent_idx is not None else 1,
             "status": "draft",
             "author_id": getattr(current_user, "id", None),
             "author_name": getattr(current_user, "full_name", None) or getattr(current_user, "email", "admin"),

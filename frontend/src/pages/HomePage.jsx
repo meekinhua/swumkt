@@ -100,21 +100,32 @@ const HomePage = () => {
 
   // Convert a pinned announcement post → hero slide shape so the existing renderer just works
   const announcementSlides = useMemo(() => {
-    return (pinnedAnnouncements || []).map((p) => ({
-      eyebrow: `📣 ${(p.category || 'ANNOUNCEMENT').toUpperCase()}`,
-      heroPre: [(p.title || '').slice(0, 80)],
-      heroAccentIdx: 0,
-      lede: p.excerpt || '',
-      mantra: ['ประชาสัมพันธ์', 'จาก SWU MKT'],
-      mantraAccentIdx: 1,
-      image: p.cover_image || '',
-      imageAlt: p.title,
-      imageCaption: p.category || 'PR',
-      media: p.media || [],
-      // CTA — admin-defined cta_url takes precedence; fallback ไปหน้ารายละเอียดข่าว /learn/{slug}
-      ctaUrl: (p.cta_url && String(p.cta_url).trim()) || (p.slug ? `/learn/${p.slug}` : ''),
-      _announcement: { id: p.id, slug: p.slug },
-    }));
+    return (pinnedAnnouncements || []).map((p) => {
+      // Prefer admin-defined short hero title (1-2 lines); fallback to truncated post.title
+      const customLines = (p.hero_title_lines || [])
+        .map(s => (s || '').trim())
+        .filter(Boolean);
+      const heroPre = customLines.length > 0
+        ? customLines
+        : [(p.title || '').slice(0, 80)];
+      const rawAccent = typeof p.hero_accent_idx === 'number' ? p.hero_accent_idx : 1;
+      const heroAccentIdx = Math.min(Math.max(rawAccent, 0), heroPre.length - 1);
+      return {
+        eyebrow: `📣 ${(p.category || 'ANNOUNCEMENT').toUpperCase()}`,
+        heroPre,
+        heroAccentIdx,
+        lede: p.excerpt || '',
+        mantra: ['ประชาสัมพันธ์', 'จาก SWU MKT'],
+        mantraAccentIdx: 1,
+        image: p.cover_image || '',
+        imageAlt: p.title,
+        imageCaption: p.category || 'PR',
+        media: p.media || [],
+        // CTA — admin-defined cta_url takes precedence; fallback ไปหน้ารายละเอียดข่าว /learn/{slug}
+        ctaUrl: (p.cta_url && String(p.cta_url).trim()) || (p.slug ? `/learn/${p.slug}` : ''),
+        _announcement: { id: p.id, slug: p.slug },
+      };
+    });
   }, [pinnedAnnouncements]);
 
   // Combine: pinned announcements first, then static landing slides
