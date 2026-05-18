@@ -313,6 +313,19 @@ Admin UX (`CmsEditorPage`):
 
 `CmsPromptsPage` (admin prompt manager): เพิ่ม option `📣 Announcement` ใน post_type selector
 
+### Multi-Media Attachments บน Post ทุก Type (Feb 2026 — NEW)
+ก่อนหน้านี้ Media Gallery (รูปหลายรูป + YouTube) เปิดให้แค่ announcement สำหรับใช้ใน hero slider. ตอนนี้ขยายให้ **ทุก post type** (article/insight/case_story/announcement) แนบ media ได้.
+
+- **Admin (`CmsEditorPage`)**: Media Gallery แสดงเสมอ — heading เปลี่ยนตาม post type (announcement: "📣 Media Gallery — สลับใน hero"; อื่นๆ: "🖼 รูปประกอบ + วิดีโอ YouTube — แสดงในหน้าบทความ")
+  - `+ Image` (upload ≤4MB หรือ URL) · `+ YouTube` (URL → auto-extract video id)
+  - Reorder ▲▼, remove ✕, caption ต่อ item
+- **Public article view (`CmsArticleView`)**: เพิ่ม section "● MEDIA (n)" ระหว่าง cover และ body
+  - Layout: CSS grid `auto-fit minmax(280px, 1fr)` — รูปแสดง 2 คอลัมน์
+  - YouTube ใช้ `<iframe>` 16:9 + `gridColumn: span 2` (เต็มกว้าง)
+  - แต่ละ figure มี caption (font-mono uppercase) ด้านล่าง
+- Backend: schema `media: List[SlideMediaItem]` มีอยู่แล้ว, persist + return ครบทุก endpoint
+- Verified E2E: สร้าง article ที่มี 2 image + 1 YouTube → publish → `/learn/{slug}` แสดง MEDIA (3) ครบ + YouTube playable ✓
+
 ## Hero Multi-Media Announcement Slides (Feb 2026 — superseded)
 - **Backend schema**: `LandingSlide.media: List[SlideMediaItem]` where `{kind: 'image'|'youtube', src, alt, caption}` — multiple per slide; legacy `image` field kept as fallback
 - **Frontend rendering** (`/app/frontend/src/components/SlideMedia.jsx`): auto-rotating intra-slide carousel (4.5s). **Lazy-load YouTube**: shows hqdefault thumbnail + red ▶ play button by default so outer hero carousel keeps rotating; iframe loads on click with `autoplay=1` and pause becomes sticky until user navigates away. Clicking inner dot = 30s grace pause + dwell. Hover also pauses outer rotation. ▶ VIDEO red badge for YT items; dots top-right with red active marker for YT, black for image

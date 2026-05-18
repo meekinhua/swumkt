@@ -326,17 +326,24 @@ const CmsEditorPage = () => {
             </div>
           </Card>
 
-          {/* Media gallery — visible for announcements + optional for any post */}
-          {post.type === 'announcement' && (
-            <Card>
-              <div className="flex items-center justify-between mb-3">
-                <Label>📣 Media Gallery — ภาพ + วิดีโอ (สลับใน hero แต่ละสไลด์)</Label>
-                <span className="text-[11px] text-neutral-500">{(post.media || []).length} items</span>
-              </div>
-              <PostMediaEditor items={post.media || []}
-                               onChange={(next) => setPost({...post, media: next})}/>
-            </Card>
-          )}
+          {/* Media gallery — multi-image + YouTube สำหรับทุก post type */}
+          <Card>
+            <div className="flex items-center justify-between mb-1">
+              <Label>
+                {post.type === 'announcement'
+                  ? '📣 Media Gallery — ภาพ + วิดีโอ (สลับใน hero แต่ละสไลด์)'
+                  : '🖼 รูปประกอบ + วิดีโอ YouTube (แสดงในหน้าบทความ)'}
+              </Label>
+              <span className="text-[11px] text-neutral-500">{(post.media || []).length} items</span>
+            </div>
+            <div className="text-[11px] text-neutral-500 mb-3 italic">
+              {post.type === 'announcement'
+                ? 'Media จะหมุนใน hero สไลด์เมื่อปักหมุดบนหน้าแรก'
+                : 'อัปโหลดรูปได้หลายรูป (≤4MB) หรือแนบลิงก์ YouTube — จะปรากฏใต้ cover ในหน้าบทความ'}
+            </div>
+            <PostMediaEditor items={post.media || []}
+                             onChange={(next) => setPost({...post, media: next})}/>
+          </Card>
 
           {/* Body editor */}
           <Card>

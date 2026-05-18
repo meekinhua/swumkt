@@ -6,6 +6,7 @@ import { Topbar, Footer, Eyebrow } from '@/pages/swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
 import { copyToClipboard } from '@/lib/clipboard';
+import { youtubeId } from '@/components/SlideMedia';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -148,6 +149,65 @@ const CmsArticleView = () => {
             )}
           </figure>
         </div>
+      )}
+
+      {/* Media gallery — multi-image + YouTube embeds */}
+      {(post.media || []).length > 0 && (
+        <section className="swu-container" data-testid="cms-article-media"
+                 style={{ padding: '0 32px 56px', maxWidth: 920 }}>
+          <div className="meta" style={{ marginBottom: 16, color: 'var(--ink-3)' }}>
+            ● MEDIA ({(post.media || []).length})
+          </div>
+          <div style={{ display: 'grid', gap: 24,
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+            {(post.media || []).map((m, i) => {
+              if (m.kind === 'youtube') {
+                const id = youtubeId(m.src);
+                if (!id) return null;
+                return (
+                  <figure key={i} data-testid={`cms-media-yt-${i}`}
+                          style={{ margin: 0, gridColumn: 'span 2', minWidth: 0 }}>
+                    <div style={{ position: 'relative', paddingTop: '56.25%',
+                                  borderRadius: 12, overflow: 'hidden',
+                                  border: '1px solid var(--ink)' }}>
+                      <iframe
+                        src={`https://www.youtube.com/embed/${id}`}
+                        title={m.alt || `YouTube video ${i + 1}`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%',
+                                 border: 0 }}/>
+                    </div>
+                    {m.caption && (
+                      <figcaption style={{ fontFamily: 'var(--mono)', fontSize: 11,
+                                           color: 'var(--ink-3)', marginTop: 10,
+                                           textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+                        ▶ {m.caption}
+                      </figcaption>
+                    )}
+                  </figure>
+                );
+              }
+              if (!m.src) return null;
+              return (
+                <figure key={i} data-testid={`cms-media-img-${i}`} style={{ margin: 0, minWidth: 0 }}>
+                  <img src={m.src} alt={m.alt || `รูปประกอบ ${i + 1}`}
+                       loading="lazy"
+                       style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover',
+                                borderRadius: 12, border: '1px solid var(--ink)',
+                                display: 'block' }}/>
+                  {m.caption && (
+                    <figcaption style={{ fontFamily: 'var(--mono)', fontSize: 11,
+                                         color: 'var(--ink-3)', marginTop: 10,
+                                         textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+                      {m.caption}
+                    </figcaption>
+                  )}
+                </figure>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {/* Body */}
