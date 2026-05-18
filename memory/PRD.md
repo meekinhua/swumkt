@@ -338,6 +338,21 @@ Admin UX (`CmsEditorPage`):
 - **HomePage**: `announcementSlides` ใช้ `hero_title_lines` ถ้ามี (filter empty), fallback ไป `title.slice(0,80)`; clamp `hero_accent_idx` ตาม length
 - Verified E2E: สร้าง announcement พร้อม `hero_title_lines=["งานสัมมนา","Brand Equity 2026"]` + `hero_accent_idx=1` → hero แสดง 2 บรรทัด, บรรทัด 2 = italic-accent ✓
 
+### One-Shot AI Write (Feb 2026 — NEW)
+เปลี่ยน workflow ของ AI Write Body จากเดิมต้องกรอก title ก่อนแล้ว AI ค่อยเขียน body → ตอนนี้ admin แค่ใส่ **รายละเอียดข่าว/เนื้อหา** ที่อยากเขียน → AI สร้างทุกอย่างให้ในคลิกเดียว
+
+- **Backend endpoint ใหม่** `POST /api/cms/ai/generate-full`:
+  - Request: `{description, post_type, category?, base_prompt?, sources?}`
+  - Response (structured JSON): `{title, hero_title_lines, hero_accent_idx, excerpt, category, body_md, model}`
+  - Prompt design: Gemini ถูกสั่งให้ตอบเป็น JSON object เดียว — มี robust parser ตัด ```json fences และหา `{...}` block; fallback คืน body_md ถ้า parse ไม่ผ่าน (`parse_warning: true`)
+- **Frontend (CmsEditorPage)**:
+  - Card "✨ AI WRITE" มี hint ชัดเจน: *"ใส่รายละเอียดเนื้อหา → AI จะสร้าง title · พาดหัวสั้น · excerpt · category · body ให้พร้อมในครั้งเดียว"*
+  - Textarea ใหญ่ (8 rows) เน้น border-blue, placeholder ยกตัวอย่าง รายละเอียดให้
+  - Primary CTA: **"✨ AI สร้างทั้งหมด (TITLE + พาดหัวสั้น + BODY)"**
+  - Secondary fallback button: "หรือสร้างเฉพาะ BODY (ใช้ TITLE ปัจจุบัน)" — เก็บ flow เก่าไว้สำหรับ regenerate body อย่างเดียว
+  - Warning text: overwrite title/excerpt/category/body/hero ทั้งหมด
+- **Verified E2E**: ใส่ description "นิสิตคว้ารางวัล Brand Storytelling Awards..." → AI คืน title + hero ["เห็นก่อน อ่านใจก่อน", "นำตลาดทุกเวที"] + excerpt + body markdown ครบ ✓
+
 
 ## Hero Multi-Media Announcement Slides (Feb 2026 — superseded)
 - **Backend schema**: `LandingSlide.media: List[SlideMediaItem]` where `{kind: 'image'|'youtube', src, alt, caption}` — multiple per slide; legacy `image` field kept as fallback

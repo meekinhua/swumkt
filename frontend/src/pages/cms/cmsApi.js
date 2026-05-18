@@ -29,6 +29,7 @@ export const cmsApi = {
 
   // AI
   aiText: (data) => axios.post(`${API}/cms/ai/generate-text`, data, { ...auth(), timeout: 90000 }),
+  aiFull: (data) => axios.post(`${API}/cms/ai/generate-full`, data, { ...auth(), timeout: 120000 }),
   aiImage: (data) => axios.post(`${API}/cms/ai/generate-image`, data, { ...auth(), timeout: 120000 }),
   aiSummarize: (data) => axios.post(`${API}/cms/ai/summarize`, data, { ...auth(), timeout: 90000 }),
   aiTranslate: (data) => axios.post(`${API}/cms/ai/translate`, data, { ...auth(), timeout: 60000 }),

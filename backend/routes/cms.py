@@ -103,6 +103,16 @@ class AITextRequest(BaseModel):
     target_lang: Optional[Literal["th", "en", "auto"]] = "th"
 
 
+class AIFullRequest(BaseModel):
+    """One-shot generation: AI fills in title, body, hero short headline, excerpt all at once
+    based on a user-provided description (and optional sources / template hint)."""
+    description: str  # user's raw idea/brief — primary input
+    post_type: Optional[Literal["article", "insight", "case_story", "announcement"]] = "announcement"
+    category: Optional[str] = None  # hint for category-aware template selection
+    base_prompt: Optional[str] = ""  # template body (already filled)
+    sources: Optional[List[SourceRef]] = []
+
+
 class AIImageRequest(BaseModel):
     prompt: str
     style: Optional[str] = "editorial photograph, marketing magazine, modern Thai context"
@@ -953,6 +963,105 @@ def get_cms_routes(db, get_current_user):
         if not text:
             raise HTTPException(503, "AI text generation failed (timeout or quota). Try again.")
         return {"text": text, "model": "gemini-2.5-flash"}
+
+    @cms_router.post("/ai/generate-full")
+    async def ai_generate_full(req: AIFullRequest, current_user=Depends(get_current_user)):
+        """One-shot AI: from a user description, generate title + body + hero short headline + excerpt + category.
+        Returns structured JSON so frontend can populate all fields at once."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        if not (req.description or "").strip():
+            raise HTTPException(400, "กรุณาใส่รายละเอียดเนื้อหาที่อยากให้ AI ช่วยเขียน")
+
+        ctx = await _build_source_context(db, req.sources or [])
+        type_hint_map = {
+            "announcement": "ข่าวประชาสัมพันธ์ของคณะการตลาด มศว — โทนเป็นทางการแต่อบอุ่น 250-400 คำ",
+            "article": "บทความวิจัยตลาดเชิงลึก 600-900 คำ tone วิชาการ-อ่านง่าย",
+            "insight": "Insight Post สั้น 150-250 คำ tone มั่นใจ-เห็นใจตลาด",
+            "case_story": "Case Story เล่าแบบ storytelling 500-800 คำ",
+        }
+        type_hint = type_hint_map.get(req.post_type or "announcement", type_hint_map["announcement"])
+
+        prompt = (
+            "คุณคือนักเขียน/ฝ่ายประชาสัมพันธ์ของสาขาการตลาด มศว (SWU MKT).\n"
+            f"จากรายละเอียดที่ผู้ใช้ให้มา ให้สร้างเนื้อหา {type_hint}\n\n"
+            "ตอบกลับเป็น JSON object อย่างเดียว (ไม่ต้องมี markdown code fence) ตาม schema:\n"
+            "{\n"
+            '  "title": "หัวเรื่องเต็ม (ไทย, ดึงดูด, 30-90 ตัวอักษร)",\n'
+            '  "hero_title_lines": ["บรรทัด1สั้นๆ", "บรรทัด2สั้นๆ"],  // <=2 บรรทัด แต่ละบรรทัด<=24 ตัวอักษร — สำหรับพาดหัว hero หน้าแรก\n'
+            '  "hero_accent_idx": 1,  // 0 หรือ 1 — บรรทัดที่ควรเน้นสีแดง (เลือกบรรทัดที่เป็น keyword หลัก)\n'
+            '  "excerpt": "สรุป 1-2 ประโยค (<=160 ตัวอักษร) สำหรับ social/preview",\n'
+            '  "category": "หมวดหมู่สั้นๆ เช่น กิจกรรมนิสิต, การประกวด, โครงงาน, การอบรม, Brand Strategy",\n'
+            '  "body_md": "เนื้อหาเต็มใน Markdown — มี # heading, paragraph, bullet, etc."\n'
+            "}\n\n"
+            "Tone: เห็นก่อน · อ่านใจก่อน · นำตลาด (avoid 'transparent/เปิดเผย').\n"
+            "ใช้ภาษาไทยเป็นหลัก, ระบุวันเวลา/สถานที่/รายชื่อถ้ามี, ใส่ตัวเลข/สถิติเด่นถ้ามี.\n\n"
+            f"[รายละเอียดจากผู้ใช้]\n{req.description.strip()}\n"
+        )
+        if req.category:
+            prompt += f"\n[หมวดหมู่ที่ผู้ใช้เลือกไว้แล้ว: {req.category}] — ถ้า field 'category' ใน JSON ตรงกันได้ ให้ใช้ค่านี้\n"
+        if req.base_prompt:
+            prompt += f"\n[Style/Structure hint]\n{req.base_prompt[:1500]}\n"
+        if ctx:
+            prompt += f"\n[ข้อมูลอ้างอิง — ใช้ตัวเลข/คำพูดจริง อย่าแต่ง]\n{ctx}\n"
+        prompt += "\nสำคัญ: ตอบ JSON object เดียวเท่านั้น ไม่มีข้อความอื่น ไม่มี ```json fence."
+
+        raw = await _gemini_text(prompt)
+        if not raw:
+            raise HTTPException(503, "AI generation failed (timeout or quota). Try again.")
+
+        # Parse JSON robustly — strip code fences if present
+        import json as _json
+        import re as _re
+        cleaned = raw.strip()
+        # Remove ```json ... ``` fences if Gemini added them anyway
+        fence_match = _re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, _re.DOTALL)
+        if fence_match:
+            cleaned = fence_match.group(1)
+        else:
+            # Find first { ... last } pair
+            first = cleaned.find("{")
+            last = cleaned.rfind("}")
+            if first >= 0 and last > first:
+                cleaned = cleaned[first:last + 1]
+        try:
+            data = _json.loads(cleaned)
+        except Exception as e:
+            logging.warning(f"[CMS] generate-full JSON parse failed: {e}; raw start={raw[:200]}")
+            # Fallback — return body only, leave others blank for frontend to handle
+            return {
+                "title": "",
+                "hero_title_lines": [],
+                "hero_accent_idx": 1,
+                "excerpt": "",
+                "category": req.category or "",
+                "body_md": raw,
+                "model": "gemini-2.5-flash",
+                "parse_warning": True,
+            }
+
+        # Sanitise hero lines: keep at most 2 non-empty trimmed strings, each <=60 chars
+        hero_lines = data.get("hero_title_lines") or []
+        if isinstance(hero_lines, str):
+            hero_lines = [hero_lines]
+        hero_lines = [str(s).strip()[:60] for s in hero_lines if str(s).strip()][:2]
+        accent_idx = data.get("hero_accent_idx", 1)
+        try:
+            accent_idx = int(accent_idx)
+        except Exception:
+            accent_idx = 1
+        if hero_lines:
+            accent_idx = max(0, min(accent_idx, len(hero_lines) - 1))
+
+        return {
+            "title": str(data.get("title", "")).strip()[:200],
+            "hero_title_lines": hero_lines,
+            "hero_accent_idx": accent_idx,
+            "excerpt": str(data.get("excerpt", "")).strip()[:320],
+            "category": str(data.get("category", req.category or "")).strip()[:80],
+            "body_md": str(data.get("body_md", "")).strip(),
+            "model": "gemini-2.5-flash",
+        }
 
     @cms_router.post("/ai/generate-image")
     async def ai_generate_image(req: AIImageRequest, current_user=Depends(get_current_user)):

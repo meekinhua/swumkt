@@ -124,6 +124,49 @@ const CmsEditorPage = () => {
     } finally { setBusy(b => ({ ...b, text: false })); }
   };
 
+  // One-shot AI: from extraPrompt (now the "description"), generate title + body + hero + excerpt + category at once
+  const aiGenerateAll = async () => {
+    if (!(extraPrompt || '').trim()) {
+      toast.error('ใส่รายละเอียดเนื้อหาในช่องด้านล่างก่อน เพื่อให้ AI เข้าใจว่าจะเขียนเรื่องอะไร');
+      return;
+    }
+    setBusy(b => ({ ...b, text: true }));
+    try {
+      const base = fillTemplate(selectedTextPrompt?.template || '');
+      const r = await cmsApi.aiFull({
+        description: extraPrompt,
+        post_type: post.type,
+        category: post.category || null,
+        base_prompt: base,
+        sources: post.source_refs || [],
+      });
+      const d = r.data || {};
+      setPost(p => ({
+        ...p,
+        title: d.title || p.title,
+        body_md: d.body_md || p.body_md,
+        excerpt: d.excerpt || p.excerpt,
+        category: d.category || p.category,
+        hero_title_lines: (d.hero_title_lines && d.hero_title_lines.length)
+          ? d.hero_title_lines
+          : (p.hero_title_lines || []),
+        hero_accent_idx: typeof d.hero_accent_idx === 'number' ? d.hero_accent_idx : (p.hero_accent_idx ?? 1),
+        generation_meta: {
+          base_prompt_id: selectedTextPrompt?.id,
+          description: extraPrompt,
+          model: d.model,
+        },
+      }));
+      if (d.parse_warning) {
+        toast.warning('AI ตอบกลับมาเป็นข้อความปกติ (ไม่ใช่ JSON) — body ถูกใส่ใน body_md แล้ว, ส่วน title/hero โปรดกรอกเองหรือกดสร้างใหม่');
+      } else {
+        toast.success('AI สร้าง title + body + พาดหัวสั้น เรียบร้อย — ตรวจสอบและแก้ได้ตามต้องการ');
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'AI สร้างเนื้อหาล้มเหลว');
+    } finally { setBusy(b => ({ ...b, text: false })); }
+  };
+
   const aiGenerateImage = async () => {
     if (!post.title) { toast.error('กรอก title ก่อน'); return; }
     setBusy(b => ({ ...b, image: true }));
@@ -485,12 +528,18 @@ const CmsEditorPage = () => {
             )}
           </Card>
 
-          {/* AI text gen */}
+          {/* AI text gen — one-shot generation from description */}
           <Card>
-            <Label>✨ AI Write Body</Label>
-            <div className="text-xs text-neutral-500 mb-2">ใช้ template ตั้งต้น + extra prompt + sources</div>
+            <Label>✨ AI WRITE — สร้างเนื้อหาทั้งหมดในคลิกเดียว</Label>
+            <div className="text-xs text-neutral-600 mb-2 leading-relaxed">
+              <span className="font-bold text-blue-700">วิธีใช้:</span> ใส่ <b>รายละเอียดเนื้อหา</b> ที่ต้องการลงในช่องด้านล่าง
+              (ใครจัด, ที่ไหน, เมื่อไหร่, ทำอะไร, ใครเข้าร่วม ฯลฯ)
+              — AI จะสร้าง <b>title · พาดหัวสั้น · excerpt · category · body</b> ให้พร้อมในครั้งเดียว
+              <br/>
+              <span className="text-neutral-500 italic">หลังจาก AI สร้างเสร็จ คุณยังแก้แต่ละช่องได้ตามต้องการ</span>
+            </div>
 
-            <div className="text-[10px] font-mono uppercase text-neutral-500 mt-2">Base Template</div>
+            <div className="text-[10px] font-mono uppercase text-neutral-500 mt-2">Base Template (ใช้เป็น style/structure hint)</div>
             <select value={selectedTextPrompt?.id || ''}
                     onChange={e => setSelectedTextPrompt(prompts.find(p => p.id === e.target.value))}
                     data-testid="cms-prompt-select"
@@ -538,18 +587,36 @@ const CmsEditorPage = () => {
               </pre>
             )}
 
-            <div className="text-[10px] font-mono uppercase text-neutral-500 mt-3">Extra Prompt (เสริม)</div>
-            <textarea value={extraPrompt} onChange={e => setExtraPrompt(e.target.value)}
-                      placeholder="เช่น 'เน้นมุม Gen Z, ยกตัวอย่าง 7-Eleven, จบด้วยคำถามชวนคิด'"
-                      data-testid="cms-extra-prompt"
-                      rows={3}
-                      className="w-full text-sm border border-neutral-300 rounded px-3 py-2 mt-1"/>
+            <div className="mt-3">
+              <div className="flex items-baseline justify-between mb-1">
+                <span className="text-xs font-mono uppercase tracking-widest text-blue-700 font-bold">
+                  📝 รายละเอียดข่าว / เนื้อหา (Input หลักของ AI)
+                </span>
+                <span className="text-[10px] text-neutral-400">{(extraPrompt || '').length} ตัวอักษร</span>
+              </div>
+              <textarea value={extraPrompt} onChange={e => setExtraPrompt(e.target.value)}
+                        placeholder={'พิมพ์รายละเอียดเนื้อหาที่ต้องการ เช่น:\n\n"สาขาการตลาด มศว จัดงานสัมมนา Brand Equity ครั้งที่ 5 วันที่ 15 มี.ค. 2026 ที่หอประชุมใหญ่ มีนิสิตปี 4 นำเสนอผลงาน 12 แบรนด์ไทย วิทยากร: ดร. สมชาย จาก SCB ลงทะเบียนฟรีที่ swumkt.org/seminar"\n\nยิ่งใส่ละเอียดเท่าไหร่ AI ยิ่งเขียนตรงประเด็นมากขึ้น'}
+                        data-testid="cms-extra-prompt"
+                        rows={8}
+                        className="w-full text-sm border-2 border-blue-300 rounded px-3 py-2 focus:border-blue-600 focus:outline-none"/>
+            </div>
 
-            <button onClick={aiGenerateText} disabled={busy.text} data-testid="cms-ai-text-btn"
-                    className="mt-3 w-full px-4 py-2 bg-blue-600 text-white text-sm font-mono uppercase rounded-full disabled:opacity-50">
-              {busy.text ? '⏳ Writing...' : '✨ Generate Body'}
-            </button>
-            <div className="text-[10px] text-neutral-400 mt-1 text-center">จะ overwrite body ปัจจุบัน</div>
+            <div className="grid grid-cols-1 gap-2 mt-3">
+              <button onClick={aiGenerateAll} disabled={busy.text}
+                      data-testid="cms-ai-full-btn"
+                      className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-mono uppercase rounded-full disabled:opacity-50 hover:bg-blue-700 font-bold">
+                {busy.text ? '⏳ AI กำลังสร้าง...' : '✨ AI สร้างทั้งหมด (Title + พาดหัวสั้น + Body)'}
+              </button>
+              <button onClick={aiGenerateText} disabled={busy.text}
+                      data-testid="cms-ai-text-btn"
+                      className="w-full px-4 py-1.5 border border-neutral-400 text-neutral-700 text-xs font-mono uppercase rounded-full disabled:opacity-50 hover:bg-neutral-50">
+                {busy.text ? '⏳ Writing...' : 'หรือสร้างเฉพาะ body (ใช้ title ปัจจุบัน)'}
+              </button>
+            </div>
+            <div className="text-[10px] text-neutral-400 mt-2 text-center leading-relaxed">
+              ⚠ ปุ่มหลักจะ <b>overwrite</b> title · พาดหัวสั้น · excerpt · category · body ทั้งหมด<br/>
+              (ค่าเดิมที่กรอกไว้จะหายไป — กดเมื่อต้องการให้ AI สร้างใหม่ทั้งชุด)
+            </div>
           </Card>
         </div>
       </div>
