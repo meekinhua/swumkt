@@ -148,6 +148,7 @@ const PromptModal = ({ initial, onClose, onSave }) => {
                 <option value="article">Article</option>
                 <option value="insight">Insight</option>
                 <option value="case_story">Case Story</option>
+                <option value="announcement">📣 Announcement</option>
               </select>
             </div>
           </div>

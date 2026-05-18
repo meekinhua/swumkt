@@ -54,13 +54,34 @@ const CmsEditorPage = () => {
 
   // Pick default text/image prompts based on post type
   useEffect(() => {
-    const txt = prompts.find(p => p.scope === 'text' && p.post_type === post.type && p.is_default)
-              || prompts.find(p => p.scope === 'text' && p.is_default)
-              || prompts.find(p => p.scope === 'text');
+    // For announcement, try to match by category keyword too (กิจกรรม, ประกวด, โครงงาน, อบรม)
+    const sameType = prompts.filter(p => p.scope === 'text' && p.post_type === post.type);
+    let txt = null;
+    if (post.type === 'announcement' && post.category) {
+      const cat = String(post.category).toLowerCase();
+      const keyMap = [
+        ['ประกวด', 'contest'], ['แข่งขัน', 'contest'],
+        ['โครงงาน', 'project'], ['วิจัย', 'project'],
+        ['อบรม', 'training'], ['workshop', 'training'],
+        ['กิจกรรม', 'activity'],
+      ];
+      for (const [thaiKw, slugKw] of keyMap) {
+        if (cat.includes(thaiKw)) {
+          txt = sameType.find(p => (p.id || '').includes(slugKw)) || txt;
+          if (txt) break;
+        }
+      }
+    }
+    if (!txt) {
+      txt = sameType.find(p => p.is_default)
+         || sameType[0]
+         || prompts.find(p => p.scope === 'text' && p.is_default)
+         || prompts.find(p => p.scope === 'text');
+    }
     const img = prompts.find(p => p.scope === 'image' && p.is_default) || prompts.find(p => p.scope === 'image');
     setSelectedTextPrompt(txt || null);
     setSelectedImagePrompt(img || null);
-  }, [prompts, post.type]);
+  }, [prompts, post.type, post.category]);
 
   const filteredSources = useMemo(() => {
     if (!sourceQuery) return allSources;
@@ -405,9 +426,37 @@ const CmsEditorPage = () => {
                     onChange={e => setSelectedTextPrompt(prompts.find(p => p.id === e.target.value))}
                     data-testid="cms-prompt-select"
                     className="w-full text-sm border border-neutral-300 rounded px-2 py-1.5 mt-1">
-              {prompts.filter(p => p.scope === 'text').map(p => (
-                <option key={p.id} value={p.id}>{p.name} {p.is_default ? '(★)' : ''}</option>
-              ))}
+              {(() => {
+                const all = prompts.filter(p => p.scope === 'text');
+                const matching = all.filter(p => p.post_type === post.type);
+                const generic = all.filter(p => !p.post_type);
+                const others = all.filter(p => p.post_type && p.post_type !== post.type);
+                return (
+                  <>
+                    {matching.length > 0 && (
+                      <optgroup label={`◆ สำหรับ ${post.type}`}>
+                        {matching.map(p => (
+                          <option key={p.id} value={p.id}>{p.name} {p.is_default ? '(★)' : ''}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {generic.length > 0 && (
+                      <optgroup label="◇ ทั่วไป">
+                        {generic.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {others.length > 0 && (
+                      <optgroup label="∙ ของ post type อื่น">
+                        {others.map(p => (
+                          <option key={p.id} value={p.id}>{p.name} ({p.post_type})</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                );
+              })()}
             </select>
 
             <button onClick={() => setEditingTemplate(v => !v)}

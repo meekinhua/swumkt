@@ -295,6 +295,24 @@ Crawlers (FB/LINE/Twitter/WhatsApp/Slack/Discord) don't run JS → React-side OG
   - `/admin/cms/posts/:id` (type=announcement): red CTA URL block ใต้ pin block พร้อม hint default `/learn/{slug}`
 - **Verified E2E**: สร้าง announcement พร้อม `cta_url=https://example.com/news/123` → publish → pinned → ขึ้น slide ที่ 2 ของ hero พร้อม `<a target="_blank" href="https://...">` ครอบ H1+lede ✓
 
+### Announcement AI Body Templates (Feb 2026 — NEW)
+4 default prompt templates สำหรับเขียน body ของ post type `announcement` ผ่าน Gemini:
+1. `default-announce-activity` — **กิจกรรมนิสิต** (★ default) — สัมมนา/ทริป/workshop
+2. `default-announce-contest` — **การประกวดของนิสิต** — แข่งขัน/ผลรางวัล
+3. `default-announce-project` — **โครงงานนิสิต** — โครงงาน/ผลงานวิจัย
+4. `default-announce-training` — **การอบรมของนิสิต** — workshop/short course
+
+Schema:
+- `PromptTemplateCreate.post_type` Literal เพิ่ม `announcement` (เดิมมีแค่ article/insight/case_story)
+- Idempotent seed ผ่าน `_seed_default_templates()` — ครั้งแรกเรียก `/cms/prompts` ก็จะ insert ครบ
+
+Admin UX (`CmsEditorPage`):
+- Base Template dropdown ใช้ `<optgroup>` 3 กลุ่ม: `◆ สำหรับ {post.type}` / `◇ ทั่วไป` / `∙ ของ post type อื่น`
+- **Category-aware auto-pick** — เมื่อ post.type=announcement + category มีคีย์เวิร์ด (`ประกวด/แข่งขัน`, `โครงงาน/วิจัย`, `อบรม/workshop`, `กิจกรรม`) → auto-เลือก template ที่ตรง
+- Verified PASS ทั้ง 4 categories จาก screenshot test
+
+`CmsPromptsPage` (admin prompt manager): เพิ่ม option `📣 Announcement` ใน post_type selector
+
 ## Hero Multi-Media Announcement Slides (Feb 2026 — superseded)
 - **Backend schema**: `LandingSlide.media: List[SlideMediaItem]` where `{kind: 'image'|'youtube', src, alt, caption}` — multiple per slide; legacy `image` field kept as fallback
 - **Frontend rendering** (`/app/frontend/src/components/SlideMedia.jsx`): auto-rotating intra-slide carousel (4.5s). **Lazy-load YouTube**: shows hqdefault thumbnail + red ▶ play button by default so outer hero carousel keeps rotating; iframe loads on click with `autoplay=1` and pause becomes sticky until user navigates away. Clicking inner dot = 30s grace pause + dwell. Hover also pauses outer rotation. ▶ VIDEO red badge for YT items; dots top-right with red active marker for YT, black for image
