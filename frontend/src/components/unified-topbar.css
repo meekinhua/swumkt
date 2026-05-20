@@ -192,6 +192,48 @@
   margin-top: 2px;
 }
 
+/* --------- Language switcher --------- */
+.utb-lang {
+  margin-right: 2px;
+}
+.utb-lang-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-family: var(--utb-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--utb-ink-2);
+  background: transparent;
+  border: 1px solid var(--utb-line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.utb-lang-trigger:hover {
+  background: var(--utb-bg-hover);
+  color: var(--utb-ink);
+  border-color: var(--utb-ink);
+}
+.utb-lang-trigger.is-open {
+  background: var(--utb-bg-hover);
+  border-color: var(--utb-ink);
+  color: var(--utb-ink);
+}
+.utb-lang-flag {
+  font-size: 14px;
+  line-height: 1;
+}
+.utb-lang-code {
+  letter-spacing: 0.08em;
+}
+.utb-dd-item--active {
+  background: rgba(31, 58, 138, 0.06);
+  color: var(--utb-ink);
+}
+
 /* --------- Right cluster --------- */
 .utb-right {
   display: flex;
@@ -363,6 +405,8 @@
 @media (max-width: 480px) {
   .utb-logo-name { font-size: 12px; }
   .utb-logo-img { height: 36px; }
+  /* Compact lang switcher: hide the code text, keep the flag */
+  .utb-right .utb-lang-code { display: none; }
 }
 
 /* --------- Suppress legacy be-topbar / topbar styles when UnifiedTopbar is present --------- */

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
 import '@/components/unified-topbar.css';
@@ -45,8 +46,71 @@ const ADMIN_LINKS = [
   { to: '/admin/cms/prompts',   label: 'AI Prompts',    hint: 'Template AI' },
   { to: '/admin/notifications', label: 'Notifications', hint: 'แจ้งเตือน' },
   { to: '/admin/llm-prompts',   label: 'LLM Prompts',   hint: 'AI Settings' },
+  { to: '/content',             label: 'Content Library', hint: 'คลังเนื้อหา' },
   { to: '/admin/settings',      label: 'Settings',      hint: 'ตั้งค่าระบบ' },
 ];
+
+// Language switcher — inline, styled to match topbar's editorial/monospace look
+const LANGUAGES = [
+  { code: 'th', name: 'ไทย',        flag: '🇹🇭' },
+  { code: 'en', name: 'English',     flag: '🇬🇧' },
+  { code: 'zh', name: '中文',        flag: '🇨🇳' },
+  { code: 'ja', name: '日本語',      flag: '🇯🇵' },
+  { code: 'ko', name: '한국어',      flag: '🇰🇷' },
+  { code: 'my', name: 'မြန်မာ',     flag: '🇲🇲' },
+  { code: 'lo', name: 'ລາວ',        flag: '🇱🇦' },
+  { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
+];
+
+const LangSwitcher = () => {
+  const { i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const onClickOutside = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onEsc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    if (open) {
+      document.addEventListener('mousedown', onClickOutside);
+      document.addEventListener('keydown', onEsc);
+    }
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [open]);
+  const current = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+  const change = (code) => { i18n.changeLanguage(code); setOpen(false); };
+  return (
+    <div className="utb-dd utb-lang" ref={ref} data-testid="utb-lang-dd">
+      <button type="button"
+              className={`utb-lang-trigger ${open ? 'is-open' : ''}`}
+              onClick={() => setOpen(v => !v)}
+              aria-expanded={open}
+              aria-label="เปลี่ยนภาษา"
+              data-testid="utb-lang-trigger">
+        <span className="utb-lang-flag" aria-hidden>{current.flag}</span>
+        <span className="utb-lang-code">{current.code.toUpperCase()}</span>
+        <span className="utb-chevron" aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div className="utb-dd-menu utb-dd-menu--right" role="menu" data-testid="utb-lang-menu">
+          {LANGUAGES.map(l => (
+            <button key={l.code} type="button"
+                    className={`utb-dd-item ${i18n.language === l.code ? 'utb-dd-item--active' : ''}`}
+                    onClick={() => change(l.code)}
+                    data-testid={`utb-lang-${l.code}`}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18 }} aria-hidden>{l.flag}</span>
+                <span className="utb-dd-label">{l.name}</span>
+              </span>
+              {i18n.language === l.code && <span className="utb-dd-hint">✓ ACTIVE</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const RoleBadge = ({ role }) => {
   if (!role) return null;
@@ -182,8 +246,9 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
           )}
         </nav>
 
-        {/* Right cluster — auth controls */}
+        {/* Right cluster — language + auth controls */}
         <div className="utb-right">
+          <LangSwitcher/>
           {!isLoggedIn ? (
             <>
               <Link to="/login" className="utb-btn utb-btn--ghost" data-testid="utb-login-btn">
@@ -276,6 +341,11 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
               ))}
             </div>
           )}
+
+          <div className="utb-mobile-section">
+            <div className="utb-mobile-label">ภาษา</div>
+            <LangSwitcher/>
+          </div>
 
           <div className="utb-mobile-section">
             {!isLoggedIn ? (
