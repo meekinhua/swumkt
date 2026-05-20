@@ -409,3 +409,42 @@ Admin UX (`CmsEditorPage`):
 ## Credentials
 - Admin: admin@swu.ac.th / admin123
 - Student: student1@swu.ac.th / student123
+
+## CMS Hero Clickable + Custom Title + Multi-Media (Feb 2026)
+- **Hero Clickable CTA** (`HomePage.jsx` + `CmsLandingPage.jsx` + `CmsEditorPage.jsx`)
+  - `CmsPost.cta_url` + `LandingSlide.cta_url` — admin-defined destination
+  - `HeroClickable` wraps H1+lede+"อ่านต่อ ↗" hint; external (`http(s)://`) → `<a target="_blank">`; internal → `<Link>`
+  - Fallback: announcement → `/learn/{slug}`; static slide → no click affordance
+- **Announcement AI Body Templates** (4 defaults, auto-seed):
+  - `default-announce-activity` (★ default) — กิจกรรมนิสิต
+  - `default-announce-contest` — การประกวด
+  - `default-announce-project` — โครงงาน
+  - `default-announce-training` — การอบรม
+  - Category-aware auto-pick (ประกวด/โครงงาน/อบรม/กิจกรรม → matches template); dropdown uses `<optgroup>` grouping
+- **Multi-Media Gallery on every post type** (article/insight/case_story/announcement)
+  - CmsEditorPage: media editor visible for all types (heading adapts)
+  - CmsArticleView (`/learn/{slug}`): renders "● MEDIA (n)" section between cover and body; grid layout, YouTube `span 2` 16:9 iframe, image figcaption
+- **Hero Short Headline override** (announcement only)
+  - Schema: `hero_title_lines: List[str]` (max 2) + `hero_accent_idx: int` (0/1)
+  - Admin: blue block "✨ พาดหัวสั้นสำหรับ Hero หน้าแรก" — 2 inputs (60 chars each) + radio for italic-accent line
+  - HomePage uses `hero_title_lines` if present, else falls back to `title.slice(0,80)`
+- **One-Shot AI Write** (`POST /api/cms/ai/generate-full`)
+  - Input: `{description, post_type, category?, base_prompt?, sources?}`
+  - Output: `{title, hero_title_lines, hero_accent_idx, excerpt, category, body_md, model}` — Gemini returns JSON; robust parser strips ```json fences and finds `{...}` block; falls back to `body_md` with `parse_warning: true`
+  - Frontend "✨ AI WRITE" card: hint text, big blue textarea (8 rows), primary CTA "✨ AI สร้างทั้งหมด (TITLE + พาดหัวสั้น + BODY)" + secondary "หรือสร้างเฉพาะ BODY"
+
+## Refactor: Conjoint Module Extraction (Feb 20, 2026 — DONE)
+ทำโดย Claude Code Pro (local) → push GitHub `main` → pull กลับ Emergent → smoke test ผ่าน
+
+- **ไฟล์เปลี่ยน:**
+  - `backend/server.py`: 12,342 → **8,022 บรรทัด** (ลด 35%)
+  - `backend/routes/conjoint.py`: ใหม่, **4,356 บรรทัด** (24 models + 24 helpers + 42 endpoints)
+- **สถาปัตยกรรม:** Factory pattern `get_conjoint_routes(db, get_current_user, get_current_user_optional)` — **ไม่มี router prefix** (เพราะมี `/admin/conjoint-image-settings` ปน → คง full path เดิม)
+- Late-import shared symbols จาก `server.py` (`User, UserRole, SurveyResponse, compress_base64_image, initialize_default_prompts`)
+- Heavy libs (numpy/pandas/sklearn/statsmodels/docx/matplotlib/lib.nca/ipma/fsqca) ยัง lazy import ภายในฟังก์ชันเหมือนเดิม
+- **Smoke tests passed**:
+  - ✅ Backend boots cleanly, no errors in supervisor log
+  - ✅ All `/api/conjoint/*` + `/api/admin/conjoint-image-settings` → 200
+  - ✅ Regression: `/api/brand-equity/*`, `/api/cms/*`, `/api/projects`, `/api/showcase/index` → 200
+  - ✅ Public showcase UI ยังแสดง topics=4 / BE=1 / CJ=3 / responses=12 ครบ
+- Reference docs: `/app/REFACTOR_CONJOINT.md` (prompt), `/app/REFACTOR_CONJOINT_REPORT.md` (สรุปจาก local agent)
