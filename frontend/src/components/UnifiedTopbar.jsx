@@ -55,9 +55,9 @@ const RoleBadge = ({ role }) => {
     admin:   { bg: '#C8102E', label: 'ADMIN' },
     teacher: { bg: '#0E5538', label: 'TEACHER' },
     student: { bg: '#1F3A8A', label: 'STUDENT' },
-    user:    { bg: '#3F3F46', label: 'USER' },
+    user:    { bg: '#1F3A8A', label: 'STUDENT' }, // default authenticated user → treated as STUDENT
   };
-  const cfg = styles[r] || styles.user;
+  const cfg = styles[r] || { bg: '#3F3F46', label: r.toUpperCase() };
   return (
     <span className="utb-role-badge" style={{ background: cfg.bg }}>
       {cfg.label}

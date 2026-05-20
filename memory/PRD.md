@@ -448,3 +448,39 @@ Admin UX (`CmsEditorPage`):
   - ✅ Regression: `/api/brand-equity/*`, `/api/cms/*`, `/api/projects`, `/api/showcase/index` → 200
   - ✅ Public showcase UI ยังแสดง topics=4 / BE=1 / CJ=3 / responses=12 ครบ
 - Reference docs: `/app/REFACTOR_CONJOINT.md` (prompt), `/app/REFACTOR_CONJOINT_REPORT.md` (สรุปจาก local agent)
+
+## Unified Top Navigation (Feb 20, 2026 — NEW)
+แก้ปัญหา: top menu ของระบบไม่ consistent ระหว่างหน้าต่างๆ + login/role logic เพี้ยน + ปุ่ม Login/Logout/Profile หาไม่เจอ
+
+### Architecture
+- ไฟล์ใหม่: `/app/frontend/src/components/UnifiedTopbar.jsx` (~310 บรรทัด, single source of truth)
+- ไฟล์ใหม่: `/app/frontend/src/components/unified-topbar.css` (Editorial/Swiss white sticky)
+- Legacy wrappers (zero per-page changes — 30+ pages auto-upgraded):
+  - `BeTopbar` ใน `be-components.jsx` → ตอนนี้แค่ render `<UnifiedTopbar/>`
+  - `Topbar` ใน `SwumktComponents.jsx` → ตอนนี้แค่ render `<UnifiedTopbar/>`
+
+### Menu Structure (role-based)
+| Element | Guest | Student | Admin |
+|---------|:-----:|:-------:|:-----:|
+| Logo + subtitle | ✓ | ✓ | ✓ |
+| หน้าแรก / เรียนรู้ / ประชาสัมพันธ์ / Showcase | ✓ | ✓ | ✓ |
+| เครื่องมือ ▾ (BE/CJ/CX/CB/JF/SV) | – | ✓ | ✓ |
+| โปรเจกต์ | – | ✓ | ✓ |
+| ผู้ดูแล ▾ (Users/CMS/Landing/AI/Notifications/LLM/Settings) | – | – | ✓ |
+| `[เข้าสู่ระบบ] [ลงทะเบียน]` | ✓ | – | – |
+| Avatar dropdown (Profile/Notifications/Dashboard/Logout) | – | ✓ | ✓ |
+
+### Features
+- Auto-detect auth via `useAuth()` — no per-page logic needed
+- Role badge color-coded: ADMIN (red), TEACHER (green), STUDENT (blue — also default for `role='user'`)
+- Mobile: hamburger + drawer @ ≤900px (auto-closes on route change)
+- `publicMode` prop (still supported) hides Tools/Projects/Admin even when logged in — ใช้กับ `/showcase/{token}` (shared dashboard) และ `/brand-equity/respond/{token}` (survey link)
+- `subtitle` prop passes through e.g. "BRAND HEALTH CHECK" / "CONJOINT ANALYSIS"
+- `active` prop highlights current section
+
+### Testing (iteration 21 — frontend agent)
+- 12/13 acceptance criteria PASS
+- Guest/Student/Admin views verified on `/`, `/learn`, `/announcements`, `/showcase`, `/brand-equity`, `/market-research/conjoint-analysis`
+- Logout flow + tools dropdown + admin dropdown + active state + subtitle + mobile responsive all PASS
+- 1 minor (student role badge showing "USER" instead of "STUDENT") — fixed by mapping `role='user'` → STUDENT label
+- No double-topbar regression (`.be-topbar:not(.utb-root)` count = 0 on all pages)
