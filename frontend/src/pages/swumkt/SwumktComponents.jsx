@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import '@/pages/swumkt-design.css';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
+import UnifiedTopbar from '@/components/UnifiedTopbar';
 
 // Real SWU/MKT logo (bitmap). Defaults to a generous size so the wordmark reads clearly.
 export const SwuLogo = ({ size = 56 }) => (
@@ -20,26 +21,12 @@ export const Eyebrow = ({ children, red, dot, pulse, green }) => (
   </span>
 );
 
-export const Topbar = ({ active }) => {
-  const navigate = useNavigate();
-  return (
-    <header className="topbar glass" style={{ position: 'sticky', top: 0 }}>
-      <div className="topbar__inner">
-        <SwuLogo />
-        <nav className="topbar__nav">
-          <Link to="/showcase" className={active === 'showcase' ? 'active' : ''}>Showcase</Link>
-          <Link to="/learn" className={active === 'learn' ? 'active' : ''}>Learn</Link>
-          <Link to="/about/swu-marketing" className={active === 'about' ? 'active' : ''}>About</Link>
-          <a href="#login" className="topbar__signin btn-pill btn-pill--blue"
-             style={{ marginLeft: 8 }}
-             onClick={(e) => { e.preventDefault(); navigate('/login'); }}>
-            Sign in →
-          </a>
-        </nav>
-      </div>
-    </header>
-  );
-};
+/**
+ * Topbar — legacy wrapper for swumkt pages. Renders UnifiedTopbar.
+ */
+export const Topbar = ({ active }) => (
+  <UnifiedTopbar active={active}/>
+);
 
 export const Footer = () => (
   <footer className="footer">

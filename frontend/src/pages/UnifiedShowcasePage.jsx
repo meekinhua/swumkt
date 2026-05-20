@@ -483,7 +483,7 @@ const UnifiedShowcasePage = () => {
   if (loading) {
     return (
       <div style={{ background: '#FFFFFF', minHeight: '100vh' }}>
-        <BeTopbar subtitle="PUBLIC SHOWCASE" publicMode />
+        <BeTopbar subtitle="PUBLIC SHOWCASE" active="showcase" />
         <BeLoading text="กำลังโหลด showcase..."/>
       </div>
     );
@@ -519,7 +519,7 @@ const UnifiedShowcasePage = () => {
 
   return (
     <div style={{ background: '#FFFFFF', minHeight: '100vh', color: '#0A0A0A' }}>
-      <BeTopbar subtitle="PUBLIC SHOWCASE" publicMode />
+      <BeTopbar subtitle="PUBLIC SHOWCASE" active="showcase" />
 
       <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 24px' }} className="md:!px-12">
 

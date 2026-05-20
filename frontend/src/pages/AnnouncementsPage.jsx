@@ -107,7 +107,7 @@ const AnnouncementsPage = () => {
   if (loading) {
     return (
       <div style={{ background: '#FFFFFF', minHeight: '100vh' }}>
-        <BeTopbar subtitle="ประชาสัมพันธ์" publicMode />
+        <BeTopbar subtitle="ประชาสัมพันธ์" active="announcements" />
         <BeLoading text="กำลังโหลด..."/>
       </div>
     );
@@ -115,7 +115,7 @@ const AnnouncementsPage = () => {
 
   return (
     <div style={{ background: '#FFFFFF', minHeight: '100vh', color: '#0A0A0A' }}>
-      <BeTopbar subtitle="ประชาสัมพันธ์" publicMode />
+      <BeTopbar subtitle="ประชาสัมพันธ์" active="announcements" />
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px' }} className="md:!px-12">
         {/* Hero */}

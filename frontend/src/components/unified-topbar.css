@@ -1,0 +1,370 @@
+/* ============================================================
+   Unified Topbar — Editorial/Swiss style
+   Sticky white with subtle border, monospace nav, accent on active
+   ============================================================ */
+
+:root {
+  --utb-ink: #0A0A0A;
+  --utb-ink-2: #3F3F46;
+  --utb-ink-3: #71717A;
+  --utb-line: #E4E4E7;
+  --utb-bg: #FFFFFF;
+  --utb-bg-hover: #FAFAFA;
+  --utb-accent: #C8102E; /* SWU red */
+  --utb-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.utb-root {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--utb-bg);
+  border-bottom: 1px solid var(--utb-line);
+  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px);
+  background-color: rgba(255, 255, 255, 0.92);
+}
+
+.utb-inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 32px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* --------- Logo --------- */
+.utb-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--utb-ink);
+  flex-shrink: 0;
+}
+.utb-logo-img {
+  height: 42px;
+  width: auto;
+  display: block;
+}
+.utb-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.utb-logo-name {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+.utb-logo-sub {
+  font-family: var(--utb-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--utb-ink-3);
+  margin-top: 2px;
+}
+
+/* --------- Main nav (center) --------- */
+.utb-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.utb-link, .utb-dd-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-family: var(--utb-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--utb-ink-2);
+  text-decoration: none;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+  white-space: nowrap;
+}
+.utb-link:hover, .utb-dd-trigger:hover {
+  background: var(--utb-bg-hover);
+  color: var(--utb-ink);
+}
+.utb-link.is-active, .utb-dd-trigger.is-open,
+.utb-dd-trigger span.is-active {
+  color: var(--utb-ink);
+}
+.utb-link.is-active {
+  background: var(--utb-bg-hover);
+  border-color: var(--utb-line);
+}
+.utb-dd-trigger.is-open {
+  background: var(--utb-bg-hover);
+}
+.utb-chevron {
+  font-size: 9px;
+  color: var(--utb-ink-3);
+  transition: transform 140ms ease;
+}
+.utb-dd-trigger.is-open .utb-chevron { transform: rotate(180deg); }
+
+/* --------- Dropdown menu --------- */
+.utb-dd { position: relative; }
+.utb-dd-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  min-width: 240px;
+  background: var(--utb-bg);
+  border: 1px solid var(--utb-line);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.12), 0 2px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 6px;
+  z-index: 100;
+  animation: utb-dd-in 120ms ease;
+}
+.utb-dd-menu--left { left: 0; }
+.utb-dd-menu--right { right: 0; }
+@keyframes utb-dd-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.utb-dd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--utb-ink-2);
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+.utb-dd-item:hover {
+  background: var(--utb-bg-hover);
+  color: var(--utb-ink);
+}
+.utb-dd-item--danger:hover {
+  background: rgba(200, 16, 46, 0.06);
+  color: var(--utb-accent);
+}
+.utb-dd-label { font-weight: 500; }
+.utb-dd-hint {
+  font-family: var(--utb-mono);
+  font-size: 10px;
+  color: var(--utb-ink-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.utb-dd-divider {
+  height: 1px;
+  background: var(--utb-line);
+  margin: 6px 4px;
+}
+.utb-dd-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--utb-line);
+  margin-bottom: 4px;
+}
+.utb-dd-header-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--utb-ink);
+}
+.utb-dd-header-email {
+  font-family: var(--utb-mono);
+  font-size: 10px;
+  color: var(--utb-ink-3);
+  margin-top: 2px;
+}
+
+/* --------- Right cluster --------- */
+.utb-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.utb-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-family: var(--utb-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 140ms ease;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.utb-btn--ghost {
+  color: var(--utb-ink);
+  border-color: var(--utb-ink);
+}
+.utb-btn--ghost:hover { background: var(--utb-ink); color: white; }
+.utb-btn--primary {
+  background: var(--utb-ink);
+  color: white;
+}
+.utb-btn--primary:hover { background: var(--utb-accent); }
+
+/* --------- Avatar --------- */
+.utb-avatar-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.utb-avatar {
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1F3A8A 0%, #C8102E 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.utb-avatar-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+.utb-avatar-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--utb-ink);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.utb-role-badge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--utb-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: white;
+  font-weight: 700;
+  width: fit-content;
+}
+
+/* --------- Hamburger (mobile only) --------- */
+.utb-hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid var(--utb-line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.utb-hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--utb-ink);
+}
+
+/* --------- Mobile drawer --------- */
+.utb-mobile {
+  display: none;
+  flex-direction: column;
+  border-top: 1px solid var(--utb-line);
+  background: var(--utb-bg);
+  padding: 16px 24px 24px;
+  animation: utb-dd-in 160ms ease;
+}
+.utb-mobile-section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--utb-line);
+}
+.utb-mobile-section:last-child { border-bottom: none; }
+.utb-mobile-label {
+  font-family: var(--utb-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--utb-ink-3);
+  margin-bottom: 8px;
+}
+.utb-mobile-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 15px;
+  color: var(--utb-ink);
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.utb-mobile-link.is-active { font-weight: 700; color: var(--utb-accent); }
+.utb-mobile-link.utb-mobile-link--danger { color: var(--utb-accent); }
+.utb-mobile-hint {
+  font-family: var(--utb-mono);
+  font-size: 10px;
+  color: var(--utb-ink-3);
+}
+.utb-mobile-btn {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+.utb-mobile-userline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--utb-line);
+  margin-bottom: 8px;
+}
+
+/* --------- Responsive breakpoints --------- */
+@media (max-width: 1100px) {
+  .utb-logo-sub { display: none; }
+  .utb-avatar-label { display: none; }
+}
+@media (max-width: 900px) {
+  .utb-nav { display: none; }
+  .utb-hamburger { display: flex; }
+  .utb-mobile { display: flex; }
+  .utb-inner { padding: 10px 20px; }
+  /* Hide login/register buttons on mobile when not logged in — accessible via hamburger */
+  .utb-right .utb-btn { display: none; }
+}
+@media (max-width: 480px) {
+  .utb-logo-name { font-size: 12px; }
+  .utb-logo-img { height: 36px; }
+}
+
+/* --------- Suppress legacy be-topbar / topbar styles when UnifiedTopbar is present --------- */
+.utb-root + .be-topbar,
+.utb-root + .topbar { display: none; }
