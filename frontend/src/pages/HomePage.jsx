@@ -2,6 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
+  useLanding,
+  usePinnedAnnouncements,
+  useBrandEquityShowcase,
+} from '@/hooks/queries';
+import {
   Topbar, Footer, Eyebrow, BrandLogo, ScoreRing, gradientForBrand
 } from './swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
@@ -70,28 +75,26 @@ const HeroClickable = ({ href, children, testid }) => {
 };
 
 const HomePage = () => {
-  const [showcases, setShowcases] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [headIdx, setHeadIdx] = useState(0);
-  const [landing, setLanding] = useState(null);
-  const [articles, setArticles] = useState([]);
-  const [pinnedAnnouncements, setPinnedAnnouncements] = useState([]);
 
+  // React Query: shared cache across pages, instant on revisit
+  const { data: landingData } = useLanding();
+  const { data: pinnedItems } = usePinnedAnnouncements();
+  const { data: showcaseResp } = useBrandEquityShowcase();
+  const landing = landingData || null;
+  const pinnedAnnouncements = pinnedItems || [];
+  const showcases = showcaseResp?.showcases || [];
+
+  // Articles list still uses plain axios (single-use, lower priority — could migrate later)
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [showcaseRes, landingRes, articlesRes, pinnedRes] = await Promise.all([
-          axios.get(`${API}/brand-equity/showcase`),
-          axios.get(`${API}/cms/landing`),
-          axios.get(`${API}/cms/posts/public?type=article&limit=12`),
-          axios.get(`${API}/cms/announcements/pinned`),
-        ]);
+        const r = await axios.get(`${API}/cms/posts/public?type=article&limit=12`);
         if (!alive) return;
-        setShowcases(showcaseRes.data?.showcases || []);
-        setLanding(landingRes.data || null);
-        setArticles(articlesRes.data?.items || []);
-        setPinnedAnnouncements(pinnedRes.data?.items || []);
+        setArticles(r.data?.items || []);
       } catch (e) { console.error(e); }
       finally { if (alive) setLoading(false); }
     })();

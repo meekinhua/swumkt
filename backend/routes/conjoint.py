@@ -2245,7 +2245,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         if study["creator_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
-    
+
+        # Offload data: URI to object storage before persisting
+        from lib.image_normalize import normalize_image_for_storage
+        stable_url = await normalize_image_for_storage(
+            request.image_url, "conjoint-levels", study_id
+        )
+
         # Update the specific level's image_url
         attributes = study.get("attributes", [])
         updated = False
@@ -2254,7 +2260,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if attr["id"] == request.attribute_id:
                 for level in attr.get("levels", []):
                     if level["id"] == request.level_id:
-                        level["image_url"] = request.image_url
+                        level["image_url"] = stable_url
                         updated = True
                         break
                 break
@@ -2275,7 +2281,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         return {
             "message": "Image uploaded successfully",
-            "image_url": request.image_url
+            "image_url": stable_url
         }
 
     @conjoint_router.post("/conjoint/studies/{study_id}/generate-profile-image")
@@ -2481,7 +2487,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         if study["creator_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
-    
+
+        # Offload data: URI to object storage before persisting to MongoDB
+        from lib.image_normalize import normalize_image_for_storage
+        stable_url = await normalize_image_for_storage(
+            request.image_url, "conjoint-profiles", study_id
+        )
+
         # Update the specific profile's image_url in choice_sets
         choice_sets = study.get("choice_sets", [])
         updated = False
@@ -2490,7 +2502,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if choice_set["id"] == request.choice_set_id:
                 for profile in choice_set.get("profiles", []):
                     if profile["id"] == request.profile_id:
-                        profile["profile_image_url"] = request.image_url
+                        profile["profile_image_url"] = stable_url
                         updated = True
                         break
                 break
@@ -2511,7 +2523,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         return {
             "message": "Profile image uploaded successfully",
-            "image_url": request.image_url
+            "image_url": stable_url
         }
 
     @conjoint_router.post("/conjoint/studies/{study_id}/reference-images")

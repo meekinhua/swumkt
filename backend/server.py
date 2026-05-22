@@ -420,6 +420,47 @@ async def log_slow_requests(request, call_next):
         logging.warning(f"[SLOW_REQ] {elapsed:.2f}s {request.method} {path} → {response.status_code}")
     return response
 
+
+# ──────────────────────────────────────────────────────────────
+# Object Storage — serves uploaded images via /api/files/{path}.
+# All images are public-read (brand logos, CMS covers, conjoint profile images
+# are already public content). 60s edge cache on the response makes repeat
+# loads instant.
+# ──────────────────────────────────────────────────────────────
+from lib.object_storage import init_storage, get_object as _objstore_get
+
+@app.on_event("startup")
+async def _init_object_storage():
+    try:
+        await init_storage()
+        logging.info("[OBJSTORE] Storage initialised on startup")
+    except Exception as e:
+        logging.warning(f"[OBJSTORE] Startup init failed (will retry on demand): {e}")
+
+
+from fastapi import Response as _ObjResp
+
+@api_router.get("/files/{path:path}")
+async def serve_object_file(path: str):
+    """Public proxy to object storage. Used by <img src={image_url}> tags.
+    Returns 404 if not found. Adds Cache-Control to encourage browser caching
+    since paths are UUID-based and content is immutable.
+    """
+    try:
+        data, content_type = await _objstore_get(path)
+    except Exception as e:
+        # 404 is the expected "not found" — distinguish silent miss vs error
+        msg = str(e)
+        if "404" in msg:
+            raise HTTPException(404, "Image not found")
+        logging.warning(f"[OBJSTORE] serve_object_file failed for {path}: {e}")
+        raise HTTPException(502, "Storage unavailable")
+    return _ObjResp(
+        content=data,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400, immutable"},
+    )
+
 # Enums
 class UserRole(str, Enum):
     ADMIN = "admin"

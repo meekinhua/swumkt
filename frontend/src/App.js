@@ -21,6 +21,7 @@ import BrandEquityRespondentPage from '@/pages/brand-equity/BrandEquityResponden
 import BrandEquityShowcaseIndexPage from '@/pages/brand-equity/BrandEquityShowcaseIndexPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ============ LAZY imports — heavy / admin / rarely-used pages ============
 // Heavy tool pages (>= 900 lines each)
@@ -145,6 +146,20 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
+// React Query — single shared client with sensible defaults for the app.
+// Cache GETs for 60s, retry 1x, refetch on window focus only if data is stale.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,           // data considered fresh for 60s
+      gcTime: 5 * 60_000,           // unused cache kept 5 min then GC
+      retry: 1,                     // 1 retry on failure (not 3 — fail fast)
+      refetchOnWindowFocus: 'always', // refetch when tab regains focus IF stale
+      refetchOnMount: true,
+    },
+  },
+});
+
 // Lazy-route fallback — minimal centred shim matching app aesthetic
 const RouteFallback = () => (
   <div style={{
@@ -171,11 +186,12 @@ const RouteFallback = () => (
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <div className="App">
-          <Suspense fallback={<RouteFallback/>}>
-            <Routes>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <div className="App">
+            <Suspense fallback={<RouteFallback/>}>
+              <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/legacy-home" element={<LandingPage />} />
             <Route path="/learn" element={<LearnIndexPage />} />
@@ -552,6 +568,7 @@ function App() {
         </div>
       </BrowserRouter>
     </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

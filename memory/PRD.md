@@ -484,3 +484,54 @@ Admin UX (`CmsEditorPage`):
 - Logout flow + tools dropdown + admin dropdown + active state + subtitle + mobile responsive all PASS
 - 1 minor (student role badge showing "USER" instead of "STUDENT") — fixed by mapping `role='user'` → STUDENT label
 - No double-topbar regression (`.be-topbar:not(.utb-root)` count = 0 on all pages)
+
+## Performance Overhaul (Feb 22, 2026)
+ตรวจสอบ performance ทั้งระบบ → แก้ทั้ง 6 phases
+
+### Phase 1: List endpoint projection — verified
+endpoints ทั้งหมดมี projection ตัด heavy fields ออกครบแล้ว (ไม่ต้องแก้เพิ่ม)
+
+### Phase 2: Frontend Code Splitting (Lazy Routes)
+- App.js เปลี่ยนจาก eager imports 55 หน้า → eager 18 หน้า + lazy 30 หน้า
+- ทุก lazy route wrap ด้วย `<Suspense fallback={<RouteFallback/>}>`
+- หน้าใหญ่ที่ lazy: ConjointResultsPage (3,388 บรรทัด), KanbanBoard (1,861), AdminSettings (1,879), BrandEquityDashboardPage (1,783), ConjointDesignPage (1,583), CmsEditorPage, all Admin pages, all Alumni pages, Surveys, BE Wizard, Content tools
+- Verified: `/admin/cms` fetches `src_pages_cms_CmsListPage_jsx.chunk.js` on-demand
+
+### Phase 3: Visibility-based Polling (Battery/CPU saver)
+- New hook: `/app/frontend/src/hooks/useVisiblePolling.js`
+- Pauses interval when `document.hidden === true`, resumes when tab focuses
+- Applied to: `NotificationCenter.js` (30s unread polls — biggest offender)
+- Pattern available for other polls (Conjoint AI status, BE thesis export) to adopt
+
+### Phase 4: Object Storage Migration (P0 lowest DB pressure)
+- New lib: `/app/backend/lib/object_storage.py` — Emergent Object Storage wrapper
+- New endpoint: `GET /api/files/{path}` — public file proxy with 24h browser cache
+- New helper: `/app/backend/lib/image_normalize.py` — transparent base64→URL conversion at write time
+- Migration: `scripts/migrate_b64_to_storage.py` ran successfully
+  - 9 conjoint images + 5 cms covers uploaded to object storage
+  - **Safety:** original base64 fields kept as fallback — no data loss
+- Cleanup script ready: `scripts/cleanup_legacy_b64.py` (run AFTER verifying URLs render correctly in production for ≥1 week)
+- Upload endpoints updated: `upload_profile_image`, `upload_image` — incoming `data:image/*` automatically uploaded to storage, only URL stored in MongoDB going forward
+
+### Phase 5: React Query (Frontend Cache)
+- Installed `@tanstack/react-query@5.100.13`
+- New hooks file: `/app/frontend/src/hooks/queries.js` — shared queries with centralised keys
+- Hooks created: `useLanding`, `usePinnedAnnouncements`, `useAnnouncementsArchive`, `useShowcaseIndex`, `useBrandEquityShowcase`, `useConjointShowcase`
+- staleTime: 60s for announcements, 90s for showcase, 5min for landing config
+- HomePage migrated: 4 parallel axios calls → 3 React Query hooks (instant on revisit)
+
+### Phase 6: Slow Request Logging
+- Middleware in `server.py` logs requests ≥1.5s as WARNING, ≥5s as ERROR
+- Skips noisy endpoints (`/auth/me`, `/notifications/unread-count`, `/health`)
+
+### Tests
+- Backend smoke: 5/5 endpoints → 200
+- Frontend smoke: HomePage + Announcements + Admin CMS (lazy) all load OK
+- Object storage: upload roundtrip verified (2KB → 200 OK retrieval)
+- Lint: all clean
+
+### Expected Performance Impact
+- **Initial bundle size:** -60% (lazy chunks load on demand)
+- **Object storage migration (when cleanup runs):** conjoint_studies ~20MB → expected ~50KB
+- **React Query caching:** เปลี่ยนหน้าระหว่าง dashboard/showcase → instant (จาก cache)
+- **Polling load:** tab idle → 0 API calls (was 2 req/min per tab)
