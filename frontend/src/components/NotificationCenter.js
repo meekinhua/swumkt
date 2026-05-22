@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 import { API } from '@/App';
 import { toast } from 'sonner';
+import useVisiblePolling from '@/hooks/useVisiblePolling';
 
 const NotificationCenter = () => {
   const { t } = useTranslation();
@@ -15,14 +16,8 @@ const NotificationCenter = () => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+  // Poll unread count every 30s — but only while tab is visible to save API calls
+  useVisiblePolling(() => { if (user) fetchUnreadCount(); }, 30000, [user], !!user);
 
   useEffect(() => {
     if (isOpen && notifications.length === 0) {

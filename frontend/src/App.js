@@ -1,64 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import '@/App.css';
-import LandingPage from '@/pages/LandingPage';
+
+// ============ EAGER imports — small / critical for first paint ============
 import HomePage from '@/pages/HomePage';
+import LandingPage from '@/pages/LandingPage';
 import LearnIndexPage from '@/pages/learn/LearnIndexPage';
 import CmsArticleView from '@/pages/learn/CmsArticleView';
 import AboutSwuMarketing from '@/pages/AboutSwuMarketing';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
-import Dashboard from '@/pages/Dashboard';
-import ContentBrowse from '@/pages/ContentBrowse';
-import ContentDetail from '@/pages/ContentDetail';
-import ContentEditor from '@/pages/ContentEditor';
 import ProfilePage from '@/pages/ProfilePage';
+import Dashboard from '@/pages/Dashboard';
 import MarketResearch from '@/pages/MarketResearch';
-import CustomerJourneyTool from '@/pages/CustomerJourneyTool';
-import CustomerBehaviorTool from '@/pages/CustomerBehaviorTool';
-import CustomerPerceptionTool from '@/pages/CustomerPerceptionTool';
-import ConjointAnalysisTool from '@/pages/ConjointAnalysisTool';
-import ConjointQualitativePage from '@/pages/ConjointQualitativePage';
-import ConjointDesignPage from '@/pages/ConjointDesignPage';
-import ConjointSurveyPage from '@/pages/ConjointSurveyPage';
-import ConjointResultsPage from '@/pages/ConjointResultsPage';
-import JournalFinder from '@/pages/JournalFinder';
-import AcademicFormatEditor from '@/pages/AcademicFormatEditor';
-import AdminSettings from '@/pages/AdminSettings';
-import CourseSubmissions from '@/pages/CourseSubmissions';
-import SurveyListPage from '@/pages/SurveyListPage';
-import SurveyBuilderPage from '@/pages/SurveyBuilderPage';
-import SurveyTakingPage from '@/pages/SurveyTakingPage';
-import SurveyResponsesPage from '@/pages/SurveyResponsesPage';
-import NotificationSettings from '@/pages/NotificationSettings';
-import AdminNotifications from '@/pages/AdminNotifications';
-import AdminUserManagement from '@/pages/AdminUserManagement';
-import AdminLLMPrompts from '@/pages/AdminLLMPrompts';
-import CmsListPage from '@/pages/cms/CmsListPage';
-import CmsEditorPage from '@/pages/cms/CmsEditorPage';
-import CmsPromptsPage from '@/pages/cms/CmsPromptsPage';
-import CmsLandingPage from '@/pages/cms/CmsLandingPage';
-import ProjectsPage from '@/pages/ProjectsPage';
-import KanbanBoard from '@/pages/KanbanBoard';
-import AlumniLandingPage from '@/pages/alumni/AlumniLandingPage';
-import AlumniOnboardingPage from '@/pages/alumni/AlumniOnboardingPage';
-import AlumniTreePage from '@/pages/alumni/AlumniTreePage';
-import AlumniProfilePage from '@/pages/alumni/AlumniProfilePage';
-import AlumniTriviaPage from '@/pages/alumni/AlumniTriviaPage';
-import AlumniInviteAcceptPage from '@/pages/alumni/AlumniInviteAcceptPage';
-import AlumniDiscoverPage from '@/pages/alumni/AlumniDiscoverPage';
-import AlumniFeedPage from '@/pages/alumni/AlumniFeedPage';
-import AlumniJobsPage from '@/pages/alumni/AlumniJobsPage';
-import BrandEquityListPage from '@/pages/brand-equity/BrandEquityListPage';
-import BrandEquityWizardPage from '@/pages/brand-equity/BrandEquityWizardPage';
-import BrandEquityRespondentPage from '@/pages/brand-equity/BrandEquityRespondentPage';
-import BrandEquityDashboardPage from '@/pages/brand-equity/BrandEquityDashboardPage';
-import BrandEquityShowcaseIndexPage from '@/pages/brand-equity/BrandEquityShowcaseIndexPage';
 import UnifiedShowcasePage from '@/pages/UnifiedShowcasePage';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
+import BrandEquityListPage from '@/pages/brand-equity/BrandEquityListPage';
+import BrandEquityRespondentPage from '@/pages/brand-equity/BrandEquityRespondentPage';
+import BrandEquityShowcaseIndexPage from '@/pages/brand-equity/BrandEquityShowcaseIndexPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
+
+// ============ LAZY imports — heavy / admin / rarely-used pages ============
+// Heavy tool pages (>= 900 lines each)
+const ConjointResultsPage = lazy(() => import('@/pages/ConjointResultsPage'));
+const ConjointDesignPage = lazy(() => import('@/pages/ConjointDesignPage'));
+const ConjointAnalysisTool = lazy(() => import('@/pages/ConjointAnalysisTool'));
+const ConjointQualitativePage = lazy(() => import('@/pages/ConjointQualitativePage'));
+const ConjointSurveyPage = lazy(() => import('@/pages/ConjointSurveyPage'));
+const KanbanBoard = lazy(() => import('@/pages/KanbanBoard'));
+const ContentEditor = lazy(() => import('@/pages/ContentEditor'));
+const ContentBrowse = lazy(() => import('@/pages/ContentBrowse'));
+const ContentDetail = lazy(() => import('@/pages/ContentDetail'));
+const CustomerJourneyTool = lazy(() => import('@/pages/CustomerJourneyTool'));
+const CustomerBehaviorTool = lazy(() => import('@/pages/CustomerBehaviorTool'));
+const CustomerPerceptionTool = lazy(() => import('@/pages/CustomerPerceptionTool'));
+const JournalFinder = lazy(() => import('@/pages/JournalFinder'));
+const AcademicFormatEditor = lazy(() => import('@/pages/AcademicFormatEditor'));
+const BrandEquityWizardPage = lazy(() => import('@/pages/brand-equity/BrandEquityWizardPage'));
+const BrandEquityDashboardPage = lazy(() => import('@/pages/brand-equity/BrandEquityDashboardPage'));
+
+// Surveys
+const SurveyListPage = lazy(() => import('@/pages/SurveyListPage'));
+const SurveyBuilderPage = lazy(() => import('@/pages/SurveyBuilderPage'));
+const SurveyTakingPage = lazy(() => import('@/pages/SurveyTakingPage'));
+const SurveyResponsesPage = lazy(() => import('@/pages/SurveyResponsesPage'));
+
+// Admin pages (only admin sees, no need in initial bundle for guest/student)
+const AdminSettings = lazy(() => import('@/pages/AdminSettings'));
+const AdminNotifications = lazy(() => import('@/pages/AdminNotifications'));
+const AdminUserManagement = lazy(() => import('@/pages/AdminUserManagement'));
+const AdminLLMPrompts = lazy(() => import('@/pages/AdminLLMPrompts'));
+const NotificationSettings = lazy(() => import('@/pages/NotificationSettings'));
+const CourseSubmissions = lazy(() => import('@/pages/CourseSubmissions'));
+
+// CMS pages (admin only)
+const CmsListPage = lazy(() => import('@/pages/cms/CmsListPage'));
+const CmsEditorPage = lazy(() => import('@/pages/cms/CmsEditorPage'));
+const CmsPromptsPage = lazy(() => import('@/pages/cms/CmsPromptsPage'));
+const CmsLandingPage = lazy(() => import('@/pages/cms/CmsLandingPage'));
+
+// Projects
+const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'));
+
+// Alumni (paused module — perfect for lazy)
+const AlumniLandingPage = lazy(() => import('@/pages/alumni/AlumniLandingPage'));
+const AlumniOnboardingPage = lazy(() => import('@/pages/alumni/AlumniOnboardingPage'));
+const AlumniTreePage = lazy(() => import('@/pages/alumni/AlumniTreePage'));
+const AlumniProfilePage = lazy(() => import('@/pages/alumni/AlumniProfilePage'));
+const AlumniTriviaPage = lazy(() => import('@/pages/alumni/AlumniTriviaPage'));
+const AlumniInviteAcceptPage = lazy(() => import('@/pages/alumni/AlumniInviteAcceptPage'));
+const AlumniDiscoverPage = lazy(() => import('@/pages/alumni/AlumniDiscoverPage'));
+const AlumniFeedPage = lazy(() => import('@/pages/alumni/AlumniFeedPage'));
+const AlumniJobsPage = lazy(() => import('@/pages/alumni/AlumniJobsPage'));
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -130,12 +145,37 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
+// Lazy-route fallback — minimal centred shim matching app aesthetic
+const RouteFallback = () => (
+  <div style={{
+    minHeight: '60vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontSize: 11,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: '#71717A',
+  }} data-testid="route-fallback">
+    <span style={{
+      display: 'inline-block',
+      width: 6, height: 6, borderRadius: 99,
+      background: '#C8102E',
+      marginRight: 8,
+      animation: 'utb-pulse 1s ease-in-out infinite',
+    }}/>
+    Loading…
+  </div>
+);
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <div className="App">
-          <Routes>
+          <Suspense fallback={<RouteFallback/>}>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/legacy-home" element={<LandingPage />} />
             <Route path="/learn" element={<LearnIndexPage />} />
@@ -507,6 +547,7 @@ function App() {
               element={<BrandEquityDashboardPage />}
             />
           </Routes>
+          </Suspense>
           <Toaster position="top-right" richColors />
         </div>
       </BrowserRouter>

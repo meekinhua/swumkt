@@ -394,6 +394,32 @@ api_router = APIRouter(prefix="/api")
 from starlette.middleware.sessions import SessionMiddleware
 app.add_middleware(SessionMiddleware, secret_key=JWT_SECRET)
 
+# ──────────────────────────────────────────────────────────────
+# Slow request logging — surfaces backend hotspots in the logs.
+# Anything > 1.5s gets WARNING; > 5s gets ERROR. Skip noisy polling/health
+# endpoints to keep the signal clean.
+# ──────────────────────────────────────────────────────────────
+import time as _slow_time
+_SLOW_LOG_SKIP_PREFIXES = (
+    "/api/notifications/unread-count",
+    "/api/auth/me",
+    "/api/health",
+)
+
+@app.middleware("http")
+async def log_slow_requests(request, call_next):
+    start = _slow_time.monotonic()
+    response = await call_next(request)
+    elapsed = _slow_time.monotonic() - start
+    path = request.url.path
+    if any(path.startswith(p) for p in _SLOW_LOG_SKIP_PREFIXES):
+        return response
+    if elapsed >= 5.0:
+        logging.error(f"[SLOW_REQ] {elapsed:.2f}s {request.method} {path} → {response.status_code}")
+    elif elapsed >= 1.5:
+        logging.warning(f"[SLOW_REQ] {elapsed:.2f}s {request.method} {path} → {response.status_code}")
+    return response
+
 # Enums
 class UserRole(str, Enum):
     ADMIN = "admin"
