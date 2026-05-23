@@ -114,18 +114,13 @@ const ConjointResultsPage = () => {
   const [extraPrompt, setExtraPrompt] = useState('');
 
   useEffect(() => {
-    // Load results for both authenticated and public access
+    // Load results for both authenticated and public access.
+    // Depend ONLY on studyId to avoid re-fetching when auth state hydrates
+    // (which previously overwrote MNL results back to counting).
     if (studyId) {
       loadResults();
     }
-  }, [user, token, studyId]);
-
-  // Load default method (MNL) when component mounts
-  useEffect(() => {
-    if (results && token && studyId && selectedMethod === 'mnl' && !statisticalData) {
-      loadStatisticalAnalysis('mnl');
-    }
-  }, [results, token, studyId]);
+  }, [studyId]); // eslint-disable-line
 
   const loadResults = async () => {
     try {
@@ -139,11 +134,22 @@ const ConjointResultsPage = () => {
       
       setStudy(studyRes.data);
       setResults(resultsRes.data);
-      setCurrentResults(resultsRes.data); // Set initial results as counting method
+      // Set as fallback display first; MNL will overwrite this when it loads.
+      setCurrentResults(resultsRes.data);
       
       // Set public sharing states
       setIsPublicResult(studyRes.data.is_public_result || false);
       setIsOwnerOrAdmin(studyRes.data.is_owner_or_admin || false);
+
+      // Auto-load default method (MNL) deterministically right after results
+      // arrive. This avoids the race where a stray re-render reset the display
+      // to counting before MNL finished.
+      // Skip if we already have statisticalData (e.g., user navigated back).
+      const hasEnoughResponses = (resultsRes.data?.respondent_count ?? 0) >= 30;
+      if (selectedMethod === 'mnl' && !statisticalData && hasEnoughResponses) {
+        // Fire and forget; loadStatisticalAnalysis handles its own loading state.
+        loadStatisticalAnalysis('mnl');
+      }
     } catch (error) {
       console.error('Error loading results:', error);
       if (error.response?.status === 401) {
