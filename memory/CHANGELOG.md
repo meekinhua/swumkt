@@ -1,3 +1,92 @@
+## 2026-05-23 — Performance Audit v2: 22 MB freed from MongoDB
+
+### Why
+A re-audit after the v1 migration revealed three remaining hot spots still
+inflating documents and slowing list / detail APIs:
+- `conjoint_studies.choice_sets[*].profiles[*].profile_image_url` held base64
+  data URIs (avg 248 KB each × 58 profiles = **14 MB total**). The biggest
+  study "นมหมี" was a 7 MB single document.
+- `contents.attachments[*].file_data` and `behavior_metadata.image_url` —
+  another **6.3 MB** of inline base64 (largest single field: 2.23 MB).
+- `cms_posts.cover_image` and `media[*].src` still held base64 even though
+  the v1 migration had written `/api/files/...` URLs into sibling fields.
+  Field names mismatched what the frontend read, so the base64 was dead
+  weight (**2.75 MB**).
+- `users.avatar_url` had a 32 KB base64 webp for the test student account.
+
+### Fix
+1. New script `/app/backend/scripts/migrate_heavy_fields_v2.py` walks all
+   three collections and rewrites each base64 value in-place with the
+   storage URL returned by `lib/object_storage.upload_b64_image`. Because
+   the frontend uses each field directly as `<img src>`, replacing the value
+   is transparent — no React change required.
+2. One-off cleanup pass on `cms_posts` to sync the legacy fields that v1
+   had only mirrored: copied `cover_image_url` → `cover_image` and the
+   per-media `url` → `src`, freeing the base64 strings.
+3. Updated source endpoints so new data lands in object storage from the
+   start (prevents re-bloat):
+   - `routes/conjoint.py` `generate-profile-image` → wraps the freshly
+     generated data URI through `normalize_image_for_storage` before
+     persisting.
+   - `server.py` `share-as-content` (behavior + perception) → routes the
+     attachment and `behavior_metadata.image_url` through the same helper.
+   - `server.py` `create_content` / `update_content` → normalizes every
+     `file_data` field on incoming attachments.
+   - `server.py` `update_profile` → normalizes `avatar_url`.
+
+### Impact (verified on live preview DB)
+| Collection | Before | After | Δ |
+|------------|-------:|------:|---:|
+| `conjoint_studies` | 19.58 MB | **5.55 MB** | −72 % |
+| `contents` | 8.10 MB | **1.76 MB** | −78 % |
+| `cms_posts` | 2.75 MB | **0.07 MB** | −97 % |
+| **Total DB data** | ~32 MB | **9.57 MB** | **−70 %** |
+
+Largest single conjoint study went from **7 MB → 39 KB** (180× smaller).
+The `GET /api/conjoint/studies/{id}` response (full view) is now 73 KB
+where it was previously up to 7 MB — about 100× faster transfer.
+
+### Verified
+- Survey page (`/survey/conjoint/<id>`) for "นมหมี" renders all 4 profile
+  images correctly from `/api/files/swumkt/conjoint-profiles/...` URLs.
+- Conjoint Results page MNL auto-loads on first open (previous bug fix
+  also verified — see same-day fix below).
+- Smoke-tested: study list, study detail, CMS pinned, content list — all
+  return 200 and reasonable payload sizes.
+
+### Known follow-up
+- `AnnouncementsPage` cards render with `<img>` height 0 due to a CSS
+  layout issue (image has `position: absolute; inset: 0` but parent has
+  only `min-height`, no fixed height in grid). This is a **pre-existing**
+  UI bug unrelated to the migration — image data loads correctly; only
+  rendering box collapses. Logged for future investigation.
+
+
+## 2026-05-23 — Conjoint Results: MNL no longer requires manual method switch
+
+### Why
+On the Conjoint Results page the dropdown defaulted to `MNL`, but the
+display kept showing the Counting result until the user manually switched
+methods. Cause: a duplicated useEffect chain plus an auth-state race —
+`loadResults` was wired to `[user, token, studyId]`, so each auth hydration
+re-ran the fetch and re-wrote `currentResults` back to the counting payload
+right after the parallel MNL effect had populated it. The MNL effect's
+own `!statisticalData` guard then blocked a re-load.
+
+### Fix (`ConjointResultsPage.js`)
+- Dependency list reduced to `[studyId]` so `loadResults` runs once per
+  study.
+- The default MNL fetch is now invoked inline at the tail of `loadResults`,
+  guarded only by `respondent_count >= 30` (avoids the insufficient-data
+  branch crashing the panel).
+
+### Verified
+Opening `/conjoint/results/<id>` on a 120-respondent study now shows
+Pseudo R², Log-likelihood and AIC immediately — no manual method switch
+required.
+
+
+
 ## 2026-05-11 — AI insight cache keyed by wave
 
 ### Why

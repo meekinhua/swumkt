@@ -2440,15 +2440,22 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             # Compress image aggressively (target: 100-150KB for 100+ images per study)
             compressed_base64 = await asyncio.to_thread(compress_base64_image, image_base64, max_size_kb=150.0, target_dimension=640)
         
-            # Create data URL
+            # Create data URL (returned to caller for immediate UI rendering)
             image_data_url = f"data:image/jpeg;base64,{compressed_base64}"
+
+            # Offload to object storage so MongoDB stores only a tiny URL string,
+            # not a 100-300 KB base64 blob per profile (we have 50+ profiles per study).
+            from lib.image_normalize import normalize_image_for_storage
+            stored_url = await normalize_image_for_storage(
+                image_data_url, "conjoint-profiles", study_id
+            ) or image_data_url
         
-            # Update the profile with the generated image
+            # Update the profile with the stored URL (not the base64)
             for choice_set in choice_sets:
                 if choice_set["id"] == request.choice_set_id:
                     for profile in choice_set.get("profiles", []):
                         if profile["id"] == request.profile_id:
-                            profile["profile_image_url"] = image_data_url
+                            profile["profile_image_url"] = stored_url
                             profile["profile_image_prompt"] = image_prompt
                             break
                     break
@@ -2466,7 +2473,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         
             return {
                 "message": "Profile image generated successfully",
-                "image_url": image_data_url,
+                "image_url": stored_url,
                 "prompt_used": image_prompt
             }
         

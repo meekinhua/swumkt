@@ -1319,7 +1319,11 @@ async def update_profile(
     if profile_data.bio:
         update_data["bio"] = profile_data.bio
     if profile_data.avatar_url:
-        update_data["avatar_url"] = profile_data.avatar_url
+        # Offload data URI avatars to object storage (was up to 32 KB inline).
+        from lib.image_normalize import normalize_image_for_storage as _norm_av
+        update_data["avatar_url"] = await _norm_av(
+            profile_data.avatar_url, "user-avatars", current_user.id
+        ) or profile_data.avatar_url
     if profile_data.student_id:
         update_data["student_id"] = profile_data.student_id
     if profile_data.graduation_year:
@@ -2489,7 +2493,19 @@ async def create_content(
         content_dict['zbs04_assignment_type'] = None
     if content_dict.get('category') == '':
         content_dict['category'] = None
-    
+
+    # Offload attachment base64 → object storage so MongoDB stays small.
+    # Frontend sends `file_data` as `data:image/...;base64,...`.
+    from lib.image_normalize import normalize_image_for_storage as _norm_att
+    attachments = content_dict.get('attachments') or []
+    if isinstance(attachments, list):
+        for a in attachments:
+            if isinstance(a, dict) and a.get('file_data'):
+                a['file_data'] = await _norm_att(
+                    a['file_data'], "content-attachments", content_dict.get('id', 'shared')
+                ) or a['file_data']
+        content_dict['attachments'] = attachments
+
     # Pre-compute preview and thumbnail for performance
     precomputed = precompute_content_metadata(
         content_dict, 
@@ -2778,7 +2794,16 @@ async def update_content(
     
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     update_dict['updated_at'] = datetime.now(timezone.utc).isoformat()
-    
+
+    # Offload any base64 attachments → object storage on update too.
+    if isinstance(update_dict.get('attachments'), list):
+        from lib.image_normalize import normalize_image_for_storage as _norm_att_upd
+        for a in update_dict['attachments']:
+            if isinstance(a, dict) and a.get('file_data'):
+                a['file_data'] = await _norm_att_upd(
+                    a['file_data'], "content-attachments", content_id
+                ) or a['file_data']
+
     # Pre-compute preview and thumbnail if content/attachments changed
     if 'content' in update_dict or 'attachments' in update_dict or 'cover_image_id' in update_dict:
         merged_data = {**content, **update_dict}
@@ -4402,20 +4427,32 @@ Customer Behavior Analysis
         attachments = []
         if data.image_base64:
             from image_utils import compress_base64_image, get_image_size_kb
-            
+            from lib.image_normalize import normalize_image_for_storage
+
             # Compress image for storage
             compressed_image = await asyncio.to_thread(compress_base64_image, data.image_base64, max_size_kb=500)
             image_size = get_image_size_kb(compressed_image)
-            
+
+            # Offload data URI to object storage so MongoDB only holds a URL.
+            stored_url = await normalize_image_for_storage(
+                compressed_image, "content-attachments", "behavior"
+            ) or compressed_image
+
             attachments.append({
                 "id": str(uuid.uuid4()),
                 "filename": "behavior_analysis_illustration.jpg",
                 "file_type": "image/jpeg",
                 "file_size_kb": round(image_size, 2),
-                "file_data": compressed_image,
+                "file_data": stored_url,
                 "uploaded_at": datetime.now(timezone.utc).isoformat()
             })
         
+        # Behavior image: also normalize to object storage (was up to 2 MB inline).
+        from lib.image_normalize import normalize_image_for_storage as _norm_bm
+        behavior_image_url = await _norm_bm(
+            data.image_url, "content-behavior", "behavior"
+        ) if data.image_url else data.image_url
+
         # Create content document
         content_dict = {
             "id": str(uuid.uuid4()),
@@ -4442,7 +4479,7 @@ Customer Behavior Analysis
                 "collection_method": data.collection_method,
                 "research_date": data.research_date,
                 "output_language": data.output_language,
-                "image_url": data.image_url,
+                "image_url": behavior_image_url,
                 "key_findings": data.key_findings,
                 "recommendations": data.recommendations
             }
@@ -5467,17 +5504,22 @@ Customer Perception Analysis
         attachments = []
         if data.image_base64:
             from image_utils import compress_base64_image, get_image_size_kb
-            
+            from lib.image_normalize import normalize_image_for_storage
+
             # Compress image
             compressed_image = await asyncio.to_thread(compress_base64_image, data.image_base64, max_size_kb=500)
             image_size = get_image_size_kb(compressed_image)
-            
+
+            stored_url = await normalize_image_for_storage(
+                compressed_image, "content-attachments", "perception"
+            ) or compressed_image
+
             attachments.append({
                 "id": str(uuid.uuid4()),
                 "filename": "perception_analysis_illustration.jpg",
                 "file_type": "image/jpeg",
                 "file_size_kb": round(image_size, 2),
-                "file_data": compressed_image,
+                "file_data": stored_url,
                 "uploaded_at": datetime.now(timezone.utc).isoformat()
             })
         
