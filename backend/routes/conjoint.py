@@ -363,8 +363,18 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         importance_scores = _calc_importance_from_part_worths(part_worths)
 
         llf = result.llf
-        llnull = result.llnull if hasattr(result, "llnull") else None
-        pseudo_r2 = 1 - (llf / llnull) if llnull else 0.0
+        # statsmodels ConditionalLogit does NOT expose `llnull`. For a conditional
+        # logit, the null model assigns equal probability 1/C_i to each alternative
+        # within choice set i, so:
+        #     LL_null = Σ log(1 / C_i) = -Σ log(C_i)
+        # We have `groups` indexing choice sets — compute group sizes and use them.
+        try:
+            _, group_sizes = np.unique(groups.values, return_counts=True)
+            llnull = float(-np.sum(np.log(group_sizes)))
+            pseudo_r2 = 1.0 - (llf / llnull) if llnull != 0 else 0.0
+        except Exception:
+            llnull = None
+            pseudo_r2 = 0.0
         k = len(result.params)
         aic = -2 * llf + 2 * k
 
