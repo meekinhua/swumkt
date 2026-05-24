@@ -2358,6 +2358,82 @@ const ConjointResultsPage = () => {
                 </div>
               ) : (
                 <>
+                  {/* ===== MODEL FIT DIAGNOSTICS (shared MNL/Mixed/HB) ===== */}
+                  {['mnl','mixed_logit','hierarchical_bayes','hb'].includes(statisticalData.method) && (() => {
+                    const r = statisticalData.results || {};
+                    const rho = r.pseudo_r_squared;
+                    const lab = r.fit_label || (
+                      rho == null ? 'n/a' :
+                      rho < 0 ? 'underfit' :
+                      rho < 0.10 ? 'poor' :
+                      rho < 0.20 ? 'fair' :
+                      rho < 0.30 ? 'good' :
+                      rho < 0.40 ? 'excellent' : 'exceptional'
+                    );
+                    const colorMap = {
+                      'underfit': 'bg-red-100 text-red-800 border-red-300',
+                      'poor':     'bg-red-50 text-red-700 border-red-200',
+                      'fair':     'bg-amber-50 text-amber-800 border-amber-200',
+                      'good':     'bg-emerald-50 text-emerald-800 border-emerald-200',
+                      'excellent':'bg-emerald-100 text-emerald-900 border-emerald-400',
+                      'exceptional':'bg-violet-100 text-violet-900 border-violet-400',
+                      'n/a':      'bg-gray-100 text-gray-600 border-gray-200',
+                    };
+                    const labelTh = {
+                      'underfit': 'ฟิตแย่กว่า null (มีปัญหา)',
+                      'poor':     'ฟิตต่ำ (ρ²<0.10)',
+                      'fair':     'ฟิตพอใช้ (ρ² 0.10-0.20)',
+                      'good':     'ฟิตดี (ρ² 0.20-0.30)',
+                      'excellent':'ฟิตดีเยี่ยม (ρ² 0.30-0.40)',
+                      'exceptional':'ฟิตยอดเยี่ยมหายาก (ρ²>0.40)',
+                      'n/a':      'ไม่มีข้อมูล',
+                    };
+                    const lrStat = r.lr_statistic;
+                    const lrDf = r.lr_df;
+                    const lrP = r.lr_p_value;
+                    const sigVerdict = (lrP != null && lrP < 0.05)
+                      ? { txt: 'Model ดีกว่า null อย่างมีนัยสำคัญ (p<0.05)', cls: 'text-emerald-700' }
+                      : (lrP != null)
+                      ? { txt: 'Model ไม่ดีกว่า null อย่างมีนัยสำคัญ', cls: 'text-red-700' }
+                      : { txt: '—', cls: 'text-gray-500' };
+                    return (
+                      <div className="mb-6 p-5 bg-white border-2 border-slate-200 rounded-xl shadow-sm" data-testid="model-fit-diagnostics">
+                        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+                          <div>
+                            <p className="text-xs uppercase tracking-wider text-slate-500 font-mono">Model Fit Diagnostics</p>
+                            <h4 className="text-lg font-bold text-slate-800 font-serif">การประเมินคุณภาพของโมเดล</h4>
+                          </div>
+                          <div className={`px-4 py-2 rounded-full border-2 font-bold text-sm uppercase tracking-wide ${colorMap[lab] || colorMap['n/a']}`} data-testid="fit-label-badge">
+                            ρ² {rho != null ? rho.toFixed(3) : '—'} · {labelTh[lab] || lab}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <p className="text-xs text-slate-500 font-mono">LR statistic (χ²)</p>
+                            <p className="text-xl font-bold text-slate-800">{lrStat != null ? lrStat.toFixed(2) : '—'}</p>
+                            <p className="text-xs text-slate-500">df = {lrDf ?? '—'}</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <p className="text-xs text-slate-500 font-mono">LR test p-value</p>
+                            <p className="text-xl font-bold text-slate-800">{lrP != null ? (lrP < 0.001 ? '<0.001' : lrP.toFixed(3)) : '—'}</p>
+                            <p className={`text-xs font-medium ${sigVerdict.cls}`}>{sigVerdict.txt}</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <p className="text-xs text-slate-500 font-mono">McFadden Scale</p>
+                            <p className="text-[11px] text-slate-700 leading-relaxed">
+                              <b>0-0.1</b> poor · <b>0.1-0.2</b> fair · <b>0.2-0.3</b> good · <b>0.3-0.4</b> excellent · <b>{'>'}0.4</b> exceptional
+                            </p>
+                          </div>
+                        </div>
+                        {r.fit_description && (
+                          <p className="mt-3 text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded border-l-4 border-slate-300" data-testid="fit-description">
+                            {r.fit_description}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* ===== METHOD-SPECIFIC MODEL SUMMARY ===== */}
 
                   {/* --- MNL Summary --- */}

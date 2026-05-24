@@ -1,3 +1,68 @@
+## 2026-05-25 — Why MNL Pseudo R² was Stuck Near Zero: Root-Cause Fix
+
+### User-reported issue
+"ตอนนี้คำนวณ Pseudo R² ยังไง ทำไมค่าต่ำมากตลอด" — McFadden's ρ² was
+showing 0.001-0.006 on every real study, making the academic dashboard
+look broken.
+
+### Diagnosis
+The formula was already correct McFadden:
+  LL_null = -Σ log(C_i)         # equal-prob over alternatives per choice set
+  ρ²      = 1 - LL_model/LL_null
+But ρ² was being suppressed by **two real bugs** + **one UX gap**:
+
+1. **Orphan level_ids silently dropped from X.** When a study editor removed
+   or renamed a level after `choice_sets` had been generated, the profiles
+   inside `choice_sets[*].profiles[*].attribute_levels` still referenced
+   the deleted level_id. `_build_conjoint_data_rows` looked up
+   `level_value_map[(attr_id, lvl_id)]`, hit None, and silently SKIPPED the
+   row's column. Result: entire dummies for that attribute went missing
+   → MNL had nothing to learn → ρ² ≈ 0. Confirmed on "นมหมี" study:
+   `แบรนด์` had 2 levels in `attributes`, 4 used in profiles, 2 orphans.
+
+2. **No guard against the mutation itself.** `PUT /studies/{id}/attributes`
+   accepted any attribute change even when there were already `choice_sets`
+   referencing the old IDs — so the corruption could re-introduce itself
+   any time the user edited a study post-design.
+
+3. **No UX for what McFadden's ρ² actually means.** Users naturally compare
+   it to OLS R² (where 0.7+ is normal). For discrete choice, McFadden (1979)
+   himself defines 0.2-0.4 as "excellent fit" — but we never said that on
+   the page, so users saw 0.05 and assumed the system was broken.
+
+### Fix
+- **`_build_conjoint_data_rows`** now preserves orphans as `__ORPHAN_xxxxxxxx__`
+  and missing-attr cells as `__MISSING__` so encoding sees a real categorical
+  value instead of `NaN`. Information is no longer lost.
+- **`_calc_fit_diagnostics`** new shared helper: computes McFadden ρ²,
+  likelihood-ratio χ² statistic, df, p-value, and a categorical
+  `fit_label` ("poor" / "fair" / "good" / "excellent" / "exceptional")
+  following McFadden's published thresholds. Returned by MNL, Mixed Logit,
+  and HB endpoints.
+- **`PUT /studies/{id}/attributes` validator** — if any `(attr_id, level_id)`
+  referenced by existing `choice_sets` no longer exists in the new attribute
+  spec, the endpoint now wipes `choice_sets`, reverts `status` to `draft`,
+  and returns `choice_sets_cleared: true` with an explanatory message.
+- **`ConjointResultsPage.js`** — new "Model Fit Diagnostics" card above
+  the method-specific summary blocks. Shows ρ² + colored label badge,
+  LR χ² with df, LR p-value with significant/not-significant verdict in
+  Thai, and the McFadden scale legend ("0.2-0.4 = excellent fit"). Renders
+  for MNL / Mixed Logit / Hierarchical Bayes.
+
+### Verification
+- Smoke-tested `_build_conjoint_data_rows` on the "นมหมี" study: orphan
+  brand levels are now encoded as two extra dummies and surface in the
+  fitted coefficients (no more silent drop).
+- API round-trip through `GET /statistical-analysis?method=mnl`:
+  new fields `lr_statistic`, `lr_df`, `lr_p_value`, `fit_label`,
+  `fit_description` are present in `results`.
+- Validator test: created a study, generated design, mutated attribute IDs
+  → server returned `choice_sets_cleared: true`, `status=draft`,
+  `len(choice_sets)=0`. ✓
+
+---
+
+
 ## 2026-05-25 — H1 Verified: True D-Optimal Choice-Set Design
 
 ### What

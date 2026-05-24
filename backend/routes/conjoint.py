@@ -457,6 +457,72 @@ def is_balanced_set(profiles: List[ConjointProfile], attributes: List[ConjointAt
     
     return True
 
+def _calc_fit_diagnostics(ll_model: float, ll_null: float, k: int) -> Dict:
+    """Likelihood-ratio test + human-readable verdict for discrete-choice fit.
+
+    Returns:
+        lr_statistic  -- 2 * (LL_model - LL_null), χ² distributed under H0
+        lr_df         -- degrees of freedom = number of estimated parameters
+        lr_p_value    -- one-sided p-value (model significantly better than null)
+        pseudo_r2     -- McFadden's ρ² = 1 - LL_model/LL_null
+        fit_label     -- McFadden's own interpretation: "poor"/"good"/"excellent"/"exceptional"
+        fit_description -- Thai+English explanation surfaced in the UI
+    """
+    import math
+    try:
+        from scipy.stats import chi2
+    except Exception:
+        chi2 = None
+
+    if ll_null == 0 or ll_null is None:
+        return {
+            "lr_statistic": None,
+            "lr_df": int(k),
+            "lr_p_value": None,
+            "pseudo_r_squared": 0.0,
+            "fit_label": "n/a",
+            "fit_description": "Null log-likelihood is 0; pseudo-R² undefined.",
+        }
+    pseudo_r2 = 1.0 - (ll_model / ll_null)
+    lr_stat = 2.0 * (ll_model - ll_null)  # positive when model fits better
+    lr_p = None
+    if chi2 is not None and k > 0:
+        try:
+            lr_p = float(chi2.sf(max(lr_stat, 0.0), df=k))
+        except Exception:
+            lr_p = None
+
+    # McFadden (1979) — his own published interpretation for discrete choice
+    if pseudo_r2 < 0.0:
+        label = "underfit"
+    elif pseudo_r2 < 0.10:
+        label = "poor"
+    elif pseudo_r2 < 0.20:
+        label = "fair"
+    elif pseudo_r2 < 0.30:
+        label = "good"
+    elif pseudo_r2 < 0.40:
+        label = "excellent"
+    else:
+        label = "exceptional"
+
+    desc = (
+        f"McFadden ρ² = {pseudo_r2:.3f} ({label}). "
+        "หมายเหตุ: McFadden's R² ไม่ใช่ R² แบบ OLS — "
+        "0.2-0.4 ถือว่า fit ดีถึงดีเยี่ยม (เทียบเท่า OLS R²≈0.7-0.9). "
+        "ค่า < 0.1 มักหมายความว่าผู้ตอบเลือกเกือบสุ่ม หรือ attributes ที่กำหนด "
+        "ไม่ใช่ปัจจัยหลักในการตัดสินใจ."
+    )
+    return {
+        "lr_statistic": float(lr_stat),
+        "lr_df": int(k),
+        "lr_p_value": lr_p,
+        "pseudo_r_squared": float(pseudo_r2),
+        "fit_label": label,
+        "fit_description": desc,
+    }
+
+
 def _build_conjoint_data_rows(study: Dict, responses: List[Dict]):
     """Shared optimized data preparation for all conjoint analysis methods.
     Returns (data_rows, attributes, level_value_map) or (None, None, None) if no data.
@@ -488,9 +554,23 @@ def _build_conjoint_data_rows(study: Dict, responses: List[Dict]):
                 for attr in attributes:
                     attr_id = attr["id"]
                     lvl_id = profile.get("attribute_levels", {}).get(attr_id)
+                    if lvl_id is None:
+                        # profile predates this attribute being added — treat as a
+                        # special "MISSING" class so the row isn't silently dropped
+                        # in the encoder. Same string across all such rows → no
+                        # within-set variance → no spurious signal.
+                        row[attr["name"]] = "__MISSING__"
+                        continue
                     val = level_value_map.get((attr_id, lvl_id))
-                    if val is not None:
-                        row[attr["name"]] = val
+                    if val is None:
+                        # Orphan level_id: profile references a level that no
+                        # longer exists in `attributes.levels` (happens when the
+                        # study editor mutates the attribute after the design
+                        # was generated). Preserve the level via its id so
+                        # ConditionalLogit/MNL can still learn from it instead
+                        # of silently dropping the entire dummy column.
+                        val = f"__ORPHAN_{lvl_id[:8]}__"
+                    row[attr["name"]] = val
                 data_rows.append(row)
 
     if not data_rows:
@@ -576,12 +656,12 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         try:
             _, group_sizes = np.unique(groups.values, return_counts=True)
             llnull = float(-np.sum(np.log(group_sizes)))
-            pseudo_r2 = 1.0 - (llf / llnull) if llnull != 0 else 0.0
         except Exception:
             llnull = None
-            pseudo_r2 = 0.0
         k = len(result.params)
         n_obs = int(len(y))
+        diag = _calc_fit_diagnostics(float(llf), float(llnull) if llnull is not None else 0.0, k)
+        pseudo_r2 = diag["pseudo_r_squared"]
         aic = -2 * llf + 2 * k
         bic = -2 * llf + k * np.log(n_obs) if n_obs > 0 else 0.0
 
@@ -596,6 +676,11 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "log_likelihood": float(llf),
             "log_likelihood_null": float(llnull) if llnull is not None else None,
             "pseudo_r_squared": float(pseudo_r2),
+            "lr_statistic": diag["lr_statistic"],
+            "lr_df": diag["lr_df"],
+            "lr_p_value": diag["lr_p_value"],
+            "fit_label": diag["fit_label"],
+            "fit_description": diag["fit_description"],
             "aic": float(aic),
             "bic": float(bic),
             "n_observations": int(len(y)),
@@ -680,7 +765,8 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
     _, group_sizes = np.unique(df["_situation"].values, return_counts=True)
     ll_null = float(-np.sum(np.log(group_sizes)))
     ll_model = float(model.loglikelihood)
-    pseudo_r2 = 1.0 - (ll_model / ll_null) if ll_null != 0 else 0.0
+    diag_mxl = _calc_fit_diagnostics(ll_model, ll_null, K * 2)
+    pseudo_r2 = diag_mxl["pseudo_r_squared"]
 
     # Pre-count level selections for the part_worth display.
     selected_rows = df[df["choice"] == 1]
@@ -729,6 +815,11 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
         "log_likelihood": ll_model,
         "log_likelihood_null": ll_null,
         "pseudo_r_squared": float(pseudo_r2),
+        "lr_statistic": diag_mxl["lr_statistic"],
+        "lr_df": diag_mxl["lr_df"],
+        "lr_p_value": diag_mxl["lr_p_value"],
+        "fit_label": diag_mxl["fit_label"],
+        "fit_description": diag_mxl["fit_description"],
         "aic": float(model.aic),
         "bic": float(model.bic),
         "n_respondents": int(df["respondent"].nunique()),
@@ -940,7 +1031,8 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     _, group_sizes = np.unique(df["_situation"].values, return_counts=True)
     ll_null = float(-np.sum(np.log(group_sizes)))
     ll_model = float(model.loglikelihood)
-    pseudo_r2 = 1.0 - (ll_model / ll_null) if ll_null != 0 else 0.0
+    diag_hb = _calc_fit_diagnostics(ll_model, ll_null, len(varnames) * 2)
+    pseudo_r2 = diag_hb["pseudo_r_squared"]
 
     # Pre-count level selections.
     selected_rows = df[df["choice"] == 1]
@@ -1019,6 +1111,11 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
         "log_likelihood": ll_model,
         "log_likelihood_null": ll_null,
         "pseudo_r_squared": float(pseudo_r2),
+        "lr_statistic": diag_hb["lr_statistic"],
+        "lr_df": diag_hb["lr_df"],
+        "lr_p_value": diag_hb["lr_p_value"],
+        "fit_label": diag_hb["fit_label"],
+        "fit_description": diag_hb["fit_description"],
         "aic": float(model.aic),
         "bic": float(model.bic),
         "n_respondents": int(df["respondent"].nunique()),
@@ -2160,25 +2257,67 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         request: UpdateAttributesRequest,
         current_user: User = Depends(get_current_user)
     ):
-        """Update study attributes after reviewing/editing LLM suggestions"""
+        """Update study attributes after reviewing/editing LLM suggestions.
+
+        Side-effect protection: if the study already has `choice_sets`, this
+        endpoint VALIDATES that every (attribute_id, level_id) referenced by
+        the existing profiles still exists in the new attribute spec. If any
+        level_id has been removed/renamed, we clear `choice_sets` so the user
+        is forced to regenerate the design — otherwise the old choice sets
+        carry orphan level_ids that silently corrupt MNL/Mixed/HB fits.
+        """
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
     
         if study["creator_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
-    
+
+        # Build the new (attr_id, level_id) universe from the incoming request.
+        new_universe = set()
+        for attr in request.attributes:
+            for lvl in (attr.levels or []):
+                new_universe.add((attr.id, lvl.id))
+
+        # Check whether existing choice_sets reference any (attr_id, level_id)
+        # that is no longer present.
+        existing_cs = study.get("choice_sets", [])
+        orphan_found = False
+        for cs in existing_cs:
+            for prof in cs.get("profiles", []):
+                for aid, lid in (prof.get("attribute_levels") or {}).items():
+                    if (aid, lid) not in new_universe:
+                        orphan_found = True
+                        break
+                if orphan_found:
+                    break
+            if orphan_found:
+                break
+
+        update_doc = {
+            "attributes": [attr.dict() for attr in request.attributes],
+            "updated_at": datetime.now(timezone.utc),
+        }
+        message = "Attributes updated successfully"
+        if orphan_found:
+            # Force regeneration: clear stale choice_sets + revert status so the
+            # respondent flow can't run against a corrupted design.
+            update_doc["choice_sets"] = []
+            update_doc["status"] = ConjointStudyStatus.DRAFT
+            message = (
+                "Attributes updated. Existing choice sets referenced removed levels "
+                "and have been cleared — please regenerate the design."
+            )
+
         await db.conjoint_studies.update_one(
             {"id": study_id},
-            {
-                "$set": {
-                    "attributes": [attr.dict() for attr in request.attributes],
-                    "updated_at": datetime.now(timezone.utc)
-                }
-            }
+            {"$set": update_doc},
         )
-    
-        return {"message": "Attributes updated successfully"}
+
+        return {
+            "message": message,
+            "choice_sets_cleared": orphan_found,
+        }
 
     @conjoint_router.post("/conjoint/studies/{study_id}/generate-design")
     async def generate_conjoint_design(
