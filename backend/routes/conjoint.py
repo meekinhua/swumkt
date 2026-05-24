@@ -286,55 +286,157 @@ def calculate_optimal_choice_sets(num_attributes: int, num_levels_per_attr: List
     optimal_sets = ((min_sets + 3) // 4) * 4
     return min(max(8, optimal_sets), 20)  # Between 8-20 sets
 
-async def generate_d_optimal_design(attributes: List[ConjointAttribute], alternatives_per_set: int, num_sets: int) -> List[ChoiceSet]:
-    """Generate D-optimal fractional factorial design for choice sets"""
+async def generate_d_optimal_design(
+    attributes: List[ConjointAttribute],
+    alternatives_per_set: int,
+    num_sets: int,
+) -> List[ChoiceSet]:
+    """True D-optimal main-effects design via modified Fedorov / K-exchange.
+
+    Procedure
+    ---------
+    1. Build candidate pool = full factorial of all profiles.
+    2. Dummy-encode each profile (last-level-as-reference, matching the rest
+       of this module).
+    3. Pick `N = num_sets * alternatives_per_set` rows at random as the
+       starting design.
+    4. K-exchange loop: for each row, try replacing it with each candidate;
+       keep the swap that maximises  log|X'X + λI|. Iterate until no swap
+       improves the determinant or `max_iter` hit.
+    5. Greedily pack the N selected profiles into choice sets of size
+       `alternatives_per_set`, refusing duplicates within a single set.
+
+    This is the "linear D-optimality" approximation that Sawtooth and most
+    open-source conjoint tools use when no prior coefficient estimates are
+    available. It's not perfect MNL D-optimality (which needs assumed β)
+    but it is academically defensible and **strictly better than random**.
+    """
     import itertools
-    import random
-    
-    # Create full factorial of all possible profiles
-    attr_levels_map = {}
-    for attr in attributes:
-        attr_levels_map[attr.id] = [level.id for level in attr.levels]
-    
-    # Generate all possible combinations
+    import numpy as np
+
+    rng = np.random.default_rng(42)
+
+    # 1. Candidate pool.
+    attr_levels_map = {a.id: [l.id for l in a.levels] for a in attributes}
     attr_ids = list(attr_levels_map.keys())
-    all_combinations = list(itertools.product(*[attr_levels_map[aid] for aid in attr_ids]))
-    
-    # Convert to profile format
-    all_profiles = []
-    for combo in all_combinations:
-        profile_dict = {attr_ids[i]: combo[i] for i in range(len(attr_ids))}
-        all_profiles.append(ConjointProfile(attribute_levels=profile_dict))
-    
-    # D-optimal selection (simplified - use random sampling with constraints)
-    # In production, use specialized DOE libraries like pyDOE or R's AlgDesign
+    candidates = list(itertools.product(*[attr_levels_map[aid] for aid in attr_ids]))
+    n_cand = len(candidates)
+    if n_cand == 0:
+        return []
+
+    # 2. Dummy-encode candidate pool. Reference = last level of each attribute.
+    col_names = []           # purely for debugging
+    col_specs = []           # list of (cand_idx_in_attr_ids, level_id) for dummies
+    for ai, attr in enumerate(attributes):
+        levels = attr.levels or []
+        for lvl in levels[:-1]:  # drop last as reference
+            col_names.append(f"{attr.name}_{lvl.value}")
+            col_specs.append((ai, lvl.id))
+
+    K = len(col_specs)
+    if K == 0:
+        # Degenerate (every attribute has ≤1 level) — fall back to random.
+        K = 1
+
+    X_cand = np.zeros((n_cand, K), dtype=float)
+    for i, cand in enumerate(candidates):
+        for k, (ai, ref_lvl_id) in enumerate(col_specs):
+            X_cand[i, k] = 1.0 if cand[ai] == ref_lvl_id else 0.0
+    # Add intercept column (we want it for D-criterion).
+    X_cand = np.hstack([np.ones((n_cand, 1)), X_cand])
+    n_params = X_cand.shape[1]
+
+    # 3. Starting design.
+    N = max(num_sets * alternatives_per_set, n_params + 1)
+    chosen = rng.choice(n_cand, size=N, replace=True).tolist()
+
+    # 4. K-exchange loop.
+    lam = 1e-6  # ridge to keep |X'X| well-defined when N is small.
+    def _logdet(idx_list):
+        Xs = X_cand[idx_list]
+        M = Xs.T @ Xs + lam * np.eye(n_params)
+        sign, ld = np.linalg.slogdet(M)
+        return ld if sign > 0 else -np.inf
+
+    cur_logdet = _logdet(chosen)
+    MAX_ITER = 8  # 8 sweeps × N rows × n_cand swaps — bounded compute
+    for _ in range(MAX_ITER):
+        improved = False
+        for i in range(N):
+            best_j = chosen[i]
+            best_ld = cur_logdet
+            for j in range(n_cand):
+                if j == chosen[i]:
+                    continue
+                trial = chosen.copy()
+                trial[i] = j
+                ld = _logdet(trial)
+                if ld > best_ld + 1e-9:
+                    best_ld = ld
+                    best_j = j
+            if best_j != chosen[i]:
+                chosen[i] = best_j
+                cur_logdet = best_ld
+                improved = True
+        if not improved:
+            break
+
+    selected_profile_indices = chosen[:]
+
+    # 5. Pack selected profiles into choice sets of size `alternatives_per_set`
+    # with no duplicates within a set. Refusing duplicates keeps each task
+    # meaningful (otherwise two identical profiles render as one effective
+    # choice).
+    profiles_by_idx = []
+    for idx in selected_profile_indices:
+        combo = candidates[idx]
+        attr_levels = {attr_ids[ai]: combo[ai] for ai in range(len(attr_ids))}
+        profiles_by_idx.append((idx, ConjointProfile(attribute_levels=attr_levels)))
+
     choice_sets = []
-    used_profiles = set()
-    
-    for set_num in range(num_sets):
-        # Select alternatives ensuring variety
+    rng.shuffle(profiles_by_idx)  # randomise set assignment
+    pool = profiles_by_idx[:]
+    set_num = 0
+    while len(choice_sets) < num_sets and len(pool) >= alternatives_per_set:
         set_profiles = []
-        attempts = 0
-        max_attempts = 100
-        
-        while len(set_profiles) < alternatives_per_set and attempts < max_attempts:
-            candidate = random.choice(all_profiles)
-            profile_key = tuple(sorted(candidate.attribute_levels.items()))
-            
-            if profile_key not in used_profiles:
-                # Check for attribute level balance in this choice set
-                if not set_profiles or is_balanced_set(set_profiles + [candidate], attributes):
-                    set_profiles.append(candidate)
-                    used_profiles.add(profile_key)
-            
-            attempts += 1
-        
+        used_combos = set()
+        i = 0
+        while i < len(pool) and len(set_profiles) < alternatives_per_set:
+            idx, prof = pool[i]
+            combo_key = tuple(sorted(prof.attribute_levels.items()))
+            if combo_key not in used_combos:
+                set_profiles.append(prof)
+                used_combos.add(combo_key)
+                pool.pop(i)
+            else:
+                i += 1
         if len(set_profiles) == alternatives_per_set:
-            choice_sets.append(ChoiceSet(
-                profiles=set_profiles,
-                set_number=set_num + 1
-            ))
-    
+            set_num += 1
+            choice_sets.append(ChoiceSet(profiles=set_profiles, set_number=set_num))
+        else:
+            break  # not enough distinct profiles left
+
+    # Fallback — if K-exchange didn't yield enough variety, top up with random
+    # distinct profiles (rare but keeps API contract intact).
+    while len(choice_sets) < num_sets:
+        set_profiles = []
+        used_combos = set()
+        attempts = 0
+        while len(set_profiles) < alternatives_per_set and attempts < 200:
+            idx = int(rng.integers(n_cand))
+            combo = candidates[idx]
+            combo_key = tuple((attr_ids[ai], combo[ai]) for ai in range(len(attr_ids)))
+            if combo_key not in used_combos:
+                set_profiles.append(ConjointProfile(
+                    attribute_levels=dict(combo_key)
+                ))
+                used_combos.add(combo_key)
+            attempts += 1
+        if len(set_profiles) < alternatives_per_set:
+            break
+        set_num += 1
+        choice_sets.append(ChoiceSet(profiles=set_profiles, set_number=set_num))
+
     return choice_sets
 
 def is_balanced_set(profiles: List[ConjointProfile], attributes: List[ConjointAttribute]) -> bool:
@@ -427,7 +529,8 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
     df = pd.DataFrame(data_rows)
 
     feature_cols = [col for col in df.columns if col not in ("respondent", "choice_set", "alternative", "choice")]
-    X = pd.get_dummies(df[feature_cols], drop_first=True)
+    # Reference = LAST level of each attribute (consistent with OLS regression).
+    X = _dummy_encode_consistent_reference(df, attributes, feature_cols)
     y = df["choice"]
     # Use integer group codes instead of string concatenation for speed
     groups = df["respondent"] * 1000000 + pd.factorize(df["choice_set"])[0]
@@ -538,8 +641,8 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
     cs_codes, _uniques = pd.factorize(df["choice_set"])
     df["_situation"] = df["respondent"].astype(int) * 1_000_000 + cs_codes
 
-    # Dummy-encode categorical attribute values (drop_first → reference = first).
-    X = pd.get_dummies(df[feature_cols], drop_first=True).astype(float)
+    # Dummy-encode with LAST level as reference (consistent with OLS).
+    X = _dummy_encode_consistent_reference(df, attributes, feature_cols)
     if X.shape[1] == 0:
         return None
     varnames = list(X.columns)
@@ -643,6 +746,37 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
 def _individual_posteriors(df, X_values, varnames, pop_means, pop_sds,
                             n_draws_indiv=500, rng_seed=42):
     """Per-respondent posterior mean coefficients via Train (2009) Ch. 11.5
+
+def _dummy_encode_consistent_reference(df, attributes, feature_cols):
+    """Dummy-encode categorical attribute columns with a CONSISTENT reference
+    level = the LAST level of each attribute (matching the OLS regression
+    convention used elsewhere in this file).
+
+    Pandas' `get_dummies(drop_first=True)` drops the FIRST level alphabetically,
+    which:
+      • does not match the UI's "last level = reference" convention
+      • makes the reference level non-deterministic across studies
+    This helper picks the reference deterministically from the study's
+    attribute definition so MNL / Mixed Logit / HB all interpret the same
+    way as the OLS table.
+    """
+    import pandas as _pd
+    # Full one-hot encode, then drop one specific column per attribute.
+    full = _pd.get_dummies(df[feature_cols]).astype(float)
+    cols_to_drop = []
+    for attr in attributes:
+        levels = attr.get("levels", [])
+        if not levels:
+            continue
+        ref_value = levels[-1]["value"]  # convention: last level is reference
+        col = f"{attr['name']}_{ref_value}"
+        if col in full.columns:
+            cols_to_drop.append(col)
+    if cols_to_drop:
+        full = full.drop(columns=cols_to_drop)
+    return full
+
+
     "conditional distribution" of taste parameters.
 
     For each respondent n with observed choice sequence y_n:
@@ -770,7 +904,7 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     cs_codes, _u = pd.factorize(df["choice_set"])
     df["_situation"] = df["respondent"].astype(int) * 1_000_000 + cs_codes
 
-    X = pd.get_dummies(df[feature_cols], drop_first=True).astype(float)
+    X = _dummy_encode_consistent_reference(df, attributes, feature_cols)
     if X.shape[1] == 0:
         return None
     varnames = list(X.columns)
@@ -934,14 +1068,18 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
     # Build X, y AND track per-level selection counts in one pass.
     X_rows = []
     y_rows = []
+    cluster_groups = []         # (respondent_id, choice_set_id) → one cluster per choice situation
     selection_counts = {}     # (attr_id, level_id) -> int (only when profile chosen)
     appearance_counts = {}    # (attr_id, level_id) -> int (every time presented)
     for resp in responses:
+        resp_id = resp.get("respondent_id") or resp.get("id") or "?"
         for choice in resp.get("responses", []):
-            cs = cs_map.get(choice.get("choice_set_id"))
+            cs_id = choice.get("choice_set_id")
+            cs = cs_map.get(cs_id)
             if not cs:
                 continue
             sel_pid = choice.get("selected_profile_id")
+            situation_key = f"{resp_id}|{cs_id}"
             for prof in cs.get("profiles", []):
                 row = []
                 for attr in attributes:
@@ -950,6 +1088,7 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
                     for lvl in levels[:-1]:
                         row.append(1 if profile_level == lvl["id"] else 0)
                 X_rows.append(row)
+                cluster_groups.append(situation_key)
                 is_selected = (prof["id"] == sel_pid)
                 y_rows.append(1 if is_selected else 0)
                 # Track per-level counts for honest reporting.
@@ -964,11 +1103,18 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
     X = np.asarray(X_rows, dtype=float)
     y = np.asarray(y_rows, dtype=float)
 
-    # Add constant for intercept; use HC1 robust SE (choices are clustered but
-    # we keep the lightweight estimator since this is descriptive only).
+    # Add constant for intercept.
+    # SE are CLUSTER-ROBUST by choice situation — alternatives within the
+    # same choice set are not i.i.d. (the chosen one mechanically excludes
+    # the others), so classical OLS SE would understate variance.
     X_with_const = sm.add_constant(X, has_constant="add")
+    _, group_idx = np.unique(np.asarray(cluster_groups), return_inverse=True)
     model = sm.OLS(y, X_with_const)
-    res = model.fit()
+    try:
+        res = model.fit(cov_type="cluster", cov_kwds={"groups": group_idx})
+    except Exception:
+        # Fallback to HC1 if cluster estimation fails (e.g. singleton groups).
+        res = model.fit(cov_type="HC1")
 
     intercept = float(res.params[0])
     coefficients = res.params[1:]
@@ -1037,8 +1183,10 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "Positive = increases choice probability."
         ),
         "note": (
-            "Linear Probability Model. For inference prefer MNL — OLS coefficients "
-            "can fall outside [0,1] and SE ignore the within-set choice clustering."
+            "Linear Probability Model with cluster-robust SE (clustered by "
+            "choice situation). For inference prefer MNL — OLS coefficients "
+            "can fall outside [0,1] and the linear approximation loses "
+            "efficiency vs. discrete-choice estimators."
         ),
     }
 
