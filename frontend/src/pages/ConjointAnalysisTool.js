@@ -51,7 +51,8 @@ const ConjointAnalysisTool = () => {
   const [newStudy, setNewStudy] = useState({
     title: '',
     description: '',
-    product_category: ''
+    product_category: '',
+    demographics_to_capture: ['age', 'gender', 'occupation'],
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [studyToDelete, setStudyToDelete] = useState(null);
@@ -157,7 +158,7 @@ const ConjointAnalysisTool = () => {
 
       toast.success('สร้างการศึกษาใหม่สำเร็จ!');
       setShowCreateModal(false);
-      setNewStudy({ title: '', description: '', product_category: '' });
+      setNewStudy({ title: '', description: '', product_category: '', demographics_to_capture: ['age', 'gender', 'occupation'] });
       
       // Navigate to qualitative phase
       navigate(`/research/conjoint/${response.data.study_id}/qualitative`);
@@ -738,6 +739,49 @@ const ConjointAnalysisTool = () => {
                   placeholder="เช่น: Electronics, F&B, Service"
                   className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
                 />
+              </div>
+
+              {/* Demographic fields to collect from respondents — used by the
+                  Results page filter bar for segment analysis. Editable later
+                  in the Design page until the survey starts. */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  ข้อมูลผู้ตอบที่จะเก็บ <span className="text-xs text-gray-500 font-normal">(สำหรับแบ่ง segment ในผลวิเคราะห์)</span>
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  เลือกเท่าที่จำเป็น — แก้ทีหลังได้ในหน้า Design จนกว่า survey จะเริ่ม
+                </p>
+                <div className="flex flex-wrap gap-2" data-testid="create-demo-chips">
+                  {[
+                    { key: 'age',        label: 'ช่วงอายุ' },
+                    { key: 'gender',     label: 'เพศ' },
+                    { key: 'occupation', label: 'อาชีพ' },
+                    { key: 'education',  label: 'การศึกษา' },
+                    { key: 'region',     label: 'ภูมิภาค' },
+                    { key: 'income',     label: 'รายได้' },
+                  ].map(opt => {
+                    const active = (newStudy.demographics_to_capture || []).includes(opt.key);
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => {
+                          const cur = newStudy.demographics_to_capture || [];
+                          const next = active ? cur.filter(k => k !== opt.key) : [...cur, opt.key];
+                          setNewStudy({ ...newStudy, demographics_to_capture: next });
+                        }}
+                        data-testid={`create-demo-chip-${opt.key}`}
+                        className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
+                          active
+                            ? 'bg-indigo-600 text-white border-indigo-700'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
