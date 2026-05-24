@@ -115,7 +115,8 @@ export const SlideMedia = ({
          data-testid={testid}
          onMouseEnter={() => setPaused(true)}
          onMouseLeave={() => setPaused(false)}
-         style={{ background: '#fff', position: 'relative', overflow: 'hidden' }}>
+         style={{ background: '#fff', position: 'relative', overflow: 'hidden',
+                  width: '100%', height: '100%', minHeight: 220 }}>
 
       {cur.kind === 'image' ? (
         <img key={`m-${idx}`} src={cur.src} alt={cur.alt || ''}

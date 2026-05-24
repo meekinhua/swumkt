@@ -28,7 +28,7 @@ const AnnouncementCard = ({ p }) => {
       }}
       className="md:!grid-cols-[5fr_7fr]"
     >
-      <div style={{ minHeight: 220, position: 'relative', background: '#0A0A0A' }}>
+      <div style={{ minHeight: 220, height: '100%', position: 'relative', background: '#0A0A0A' }}>
         {hasMedia ? (
           <SlideMedia
             media={p.media}

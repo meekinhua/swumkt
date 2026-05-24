@@ -34,6 +34,7 @@ import {
   Network
 } from 'lucide-react';
 import ShareConjointModal from '@/components/ShareConjointModal';
+import ConjointCompareMethods from '@/pages/conjoint/ConjointCompareMethods';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -1074,6 +1075,20 @@ const ConjointResultsPage = () => {
             <div className="flex items-center justify-center gap-2">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>เทคนิคขั้นสูง</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('compare')}
+            data-testid="tab-compare-methods"
+            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+              activeTab === 'compare'
+                ? 'bg-gradient-to-r from-slate-800 to-slate-600 text-white shadow-lg'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>เปรียบเทียบวิธี</span>
             </div>
           </button>
         </div>
@@ -2712,6 +2727,17 @@ const ConjointResultsPage = () => {
             </Card>
           </>
         )}
+
+        {/* Compare Methods Tab */}
+        {activeTab === 'compare' && (
+          <ConjointCompareMethods
+            studyId={studyId}
+            study={study}
+            token={token}
+            countingResults={results}
+          />
+        )}
+
 
         {/* Advanced Analytics Tab */}
         {activeTab === 'advanced' && (
