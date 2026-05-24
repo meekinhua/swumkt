@@ -36,6 +36,7 @@ import {
 import ShareConjointModal from '@/components/ShareConjointModal';
 import ConjointCompareMethods from '@/pages/conjoint/ConjointCompareMethods';
 import ConjointSegmentCompare from '@/pages/conjoint/ConjointSegmentCompare';
+import HBIndividualInsights from '@/pages/conjoint/HBIndividualInsights';
 import { BeFilterBar } from '@/pages/brand-equity/BeFilterBar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -2797,6 +2798,13 @@ const ConjointResultsPage = () => {
                 </div>
               </div>
             </Card>
+
+            {/* Individual-level posteriors — only shows when HB is the
+                active method, surfacing the heterogeneity insights that
+                only Hierarchical Bayes can deliver. */}
+            {selectedMethod === 'hierarchical_bayes' && statisticalData?.results?.individual_quantiles && (
+              <HBIndividualInsights hbResult={statisticalData.results} study={study}/>
+            )}
           </>
         )}
 

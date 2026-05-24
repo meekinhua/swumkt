@@ -640,6 +640,106 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
         "note": "Estimated by Maximum Simulated Likelihood with 200 Halton draws.",
     }
 
+def _individual_posteriors(df, X_values, varnames, pop_means, pop_sds,
+                            n_draws_indiv=500, rng_seed=42):
+    """Per-respondent posterior mean coefficients via Train (2009) Ch. 11.5
+    "conditional distribution" of taste parameters.
+
+    For each respondent n with observed choice sequence y_n:
+        P(β | y_n)  ∝  f(β | θ̂) · L_n(β)
+        E[β | y_n]  ≈  Σ_r β_r · w_r,n
+        where     w_r,n = L_n(β_r) / Σ_r L_n(β_r)
+                  β_r   are R draws from f(β | θ̂)  (population N(μ̂, σ̂²))
+
+    This is what gives "Hierarchical Bayes" its individual-level utilities
+    — without needing MCMC. Numerically stable: we use log-likelihoods and
+    subtract the max before exponentiating.
+
+    Returns:
+        per_respondent: dict {respondent_id -> {varname -> posterior_mean_β}}
+        per_respondent_sd: same shape, posterior standard deviations
+    """
+    import numpy as np
+    rng = np.random.default_rng(rng_seed)
+    K = len(varnames)
+
+    # R draws from N(μ̂, σ̂²) — shared across all respondents for stability.
+    # Halton would be variance-reduced but `rng.normal` is sufficient here.
+    draws = rng.normal(loc=pop_means, scale=np.maximum(pop_sds, 1e-6),
+                       size=(n_draws_indiv, K))  # (R, K)
+
+    # X · β_r for ALL rows simultaneously: (N_rows, R)
+    utilities_all = X_values @ draws.T
+
+    # Pre-index choice situations and respondents.
+    sit_codes = df["_situation"].values.astype(np.int64)
+    resp_codes = df["respondent"].values.astype(np.int64)
+    choice_arr = df["choice"].values.astype(np.int64)
+
+    per_respondent_mean = {}
+    per_respondent_sd = {}
+
+    # Aggregate softmax over rows belonging to the same choice situation.
+    # The trick: for each situation, log-likelihood of chosen alt =
+    # U_chosen - logsumexp(U_alt over situation). Sum over n's situations
+    # gives log L_n(β_r).
+    unique_sits, sit_inverse = np.unique(sit_codes, return_inverse=True)
+    n_sits = len(unique_sits)
+
+    # For each draw, compute per-situation log-likelihood.
+    # Softmax trick: subtract row-max for stability.
+    # We need: ll_per_sit shape (n_sits, R)
+    # Step 1: max utility per situation per draw → for stability.
+    sit_max = np.full((n_sits, n_draws_indiv), -np.inf)
+    np.maximum.at(sit_max, sit_inverse, utilities_all)
+    util_centered = utilities_all - sit_max[sit_inverse]
+
+    # Step 2: exp & sum per situation (denominator of softmax).
+    exp_u = np.exp(util_centered)
+    denom = np.zeros((n_sits, n_draws_indiv))
+    np.add.at(denom, sit_inverse, exp_u)
+    log_denom = np.log(denom) + sit_max  # broadcast (n_sits, R)
+
+    # Step 3: chosen-alt utility per situation per draw.
+    chosen_mask = (choice_arr == 1)
+    chosen_util = utilities_all[chosen_mask]                 # (n_sits, R)
+    chosen_sit_idx = sit_inverse[chosen_mask]                # (n_sits,)
+    # log P(y_t | β_r) = U_chosen,t - log_denom_t,r
+    ll_per_sit = chosen_util - log_denom[chosen_sit_idx]    # (n_sits, R)
+
+    # Map situation → respondent.
+    sit_to_resp = np.zeros(n_sits, dtype=np.int64)
+    # Earlier rows in a situation share the same respondent; use the chosen-row mask
+    sit_to_resp[chosen_sit_idx] = resp_codes[chosen_mask]
+
+    # Step 4: sum log-likelihoods per respondent (panel structure).
+    unique_resps, resp_inverse = np.unique(sit_to_resp, return_inverse=True)
+    n_resps = len(unique_resps)
+    log_L_n = np.zeros((n_resps, n_draws_indiv))
+    np.add.at(log_L_n, resp_inverse, ll_per_sit)
+
+    # Step 5: posterior weights — softmax across draws, per respondent.
+    log_L_n -= log_L_n.max(axis=1, keepdims=True)
+    w = np.exp(log_L_n)
+    w /= w.sum(axis=1, keepdims=True)  # (n_resps, R)
+
+    # Step 6: posterior mean & sd of β per respondent.
+    # E[β | y_n] = Σ_r w_r,n · β_r        → (n_resps, K)
+    # Var[β | y_n] = Σ_r w_r,n · (β_r - E)²
+    post_mean = w @ draws                                    # (n_resps, K)
+    # Variance via weighted mean of squares minus square of mean.
+    post_sq = w @ (draws ** 2)
+    post_var = np.maximum(post_sq - post_mean ** 2, 0.0)
+    post_sd = np.sqrt(post_var)
+
+    for i, r_id in enumerate(unique_resps):
+        per_respondent_mean[int(r_id)] = {v: float(post_mean[i, k]) for k, v in enumerate(varnames)}
+        per_respondent_sd[int(r_id)]   = {v: float(post_sd[i, k])   for k, v in enumerate(varnames)}
+
+    return per_respondent_mean, per_respondent_sd
+
+
+
 def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) -> Dict:
     """Hierarchical Bayes (Empirical Bayes via SMLE) — individual-level utilities.
 
@@ -696,6 +796,13 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     pop_means = np.asarray(model.coeff_)[:K]
     pop_sds = np.abs(np.asarray(model.coeff_)[K:])  # SD must be positive
 
+    # ---- Individual-level posteriors (THE thing that makes HB different
+    # from population Mixed Logit). Train (2009) Ch. 11.5. ----
+    indiv_means, indiv_sds = _individual_posteriors(
+        df, X.values, varnames, pop_means, pop_sds,
+        n_draws_indiv=500,
+    )
+
     # Null log-likelihood (same definition as MNL).
     _, group_sizes = np.unique(df["_situation"].values, return_counts=True)
     ll_null = float(-np.sum(np.log(group_sizes)))
@@ -733,13 +840,49 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     population_mean = {v: float(m) for v, m in zip(varnames, pop_means)}
     population_std = {v: float(s) for v, s in zip(varnames, pop_sds)}
 
+    # ---- Heterogeneity summary derived from individual posteriors ----
+    # For each level, what % of respondents value it more than the reference
+    # (i.e., posterior β > 0)? This is the "who prefers what" view that
+    # population means alone cannot deliver.
+    indiv_arr = np.array([
+        [indiv_means[r][v] for v in varnames]
+        for r in sorted(indiv_means.keys())
+    ])  # (n_resps, K)
+    pct_positive = (indiv_arr > 0).mean(axis=0) * 100.0  # % of respondents with β > 0
+    indiv_quantiles = {
+        v: {
+            "q10": float(np.quantile(indiv_arr[:, k], 0.10)),
+            "q50": float(np.quantile(indiv_arr[:, k], 0.50)),
+            "q90": float(np.quantile(indiv_arr[:, k], 0.90)),
+            "pct_positive": float(pct_positive[k]),
+        }
+        for k, v in enumerate(varnames)
+    }
+
+    # Sample of per-respondent posteriors for the UI — full N can be huge
+    # so we keep just the first 50 plus aggregate stats. Researchers who need
+    # the raw per-respondent file can still fetch via a future export endpoint.
+    sample_resp_ids = sorted(indiv_means.keys())[:50]
+    individual_posteriors_sample = [
+        {
+            "respondent_id": int(r),
+            "betas": indiv_means[r],
+            "sd_betas": indiv_sds[r],
+        }
+        for r in sample_resp_ids
+    ]
+
     return {
-        "method": "Hierarchical Bayes (Panel Mixed Logit via SMLE)",
+        "method": "Hierarchical Bayes (Panel Mixed Logit + Individual Posteriors)",
         "part_worths": part_worths,
         "importance_scores": _calc_importance_from_part_worths(part_worths),
         "population_mean": population_mean,
         "population_std": population_std,
         "coefficients": population_mean,
+        # NEW — individual-level outputs (Train 2009 Ch. 11.5 conditional dist.):
+        "individual_posteriors_sample": individual_posteriors_sample,
+        "individual_quantiles": indiv_quantiles,
+        "n_individual_draws": 500,
         "log_likelihood": ll_model,
         "log_likelihood_null": ll_null,
         "pseudo_r_squared": float(pseudo_r2),
@@ -750,13 +893,15 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
         "n_draws": 300,
         "utility_scale": "logit",
         "utility_interpretation": (
-            "Population-level posterior means with standard deviations capturing "
-            "between-respondent heterogeneity (the hierarchical layer)."
+            "Population-level posterior means with std capturing heterogeneity. "
+            "Individual-level β posteriors derived from the conditional "
+            "distribution f(β | y_n) ∝ f(β|θ̂)·L_n(β) — Train (2009) Ch. 11.5."
         ),
         "note": (
-            "Empirical Bayes via Maximum Simulated Likelihood (Train 2009, Ch. 11). "
-            "Equivalent to full HB-MCMC for population-level estimates; individual "
-            "posteriors available via the conditional distribution method on request."
+            "Estimation: SMLE with 300 Halton draws (population); 500 Monte-Carlo "
+            "draws per respondent for individual posteriors. Use `individual_quantiles` "
+            "for the 10/50/90-percentile spread and `pct_positive` to see what share "
+            "of respondents value each level above its reference."
         ),
     }
 
