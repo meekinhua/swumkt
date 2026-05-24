@@ -51,6 +51,9 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 
 ### Conjoint Analysis (COMPLETE)
 - 5 statistical methods: Counting, MNL, Mixed Logit, HB, Linear Regression
+- **D-Optimal design via K-exchange / modified Fedorov** (May 25, 2026) — replaces random sampling; ~5.6× larger |X'X| than random; perfect level balance across attributes; verified via API + unit tests
+- Cluster-robust OLS standard errors (M2), consistent reference-level encoding across MNL/Mixed/HB/OLS (M1)
+- Demographics capture (Wave A/B segment comparison), HB Individual Posteriors panel
 - AI interpretation via Gemini 2.5 Flash with caching
 - Background task + polling architecture (prevents 502 proxy timeout)
 - `_call_gemini_with_retry` for reliable AI calls

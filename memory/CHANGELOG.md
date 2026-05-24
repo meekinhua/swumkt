@@ -1,3 +1,32 @@
+## 2026-05-25 — H1 Verified: True D-Optimal Choice-Set Design
+
+### What
+Tested and verified the K-exchange / modified-Fedorov D-optimal design
+generator that was implemented at the end of the previous fork in
+`/app/backend/routes/conjoint.py::generate_d_optimal_design`. Also fixed
+a critical SyntaxError caused by `_dummy_encode_consistent_reference` being
+inserted inside the `_individual_posteriors` docstring (the file would
+not import; backend was relying on prior reload state).
+
+### Verification
+- Unit test (3×3×2 attributes, 8 sets × 3 alts):
+  Perfect level balance — Price 8/8/8, Brand 8/8/8, Color 12/12.
+  0 duplicate profiles within sets. ~0.1 s runtime.
+- D-efficiency vs random (4 attributes 3×4×3×2, 8 sets):
+  log|X'X|  D-opt = 15.05  vs  Random = 13.32  →  +1.72 log-units
+  (≈ 5.6× larger determinant — more informative design).
+- End-to-end API smoke test through
+  `POST /api/conjoint/studies/{id}/generate-design`:
+  Real attribute IDs persisted, choice_sets length matches
+  `calculate_optimal_choice_sets`, and balance preserved when
+  round-tripping through MongoDB.
+
+### Status
+H1 (academic-grade D-optimal design) — COMPLETE.
+
+---
+
+
 ## 2026-05-23 — Performance Audit v2: 22 MB freed from MongoDB
 
 ### Why

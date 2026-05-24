@@ -743,10 +743,6 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
         "note": "Estimated by Maximum Simulated Likelihood with 200 Halton draws.",
     }
 
-def _individual_posteriors(df, X_values, varnames, pop_means, pop_sds,
-                            n_draws_indiv=500, rng_seed=42):
-    """Per-respondent posterior mean coefficients via Train (2009) Ch. 11.5
-
 def _dummy_encode_consistent_reference(df, attributes, feature_cols):
     """Dummy-encode categorical attribute columns with a CONSISTENT reference
     level = the LAST level of each attribute (matching the OLS regression
@@ -777,6 +773,9 @@ def _dummy_encode_consistent_reference(df, attributes, feature_cols):
     return full
 
 
+def _individual_posteriors(df, X_values, varnames, pop_means, pop_sds,
+                            n_draws_indiv=500, rng_seed=42):
+    """Per-respondent posterior mean coefficients via Train (2009) Ch. 11.5
     "conditional distribution" of taste parameters.
 
     For each respondent n with observed choice sequence y_n:
