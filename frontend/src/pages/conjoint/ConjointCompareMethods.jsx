@@ -27,10 +27,29 @@ const fmt = (v, d = 3) => {
 const fmtPct = (v) => (v === null || v === undefined || Number.isNaN(v)) ? '—' : `${(v * 100).toFixed(2)}%`;
 const fmtInt = (v) => (v === null || v === undefined || Number.isNaN(v)) ? '—' : String(Math.round(v));
 
-const ConjointCompareMethods = ({ studyId, study, token, countingResults }) => {
+const ConjointCompareMethods = ({ studyId, study, token, countingResults, filter }) => {
   const [results, setResults] = useState({}); // method_id -> response.results
   const [loading, setLoading] = useState({}); // method_id -> bool
   const [errors, setErrors] = useState({});   // method_id -> string
+
+  // Build the same filter querystring suffix the parent page uses, so the
+  // Compare tab always re-aggregates against the active slice.
+  const buildQs = () => {
+    if (!filter) return '';
+    const parts = [];
+    if (filter.from) parts.push(`from=${encodeURIComponent(filter.from)}`);
+    if (filter.to)   parts.push(`to=${encodeURIComponent(filter.to)}`);
+    const segs = Object.fromEntries(
+      Object.entries(filter.segments || {}).filter(([, vs]) => (vs || []).length)
+    );
+    if (Object.keys(segs).length) {
+      parts.push(`segments=${encodeURIComponent(JSON.stringify(segs))}`);
+    }
+    return parts.length ? `&${parts.join('&')}` : '';
+  };
+  const filterKey = JSON.stringify({
+    from: filter?.from || '', to: filter?.to || '', segments: filter?.segments || {}
+  });
 
   useEffect(() => {
     if (!studyId || !token) return;
@@ -38,9 +57,12 @@ const ConjointCompareMethods = ({ studyId, study, token, countingResults }) => {
     const headers = { Authorization: `Bearer ${token}` };
     const initLoading = Object.fromEntries(METHODS.map(m => [m.id, true]));
     setLoading(initLoading);
+    setResults({});
+    setErrors({});
+    const qs = buildQs();
 
     METHODS.forEach(m => {
-      axios.get(`${API}/conjoint/studies/${studyId}/statistical-analysis?method=${m.id}`, { headers })
+      axios.get(`${API}/conjoint/studies/${studyId}/statistical-analysis?method=${m.id}${qs}`, { headers })
         .then(r => {
           if (cancelled) return;
           if (r.data?.status === 'success') {
@@ -60,7 +82,7 @@ const ConjointCompareMethods = ({ studyId, study, token, countingResults }) => {
     });
 
     return () => { cancelled = true; };
-  }, [studyId, token]);
+  }, [studyId, token, filterKey]); // eslint-disable-line
 
   // Build a single grouped bar dataset: x-axis = attribute, one bar per method.
   const importanceData = useMemo(() => {
@@ -70,11 +92,15 @@ const ConjointCompareMethods = ({ studyId, study, token, countingResults }) => {
       METHODS.forEach(m => {
         const r = results[m.id];
         const imp = r?.importance_scores?.[attr.id];
-        row[m.label] = imp != null ? Number(imp) : 0;
+        // Importance scores may be either a plain number or {name, importance}
+        const val = imp?.importance ?? imp;
+        row[m.label] = typeof val === 'number' ? val : 0;
       });
       // Counting method (from non-statistical /results endpoint, passed in via prop)
-      if (countingResults?.importance_scores?.[attr.id] != null) {
-        row['Counting'] = Number(countingResults.importance_scores[attr.id]);
+      const cImp = countingResults?.importance_scores?.[attr.id];
+      const cVal = cImp?.importance ?? cImp;
+      if (typeof cVal === 'number') {
+        row['Counting'] = cVal;
       }
       return row;
     });

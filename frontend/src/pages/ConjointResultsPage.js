@@ -35,6 +35,8 @@ import {
 } from 'lucide-react';
 import ShareConjointModal from '@/components/ShareConjointModal';
 import ConjointCompareMethods from '@/pages/conjoint/ConjointCompareMethods';
+import ConjointSegmentCompare from '@/pages/conjoint/ConjointSegmentCompare';
+import { BeFilterBar } from '@/pages/brand-equity/BeFilterBar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -76,6 +78,16 @@ const ConjointResultsPage = () => {
   const [selectedMethod, setSelectedMethod] = useState('mnl'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
   const [currentResults, setCurrentResults] = useState(null); // Results to display (either from counting or statistical)
   const [aiAnalysisMode, setAiAnalysisMode] = useState('single'); // 'single' or 'compare_all'
+
+  // ---------- Filter state (time + demographic segments) ----------
+  // Mirrors the BrandEquity dashboard. Changing this re-fetches all method
+  // results so the whole page (overview, academic, compare) re-aggregates
+  // against the same slice.
+  const [filter, setFilter] = useState({ from: '', to: '', segments: {} });
+  const [compareFilter, setCompareFilter] = useState(null); // Wave B; null = compare disabled
+  const [segmentsAvailable, setSegmentsAvailable] = useState({});
+  const [demographicsToCapture, setDemographicsToCapture] = useState([]);
+  const [totalRespondentCount, setTotalRespondentCount] = useState(0);
   
   // Product Image Generator states
   const [productImagePrompt, setProductImagePrompt] = useState('');
@@ -123,21 +135,50 @@ const ConjointResultsPage = () => {
     }
   }, [studyId]); // eslint-disable-line
 
+  // Refetch when filter changes (debounce-free since BeFilterBar already
+  // batches chip toggles into one click each).
+  useEffect(() => {
+    if (!studyId) return;
+    loadResults();
+    // Filter changed → invalidate the in-memory MNL cache so it reloads too.
+    setStatisticalData(null);
+  }, [filter.from, filter.to, JSON.stringify(filter.segments)]); // eslint-disable-line
+
+  // Build filter query string used by all analysis endpoints.
+  const buildFilterQs = () => {
+    const parts = [];
+    if (filter.from) parts.push(`from=${encodeURIComponent(filter.from)}`);
+    if (filter.to)   parts.push(`to=${encodeURIComponent(filter.to)}`);
+    const segs = Object.fromEntries(
+      Object.entries(filter.segments || {}).filter(([, vs]) => (vs || []).length)
+    );
+    if (Object.keys(segs).length) {
+      parts.push(`segments=${encodeURIComponent(JSON.stringify(segs))}`);
+    }
+    return parts.length ? `&${parts.join('&')}` : '';
+  };
+
   const loadResults = async () => {
     try {
       // Prepare headers (with token if authenticated, without if public)
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
+      const qs = buildFilterQs();
+
       const [studyRes, resultsRes] = await Promise.all([
         axios.get(`${API}/conjoint/studies/${studyId}?view=summary`, { headers }),
-        axios.get(`${API}/conjoint/studies/${studyId}/results`, { headers })
+        axios.get(`${API}/conjoint/studies/${studyId}/results?_=1${qs}`, { headers })
       ]);
       
       setStudy(studyRes.data);
       setResults(resultsRes.data);
       // Set as fallback display first; MNL will overwrite this when it loads.
       setCurrentResults(resultsRes.data);
-      
+
+      // Segment filter metadata for the filter bar.
+      setSegmentsAvailable(resultsRes.data.segments_available || {});
+      setDemographicsToCapture(resultsRes.data.demographics_to_capture || []);
+      setTotalRespondentCount(resultsRes.data.total_respondent_count ?? resultsRes.data.respondent_count ?? 0);
+
       // Set public sharing states
       setIsPublicResult(studyRes.data.is_public_result || false);
       setIsOwnerOrAdmin(studyRes.data.is_owner_or_admin || false);
@@ -147,7 +188,7 @@ const ConjointResultsPage = () => {
       // to counting before MNL finished.
       // Skip if we already have statisticalData (e.g., user navigated back).
       const hasEnoughResponses = (resultsRes.data?.respondent_count ?? 0) >= 30;
-      if (selectedMethod === 'mnl' && !statisticalData && hasEnoughResponses) {
+      if (selectedMethod === 'mnl' && hasEnoughResponses) {
         // Fire and forget; loadStatisticalAnalysis handles its own loading state.
         loadStatisticalAnalysis('mnl');
       }
@@ -173,8 +214,9 @@ const ConjointResultsPage = () => {
         toast.success('แสดงผลแบบ Counting Method');
       } else {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const qs = buildFilterQs();
         const response = await axios.get(
-          `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}`,
+          `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}${qs}`,
           { headers }
         );
         setStatisticalData(response.data);
@@ -1035,6 +1077,36 @@ const ConjointResultsPage = () => {
             )}
           </div>
         </div>
+
+        {/* Filter Bar — time + demographic segments (shows segment chips
+            only for fields actually collected from respondents) */}
+        {demographicsToCapture.length > 0 && (
+          <div className="mb-4 sm:mb-6" data-testid="conjoint-filter-bar-wrap">
+            <BeFilterBar
+              value={filter}
+              compareValue={compareFilter}
+              segmentsAvailable={segmentsAvailable}
+              responsesTotal={totalRespondentCount}
+              responsesFiltered={results?.respondent_count ?? totalRespondentCount}
+              onChange={(next) => setFilter(next)}
+              onCompareChange={(next) => setCompareFilter(next)}
+              isShowcase={!isOwnerOrAdmin}
+            />
+          </div>
+        )}
+
+        {/* Segment Compare Panel — only renders when compare wave is active */}
+        {compareFilter && (
+          <div className="mb-6" data-testid="conjoint-segment-compare-wrap">
+            <ConjointSegmentCompare
+              studyId={studyId}
+              study={study}
+              token={token}
+              filterA={filter}
+              filterB={compareFilter}
+            />
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6 bg-white rounded-lg p-2 shadow-sm">
@@ -2735,6 +2807,7 @@ const ConjointResultsPage = () => {
             study={study}
             token={token}
             countingResults={results}
+            filter={filter}
           />
         )}
 

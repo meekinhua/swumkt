@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Send
 } from 'lucide-react';
+import ConjointDemographicsStep from '@/pages/conjoint/ConjointDemographicsStep';
 
 const ConjointSurveyPage = () => {
   const { studyId } = useParams();
@@ -24,6 +25,10 @@ const ConjointSurveyPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [respondentEmail, setRespondentEmail] = useState('');
+  // Demographics step state — only shown if the study has demographics_to_capture
+  const [demographics, setDemographics] = useState({});
+  const [phase, setPhase] = useState('intro'); // 'intro' (= demographics) | 'choice'
+  const [startedAt] = useState(() => Date.now());
 
   useEffect(() => {
     loadSurvey();
@@ -110,7 +115,9 @@ const ConjointSurveyPage = () => {
       await axios.post(`${API}/conjoint/survey/${studyId}/response`, {
         study_id: studyId,
         respondent_email: respondentEmail || undefined,
-        responses: responses
+        responses: responses,
+        demographics: demographics,
+        duration_sec: Math.max(0, Math.round((Date.now() - startedAt) / 1000)),
       });
 
       setSubmitted(true);
@@ -212,6 +219,34 @@ const ConjointSurveyPage = () => {
   const currentSet = survey.choice_sets[currentSetIndex];
   const progress = ((currentSetIndex + 1) / survey.choice_sets.length) * 100;
   const isLastSet = currentSetIndex === survey.choice_sets.length - 1;
+  const demoFields = survey.demographics_to_capture || [];
+  // If the study captures any demographics AND we haven't moved past the intro
+  // phase, show the demographics step instead of the choice task.
+  const showDemo = phase === 'intro' && demoFields.length > 0;
+
+  if (showDemo) {
+    return (
+      <div className="be-root">
+        <PublicTopbar/>
+        <div className="be-conjoint-page" style={{ maxWidth: 720 }}>
+          <Card className="p-6 mb-4 bg-white border-2 border-blue-300">
+            <h1 className="text-2xl font-black text-gray-900 mb-1" style={{ fontFamily: 'IBM Plex Serif' }}>
+              {survey.title}
+            </h1>
+            {survey.description && (
+              <p className="text-gray-700 text-sm">{survey.description}</p>
+            )}
+          </Card>
+          <ConjointDemographicsStep
+            fields={demoFields}
+            value={demographics}
+            onChange={setDemographics}
+            onContinue={(v) => { setDemographics(v); setPhase('choice'); }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="be-root">

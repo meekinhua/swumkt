@@ -7652,6 +7652,8 @@ class SurveyResponse(BaseModel):
     respondent_id: Optional[str] = None
     respondent_email: Optional[str] = None
     responses: List[Dict[str, Any]]  # list of {choice_set_id, selected_profile_id}
+    demographics: Optional[Dict[str, Any]] = None  # {age, gender, occupation, ...} — keys match study.demographics_to_capture
+    duration_sec: Optional[int] = 0  # time the respondent spent on the survey
 
 
 async def initialize_default_prompts():

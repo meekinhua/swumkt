@@ -22,7 +22,7 @@ from enum import Enum
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 
-from fastapi import APIRouter, HTTPException, Depends, Body, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, Body, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 from docx.shared import Pt
 
@@ -71,6 +71,7 @@ class CreateConjointStudyRequest(BaseModel):
     title: str
     description: Optional[str] = None
     product_category: Optional[str] = None
+    demographics_to_capture: Optional[List[str]] = None  # ["age", "gender", "occupation", "region", "income"]
 
 class QualitativeAnalysisRequest(BaseModel):
     qualitative_data: List[QualitativeInput]
@@ -172,6 +173,107 @@ class GenerateShelfSimulationRequest(BaseModel):
     shelf_style: str = "eye_level"  # "eye_level", "shelf_view", "aisle_view", "custom"
     custom_shelf_style: Optional[str] = None  # Custom shelf style description if shelf_style is "custom"
     additional_prompt: Optional[str] = None  # User can customize environment
+
+
+
+# ===================== FILTER HELPERS (time + demographic segments) =====================
+# Mirrors the brand_equity pattern so the frontend `BeFilterBar` can be reused.
+
+def _parse_segments_param(segments_raw):
+    """Parse the `segments` query param (JSON string) into {field: [values]}.
+
+    Returns {} on empty / invalid input. Values are coerced to strings so the
+    chip selectors on the frontend (which always pass strings) match what we
+    stored on the respondent's demographics dict.
+    """
+    if not segments_raw:
+        return {}
+    import json as _json
+    try:
+        raw = _json.loads(segments_raw)
+        if not isinstance(raw, dict):
+            return {}
+        return {
+            str(k): [str(v) for v in (vs or []) if v not in (None, "")]
+            for k, vs in raw.items()
+            if vs
+        }
+    except (ValueError, TypeError):
+        return {}
+
+
+def _apply_response_filter(
+    responses,
+    from_iso=None,
+    to_iso=None,
+    segments=None,
+):
+    """Filter conjoint responses by time window + demographic segments.
+
+    `submitted_at` is stored as ISO-8601 / datetime → str() compare is valid
+    when both bounds are ISO strings. Segment fields combine AND; multiple
+    values within a field combine OR (same semantics as brand_equity).
+    """
+    def _ts(r):
+        v = r.get("submitted_at")
+        if v is None:
+            return ""
+        if hasattr(v, "isoformat"):
+            return v.isoformat()
+        return str(v)
+
+    out = list(responses)
+    if from_iso:
+        out = [r for r in out if _ts(r) >= from_iso]
+    if to_iso:
+        out = [r for r in out if _ts(r) <= to_iso]
+    if segments:
+        for field, allowed in segments.items():
+            if not allowed:
+                continue
+            allowed_set = set(str(v) for v in allowed)
+            out = [
+                r for r in out
+                if str((r.get("demographics") or {}).get(field, "")) in allowed_set
+            ]
+    return out
+
+
+def _segments_available(responses, capture):
+    """Auto-derive the set of distinct demographic values per captured field.
+
+    The frontend uses this to render chip selectors — fields with zero values
+    are simply omitted, so an empty `capture` list or a study with no
+    demographics yet renders an empty filter bar gracefully.
+    """
+    out = {k: set() for k in (capture or [])}
+    for r in responses:
+        demo = r.get("demographics") or {}
+        for k in list(out.keys()):
+            v = demo.get(k)
+            if v not in (None, ""):
+                out[k].add(str(v))
+    return {k: sorted(list(vs)) for k, vs in out.items()}
+
+
+def _filter_signature(from_iso, to_iso, segments):
+    """Stable short hash of the filter, used as a cache key suffix so analysis
+    runs at different filter slices don't clobber each other's cached output.
+    Empty filter → 'all', preserving the original cache path."""
+    import hashlib as _hashlib
+    import json as _json
+    seg_norm = {
+        k: sorted(set(str(x) for x in (v or [])))
+        for k, v in (segments or {}).items() if v
+    }
+    if not from_iso and not to_iso and not seg_norm:
+        return "all"
+    payload = _json.dumps(
+        {"from": from_iso or "", "to": to_iso or "", "seg": seg_norm},
+        sort_keys=True, ensure_ascii=False,
+    )
+    return _hashlib.sha1(payload.encode("utf-8")).hexdigest()[:12]
+
 
 
 # ===================== MODULE-LEVEL HELPERS =====================
@@ -1630,6 +1732,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             "choice_sets": [],
             "respondent_count": 0,
             "is_public_result": False,
+            # Demographics collected on the public survey — used for segment filters
+            # in the Results page. Empty list = skip the demographics step entirely.
+            "demographics_to_capture": (
+                request.demographics_to_capture
+                if request.demographics_to_capture is not None
+                else ["age", "gender", "occupation"]
+            ),
             "status_history": [{
                 "from_status": None,
                 "to_status": ConjointStudyStatus.DRAFT,
@@ -2047,6 +2156,41 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             "is_public_result": is_public,
             "study_id": study_id
         }
+
+    @conjoint_router.put("/conjoint/studies/{study_id}/demographics-config")
+    async def update_demographics_config(
+        study_id: str,
+        demographics_to_capture: List[str] = Body(..., embed=True),
+        current_user: User = Depends(get_current_user)
+    ):
+        """Set which demographic fields the public survey collects.
+
+        Accepted values from the UI checklist: ``age``, ``gender``, ``occupation``,
+        ``education``, ``region``, ``income``. An empty list disables the
+        demographics step entirely. Changing this only affects FUTURE
+        respondents — existing responses keep whatever they submitted.
+        """
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Whitelist the keys to keep the survey UI simple and the segment
+        # filter bar predictable.
+        allowed = {"age", "gender", "occupation", "education", "region", "income"}
+        cleaned = [f for f in (demographics_to_capture or []) if f in allowed]
+
+        await db.conjoint_studies.update_one(
+            {"id": study_id},
+            {"$set": {
+                "demographics_to_capture": cleaned,
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+        return {"demographics_to_capture": cleaned}
+
+
 
     @conjoint_router.get("/conjoint/showcase")
     async def list_conjoint_showcase():
@@ -3201,7 +3345,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             "description": study.get("description"),
             "attributes": study.get("attributes", []),
             "choice_sets": choice_sets,
-            "alternatives_per_set": study.get("alternatives_per_set", 3)
+            "alternatives_per_set": study.get("alternatives_per_set", 3),
+            "demographics_to_capture": study.get("demographics_to_capture") or [],
         }
 
     @conjoint_router.post("/conjoint/survey/{study_id}/response")
@@ -3224,6 +3369,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             "respondent_id": response.respondent_id or str(uuid.uuid4()),
             "respondent_email": response.respondent_email,
             "responses": response.responses,
+            "demographics": response.demographics or {},
+            "duration_sec": int(response.duration_sec or 0),
             "submitted_at": datetime.now(timezone.utc)
         }
     
@@ -3327,9 +3474,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     @conjoint_router.get("/conjoint/studies/{study_id}/results")
     async def get_study_results(
         study_id: str,
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
         current_user: Optional[User] = Depends(get_current_user_optional)
     ):
-        """Get analysis results for a study (public if is_public_result is True)"""
+        """Get analysis results for a study (public if is_public_result is True).
+
+        Optional query params for slicing:
+          • `from`, `to`         — ISO timestamps; filter respondents by submitted_at
+          • `segments`           — JSON-encoded {field: [values]}; AND across fields, OR within
+        Returns `segments_available` so the frontend can render chip selectors.
+        """
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
@@ -3344,15 +3500,26 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 raise HTTPException(status_code=403, detail="Not authorized")
     
         # Get all responses
-        responses = await db.conjoint_responses.find(
+        all_responses = await db.conjoint_responses.find(
             {"study_id": study_id},
             {"_id": 0}
         ).to_list(10000)
-    
+
+        seg_filter = _parse_segments_param(segments)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter)
+
+        capture = study.get("demographics_to_capture") or ["age", "gender", "occupation"]
+        seg_available = _segments_available(all_responses, capture)
+
+        # `respondent_count` always refers to the FILTERED slice — the UI uses
+        # `total_respondent_count` to show "X of Y" when a filter is active.
         if len(responses) < 30:
             return {
                 "study_id": study_id,
                 "respondent_count": len(responses),
+                "total_respondent_count": len(all_responses),
+                "segments_available": seg_available,
+                "demographics_to_capture": capture,
                 "status": "insufficient_data",
                 "message": "Need at least 30 responses for reliable analysis",
                 "responses": responses
@@ -3366,6 +3533,9 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         return {
             "study_id": study_id,
             "respondent_count": len(responses),
+            "total_respondent_count": len(all_responses),
+            "segments_available": seg_available,
+            "demographics_to_capture": capture,
             "status": "complete",
             "part_worths": part_worths,
             "importance_scores": importance_scores
@@ -3395,9 +3565,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         study_id: str,
         method: str = "mnl",
         force: bool = False,  # force=true to bypass cache
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
         current_user: Optional[User] = Depends(get_current_user_optional)
     ):
-        """Get statistical analysis results with selected method (cached in DB)"""
+        """Get statistical analysis results with selected method (cached in DB).
+
+        Optional filter params (`from`, `to`, `segments`) re-run the analysis on
+        the filtered slice. Cache keys include the filter signature so each
+        slice is cached independently and the unfiltered ("all") view stays at
+        the canonical cache row.
+        """
         import asyncio
         import concurrent.futures
 
@@ -3412,35 +3591,43 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
                 raise HTTPException(status_code=403, detail="Not authorized")
 
-        respondent_count = study.get("respondent_count", 0)
+        seg_filter = _parse_segments_param(segments)
+        filter_sig = _filter_signature(from_, to, seg_filter)
+        has_filter = filter_sig != "all"
 
-        # Check cache first (unless force refresh)
+        # Cache lookup — include filter signature so slices stay distinct.
+        # `respondent_count` in the cache reflects the FILTERED count so we
+        # invalidate automatically when new respondents arrive in the slice.
         if not force:
             cached = await db.analysis_cache.find_one(
-                {"study_id": study_id, "method": method, "respondent_count": respondent_count},
+                {"study_id": study_id, "method": method, "filter_sig": filter_sig},
                 {"_id": 0}
             )
             if cached and cached.get("results"):
                 return {
                     "status": "success",
                     "method": method,
-                    "respondent_count": respondent_count,
+                    "filter_signature": filter_sig,
+                    "respondent_count": cached.get("respondent_count", 0),
                     "results": cached["results"],
-                    "cached": True
+                    "cached": True,
                 }
 
         # Need full study with choice_sets for computation
         full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
 
-        responses = await db.conjoint_responses.find(
+        all_responses = await db.conjoint_responses.find(
             {"study_id": study_id}, {"_id": 0}
         ).to_list(10000)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) \
+            if has_filter else all_responses
     
         if len(responses) < 30:
             return {
                 "status": "insufficient_data",
                 "message": "Need at least 30 responses for statistical analysis",
-                "respondent_count": len(responses)
+                "respondent_count": len(responses),
+                "filter_signature": filter_sig,
             }
     
         method_map = {
@@ -3471,12 +3658,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if not results:
             raise HTTPException(status_code=500, detail=f"Failed to perform {method} analysis")
     
-        # Save to cache
+        # Save to cache keyed by filter signature too.
         await db.analysis_cache.update_one(
-            {"study_id": study_id, "method": method},
+            {"study_id": study_id, "method": method, "filter_sig": filter_sig},
             {"$set": {
                 "study_id": study_id,
                 "method": method,
+                "filter_sig": filter_sig,
                 "respondent_count": len(responses),
                 "results": results,
                 "created_at": datetime.now(timezone.utc).isoformat()
@@ -3487,6 +3675,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         return {
             "status": "success",
             "method": method,
+            "filter_signature": filter_sig,
             "respondent_count": len(responses),
             "results": results,
             "cached": False
