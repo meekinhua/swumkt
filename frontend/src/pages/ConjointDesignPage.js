@@ -8,6 +8,7 @@ import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ReferenceImagesSection from '@/components/ReferenceImagesSection';
+import ConjointDemographicsConfig from '@/pages/conjoint/ConjointDemographicsConfig';
 import { API } from '@/App';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -1172,6 +1173,19 @@ const ConjointDesignPage = () => {
                 บันทึก Attributes & Levels
               </Button>
             </div>
+          </div>
+
+          {/* Demographic data capture configuration. Editable until the
+              survey starts; saved independently of attributes via its
+              own PUT endpoint so partial config is allowed. */}
+          <div className="mb-6">
+            <ConjointDemographicsConfig
+              studyId={studyId}
+              token={token}
+              initialValue={study?.demographics_to_capture || ['age', 'gender', 'occupation']}
+              disabled={surveyStarted}
+              onChange={(list) => setStudy(prev => prev ? { ...prev, demographics_to_capture: list } : prev)}
+            />
           </div>
 
           {attributes.length === 0 ? (
