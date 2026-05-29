@@ -72,6 +72,7 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 ### Customer Value Lab (NEW — May 29, 2026) — COMPLETE
 CBS04 principle tool: **Customer Value = Benefit − Price**. Benefit (functional/economic/psychological) vs Cost (money/inconvenience/risk). Backend `routes/customer_value.py` (/api/cv/*): CRUD+trash, AI suggestions per category (Gemini 2.5 Flash), AI strategic analysis, and product/service **image simulation** via Nano Banana (gemini-3.1-flash-image-preview). Frontend `pages/customer-value/` with 4-tab studio (Value Audit live scoring + per-category AI, AI Strategy, Perception Timeline SVG, Image Simulation). Tested 100% (iteration_22). Added to เครื่องมือ menu.
 - **Fix (May 29)**: AI suggestions for COST categories now forced to NEGATIVE framing (pain points / things the customer loses e.g. "ที่จอดรถไม่เพียงพอ", "รอคิวนาน") instead of positive solution framing — matches the Cost concept. Benefit stays positive. Prompt-only change, verified via curl.
+- **Fix (May 29)**: Added `CATEGORY_GUIDE` (definition + includes + excludes→which other category) injected into the ai-suggest prompt so each suggestion stays in the correct concept bucket. Fixes cross-category leakage (e.g. hygiene concern "ห้องน้ำสกปรก" now correctly classified under Risk, not Inconvenience). Verified via curl across money/inconvenience/risk + benefit categories.
 
 ### Kanban Project Management (COMPLETE)
 - Sub-Kanban inside cards, Cover Images, Assignees with auto-avatar
