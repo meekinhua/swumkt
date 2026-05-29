@@ -15,7 +15,7 @@ import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, Copy, Ale
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://soft-delete-conjoint.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
 const CustomerBehaviorTool = () => {
   const navigate = useNavigate();

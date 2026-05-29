@@ -1,143 +1,118 @@
 <analysis>**original_problem_statement:**
-The user requested continuous improvements, bug fixes, and system hardening for the Brand Equity and Conjoint Analysis modules. Recent fixes included resolving Clipboard API blocks, fixing Conjoint topbar titles, adding admin visibility filters, fixing mobile responsive layouts, and preventing production server hangs caused by sync CPU-heavy tasks (like document generation and image compression) blocking the async event loop. The user also requested soft-delete/trash bin features for studies.
-The most recent issue reported is a hallucination/data generation bug: in the Aided recognition survey question, an unknown brand (Brand X) is appearing in the options, which was not entered by the user.
+The user wanted to investigate why the Conjoint Analysis Pseudo R² (McFadden) calculations were returning extremely low values. The investigation revealed an encoding bug caused by orphan level IDs when users updated study attributes after generating choice sets, leading to dropped variables. The user also requested better interpretation metrics (Likelihood Ratio Test, McFadden R² Badges) to help understand the statistical outputs clearly.
 
 **PRODUCT REQUIREMENTS:**
-- Investigate and fix the Aided Recognition options generation to ensure only the specified brand and its defined competitors are shown (remove hardcoded/hallucinated Brand X).
-- Implement the Soft-delete and Trash bin feature for the Conjoint Analysis module (this was requested for *both* Brand Equity and Conjoint, but only Brand Equity was completed in the last session).
-- ALUMNI MODULE IS STRICTLY PAUSED. Do not work on it.
+- Investigate and fix the Conjoint Pseudo R² calculation / data processing.
+- Prevent invalid  from persisting when  are mutated.
+- Display Likelihood Ratio tests (chi-square, df, p-value) and McFadden R² interpretation on the Conjoint Results frontend.
 
 **User's preferred language**: Thai (INSTRUCT NEXT AGENT TO RESPOND IN THAI ONLY)
 
 **what currently exists?** 
-A highly hardened Brand Equity and Conjoint Analysis system. The frontend features a unified Swiss/Editorial UI design. The backend has been optimized to prevent event loop blocking by wrapping CPU-heavy tasks in  and adding concurrency limits/timeouts to LLM calls. Brand Equity now supports a 30-day Trash bin recovery system.
+A heavily optimized, academically rigorous Conjoint Analysis system. The backend features True D-Optimal Design generation and calculates MNL, Mixed Logit, and HB via . It now includes robust dummy encoding to handle orphan s, Likelihood Ratio tests to validate model significance, and backend protections that clear stale choice sets when attributes are edited. The frontend displays McFadden R² interpretation badges to help users understand fit quality.
 
 **Last working item**:
-    - Last item agent was working: The agent successfully completed the soft-delete and Trash bin UI/backend for the Brand Equity module. The user then reported a new bug regarding extra unwanted brands appearing in the Aided Recognition question. The agent has not yet started investigating this new bug.
-    - Status: NOT STARTED
-    - Agent Testing Done: N
-    - Which testing method agent to use? backend testing agent / manual curl
+    - Last item agent was working: Investigating the low Pseudo R² issue, fixing the dummy encoding bug in , adding statistical diagnostics (LR Test), updating the frontend UI to display these metrics, and adding a validation step to the update attributes endpoint.
+    - Status: COMPLETED
+    - Agent Testing Done: Y
+    - Which testing method agent to use? backend testing agent / manual curl / python -c
     - User Testing Done: N
 
-**All Pending/In progress Issue list**:
-  Issue 1: Brand X appearing in Aided Recognition options (P0)
-     - Attempted fixes: None yet.
-     - Next debug checklist: Check , specifically the  function and the  dimension templates. Look at how the  array is built for the  question. Ensure it uses  and  dynamically, and remove any hardcoded placeholder arrays like .
-     - Why fix this issue and what will be achieved with the fix? Ensures survey data integrity. Respondents shouldn't be asked about dummy brands that don't exist in the study's context.
-     - Status: NOT STARTED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? backend (verify JSON output)
-     - Blocked on other issue: None
+**All Pending/In progress Issue list**:  
+None at this time. All reported issues were resolved in the previous session.
 
-**In progress Task List**:
-  Task 1: Soft-delete and Trash Bin for Conjoint Studies (P1)
-     - Where to resume: Review how it was implemented in  (adding , filtering ) and apply the exact same logic to  (or  where conjoint routes live) and the Conjoint frontend list page.
-     - What will be achieved with this? Fulfills the user's previous request to allow deleting/editing studies for *both* conjoint and brand equity (the agent missed conjoint).
-     - Status: NOT STARTED
-     - Should Test frontend/backend/both after fix? both
-     - Blocked on something: None
+**In progress Task List**: 
+None at this time.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - P0: Fix Aided Recognition Brand X bug.
-    - P1: Apply Soft-delete / Trash Bin to Conjoint Analysis.
+    - P1: Review the  file, discuss the UX customer journey plan with the user, and execute the agreed-upon UI/UX improvements.
+    - P2: Implement respondent quality checks (e.g., dropping straight-liners or fast-clickers) before running stats to improve model fit from real responsive samples (Suggested enhancement).
+
     Future Tasks (PAUSED by User - DO NOT WORK ON THESE):
     - Alumni Module Phase 1 & 2.
-    - Image upload in Alumni Feed posts.
-    - Google Drive Kanban attachments.
 
 **Completed work in this session**
-- Fixed Clipboard  in iframe previews by using a custom textarea fallback (DONE).
-- Fixed Conjoint topbar to correctly display CONJOINT ANALYSIS instead of Brand Equity (DONE).
-- Added Admin visibility logic: admins can now see all Brand Equity studies via  and  helpers, with OWNER filter chips on the frontend (DONE).
-- Auto-promoted specific admin emails to  on login (DONE).
-- Fixed Critical Bug: Corrected decorator placement in  that broke POST  (DONE).
-- Fixed Quality Attributes Radar: filtered out  dimensions from rendering as radar axes (DONE).
-- Added เทียบกับคู่แข่ง toggle to Quality Radar and fixed mobile responsive overflow issues (DONE).
-- Improved Conjoint Survey UI: Increased contrast and visibility for Next/Prev buttons, Progress Bar, and Selected Profile states (DONE).
-- Hardened Production Server: Wrapped synchronous CPU-heavy tasks (, ) in  to prevent event-loop blocking/server hangs (DONE).
-- Hardened AI Analysis: Added , 55s timeouts, and idempotency checks to prevent proxy 502s (DONE).
-- Implemented Edit, Status change, Soft-delete, and Trash bin (30-day recovery) for Brand Equity studies (DONE).
+- Fixed a critical  in  that was blocking the new algorithm (DONE).
+- Tested and Verified the True D-Optimal Design (H1 task) using K-exchange, proving a 1.72 log-unit efficiency improvement over random sets (DONE).
+- Fixed Conjoint Pseudo R² bug caused by orphan s dropping out during dummy encoding (DONE).
+- Added Likelihood Ratio (LR) test (statistic, df, p-value) to MNL, Mixed Logit, and HB models (DONE).
+- Added McFadden R² interpretation labels (Poor, Good, Excellent, Exceptional) to the API response (DONE).
+- Added backend validator to  to automatically clear existing  if attributes are modified, preventing data mismatch (DONE).
+- Updated  and  to display LR test results and McFadden R² interpretation badges (DONE).
 
 **Earlier issues found/mentioned but not fixed**
-   Issue 1: Agent missed applying Trash logic to Conjoint
-   - Debug checklist: User explicitly requested ทั้ง conjoint และ brand (both conjoint and brand) for the editable/trash feature. Agent only did Brand. Needs to be mirrored to Conjoint.
-   - Why to solve this issue and what will be achieved with this? Feature parity and fulfilling user request.
-   - Should Test frontend/backend/both after fix: both
-   - Is recurring issue? N
+None.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: Production server hanging/Proxy 502s.
-  - Recurrence count: 2
-  - Status: RESOLVED (via  and AI Semaphores).
+  - Issue recurrence in previous fork: None
+  - Recurrence count: 0
+  - Status: RESOLVED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- Backend: FastAPI, MongoDB. Soft deletes are handled via  field. CPU-heavy synchronous operations MUST use .
-- Frontend: React, TailwindCSS, custom Swiss/Editorial UI ().
+- Backend Data: FastAPI, MongoDB.  and  for advanced discrete choice modeling (MNL, Mixed Logit & HB).  for Design of Experiments. 
+- Math context: McFadden's Pseudo R² scale differs from OLS. Values between 0.2 and 0.4 represent an Excellent fit.
 
 **key DB schema**
-  - : Added  (ISO string) for soft-delete logic.
+  - :  array and  array. If  update,  are now cleared automatically.
 
 **changes in tech stack**
-  - No new libraries, but heavy structural reliance on  for stability.
+  - None this session.
 
 **All files of reference** 
-  -  (Check )
+  -  
+  -  
   - 
-  -  (Needs Trash UI added)
+  - 
+  - 
+  - 
 
 **Areas that need refactoring**: 
-  - Conjoint routes in  should eventually be moved to  to match Brand Equity structure.
+  - None immediately.
 
 **key api endpoints**
-  -  (Soft delete)
-  - 
+  -  (Now contains choice_sets clearing logic)
+  -  (Now returns , , )
 
 **Critical Info for New Agent** 
 - **USER LANGUAGE IS THAI.** All communication MUST be in Thai.
-- NEVER use standard ; always use .
-- If you write CPU-bound backend code (image processing, document generation, heavy loops), you MUST wrap it in  to prevent blocking the single-worker production event loop.
-- Do NOT provide preview or deployed URLs in your summaries or chat.
-- The user's newest request is fixing Brand X appearing in Aided recognition. Fix this first.
+- The previous agent successfully implemented and tested the Pseudo R² fixes and the D-Optimal Design generator. 
+- The user will likely provide a new command upon your arrival. Greet them in Thai, state that the previous fixes are complete, and ask if they would like to proceed with the UX/UI improvements outlined in the Conjoint Audit document.
 
 **documents and test reports created in this job** 
-  -  (Continuously updated)
+  -  (Updated)
+  -  (Updated)
 
 **Last 10 User Messages and any pending HUMAN messages** 
- 1. User: Progress bar is hard to see. -> COMPLETED.
- 2. User: Make selected profile BG distinct. -> COMPLETED.
- 3. User: App hangs on production (https://swumkt...); login fails. -> COMPLETED (Fixed event loop blocking sync code).
- 4. User: AI analysis knocks out the system too. -> COMPLETED (Added semaphore and timeouts).
- 5. User: Make studies editable, deletable, and change status like Conjoint, because there are trash studies. ทั้ง conjoint และ brand (Both conjoint and brand). -> PARTIALLY COMPLETED (Agent did Brand Equity but forgot Conjoint).
- 6. User: Use soft-delete + Trash bin. -> COMPLETED (For Brand Equity).
- 7. User: Aided recognition has a problem: extra brands (Brand X) appear from nowhere. -> PENDING (New issue).
+ 1. User: Make Conjoint results load MNL default. -> COMPLETED.
+ 2. User: Check server for any remaining load issues. -> COMPLETED.
+ 3. User: Audit all conjoint stats for academic correctness. -> COMPLETED.
+ 4. User: Add demographics config to CREATE study phase. Analyze academic correctness and build UX plan. -> COMPLETED.
+ 5. User: Prioritize HB conditional distribution sprint. -> COMPLETED.
+ 6. User: Do H1 (True D-Optimal design via dexpy), M2 (Cluster-robust OLS SE), M1 (OLS reference level match). -> COMPLETED.
+ 7. User: ต่อเลย (Continue) -> COMPLETED (Agent tested and verified H1 D-Optimal design).
+ 8. User: ตอนนี้ คำนวน psudo r square ยังไง ทำไม ค่าต่ำมากตลอด (How is pseudo R squared calculated right now? Why is the value always so low?) -> COMPLETED (Agent investigated, found orphan level bug, fixed it, and added LR tests).
+ 9. User: a (Approval to proceed with fixes) -> COMPLETED.
 
 **Project Health Check:**
-Broken: Aided Recognition data template.
+Broken: None.
 Mocked: Alumni module.
 
 **3rd Party Integrations** 
- - Emergent LLM Key -> Gemini (Text & Multimodal Vision) via . (Configured with Semaphore(3) limits).
+ - Emergent LLM Key -> Emergent Object Storage via  (handling conjoint profile images).
 
 **Testing status**
-  - Testing agent used after significant changes: NO (Agent relied heavily on bash scripts and manual curl commands for speed).
-  - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None in the immediate last steps.
-  - Known regressions: None active.
+  - Testing agent used after significant changes: NO. Main agent used  and curl for rigorous backend mathematical testing.
+  - Troubleshoot agent used after agent stuck in loop: NO.
+  - Test files created: None.
+  - Known regressions: None.
 
 **Credentials to test flow:**
   - Admin:  / 
   - Student:  / 
 
 **What agent forgot to execute**
-The user explicitly asked to make studies editable/deletable for **ทั้ง conjoint และ brand** (both conjoint and brand). The previous agent built a beautiful soft-delete and Trash UI for Brand Equity but completely forgot to apply the same logic to Conjoint Analysis.
-
-**Debugging checklist for current issue**
-    Issue: Brand X appearing in Aided Recognition
-    
-    Backend files to check: 
-    -  -> look for  or the  dictionary definition.
-    - Check if the  template has hardcoded options like  instead of dynamically injecting  and .</analysis>
+None. All tasks were thoroughly completed and validated.</analysis>
