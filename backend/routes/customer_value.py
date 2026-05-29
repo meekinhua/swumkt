@@ -545,7 +545,7 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
         # Build a vivid prompt from the chosen value proposition (checked benefits).
         benefits = brand.get("benefits", {}) or {}
         chosen = []
-        for cat in ("functional", "economic", "psychological"):
+        for cat in ("functional", "economic", "love_belonging", "esteem_status"):
             chosen += [f["label"] for f in (benefits.get(cat) or []) if f.get("checked")]
         value_props = ", ".join(chosen[:8]) if chosen else "high quality, appealing"
 

@@ -1,3 +1,41 @@
+## 2026-05-29 — Customer Value Lab FULL REVISION (CBS04 complete framework)
+
+Reference asset (permanent): `/app/memory/CONCEPT_marketing_principles_intaka.md` (full 33KB CBS04 lecture).
+
+User asked to store the principle doc as a permanent reference and revise the tool
+entirely to cover the WHOLE framework. Confirmed: all 6 modules, keep white
+Editorial/Swiss, Thai primary, discard old studies (deleted 9 old cv_studies).
+
+### New tool = 6-module studio (one study)
+1. **Marketing Lens** (§1): 3 definition cards (Basic "make people choose" / Drucker
+   "make selling unnecessary" / Kotler "value + engagement") + a "self-sell" slider
+   (Drucker check) stored in `lens.self_sell`.
+2. **Need → Want → Demand** (§5): 3 textareas (need/want/buying_power) + `POST /ai-needs`
+   → AI fills/validates + verdict whether it's real Demand (Want backed by Buying Power) + tips.
+3. **Value Audit** (§2): Benefit now = Functional, Economic (ปริมาณ/ของแถม), and
+   **Psychological split into Love&Belonging + Esteem&Status (Maslow)**; Cost = Monetary
+   (price), Inconvenience, Risk. Per-category AI suggest (concept-accurate framing +
+   CATEGORY_GUIDE + STRATEGY_NOTES), live scoring, multi-brand compare, winner banner,
+   inline AI Strategy.
+4. **Perception Timeline** (§3): EXACT doc formulas — A Over `Actual+Δy(1−t)^4` (decay→
+   Dissatisfaction), B Under `Actual−Δy(1−t)^2.5` (rise→Delight), C Balanced `=Actual`
+   (Sustainable). SVG shows Actual line + Perceived curve + satisfaction verdict + application note.
+5. **5-Step Process** (§4): Research→STP→4Ps→Engagement→Return cards with notes + done
+   checkbox + `POST /ai-step` (per-step summary + tailored checklist).
+6. **Image Simulation** (§2): unchanged (Nano Banana product/service render).
+
+### Backend changes (`routes/customer_value.py`)
+- `score_brand`: psychological = min(10, love_belonging + esteem_status); benefit 3-dim equal.
+- New benefit keys (functional/economic/love_belonging/esteem_status); new study fields
+  needs/process/lens. CATEGORY_LABELS/CATEGORY_GUIDE updated; 'psychological' category retired (→400).
+- New endpoints: `POST /ai-needs`, `POST /ai-step`. `_parse_json_obj` helper. STRATEGY_NOTES.
+- Fix: generate_image value_props loop now includes love_belonging + esteem_status.
+
+### Testing — iteration_23.json: backend 27/27 pytest, frontend 100% all 6 tabs. No critical issues.
+- Regression suite: `/app/backend/tests/test_customer_value.py` (27 cases).
+
+
+
 ## 2026-05-29 — NEW TOOL: Customer Value Lab (CBS04: Value = Benefit − Price)
 
 ### Request (Thai)
