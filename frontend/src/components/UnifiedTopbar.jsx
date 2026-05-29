@@ -33,6 +33,7 @@ const PUBLIC_LINKS = [
 const TOOLS_LINKS = [
   { to: '/brand-equity',                          label: 'Brand Equity',     hint: 'BE' },
   { to: '/market-research/conjoint-analysis',     label: 'Conjoint Analysis', hint: 'CJ' },
+  { to: '/market-research/customer-value',         label: 'Customer Value Lab', hint: 'CV' },
   { to: '/market-research/customer-journey',      label: 'Customer Journey',  hint: 'CX' },
   { to: '/market-research/customer-behavior',     label: 'Customer Behavior', hint: 'CB' },
   { to: '/market-research/journal-finder',        label: 'Journal Finder',    hint: 'JF' },

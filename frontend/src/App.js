@@ -37,6 +37,8 @@ const ContentDetail = lazy(() => import('@/pages/ContentDetail'));
 const CustomerJourneyTool = lazy(() => import('@/pages/CustomerJourneyTool'));
 const CustomerBehaviorTool = lazy(() => import('@/pages/CustomerBehaviorTool'));
 const CustomerPerceptionTool = lazy(() => import('@/pages/CustomerPerceptionTool'));
+const CustomerValueListPage = lazy(() => import('@/pages/customer-value/CustomerValueListPage'));
+const CustomerValueStudioPage = lazy(() => import('@/pages/customer-value/CustomerValueStudioPage'));
 const JournalFinder = lazy(() => import('@/pages/JournalFinder'));
 const AcademicFormatEditor = lazy(() => import('@/pages/AcademicFormatEditor'));
 const BrandEquityWizardPage = lazy(() => import('@/pages/brand-equity/BrandEquityWizardPage'));
@@ -231,6 +233,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ConjointAnalysisTool />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/market-research/customer-value"
+              element={
+                <ProtectedRoute>
+                  <CustomerValueListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/market-research/customer-value/:studyId"
+              element={
+                <ProtectedRoute>
+                  <CustomerValueStudioPage />
                 </ProtectedRoute>
               }
             />

@@ -7986,6 +7986,12 @@ from routes.conjoint import get_conjoint_routes
 conjoint_routes = get_conjoint_routes(db, get_current_user, get_current_user_optional)
 api_router.include_router(conjoint_routes)
 
+# ============ CUSTOMER VALUE LAB ============
+from routes.customer_value import get_customer_value_routes
+
+cv_routes = get_customer_value_routes(db, get_current_user, get_current_user_optional)
+api_router.include_router(cv_routes)
+
 # ============ SHARE — OG / Social Media Preview Bridges ============
 from routes.share import get_share_routes
 from routes.brand_equity import _aggregate_responses as _be_aggregate_responses
