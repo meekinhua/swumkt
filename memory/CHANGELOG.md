@@ -1,3 +1,56 @@
+## 2026-05-29 — NEW TOOL: Customer Value Lab (CBS04: Value = Benefit − Price)
+
+### Request (Thai)
+Build a new tool based on the attached CBS04 marketing principle, better than a
+sample Gemini HTML tool. Must include AI suggestions for what to add per category,
+and an image-simulation module showing real product/service images.
+
+### Principle implemented
+Customer Value = Benefit − Price (Cost), with Kotler (value + engagement) and
+Drucker (make selling unnecessary) framing. Benefit = 3 categories
+(functional / economic / psychological); Cost = 3 categories
+(money[incl. effort] / inconvenience[incl. time] / risk) — time & effort folded
+in per the user's instruction.
+
+### Backend — `routes/customer_value.py` (factory, router prefix /cv → /api/cv/*)
+- CRUD: POST/GET/PUT/DELETE `/cv/studies(/{id})`, soft-delete + `/trash` + `/restore`.
+- Ownership: admin sees all, creator-only otherwise (403 enforced).
+- `POST /cv/studies/{id}/ai-suggest` {brand_id, category}: Gemini suggests 4-5
+  factors to add per category (label/weight 1-3/rationale/principle). Robust JSON
+  parsing. Model = **gemini-2.5-flash** (gemini-2.5-flash-lite is NOT enabled on
+  the Emergent key despite being listed — fell back per user's "ก็ใช้ตามนั้น").
+- `POST /cv/studies/{id}/ai-analysis`: strategic markdown comparing all brands.
+- `POST /cv/studies/{id}/generate-image` {brand_id}: builds a prompt from the
+  brand's checked benefits and renders a realistic product/service photo via
+  **Nano Banana = gemini-3.1-flash-image-preview** (the 2.5 image model is
+  deprecated/404). Compresses + stores via object storage → `/api/files/...`.
+- Transparent scoring (`score_brand`, mirrored in frontend `cv-lib.js`):
+  catScore=min(10, Σ checked weights); benefit_total=(func+econ+psych)/3·10;
+  money mapped 1-10 by price within industry range; cost_total=(money+inconv+risk)/3·10;
+  net = benefit − cost.
+
+### Frontend — `pages/customer-value/`
+- `CustomerValueListPage.jsx` (/market-research/customer-value): study list +
+  create (industry chips) + trash.
+- `CustomerValueStudioPage.jsx` (/:studyId): 4 tabs —
+  1) **Value Audit**: brand columns, live Benefit/Cost gauges + Net Value, factor
+     checkboxes + weight 1-2-3 + quick-add chips + custom add + per-category **AI**
+     suggestion box, add competitors, winner banner (empty-state aware), debounced auto-save.
+  2) **AI Strategy**: one-click Gemini strategic analysis (markdown).
+  3) **Perception Timeline**: over/under/balanced-promise SVG simulation of
+     expectation vs experienced value vs satisfaction.
+  4) **Image Simulation**: per-brand Nano Banana product/service image generation.
+- `cv-lib.js`: industry ranges, default factor library per industry, scoring math
+  (mirror of backend), perception model.
+- Editorial/Swiss design (`customer-value.css`); added to เครื่องมือ menu (hint CV).
+
+### Testing — iteration_22.json: 100% (backend 12/12 pytest, frontend all flows)
+- Tests at `/app/backend/tests/test_customer_value.py`. No critical/minor issues.
+- Polish from review: winner banner shows "ยังไม่ได้ประเมิน" until ≥1 factor checked
+  (avoids confusing negative Net on a fresh study from price-only cost).
+
+
+
 ## 2026-05-29 — Conjoint Stats Full Correctness Audit + Stale-Cache Fix
 
 ### User request (Thai)

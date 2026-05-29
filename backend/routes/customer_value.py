@@ -282,9 +282,23 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
             existing = [f["label"] for f in (brand.get("benefits", {}).get(req.category, []) or [])]
 
         rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
-        goal = ("ลดต้นทุน/สิ่งที่ลูกค้าต้องเสียในหมวดนี้ (Cost ลดลง → Customer Value สูงขึ้น)"
-                if is_cost else
-                "เพิ่มประโยชน์/คุณค่าที่ลูกค้าจะได้รับในหมวดนี้ (Benefit สูงขึ้น → Customer Value สูงขึ้น)")
+        if is_cost:
+            goal = ("ระบุ 'ต้นทุน / สิ่งที่ลูกค้าต้องเสียหรือเจ็บปวด' ในหมวดนี้ "
+                    "(ยิ่งมีปัจจัยเหล่านี้มาก Customer Value ยิ่งลดลง)")
+            framing = (
+                "สำคัญมาก: เนื่องจากเป็นหมวด COST ปัจจัยทุกตัวต้องเขียนใน 'มุมลบ' "
+                "คือ ปัญหา/อุปสรรค/สิ่งที่ลูกค้าต้องเสียหรือไม่พอใจ "
+                "เช่น 'ที่จอดรถไม่เพียงพอ', 'รอคิวนาน', 'ขั้นตอนสั่งซื้อยุ่งยาก', 'กลัวได้ของไม่ตรงปก'. "
+                "ห้ามเขียนเป็นทางแก้หรือมุมบวกเด็ดขาด (อย่าเขียน 'ที่จอดรถเพียงพอ' หรือ 'ระบบจองคิวสะดวก').\n"
+            )
+            rationale_hint = "rationale: เหตุผลสั้นๆ ว่าทำไมสิ่งนี้เป็นต้นทุนที่ทำให้ลูกค้าลังเล / คุณค่าลดลง"
+        else:
+            goal = "เพิ่มประโยชน์/คุณค่าที่ลูกค้าจะได้รับในหมวดนี้ (Benefit สูงขึ้น → Customer Value สูงขึ้น)"
+            framing = (
+                "ปัจจัยทุกตัวต้องเขียนใน 'มุมบวก' คือ ประโยชน์/จุดเด่นที่ลูกค้าได้รับ "
+                "เช่น 'รสชาติอร่อยเข้มข้น', 'บริการรวดเร็ว'.\n"
+            )
+            rationale_hint = "rationale: เหตุผลสั้นๆ ว่าช่วยเพิ่มคุณค่าให้ลูกค้าอย่างไร"
 
         system = (
             "คุณเป็นที่ปรึกษาการตลาดที่ยึดหลัก Kotler (บริหาร Customer Value + Engagement) "
@@ -295,11 +309,12 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
             f"ธุรกิจ: {rng['label']} | แบรนด์: {brand['name']}\n"
             f"หมวดที่ต้องการคำแนะนำ: {CATEGORY_LABELS[req.category]}\n"
             f"เป้าหมาย: {goal}\n"
+            f"{framing}"
             f"ปัจจัยที่มีอยู่แล้ว (อย่าซ้ำ): {existing or 'ยังไม่มี'}\n\n"
             "เสนอ 4-5 ปัจจัยใหม่ที่ควรเพิ่มเข้าไปในหมวดนี้ โดยแต่ละปัจจัยให้:\n"
-            "- label: ชื่อปัจจัยสั้นๆ ภาษาไทย (เป็นรูปธรรม จับต้องได้)\n"
-            "- weight: ความสำคัญ 1-3 (3=สำคัญมาก)\n"
-            "- rationale: เหตุผลสั้นๆ 1 ประโยค ว่าช่วย Customer Value อย่างไร\n"
+            "- label: ชื่อปัจจัยสั้นๆ ภาษาไทย (เป็นรูปธรรม จับต้องได้ และตรงตามมุมที่กำหนดข้างต้น)\n"
+            "- weight: ความสำคัญ/ความรุนแรง 1-3 (3=มากที่สุด)\n"
+            f"- {rationale_hint}\n"
             "- principle: หนึ่งใน ['kotler-value','kotler-engagement','drucker-selfsell']\n\n"
             'รูปแบบ JSON: {"suggestions":[{"label":"...","weight":2,"rationale":"...","principle":"kotler-value"}]}'
         )

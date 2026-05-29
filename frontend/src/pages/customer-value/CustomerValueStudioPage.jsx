@@ -269,6 +269,11 @@ export default function CustomerValueStudioPage() {
   const scored = study.brands.map((b) => ({ brand: b, sc: scoreBrand(b, rng) }));
   const winner = scored.slice().sort((a, b) => b.sc.net - a.sc.net)[0];
   const ours = scored.find((x) => x.brand.is_ours) || scored[0];
+  const anyChecked = study.brands.some((b) => {
+    const ben = Object.values(b.benefits || {}).flat();
+    const cst = Object.values(b.costs || {}).flat();
+    return [...ben, ...cst].some((f) => f && f.checked);
+  });
 
   const TABS = [
     { id: 'audit', label: 'Value Audit', icon: 'fa-scale-balanced' },
@@ -303,14 +308,24 @@ export default function CustomerValueStudioPage() {
             </div>
 
             {/* winner banner */}
-            <div className="cv-winner" style={{ marginBottom: 18, borderColor: winner.sc.net >= 0 ? '#0e5538' : '#c8102e', background: winner.sc.net >= 0 ? '#eaf3ee' : '#fdeaec' }} data-testid="cv-winner">
-              <i className="fa-solid fa-trophy" style={{ fontSize: 22, color: winner.brand.color }} />
-              <div>
-                <div className="cv-eyebrow">ผู้ชนะด้านคุณค่า (Net Value สูงสุด)</div>
-                <b style={{ fontSize: 18 }}>{winner.brand.name}</b>
-                <span style={{ marginLeft: 8, fontFamily: "'IBM Plex Mono', monospace" }}>Net {winner.sc.net > 0 ? '+' : ''}{winner.sc.net}</span>
+            {anyChecked ? (
+              <div className="cv-winner" style={{ marginBottom: 18, borderColor: winner.sc.net >= 0 ? '#0e5538' : '#c8102e', background: winner.sc.net >= 0 ? '#eaf3ee' : '#fdeaec' }} data-testid="cv-winner">
+                <i className="fa-solid fa-trophy" style={{ fontSize: 22, color: winner.brand.color }} />
+                <div>
+                  <div className="cv-eyebrow">ผู้ชนะด้านคุณค่า (Net Value สูงสุด)</div>
+                  <b style={{ fontSize: 18 }}>{winner.brand.name}</b>
+                  <span style={{ marginLeft: 8, fontFamily: "'IBM Plex Mono', monospace" }}>Net {winner.sc.net > 0 ? '+' : ''}{winner.sc.net}</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="cv-winner" style={{ marginBottom: 18, borderColor: '#6b7280', background: '#f7f4ee' }} data-testid="cv-winner">
+                <i className="fa-solid fa-hand-pointer" style={{ fontSize: 20, color: '#6b7280' }} />
+                <div>
+                  <div className="cv-eyebrow">ยังไม่ได้ประเมิน</div>
+                  <span style={{ fontSize: 14 }}>เริ่มติ๊กปัจจัย Benefit / Cost ของแต่ละแบรนด์ — หรือกดปุ่ม <b>AI</b> ให้ช่วยแนะนำว่าควรเพิ่มอะไร</span>
+                </div>
+              </div>
+            )}
 
             <div className="cv-brands">
               {scored.map(({ brand, sc }) => (

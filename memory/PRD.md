@@ -69,6 +69,10 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - **Trash Bin** (Feb 2026): soft-delete with 30-day recovery, restore + purge endpoints, UI tabs in `ConjointAnalysisTool.js`
 - **Stats correctness audit (May 29, 2026)**: all 5 methods verified via synthetic ground-truth tests (`backend/tests/test_conjoint_stats_correctness.py`, 12 PASS). Confirmed low McFadden ρ² on live studies is genuine (random/test responses), not a calculation bug. Added `ANALYSIS_CACHE_VERSION` to `analysis_cache` so new fit-diagnostic fields (LR test, fit_label) self-heal stale caches instead of serving null.
 
+### Customer Value Lab (NEW — May 29, 2026) — COMPLETE
+CBS04 principle tool: **Customer Value = Benefit − Price**. Benefit (functional/economic/psychological) vs Cost (money/inconvenience/risk). Backend `routes/customer_value.py` (/api/cv/*): CRUD+trash, AI suggestions per category (Gemini 2.5 Flash), AI strategic analysis, and product/service **image simulation** via Nano Banana (gemini-3.1-flash-image-preview). Frontend `pages/customer-value/` with 4-tab studio (Value Audit live scoring + per-category AI, AI Strategy, Perception Timeline SVG, Image Simulation). Tested 100% (iteration_22). Added to เครื่องมือ menu.
+- **Fix (May 29)**: AI suggestions for COST categories now forced to NEGATIVE framing (pain points / things the customer loses e.g. "ที่จอดรถไม่เพียงพอ", "รอคิวนาน") instead of positive solution framing — matches the Cost concept. Benefit stays positive. Prompt-only change, verified via curl.
+
 ### Kanban Project Management (COMPLETE)
 - Sub-Kanban inside cards, Cover Images, Assignees with auto-avatar
 - RBAC: owner, manager, editor, card_owner (student), viewer
