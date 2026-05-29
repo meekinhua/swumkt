@@ -62,16 +62,30 @@ class CVStudyUpdate(BaseModel):
     industry: Optional[str] = None
     brands: Optional[List[Dict[str, Any]]] = None  # full brand objects from UI
     perception: Optional[Dict[str, Any]] = None
+    needs: Optional[Dict[str, Any]] = None          # Need/Want/Demand module
+    process: Optional[Dict[str, Any]] = None         # 5-step process module
+    lens: Optional[Dict[str, Any]] = None            # Marketing Lens module
 
 
 class CVAISuggestRequest(BaseModel):
     brand_id: str
-    category: str  # functional | economic | psychological | money | inconvenience | risk
+    # functional | economic | love_belonging | esteem_status | money | inconvenience | risk
+    category: str
 
 
 class CVImageRequest(BaseModel):
     brand_id: str
     extra_prompt: Optional[str] = ""
+
+
+class CVNeedsRequest(BaseModel):
+    need: Optional[str] = ""
+    want: Optional[str] = ""
+    buying_power: Optional[str] = ""
+
+
+class CVStepRequest(BaseModel):
+    step: str  # research | stp | fourps | engagement | returns
 
 
 # ===================== SCORING (mirror of frontend cv-lib.js) =====================
@@ -90,13 +104,21 @@ def _money_score(price: float, pmin: float, pmax: float) -> float:
 
 
 def score_brand(brand: Dict[str, Any], industry_range: Dict[str, float]) -> Dict[str, Any]:
-    """Compute benefit/cost/net value for a single brand. Range 0-100 each."""
+    """Compute benefit/cost/net value for a single brand. Range 0-100 each.
+
+    Benefit has 3 equal dimensions per CBS04: Functional, Economic, Psychological.
+    Psychological is itself made of two Maslow sub-dimensions (Love&Belonging +
+    Esteem&Status); their checked weights combine into the single psychological
+    dimension (capped at 10) so the 3 benefit dimensions stay equally weighted.
+    """
     benefits = brand.get("benefits", {}) or {}
     costs = brand.get("costs", {}) or {}
 
     func = _cat_score(benefits.get("functional"))
     econ = _cat_score(benefits.get("economic"))
-    psych = _cat_score(benefits.get("psychological"))
+    love = _cat_score(benefits.get("love_belonging"))
+    esteem = _cat_score(benefits.get("esteem_status"))
+    psych = min(10.0, love + esteem)
     benefit_total = round((func + econ + psych) / 3.0 * 10.0, 1)
 
     money = _money_score(
@@ -114,6 +136,7 @@ def score_brand(brand: Dict[str, Any], industry_range: Dict[str, float]) -> Dict
         "net_value": round(benefit_total - cost_total, 1),
         "breakdown": {
             "functional": round(func, 1), "economic": round(econ, 1),
+            "love_belonging": round(love, 1), "esteem_status": round(esteem, 1),
             "psychological": round(psych, 1), "money": round(money, 1),
             "inconvenience": round(inconv, 1), "risk": round(risk, 1),
         },
@@ -129,12 +152,13 @@ INDUSTRY_RANGES = {
 }
 
 CATEGORY_LABELS = {
-    "functional": "Functional — ประโยชน์ใช้สอย/คุณภาพ",
-    "economic": "Economic — ความคุ้มค่า/ประหยัด",
-    "psychological": "Psychological — อารมณ์/สังคม/สถานะ (Love&Belonging + Esteem&Status)",
-    "money": "Money Cost — ราคา/เงิน (รวมความพยายามที่ตีเป็นเงินได้)",
-    "inconvenience": "Inconvenience — ความไม่สะดวก (รวมเวลาที่เสียไป)",
-    "risk": "Risk — ความเสี่ยง/ความไม่มั่นใจทางจิตใจ",
+    "functional": "Functional Benefit — ประโยชน์ตามฟังก์ชัน/คุณภาพ",
+    "economic": "Economic Benefit — ความคุ้มค่าเชิงปริมาณ/ของแถม",
+    "love_belonging": "Psychological · Love & Belonging — ความรัก/ความผูกพัน/การเป็นส่วนหนึ่ง",
+    "esteem_status": "Psychological · Esteem & Status — ความภูมิใจ/สถานะ/การยอมรับ",
+    "money": "Monetary Cost — ราคาที่เป็นตัวเงิน (รวมความพยายามที่ตีเป็นเงินได้)",
+    "inconvenience": "Inconvenience — ความยากลำบากในการเข้าถึง (รวมเวลาที่เสียไป)",
+    "risk": "Risk — ความเสี่ยงแฝง/ความไม่มั่นใจทางจิตใจ",
 }
 
 # Precise per-category guide so AI suggestions stay in the correct concept bucket
@@ -142,36 +166,48 @@ CATEGORY_LABELS = {
 CATEGORY_GUIDE = {
     # ---- BENEFITS ----
     "functional": {
-        "def": "ประโยชน์ใช้สอย/คุณภาพของตัวสินค้าหรือบริการเอง (ทำงานได้ดี ตอบโจทย์การใช้งาน)",
-        "include": "คุณภาพ/ความทนทาน, ประสิทธิภาพ, ความหลากหลายของตัวเลือก, รสชาติ/ฟังก์ชันการใช้งาน, ใช้งานง่าย",
-        "exclude": "ความคุ้มราคา/โปรโมชัน → Economic ; ความภูมิใจ/ภาพลักษณ์/บรรยากาศ → Psychological",
+        "def": "หน้าที่และสมรรถนะพื้นฐานที่สินค้า/บริการพึงมีตามความคาดหวัง (ตัวสินค้าทำงานได้ดี)",
+        "include": "คุณภาพ/รสชาติ, ประสิทธิภาพ/ความเสถียร, ความทนทาน, ความหลากหลายของตัวเลือก, ใช้งานง่าย",
+        "exclude": "ปริมาณ/ของแถม/ความคุ้มเงิน → Economic ; ความฟิน/ภาพลักษณ์/สถานะ → Psychological(Love/Esteem)",
     },
     "economic": {
-        "def": "คุณค่าเชิงเศรษฐกิจ/ความคุ้มค่าเงิน (รู้สึกได้มากกว่าที่จ่าย)",
-        "include": "ราคาคุ้มค่า, โปรโมชัน/ส่วนลด, สะสมแต้ม/สิทธิพิเศษ, การรับประกัน/คืนเงิน, ประหยัดระยะยาว",
-        "exclude": "คุณภาพ/ฟังก์ชันตัวสินค้า → Functional ; ความภูมิใจ/สถานะ → Psychological",
+        "def": "ความคุ้มค่าที่จับต้องได้ในแง่ปริมาณ ปริมาตร หรือของแถม (ได้เยอะในราคาเท่าเดิม)",
+        "include": "ปริมาณเยอะ/จานใหญ่พูน, ของแถม/น้ำซุปฟรี, ซื้อ 1 แถม 1, แพ็กคุ้ม, สะสมแต้ม/รับประกัน",
+        "exclude": "คุณภาพ/รสชาติตัวสินค้า → Functional ; ความภูมิใจ/สถานะ → Esteem&Status",
     },
-    "psychological": {
-        "def": "คุณค่าทางอารมณ์ สังคม และสถานะ (Love & Belonging + Esteem & Status ตาม Maslow)",
-        "include": "ความภูมิใจ, ภาพลักษณ์/สถานะทางสังคม, ความรู้สึกเป็นส่วนหนึ่งของกลุ่ม, แบรนด์ที่ได้รับการยอมรับ, บรรยากาศ/ประสบการณ์ที่ทำให้รู้สึกดี",
-        "exclude": "คุณภาพการใช้งาน → Functional ; ความคุ้มราคา → Economic",
+    "love_belonging": {
+        "def": "ประโยชน์เชิงจิตวิทยาระดับความรักและการเป็นส่วนหนึ่ง (Maslow: Love & Belonging)",
+        "include": "ตอบสนองความผูกพันในครอบครัว/แฟน/เพื่อน/สัตว์เลี้ยง, ร้าน Pet-friendly, พื้นที่รวมกลุ่ม/ชุมชน, ความอบอุ่นเป็นกันเอง",
+        "exclude": "การอวด/สถานะ/ความพรีเมียม → Esteem&Status ; คุณภาพการใช้งาน → Functional",
+    },
+    "esteem_status": {
+        "def": "ประโยชน์เชิงจิตวิทยาระดับความภูมิใจและสถานะทางสังคม (Maslow: Esteem & Status)",
+        "include": "ความรู้สึกได้รับการยอมรับ, ซื้อเพื่ออวด/แสดงรสนิยม, ความพรีเมียม/หรูหรา, แบรนด์เนม, ภาพลักษณ์ไฮเอนด์",
+        "exclude": "ความผูกพัน/ครอบครัว/ชุมชน → Love&Belonging ; ความคุ้มเงิน → Economic",
     },
     # ---- COSTS (เขียนเป็นมุมลบ) ----
     "money": {
-        "def": "ต้นทุนที่เป็นตัวเงิน (รวมความพยายาม/แรงที่ตีค่าเป็นเงินได้)",
+        "def": "ราคาเงินสดที่ต้องควักจ่ายจริง (รวมความพยายาม/แรงที่ตีค่าเป็นเงินได้)",
         "include": "ราคาสูง/แพงกว่าคู่แข่ง, ค่าใช้จ่ายแฝง, ค่าบริการ/ภาษีเพิ่ม, ปริมาณไม่คุ้มเงิน, ค่าเดินทางที่เป็นเงิน",
         "exclude": "การเสียเวลา/ความยุ่งยากเชิงกระบวนการ → Inconvenience ; ความกลัว/ไม่มั่นใจ → Risk",
     },
     "inconvenience": {
-        "def": "ความไม่สะดวก/เสียเวลา/ความยุ่งยากในการเข้าถึงและใช้บริการ (รวม Time cost)",
-        "include": "รอคิว/รอนาน, เดินทางลำบาก/หายาก/ที่จอดรถไม่พอ, ขั้นตอนยุ่งยาก, เวลาทำการจำกัด, ชำระเงินไม่สะดวก",
-        "exclude": "เรื่องราคา/เงิน → Money ; ความกลัว ไม่มั่นใจ ความสะอาด ความปลอดภัย คุณภาพไม่ตรงปก → Risk",
+        "def": "ความไม่สะดวกสบาย/เสียเวลา/ความยากลำบากในการเข้าถึงและใช้บริการ (รวม Time cost)",
+        "include": "รอคิว/รอนาน, ทำเลไกล/เดินทางลำบาก/หายาก, ไม่มีที่จอดรถ, หน้าจอ/แอปใช้ยาก, ขั้นตอนยุ่งยาก, เวลาทำการจำกัด",
+        "exclude": "เรื่องราคา/เงิน → Money ; ความกลัว ไม่มั่นใจ ความสะอาด ความปลอดภัย ของไม่ตรงปก → Risk",
     },
     "risk": {
-        "def": "ต้นทุนทางจิตใจ — ความเสี่ยง ความไม่มั่นใจ ความกังวล ที่ลูกค้ารู้สึกก่อน/ระหว่างตัดสินใจซื้อ",
-        "include": "กลัวคุณภาพไม่ดี/ไม่ตรงปก, กังวลความสะอาด/สุขอนามัย (เช่น ห้องน้ำสกปรก), กังวลความปลอดภัย, กลัวได้ของปลอม, ไม่มั่นใจบริการหลังการขาย, กลัวเสียหน้า/ผิดหวัง",
+        "def": "ความเสี่ยงแฝง — ความกลัว ความระแวง ความกังวล ด้านความปลอดภัย/ความสะอาด/ของไม่ตรงปก",
+        "include": "กลัวคุณภาพไม่ดี/ไม่ตรงปก, กังวลความสะอาด/สุขอนามัย (เช่น ห้องน้ำสกปรก), กังวลความปลอดภัย, กลัวได้ของปลอม, ร้านใหม่ยังไม่น่าเชื่อถือ, ไม่มั่นใจบริการหลังการขาย",
         "exclude": "ราคา/เงิน → Money ; การเสียเวลา/ความยุ่งยากเชิงกระบวนการ (ที่ไม่ได้เกิดจากความกังวล) → Inconvenience",
     },
+}
+
+# Strategic tips from the CBS04 doc, surfaced as AI context per cost dimension.
+STRATEGY_NOTES = {
+    "money": "เกมตัดราคา (Price War) เป็นสนามรบของยักษ์ใหญ่ที่มี Economy of Scale — รายย่อยควรเลี่ยง ไปสู้จุดอื่นแทน",
+    "inconvenience": "ลูกค้ามักยอมจ่ายแพงขึ้นเพื่อแลกกับความสะดวก (เช่น ซื้อของหน้าปากซอยแพงกว่าแต่ไม่ต้องเดินทางไกล)",
+    "risk": "ร้านใหญ่/แบรนด์ที่น่าเชื่อถือมักได้เปรียบเรื่องความเสี่ยงต่ำ ลูกค้ายอมจ่ายแพงกว่าเพื่อตัดความเสี่ยงทิ้ง",
 }
 
 
@@ -216,7 +252,7 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
                 "is_ours": b.is_ours,
                 "color": palette[i % len(palette)],
                 "price_value": INDUSTRY_RANGES.get(req.industry, INDUSTRY_RANGES["generic"])["mid"],
-                "benefits": {"functional": [], "economic": [], "psychological": []},
+                "benefits": {"functional": [], "economic": [], "love_belonging": [], "esteem_status": []},
                 "costs": {"inconvenience": [], "risk": []},
                 "image_url": None,
                 "image_prompt": None,
@@ -226,6 +262,11 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
             "title": req.title, "description": req.description or "",
             "industry": req.industry, "brands": brands,
             "perception": {"profile": "C"},
+            "needs": {"need": "", "want": "", "buying_power": ""},
+            "process": {"research": {"notes": "", "done": False}, "stp": {"notes": "", "done": False},
+                        "fourps": {"notes": "", "done": False}, "engagement": {"notes": "", "done": False},
+                        "returns": {"notes": "", "done": False}},
+            "lens": {"self_sell": 50},
             "created_at": now, "updated_at": now, "deleted_at": None,
         }
         await db.cv_studies.insert_one(doc)
@@ -343,13 +384,15 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
             "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
         )
         guide = CATEGORY_GUIDE.get(req.category, {})
+        strat = STRATEGY_NOTES.get(req.category, "")
         prompt = (
             f"ธุรกิจ: {rng['label']} | แบรนด์: {brand['name']}\n"
             f"หมวดที่ต้องการคำแนะนำ: {CATEGORY_LABELS[req.category]}\n"
             f"นิยามของหมวดนี้: {guide.get('def', '')}\n"
             f"สิ่งที่อยู่ในหมวดนี้: {guide.get('include', '')}\n"
             f"สิ่งที่ 'ไม่ใช่' หมวดนี้ (ห้ามเสนอ เพราะอยู่หมวดอื่น): {guide.get('exclude', '')}\n"
-            f"เป้าหมาย: {goal}\n"
+            + (f"ข้อสังเกตเชิงกลยุทธ์: {strat}\n" if strat else "")
+            + f"เป้าหมาย: {goal}\n"
             f"{framing}"
             f"ปัจจัยที่มีอยู่แล้ว (อย่าซ้ำ): {existing or 'ยังไม่มี'}\n\n"
             "เสนอ 4-5 ปัจจัยใหม่ที่ 'ตรงกับนิยามหมวดนี้เท่านั้น' โดยแต่ละปัจจัยให้:\n"
@@ -410,6 +453,83 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
             {"id": study_id},
             {"$set": {"ai_analysis": md, "ai_analysis_at": datetime.now(timezone.utc).isoformat()}})
         return {"analysis": md}
+
+    # ------------------------------------------------------ AI: NEED → WANT → DEMAND
+    @cv_router.post("/studies/{study_id}/ai-needs")
+    async def ai_needs(study_id: str, req: CVNeedsRequest, current_user: User = Depends(get_current_user)):
+        s = await db.cv_studies.find_one({"id": study_id}, {"_id": 0})
+        if not s or not _owns(s, current_user):
+            raise HTTPException(status_code=404, detail="Study not found")
+        rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
+        ours = next((b for b in s.get("brands", []) if b.get("is_ours")), (s.get("brands") or [{}])[0])
+        system = (
+            "คุณเป็นที่ปรึกษาการตลาด สอนเรื่อง Need vs Want vs Demand. "
+            "Need=ความต้องการดิบจากธรรมชาติ, Want=Need ที่ถูกหล่อหลอมด้วยวัฒนธรรมจนเจาะจงเป็นสินค้า, "
+            "Demand=Want ที่มี Buying Power (กำลังซื้อ/สิทธิ์จริง) รองรับเท่านั้น. "
+            "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
+        )
+        prompt = (
+            f"ธุรกิจ: {rng['label']} | แบรนด์: {ours.get('name','ของเรา')}\n"
+            f"Need ที่ผู้ใช้ระบุ: {req.need or '(ยังไม่ระบุ)'}\n"
+            f"Want ที่ผู้ใช้ระบุ: {req.want or '(ยังไม่ระบุ)'}\n"
+            f"Buying Power ที่ผู้ใช้ระบุ: {req.buying_power or '(ยังไม่ระบุ)'}\n\n"
+            "ช่วยวิเคราะห์และเติมเต็มให้ ตอบ JSON ดังนี้:\n"
+            '{"need":"ความต้องการดิบที่แท้จริง","want":"Want ที่เจาะจงตามวัฒนธรรมกลุ่มเป้าหมาย",'
+            '"buying_power":"ประเมินกำลังซื้อ/สิทธิ์ของกลุ่มเป้าหมาย",'
+            '"is_real_demand":true,"demand_verdict":"สรุปสั้นๆว่านับเป็น Demand จริงไหม เพราะอะไร",'
+            '"tips":["คำแนะนำสั้นๆ 2-3 ข้อ ในการเปลี่ยน Want ให้เป็น Demand"]}'
+        )
+        try:
+            raw = await _gemini_text(system, prompt, f"cv-needs-{study_id}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"CV ai-needs error: {e}")
+            raise HTTPException(status_code=500, detail="AI needs analysis failed")
+        data = _parse_json_obj(raw)
+        return {"result": data}
+
+    # ------------------------------------------------------ AI: 5-STEP PROCESS
+    _STEP_LABELS = {
+        "research": "ขั้นที่ 1 — เข้าใจตลาดและความต้องการ (Market Research: Need & Want)",
+        "stp": "ขั้นที่ 2 — วางกลยุทธ์ STP (Segmentation, Targeting, Positioning)",
+        "fourps": "ขั้นที่ 3 — สร้างโปรแกรมคุณค่า 4Ps (Product, Price, Place, Promotion)",
+        "engagement": "ขั้นที่ 4 — สร้างความสัมพันธ์และความรักแบรนด์ (Engagement)",
+        "returns": "ขั้นที่ 5 — เก็บเกี่ยวผลตอบแทนเชิงคุณค่า (Capture Value / Return / ROI)",
+    }
+
+    @cv_router.post("/studies/{study_id}/ai-step")
+    async def ai_step(study_id: str, req: CVStepRequest, current_user: User = Depends(get_current_user)):
+        s = await db.cv_studies.find_one({"id": study_id}, {"_id": 0})
+        if not s or not _owns(s, current_user):
+            raise HTTPException(status_code=404, detail="Study not found")
+        if req.step not in _STEP_LABELS:
+            raise HTTPException(status_code=400, detail="Invalid step")
+        rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
+        ours = next((b for b in s.get("brands", []) if b.get("is_ours")), (s.get("brands") or [{}])[0])
+        needs = s.get("needs", {}) or {}
+        system = (
+            "คุณเป็นที่ปรึกษาการตลาดที่ยึดกระบวนการตลาด 5 ขั้นของ Kotler. "
+            "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
+        )
+        prompt = (
+            f"ธุรกิจ: {rng['label']} | แบรนด์: {ours.get('name','ของเรา')}\n"
+            f"บริบท Need/Want: {needs.get('need','-')} / {needs.get('want','-')}\n"
+            f"ขั้นตอนที่ต้องการคำแนะนำ: {_STEP_LABELS[req.step]}\n\n"
+            "ให้คำแนะนำที่ลงมือทำได้จริงเฉพาะขั้นตอนนี้ ตอบ JSON:\n"
+            '{"summary":"อธิบายเป้าหมายของขั้นตอนนี้ใน 1-2 ประโยค",'
+            '"checklist":["สิ่งที่ต้องทำเป็นข้อๆ 4-5 ข้อ เฉพาะเจาะจงกับธุรกิจนี้"]}'
+        )
+        try:
+            raw = await _gemini_text(system, prompt, f"cv-step-{study_id}-{req.step}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"CV ai-step error: {e}")
+            raise HTTPException(status_code=500, detail="AI step guidance failed")
+        data = _parse_json_obj(raw)
+        return {"step": req.step, "result": data}
+
 
     # ------------------------------------------------------ IMAGE SIMULATION
     @cv_router.post("/studies/{study_id}/generate-image")
@@ -482,6 +602,31 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
         return {"image_url": stable_url, "prompt_used": prompt}
 
     return cv_router
+
+
+def _parse_json_obj(raw: str) -> Dict[str, Any]:
+    """Robustly parse a single JSON object from the model output."""
+    if not raw:
+        return {}
+    txt = raw.strip()
+    if "```" in txt:
+        parts = txt.split("```")
+        for p in parts:
+            p = p.strip()
+            if p.startswith("json"):
+                p = p[4:].strip()
+            if p.startswith("{"):
+                txt = p
+                break
+    start = txt.find("{")
+    end = txt.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        txt = txt[start:end + 1]
+    try:
+        return json.loads(txt)
+    except Exception:
+        return {}
+
 
 
 def _parse_suggestions(raw: str) -> List[Dict[str, Any]]:

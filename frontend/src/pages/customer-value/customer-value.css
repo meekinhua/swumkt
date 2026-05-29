@@ -132,6 +132,15 @@
 
 .cv-empty { text-align: center; padding: 60px 20px; color: var(--muted); border: 1.5px dashed #d8d2c6;
   border-radius: 6px; }
+.cv-textarea { width: 100%; border: 1.5px solid #d8d2c6; border-radius: 3px; padding: 8px 10px;
+  font-family: inherit; font-size: 13px; resize: vertical; color: var(--ink); }
+.cv-textarea:focus { outline: none; border-color: var(--accent); }
+.cv-subhd { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .1em; color: #6b21a8; margin: 12px 0 8px; padding-top: 8px; border-top: 1px dashed #e3ddd2; }
+.cv-step-no { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; background: var(--ink); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace;
+  font-size: 15px; font-weight: 700; }
+@media (max-width: 720px) { .cv-needs-grid { grid-template-columns: 1fr !important; } }
 .cv-md { font-size: 14px; line-height: 1.7; }
 .cv-md h1, .cv-md h2, .cv-md h3 { font-family: 'IBM Plex Serif', serif; margin: 14px 0 6px; }
 .cv-md ul { padding-left: 20px; }

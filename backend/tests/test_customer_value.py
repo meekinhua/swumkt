@@ -69,11 +69,22 @@ class TestCVCrud:
         assert d["id"] == sid
         assert "scores" in d
         assert "industry_range" in d
+        # NEW: doc has needs/process/lens defaults
+        assert "needs" in d and set(d["needs"].keys()) >= {"need", "want", "buying_power"}
+        assert "process" in d and set(d["process"].keys()) >= {"research", "stp", "fourps", "engagement", "returns"}
+        assert "lens" in d and "self_sell" in d["lens"]
+        # NEW: brand benefits structure
+        b0 = d["brands"][0]
+        assert set(b0["benefits"].keys()) >= {"functional", "economic", "love_belonging", "esteem_status"}
+        assert set(b0["costs"].keys()) >= {"inconvenience", "risk"}
         # scores per brand
         for b in d["brands"]:
             assert b["id"] in d["scores"]
             sc = d["scores"][b["id"]]
             assert "benefit_total" in sc and "cost_total" in sc and "net_value" in sc
+            bd = sc["breakdown"]
+            for k in ("love_belonging", "esteem_status", "psychological", "money", "inconvenience", "risk"):
+                assert k in bd, f"missing breakdown key {k}: {bd}"
 
     def test_list_studies_admin_sees_created(self, admin_token):
         r = requests.get(f"{BASE_URL}/api/cv/studies", headers=_h(admin_token), timeout=15)
@@ -177,7 +188,7 @@ class TestCVAI:
         yield r
         requests.delete(f"{BASE_URL}/api/cv/studies/{r['id']}", headers=_h(admin_token))
 
-    @pytest.mark.parametrize("cat", ["functional", "money"])
+    @pytest.mark.parametrize("cat", ["functional", "economic", "love_belonging", "esteem_status", "money", "inconvenience", "risk"])
     def test_ai_suggest(self, admin_token, study, cat):
         brand_id = study["brands"][0]["id"]
         r = requests.post(
@@ -207,6 +218,18 @@ class TestCVAI:
             timeout=15,
         )
         assert r.status_code == 400
+
+    def test_ai_suggest_old_psychological_category_rejected(self, admin_token, study):
+        """The old 'psychological' category is split into love_belonging+esteem_status.
+        Calling with 'psychological' must return 400."""
+        brand_id = study["brands"][0]["id"]
+        r = requests.post(
+            f"{BASE_URL}/api/cv/studies/{study['id']}/ai-suggest",
+            headers=_h(admin_token),
+            json={"brand_id": brand_id, "category": "psychological"},
+            timeout=15,
+        )
+        assert r.status_code == 400, f"expected 400 for legacy psychological, got {r.status_code}"
 
     def test_ai_analysis(self, admin_token, study):
         r = requests.post(
@@ -242,3 +265,128 @@ class TestCVAI:
         g = requests.get(f"{BASE_URL}/api/cv/studies/{study['id']}", headers=_h(admin_token)).json()
         b = next(b for b in g["brands"] if b["id"] == brand_id)
         assert b.get("image_url"), "image_url not persisted"
+
+
+# ----------------------------- NEEDS / STEP / PERSIST -----------------------------
+class TestCVNeedsAndProcess:
+    """Tests for new CBS04 modules: Need/Want/Demand, 5-step process, Marketing Lens."""
+
+    @pytest.fixture(scope="class")
+    def study(self, admin_token):
+        r = requests.post(
+            f"{BASE_URL}/api/cv/studies",
+            headers=_h(admin_token),
+            json={"title": "TEST_needs_study", "industry": "food"},
+        ).json()
+        yield r
+        requests.delete(f"{BASE_URL}/api/cv/studies/{r['id']}", headers=_h(admin_token))
+
+    def test_ai_needs(self, admin_token, study):
+        r = requests.post(
+            f"{BASE_URL}/api/cv/studies/{study['id']}/ai-needs",
+            headers=_h(admin_token),
+            json={"need": "หิว", "want": "ก๋วยเตี๋ยวเรือ", "buying_power": "นักศึกษามีเงิน 50 บาท/มื้อ"},
+            timeout=120,
+        )
+        assert r.status_code == 200, r.text
+        result = r.json().get("result", {})
+        assert isinstance(result, dict) and result, f"empty result: {r.text}"
+        # required keys
+        for k in ("need", "want", "buying_power", "is_real_demand", "demand_verdict", "tips"):
+            assert k in result, f"missing key {k} in {result.keys()}"
+        assert isinstance(result["is_real_demand"], bool)
+        assert isinstance(result["tips"], list)
+        assert len(result["tips"]) >= 1
+
+    @pytest.mark.parametrize("step", ["research", "stp", "fourps", "engagement", "returns"])
+    def test_ai_step(self, admin_token, study, step):
+        r = requests.post(
+            f"{BASE_URL}/api/cv/studies/{study['id']}/ai-step",
+            headers=_h(admin_token),
+            json={"step": step},
+            timeout=120,
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["step"] == step
+        result = d.get("result", {})
+        assert "summary" in result and isinstance(result["summary"], str) and result["summary"].strip()
+        assert "checklist" in result and isinstance(result["checklist"], list) and len(result["checklist"]) >= 1
+
+    def test_ai_step_invalid(self, admin_token, study):
+        r = requests.post(
+            f"{BASE_URL}/api/cv/studies/{study['id']}/ai-step",
+            headers=_h(admin_token),
+            json={"step": "bogus_step"},
+            timeout=15,
+        )
+        assert r.status_code == 400
+
+    def test_put_persists_needs_process_lens(self, admin_token, study):
+        sid = study["id"]
+        payload = {
+            "needs": {"need": "TEST_need_x", "want": "TEST_want_y", "buying_power": "TEST_bp_z"},
+            "process": {
+                "research": {"notes": "TEST_notes_research", "done": True},
+                "stp": {"notes": "", "done": False},
+                "fourps": {"notes": "", "done": False},
+                "engagement": {"notes": "", "done": False},
+                "returns": {"notes": "", "done": False},
+            },
+            "lens": {"self_sell": 75},
+        }
+        r = requests.put(
+            f"{BASE_URL}/api/cv/studies/{sid}",
+            headers=_h(admin_token),
+            json=payload,
+            timeout=15,
+        )
+        assert r.status_code == 200, r.text
+        # verify persistence with GET
+        g = requests.get(f"{BASE_URL}/api/cv/studies/{sid}", headers=_h(admin_token)).json()
+        assert g["needs"]["need"] == "TEST_need_x"
+        assert g["needs"]["want"] == "TEST_want_y"
+        assert g["process"]["research"]["notes"] == "TEST_notes_research"
+        assert g["process"]["research"]["done"] is True
+        assert g["lens"]["self_sell"] == 75
+
+
+# ----------------------------- SCORING (psychological cap) -----------------------------
+class TestCVScoring:
+    @pytest.fixture(scope="class")
+    def study(self, admin_token):
+        r = requests.post(
+            f"{BASE_URL}/api/cv/studies",
+            headers=_h(admin_token),
+            json={"title": "TEST_score_study", "industry": "food"},
+        ).json()
+        yield r
+        requests.delete(f"{BASE_URL}/api/cv/studies/{r['id']}", headers=_h(admin_token))
+
+    def test_psychological_is_capped_sum_of_love_and_esteem(self, admin_token, study):
+        """psychological = min(10, love_belonging + esteem_status). love=6 + esteem=5 → capped to 10."""
+        sid = study["id"]
+        cur = requests.get(f"{BASE_URL}/api/cv/studies/{sid}", headers=_h(admin_token)).json()
+        brands = cur["brands"]
+        b0 = brands[0]
+        b0["benefits"]["love_belonging"] = [
+            {"label": "TEST_love_3", "weight": 3, "checked": True},
+            {"label": "TEST_love_3b", "weight": 3, "checked": True},
+        ]  # love = min(10, 6) = 6
+        b0["benefits"]["esteem_status"] = [
+            {"label": "TEST_esteem_3", "weight": 3, "checked": True},
+            {"label": "TEST_esteem_2", "weight": 2, "checked": True},
+        ]  # esteem = min(10, 5) = 5
+        r = requests.put(
+            f"{BASE_URL}/api/cv/studies/{sid}",
+            headers=_h(admin_token),
+            json={"brands": brands},
+            timeout=15,
+        )
+        assert r.status_code == 200, r.text
+        g = requests.get(f"{BASE_URL}/api/cv/studies/{sid}", headers=_h(admin_token)).json()
+        bd = g["scores"][b0["id"]]["breakdown"]
+        assert bd["love_belonging"] == 6.0, bd
+        assert bd["esteem_status"] == 5.0, bd
+        # psychological should be capped at 10
+        assert bd["psychological"] == 10.0, f"psychological should be capped to 10, got {bd['psychological']}"

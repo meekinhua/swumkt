@@ -1,0 +1,59 @@
+{
+  "summary": "Full E2E retest of revised Customer Value Lab (CBS04, 6-module). Backend: 27/27 pytest cases passed including CRUD with new benefits keys (functional/economic/love_belonging/esteem_status) + costs (inconvenience/risk), scores.breakdown contains love_belonging/esteem_status/psychological/money/inconvenience/risk, AI suggest for all 7 valid categories (functional, economic, love_belonging, esteem_status, money, inconvenience, risk) returning Thai suggestions, legacy category 'psychological' correctly rejected with 400, ai-needs returns need/want/buying_power/is_real_demand(bool)/demand_verdict/tips, ai-step for all 5 steps returns summary+checklist, invalid step → 400, PUT persists needs/process/lens, scoring: psychological = min(10, love+esteem) cap verified (love=6+esteem=5 → psych=10.0), ai-analysis markdown persisted, generate-image returns /api/files/ url. Frontend: all 6 tabs (lens/needs/audit/perception/process/image) render with full data-testid coverage; lens shows 3 definition cards + self-sell slider; needs analyze returns Thai result with verdict+tips (~8s); audit has Functional+Economic+Love&Belonging+Esteem&Status benefit groups and Inconvenience+Risk cost groups with AI buttons each; perception SVG renders with A/B/C profile switching; 5-step process cards each have notes+done+AI; ai-step(stp) returns result; image tab has gen buttons per brand. No console errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/cv/studies/{id}/generate-image", "issue": "Line 548 of routes/customer_value.py iterates over stale benefit categories ('functional', 'economic', 'psychological') when building the image prompt's value_props string. Since the new structure no longer has 'psychological' as a key (it's split into love_belonging + esteem_status), checked items in those two Maslow sub-categories are never included in the image generation prompt. Fix: change the loop to ('functional', 'economic', 'love_belonging', 'esteem_status')."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_acceptance_criteria": [
+    "GET /api/cv/studies/{id} returns brands with benefits keys {functional, economic, love_belonging, esteem_status} and costs keys {inconvenience, risk}; doc contains needs/process/lens defaults.",
+    "scores.breakdown contains love_belonging, esteem_status, psychological, money, inconvenience, risk keys.",
+    "Scoring: psychological = min(10, love_belonging + esteem_status). Verified love=6 + esteem=5 → psych=10.0 (capped).",
+    "POST /ai-suggest accepts all 7 new categories (functional/economic/love_belonging/esteem_status/money/inconvenience/risk) and returns 4-5 Thai suggestions per call.",
+    "POST /ai-suggest with category='psychological' → 400 (legacy category retired).",
+    "POST /ai-suggest with category='bogus' → 400.",
+    "POST /ai-needs with need/want/buying_power → result containing need, want, buying_power, is_real_demand (bool), demand_verdict, tips (list).",
+    "POST /ai-step for each of research/stp/fourps/engagement/returns → {summary, checklist[]}.",
+    "POST /ai-step with invalid step → 400.",
+    "PUT /api/cv/studies/{id} accepts needs/process/lens fields and persists them (verified via subsequent GET).",
+    "POST /ai-analysis still returns Thai markdown and persists ai_analysis.",
+    "POST /generate-image returns /api/files/... url and persists on brand.",
+    "Frontend studio shows 6 tabs (cv-tab-lens/needs/audit/perception/process/image) with default = lens.",
+    "Lens tab: 3 definition cards + cv-selfsell-slider work.",
+    "Needs tab: cv-needs-need/want/buying_power textareas + cv-needs-analyze button → cv-needs-result renders Thai verdict + tips.",
+    "Audit tab: cv-winner banner + 2 brand columns; AI buttons present for all 6 benefit/cost factor groups (love_belonging, esteem_status, inconvenience, risk in addition to functional, economic). Note: cv-ai-money intentionally absent — money cost is the numeric price input, not a factor list with AI.",
+    "Perception tab: cv-prof-A/B/C present + SVG chart renders inside cv-perception.",
+    "Process tab: 5 step cards each with cv-step-{name}, cv-step-done-{name}, cv-step-ai-{name}; cv-step-ai-stp triggers and cv-step-result-stp appears (~8s).",
+    "Image tab: 2 cv-gen-img-* buttons (one per brand)."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_customer_value.py",
+    "/app/test_reports/pytest/cv_iter23.xml"
+  ],
+  "action_items": [
+    "Minor: fix routes/customer_value.py generate_image() line ~548 — iterate over ('functional', 'economic', 'love_belonging', 'esteem_status') instead of legacy ('functional', 'economic', 'psychological') so Nano Banana prompts include checked Love&Belonging + Esteem&Status factors."
+  ],
+  "critical_code_review_comments": [
+    "routes/customer_value.py (~673 lines) — Now exceeds 700-line soft cap once you add more endpoints. Consider splitting AI prompt builders (_STEP_LABELS, CATEGORY_GUIDE, STRATEGY_NOTES, prompts) into a sibling cv_prompts.py module for maintainability.",
+    "generate_image() benefit-category loop is stale (still references 'psychological'). See action item above.",
+    "ai-suggest and ai-needs/ai-step all share identical try/except + _gemini_text pattern — could be unified with a small helper to reduce duplication.",
+    "_parse_json_obj and _parse_suggestions duplicate ~95% of fence-stripping/brace-finding logic. Extract a single _strip_json_fences helper.",
+    "CVStudyUpdate.brands/perception/needs/process/lens are typed Dict[str, Any] (intentional UI roundtrip) — no Pydantic schema validation. Acceptable for MVP; document risk.",
+    "Score formula: catScore caps sum-of-checked-weights at 10 — once 4+ weight=3 items in one category, extras have zero effect. Could mislead heavy users; consider documenting in UI tooltip.",
+    "Initial study price defaults to industry mid → money_score ≈ 5.5 → cost_total ≈ 18 before any factor checked → winner banner shows '-X' on a brand-new study (cosmetic, may confuse first-time users). Same issue flagged iter_22 — still present."
+  ],
+  "updated_files": ["/app/backend/tests/test_customer_value.py"],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "100% on all 6 tabs + AI flows tested"},
+  "test_credentials": "admin@swu.ac.th/admin123, student1@swu.ac.th/student123 — both authenticate via /login.",
+  "seed_data_creation": "Test studies prefixed TEST_CV_* / TEST_ai_study / TEST_needs_study / TEST_score_study created and cleaned up by pytest. Existing 854f91d2-... study used for frontend tests (left in admin's list).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Customer Value Lab CBS04 revision is fully verified. test_customer_value.py is the source-of-truth regression suite (27 cases, ~3 min runtime). AI timings: ai-suggest ~5-7s, ai-needs ~8s, ai-step ~5-10s, ai-analysis ~21s, generate-image ~25-35s. Poll UI testids for up to 60s on AI flows. Only known minor backend issue: generate_image() image-prompt category loop still references the legacy 'psychological' key — Nano Banana won't see checked Love/Esteem items until line ~548 is updated.",
+  "rca_of_the_issue": "N/A — no blocking bugs. The single minor backend nit (image-prompt stale category loop) doesn't break the endpoint; it only weakens the prompt by silently skipping checked psychological factors."
+}
