@@ -1,3 +1,65 @@
+## 2026-05-29 — Conjoint Stats Full Correctness Audit + Stale-Cache Fix
+
+### User request (Thai)
+"เอาให้มั่นใจว่า ค่าต่างๆ และวิธีต่างๆ ถูกต้องจริง ทั้งหมด" — verify ALL conjoint
+statistical values and methods are genuinely correct, end to end.
+
+### What was verified
+1. **Mathematical correctness — proven via synthetic ground-truth tests.**
+   New suite `/app/backend/tests/test_conjoint_stats_correctness.py` (12 tests,
+   all PASS). Builds a synthetic study where respondents choose by a KNOWN logit
+   utility (Price=2.0 > Quality=1.0 > BrandA=0.4, reference=last level) and
+   confirms every estimator recovers the truth:
+   - `_calc_fit_diagnostics`: McFadden ρ², LR=2·(LL−LL_null), df, χ² p-value,
+     and all five fit-labels hand-checked.
+   - MNL recovers coefficient SIGNS + RANKING + values close to truth, drops the
+     LAST level as reference (Price_High/Quality_Bad/Brand_BrandC absent),
+     ρ²>0.10, LR p<1e-6, importance ranks Price>Quality>Brand.
+   - Counting method = conditional selection rate (sel/appearance), preferred
+     levels rank higher.
+   - OLS signs correct, reference coef = 0 + flagged, R²∈[0,1].
+   - Reference consistency: MNL & OLS both drop the same (last) level.
+   - Orphan level_id preserved as `__ORPHAN_*__` (no silent row drop); new
+     attribute → `__MISSING__`; row count preserved.
+   - Mixed Logit signs + LR df = 2K; HB individual posteriors are genuinely
+     heterogeneous (std>0) with monotone quantiles.
+
+2. **Real-data finding — the low ρ² is GENUINE, not a bug.** On the two live
+   studies with ≥30 responses ("นมหมี" n=120, "ข้าว" n=51) ρ²≈0.003–0.006.
+   Investigation proved the response data is statistically random:
+   - Selected-alternative POSITION distribution is uniform (นมหมี: 24.3–25.6%
+     across 4 positions; uniform=25%).
+   - Per-level conditional selection rates are FLAT (max spread ≤3.7pp across
+     every attribute in both studies).
+   - LR test p=0.67 → model NOT significantly better than equal-probability null.
+   Conclusion: these are seeded/test responses with no preference signal, so
+   ρ²≈0 is the mathematically correct result. The synthetic test confirms the
+   SAME engine returns ρ²>0.10 the moment real signal exists.
+
+### Bug found & fixed — stale `analysis_cache` hid the new diagnostics
+`GET /conjoint/studies/{id}/statistical-analysis` cached per-method results in
+`db.analysis_cache` and never invalidated on code change. Studies analysed
+BEFORE the LR-test / fit_label fields were added kept serving old cached results
+where `lr_statistic`, `lr_df`, `lr_p_value`, `fit_label`, `fit_description` were
+all `null` — so the frontend "Model Fit Diagnostics" card showed blanks even
+though a fresh compute (`?force=true`) returned them correctly.
+
+**Fix** (`routes/conjoint.py`): added `ANALYSIS_CACHE_VERSION = 2`. The cache
+write now stamps `schema_version`; the read paths (main endpoint + thesis
+background per-method reuse) treat a version mismatch as a cache MISS and
+recompute. Old rows self-heal on next view — no manual purge needed.
+
+### Verified end-to-end
+- API default (non-force) call #1 → `cached:false` (recomputed, full
+  diagnostics); call #2 → `cached:true` serving fresh v2 cache WITH diagnostics.
+- Live frontend `/conjoint/results/{นมหมี}` → "เชิงวิชาการและสถิติ" tab → Model
+  Fit Diagnostics card renders: badge "ρ² 0.003 · ฟิตต่ำ", LR χ²=10.24 df=13,
+  p=0.675 "Model ไม่ดีกว่า null อย่างมีนัยสำคัญ", McFadden scale + Thai
+  explanation. Pseudo R² 0.26%, LL −1991.1, AIC 4008.3, n=5,760.
+- 12/12 pytest pass; no new lint errors introduced.
+
+
+
 ## 2026-05-25 — Why MNL Pseudo R² was Stuck Near Zero: Root-Cause Fix
 
 ### User-reported issue

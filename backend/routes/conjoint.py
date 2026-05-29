@@ -30,6 +30,14 @@ from lib.ttl_cache import async_ttl_cache
 
 conjoint_router = APIRouter(tags=["conjoint"])
 
+# Bump this whenever the SHAPE of a statistical-method result changes (e.g.
+# new fit-diagnostic fields). Cached `analysis_cache` rows whose stored
+# `schema_version` differs are treated as a cache MISS and recomputed, so
+# studies analysed before a new field was added self-heal on next view
+# instead of forever serving stale results missing the new fields.
+# v2 (2026-05): added lr_statistic / lr_df / lr_p_value / fit_label / fit_description
+ANALYSIS_CACHE_VERSION = 2
+
 
 # ============================ MODELS ============================
 class ConjointStudyStatus(str, Enum):
@@ -4034,7 +4042,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 {"study_id": study_id, "method": method, "filter_sig": filter_sig},
                 {"_id": 0}
             )
-            if cached and cached.get("results"):
+            # Stale-cache guard: only serve cache whose schema_version matches
+            # the current result shape, otherwise recompute so newly-added
+            # diagnostic fields (LR test, fit_label, …) are never missing.
+            if (cached and cached.get("results")
+                    and cached.get("schema_version") == ANALYSIS_CACHE_VERSION):
                 return {
                     "status": "success",
                     "method": method,
@@ -4096,6 +4108,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "study_id": study_id,
                 "method": method,
                 "filter_sig": filter_sig,
+                "schema_version": ANALYSIS_CACHE_VERSION,
                 "respondent_count": len(responses),
                 "results": results,
                 "created_at": datetime.now(timezone.utc).isoformat()
@@ -5045,7 +5058,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                         {"study_id": study_id, "method": m, "respondent_count": respondent_count},
                         {"_id": 0}
                     )
-                    if cached_method and cached_method.get("results"):
+                    if (cached_method and cached_method.get("results")
+                            and cached_method.get("schema_version") == ANALYSIS_CACHE_VERSION):
                         all_results[m] = cached_method["results"]
                     else:
                         all_results[m] = await get_method_results(full_study, responses, m)

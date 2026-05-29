@@ -67,6 +67,7 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
   - Background job + polling, retry with backoff
 - AI Interpretation: Background task + polling (same as thesis, prevents 502)
 - **Trash Bin** (Feb 2026): soft-delete with 30-day recovery, restore + purge endpoints, UI tabs in `ConjointAnalysisTool.js`
+- **Stats correctness audit (May 29, 2026)**: all 5 methods verified via synthetic ground-truth tests (`backend/tests/test_conjoint_stats_correctness.py`, 12 PASS). Confirmed low McFadden ρ² on live studies is genuine (random/test responses), not a calculation bug. Added `ANALYSIS_CACHE_VERSION` to `analysis_cache` so new fit-diagnostic fields (LR test, fit_label) self-heal stale caches instead of serving null.
 
 ### Kanban Project Management (COMPLETE)
 - Sub-Kanban inside cards, Cover Images, Assignees with auto-avatar
