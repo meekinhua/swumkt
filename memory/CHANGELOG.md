@@ -1,3 +1,38 @@
+## 2026-06-08 — YOLO Detect PWA hosted as a sub-url (/api/yolo/)
+
+User provided yolo-detect-pwa.zip (Ultralytics YOLO11 people/object + pipe counter,
+client-side-first PWA). Asked to host it SEPARATELY as a sub-url first for testing,
+then integrate as a tool.
+
+### Approach: static-only (Option D from the tool's EMERGENT.md)
+All detection runs in-browser (ONNX Runtime Web + OpenCV.js in workers). The optional
+Python/torch/ultralytics backend was NOT installed (would bloat/destabilize the main
+SWUMKT backend; on-device is the app's default mode anyway).
+
+### Implementation
+- Copied `frontend/` → `/app/backend/yolo_static/` (32MB: yolo11n.onnx 10MB, ort-web 11MB, opencv.js 11MB).
+- Rewrote all absolute asset paths (`/x` → `/api/yolo/x`) in index.html, app.js,
+  detector.js, pipes.js, opencv_worker.js, sw.js (scope + shell), manifest. SW fetch
+  bypass narrowed to `/api/detect` + `/ws` only.
+- server.py: mounted a `_YoloStatic(StaticFiles)` subclass at `/api/yolo` that adds
+  COOP `same-origin` + COEP `require-corp` + CORP `same-origin` (→ cross-origin isolated
+  → multi-threaded WASM) and registers .wasm/.mjs/.onnx mime types. Served through
+  ingress because the path is under `/api/*` (→ backend :8001).
+
+### Verified
+- All assets 200 with correct MIME (wasm=application/wasm); COOP/COEP present.
+- Browser: title ok, full mobile UI (นับสด/รูป/วิดีโอ/นับท่อ/บันทึก), `self.crossOriginIsolated=true`.
+- Definitive engine test: `ort.InferenceSession.create(yolo11n.onnx)` + dummy run →
+  output `[1,84,2100]`, 2 threads, 750ms. ONNX inference works end-to-end under the sub-url.
+- Live URL (preview): `<REACT_APP_BACKEND_URL>/api/yolo/`. Camera live-count needs a real
+  device (HTTPS provided) — not testable headless.
+
+### Pending
+- Integrate into the เครื่องมือ menu (awaiting user decision: new-tab link vs embedded iframe).
+- Production (swumkt.org): requires REDEPLOY to ship the 32MB static folder + mount.
+
+
+
 ## 2026-05-29 — Customer Value Lab FULL REVISION (CBS04 complete framework)
 
 Reference asset (permanent): `/app/memory/CONCEPT_marketing_principles_intaka.md` (full 33KB CBS04 lecture).

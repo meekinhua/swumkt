@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>นับคน · YOLO Detect</title>
+  <link rel="manifest" href="/api/yolo/manifest.webmanifest" />
+  <link rel="icon" href="/api/yolo/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/api/yolo/icons/icon-192.png" />
+  <link rel="stylesheet" href="/api/yolo/styles.css" />
+</head>
+<body>
+  <!-- ============ LIVE / SURVEY VIEW ============ -->
+  <section id="view-live" class="view active">
+    <div class="stage" id="stage">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+
+      <!-- big count HUD -->
+      <div class="hud">
+        <div class="hud-main" id="hudMain">
+          <span class="hud-icon">👥</span>
+          <span class="hud-num" id="liveCount">0</span>
+          <span class="hud-label" id="liveLabel">คน</span>
+        </div>
+        <div class="hud-sub">
+          <span class="stat">สูงสุด <b id="peakCount">0</b></span>
+          <span class="stat">เฉลี่ย <b id="avgCount">0</b></span>
+          <span class="stat" id="fpsStat">— FPS</span>
+        </div>
+      </div>
+
+      <!-- secondary class chips (general mode) -->
+      <div class="chips" id="liveChips"></div>
+
+      <!-- idle prompt -->
+      <div class="idle" id="idle">
+        <div class="idle-card">
+          <div class="idle-emoji">📷</div>
+          <p>แตะ <b>เริ่มนับ</b> ด้านล่างเพื่อเปิดกล้องและเริ่มนับคนในพื้นที่</p>
+        </div>
+      </div>
+
+      <div class="toast" id="toast" hidden></div>
+    </div>
+
+    <!-- bottom control bar (thumb zone) -->
+    <div class="dock">
+      <button class="dock-btn" id="flipBtn" title="สลับกล้อง">🔄<span>กล้อง</span></button>
+      <button class="dock-btn big" id="startBtn">▶<span>เริ่มนับ</span></button>
+      <button class="dock-btn" id="snapBtn" disabled>📸<span>บันทึก</span></button>
+      <button class="dock-btn" id="settingsBtn">⚙<span>ตั้งค่า</span></button>
+    </div>
+  </section>
+
+  <!-- ============ IMAGE VIEW ============ -->
+  <section id="view-image" class="view scroll">
+    <div class="dropzone" id="imgDrop">
+      <input type="file" id="imgInput" accept="image/*" capture="environment" hidden />
+      <div class="dz-emoji">🖼️</div>
+      <p>แตะเพื่อถ่าย/เลือกรูป</p>
+    </div>
+    <div class="result-img"><img id="imgResult" alt="" /></div>
+    <div id="counts-image" class="count-grid"></div>
+  </section>
+
+  <!-- ============ VIDEO VIEW ============ -->
+  <section id="view-video" class="view scroll">
+    <div class="dropzone" id="vidDrop">
+      <input type="file" id="vidInput" accept="video/*" capture="environment" hidden />
+      <div class="dz-emoji">🎬</div>
+      <p>แตะเพื่อเลือกวิดีโอ</p>
+      <small>นับวัตถุไม่ซ้ำด้วย tracking · ใช้เซิร์ฟเวอร์ (ต้องเปิดเครื่อง server)</small>
+    </div>
+    <div id="vidProgress" class="progress" hidden>⏳ กำลังประมวลผล…</div>
+    <div class="result-img"><video id="vidResult" controls playsinline></video></div>
+    <div id="counts-video" class="count-grid"></div>
+  </section>
+
+  <!-- ============ PIPE COUNT VIEW ============ -->
+  <section id="view-pipes" class="view scroll">
+    <div class="dropzone" id="pipeDrop">
+      <input type="file" id="pipeInput" accept="image/*" capture="environment" hidden />
+      <div class="dz-emoji">🛢️</div>
+      <p>แตะเพื่อถ่าย/เลือกรูปกองท่อ</p>
+      <small>นับปลายท่อ (วงกลม) · ลากนิ้ววาดรอบพื้นที่ (อิสระ) เพื่อเลือกเฉพาะส่วนที่จะนับ</small>
+    </div>
+
+    <div class="pipe-count" id="pipeCountWrap" hidden>
+      <span class="pipe-num" id="pipeCount">0</span><span class="pipe-unit">ท่อ</span>
+    </div>
+
+    <div class="pipe-stage" id="pipeStage" hidden>
+      <img id="pipeImg" alt="" />
+      <canvas id="pipeOverlay"></canvas>
+    </div>
+
+    <div class="pipe-controls" id="pipeControls" hidden>
+      <label class="field">
+        <span>โหมด</span>
+        <div class="seg" id="pipeModeSeg">
+          <button class="seg-btn active" data-pmode="region">✏️ เลือกพื้นที่</button>
+          <button class="seg-btn" data-pmode="edit">➕➖ แก้ไขจุด</button>
+        </div>
+      </label>
+      <p class="pipe-hint" id="pipeModeHint">ลากนิ้ววาดรอบพื้นที่ที่จะนับ (อิสระ)</p>
+
+      <label class="field">
+        <span>ขนาดท่อโดยประมาณ: <b id="pipeDiaVal">60</b> px</span>
+        <input type="range" id="pipeDia" min="12" max="320" step="2" value="60" />
+      </label>
+      <label class="field">
+        <span>ความไว: <b id="pipeSensVal">50</b></span>
+        <input type="range" id="pipeSens" min="0" max="100" step="5" value="50" />
+      </label>
+      <div class="pipe-btns">
+        <button class="btn" id="pipeClearRoi">⛶ ทั้งภาพ</button>
+        <button class="btn primary" id="pipeRecount">🔄 ตรวจใหม่</button>
+        <button class="btn" id="pipeSave">📸 บันทึก</button>
+        <button class="btn" id="pipeNew">🖼️ รูปใหม่</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOG VIEW ============ -->
+  <section id="view-log" class="view scroll">
+    <div class="log-head">
+      <h2>📋 บันทึกการนับ</h2>
+      <div class="log-actions">
+        <button class="btn" id="exportCsv">⬇ CSV</button>
+        <button class="btn danger" id="clearLog">🗑 ล้าง</button>
+      </div>
+    </div>
+    <div id="logList" class="log-list"></div>
+  </section>
+
+  <!-- ============ BOTTOM TAB NAV ============ -->
+  <nav class="tabbar">
+    <button class="tabbtn active" data-view="live">📷<span>นับสด</span></button>
+    <button class="tabbtn" data-view="image">🖼️<span>รูป</span></button>
+    <button class="tabbtn" data-view="video">🎬<span>วิดีโอ</span></button>
+    <button class="tabbtn" data-view="pipes">🛢️<span>นับท่อ</span></button>
+    <button class="tabbtn" data-view="log">📋<span>บันทึก</span></button>
+  </nav>
+
+  <!-- ============ SETTINGS SHEET ============ -->
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+  <div class="sheet" id="settingsSheet" hidden>
+    <div class="sheet-handle"></div>
+    <h3>ตั้งค่า</h3>
+
+    <label class="field">
+      <span>เครื่องตรวจจับ</span>
+      <div class="seg" id="engineSeg">
+        <button class="seg-btn active" data-engine="device">📱 บนอุปกรณ์ (ออฟไลน์)</button>
+        <button class="seg-btn" data-engine="server">🖥️ เซิร์ฟเวอร์</button>
+      </div>
+    </label>
+
+    <label class="field" id="sizeField">
+      <span>ขนาดประมวลผล (เล็ก=เร็ว, ใหญ่=แม่น)</span>
+      <div class="seg" id="sizeSeg">
+        <button class="seg-btn active" data-size="320">320</button>
+        <button class="seg-btn" data-size="480">480</button>
+        <button class="seg-btn" data-size="640">640</button>
+      </div>
+    </label>
+
+    <label class="field">
+      <span>โหมด</span>
+      <div class="seg" id="modeSeg">
+        <button class="seg-btn active" data-mode="people">นับคน</button>
+        <button class="seg-btn" data-mode="all">ทุกอย่าง</button>
+        <button class="seg-btn" data-mode="custom">เลือกเอง</button>
+      </div>
+    </label>
+
+    <label class="field" id="classField" hidden>
+      <span>เลือกสิ่งที่จะนับ</span>
+      <select id="classFilter" multiple size="6"></select>
+    </label>
+
+    <label class="field">
+      <span>ความเชื่อมั่น (conf): <b id="confVal">0.35</b></span>
+      <input type="range" id="conf" min="0.1" max="0.9" step="0.05" value="0.35" />
+    </label>
+
+    <label class="field switch">
+      <span>กันหน้าจอดับขณะสำรวจ</span>
+      <input type="checkbox" id="wakeToggle" checked />
+    </label>
+
+    <label class="field switch">
+      <span>แสดงกรอบตรวจจับ</span>
+      <input type="checkbox" id="boxToggle" checked />
+    </label>
+
+    <button class="btn primary full" id="closeSheet">เสร็จ</button>
+  </div>
+
+  <div id="connStatus" class="conn"></div>
+
+  <script src="/api/yolo/vendor/ort/ort.wasm.min.js"></script>
+  <script src="/api/yolo/detector.js"></script>
+  <script src="/api/yolo/app.js"></script>
+  <script src="/api/yolo/pipes.js"></script>
+</body>
+</html>

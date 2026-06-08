@@ -8001,6 +8001,31 @@ api_router.include_router(share_routes)
 
 app.include_router(api_router)
 
+# ============ YOLO Detect — on-device PWA served as a sub-app at /api/yolo ============
+# Static-only hosting (Option D from the tool's EMERGENT.md): all detection runs
+# in the browser (ONNX Runtime Web + OpenCV.js). No torch/ultralytics installed.
+import mimetypes as _mt
+from fastapi.staticfiles import StaticFiles as _StaticFiles
+_mt.add_type("application/wasm", ".wasm")
+_mt.add_type("text/javascript", ".mjs")
+_mt.add_type("application/octet-stream", ".onnx")
+
+
+class _YoloStatic(_StaticFiles):
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        # Enable cross-origin isolation so ORT-Web can use multi-threaded WASM.
+        resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        resp.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        resp.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        return resp
+
+
+_YOLO_DIR = ROOT_DIR / "yolo_static"
+if _YOLO_DIR.exists():
+    app.mount("/api/yolo", _YoloStatic(directory=str(_YOLO_DIR), html=True), name="yolo")
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
