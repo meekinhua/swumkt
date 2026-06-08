@@ -1,6 +1,6 @@
 // Minimal service worker — caches the app shell so the PWA is installable
 // and loads instantly. API/WS calls always go to the network.
-const CACHE = "yolo-detect-v12";
+const CACHE = "yolo-detect-v13";
 // Core app shell — must cache for install to succeed.
 const SHELL = [
   "/api/yolo/",
