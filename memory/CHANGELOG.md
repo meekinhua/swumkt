@@ -1,3 +1,47 @@
+## 2026-06-10 — meekintube (YouTube/FB downloader) mounted at /api/meekintube/
+
+User provided meekintube.zip — a Flask PWA that wraps yt-dlp + ffmpeg to download
+YouTube/Facebook videos (search, related feed, library, streaming-while-downloading).
+Asked to host it at `/meekintube`. Public access (no auth), per user confirmation.
+
+### Approach: WSGI sub-app mounted in FastAPI via a2wsgi
+The Flask app (`/app/backend/meekintube_app/server.py`, exposes `app`) is mounted as a
+WSGI sub-app. Its routes are defined relative to `/` (e.g. `/`, `/api/config`,
+`/static/<f>`, `/media/<rel>`, `/thumb/<rel>`); the mount prefix is stripped before
+Flask sees the request. Static assets were pre-rewritten to the `/api/meekintube/` base
+path (index.html, app.js, sw.js scope, manifest start_url/scope).
+
+### Implementation (`server.py`, after the YOLO mount block)
+- `pip`: yt-dlp, flask, a2wsgi installed; `apt`: ffmpeg (PREVIEW ONLY).
+- Loaded `meekintube_app/server.py` via `importlib.util.spec_from_file_location` under a
+  UNIQUE module name `meekintube_server` — a plain `from server import app` would have
+  returned the main backend module already in `sys.modules`.
+- Mounted: `app.mount("/api/meekintube", WSGIMiddleware(meek_mod.app))`. Served through
+  ingress because the path is under `/api/*` (→ backend :8001).
+- **PATH fix**: the uvicorn `--reload` worker runs with a stripped PATH missing
+  `/root/.venv/bin`, so `shutil.which("yt-dlp")` (resolved at meekintube import time)
+  returned None → search/download failed with `Errno 2 'yt-dlp'`. Prepend
+  `os.path.dirname(sys.executable)` to `os.environ["PATH"]` before loading the Flask app.
+- Set `MEEKIN_VIDEO_DIR=<backend>/meekintube_video` (writable staging dir).
+
+### Frontend (`App.js`)
+- New `ExternalRedirect` helper + route `/meekintube` → `window.location.replace('/api/meekintube/')`
+  (the sub-app lives on a non-SPA backend path).
+
+### Verified
+- `/api/meekintube/` → 200 text/html; `/api/meekintube/api/config` → `{ffmpeg:true, ytdlp:true}`.
+- static app.js / logo.png / manifest.webmanifest all 200 with correct MIME.
+- Live yt-dlp search (`?q=lofi`) returned real YouTube results.
+- Browser: meekinTube UI renders (search bar, หน้าแรก/คลัง/ดาวน์โหลด tabs, green status dot).
+- `/meekintube` SPA route correctly redirects to `/api/meekintube/`.
+- Regression: `/api/showcase/index`, `/api/cms/landing`, `/api/yolo/` all still 200.
+
+### Pending / Production note
+- Production (swumkt.org) requires REDEPLOY to ship `meekintube_app/` + the mount, AND
+  needs `ffmpeg` + `yt-dlp` installed on the production host (current installs were
+  PREVIEW-ONLY via apt/pip — they do not persist to a fresh production deploy).
+
+
 ## 2026-06-08 — YOLO Detect PWA hosted as a sub-url (/api/yolo/)
 
 User provided yolo-detect-pwa.zip (Ultralytics YOLO11 people/object + pipe counter,

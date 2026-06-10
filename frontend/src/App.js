@@ -186,6 +186,12 @@ const RouteFallback = () => (
   </div>
 );
 
+// External redirect helper — sends the browser to a non-SPA backend path.
+const ExternalRedirect = ({ to }) => {
+  useEffect(() => { window.location.replace(to); }, [to]);
+  return <RouteFallback />;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -195,6 +201,7 @@ function App() {
             <Suspense fallback={<RouteFallback/>}>
               <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/meekintube" element={<ExternalRedirect to="/api/meekintube/" />} />
             <Route path="/legacy-home" element={<LandingPage />} />
             <Route path="/learn" element={<LearnIndexPage />} />
             <Route path="/learn/:slug" element={<CmsArticleView />} />

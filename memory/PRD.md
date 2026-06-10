@@ -217,6 +217,10 @@ alumni_jobs: {
     └── alumni-spec/           # Full prototype & spec
 ```
 
+## Embedded Sub-Apps (Jun 2026)
+- **YOLO Detect PWA** — static-only, mounted at `/api/yolo/` (in-browser ONNX/OpenCV). Dir: `backend/yolo_static/`.
+- **meekintube** (YouTube/FB downloader) — Flask app mounted at `/api/meekintube/` via `a2wsgi.WSGIMiddleware`. Public, no auth. Dir: `backend/meekintube_app/`. Frontend `/meekintube` redirects to it. Requires `ffmpeg` + `yt-dlp` on host (PREVIEW-ONLY installs — production redeploy must reinstall).
+
 ## 3rd Party Integrations
 - Emergent LLM Key → Gemini 2.5 Flash (`gemini-2.5-flash`) via `emergentintegrations` (text/translate/summary)
 - Emergent LLM Key → Gemini Nano Banana (`gemini-3.1-flash-image-preview`) via `emergentintegrations` (CMS cover image gen)

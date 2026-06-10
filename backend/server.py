@@ -8026,6 +8026,41 @@ if _YOLO_DIR.exists():
     app.mount("/api/yolo", _YoloStatic(directory=str(_YOLO_DIR), html=True), name="yolo")
 
 
+# ============ meekintube — YouTube/FB downloader (Flask app) at /api/meekintube ============
+# Mounted as a WSGI sub-app via a2wsgi. The Flask app's own routes are defined
+# relative to "/" (e.g. /, /api/config, /static/<f>, /media/<rel>); the mount
+# prefix is stripped before Flask sees the request. Static assets were already
+# rewritten to the /api/meekintube/ base path. Requires ffmpeg + yt-dlp on host.
+_MEEK_DIR = ROOT_DIR / "meekintube_app"
+if _MEEK_DIR.exists():
+    try:
+        import sys as _sys
+        import importlib.util as _ilu
+        from a2wsgi import WSGIMiddleware as _WSGIMiddleware
+        if str(_MEEK_DIR) not in _sys.path:
+            _sys.path.insert(0, str(_MEEK_DIR))
+        # The uvicorn --reload worker runs with a stripped PATH that omits the
+        # venv bin dir, so shutil.which("yt-dlp") (resolved at meekintube import
+        # time) would return None. Prepend the running interpreter's bin dir so
+        # yt-dlp (installed in the same venv) is discoverable.
+        _venv_bin = os.path.dirname(_sys.executable)
+        if _venv_bin and _venv_bin not in os.environ.get("PATH", "").split(os.pathsep):
+            os.environ["PATH"] = _venv_bin + os.pathsep + os.environ.get("PATH", "")
+        # Keep staged downloads inside the backend dir (writable).
+        os.environ.setdefault("MEEKIN_VIDEO_DIR", str(ROOT_DIR / "meekintube_video"))
+        # Load meekintube_app/server.py under a unique module name to avoid
+        # clashing with this main `server` module already in sys.modules.
+        _meek_spec = _ilu.spec_from_file_location(
+            "meekintube_server", str(_MEEK_DIR / "server.py")
+        )
+        _meek_mod = _ilu.module_from_spec(_meek_spec)
+        _meek_spec.loader.exec_module(_meek_mod)
+        app.mount("/api/meekintube", _WSGIMiddleware(_meek_mod.app), name="meekintube")
+        logging.info("[MEEKINTUBE] Mounted Flask downloader at /api/meekintube")
+    except Exception as _e:
+        logging.error(f"[MEEKINTUBE] Failed to mount: {_e}")
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
