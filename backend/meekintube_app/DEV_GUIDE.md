@@ -272,3 +272,20 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
   not already queued, appends and plays it — endless radio; user skips with Next. Wired into all
   three end-of-clip signals: `vid` `ended`, `bgAudio` `ended`, and the YouTube embed playerState-0
   postMessage (deduped per playToken via `embEndedToken`).
+
+## 16. What's new in v39 (2026-06-12)
+
+Background-audio hardening (the lock-screen "it pauses, must press play" complaint):
+- `armBgAudio(src)` pre-loads the SAME blob into the hidden `<audio>` **at playback start** (inside
+  the user gesture, which iOS blesses) — called from `openPlayerSrc` and from `streamPlayAndStore`
+  blob swaps (main player only). On lock, `toBgAudio()` only has to `play()` an already-loaded
+  element instead of assigning a fresh src.
+- `toBgAudio()` retries `play()` at +400ms and +1500ms (one-shot, guarded by `bgActive`) because iOS
+  sometimes issues its own pause right at lock time; returning to foreground keeps the audio src
+  armed so the next lock resumes instantly.
+- `vid` `pause` while `document.hidden` is a secondary handoff trigger (some platforms pause the
+  video without a preceding visibilitychange).
+- `refreshMediaSession()` re-applies metadata (cached in `lastNow`) + action handlers + playbackState
+  after every video→audio switch so the lock screen keeps showing title/artwork and ⏮⏭ buttons.
+- NOTE: lock-screen prev/next (Media Session) requires a **secure context** — works on the HTTPS
+  Emergent URL or localhost, NOT on plain LAN http (the browser hides the API entirely there).

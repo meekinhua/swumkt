@@ -46,7 +46,7 @@ function histAdd(id, title) {
 }
 
 // ---------- service worker ----------
-const APP_VER = "v38";
+const APP_VER = "v39";
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(BASE + "sw.js", { scope: BASE }).catch(() => {});
   // มีเวอร์ชันใหม่ activate (claim) → รีโหลดให้ใช้โค้ดใหม่ทันที (สำคัญบน iOS ที่อัปเดตยาก)
@@ -153,6 +153,7 @@ async function streamPlayAndStore(job, videoEl) {
     };
     videoEl.addEventListener("loadedmetadata", onMeta);
     videoEl.src = u;
+    if (videoEl === vid) armBgAudio(u);   // เตรียมเสียง background ให้คลิปที่กำลังสตรีมใน player หลักด้วย
     blobBytes = received;
   };
   // เล่นจน blob หมดแต่ยังโหลดไม่จบ → ผูก blob ใหม่ที่ใหญ่ขึ้น (จุดที่อาจสะดุดเล็กน้อย)
@@ -1024,8 +1025,10 @@ function openPlayerSrc(url, name, isBlob, libId) {
     bgActive = true;
     bgAudio.src = url;
     bgAudio.play().catch(() => {});
+    refreshMediaSession();
   } else {
     vid.play().catch(() => {});
+    armBgAudio(url);   // เตรียมเสียง background ไว้เลย (ยังอยู่ใน gesture)
   }
   loadRelated(libId || "");   // related จาก YouTube id (ถ้ามี — ต้องออนไลน์)
 }
@@ -1065,7 +1068,9 @@ vid.addEventListener("loadedmetadata", () => {
 // ===== Media Session — คอนโทรลบน lock screen / notification (แบบ Spotify) =====
 let pmQueue = [], pmIndex = -1;   // คิว: {kind:'device'|'remote', ref, name, meta?}
 let msArtUrl = null;
+let lastNow = { title: "", art: null };   // metadata ล่าสุด — ไว้ re-apply หลังสลับตัวเล่น (iOS ชอบลืม)
 function setNowPlaying(title, artUrl) {
+  lastNow = { title: title || "", art: artUrl || null };
   if (!("mediaSession" in navigator)) return;
   try {
     const artwork = artUrl ? [96, 192, 384, 512].map((s) => ({ src: artUrl, sizes: s + "x" + s, type: "image/jpeg" })) : [];
@@ -1166,7 +1171,8 @@ async function autoPlayNext() {
   finally { autoBusy = false; }
 }
 
-if ("mediaSession" in navigator) {
+function registerMsHandlers() {
+  if (!("mediaSession" in navigator)) return;
   const ms = navigator.mediaSession;
   const H = (a, fn) => { try { ms.setActionHandler(a, fn); } catch {} };
   H("play", () => activeMedia().play());
@@ -1178,6 +1184,15 @@ if ("mediaSession" in navigator) {
   H("previoustrack", () => playAdjacent(-1));
   H("nexttrack", () => playAdjacent(1));
   H("stop", () => closePlayer());
+}
+registerMsHandlers();
+// re-apply metadata + handlers + state หลังสลับตัวเล่น video↔audio (ให้ lock screen ขึ้นปุ่ม ⏮⏭ ต่อเนื่อง)
+function refreshMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  setNowPlaying(lastNow.title, lastNow.art);
+  registerMsHandlers();
+  try { navigator.mediaSession.playbackState = "playing"; } catch {}
+  updatePositionState();
 }
 vid.addEventListener("play", () => { try { navigator.mediaSession.playbackState = "playing"; } catch {} updatePositionState(); });
 vid.addEventListener("pause", () => { try { navigator.mediaSession.playbackState = "paused"; } catch {} });
@@ -1212,6 +1227,13 @@ function unlockBgAudio() {
   try { bgAudio.src = SILENT_WAV; bgAudio.play().then(() => { bgAudio.pause(); bgAudio.removeAttribute("src"); }).catch(() => {}); } catch {}
 }
 document.addEventListener("pointerdown", unlockBgAudio, true);
+// เตรียมไฟล์เดียวกันใส่ bgAudio ไว้ล่วงหน้า "ตั้งแต่ตอนผู้ใช้กดเล่น" (ยังอยู่ใน gesture ที่ iOS ยอม)
+// → ตอนจอดับแค่สั่ง play ต่อ ไม่ต้องโหลด src ใหม่ (ลดโอกาสโดน iOS pause ทับแล้วต้องกดเอง)
+function armBgAudio(src) {
+  if (!src || bgAudio.src === src) return;
+  bgAudio.src = src;
+  try { bgAudio.load(); } catch {}
+}
 function toBgAudio() {
   if (bgActive || modal.hidden || stage.classList.contains("embedding")) return;
   const src = vid.currentSrc || vid.src;
@@ -1219,10 +1241,14 @@ function toBgAudio() {
   // นับว่า "กำลังเล่น" ถ้าเพิ่งเล่นอยู่เมื่อกี้ (เบราว์เซอร์อาจ pause วิดีโอก่อน event นี้มาถึง)
   if (vid.paused && Date.now() - lastPlayingTs > 1500) return;
   bgActive = true;
-  bgAudio.src = src;
+  if (bgAudio.src !== src) bgAudio.src = src;
   try { bgAudio.currentTime = vid.currentTime; } catch {}
-  bgAudio.play().catch(() => { bgActive = false; bgAudio.removeAttribute("src"); });
+  bgAudio.play().catch(() => {});
   vid.pause();
+  // iOS อาจสั่ง pause ทับตอนล็อกจอพอดี → ลองเล่นซ้ำอัตโนมัติช่วงสั้นๆ (ครั้งเดียวพอ ไม่ชนกับผู้ใช้กดหยุดเอง)
+  setTimeout(() => { if (bgActive && bgAudio.paused) bgAudio.play().catch(() => {}); }, 400);
+  setTimeout(() => { if (bgActive && bgAudio.paused) bgAudio.play().catch(() => {}); }, 1500);
+  refreshMediaSession();   // ขึ้น metadata + ปุ่ม ⏮⏭ บน lock screen ใหม่หลังสลับตัวเล่น
 }
 function toVideo() {
   if (!bgActive) return;
@@ -1230,10 +1256,14 @@ function toVideo() {
   const t = bgAudio.currentTime, playing = !bgAudio.paused;
   try { bgAudio.pause(); } catch {}
   try { if (Math.abs((vid.currentTime || 0) - t) > 0.4) vid.currentTime = t; } catch {}
-  bgAudio.removeAttribute("src");
+  // คง src ไว้ (ไม่ remove) — ล็อกจอรอบถัดไปจะได้เล่นต่อทันทีไม่ต้องโหลดใหม่
   if (playing) vid.play().catch(() => {});
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) toBgAudio(); else toVideo(); });
+// บางเครื่องสั่ง pause วิดีโอตอนพับแอปโดยไม่ยิง visibilitychange ก่อน → ใช้ pause เป็นสัญญาณสำรอง
+vid.addEventListener("pause", () => {
+  if (document.hidden && !bgActive && !modal.hidden) toBgAudio();
+});
 bgAudio.addEventListener("play", () => { try { navigator.mediaSession.playbackState = "playing"; } catch {} updatePositionState(); });
 bgAudio.addEventListener("pause", () => { if (bgActive) { try { navigator.mediaSession.playbackState = "paused"; } catch {} } });
 bgAudio.addEventListener("loadedmetadata", updatePositionState);
