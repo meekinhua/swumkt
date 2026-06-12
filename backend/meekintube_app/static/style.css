@@ -417,3 +417,13 @@ textarea:focus { border-color: var(--red); }
 .si-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-empty { color: var(--muted); padding: 18px; text-align: center; font-size: 14px; }
 .sheet-new { width: 100%; justify-content: center; }
+
+/* ================= โหมดดู/โหลด + เพลย์ลิสต์จากผลค้นหา ================= */
+.home-toolbar { display: flex; align-items: center; justify-content: flex-end; margin: 0 0 12px; }
+.mseg { border: 0; background: transparent; color: var(--muted); padding: 7px 14px; border-radius: 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.mseg .ic { width: 15px; height: 15px; }
+.mseg.active { background: var(--red); color: #fff; font-weight: 600; }
+.rthumb .addpl { width: 28px; height: 28px; top: 5px; left: 5px; }
+.rthumb .addpl .ic { width: 15px; height: 15px; }
+@media (min-width: 760px) { .rcard .addpl { opacity: 0; } .rcard:hover .addpl { opacity: 1; } }
+.badge.ytb { background: rgba(204,0,0,.88); font-weight: 600; }

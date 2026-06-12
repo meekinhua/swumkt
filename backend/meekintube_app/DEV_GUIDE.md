@@ -205,3 +205,22 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
 3. Tap a result → it streams + saves to library; `/api/files` shows it briefly then it's purged.
 4. Library tab plays the saved video offline (stop the server → still plays).
 5. (mobile + HTTPS) "Add to Home Screen" → opens standalone → lock screen shows title/artwork + prev/next.
+
+---
+
+## 12. What's new in v33 (2026-06-12)
+
+- **Watch/Download mode toggle** (`#modeSwitch`, home tab; persisted in `localStorage.mkt_mode`, default = watch).
+  Watch mode: tapping an online video card opens the **YouTube embed player immediately** (autoplay, no
+  download, no server job) via `playEmbed()`. Download mode = old behavior (`playFromUrl` stream+store).
+- **Playlists accept remote items**: the `+` button now also appears on search-result / home-feed cards and
+  on related cards in the player. Playlist `items[]` entries are now either a string (device id, legacy) or
+  `{remote:true, id, title, url}`. Remote items render with an `i.ytimg.com` thumbnail + "YouTube" badge and
+  play according to the current mode. Mixed queues use `setQueueMixed()`/`playEntry()`.
+- **Background audio (Spotify-style)**: on `visibilitychange→hidden` while our player is playing a local
+  blob, playback hands off to a hidden `<audio>` (`bgAudio`) at the same time position (audio keeps playing
+  with the screen off / app in background); on return it hands back to the `<video>` in sync. Media Session
+  handlers (`play/pause/seekto`, position state) target `activeMedia()`. Auto-next from the queue keeps
+  working in background (`bgAudio.ended` → `playAdjacent(1)`; `openPlayerSrc` routes to `bgAudio` while
+  hidden). `bgAudio` is unlocked on the first user gesture (silent WAV) so iOS allows `play()` later.
+  Note: does NOT apply to the YouTube embed (watch mode) — YouTube pauses embeds in background by design.
