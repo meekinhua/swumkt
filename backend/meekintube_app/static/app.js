@@ -1,5 +1,5 @@
-﻿const BASE = new URL(".", document.baseURI).pathname;  // e.g. "/api/meekintube/"
-const $ = (s) => document.querySelector(s);
+const BASE = new URL(".", document.baseURI).pathname;  // e.g. "/api/meekintube/"
+﻿const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 const IC = (name) => `<svg class="ic"><use href="#i-${name}"/></svg>`;
 function setIcon(el, name) { const u = el && el.querySelector("use"); if (u) u.setAttribute("href", "#i-" + name); }
@@ -35,8 +35,18 @@ function playRemote(url, name) {
   else playFromUrl(url, name);
 }
 
+// ---------- ประวัติการดู (localStorage) — ใช้เป็น seeds แนะนำวิดีโอหน้าแรก ----------
+function histAll() { try { return JSON.parse(localStorage.getItem("mkt_history") || "[]"); } catch { return []; } }
+function histAdd(id, title) {
+  if (!id || !/^[\w-]{11}$/.test(id)) return;   // เก็บเฉพาะ YouTube id (เอาไปขอ related ต่อได้)
+  let h = histAll().filter((x) => x.id !== id);
+  h.unshift({ id, title: title || "", ts: Date.now() });
+  if (h.length > 200) h = h.slice(0, 200);
+  try { localStorage.setItem("mkt_history", JSON.stringify(h)); } catch {}
+}
+
 // ---------- service worker ----------
-const APP_VER = "v34";
+const APP_VER = "v35";
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(BASE + "sw.js", { scope: BASE }).catch(() => {});
   // มีเวอร์ชันใหม่ activate (claim) → รีโหลดให้ใช้โค้ดใหม่ทันที (สำคัญบน iOS ที่อัปเดตยาก)
@@ -317,7 +327,7 @@ function renderGrid() {
     if (f.kind === "audio") { inner = IC("music"); cls += " audio"; }
     else if (f.thumb) { const u = URL.createObjectURL(f.thumb); gridUrls.push(u); inner = `<img src="${u}"><span class="badge">${esc(f.ext)}</span>`; }
     else { inner = `<span class="badge">${esc(f.ext)}</span>`; cls += " noimg"; }
-    return `<div class="cell" data-id="${esc(f.id)}" title="${esc(f.name)}">
+    return `<div class="cell" data-id="${esc(f.id)}" title="${esc(f.name)}" tabindex="0">
       <div class="${cls}">${inner}
         <button class="addpl" title="เพิ่มไปเพลย์ลิสต์">${IC("add")}</button>
         <button class="delhere" title="ลบออกจากเครื่อง">${IC("trash")}</button></div>
@@ -359,6 +369,7 @@ async function playDevice(meta) {
     }
     openPlayerSrc(URL.createObjectURL(blob), meta.name, true, meta.id);
     setNowPlayingDevice(meta);
+    histAdd(meta.id, meta.name);   // นับเป็นประวัติการดูด้วย (เฉพาะ id ที่เป็น YouTube)
   } catch { alert("เปิดไฟล์ไม่ได้"); }
 }
 searchEl.addEventListener("input", renderGrid);
@@ -479,7 +490,7 @@ async function loadPlaylists() {
       if (rem) thumb = `<img loading="lazy" src="https://i.ytimg.com/vi/${rem.id}/hqdefault.jpg">`;
     }
     const n = entries.length;
-    return `<div class="cell plcell" data-id="${esc(pl.id)}">
+    return `<div class="cell plcell" data-id="${esc(pl.id)}" tabindex="0">
       <div class="thumb pl${thumb ? "" : " noimg"}">${thumb}<span class="pl-badge">${IC("playlist")} ${n}</span></div>
       <div class="cap">${esc(pl.name)}</div>
       <div class="capsub">${n} วิดีโอ</div>
@@ -524,13 +535,13 @@ async function openPlaylist(id) {
       let thumb = "";
       if (f.kind === "audio") thumb = IC("music");
       else if (f.thumb) { const u = URL.createObjectURL(f.thumb); plDetailUrls.push(u); thumb = `<img src="${u}">`; }
-      return `<div class="cell" data-i="${i}">
+      return `<div class="cell" data-i="${i}" tabindex="0">
         <div class="thumb${f.kind === "audio" ? " audio" : (f.thumb ? "" : " noimg")}">${thumb}<button class="plremove" title="เอาออกจากเพลย์ลิสต์">${IC("close")}</button></div>
         <div class="cap">${esc(f.name)}</div></div>`;
     }
     const ytid = /^[\w-]{11}$/.test(e.id) ? e.id : ytId(e.url);
     const thumb = ytid ? `<img loading="lazy" src="https://i.ytimg.com/vi/${ytid}/hqdefault.jpg">` : "";
-    return `<div class="cell" data-i="${i}">
+    return `<div class="cell" data-i="${i}" tabindex="0">
       <div class="thumb${thumb ? "" : " noimg"}">${thumb}<span class="badge ytb">▶ YouTube</span><button class="plremove" title="เอาออกจากเพลย์ลิสต์">${IC("close")}</button></div>
       <div class="cap">${esc(e.title)}</div></div>`;
   }).join("");
@@ -650,7 +661,7 @@ ytq.addEventListener("keydown", (e) => {
 function renderVideoCards(list) {
   ytResults.innerHTML = list.map((v) => {
     const sub = esc(v.channel) + (v.views ? " • " + fmtViews(v.views) : (v.meta ? " • " + esc(v.meta) : ""));
-    return `<div class="cell ytcell" data-url="${esc(v.url)}" data-title="${esc(v.title)}" title="${esc(v.title)}">
+    return `<div class="cell ytcell" data-url="${esc(v.url)}" data-title="${esc(v.title)}" title="${esc(v.title)}" tabindex="0">
       <div class="thumb"><img loading="lazy" src="${esc(v.thumb)}" onerror="this.parentNode.classList.add('noimg')">
         ${v.duration ? `<span class="badge">${fmtDur(v.duration)}</span>` : ""}
         <button class="addpl" title="เพิ่มไปเพลย์ลิสต์">${IC("add")}</button>
@@ -684,23 +695,30 @@ async function loadHomeFeed() {
   const seq = ++homeSeq;
   if (hint) hint.hidden = true;
   ytResults.innerHTML = "";
-  // seeds จากคลังในเครื่อง (IndexedDB)
+  // seeds = ประวัติการดูล่าสุด สลับกับ คลังที่โหลดไว้ (ไม่ซ้ำ, สูงสุด 6 — ลิมิตของ /api/home)
   let metas = [];
   try { metas = await LibDB.allMeta(); } catch {}
   const libIds = new Set(metas.map((m) => m.id));
-  const seeds = metas.map((m) => m.id).filter((id) => /^[\w-]{11}$/.test(id)).slice(0, 6);
-  if (!seeds.length) {            // คลังว่าง → โชว์หน้าต้อนรับ
+  const histIds = histAll().map((h) => h.id);
+  const dlIds = metas.map((m) => m.id).filter((id) => /^[\w-]{11}$/.test(id));
+  const seedSet = new Set(), seeds = [];
+  for (let i = 0; seeds.length < 6 && (i < histIds.length || i < dlIds.length); i++) {
+    for (const id of [histIds[i], dlIds[i]]) {
+      if (id && !seedSet.has(id) && seeds.length < 6) { seedSet.add(id); seeds.push(id); }
+    }
+  }
+  if (!seeds.length) {            // ยังไม่เคยดู+คลังว่าง → โชว์หน้าต้อนรับ
     ytStatus.textContent = "";
     if (hint) hint.hidden = false;
     return;
   }
-  ytStatus.textContent = "กำลังโหลดวิดีโอแนะนำจากคลังของคุณ…";
+  ytStatus.textContent = "กำลังโหลดวิดีโอแนะนำสำหรับคุณ…";
   try {
     const list = await (await fetch(BASE + "api/home?ids=" + seeds.join(","))).json();
     if (seq !== homeSeq) return;
-    const filtered = (Array.isArray(list) ? list : []).filter((v) => !libIds.has(v.id));
+    const filtered = (Array.isArray(list) ? list : []).filter((v) => !libIds.has(v.id) && !seedSet.has(v.id));
     if (!filtered.length) { ytStatus.textContent = "เปิดเซิร์ฟเวอร์เพื่อโหลดวิดีโอแนะนำ"; return; }
-    ytStatus.textContent = "▶ แนะนำสำหรับคุณ — จากคลังของคุณ";
+    ytStatus.textContent = "▶ แนะนำสำหรับคุณ — จากประวัติการดู + คลังของคุณ";
     renderVideoCards(filtered);
   } catch {
     if (seq !== homeSeq) return;
@@ -821,7 +839,7 @@ async function loadRelated(idOrUrl) {
     if (token !== relatedToken || !Array.isArray(list) || !list.length) return;
     relatedHead.hidden = false;
     relatedEl.innerHTML = list.map((v) => `
-      <div class="rcard" data-url="${esc(v.url)}" data-title="${esc(v.title)}" title="${esc(v.title)}">
+      <div class="rcard" data-url="${esc(v.url)}" data-title="${esc(v.title)}" title="${esc(v.title)}" tabindex="0">
         <div class="rthumb"><img loading="lazy" src="${esc(v.thumb)}" onerror="this.style.opacity=0">
           <button class="addpl" title="เพิ่มไปเพลย์ลิสต์">${IC("add")}</button></div>
         <div class="rcap">${esc(v.title)}</div>
@@ -872,7 +890,8 @@ function playEmbed(url, name) {
   nowTitle.textContent = name || "";
   modal.hidden = false;
   document.body.style.overflow = "hidden";
-  if (!showEmbed(url, name, true)) playFromUrl(url, name);   // ไม่ใช่ลิงก์ YT/FB → สตรีมตามปกติ
+  if (showEmbed(url, name, true)) histAdd(ytId(url), name);
+  else playFromUrl(url, name);   // ไม่ใช่ลิงก์ YT/FB → สตรีมตามปกติ
 }
 function clearEmbed() {
   stage.querySelectorAll(".embedframe").forEach((e) => e.remove());
@@ -1108,6 +1127,7 @@ async function playFromUrl(url, name) {
   modal.hidden = false;
   document.body.style.overflow = "hidden";
   showLoading("กำลังเริ่ม…");
+  histAdd(ytId(url), name);
   loadRelated(url);
   const ids = await startDownload([url], { live: true });
   if (token !== playToken) return;
@@ -1198,12 +1218,41 @@ btnPip.addEventListener("click", async () => {
 });
 stage.addEventListener("dblclick", () => btnFull.click());
 
+// ===== ทีวี/คีย์บอร์ด: การ์ดโฟกัสได้ — Enter = เล่น, ลูกศร = เลื่อนโฟกัสในกริด =====
+document.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (!t || !t.classList || !(t.classList.contains("cell") || t.classList.contains("rcard"))) return;
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); t.click(); return; }
+  if (!["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+  const cls = t.classList.contains("rcard") ? "rcard" : "cell";
+  const cells = [...t.parentElement.children].filter((c) => c.classList.contains(cls));
+  const i = cells.indexOf(t);
+  let j;
+  if (e.key === "ArrowRight") j = i + 1;
+  else if (e.key === "ArrowLeft") j = i - 1;
+  else {
+    // ขึ้น/ลงทีละแถว: จำนวนคอลัมน์ = index ของการ์ดแรกที่ x ตรงกับการ์ดแรกสุด (ขึ้นแถวใหม่)
+    const x0 = cells[0].getBoundingClientRect().left;
+    let cols = cells.findIndex((c, k) => k > 0 && Math.abs(c.getBoundingClientRect().left - x0) < 4);
+    if (cols < 1) cols = cells.length;
+    j = e.key === "ArrowDown" ? i + cols : i - cols;
+  }
+  if (j >= 0 && j < cells.length) {
+    e.preventDefault();
+    cells[j].focus();
+    cells[j].scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+  // เกินขอบกริด → ไม่ preventDefault ปล่อยให้ spatial navigation ของเบราว์เซอร์ทีวีพาออกไปเอง
+});
+
 // คีย์ลัด (เฉพาะตอนเปิด player)
 document.addEventListener("keydown", (e) => {
   if (modal.hidden) return;
   if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
   const k = e.key.toLowerCase();
-  if (k === "escape") { closePlayer(); return; }
+  // Escape / ปุ่ม Back ของรีโมตทีวี (webOS 461, Tizen 10009) → ปิด player
+  if (k === "escape" || e.keyCode === 461 || e.keyCode === 10009) { closePlayer(); return; }
+  if (document.activeElement.closest && document.activeElement.closest(".cell,.rcard")) return;   // กำลังเลื่อนการ์ดอยู่ — อย่าแย่ง key
   if (k === " " || k === "k") { e.preventDefault(); togglePlay(); }
   else if (k === "arrowright") vid.currentTime += 5;
   else if (k === "arrowleft") vid.currentTime -= 5;

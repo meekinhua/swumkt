@@ -224,3 +224,19 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
   working in background (`bgAudio.ended` → `playAdjacent(1)`; `openPlayerSrc` routes to `bgAudio` while
   hidden). `bgAudio` is unlocked on the first user gesture (silent WAV) so iOS allows `play()` later.
   Note: does NOT apply to the YouTube embed (watch mode) — YouTube pauses embeds in background by design.
+
+## 13. What's new in v35 (2026-06-12)
+
+- **Fix: search autocomplete hidden behind the tab bar** — `.topbar` z-index raised 60 → 70
+  (the sticky `.tabs` is also z-60 and later in the DOM, so it painted over the dropdown).
+- **Mobile search UX**: input font-size 16px everywhere (prevents iOS focus-zoom); under 760px the
+  search pill grows to 46px tall, brand logo shrinks, bigger suggest items.
+- **TV / keyboard support (whole app)**: every card (`.cell`, `.rcard`) is `tabindex="0"` with a strong
+  red focus outline; Enter/Space activates; Arrow keys move focus inside a grid (column count detected
+  from layout; moves past the grid edge are left to the browser's native spatial navigation, which TV
+  browsers provide). TV remote Back (webOS 461 / Tizen 10009) closes the player like Escape.
+- **Watch history** (`localStorage.mkt_history`, newest-first, YouTube ids only, cap 200) recorded by
+  `histAdd()` in all three play paths: watch-mode embed, stream-while-download, and library playback.
+- **Home feed recommendation mix**: seeds = recent watch history interleaved with downloaded library ids
+  (deduped, max 6 = `/api/home` limit). Watch-only users now get recommendations even with an empty
+  library; results filter out items already in the library or used as seeds.
