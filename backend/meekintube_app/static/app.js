@@ -46,7 +46,7 @@ function histAdd(id, title) {
 }
 
 // ---------- service worker ----------
-const APP_VER = "v40";
+const APP_VER = "v42";
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(BASE + "sw.js", { scope: BASE }).catch(() => {});
   // มีเวอร์ชันใหม่ activate (claim) → รีโหลดให้ใช้โค้ดใหม่ทันที (สำคัญบน iOS ที่อัปเดตยาก)
@@ -137,6 +137,8 @@ async function streamPlayAndStore(job, videoEl) {
   videoEl.__abort = ctrl;
   const url = BASE + "media/" + job.rel.split("/").map(encodeURIComponent).join("/");
   const resp = await fetch(url, { signal: ctrl.signal });
+  // ไฟล์บนเซิร์ฟเวอร์ไม่อยู่แล้ว (เครื่อง/แท็บอื่นเก็บเข้าคลังแล้วสั่งลบไปก่อน) — ห้ามเอาหน้า 404 มาเล่น/เก็บ
+  if (!resp.ok) throw new Error("media " + resp.status);
   const reader = resp.body.getReader();
   const chunks = [];
   let received = 0, blobBytes = -1, started = false;
@@ -399,7 +401,9 @@ async function ingestJob(job) {
     removeTombstone(id);                         // โหลดใหม่ = ตั้งใจเก็บ
     if (await LibDB.has(id)) { purgeServer(job.rel); return; }   // มีในเครื่องแล้ว → ลบสำเนาบนเซิร์ฟเวอร์
     const resp = await fetch(BASE + "media/" + job.rel.split("/").map(encodeURIComponent).join("/"));
+    if (!resp.ok) return;   // ไฟล์ถูกเครื่อง/แท็บอื่นเก็บ+ลบไปแล้ว → อย่าเก็บหน้า 404 เป็นวิดีโอ
     const blob = await resp.blob();
+    if (blob.size < 1024 || (blob.type || "").includes("text/html")) return;   // กันขยะ/หน้า error
     const ext = (job.rel.split(".").pop() || "mp4").toLowerCase();
     const audio = ["mp3", "m4a", "opus", "ogg", "wav", "aac"].includes(ext);
     const meta = { id, name: job.title || baseName(job.rel), ext, size: blob.size, kind: audio ? "audio" : "video", addedAt: Date.now() };

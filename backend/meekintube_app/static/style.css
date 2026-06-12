@@ -493,3 +493,7 @@ textarea:focus { border-color: var(--red); }
   .modal-card.has-queue .queue-list { max-height: none; flex: 1; overflow-y: auto; }
   .modal-card.has-queue .related-wrap { grid-column: 1 / -1; }
 }
+
+/* ================= v41: จอใหญ่ — แถบแท็บ sticky ลอยทับเนื้อหา ~64px แรกของทุกแท็บ (quirk layout เดิม
+   ทำให้ปุ่ม วิดีโอ/เพลย์ลิสต์ ในคลังถูกบังบน desktop มาตลอด) → ดันเนื้อหาให้เริ่มใต้แถบแท็บ ================= */
+@media (min-width: 760px) { .wrap { padding-top: 78px; } }

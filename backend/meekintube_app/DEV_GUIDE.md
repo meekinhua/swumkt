@@ -297,3 +297,15 @@ Background-audio hardening (the lock-screen "it pauses, must press play" complai
   stage, internally scrollable), related videos full-width below. Narrow screens keep the stacked
   layout (queue under the title). This was added because the queue panel sat below the fold on
   desktop/iPad and users could not find it.
+
+## 18. What's new in v41-v42 (2026-06-12)
+
+- **v41 — sticky tab bar overlapped the first ~64px of every tab page on desktop** (>=760px), which
+  is why the Library "วิดีโอ/เพลย์ลิสต์" toggle was invisible on desktop since playlists shipped
+  (mobile unaffected — its tab bar is a fixed bottom bar). Fix: `.wrap { padding-top: 78px }` in the
+  desktop media query. Do NOT place content that must be visible in the first 64px of a tabpage.
+- **v42 — never ingest the 404 page as a video.** With two clients/tabs open (e.g. iPad + desktop),
+  the first one to finish ingesting purges the server file; the other one then fetched `/media/...`,
+  got the Flask 404 HTML, and stored it as the library blob (207-byte "videos"). Both
+  `streamPlayAndStore()` and `ingestJob()` now check `resp.ok` (+ size/content-type sanity in
+  ingest) and skip instead. Existing broken entries can be found by `size < 5000` + HTML sniff.
