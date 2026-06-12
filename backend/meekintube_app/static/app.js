@@ -46,7 +46,7 @@ function histAdd(id, title) {
 }
 
 // ---------- service worker ----------
-const APP_VER = "v36";
+const APP_VER = "v37";
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(BASE + "sw.js", { scope: BASE }).catch(() => {});
   // มีเวอร์ชันใหม่ activate (claim) → รีโหลดให้ใช้โค้ดใหม่ทันที (สำคัญบน iOS ที่อัปเดตยาก)
@@ -881,9 +881,9 @@ function showEmbed(url, name, pure) {
   loadRelated(url);
   return true;
 }
-// โหมดดู — เปิด player ของ YouTube/FB เล่นทันที (autoplay) ไม่ดาวน์โหลดอะไรเลย
-// MV จำนวนมาก (โดยเฉพาะค่ายเพลง) ปิดการฝังนอก YouTube → เช็คก่อน ถ้าฝังไม่ได้ถอยไปโหลด+สตรีมแบบเดิมอัตโนมัติ
-async function playEmbed(url, name) {
+// โหมดดู — เปิด player ของ YouTube/FB "ทันที" ด้วยโค้ดเดิม (showEmbed ตัวเดียวกับเคสดาวน์โหลดไม่ได้)
+// แล้วใช้ trigger ถอยไปโหลด+สตรีมแบบเดิม เฉพาะเมื่อ player เล่นไม่ได้จริง (MV ค่ายเพลงโดนบล็อก ฯลฯ)
+function playEmbed(url, name) {
   const token = ++playToken;
   stopBgAudio();
   stopStream(vid); revokeBlobUrl(); clearEmbed();
@@ -892,16 +892,19 @@ async function playEmbed(url, name) {
   modal.hidden = false;
   document.body.style.overflow = "hidden";
   const id = ytId(url);
+  if (!showEmbed(url, name, true)) { playFromUrl(url, name); return; }   // ไม่ใช่ลิงก์ YT/FB → สตรีมตามปกติ
+  histAdd(id, name);
+  armEmbedFallback(url, name, token);
+  // เช็คเงียบๆ แบบคู่ขนาน (ไม่หน่วงการเปิด player): ถ้า YouTube ตอบว่าคลิปนี้ปิดการฝัง
+  // → สลับไปสตรีมได้เร็วกว่ารอ error จาก player
   if (id && serverOnline) {
-    showLoading("กำลังเปิด player…");
-    let ok = true;
-    try { ok = (await (await fetch(BASE + "api/embedok?id=" + id)).json()).ok !== false; } catch {}
-    if (token !== playToken) return;
-    hideLoading();
-    if (!ok) { playFromUrl(url, name); return; }   // คลิปปิดการฝัง → เล่นด้วยวิธีโหลด+สตรีมแทน
+    fetch(BASE + "api/embedok?id=" + id).then((r) => r.json()).then((j) => {
+      if (j.ok === false && token === playToken && embedFb && embedFb.token === token) {
+        embedFb = null;
+        playFromUrl(url, name);
+      }
+    }).catch(() => {});
   }
-  if (showEmbed(url, name, true)) { histAdd(id, name); armEmbedFallback(url, name, token); }
-  else playFromUrl(url, name);   // ไม่ใช่ลิงก์ YT/FB → สตรีมตามปกติ
 }
 // ตาข่ายชั้นสอง: บางคลิปผ่านเช็คแต่ player ยังเล่นไม่ได้ (ติดอายุ/ประเทศ) —
 // ขอรับ event จาก iframe ของ YouTube (enablejsapi) ถ้าได้ onError → ถอยไปสตรีมแบบเดิม

@@ -241,7 +241,7 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
   (deduped, max 6 = `/api/home` limit). Watch-only users now get recommendations even with an empty
   library; results filter out items already in the library or used as seeds.
 
-## 14. What's new in v36 (2026-06-12)
+## 14. What's new in v36-v37 (2026-06-12)
 
 - **Watch mode now auto-falls back to stream when the YouTube embed can't play.** Many label MVs
   (Thai music labels especially) either disable embedding or let the embed load but **block playback
@@ -253,3 +253,7 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
      covers copyright-holder playback blocks that pass oEmbed. On error → `playFromUrl()` (the
      classic download+stream path, which plays everything yt-dlp can).
   So watch mode = instant YouTube player when allowed, seamless stream fallback when not.
+
+  **v37 refinement:** the oEmbed probe no longer blocks — watch mode embeds INSTANTLY (old behavior,
+  ~0ms) and the probe runs in parallel; whichever signal arrives first (probe not-ok, or player
+  onError) triggers the one-shot fallback to `playFromUrl()` (guarded by `embedFb.token`).
