@@ -240,3 +240,16 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
 - **Home feed recommendation mix**: seeds = recent watch history interleaved with downloaded library ids
   (deduped, max 6 = `/api/home` limit). Watch-only users now get recommendations even with an empty
   library; results filter out items already in the library or used as seeds.
+
+## 14. What's new in v36 (2026-06-12)
+
+- **Watch mode now auto-falls back to stream when the YouTube embed can't play.** Many label MVs
+  (Thai music labels especially) either disable embedding or let the embed load but **block playback
+  in embedded players** ("Video unavailable"). Two safety nets:
+  1. `GET /api/embedok?id=` (new server endpoint) probes YouTube oEmbed before embedding —
+     401/403 = embedding disabled, 404 = gone → skip the embed and go straight to `playFromUrl()`.
+  2. The embed iframe is created with `enablejsapi=1`; after load we postMessage the widget
+     `{"event":"listening"}` handshake and listen for `onError` events (`armEmbedFallback`) —
+     covers copyright-holder playback blocks that pass oEmbed. On error → `playFromUrl()` (the
+     classic download+stream path, which plays everything yt-dlp can).
+  So watch mode = instant YouTube player when allowed, seamless stream fallback when not.

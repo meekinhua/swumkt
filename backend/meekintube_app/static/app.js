@@ -46,7 +46,7 @@ function histAdd(id, title) {
 }
 
 // ---------- service worker ----------
-const APP_VER = "v35";
+const APP_VER = "v36";
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(BASE + "sw.js", { scope: BASE }).catch(() => {});
   // มีเวอร์ชันใหม่ activate (claim) → รีโหลดให้ใช้โค้ดใหม่ทันที (สำคัญบน iOS ที่อัปเดตยาก)
@@ -859,7 +859,7 @@ async function loadRelated(idOrUrl) {
 // ---- fallback: ฝัง player ของ YouTube/FB เมื่อโหลดไฟล์ไม่ได้ ----
 function embedUrlFor(url) {
   const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/);
-  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&playsinline=1`;
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&playsinline=1&enablejsapi=1`;
   if (/facebook\.com|fb\.watch/.test(url))
     return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true`;
   return null;
@@ -882,17 +882,47 @@ function showEmbed(url, name, pure) {
   return true;
 }
 // โหมดดู — เปิด player ของ YouTube/FB เล่นทันที (autoplay) ไม่ดาวน์โหลดอะไรเลย
-function playEmbed(url, name) {
-  playToken++;
+// MV จำนวนมาก (โดยเฉพาะค่ายเพลง) ปิดการฝังนอก YouTube → เช็คก่อน ถ้าฝังไม่ได้ถอยไปโหลด+สตรีมแบบเดิมอัตโนมัติ
+async function playEmbed(url, name) {
+  const token = ++playToken;
   stopBgAudio();
-  stopStream(vid); revokeBlobUrl();
+  stopStream(vid); revokeBlobUrl(); clearEmbed();
   vid.pause(); vid.removeAttribute("src"); vid.load(); vid.dataset.rel = "";
   nowTitle.textContent = name || "";
   modal.hidden = false;
   document.body.style.overflow = "hidden";
-  if (showEmbed(url, name, true)) histAdd(ytId(url), name);
+  const id = ytId(url);
+  if (id && serverOnline) {
+    showLoading("กำลังเปิด player…");
+    let ok = true;
+    try { ok = (await (await fetch(BASE + "api/embedok?id=" + id)).json()).ok !== false; } catch {}
+    if (token !== playToken) return;
+    hideLoading();
+    if (!ok) { playFromUrl(url, name); return; }   // คลิปปิดการฝัง → เล่นด้วยวิธีโหลด+สตรีมแทน
+  }
+  if (showEmbed(url, name, true)) { histAdd(id, name); armEmbedFallback(url, name, token); }
   else playFromUrl(url, name);   // ไม่ใช่ลิงก์ YT/FB → สตรีมตามปกติ
 }
+// ตาข่ายชั้นสอง: บางคลิปผ่านเช็คแต่ player ยังเล่นไม่ได้ (ติดอายุ/ประเทศ) —
+// ขอรับ event จาก iframe ของ YouTube (enablejsapi) ถ้าได้ onError → ถอยไปสตรีมแบบเดิม
+let embedFb = null;   // {url, name, token}
+function armEmbedFallback(url, name, token) {
+  embedFb = { url, name, token };
+  const ifr = stage.querySelector(".embedframe");
+  if (!ifr) return;
+  ifr.addEventListener("load", () => {
+    try { ifr.contentWindow.postMessage(JSON.stringify({ event: "listening", id: "mkt", channel: "widget" }), "*"); } catch {}
+  });
+}
+window.addEventListener("message", (e) => {
+  let host = "";
+  try { host = new URL(e.origin).hostname; } catch { return; }
+  if (!/(^|\.)youtube(-nocookie)?\.com$/.test(host) || typeof e.data !== "string") return;
+  let d; try { d = JSON.parse(e.data); } catch { return; }
+  if (d.event !== "onError" || !embedFb || embedFb.token !== playToken) return;
+  const fb = embedFb; embedFb = null;
+  if (serverOnline) playFromUrl(fb.url, fb.name);   // เล่นผ่าน YouTube ไม่ได้ → โหลด+สตรีมให้แทน
+});
 function clearEmbed() {
   stage.querySelectorAll(".embedframe").forEach((e) => e.remove());
   stage.classList.remove("embedding");
