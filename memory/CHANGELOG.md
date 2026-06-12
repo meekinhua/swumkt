@@ -1,3 +1,21 @@
+## 2026-06-12 — meekintube updated v37 → v42 (drop-in) + ffmpeg recurring-loss note
+
+User uploaded `meekintube_v42_emergent.zip`. Drop-in replacement; mount unchanged; no new
+endpoints (embedok already present). New since v37: v38 full-screen mobile search overlay,
+now-playing queue UI with prev/next, Spotify-style autoplay toggle (frontend-only).
+
+### Actions
+- Replaced `/app/backend/meekintube_app/` with v42 (app.js confirms `v42`).
+- **ffmpeg was MISSING AGAIN** — the preview pod recycles periodically and wipes apt-installed
+  packages (this is the 2nd time this session). Reinstalled via `apt-get install ffmpeg`.
+  ⚠️ RECURRING: any apt package (ffmpeg) is ephemeral in preview — if meekintube search/embed
+  breaks, first check `/api/meekintube/api/config` for `ffmpeg:false` and reinstall.
+  yt-dlp (pip/venv) + node (/usr/bin) persist.
+
+### Verified
+- config → `{ffmpeg:true, ytdlp:true}`; embedok → `{ok:true}`; UI v42 renders with mode toggle.
+
+
 ## 2026-06-12 — meekintube updated v31 → v37 (drop-in from external agent)
 
 User uploaded `meekintube_v37_emergent.zip` (built by an external agent) — a drop-in

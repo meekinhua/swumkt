@@ -257,3 +257,55 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
   **v37 refinement:** the oEmbed probe no longer blocks — watch mode embeds INSTANTLY (old behavior,
   ~0ms) and the probe runs in parallel; whichever signal arrives first (probe not-ok, or player
   onError) triggers the one-shot fallback to `playFromUrl()` (guarded by `embedFb.token`).
+## 15. What's new in v38 (2026-06-12)
+
+- **Full-screen mobile search** (`#searchOverlay`): on screens <760px, focusing the topbar search
+  opens a full-screen overlay with a 48px input and large tap-friendly suggestion rows
+  (same `/api/suggest` source). Pick/submit closes the overlay and runs the normal search.
+- **Now-playing queue UI in the player** (`#queueWrap`, rendered by `renderQueue()` from
+  `pmQueue`/`pmIndex`, refreshed via `loadRelated()` which every play path passes through):
+  shows position (n / total), thumbnails, highlights the current item, tap any row to jump.
+  Prev/Next track buttons (`#btnPrev`/`#btnNext`) appear in the control row when a queue exists.
+- **Spotify-style autoplay (toggle in player, persisted `localStorage.mkt_autonext`, default ON)**:
+  when the current clip ends AND the queue is finished, `autoPlayNext()` fetches `/api/related`
+  for the clip that just played (`nowPlayingId`), picks the first item not in watch history and
+  not already queued, appends and plays it — endless radio; user skips with Next. Wired into all
+  three end-of-clip signals: `vid` `ended`, `bgAudio` `ended`, and the YouTube embed playerState-0
+  postMessage (deduped per playToken via `embEndedToken`).
+
+## 16. What's new in v39 (2026-06-12)
+
+Background-audio hardening (the lock-screen "it pauses, must press play" complaint):
+- `armBgAudio(src)` pre-loads the SAME blob into the hidden `<audio>` **at playback start** (inside
+  the user gesture, which iOS blesses) — called from `openPlayerSrc` and from `streamPlayAndStore`
+  blob swaps (main player only). On lock, `toBgAudio()` only has to `play()` an already-loaded
+  element instead of assigning a fresh src.
+- `toBgAudio()` retries `play()` at +400ms and +1500ms (one-shot, guarded by `bgActive`) because iOS
+  sometimes issues its own pause right at lock time; returning to foreground keeps the audio src
+  armed so the next lock resumes instantly.
+- `vid` `pause` while `document.hidden` is a secondary handoff trigger (some platforms pause the
+  video without a preceding visibilitychange).
+- `refreshMediaSession()` re-applies metadata (cached in `lastNow`) + action handlers + playbackState
+  after every video→audio switch so the lock screen keeps showing title/artwork and ⏮⏭ buttons.
+- NOTE: lock-screen prev/next (Media Session) requires a **secure context** — works on the HTTPS
+  Emergent URL or localhost, NOT on plain LAN http (the browser hides the API entirely there).
+
+## 17. What's new in v40 (2026-06-12)
+
+- **Queue sidebar on wide screens**: at >=1000px, when a queue exists (`.modal-card.has-queue`) the
+  player modal becomes a 2-column grid — video left, "now playing" queue right (full height of the
+  stage, internally scrollable), related videos full-width below. Narrow screens keep the stacked
+  layout (queue under the title). This was added because the queue panel sat below the fold on
+  desktop/iPad and users could not find it.
+
+## 18. What's new in v41-v42 (2026-06-12)
+
+- **v41 — sticky tab bar overlapped the first ~64px of every tab page on desktop** (>=760px), which
+  is why the Library "วิดีโอ/เพลย์ลิสต์" toggle was invisible on desktop since playlists shipped
+  (mobile unaffected — its tab bar is a fixed bottom bar). Fix: `.wrap { padding-top: 78px }` in the
+  desktop media query. Do NOT place content that must be visible in the first 64px of a tabpage.
+- **v42 — never ingest the 404 page as a video.** With two clients/tabs open (e.g. iPad + desktop),
+  the first one to finish ingesting purges the server file; the other one then fetched `/media/...`,
+  got the Flask 404 HTML, and stored it as the library blob (207-byte "videos"). Both
+  `streamPlayAndStore()` and `ingestJob()` now check `resp.ok` (+ size/content-type sanity in
+  ingest) and skip instead. Existing broken entries can be found by `size < 5000` + HTML sniff.

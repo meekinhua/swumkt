@@ -46,7 +46,7 @@ function histAdd(id, title) {
 }
 
 // ---------- service worker ----------
-const APP_VER = "v37";
+const APP_VER = "v42";
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(BASE + "sw.js", { scope: BASE }).catch(() => {});
   // มีเวอร์ชันใหม่ activate (claim) → รีโหลดให้ใช้โค้ดใหม่ทันที (สำคัญบน iOS ที่อัปเดตยาก)
@@ -137,6 +137,8 @@ async function streamPlayAndStore(job, videoEl) {
   videoEl.__abort = ctrl;
   const url = BASE + "media/" + job.rel.split("/").map(encodeURIComponent).join("/");
   const resp = await fetch(url, { signal: ctrl.signal });
+  // ไฟล์บนเซิร์ฟเวอร์ไม่อยู่แล้ว (เครื่อง/แท็บอื่นเก็บเข้าคลังแล้วสั่งลบไปก่อน) — ห้ามเอาหน้า 404 มาเล่น/เก็บ
+  if (!resp.ok) throw new Error("media " + resp.status);
   const reader = resp.body.getReader();
   const chunks = [];
   let received = 0, blobBytes = -1, started = false;
@@ -153,6 +155,7 @@ async function streamPlayAndStore(job, videoEl) {
     };
     videoEl.addEventListener("loadedmetadata", onMeta);
     videoEl.src = u;
+    if (videoEl === vid) armBgAudio(u);   // เตรียมเสียง background ให้คลิปที่กำลังสตรีมใน player หลักด้วย
     blobBytes = received;
   };
   // เล่นจน blob หมดแต่ยังโหลดไม่จบ → ผูก blob ใหม่ที่ใหญ่ขึ้น (จุดที่อาจสะดุดเล็กน้อย)
@@ -398,7 +401,9 @@ async function ingestJob(job) {
     removeTombstone(id);                         // โหลดใหม่ = ตั้งใจเก็บ
     if (await LibDB.has(id)) { purgeServer(job.rel); return; }   // มีในเครื่องแล้ว → ลบสำเนาบนเซิร์ฟเวอร์
     const resp = await fetch(BASE + "media/" + job.rel.split("/").map(encodeURIComponent).join("/"));
+    if (!resp.ok) return;   // ไฟล์ถูกเครื่อง/แท็บอื่นเก็บ+ลบไปแล้ว → อย่าเก็บหน้า 404 เป็นวิดีโอ
     const blob = await resp.blob();
+    if (blob.size < 1024 || (blob.type || "").includes("text/html")) return;   // กันขยะ/หน้า error
     const ext = (job.rel.split(".").pop() || "mp4").toLowerCase();
     const audio = ["mp3", "m4a", "opus", "ogg", "wav", "aac"].includes(ext);
     const meta = { id, name: job.title || baseName(job.rel), ext, size: blob.size, kind: audio ? "audio" : "video", addedAt: Date.now() };
@@ -657,6 +662,49 @@ ytq.addEventListener("keydown", (e) => {
   else if (e.key === "Escape") { closeSuggest(); }
 });
 
+// ---- ค้นหาเต็มจอ (จอแคบ/มือถือ): แตะช่องค้นหาเล็กบน topbar → เปิด popup ใหญ่พิมพ์ง่าย ----
+const sov = $("#searchOverlay"), sovInput = $("#sovInput"), sovList = $("#sovList"), sovForm = $("#sovForm");
+let sovTimer = null, sovSeq2 = 0;
+function openSearchOverlay() {
+  sov.hidden = false;
+  document.body.style.overflow = "hidden";
+  sovInput.value = ytq.value;
+  sovList.innerHTML = "";
+  setTimeout(() => sovInput.focus(), 60);
+  if (sovInput.value.trim().length >= 2) sovFetch();
+}
+function closeSearchOverlay() {
+  if (sov.hidden) return;
+  sov.hidden = true;
+  document.body.style.overflow = "";
+}
+async function sovFetch() {
+  const q = sovInput.value.trim();
+  if (q.length < 2) { sovList.innerHTML = ""; return; }
+  const seq = ++sovSeq2;
+  try {
+    const list = await (await fetch(BASE + "api/suggest?q=" + encodeURIComponent(q))).json();
+    if (seq !== sovSeq2 || sov.hidden) return;
+    const items = Array.isArray(list) ? list.slice(0, 14) : [];
+    sovList.innerHTML = items.map((s) =>
+      `<button class="sov-item">${IC("search")}<span>${esc(s)}</span></button>`).join("");
+    sovList.querySelectorAll(".sov-item").forEach((b, i) => b.addEventListener("click", () => sovGo(items[i])));
+  } catch {}
+}
+function sovGo(q) {
+  closeSearchOverlay();
+  ytq.value = q;
+  ytForm.requestSubmit();
+}
+if (sov) {
+  ytq.addEventListener("focus", () => {
+    if (window.matchMedia("(max-width: 759px)").matches) { ytq.blur(); openSearchOverlay(); }
+  });
+  sovInput.addEventListener("input", () => { clearTimeout(sovTimer); sovTimer = setTimeout(sovFetch, 150); });
+  sovForm.addEventListener("submit", (e) => { e.preventDefault(); const q = sovInput.value.trim(); if (q) sovGo(q); });
+  $("#sovBack").addEventListener("click", closeSearchOverlay);
+}
+
 // การ์ดวิดีโอ (ใช้ร่วมกันทั้งผลค้นหา + ฟีดหน้าแรก)
 function renderVideoCards(list) {
   ytResults.innerHTML = list.map((v) => {
@@ -829,8 +877,11 @@ function ytId(s) {
   return m ? m[1] : null;
 }
 let relatedToken = 0;
+let nowPlayingId = null;   // YouTube id ของคลิปที่กำลังเล่น (ใช้ต่อยอด autoplay ต่อเนื่อง)
 async function loadRelated(idOrUrl) {
   const id = ytId(idOrUrl);
+  nowPlayingId = id;
+  renderQueue();   // ทุกเส้นทางการเล่นผ่านจุดนี้ → อัปเดต UI คิวไปด้วย
   relatedEl.innerHTML = ""; relatedHead.hidden = true;
   if (!id) return;
   const token = ++relatedToken;
@@ -917,14 +968,25 @@ function armEmbedFallback(url, name, token) {
     try { ifr.contentWindow.postMessage(JSON.stringify({ event: "listening", id: "mkt", channel: "widget" }), "*"); } catch {}
   });
 }
+let embEndedToken = -1;   // กัน state-0 มาซ้ำหลายข้อความแล้วข้ามคิวเกิน 1 ขั้น
 window.addEventListener("message", (e) => {
   let host = "";
   try { host = new URL(e.origin).hostname; } catch { return; }
   if (!/(^|\.)youtube(-nocookie)?\.com$/.test(host) || typeof e.data !== "string") return;
   let d; try { d = JSON.parse(e.data); } catch { return; }
-  if (d.event !== "onError" || !embedFb || embedFb.token !== playToken) return;
-  const fb = embedFb; embedFb = null;
-  if (serverOnline) playFromUrl(fb.url, fb.name);   // เล่นผ่าน YouTube ไม่ได้ → โหลด+สตรีมให้แทน
+  if (d.event === "onError" && embedFb && embedFb.token === playToken) {
+    const fb = embedFb; embedFb = null;
+    if (serverOnline) playFromUrl(fb.url, fb.name);   // เล่นผ่าน YouTube ไม่ได้ → โหลด+สตรีมให้แทน
+    return;
+  }
+  // embed เล่นจบ (playerState 0) → เล่นรายการถัดไปในคิว / autoplay วิดีโอแนะนำต่อ
+  const st = d.event === "onStateChange" ? +d.info
+    : (d.event === "infoDelivery" && d.info && d.info.playerState !== undefined ? +d.info.playerState : -1);
+  if (st === 0 && embEndedToken !== playToken && !modal.hidden && stage.classList.contains("embedding")) {
+    embEndedToken = playToken;
+    if (!endOfQueue()) playAdjacent(1);
+    else autoPlayNext();
+  }
 });
 function clearEmbed() {
   stage.querySelectorAll(".embedframe").forEach((e) => e.remove());
@@ -967,8 +1029,10 @@ function openPlayerSrc(url, name, isBlob, libId) {
     bgActive = true;
     bgAudio.src = url;
     bgAudio.play().catch(() => {});
+    refreshMediaSession();
   } else {
     vid.play().catch(() => {});
+    armBgAudio(url);   // เตรียมเสียง background ไว้เลย (ยังอยู่ใน gesture)
   }
   loadRelated(libId || "");   // related จาก YouTube id (ถ้ามี — ต้องออนไลน์)
 }
@@ -1008,7 +1072,9 @@ vid.addEventListener("loadedmetadata", () => {
 // ===== Media Session — คอนโทรลบน lock screen / notification (แบบ Spotify) =====
 let pmQueue = [], pmIndex = -1;   // คิว: {kind:'device'|'remote', ref, name, meta?}
 let msArtUrl = null;
+let lastNow = { title: "", art: null };   // metadata ล่าสุด — ไว้ re-apply หลังสลับตัวเล่น (iOS ชอบลืม)
 function setNowPlaying(title, artUrl) {
+  lastNow = { title: title || "", art: artUrl || null };
   if (!("mediaSession" in navigator)) return;
   try {
     const artwork = artUrl ? [96, 192, 384, 512].map((s) => ({ src: artUrl, sizes: s + "x" + s, type: "image/jpeg" })) : [];
@@ -1055,7 +1121,62 @@ function playQueueItem(i) {
 }
 function playAdjacent(dir) { if (pmQueue.length) playQueueItem(pmIndex + dir); }
 
-if ("mediaSession" in navigator) {
+// ===== UI คิวที่กำลังเล่น (ใน player) + ปุ่มข้ามเพลง =====
+const queueWrap = $("#queueWrap"), queueList = $("#queueList"), queuePos = $("#queuePos");
+function queueThumb(it) {
+  const id = it.kind === "remote" ? ytId(it.ref) : (/^[\w-]{11}$/.test(it.ref) ? it.ref : null);
+  return id ? `<img loading="lazy" src="https://i.ytimg.com/vi/${id}/default.jpg">` : IC("music");
+}
+function renderQueue() {
+  if (!queueWrap) return;
+  const has = pmQueue.length > 1;
+  queueWrap.hidden = !has;
+  document.querySelector(".modal-card")?.classList.toggle("has-queue", has);
+  if (!has) { queueList.innerHTML = ""; return; }
+  queuePos.textContent = (pmIndex + 1) + " / " + pmQueue.length;
+  queueList.innerHTML = pmQueue.map((it, i) => `
+    <button class="q-item${i === pmIndex ? " now" : ""}" data-i="${i}">
+      <span class="q-n">${i === pmIndex ? IC("play") : i + 1}</span>
+      <span class="q-thumb">${queueThumb(it)}</span>
+      <span class="q-name">${esc(it.name || "")}</span>
+    </button>`).join("");
+  queueList.querySelectorAll(".q-item").forEach((b) => b.addEventListener("click", () => playQueueItem(+b.dataset.i)));
+  queueList.querySelector(".q-item.now")?.scrollIntoView({ block: "nearest" });
+}
+$("#btnPrev")?.addEventListener("click", () => playAdjacent(-1));
+$("#btnNext")?.addEventListener("click", () => playAdjacent(1));
+
+// ===== Autoplay ต่อเนื่อง (แบบ Spotify) — จบคิวแล้วต่อด้วยวิดีโอแนะนำของคลิปที่เพิ่งเล่น =====
+let autoNext = localStorage.getItem("mkt_autonext") !== "0";   // เปิดเป็นค่าเริ่มต้น (ปิดได้ใน player)
+const autoNextChk = $("#autoNextChk");
+if (autoNextChk) {
+  autoNextChk.checked = autoNext;
+  autoNextChk.addEventListener("change", () => {
+    autoNext = autoNextChk.checked;
+    localStorage.setItem("mkt_autonext", autoNext ? "1" : "0");
+  });
+}
+function endOfQueue() { return !(pmIndex >= 0 && pmIndex < pmQueue.length - 1); }
+let autoBusy = false;
+async function autoPlayNext() {
+  if (!autoNext || autoBusy || modal.hidden) return;
+  if (!nowPlayingId || !serverOnline) return;
+  autoBusy = true;
+  try {
+    const list = await (await fetch(BASE + "api/related?id=" + nowPlayingId)).json();
+    if (!Array.isArray(list) || !list.length) return;
+    const played = new Set(histAll().map((h) => h.id));   // กันวนเล่นซ้ำของที่เพิ่งดู
+    const queued = new Set(pmQueue.map((q) => (q.kind === "remote" ? ytId(q.ref) : q.ref)));
+    const pick = list.find((v) => v.id && !played.has(v.id) && !queued.has(v.id)) || list[0];
+    if (!pick) return;
+    pmQueue.push({ kind: "remote", ref: pick.url, name: pick.title });
+    playQueueItem(pmQueue.length - 1);
+  } catch {}
+  finally { autoBusy = false; }
+}
+
+function registerMsHandlers() {
+  if (!("mediaSession" in navigator)) return;
   const ms = navigator.mediaSession;
   const H = (a, fn) => { try { ms.setActionHandler(a, fn); } catch {} };
   H("play", () => activeMedia().play());
@@ -1068,17 +1189,25 @@ if ("mediaSession" in navigator) {
   H("nexttrack", () => playAdjacent(1));
   H("stop", () => closePlayer());
 }
+registerMsHandlers();
+// re-apply metadata + handlers + state หลังสลับตัวเล่น video↔audio (ให้ lock screen ขึ้นปุ่ม ⏮⏭ ต่อเนื่อง)
+function refreshMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  setNowPlaying(lastNow.title, lastNow.art);
+  registerMsHandlers();
+  try { navigator.mediaSession.playbackState = "playing"; } catch {}
+  updatePositionState();
+}
 vid.addEventListener("play", () => { try { navigator.mediaSession.playbackState = "playing"; } catch {} updatePositionState(); });
 vid.addEventListener("pause", () => { try { navigator.mediaSession.playbackState = "paused"; } catch {} });
 vid.addEventListener("loadedmetadata", updatePositionState);
 vid.addEventListener("seeked", updatePositionState);
 vid.addEventListener("ratechange", updatePositionState);
-// จบคลิปจริง → เล่นถัดไปในคิวอัตโนมัติ (แบบ Spotify)
+// จบคลิปจริง → เล่นถัดไปในคิว / จบคิวแล้ว autoplay วิดีโอแนะนำต่อ (แบบ Spotify)
 vid.addEventListener("ended", () => {
-  if (vid.duration && isFinite(vid.duration) && vid.currentTime >= vid.duration - 1.5 &&
-      pmIndex >= 0 && pmIndex < pmQueue.length - 1) {
-    playAdjacent(1);
-  }
+  if (!(vid.duration && isFinite(vid.duration) && vid.currentTime >= vid.duration - 1.5)) return;
+  if (!endOfQueue()) playAdjacent(1);
+  else autoPlayNext();
 });
 
 // ===== เล่นเสียงต่อใน background (พับแอป/ล็อกหน้าจอ) แบบ Spotify =====
@@ -1102,6 +1231,13 @@ function unlockBgAudio() {
   try { bgAudio.src = SILENT_WAV; bgAudio.play().then(() => { bgAudio.pause(); bgAudio.removeAttribute("src"); }).catch(() => {}); } catch {}
 }
 document.addEventListener("pointerdown", unlockBgAudio, true);
+// เตรียมไฟล์เดียวกันใส่ bgAudio ไว้ล่วงหน้า "ตั้งแต่ตอนผู้ใช้กดเล่น" (ยังอยู่ใน gesture ที่ iOS ยอม)
+// → ตอนจอดับแค่สั่ง play ต่อ ไม่ต้องโหลด src ใหม่ (ลดโอกาสโดน iOS pause ทับแล้วต้องกดเอง)
+function armBgAudio(src) {
+  if (!src || bgAudio.src === src) return;
+  bgAudio.src = src;
+  try { bgAudio.load(); } catch {}
+}
 function toBgAudio() {
   if (bgActive || modal.hidden || stage.classList.contains("embedding")) return;
   const src = vid.currentSrc || vid.src;
@@ -1109,10 +1245,14 @@ function toBgAudio() {
   // นับว่า "กำลังเล่น" ถ้าเพิ่งเล่นอยู่เมื่อกี้ (เบราว์เซอร์อาจ pause วิดีโอก่อน event นี้มาถึง)
   if (vid.paused && Date.now() - lastPlayingTs > 1500) return;
   bgActive = true;
-  bgAudio.src = src;
+  if (bgAudio.src !== src) bgAudio.src = src;
   try { bgAudio.currentTime = vid.currentTime; } catch {}
-  bgAudio.play().catch(() => { bgActive = false; bgAudio.removeAttribute("src"); });
+  bgAudio.play().catch(() => {});
   vid.pause();
+  // iOS อาจสั่ง pause ทับตอนล็อกจอพอดี → ลองเล่นซ้ำอัตโนมัติช่วงสั้นๆ (ครั้งเดียวพอ ไม่ชนกับผู้ใช้กดหยุดเอง)
+  setTimeout(() => { if (bgActive && bgAudio.paused) bgAudio.play().catch(() => {}); }, 400);
+  setTimeout(() => { if (bgActive && bgAudio.paused) bgAudio.play().catch(() => {}); }, 1500);
+  refreshMediaSession();   // ขึ้น metadata + ปุ่ม ⏮⏭ บน lock screen ใหม่หลังสลับตัวเล่น
 }
 function toVideo() {
   if (!bgActive) return;
@@ -1120,17 +1260,23 @@ function toVideo() {
   const t = bgAudio.currentTime, playing = !bgAudio.paused;
   try { bgAudio.pause(); } catch {}
   try { if (Math.abs((vid.currentTime || 0) - t) > 0.4) vid.currentTime = t; } catch {}
-  bgAudio.removeAttribute("src");
+  // คง src ไว้ (ไม่ remove) — ล็อกจอรอบถัดไปจะได้เล่นต่อทันทีไม่ต้องโหลดใหม่
   if (playing) vid.play().catch(() => {});
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) toBgAudio(); else toVideo(); });
+// บางเครื่องสั่ง pause วิดีโอตอนพับแอปโดยไม่ยิง visibilitychange ก่อน → ใช้ pause เป็นสัญญาณสำรอง
+vid.addEventListener("pause", () => {
+  if (document.hidden && !bgActive && !modal.hidden) toBgAudio();
+});
 bgAudio.addEventListener("play", () => { try { navigator.mediaSession.playbackState = "playing"; } catch {} updatePositionState(); });
 bgAudio.addEventListener("pause", () => { if (bgActive) { try { navigator.mediaSession.playbackState = "paused"; } catch {} } });
 bgAudio.addEventListener("loadedmetadata", updatePositionState);
 bgAudio.addEventListener("seeked", updatePositionState);
-// จบคลิประหว่างอยู่ background → เล่นถัดไปในคิวต่อเลย
+// จบคลิประหว่างอยู่ background → เล่นถัดไปในคิว / autoplay แนะนำต่อ
 bgAudio.addEventListener("ended", () => {
-  if (bgActive && pmIndex >= 0 && pmIndex < pmQueue.length - 1) playAdjacent(1);
+  if (!bgActive) { stopBgAudio(); return; }
+  if (!endOfQueue()) playAdjacent(1);
+  else if (autoNext) autoPlayNext();
   else stopBgAudio();
 });
 

@@ -452,3 +452,48 @@ textarea:focus { border-color: var(--red); }
 .searchpill input:focus-visible, .searchpill button:focus-visible {
   outline: 3px solid var(--red); outline-offset: 2px;
 }
+/* ================= v38: ค้นหาเต็มจอ (มือถือ) + คิวใน player + autoplay ================= */
+.sov { position: fixed; inset: 0; z-index: 150; background: var(--bg); display: flex; flex-direction: column; }
+.sov[hidden] { display: none; }
+.sov-bar { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.sov-form { flex: 1; }
+.sov-form input { width: 100%; box-sizing: border-box; height: 48px; font-size: 17px; padding: 0 18px; background: #121212; color: var(--text); border: 1px solid var(--line); border-radius: 24px; outline: none; }
+.sov-form input:focus { border-color: var(--red); }
+.sov-list { flex: 1; overflow-y: auto; }
+.sov-item { display: flex; width: 100%; gap: 14px; align-items: center; padding: 15px 18px; background: transparent; border: 0; border-bottom: 1px solid #1b1b1b; color: var(--text); font-size: 16px; text-align: left; }
+.sov-item .ic { width: 18px; height: 18px; color: var(--muted); flex: 0 0 auto; }
+.sov-item:active, .sov-item:hover { background: #1c1c1c; }
+
+.player-tools { display: flex; justify-content: flex-end; padding: 6px 14px 0; }
+.autonext { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+.autonext input { accent-color: var(--red); width: 17px; height: 17px; margin: 0; }
+
+.queue-wrap { margin: 10px 14px 0; background: #161616; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.queue-head { padding: 9px 14px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; border-bottom: 1px solid #1d1d1d; }
+.queue-list { max-height: 230px; overflow-y: auto; }
+.q-item { display: flex; width: 100%; gap: 10px; align-items: center; padding: 7px 12px; border: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.q-item:hover { background: #1d1d1d; }
+.q-item.now { background: rgba(255,0,51,.14); }
+.q-n { width: 20px; flex: 0 0 auto; color: var(--muted); font-size: 12px; display: flex; justify-content: center; }
+.q-n .ic { width: 14px; height: 14px; color: var(--red); }
+.q-thumb { width: 56px; height: 32px; border-radius: 6px; overflow: hidden; background: #000; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.q-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.q-thumb .ic { width: 16px; height: 16px; }
+.q-name { font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+#btnPrev, #btnNext { display: none; }
+.modal-card.has-queue #btnPrev, .modal-card.has-queue #btnNext { display: flex; }
+@media (max-height: 500px) and (orientation: landscape) { .queue-wrap, .player-tools { display: none; } }
+
+/* ================= v40: คิวเป็นคอลัมน์ข้างวิดีโอบนจอใหญ่ (เห็นทันที ไม่ต้องเลื่อน) ================= */
+@media (min-width: 1000px) {
+  .modal-card.has-queue { width: min(1360px, 96vw); display: grid; grid-template-columns: minmax(0, 1fr) 330px; column-gap: 6px; align-content: start; }
+  .modal-card.has-queue .stage, .modal-card.has-queue .now-title, .modal-card.has-queue .player-tools { grid-column: 1; }
+  .modal-card.has-queue .queue-wrap { grid-column: 2; grid-row: 1 / 4; margin: 12px 14px 0 0; display: flex; flex-direction: column; min-height: 0; }
+  .modal-card.has-queue .queue-list { max-height: none; flex: 1; overflow-y: auto; }
+  .modal-card.has-queue .related-wrap { grid-column: 1 / -1; }
+}
+
+/* ================= v41: จอใหญ่ — แถบแท็บ sticky ลอยทับเนื้อหา ~64px แรกของทุกแท็บ (quirk layout เดิม
+   ทำให้ปุ่ม วิดีโอ/เพลย์ลิสต์ ในคลังถูกบังบน desktop มาตลอด) → ดันเนื้อหาให้เริ่มใต้แถบแท็บ ================= */
+@media (min-width: 760px) { .wrap { padding-top: 78px; } }
