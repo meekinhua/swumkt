@@ -1,4 +1,4 @@
-# meekinTube — Developer Handoff Guide
+﻿# meekinTube — Developer Handoff Guide
 
 > สำหรับ dev agent ที่จะนำไปติดตั้ง/พัฒนาต่อบน Emergent platform
 > A self-hosted PWA to **search, watch, and download** YouTube / Facebook videos,
@@ -205,3 +205,55 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
 3. Tap a result → it streams + saves to library; `/api/files` shows it briefly then it's purged.
 4. Library tab plays the saved video offline (stop the server → still plays).
 5. (mobile + HTTPS) "Add to Home Screen" → opens standalone → lock screen shows title/artwork + prev/next.
+
+---
+
+## 12. What's new in v33-v34 (2026-06-12)
+
+- **Watch/Download mode toggle** (`#modeSwitch` in the fixed topbar, icon-only labels on mobile; persisted in `localStorage.mkt_mode`, default = watch).
+  Watch mode: tapping an online video card opens the **YouTube embed player immediately** (autoplay, no
+  download, no server job) via `playEmbed()`. Download mode = old behavior (`playFromUrl` stream+store).
+- **Playlists accept remote items**: the `+` button now also appears on search-result / home-feed cards and
+  on related cards in the player. Playlist `items[]` entries are now either a string (device id, legacy) or
+  `{remote:true, id, title, url}`. Remote items render with an `i.ytimg.com` thumbnail + "YouTube" badge and
+  play according to the current mode. Mixed queues use `setQueueMixed()`/`playEntry()`.
+- **Background audio (Spotify-style)**: on `visibilitychange→hidden` while our player is playing a local
+  blob, playback hands off to a hidden `<audio>` (`bgAudio`) at the same time position (audio keeps playing
+  with the screen off / app in background); on return it hands back to the `<video>` in sync. Media Session
+  handlers (`play/pause/seekto`, position state) target `activeMedia()`. Auto-next from the queue keeps
+  working in background (`bgAudio.ended` → `playAdjacent(1)`; `openPlayerSrc` routes to `bgAudio` while
+  hidden). `bgAudio` is unlocked on the first user gesture (silent WAV) so iOS allows `play()` later.
+  Note: does NOT apply to the YouTube embed (watch mode) — YouTube pauses embeds in background by design.
+
+## 13. What's new in v35 (2026-06-12)
+
+- **Fix: search autocomplete hidden behind the tab bar** — `.topbar` z-index raised 60 → 70
+  (the sticky `.tabs` is also z-60 and later in the DOM, so it painted over the dropdown).
+- **Mobile search UX**: input font-size 16px everywhere (prevents iOS focus-zoom); under 760px the
+  search pill grows to 46px tall, brand logo shrinks, bigger suggest items.
+- **TV / keyboard support (whole app)**: every card (`.cell`, `.rcard`) is `tabindex="0"` with a strong
+  red focus outline; Enter/Space activates; Arrow keys move focus inside a grid (column count detected
+  from layout; moves past the grid edge are left to the browser's native spatial navigation, which TV
+  browsers provide). TV remote Back (webOS 461 / Tizen 10009) closes the player like Escape.
+- **Watch history** (`localStorage.mkt_history`, newest-first, YouTube ids only, cap 200) recorded by
+  `histAdd()` in all three play paths: watch-mode embed, stream-while-download, and library playback.
+- **Home feed recommendation mix**: seeds = recent watch history interleaved with downloaded library ids
+  (deduped, max 6 = `/api/home` limit). Watch-only users now get recommendations even with an empty
+  library; results filter out items already in the library or used as seeds.
+
+## 14. What's new in v36-v37 (2026-06-12)
+
+- **Watch mode now auto-falls back to stream when the YouTube embed can't play.** Many label MVs
+  (Thai music labels especially) either disable embedding or let the embed load but **block playback
+  in embedded players** ("Video unavailable"). Two safety nets:
+  1. `GET /api/embedok?id=` (new server endpoint) probes YouTube oEmbed before embedding —
+     401/403 = embedding disabled, 404 = gone → skip the embed and go straight to `playFromUrl()`.
+  2. The embed iframe is created with `enablejsapi=1`; after load we postMessage the widget
+     `{"event":"listening"}` handshake and listen for `onError` events (`armEmbedFallback`) —
+     covers copyright-holder playback blocks that pass oEmbed. On error → `playFromUrl()` (the
+     classic download+stream path, which plays everything yt-dlp can).
+  So watch mode = instant YouTube player when allowed, seamless stream fallback when not.
+
+  **v37 refinement:** the oEmbed probe no longer blocks — watch mode embeds INSTANTLY (old behavior,
+  ~0ms) and the probe runs in parallel; whichever signal arrives first (probe not-ok, or player
+  onError) triggers the one-shot fallback to `playFromUrl()` (guarded by `embedFb.token`).

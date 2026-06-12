@@ -1,3 +1,34 @@
+## 2026-06-12 — meekintube updated v31 → v37 (drop-in from external agent)
+
+User uploaded `meekintube_v37_emergent.zip` (built by an external agent) — a drop-in
+replacement for `backend/meekintube_app/`. Paths already rewritten for `/api/meekintube/`;
+FastAPI mount in server.py unchanged (no edits needed).
+
+### Changes (v33–v37)
+- v33: Watch/Download mode toggle (watch = instant YouTube embed; download = stream+store).
+  Background audio handoff `<video>`→hidden `<audio>` + Media Session queue.
+- v34/v35: mode switch moved into fixed topbar; z-index fix; bigger mobile search;
+  TV/keyboard nav; watch history in localStorage.
+- v36/v37: watch mode embeds instantly with auto-fallback to download+stream when embed
+  is blocked — via NEW endpoint `GET /api/embedok?id=` (oEmbed probe) + iframe onError.
+
+### Deploy actions taken (preview)
+- Replaced `/app/backend/meekintube_app/` with v37 folder (video staging dir untouched).
+- **Reinstalled ffmpeg** — this is a FORKED job on a fresh pod, so the previous apt install
+  did NOT persist (`which ffmpeg` was empty, config reported `ffmpeg:false`). `apt-get install
+  ffmpeg` restored it. yt-dlp (pip/venv) + node (/usr/bin) persisted fine.
+
+### Verified
+- `/api/meekintube/api/config` → `{ffmpeg:true, ytdlp:true}`.
+- NEW `/api/meekintube/api/embedok?id=jNQXAC9IVRw` → `{ok:true}`.
+- index/static/manifest/logo all 200; live yt-dlp search returned real results.
+- Browser: v37 UI renders with the new topbar Watch/Download mode toggle (red "ดู" + "โหลด").
+
+### Production note (swumkt.org)
+- REDEPLOY needed to ship v37 files. ffmpeg + yt-dlp (+ ideally node) MUST be installed on the
+  production host — preview installs do not persist to a fresh production deploy.
+
+
 ## 2026-06-10 — meekintube (YouTube/FB downloader) mounted at /api/meekintube/
 
 User provided meekintube.zip — a Flask PWA that wraps yt-dlp + ffmpeg to download

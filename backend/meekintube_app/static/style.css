@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #0f0f0f;
   --surface: #1b1b1b;
   --surface2: #272727;
@@ -29,7 +29,7 @@ h2, h3 { margin: 0; }
 
 /* ================= Topbar ================= */
 .topbar {
-  position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h); z-index: 60;
+  position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h); z-index: 70;  /* สูงกว่า .tabs ไม่งั้นแถบแท็บบัง autocomplete */
   display: flex; align-items: center; gap: 10px; padding: 0 12px;
   background: rgba(15,15,15,.92); backdrop-filter: saturate(1.4) blur(8px);
   border-bottom: 1px solid var(--line);
@@ -417,3 +417,38 @@ textarea:focus { border-color: var(--red); }
 .si-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-empty { color: var(--muted); padding: 18px; text-align: center; font-size: 14px; }
 .sheet-new { width: 100%; justify-content: center; }
+
+/* ================= โหมดดู/โหลด + เพลย์ลิสต์จากผลค้นหา ================= */
+.modesw { flex: 0 0 auto; }
+@media (max-width: 759px) { .mseg .ml { display: none; } .mseg { padding: 7px 9px; } }
+.mseg { border: 0; background: transparent; color: var(--muted); padding: 7px 14px; border-radius: 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.mseg .ic { width: 15px; height: 15px; }
+.mseg.active { background: var(--red); color: #fff; font-weight: 600; }
+.rthumb .addpl { width: 28px; height: 28px; top: 5px; left: 5px; }
+.rthumb .addpl .ic { width: 15px; height: 15px; }
+@media (min-width: 760px) { .rcard .addpl { opacity: 0; } .rcard:hover .addpl { opacity: 1; } }
+.badge.ytb { background: rgba(204,0,0,.88); font-weight: 600; }
+
+/* ================= v35: ค้นหา (มือถือ) + ประวัติ/ทีวี ================= */
+/* >=16px กัน iOS ซูมหน้าจอเองตอนโฟกัสช่องค้นหา */
+.searchpill input { font-size: 16px; }
+@media (max-width: 759px) {
+  .topbar { gap: 6px; padding: 0 8px; }
+  .brand { padding: 4px 0; }
+  .brand-img { height: 28px; max-width: 88px; }
+  .searchbox { max-width: none; }
+  .searchpill { height: 46px; }
+  .searchpill input { height: 46px; padding: 0 14px; }
+  .searchpill button { width: 52px; }
+  .suggest { top: 52px; }
+  .suggest .sg { padding: 13px 14px; font-size: 15px; }
+}
+/* การ์ดโฟกัสได้ด้วยรีโมตทีวี/คีย์บอร์ด — กรอบแดงชัดๆ */
+.cell:focus, .rcard:focus { outline: none; }
+.cell:focus .thumb, .rcard:focus .rthumb { outline: 3px solid var(--red); outline-offset: 2px; }
+.cell:focus .cap, .rcard:focus .rcap { color: #fff; }
+.tab:focus-visible, .mseg:focus-visible, .iconbtn:focus-visible, .chip:focus-visible,
+.primary:focus-visible, .cbtn:focus-visible, .sheet-item:focus-visible, .lt:focus-visible,
+.searchpill input:focus-visible, .searchpill button:focus-visible {
+  outline: 3px solid var(--red); outline-offset: 2px;
+}

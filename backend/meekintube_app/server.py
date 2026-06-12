@@ -440,6 +440,25 @@ def api_suggest():
         return jsonify([])
 
 
+@app.route("/api/embedok")
+def api_embedok():
+    # เช็คว่าคลิปเปิดให้ฝัง (embed) นอก YouTube ไหม — MV ค่ายเพลงจำนวนมากปิดไว้
+    # ใช้ oEmbed: 200 = ฝังได้, 401/403 = ปิดการฝัง/ส่วนตัว, 404 = ไม่มีคลิป
+    vid = (request.args.get("id") or "").strip()
+    if not re.fullmatch(r"[\w-]{11}", vid):
+        return jsonify({"ok": False, "code": "bad-id"})
+    try:
+        url = ("https://www.youtube.com/oembed?format=json&url="
+               + urllib.parse.quote("https://www.youtube.com/watch?v=" + vid, safe=""))
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        urllib.request.urlopen(req, timeout=6).read()
+        return jsonify({"ok": True})
+    except urllib.error.HTTPError as e:
+        return jsonify({"ok": False, "code": e.code})
+    except Exception:
+        return jsonify({"ok": True})   # เช็คไม่ได้ (เน็ต/timeout) → ปล่อยให้ลองฝังตามปกติ
+
+
 @app.route("/api/download", methods=["POST"])
 def api_download():
     data = request.get_json(force=True)
