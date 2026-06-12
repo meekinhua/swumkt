@@ -1,4 +1,4 @@
-# meekintube update v31 → v37 — deploy notes for the dev agent
+﻿# meekintube update v31 → v38 — deploy notes for the dev agent
 
 This folder is a drop-in replacement for `/app/backend/meekintube_app/` in the swumkt repo
 (already pushed to `main` as commits e4faaff, 6a3da88, c4f5784, 397b933, 432d3dc — if the repo is
@@ -23,6 +23,10 @@ All paths in this build are already rewritten for the mount at **`/api/meekintub
   **`GET /api/embedok?id=`** oEmbed probe (NEW endpoint in `server.py`) plus an `enablejsapi`
   `onError` listener on the embed iframe — either signal triggers a one-shot `playFromUrl()`.
 
+
+- **v38** — Full-screen mobile search overlay; now-playing queue UI in the player with prev/next
+  track buttons; Spotify-style autoplay toggle (queue ends -> keep playing related videos
+  endlessly). Frontend-only; no new endpoints. See DEV_GUIDE.md section 15.
 Full details: `DEV_GUIDE.md` §12–§14.
 
 ## Deploy checklist (production swumkt.org)
@@ -33,6 +37,6 @@ Full details: `DEV_GUIDE.md` §12–§14.
 3. **`ffmpeg` and `yt-dlp` (and ideally `node`) must be installed on the production host** —
    the earlier installs were preview-only (apt/pip do not persist a fresh deploy).
    Without them: search and the new embed-fallback streaming both fail.
-4. After deploy verify: `/api/meekintube/` loads and the page footer shows **v37**;
+4. After deploy verify: `/api/meekintube/` loads and the page footer shows **v38**;
    `/api/meekintube/api/config` → `{"ffmpeg": true, "ytdlp": true}`;
    `/api/meekintube/api/embedok?id=jNQXAC9IVRw` → `{"ok": true}`.
