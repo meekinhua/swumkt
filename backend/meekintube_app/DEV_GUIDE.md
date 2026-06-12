@@ -289,3 +289,11 @@ Background-audio hardening (the lock-screen "it pauses, must press play" complai
   after every video→audio switch so the lock screen keeps showing title/artwork and ⏮⏭ buttons.
 - NOTE: lock-screen prev/next (Media Session) requires a **secure context** — works on the HTTPS
   Emergent URL or localhost, NOT on plain LAN http (the browser hides the API entirely there).
+
+## 17. What's new in v40 (2026-06-12)
+
+- **Queue sidebar on wide screens**: at >=1000px, when a queue exists (`.modal-card.has-queue`) the
+  player modal becomes a 2-column grid — video left, "now playing" queue right (full height of the
+  stage, internally scrollable), related videos full-width below. Narrow screens keep the stacked
+  layout (queue under the title). This was added because the queue panel sat below the fold on
+  desktop/iPad and users could not find it.

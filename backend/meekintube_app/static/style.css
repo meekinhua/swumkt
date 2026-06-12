@@ -484,3 +484,12 @@ textarea:focus { border-color: var(--red); }
 #btnPrev, #btnNext { display: none; }
 .modal-card.has-queue #btnPrev, .modal-card.has-queue #btnNext { display: flex; }
 @media (max-height: 500px) and (orientation: landscape) { .queue-wrap, .player-tools { display: none; } }
+
+/* ================= v40: คิวเป็นคอลัมน์ข้างวิดีโอบนจอใหญ่ (เห็นทันที ไม่ต้องเลื่อน) ================= */
+@media (min-width: 1000px) {
+  .modal-card.has-queue { width: min(1360px, 96vw); display: grid; grid-template-columns: minmax(0, 1fr) 330px; column-gap: 6px; align-content: start; }
+  .modal-card.has-queue .stage, .modal-card.has-queue .now-title, .modal-card.has-queue .player-tools { grid-column: 1; }
+  .modal-card.has-queue .queue-wrap { grid-column: 2; grid-row: 1 / 4; margin: 12px 14px 0 0; display: flex; flex-direction: column; min-height: 0; }
+  .modal-card.has-queue .queue-list { max-height: none; flex: 1; overflow-y: auto; }
+  .modal-card.has-queue .related-wrap { grid-column: 1 / -1; }
+}
