@@ -257,3 +257,18 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
   **v37 refinement:** the oEmbed probe no longer blocks — watch mode embeds INSTANTLY (old behavior,
   ~0ms) and the probe runs in parallel; whichever signal arrives first (probe not-ok, or player
   onError) triggers the one-shot fallback to `playFromUrl()` (guarded by `embedFb.token`).
+## 15. What's new in v38 (2026-06-12)
+
+- **Full-screen mobile search** (`#searchOverlay`): on screens <760px, focusing the topbar search
+  opens a full-screen overlay with a 48px input and large tap-friendly suggestion rows
+  (same `/api/suggest` source). Pick/submit closes the overlay and runs the normal search.
+- **Now-playing queue UI in the player** (`#queueWrap`, rendered by `renderQueue()` from
+  `pmQueue`/`pmIndex`, refreshed via `loadRelated()` which every play path passes through):
+  shows position (n / total), thumbnails, highlights the current item, tap any row to jump.
+  Prev/Next track buttons (`#btnPrev`/`#btnNext`) appear in the control row when a queue exists.
+- **Spotify-style autoplay (toggle in player, persisted `localStorage.mkt_autonext`, default ON)**:
+  when the current clip ends AND the queue is finished, `autoPlayNext()` fetches `/api/related`
+  for the clip that just played (`nowPlayingId`), picks the first item not in watch history and
+  not already queued, appends and plays it — endless radio; user skips with Next. Wired into all
+  three end-of-clip signals: `vid` `ended`, `bgAudio` `ended`, and the YouTube embed playerState-0
+  postMessage (deduped per playToken via `embEndedToken`).
