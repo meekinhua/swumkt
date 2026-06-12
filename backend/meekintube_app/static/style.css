@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #0f0f0f;
   --surface: #1b1b1b;
   --surface2: #272727;
@@ -419,7 +419,8 @@ textarea:focus { border-color: var(--red); }
 .sheet-new { width: 100%; justify-content: center; }
 
 /* ================= โหมดดู/โหลด + เพลย์ลิสต์จากผลค้นหา ================= */
-.home-toolbar { display: flex; align-items: center; justify-content: flex-end; margin: 0 0 12px; }
+.modesw { flex: 0 0 auto; }
+@media (max-width: 759px) { .mseg .ml { display: none; } .mseg { padding: 7px 9px; } }
 .mseg { border: 0; background: transparent; color: var(--muted); padding: 7px 14px; border-radius: 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .mseg .ic { width: 15px; height: 15px; }
 .mseg.active { background: var(--red); color: #fff; font-weight: 600; }

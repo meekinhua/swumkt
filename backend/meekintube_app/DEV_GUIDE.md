@@ -1,4 +1,4 @@
-# meekinTube — Developer Handoff Guide
+﻿# meekinTube — Developer Handoff Guide
 
 > สำหรับ dev agent ที่จะนำไปติดตั้ง/พัฒนาต่อบน Emergent platform
 > A self-hosted PWA to **search, watch, and download** YouTube / Facebook videos,
@@ -208,9 +208,9 @@ application = DispatcherMiddleware(NotFound(), {PREFIX: app})
 
 ---
 
-## 12. What's new in v33 (2026-06-12)
+## 12. What's new in v33-v34 (2026-06-12)
 
-- **Watch/Download mode toggle** (`#modeSwitch`, home tab; persisted in `localStorage.mkt_mode`, default = watch).
+- **Watch/Download mode toggle** (`#modeSwitch` in the fixed topbar, icon-only labels on mobile; persisted in `localStorage.mkt_mode`, default = watch).
   Watch mode: tapping an online video card opens the **YouTube embed player immediately** (autoplay, no
   download, no server job) via `playEmbed()`. Download mode = old behavior (`playFromUrl` stream+store).
 - **Playlists accept remote items**: the `+` button now also appears on search-result / home-feed cards and
