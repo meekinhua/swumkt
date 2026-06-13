@@ -30,7 +30,9 @@ $$("#modeSwitch .mseg").forEach((b) => b.addEventListener("click", () => {
 }));
 applyMode();
 // โหมดดู = เปิด player ของ YouTube/FB เล่นทันที (ไม่ดาวน์โหลด) / โหมดโหลด = โหลดเก็บ + สตรีมระหว่างโหลด
+// แต่ถ้าจอดับ/อยู่ background: embed เล่นไม่ได้ (YouTube หยุดเอง) → โหลดแล้วเล่นเสียงผ่าน bgAudio แทน
 function playRemote(url, name) {
+  if (bgActive || document.hidden) { playRemoteInBg(url, name); return; }
   if (appMode === "watch") playEmbed(url, name);
   else playFromUrl(url, name);
 }
@@ -46,7 +48,7 @@ function histAdd(id, title) {
 }
 
 // ---------- service worker ----------
-const APP_VER = "v42";
+const APP_VER = "v43";
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(BASE + "sw.js", { scope: BASE }).catch(() => {});
   // มีเวอร์ชันใหม่ activate (claim) → รีโหลดให้ใช้โค้ดใหม่ทันที (สำคัญบน iOS ที่อัปเดตยาก)
@@ -944,6 +946,7 @@ function playEmbed(url, name) {
   document.body.style.overflow = "hidden";
   const id = ytId(url);
   if (!showEmbed(url, name, true)) { playFromUrl(url, name); return; }   // ไม่ใช่ลิงก์ YT/FB → สตรีมตามปกติ
+  embState = -1; embCurTime = 0;
   histAdd(id, name);
   armEmbedFallback(url, name, token);
   // เช็คเงียบๆ แบบคู่ขนาน (ไม่หน่วงการเปิด player): ถ้า YouTube ตอบว่าคลิปนี้ปิดการฝัง
@@ -969,6 +972,8 @@ function armEmbedFallback(url, name, token) {
   });
 }
 let embEndedToken = -1;   // กัน state-0 มาซ้ำหลายข้อความแล้วข้ามคิวเกิน 1 ขั้น
+let embState = -1;        // playerState ล่าสุดของ embed (1=เล่น, 2=หยุด, 3=บัฟเฟอร์)
+let embCurTime = 0;       // ตำแหน่งล่าสุดของ embed (วินาที) — ใช้เล่นต่อจากเดิมตอนจอดับ
 window.addEventListener("message", (e) => {
   let host = "";
   try { host = new URL(e.origin).hostname; } catch { return; }
@@ -979,9 +984,11 @@ window.addEventListener("message", (e) => {
     if (serverOnline) playFromUrl(fb.url, fb.name);   // เล่นผ่าน YouTube ไม่ได้ → โหลด+สตรีมให้แทน
     return;
   }
+  if (d.event === "infoDelivery" && d.info && typeof d.info.currentTime === "number") embCurTime = d.info.currentTime;
   // embed เล่นจบ (playerState 0) → เล่นรายการถัดไปในคิว / autoplay วิดีโอแนะนำต่อ
   const st = d.event === "onStateChange" ? +d.info
     : (d.event === "infoDelivery" && d.info && d.info.playerState !== undefined ? +d.info.playerState : -1);
+  if (st >= 0) embState = st;
   if (st === 0 && embEndedToken !== playToken && !modal.hidden && stage.classList.contains("embedding")) {
     embEndedToken = playToken;
     if (!endOfQueue()) playAdjacent(1);
@@ -1221,16 +1228,43 @@ vid.addEventListener("timeupdate", () => { if (!vid.paused) lastPlayingTs = Date
 function activeMedia() { return bgActive ? bgAudio : vid; }
 function stopBgAudio() {
   bgActive = false;
+  keepAliveOff();
   try { bgAudio.pause(); } catch {}
   bgAudio.removeAttribute("src");
 }
-// ปลดล็อก bgAudio ด้วย gesture แรกของผู้ใช้ (ไม่งั้น iOS ไม่ยอม play() ตอนแอปถูกพับ)
+// ----- เสียงเงียบวนลูป: กันเบราว์เซอร์/iOS หลับระหว่างรอโหลดเพลงถัดไปตอนจอดับ -----
+function silenceWavUrl(seconds) {
+  const rate = 8000, n = Math.floor(rate * seconds);
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVEfmt ");
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  w(36, "data"); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);   // ความเงียบ (8-bit center)
+  return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+}
+const kaAudio = new Audio();
+kaAudio.loop = true;
+let kaUrl = null;
+function keepAliveOn() {
+  try {
+    if (!kaUrl) kaUrl = silenceWavUrl(0.7);
+    if (kaAudio.src !== kaUrl) kaAudio.src = kaUrl;
+    kaAudio.play().catch(() => {});
+  } catch {}
+}
+function keepAliveOff() { try { kaAudio.pause(); } catch {} }
+// ปลดล็อก bgAudio + kaAudio ด้วย gesture แรกของผู้ใช้ (ไม่งั้น iOS ไม่ยอม play() ตอนแอปถูกพับ)
 const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 function unlockBgAudio() {
   document.removeEventListener("pointerdown", unlockBgAudio, true);
   try { bgAudio.src = SILENT_WAV; bgAudio.play().then(() => { bgAudio.pause(); bgAudio.removeAttribute("src"); }).catch(() => {}); } catch {}
+  try { kaAudio.muted = true; keepAliveOn(); setTimeout(() => { keepAliveOff(); kaAudio.muted = false; }, 150); } catch {}
 }
 document.addEventListener("pointerdown", unlockBgAudio, true);
+bgAudio.addEventListener("playing", keepAliveOff);   // เสียงจริงมาแล้ว → ปิดเสียงเงียบ
 // เตรียมไฟล์เดียวกันใส่ bgAudio ไว้ล่วงหน้า "ตั้งแต่ตอนผู้ใช้กดเล่น" (ยังอยู่ใน gesture ที่ iOS ยอม)
 // → ตอนจอดับแค่สั่ง play ต่อ ไม่ต้องโหลด src ใหม่ (ลดโอกาสโดน iOS pause ทับแล้วต้องกดเอง)
 function armBgAudio(src) {
@@ -1239,7 +1273,19 @@ function armBgAudio(src) {
   try { bgAudio.load(); } catch {}
 }
 function toBgAudio() {
-  if (bgActive || modal.hidden || stage.classList.contains("embedding")) return;
+  if (bgActive || modal.hidden) return;
+  if (stage.classList.contains("embedding")) {
+    // กำลังเล่นผ่าน YouTube embed → YouTube จะหยุดเองตอนจอดับ:
+    // สลับแทร็กนี้มาโหลด+เล่นเสียงต่อจากตำแหน่งเดิม (แล้วคิว/autoplay จะวิ่งต่อแบบ background ได้)
+    if ((embState === 1 || embState === 3) && serverOnline) {
+      const it = pmIndex >= 0 ? pmQueue[pmIndex] : null;
+      const url = it && it.kind === "remote" ? it.ref
+        : (nowPlayingId ? "https://www.youtube.com/watch?v=" + nowPlayingId : null);
+      const name = (it && it.name) || nowTitle.textContent;
+      if (url) playRemoteInBg(url, name, embCurTime);
+    }
+    return;
+  }
   const src = vid.currentSrc || vid.src;
   if (!src) return;
   // นับว่า "กำลังเล่น" ถ้าเพิ่งเล่นอยู่เมื่อกี้ (เบราว์เซอร์อาจ pause วิดีโอก่อน event นี้มาถึง)
@@ -1275,10 +1321,81 @@ bgAudio.addEventListener("seeked", updatePositionState);
 // จบคลิประหว่างอยู่ background → เล่นถัดไปในคิว / autoplay แนะนำต่อ
 bgAudio.addEventListener("ended", () => {
   if (!bgActive) { stopBgAudio(); return; }
+  keepAliveOn();   // กันเบราว์เซอร์หลับระหว่างหา/โหลดเพลงถัดไป
   if (!endOfQueue()) playAdjacent(1);
   else if (autoNext) autoPlayNext();
   else stopBgAudio();
 });
+
+// ===== เล่นรายการ YouTube ตอนจอดับ: โหลดเป็นไฟล์ (ผ่านเครื่องจักรเดิม → เก็บเข้าคลังด้วย)
+// แล้วเล่นเสียงเต็มไฟล์ผ่าน bgAudio — ระหว่างรอเปิดเสียงเงียบกันเครื่องหลับ =====
+async function playRemoteInBg(url, name, startAt) {
+  const token = ++playToken;
+  bgActive = true;
+  keepAliveOn();
+  stopStream(vid); revokeBlobUrl(); clearEmbed();
+  vid.pause(); vid.removeAttribute("src"); vid.load(); vid.dataset.rel = "";
+  try { bgAudio.pause(); } catch {}
+  bgAudio.removeAttribute("src");
+  nowTitle.textContent = name || "";
+  modal.hidden = false;
+  showLoading("จอปิดอยู่ — กำลังโหลดเพื่อเล่นเสียงต่อ…");
+  const id = ytId(url);
+  histAdd(id, name);
+  setNowPlayingRemote(name, id);
+  refreshMediaSession();
+  loadRelated(url);   // อัปเดต nowPlayingId + คิว (ให้ autoplay หาเพลงต่อได้)
+  if (!id) { bgSkipNext(token); return; }
+  if (!(await LibDB.has(id))) {
+    const ids = await startDownload([url], { live: false });
+    if (token !== playToken) return;
+    if (!ids.length) { bgSkipNext(token); return; }
+    // pollJobs จะ ingest เข้า IndexedDB เองเมื่อโหลดเสร็จ — รอจนมีในคลัง (สูงสุด ~4 นาที)
+    for (let i = 0; i < 240; i++) {
+      if (token !== playToken) return;
+      if (await LibDB.has(id)) break;
+      if (kaAudio.paused) keepAliveOn();   // เสียงเงียบต้องติดตลอดช่วงรอ ไม่งั้น iOS หลับกลางคัน
+      try {
+        const j = (await (await fetch(BASE + "api/status")).json()).find((x) => x.url === url || ytId(x.rel || "") === id);
+        if (j && j.state === "error") { bgSkipNext(token); return; }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  if (token !== playToken) return;
+  const blob = await LibDB.getBlob(id);
+  if (!blob) { bgSkipNext(token); return; }
+  bgFails = 0;   // ได้ไฟล์แล้ว — รีเซ็ตตัวนับล้มเหลว
+  const u = URL.createObjectURL(blob);
+  curBlobUrl = u;
+  vid.src = u;            // เผื่อกลับมาเปิดจอ → toVideo() เล่นภาพต่อจากตำแหน่งเดียวกัน
+  if (bgActive || document.hidden) {
+    bgAudio.src = u;
+    if (startAt > 0) { try { bgAudio.currentTime = startAt; } catch {} }
+    bgAudio.play().catch(() => {});
+    setTimeout(() => { if (token === playToken && bgActive && bgAudio.paused) bgAudio.play().catch(() => {}); }, 600);
+  } else {
+    // ผู้ใช้กลับมาเปิดจอระหว่างรอโหลด → เล่นเป็นวิดีโอตามปกติ
+    keepAliveOff();
+    if (startAt > 0) { try { vid.currentTime = startAt; } catch {} }
+    vid.play().catch(() => {});
+    armBgAudio(u);
+  }
+  hideLoading();
+}
+let bgFails = 0;   // กันวนไม่รู้จบเมื่อคลิปแนะนำโหลดไม่ได้ติดกันหลายตัว
+function bgSkipNext(token) {
+  if (token !== playToken) return;
+  bgFails++;
+  if (bgFails < 4) {
+    if (pmIndex >= 0 && pmIndex < pmQueue.length - 1) { playAdjacent(1); return; }
+    // สุดคิวแล้ว → ลองหาเพลงแนะนำตัวอื่นต่อ (ตัวที่พังถูกบันทึกในประวัติ+คิวแล้ว จะไม่ถูกหยิบซ้ำ)
+    if (autoNext && serverOnline && nowPlayingId) { keepAliveOn(); autoPlayNext(); return; }
+  }
+  keepAliveOff();
+  stopBgAudio();
+  showLoading("เล่นต่อไม่ได้ — กลับเข้าแอปแล้วเลือกใหม่");
+}
 
 function closePlayer() {
   playToken++;   // ยกเลิก polling ที่ค้างอยู่

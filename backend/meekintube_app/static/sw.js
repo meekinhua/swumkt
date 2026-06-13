@@ -1,5 +1,5 @@
 ﻿// Service worker — แคช "เปลือกแอป" (UI) ให้เปิดแบบออฟไลน์ได้ (mounted under a sub-path)
-const CACHE = "vdl-shell-v42";
+const CACHE = "vdl-shell-v43";
 const BASE = new URL(self.registration.scope).pathname;  // e.g. "/api/meekintube/"
 const SHELL = [
   BASE,
