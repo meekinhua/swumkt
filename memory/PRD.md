@@ -219,7 +219,7 @@ alumni_jobs: {
 
 ## Embedded Sub-Apps (Jun 2026)
 - **YOLO Detect PWA** — static-only, mounted at `/api/yolo/` (in-browser ONNX/OpenCV). Dir: `backend/yolo_static/`.
-- **meekintube** (YouTube/FB downloader) — Flask app mounted at `/api/meekintube/` via `a2wsgi.WSGIMiddleware`. Public, no auth. Dir: `backend/meekintube_app/`. Frontend `/meekintube` redirects to it. Requires `ffmpeg` + `yt-dlp` on host (PREVIEW-ONLY installs — production redeploy must reinstall).
+- **meekinTube** (YouTube-style PWA) — **static** PWA mounted at `/api/meekintube/` via `StaticFiles(html=True)`. Public, no auth. Dir: `backend/meekintube_static/`. Frontend `/meekintube` redirects to it. Plays via YouTube embed; search/feed via public Invidious/Piped (client-side). No backend/ffmpeg/yt-dlp needed. (Replaced the old Flask downloader on 2026-06-14.)
 
 ## 3rd Party Integrations
 - Emergent LLM Key → Gemini 2.5 Flash (`gemini-2.5-flash`) via `emergentintegrations` (text/translate/summary)

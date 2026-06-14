@@ -1,8 +1,0 @@
-# Python dependencies (ติดตั้งด้วย: pip install -r requirements.txt)
-Flask>=2.2
-send2trash>=1.8
-
-# ---- เครื่องมือระบบ (ต้องมีใน PATH — ไม่ใช่ pip) ----
-#   yt-dlp   : pip install -U yt-dlp   (หรือ pkg install yt-dlp)
-#   ffmpeg   : ติดตั้งผ่าน apt/brew/winget/pkg  (จำเป็นสำหรับ merge + (ฝั่ง dev) thumbnail)
-#   node     : Node.js LTS  — yt-dlp ใช้เป็น JS runtime ถอดรหัส YouTube (ไม่มี = หลายคลิปโหลดไม่ได้)

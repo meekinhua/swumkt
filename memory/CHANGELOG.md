@@ -1,3 +1,31 @@
+## 2026-06-14 — meekintube REPLACED with mytube-pwa (static), rebranded "meekinTube"
+
+User asked to remove the old meekintube (Flask downloader) entirely and replace it with
+`mytube-pwa.zip` — a YouTube-style **static PWA** (HTML/CSS/JS only, no backend, no yt-dlp/
+ffmpeg). Plays via YouTube embed player; search/feed pull from public Invidious/Piped
+instances client-side. Also rebranded the UI name "MyTube" → "meekinTube".
+
+### Changes
+- **Removed**: `backend/meekintube_app/` (Flask), `meekintube_video/`, the a2wsgi WSGI mount
+  block + PATH/yt-dlp/ffmpeg logic in `server.py`. No more ffmpeg dependency (the recurring
+  preview-pod ffmpeg-loss problem is now gone).
+- **Added**: `backend/meekintube_static/` (index.html, sw.js, manifest, icons). All paths are
+  relative, so served via `StaticFiles(html=True)` mounted at `/api/meekintube` (same pattern
+  as YOLO). Route + frontend `/meekintube` redirect unchanged.
+- **Rebrand** MyTube → meekinTube: `<title>`, apple-mobile-web-app-title meta, brand span
+  (`meekin<sup>Tube</sup>`), share title, manifest name/short_name. (Internal `mytube_*`
+  localStorage keys left as-is — not user-visible.)
+
+### Verified
+- `/api/meekintube/` + index/manifest/sw/icons → 200 (correct MIME); served `<title>` = meekinTube.
+- Old Flask endpoint `/api/meekintube/api/config` → 404 (correctly removed).
+- Browser: full YouTube-style UI renders with live trending feed (real data via Invidious/Piped),
+  sidebar (หน้าแรก/Shorts/การติดตาม/ประวัติ/เพลย์ลิสต์/ดูภายหลัง/สำรวจ), category chips, brand "meekinTube".
+
+### Production note (swumkt.org)
+- REDEPLOY needed. No host packages required anymore (pure static) — simpler than before.
+
+
 ## 2026-06-12 — meekintube updated v37 → v42 (drop-in) + ffmpeg recurring-loss note
 
 User uploaded `meekintube_v42_emergent.zip`. Drop-in replacement; mount unchanged; no new
