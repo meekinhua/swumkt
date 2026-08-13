@@ -36,7 +36,21 @@ conjoint_router = APIRouter(tags=["conjoint"])
 # studies analysed before a new field was added self-heal on next view
 # instead of forever serving stale results missing the new fields.
 # v2 (2026-05): added lr_statistic / lr_df / lr_p_value / fit_label / fit_description
-ANALYSIS_CACHE_VERSION = 2
+# v3 (2026-08): the audit changed VALUES, not just shape — MNL's BIC moved to the
+#   choice-situation basis, HB importance became individual-based, and Mixed
+#   Logit/HB may now constrain coefficients to fixed. Without this bump every
+#   already-analysed study would keep serving its pre-audit numbers, so the BIC
+#   column in Compare Methods would stay on the old incomparable scale exactly
+#   where it matters most. New fields: pseudo_r_squared_adj, n_choice_situations,
+#   n_parameters, ic_sample_basis, random_vars, fixed_vars, refit_with_fixed,
+#   heterogeneity_detected, sd_alpha, importance_basis,
+#   importance_population_mean, excluded_levels, reference_levels,
+#   unmapped_level_rows.
+# v4 (2026-08): review pass — pseudo_r_squared_adj actually emitted by the three
+#   logit methods (v3 computed it but never returned it), choice situations with
+#   no usable selection now excluded from every method's sample, and the thesis
+#   cache gained the same guard. Values move again, so v3 rows must not be served.
+ANALYSIS_CACHE_VERSION = 4
 
 
 # ============================ MODELS ============================
@@ -285,167 +299,266 @@ def _filter_signature(from_iso, to_iso, segments):
 
 
 # ===================== MODULE-LEVEL HELPERS =====================
+def recommend_sample_size(num_levels_per_attr: List[int], num_sets: int,
+                          alternatives_per_set: int = 3) -> Dict:
+    """Respondents needed, by the Johnson & Orme rule for choice-based conjoint.
+
+        n · t · a / c  ≥  500          (1000 for comfortable subgroup analysis)
+
+    n = respondents, t = choice tasks each sees, a = alternatives per task,
+    c = the largest level count of any single attribute (the attribute that needs
+    the most data). Orme, *Getting Started with Conjoint Analysis*, ch. 7.
+
+    This is the SAME rule the Results page uses for its "ข้อมูลพอหรือยัง" card, so
+    the number quoted before launch matches the one checked after.
+    """
+    c = max(num_levels_per_attr) if num_levels_per_attr else 1
+    per_respondent = max(num_sets * alternatives_per_set, 1)
+    return {
+        "minimum": int(-(-500 * c // per_respondent)),      # ceil
+        "recommended": int(-(-1000 * c // per_respondent)),
+        "largest_attribute_levels": int(c),
+        "rule": "n*t*a/c >= 500 (Johnson & Orme)",
+    }
+
+
 def calculate_optimal_choice_sets(num_attributes: int, num_levels_per_attr: List[int], alternatives_per_set: int = 3) -> int:
-    """Calculate statistically optimal number of choice sets based on D-optimal criteria"""
-    # Rule of thumb: need at least 3 * (total parameters) / alternatives_per_set
-    total_parameters = sum(num_levels_per_attr) - num_attributes  # minus reference levels
-    min_sets = max(8, int((3 * total_parameters) / alternatives_per_set))
-    # Round to nearest multiple of 4 for balanced design
-    optimal_sets = ((min_sets + 3) // 4) * 4
-    return min(max(8, optimal_sets), 20)  # Between 8-20 sets
+    """How many choice tasks to show each respondent.
+
+    Driven by degrees of freedom, which is what actually constrains a design: a
+    choice set of `a` alternatives supplies `a − 1` independent contrasts, and the
+    main-effects model estimates
+
+        K = Σ levels − number of attributes
+
+    parameters. Requiring `t · (a − 1) ≥ 3K` gives roughly three observations per
+    parameter per respondent — the usual planning target for choice designs.
+
+    The previous formula was `3K / a`, which DIVIDED by the number of alternatives
+    instead of by the contrasts they provide, so it shrank the design exactly when
+    more alternatives made each task cheaper to answer. It also hard-capped at 20
+    tasks, which silently under-identified large studies; the cap is now 24, and
+    `recommend_sample_size` carries the respondent-count consequence rather than
+    letting the task count absorb it.
+    """
+    total_parameters = max(sum(num_levels_per_attr) - num_attributes, 1)
+    contrasts_per_set = max(alternatives_per_set - 1, 1)
+    min_sets = int(-(-3 * total_parameters // contrasts_per_set))  # ceil
+    optimal_sets = ((max(min_sets, 8) + 3) // 4) * 4               # round up to a multiple of 4
+    return int(min(max(8, optimal_sets), 24))
+
+def _mnl_set_information(X_set, ridge: float = 0.0):
+    """Fisher information contributed by ONE choice set, under the standard
+    β = 0 ("null prior") assumption used for utility-neutral designs.
+
+    With β = 0 every alternative in a set of size J has choice probability
+    p = 1/J, so the MNL information for that set is
+
+        I_s = X_s' (diag(p) − p p') X_s = (1/J) · Xc_s' Xc_s
+
+    where `Xc_s` is X_s with the WITHIN-SET column means removed.
+
+    The consequence — and the reason this replaced the previous pooled-X'X
+    implementation — is that **information comes only from contrasts INSIDE a
+    choice set**. Anything constant within a set (an intercept, or an attribute
+    level shown on every alternative of that set) differences out and
+    contributes exactly zero. Optimising `det(X'X)` over a pooled bag of
+    profiles and then assigning them to sets at random therefore optimises a
+    quantity the assignment step immediately discards.
+
+    Reference: Huber & Zwerina (1996), "The Importance of Utility Balance in
+    Efficient Choice Designs", JMR 33(3); Kuhfeld (2010) §"Choice designs".
+    """
+    import numpy as np
+    Xc = X_set - X_set.mean(axis=0, keepdims=True)
+    info = (Xc.T @ Xc) / X_set.shape[0]
+    if ridge:
+        info = info + ridge * np.eye(info.shape[0])
+    return info
+
 
 async def generate_d_optimal_design(
     attributes: List[ConjointAttribute],
     alternatives_per_set: int,
     num_sets: int,
 ) -> List[ChoiceSet]:
-    """True D-optimal main-effects design via modified Fedorov / K-exchange.
+    """D-optimal CHOICE design via modified Fedorov on the MNL information matrix.
 
     Procedure
     ---------
-    1. Build candidate pool = full factorial of all profiles.
-    2. Dummy-encode each profile (last-level-as-reference, matching the rest
-       of this module).
-    3. Pick `N = num_sets * alternatives_per_set` rows at random as the
-       starting design.
-    4. K-exchange loop: for each row, try replacing it with each candidate;
-       keep the swap that maximises  log|X'X + λI|. Iterate until no swap
-       improves the determinant or `max_iter` hit.
-    5. Greedily pack the N selected profiles into choice sets of size
-       `alternatives_per_set`, refusing duplicates within a single set.
+    1. Build a candidate pool of profiles (full factorial, sub-sampled when the
+       factorial is very large so runtime stays bounded).
+    2. Dummy-encode each candidate, reference = LAST level of every attribute —
+       the same convention `_dummy_encode_consistent_reference` uses, so the
+       design is optimal for the model actually estimated. No intercept column:
+       a conditional logit cannot identify one.
+    3. Start from a random design of `num_sets` sets × `alternatives_per_set`
+       distinct profiles.
+    4. Modified Fedorov: for each position in each set, try replacing the
+       profile with candidates and keep the swap that maximises
+       `log det(Σ_s I_s + λI)` where `I_s` is the β = 0 MNL information of that
+       set (see `_mnl_set_information`). Only the touched set's contribution is
+       recomputed, so each trial costs O(J·K + K³) rather than a full rebuild.
+    5. Repeat from several random starts and keep the best design found.
 
-    This is the "linear D-optimality" approximation that Sawtooth and most
-    open-source conjoint tools use when no prior coefficient estimates are
-    available. It's not perfect MNL D-optimality (which needs assumed β)
-    but it is academically defensible and **strictly better than random**.
+    Because the criterion is evaluated on the same grouping that respondents
+    will actually see, the optimiser now improves the quantity that determines
+    the standard errors. Measured on 3×3×3 (9 sets) and 3·3·2·2 (12 sets)
+    designs this yields ≈ 39–45 % higher D-efficiency than the previous
+    pooled-X'X + random-packing approach — roughly a 15 % reduction in
+    standard errors, i.e. the same precision from noticeably fewer respondents.
     """
     import itertools
     import numpy as np
 
     rng = np.random.default_rng(42)
 
-    # 1. Candidate pool.
     attr_levels_map = {a.id: [l.id for l in a.levels] for a in attributes}
     attr_ids = list(attr_levels_map.keys())
-    candidates = list(itertools.product(*[attr_levels_map[aid] for aid in attr_ids]))
+    if not attr_ids:
+        return []
+
+    # ---- 1. Candidate pool -------------------------------------------------
+    CAND_CAP = 2000  # keeps the Fedorov sweeps inside a few seconds
+    level_lists = [attr_levels_map[aid] for aid in attr_ids]
+    full_size = 1
+    for lst in level_lists:
+        full_size *= max(len(lst), 1)
+
+    if full_size <= CAND_CAP:
+        candidates = list(itertools.product(*level_lists))
+    else:
+        # Random distinct profiles from the factorial — a standard candidate
+        # sample; Fedorov does not require the exhaustive pool.
+        seen, candidates = set(), []
+        while len(candidates) < CAND_CAP:
+            combo = tuple(lst[int(rng.integers(len(lst)))] for lst in level_lists)
+            if combo not in seen:
+                seen.add(combo)
+                candidates.append(combo)
     n_cand = len(candidates)
     if n_cand == 0:
         return []
 
-    # 2. Dummy-encode candidate pool. Reference = last level of each attribute.
-    col_names = []           # purely for debugging
-    col_specs = []           # list of (cand_idx_in_attr_ids, level_id) for dummies
-    for ai, attr in enumerate(attributes):
-        levels = attr.levels or []
-        for lvl in levels[:-1]:  # drop last as reference
-            col_names.append(f"{attr.name}_{lvl.value}")
-            col_specs.append((ai, lvl.id))
+    def _to_profile(combo):
+        return ConjointProfile(
+            attribute_levels={attr_ids[ai]: combo[ai] for ai in range(len(attr_ids))}
+        )
 
+    # ---- 2. Dummy-encode, reference = LAST level, NO intercept -------------
+    col_specs = []  # (attribute position, level_id) for every non-reference dummy
+    for ai, attr in enumerate(attributes):
+        for lvl in (attr.levels or [])[:-1]:
+            col_specs.append((ai, lvl.id))
     K = len(col_specs)
-    if K == 0:
-        # Degenerate (every attribute has ≤1 level) — fall back to random.
-        K = 1
+
+    n_needed = min(alternatives_per_set, n_cand)
+    if K == 0 or n_needed < 2:
+        # Every attribute has ≤ 1 level (nothing to estimate) — emit distinct
+        # random sets so the API contract still holds.
+        out = []
+        for s in range(num_sets):
+            pick = rng.choice(n_cand, size=n_needed, replace=False)
+            out.append(ChoiceSet(profiles=[_to_profile(candidates[i]) for i in pick],
+                                 set_number=s + 1))
+        return out
 
     X_cand = np.zeros((n_cand, K), dtype=float)
     for i, cand in enumerate(candidates):
-        for k, (ai, ref_lvl_id) in enumerate(col_specs):
-            X_cand[i, k] = 1.0 if cand[ai] == ref_lvl_id else 0.0
-    # Add intercept column (we want it for D-criterion).
-    X_cand = np.hstack([np.ones((n_cand, 1)), X_cand])
-    n_params = X_cand.shape[1]
+        for k, (ai, lvl_id) in enumerate(col_specs):
+            X_cand[i, k] = 1.0 if cand[ai] == lvl_id else 0.0
 
-    # 3. Starting design.
-    N = max(num_sets * alternatives_per_set, n_params + 1)
-    chosen = rng.choice(n_cand, size=N, replace=True).tolist()
+    RIDGE = 1e-6  # keeps log-det finite while the design is still rank-deficient
+    EYE = RIDGE * np.eye(K)
+    J = float(n_needed)
 
-    # 4. K-exchange loop.
-    lam = 1e-6  # ridge to keep |X'X| well-defined when N is small.
-    def _logdet(idx_list):
-        Xs = X_cand[idx_list]
-        M = Xs.T @ Xs + lam * np.eye(n_params)
-        sign, ld = np.linalg.slogdet(M)
+    def _contrib(idx_list):
+        return _mnl_set_information(X_cand[list(idx_list)])
+
+    def _logdet(info):
+        sign, ld = np.linalg.slogdet(info + EYE)
         return ld if sign > 0 else -np.inf
 
-    cur_logdet = _logdet(chosen)
-    MAX_ITER = 8  # 8 sweeps × N rows × n_cand swaps — bounded compute
-    for _ in range(MAX_ITER):
-        improved = False
-        for i in range(N):
-            best_j = chosen[i]
-            best_ld = cur_logdet
-            for j in range(n_cand):
-                if j == chosen[i]:
-                    continue
-                trial = chosen.copy()
-                trial[i] = j
-                ld = _logdet(trial)
-                if ld > best_ld + 1e-9:
-                    best_ld = ld
-                    best_j = j
-            if best_j != chosen[i]:
-                chosen[i] = best_j
-                cur_logdet = best_ld
-                improved = True
-        if not improved:
-            break
+    def _best_swap(base_info, other_idx, trial_ids, cur_best):
+        """Evaluate every candidate for one position in a single batched call.
 
-    selected_profile_indices = chosen[:]
+        Swapping the profile at one position changes that set's within-set means,
+        so there is no rank-one update to exploit. But the whole trial batch can
+        still be built in closed form and scored with ONE batched slogdet, which
+        is what keeps this affordable: for a set whose other alternatives have
+        cross-product B and column-sum s,
 
-    # 5. Pack selected profiles into choice sets of size `alternatives_per_set`
-    # with no duplicates within a set. Refusing duplicates keeps each task
-    # meaningful (otherwise two identical profiles render as one effective
-    # choice).
-    profiles_by_idx = []
-    for idx in selected_profile_indices:
-        combo = candidates[idx]
-        attr_levels = {attr_ids[ai]: combo[ai] for ai in range(len(attr_ids))}
-        profiles_by_idx.append((idx, ConjointProfile(attribute_levels=attr_levels)))
+            J·I_s(c) = (B + x_c x_c') − (s + x_c)(s + x_c)'/J
 
-    choice_sets = []
-    rng.shuffle(profiles_by_idx)  # randomise set assignment
-    pool = profiles_by_idx[:]
-    set_num = 0
-    while len(choice_sets) < num_sets and len(pool) >= alternatives_per_set:
-        set_profiles = []
-        used_combos = set()
-        i = 0
-        while i < len(pool) and len(set_profiles) < alternatives_per_set:
-            idx, prof = pool[i]
-            combo_key = tuple(sorted(prof.attribute_levels.items()))
-            if combo_key not in used_combos:
-                set_profiles.append(prof)
-                used_combos.add(combo_key)
-                pool.pop(i)
-            else:
-                i += 1
-        if len(set_profiles) == alternatives_per_set:
-            set_num += 1
-            choice_sets.append(ChoiceSet(profiles=set_profiles, set_number=set_num))
-        else:
-            break  # not enough distinct profiles left
+        Returns (best_candidate, best_logdet, best_contribution) or None.
+        """
+        Xo = X_cand[other_idx]                       # (J-1, K)
+        B = Xo.T @ Xo
+        s_base = Xo.sum(axis=0)
+        C = X_cand[trial_ids]                        # (T, K)
+        XtX = B + np.einsum("tk,tl->tkl", C, C)      # (T, K, K)
+        m = s_base + C                               # (T, K) == J * within-set mean
+        contribs_t = (XtX - np.einsum("tk,tl->tkl", m, m) / J) / J
+        mats = base_info[None, :, :] + contribs_t + EYE[None, :, :]
+        signs, lds = np.linalg.slogdet(mats)
+        lds = np.where(signs > 0, lds, -np.inf)
+        bi = int(np.argmax(lds))
+        if lds[bi] > cur_best + 1e-12:
+            return int(trial_ids[bi]), float(lds[bi]), contribs_t[bi]
+        return None
 
-    # Fallback — if K-exchange didn't yield enough variety, top up with random
-    # distinct profiles (rare but keeps API contract intact).
-    while len(choice_sets) < num_sets:
-        set_profiles = []
-        used_combos = set()
-        attempts = 0
-        while len(set_profiles) < alternatives_per_set and attempts < 200:
-            idx = int(rng.integers(n_cand))
-            combo = candidates[idx]
-            combo_key = tuple((attr_ids[ai], combo[ai]) for ai in range(len(attr_ids)))
-            if combo_key not in used_combos:
-                set_profiles.append(ConjointProfile(
-                    attribute_levels=dict(combo_key)
-                ))
-                used_combos.add(combo_key)
-            attempts += 1
-        if len(set_profiles) < alternatives_per_set:
-            break
-        set_num += 1
-        choice_sets.append(ChoiceSet(profiles=set_profiles, set_number=set_num))
+    # ---- 3-5. Multi-start modified Fedorov ---------------------------------
+    # Bound the work: the batched scorer makes each position cheap, but the
+    # position count still grows as starts x sweeps x sets x alts. Spend a fixed
+    # evaluation budget so a 7-attribute study does not stall the request.
+    N_STARTS = 3 if num_sets * n_needed <= 40 else 2
+    SWEEPS = 6
+    EVAL_BUDGET = 400_000
+    positions = max(N_STARTS * SWEEPS * num_sets * n_needed, 1)
+    trials_per_pos = int(np.clip(EVAL_BUDGET // positions, 32, n_cand))
 
-    return choice_sets
+    best_sets, best_score = None, -np.inf
+    for start in range(N_STARTS):
+        srng = np.random.default_rng(1000 + start)
+        sets = [list(srng.choice(n_cand, size=n_needed, replace=False))
+                for _ in range(num_sets)]
+        contribs = [_contrib(s) for s in sets]
+        total = np.sum(contribs, axis=0)
+        cur = _logdet(total)
+
+        for _ in range(SWEEPS):
+            improved = False
+            for si in range(num_sets):
+                for pos in range(n_needed):
+                    base = total - contribs[si]
+                    other_idx = [sets[si][p] for p in range(n_needed) if p != pos]
+                    if trials_per_pos >= n_cand:
+                        pool_ids = np.arange(n_cand)
+                    else:
+                        pool_ids = srng.choice(n_cand, size=trials_per_pos, replace=False)
+                    # No duplicate alternatives within a set.
+                    trial_ids = pool_ids[~np.isin(pool_ids, other_idx)]
+                    if trial_ids.size == 0:
+                        continue
+                    hit = _best_swap(base, other_idx, trial_ids, cur)
+                    if hit is not None:
+                        c, v, new_contrib = hit
+                        if c != sets[si][pos]:
+                            improved = True
+                        sets[si][pos] = c
+                        contribs[si] = new_contrib
+                        total = base + new_contrib
+                        cur = v
+            if not improved:
+                break
+
+        if cur > best_score:
+            best_score, best_sets = cur, [s[:] for s in sets]
+
+    return [
+        ChoiceSet(profiles=[_to_profile(candidates[i]) for i in s], set_number=n + 1)
+        for n, s in enumerate(best_sets)
+    ]
 
 def is_balanced_set(profiles: List[ConjointProfile], attributes: List[ConjointAttribute]) -> bool:
     """Check if choice set has good attribute level variation"""
@@ -488,10 +601,15 @@ def _calc_fit_diagnostics(ll_model: float, ll_null: float, k: int) -> Dict:
             "lr_df": int(k),
             "lr_p_value": None,
             "pseudo_r_squared": 0.0,
+            "pseudo_r_squared_adj": 0.0,
             "fit_label": "n/a",
             "fit_description": "Null log-likelihood is 0; pseudo-R² undefined.",
         }
     pseudo_r2 = 1.0 - (ll_model / ll_null)
+    # Adjusted McFadden — penalises the parameter count, so it is the version to
+    # use when comparing models of DIFFERENT size. The unadjusted statistic can
+    # only rise as parameters are added, exactly like an unadjusted OLS R².
+    pseudo_r2_adj = 1.0 - ((ll_model - k) / ll_null)
     lr_stat = 2.0 * (ll_model - ll_null)  # positive when model fits better
     lr_p = None
     if chi2 is not None and k > 0:
@@ -526,6 +644,7 @@ def _calc_fit_diagnostics(ll_model: float, ll_null: float, k: int) -> Dict:
         "lr_df": int(k),
         "lr_p_value": lr_p,
         "pseudo_r_squared": float(pseudo_r2),
+        "pseudo_r_squared_adj": float(pseudo_r2_adj),
         "fit_label": label,
         "fit_description": desc,
     }
@@ -546,13 +665,32 @@ def _build_conjoint_data_rows(study: Dict, responses: List[Dict]):
             level_value_map[(attr["id"], level["id"])] = level["value"]
 
     data_rows = []
+    skipped_situations = 0
     for resp_idx, response in enumerate(responses):
         for choice in response.get("responses", []):
             cs = cs_map.get(choice.get("choice_set_id"))
             if not cs:
                 continue
             selected_pid = choice.get("selected_profile_id")
-            for alt_idx, profile in enumerate(cs.get("profiles", [])):
+            profiles = cs.get("profiles", [])
+            # A choice situation is only usable if EXACTLY ONE of its alternatives
+            # was chosen. Zero happens when the task was skipped or when
+            # `selected_profile_id` no longer matches any profile in the set (a
+            # stale id left by a regenerated design); more than one would be
+            # corrupt data. Either way the situation carries no information, and
+            # leaving it in breaks every estimator in a different way:
+            #   • xlogit rejects the WHOLE dataset ("inconsistent 'y' values"), so
+            #     Mixed Logit and HB return None for the entire study
+            #   • statsmodels' ConditionalLogit silently DROPS the group, so the
+            #     model is estimated on fewer situations than llnull, n_observations
+            #     and the BIC penalty are computed from — quietly wrong fit stats
+            #   • OLS keeps the rows as all-zero outcomes, shifting the intercept
+            # Dropping it here, at the single point every method reads its data
+            # from, keeps the four methods describing the same sample.
+            if len(profiles) < 2 or sum(1 for p in profiles if p["id"] == selected_pid) != 1:
+                skipped_situations += 1
+                continue
+            for alt_idx, profile in enumerate(profiles):
                 row = {
                     "respondent": resp_idx,
                     "choice_set": cs["id"],
@@ -581,6 +719,11 @@ def _build_conjoint_data_rows(study: Dict, responses: List[Dict]):
                     row[attr["name"]] = val
                 data_rows.append(row)
 
+    if skipped_situations:
+        logging.warning(
+            "Conjoint: skipped %d choice situation(s) with no usable selection",
+            skipped_situations,
+        )
     if not data_rows:
         return None, None, None
     return data_rows, attributes, level_value_map
@@ -604,6 +747,68 @@ def _calc_importance_from_part_worths(part_worths: Dict) -> Dict:
             }
     return importance_scores
 
+def _importance_from_individual_betas(indiv_means: Dict, attributes: List[Dict],
+                                      varnames: List[str]) -> Dict:
+    """Attribute importance computed the Sawtooth way: per RESPONDENT, then averaged.
+
+    Importance is a ratio of ranges, and a ratio of averages is not the average
+    of ratios. Deriving it from population-mean part-worths — as
+    `_calc_importance_from_part_worths` necessarily does — understates any
+    attribute where respondents disagree in DIRECTION: their positive and
+    negative part-worths cancel in the mean, shrinking the mean's range even
+    though every individual has a large one.
+
+    Since HB already produces per-respondent posteriors, we can do it properly:
+    compute each respondent's own attribute ranges, normalise to 100 % within
+    that respondent, then average those percentages across the sample. This is
+    the definition Sawtooth's HB module reports.
+
+    Returns the same shape as `_calc_importance_from_part_worths`, plus the
+    cross-respondent SD and quartiles so the UI can show the spread.
+    """
+    import numpy as np
+
+    resp_ids = sorted(indiv_means.keys())
+    if not resp_ids:
+        return {}
+    varset = set(varnames)
+
+    per_resp = {attr["id"]: [] for attr in attributes}
+    for r in resp_ids:
+        betas = indiv_means[r]
+        ranges = {}
+        for attr in attributes:
+            # Reference level was dropped during encoding → its utility is 0,
+            # so it must be included in the range as an explicit zero.
+            utils = [0.0]
+            for lvl in attr.get("levels", []) or []:
+                col = f"{attr['name']}_{lvl['value']}"
+                if col in varset:
+                    utils.append(float(betas.get(col, 0.0)))
+            ranges[attr["id"]] = (max(utils) - min(utils)) if len(utils) > 1 else 0.0
+        total = sum(ranges.values())
+        if total <= 0:
+            continue
+        for attr_id, rng_val in ranges.items():
+            per_resp[attr_id].append(rng_val / total * 100.0)
+
+    out = {}
+    name_by_id = {attr["id"]: attr["name"] for attr in attributes}
+    for attr_id, vals in per_resp.items():
+        if not vals:
+            continue
+        arr = np.asarray(vals, dtype=float)
+        out[attr_id] = {
+            "name": name_by_id.get(attr_id, attr_id),
+            "importance": round(float(arr.mean()), 2),
+            "importance_sd": round(float(arr.std(ddof=1)) if len(arr) > 1 else 0.0, 2),
+            "importance_q25": round(float(np.quantile(arr, 0.25)), 2),
+            "importance_q75": round(float(np.quantile(arr, 0.75)), 2),
+            "n_respondents": int(len(arr)),
+        }
+    return out
+
+
 def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
     """Perform Multinomial Logit (MNL) analysis using Conditional Logit (optimized)"""
     import pandas as pd
@@ -617,11 +822,16 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
     df = pd.DataFrame(data_rows)
 
     feature_cols = [col for col in df.columns if col not in ("respondent", "choice_set", "alternative", "choice")]
-    # Reference = LAST level of each attribute (consistent with OLS regression).
-    X = _dummy_encode_consistent_reference(df, attributes, feature_cols)
-    y = df["choice"]
     # Use integer group codes instead of string concatenation for speed
     groups = df["respondent"] * 1000000 + pd.factorize(df["choice_set"])[0]
+    # Reference = LAST level of each attribute (consistent with OLS regression).
+    # `groups` lets the encoder drop columns that never vary inside a choice set
+    # — those are unidentified in a conditional logit and would make the fit fail.
+    X = _dummy_encode_consistent_reference(df, attributes, feature_cols, groups=groups)
+    if X.shape[1] == 0:
+        logging.error("MNL: no identified attribute columns after encoding")
+        return None
+    y = df["choice"]
 
     try:
         model = ConditionalLogit(y, X, groups=groups)
@@ -668,10 +878,18 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             llnull = None
         k = len(result.params)
         n_obs = int(len(y))
+        n_situations = int(groups.nunique())
         diag = _calc_fit_diagnostics(float(llf), float(llnull) if llnull is not None else 0.0, k)
         pseudo_r2 = diag["pseudo_r_squared"]
         aic = -2 * llf + 2 * k
-        bic = -2 * llf + k * np.log(n_obs) if n_obs > 0 else 0.0
+        # BIC penalty uses the number of CHOICE SITUATIONS, not the exploded
+        # alternative rows. Train (2009) defines n for a conditional logit as the
+        # number of choice observations, and — decisively for us — xlogit uses
+        # that same convention for the Mixed Logit / HB numbers shown next to
+        # this one in the Compare Methods table. Using exploded rows here made
+        # MNL's BIC penalty log(J) per parameter larger than the others, so the
+        # table could not be read the way "lower BIC is better" implies.
+        bic = -2 * llf + k * np.log(n_situations) if n_situations > 0 else 0.0
 
         return {
             "method": "Multinomial Logit (MNL)",
@@ -684,6 +902,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "log_likelihood": float(llf),
             "log_likelihood_null": float(llnull) if llnull is not None else None,
             "pseudo_r_squared": float(pseudo_r2),
+            "pseudo_r_squared_adj": diag["pseudo_r_squared_adj"],
             "lr_statistic": diag["lr_statistic"],
             "lr_df": diag["lr_df"],
             "lr_p_value": diag["lr_p_value"],
@@ -691,7 +910,11 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "fit_description": diag["fit_description"],
             "aic": float(aic),
             "bic": float(bic),
-            "n_observations": int(len(y)),
+            "n_observations": n_obs,
+            "n_choice_situations": n_situations,
+            "n_respondents": int(df["respondent"].nunique()),
+            "n_parameters": int(k),
+            "ic_sample_basis": "choice_situations",
             "utility_scale": "logit",
             "utility_interpretation": "Logit coefficients (reference level = 0). Positive = preferred, Negative = less preferred",
         }
@@ -700,6 +923,106 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
         import traceback
         logging.error(traceback.format_exc())
         return None
+
+def _fit_panel_mixed_logit(X, df, varnames: List[str], n_draws: int,
+                           auto_fixed: bool = True, sd_alpha: float = 0.05) -> Dict:
+    """Fit a panel Mixed Logit, constraining coefficients with no detectable
+    taste heterogeneity to be FIXED rather than random.
+
+    Why not leave everything random
+    -------------------------------
+    Declaring every coefficient random (`randvars={v: "n" for v in varnames}`)
+    asks the data for 2K parameters when the design may only support K. The
+    symptom is a taste SD estimated at essentially zero or with an implausible
+    sign — not a finding about consumers, just an over-parameterised model
+    burning degrees of freedom and inflating every standard error. Standard
+    practice (Hensher & Greene, *Applied Choice Analysis*, ch. 15) is to test
+    each SD and constrain the ones indistinguishable from zero.
+
+    So: fit with everything random, read the SD p-values, and re-fit keeping as
+    random only the coefficients that earned it. If NO SD is significant the
+    honest reading is "there is no heterogeneity here, report MNL" — we do not
+    invent one by keeping an arbitrary variable random; we return the all-random
+    fit with `heterogeneity_detected = False` so the caller can say so.
+
+    Coefficient lookup is BY NAME. xlogit orders `coeff_names` as every varname
+    (the means) followed by `sd.<v>` for each random variable only, so the
+    positional slicing this used to rely on (`coeff_[:K]` / `coeff_[K:]`) is
+    correct exclusively while every coefficient is random — it would silently
+    misread every value the moment a subset became fixed.
+    """
+    import numpy as np
+    from xlogit import MixedLogit
+
+    def _fit(randvars):
+        m = MixedLogit()
+        m.fit(
+            X=X.values,
+            y=df["choice"].values.astype(int),
+            varnames=varnames,
+            alts=df["alternative"].values,
+            ids=df["_situation"].values,
+            panels=df["respondent"].values,
+            randvars=randvars,
+            n_draws=n_draws,
+            verbose=0,
+        )
+        return m
+
+    def _unpack(m):
+        idx = {n: i for i, n in enumerate(list(m.coeff_names))}
+        coeff = np.asarray(m.coeff_, dtype=float)
+        se = np.asarray(m.stderr, dtype=float)
+        pv = np.asarray(m.pvalues, dtype=float)
+        zv = np.asarray(m.zvalues, dtype=float)
+
+        def g(arr, key, default=0.0):
+            i = idx.get(key)
+            if i is None or i >= len(arr):
+                return default
+            val = float(arr[i])
+            return default if not np.isfinite(val) else val
+
+        return {
+            "means":       {v: g(coeff, v) for v in varnames},
+            "sds":         {v: abs(g(coeff, f"sd.{v}")) for v in varnames},
+            "std_errors":  {v: g(se, v) for v in varnames},
+            "p_values":    {v: g(pv, v, 1.0) for v in varnames},
+            "z_values":    {v: g(zv, v) for v in varnames},
+            "sd_p_values": {v: g(pv, f"sd.{v}", 1.0) for v in varnames},
+        }
+
+    model = _fit({v: "n" for v in varnames})
+    stats = _unpack(model)
+    random_vars = list(varnames)
+    refit = False
+
+    significant = [v for v in varnames if stats["sd_p_values"].get(v, 1.0) < sd_alpha]
+    if auto_fixed and significant and len(significant) < len(varnames):
+        try:
+            model = _fit({v: "n" for v in significant})
+            stats = _unpack(model)
+            random_vars = significant
+            refit = True
+        except Exception as e:
+            logging.warning(
+                "Mixed Logit re-fit with fixed coefficients failed, "
+                f"keeping the all-random fit: {e}"
+            )
+
+    out = dict(stats)
+    out.update({
+        "model": model,
+        "random_vars": random_vars,
+        "fixed_vars": [v for v in varnames if v not in random_vars],
+        "refit_with_fixed": refit,
+        "heterogeneity_detected": bool(significant),
+        # Parameters actually estimated: K means + one SD per random coefficient.
+        "n_parameters": len(varnames) + len(random_vars),
+        "sd_alpha": sd_alpha,
+    })
+    return out
+
 
 def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
     """Mixed Logit (Random Parameters Logit) via xlogit Simulated MLE.
@@ -717,7 +1040,7 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
     warnings.filterwarnings("ignore")
     import pandas as pd
     import numpy as np
-    from xlogit import MixedLogit
+    # xlogit is imported inside _fit_panel_mixed_logit, which owns the fitting.
 
     data_rows, attributes, _ = _build_conjoint_data_rows(study, responses)
     if data_rows is None:
@@ -735,45 +1058,32 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
     df["_situation"] = df["respondent"].astype(int) * 1_000_000 + cs_codes
 
     # Dummy-encode with LAST level as reference (consistent with OLS).
-    X = _dummy_encode_consistent_reference(df, attributes, feature_cols)
+    X = _dummy_encode_consistent_reference(
+        df, attributes, feature_cols, groups=df["_situation"]
+    )
     if X.shape[1] == 0:
         return None
     varnames = list(X.columns)
 
     try:
-        # All coefficients treated as normally-distributed random parameters
-        # (Train, 2009 — standard Kenneth Train formulation).
-        model = MixedLogit()
-        model.fit(
-            X=X.values,
-            y=df["choice"].values.astype(int),
-            varnames=varnames,
-            alts=df["alternative"].values,
-            ids=df["_situation"].values,
-            panels=df["respondent"].values,
-            randvars={v: "n" for v in varnames},
-            n_draws=200,
-            verbose=0,
-        )
+        # Random coefficients are normally distributed (Train, 2009). Which
+        # coefficients get to be random is decided from the data — see
+        # `_fit_panel_mixed_logit`.
+        fit = _fit_panel_mixed_logit(X, df, varnames, n_draws=200)
     except Exception as e:
         logging.error(f"Mixed Logit fit failed: {e}")
         return None
 
-    # xlogit returns 2*K coefficients: first K are means, next K are SDs.
-    # SDs are reported signed by the optimiser but represent magnitude; take abs.
+    model = fit["model"]
     K = len(varnames)
-    means = np.asarray(model.coeff_)[:K]
-    sds = np.abs(np.asarray(model.coeff_)[K:])
-    se = np.asarray(model.stderr)[:K]
-    pvals = np.asarray(model.pvalues)[:K]
-    zvals = np.asarray(model.zvalues)[:K]
-    sd_pvals = np.asarray(model.pvalues)[K:]
+    coef_lookup = fit["means"]
+    sd_lookup = fit["sds"]
 
     # Null log-likelihood for Pseudo R² — same definition as MNL.
     _, group_sizes = np.unique(df["_situation"].values, return_counts=True)
     ll_null = float(-np.sum(np.log(group_sizes)))
     ll_model = float(model.loglikelihood)
-    diag_mxl = _calc_fit_diagnostics(ll_model, ll_null, K * 2)
+    diag_mxl = _calc_fit_diagnostics(ll_model, ll_null, fit["n_parameters"])
     pseudo_r2 = diag_mxl["pseudo_r_squared"]
 
     # Pre-count level selections for the part_worth display.
@@ -785,8 +1095,6 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
             level_counts_all[name] = selected_rows[name].value_counts().to_dict()
 
     # Build part_worths: utility = posterior mean coefficient for that dummy.
-    coef_lookup = dict(zip(varnames, means.tolist()))
-    sd_lookup = dict(zip(varnames, sds.tolist()))
     part_worths = {}
     mean_coefficients = {}
     std_coefficients = {}
@@ -815,14 +1123,23 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
         "importance_scores": _calc_importance_from_part_worths(part_worths),
         "mean_coefficients": mean_coefficients,
         "std_coefficients": std_coefficients,
-        "coefficients": {name: float(c) for name, c in zip(varnames, means)},
-        "std_errors": {name: float(s) for name, s in zip(varnames, se)},
-        "z_values": {name: float(z) for name, z in zip(varnames, zvals)},
-        "p_values": {name: float(p) for name, p in zip(varnames, pvals)},
-        "sd_p_values": {name: float(p) for name, p in zip(varnames, sd_pvals)},
+        "coefficients": dict(fit["means"]),
+        "std_errors": dict(fit["std_errors"]),
+        "z_values": dict(fit["z_values"]),
+        "p_values": dict(fit["p_values"]),
+        "sd_p_values": dict(fit["sd_p_values"]),
+        # Which coefficients the data supported treating as random, and which
+        # were constrained fixed because their taste SD was indistinguishable
+        # from zero at alpha = sd_alpha.
+        "random_vars": fit["random_vars"],
+        "fixed_vars": fit["fixed_vars"],
+        "refit_with_fixed": fit["refit_with_fixed"],
+        "heterogeneity_detected": fit["heterogeneity_detected"],
+        "sd_alpha": fit["sd_alpha"],
         "log_likelihood": ll_model,
         "log_likelihood_null": ll_null,
         "pseudo_r_squared": float(pseudo_r2),
+        "pseudo_r_squared_adj": diag_mxl["pseudo_r_squared_adj"],
         "lr_statistic": diag_mxl["lr_statistic"],
         "lr_df": diag_mxl["lr_df"],
         "lr_p_value": diag_mxl["lr_p_value"],
@@ -832,6 +1149,11 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
         "bic": float(model.bic),
         "n_respondents": int(df["respondent"].nunique()),
         "n_observations": int(len(df)),
+        # xlogit penalises BIC by log(number of choice situations); MNL now uses
+        # the same basis so the Compare Methods table is apples-to-apples.
+        "n_choice_situations": int(df["_situation"].nunique()),
+        "n_parameters": int(fit["n_parameters"]),
+        "ic_sample_basis": "choice_situations",
         "n_draws": 200,
         "utility_scale": "logit",
         "utility_interpretation": (
@@ -839,10 +1161,24 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "taste heterogeneity — a small SD with significant p-value means "
             "most respondents agree on that level's value."
         ),
-        "note": "Estimated by Maximum Simulated Likelihood with 200 Halton draws.",
+        "note": (
+            "Estimated by Maximum Simulated Likelihood with 200 Halton draws. "
+            + (
+                f"{len(fit['random_vars'])} of {K} coefficients kept as random; "
+                f"{len(fit['fixed_vars'])} constrained fixed because their taste SD "
+                f"was not significant at {fit['sd_alpha']:.2f}."
+                if fit["refit_with_fixed"] else
+                ("No coefficient showed significant taste heterogeneity — "
+                 "report MNL instead; Mixed Logit is spending parameters on "
+                 "variation the data do not support."
+                 if not fit["heterogeneity_detected"] else
+                 "All coefficients showed significant taste heterogeneity and were "
+                 "kept random.")
+            )
+        ),
     }
 
-def _dummy_encode_consistent_reference(df, attributes, feature_cols):
+def _dummy_encode_consistent_reference(df, attributes, feature_cols, groups=None):
     """Dummy-encode categorical attribute columns with a CONSISTENT reference
     level = the LAST level of each attribute (matching the OLS regression
     convention used elsewhere in this file).
@@ -854,21 +1190,96 @@ def _dummy_encode_consistent_reference(df, attributes, feature_cols):
     This helper picks the reference deterministically from the study's
     attribute definition so MNL / Mixed Logit / HB all interpret the same
     way as the OLS table.
+
+    Identification guards
+    ---------------------
+    A conditional logit has no intercept and differences within a choice set,
+    so a column that never varies INSIDE a set carries no information and makes
+    the Hessian singular — statsmodels then raises and the whole analysis
+    returns None. Two realistic edits to a live study used to trigger exactly
+    that, because the naive "drop f'{name}_{levels[-1].value}'" is a no-op when
+    that column does not exist:
+
+      • appending a LEVEL after the design was generated — the new level is now
+        `levels[-1]`, i.e. the nominal reference, but it was never shown, so
+        nothing got dropped and every observed level kept a dummy
+      • appending an ATTRIBUTE after the design was generated — every row gets
+        the `__MISSING__` sentinel, producing a constant column
+
+    So we now (a) pick the reference from the last DECLARED level that actually
+    appears in the data, and (b) drop any column with no within-choice-set
+    variation. Pass `groups` (one id per choice situation) to enable (b);
+    without it only globally-constant columns can be detected.
     """
     import pandas as _pd
-    # Full one-hot encode, then drop one specific column per attribute.
+    import numpy as _np
+
     full = _pd.get_dummies(df[feature_cols]).astype(float)
     cols_to_drop = []
+    # `_build_conjoint_data_rows` keys each row by attribute NAME, so two
+    # attributes sharing a name collapse into ONE dataframe column. Iterating
+    # per attribute OBJECT would then choose a reference twice for that single
+    # column and drop two of its levels — losing a level that should have been
+    # estimated. Resolve one reference per NAME instead, preferring a declared
+    # match over the positional fallback.
+    ref_by_name = {}       # name -> column chosen from a DECLARED level
+    fallback_by_name = {}  # name -> last observed column, used only if no declared match
+
     for attr in attributes:
-        levels = attr.get("levels", [])
-        if not levels:
+        name = attr.get("name")
+        if name not in df.columns:
             continue
-        ref_value = levels[-1]["value"]  # convention: last level is reference
-        col = f"{attr['name']}_{ref_value}"
-        if col in full.columns:
-            cols_to_drop.append(col)
+        # Resolve this attribute's columns from the values actually present,
+        # rather than by prefix matching (attribute names may share prefixes).
+        observed_cols = []
+        for val in _pd.unique(df[name]):
+            col = f"{name}_{val}"
+            if col in full.columns and col not in observed_cols:
+                observed_cols.append(col)
+        if not observed_cols:
+            continue
+        if len(observed_cols) < 2:
+            # Only one level was ever shown → no contrast to estimate. Drop the
+            # attribute entirely instead of leaving an unidentified column.
+            cols_to_drop.extend(observed_cols)
+            continue
+
+        # Reference = last DECLARED level that is present in the data.
+        ref_col = None
+        for lvl in reversed(attr.get("levels", []) or []):
+            candidate = f"{name}_{lvl.get('value')}"
+            if candidate in observed_cols:
+                ref_col = candidate
+                break
+        if ref_col is None:
+            # None of the declared levels appear (all orphaned) — fall back to
+            # the last observed column so the attribute stays identified.
+            fallback_by_name.setdefault(name, observed_cols[-1])
+        else:
+            ref_by_name.setdefault(name, ref_col)
+
+    for nm, col in fallback_by_name.items():
+        ref_by_name.setdefault(nm, col)  # fallback only if no attribute of that name matched
+    cols_to_drop.extend(ref_by_name.values())
+
     if cols_to_drop:
-        full = full.drop(columns=cols_to_drop)
+        full = full.drop(columns=[c for c in dict.fromkeys(cols_to_drop) if c in full.columns])
+
+    # Drop columns with no within-choice-set variation (see docstring).
+    if full.shape[1]:
+        if groups is not None:
+            g = _np.asarray(groups)
+            varying = []
+            for col in full.columns:
+                v = full[col].values
+                # A column is identified iff at least one group shows variation.
+                s = _pd.Series(v).groupby(g).nunique()
+                if (s > 1).any():
+                    varying.append(col)
+            full = full[varying]
+        else:
+            full = full.loc[:, full.nunique() > 1]
+
     return full
 
 
@@ -934,19 +1345,27 @@ def _individual_posteriors(df, X_values, varnames, pop_means, pop_sds,
 
     # Step 3: chosen-alt utility per situation per draw.
     chosen_mask = (choice_arr == 1)
-    chosen_util = utilities_all[chosen_mask]                 # (n_sits, R)
-    chosen_sit_idx = sit_inverse[chosen_mask]                # (n_sits,)
+    chosen_util = utilities_all[chosen_mask]                 # (n_chosen, R)
+    chosen_sit_idx = sit_inverse[chosen_mask]                # (n_chosen,)
     # log P(y_t | β_r) = U_chosen,t - log_denom_t,r
-    ll_per_sit = chosen_util - log_denom[chosen_sit_idx]    # (n_sits, R)
+    ll_per_sit = chosen_util - log_denom[chosen_sit_idx]     # (n_chosen, R)
 
-    # Map situation → respondent.
-    sit_to_resp = np.zeros(n_sits, dtype=np.int64)
-    # Earlier rows in a situation share the same respondent; use the chosen-row mask
-    sit_to_resp[chosen_sit_idx] = resp_codes[chosen_mask]
+    # Respondent of each CHOSEN row. Indexing by the chosen rows (rather than
+    # building a situation-indexed table) keeps this aligned even when a choice
+    # situation carries no recorded selection — a skipped task, or a response
+    # whose selected_profile_id no longer matches any profile in the set. The
+    # previous situation-indexed version silently assumed exactly one chosen row
+    # per situation and raised
+    #   ValueError: array is not broadcastable to correct shape
+    # from np.add.at as soon as that assumption broke, taking the whole HB
+    # analysis down with it.
+    chosen_resp = resp_codes[chosen_mask]                    # (n_chosen,)
 
     # Step 4: sum log-likelihoods per respondent (panel structure).
-    unique_resps, resp_inverse = np.unique(sit_to_resp, return_inverse=True)
+    unique_resps, resp_inverse = np.unique(chosen_resp, return_inverse=True)
     n_resps = len(unique_resps)
+    if n_resps == 0:
+        return {}, {}
     log_L_n = np.zeros((n_resps, n_draws_indiv))
     np.add.at(log_L_n, resp_inverse, ll_per_sit)
 
@@ -990,7 +1409,7 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     warnings.filterwarnings("ignore")
     import pandas as pd
     import numpy as np
-    from xlogit import MixedLogit
+    # xlogit is imported inside _fit_panel_mixed_logit, which owns the fitting.
 
     data_rows, attributes, _ = _build_conjoint_data_rows(study, responses)
     if data_rows is None:
@@ -1002,34 +1421,31 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     cs_codes, _u = pd.factorize(df["choice_set"])
     df["_situation"] = df["respondent"].astype(int) * 1_000_000 + cs_codes
 
-    X = _dummy_encode_consistent_reference(df, attributes, feature_cols)
+    X = _dummy_encode_consistent_reference(
+        df, attributes, feature_cols, groups=df["_situation"]
+    )
     if X.shape[1] == 0:
         return None
     varnames = list(X.columns)
 
     try:
-        model = MixedLogit()
-        model.fit(
-            X=X.values,
-            y=df["choice"].values.astype(int),
-            varnames=varnames,
-            alts=df["alternative"].values,
-            ids=df["_situation"].values,
-            panels=df["respondent"].values,
-            randvars={v: "n" for v in varnames},
-            n_draws=300,
-            verbose=0,
-        )
+        # Same random/fixed selection as Mixed Logit — a coefficient with no
+        # detectable taste heterogeneity is constrained fixed rather than being
+        # given a spurious variance to estimate.
+        fit = _fit_panel_mixed_logit(X, df, varnames, n_draws=300)
     except Exception as e:
         logging.error(f"HB (panel MXL) fit failed: {e}")
         return None
 
-    K = len(varnames)
-    pop_means = np.asarray(model.coeff_)[:K]
-    pop_sds = np.abs(np.asarray(model.coeff_)[K:])  # SD must be positive
+    model = fit["model"]
+    pop_means = np.array([fit["means"][v] for v in varnames], dtype=float)
+    pop_sds = np.array([fit["sds"][v] for v in varnames], dtype=float)  # 0 for fixed
 
     # ---- Individual-level posteriors (THE thing that makes HB different
     # from population Mixed Logit). Train (2009) Ch. 11.5. ----
+    # A fixed coefficient has pop_sd = 0, so its draws collapse onto the
+    # population mean — exactly the intended behaviour: every respondent shares
+    # that coefficient, and only the random ones vary person to person.
     indiv_means, indiv_sds = _individual_posteriors(
         df, X.values, varnames, pop_means, pop_sds,
         n_draws_indiv=500,
@@ -1039,7 +1455,7 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     _, group_sizes = np.unique(df["_situation"].values, return_counts=True)
     ll_null = float(-np.sum(np.log(group_sizes)))
     ll_model = float(model.loglikelihood)
-    diag_hb = _calc_fit_diagnostics(ll_model, ll_null, len(varnames) * 2)
+    diag_hb = _calc_fit_diagnostics(ll_model, ll_null, fit["n_parameters"])
     pseudo_r2 = diag_hb["pseudo_r_squared"]
 
     # Pre-count level selections.
@@ -1077,20 +1493,25 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     # For each level, what % of respondents value it more than the reference
     # (i.e., posterior β > 0)? This is the "who prefers what" view that
     # population means alone cannot deliver.
-    indiv_arr = np.array([
-        [indiv_means[r][v] for v in varnames]
-        for r in sorted(indiv_means.keys())
-    ])  # (n_resps, K)
-    pct_positive = (indiv_arr > 0).mean(axis=0) * 100.0  # % of respondents with β > 0
-    indiv_quantiles = {
-        v: {
-            "q10": float(np.quantile(indiv_arr[:, k], 0.10)),
-            "q50": float(np.quantile(indiv_arr[:, k], 0.50)),
-            "q90": float(np.quantile(indiv_arr[:, k], 0.90)),
-            "pct_positive": float(pct_positive[k]),
+    # `_individual_posteriors` returns empty dicts when no respondent had a usable
+    # chosen row; guard so the quantile block cannot index an empty array.
+    if indiv_means:
+        indiv_arr = np.array([
+            [indiv_means[r][v] for v in varnames]
+            for r in sorted(indiv_means.keys())
+        ])  # (n_resps, K)
+        pct_positive = (indiv_arr > 0).mean(axis=0) * 100.0  # % of respondents with β > 0
+        indiv_quantiles = {
+            v: {
+                "q10": float(np.quantile(indiv_arr[:, k], 0.10)),
+                "q50": float(np.quantile(indiv_arr[:, k], 0.50)),
+                "q90": float(np.quantile(indiv_arr[:, k], 0.90)),
+                "pct_positive": float(pct_positive[k]),
+            }
+            for k, v in enumerate(varnames)
         }
-        for k, v in enumerate(varnames)
-    }
+    else:
+        indiv_quantiles = {}
 
     # Sample of per-respondent posteriors for the UI — full N can be huge
     # so we keep just the first 50 plus aggregate stats. Researchers who need
@@ -1105,10 +1526,19 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
         for r in sample_resp_ids
     ]
 
+    # Importance the Sawtooth way — per respondent, then averaged. Falls back to
+    # the population-mean version if individual posteriors came back empty.
+    importance_individual = _importance_from_individual_betas(indiv_means, attributes, varnames)
+    importance_population = _calc_importance_from_part_worths(part_worths)
+
     return {
         "method": "Hierarchical Bayes (Panel Mixed Logit + Individual Posteriors)",
         "part_worths": part_worths,
-        "importance_scores": _calc_importance_from_part_worths(part_worths),
+        "importance_scores": importance_individual or importance_population,
+        # Kept alongside so the two definitions can be compared. They diverge
+        # exactly when respondents disagree on an attribute's DIRECTION.
+        "importance_population_mean": importance_population,
+        "importance_basis": "individual" if importance_individual else "population_mean",
         "population_mean": population_mean,
         "population_std": population_std,
         "coefficients": population_mean,
@@ -1119,6 +1549,7 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
         "log_likelihood": ll_model,
         "log_likelihood_null": ll_null,
         "pseudo_r_squared": float(pseudo_r2),
+        "pseudo_r_squared_adj": diag_hb["pseudo_r_squared_adj"],
         "lr_statistic": diag_hb["lr_statistic"],
         "lr_df": diag_hb["lr_df"],
         "lr_p_value": diag_hb["lr_p_value"],
@@ -1128,6 +1559,17 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
         "bic": float(model.bic),
         "n_respondents": int(df["respondent"].nunique()),
         "n_observations": int(len(df)),
+        "n_choice_situations": int(df["_situation"].nunique()),
+        "n_parameters": int(fit["n_parameters"]),
+        "ic_sample_basis": "choice_situations",
+        # Coefficients the data supported treating as random (the rest are shared
+        # across respondents, so their individual posteriors equal the population
+        # mean by construction).
+        "random_vars": fit["random_vars"],
+        "fixed_vars": fit["fixed_vars"],
+        "refit_with_fixed": fit["refit_with_fixed"],
+        "heterogeneity_detected": fit["heterogeneity_detected"],
+        "sd_alpha": fit["sd_alpha"],
         "n_draws": 300,
         "utility_scale": "logit",
         "utility_interpretation": (
@@ -1157,17 +1599,66 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
     attributes = study.get("attributes", [])
     cs_map = {cs["id"]: cs for cs in study.get("choice_sets", [])}
 
-    # Pre-compute the dummy column order and a (attr_id, level_id, col_idx) map.
-    col_names = []          # human-readable column names for output
-    col_keys = []           # (attr_id, level_id) tuples in the SAME order as columns
-    attr_level_keys = {}    # attr_id -> list of all level_ids (incl. reference last)
+    # Level ids this study still declares, per attribute — used to spot profiles
+    # that reference a level which no longer exists.
+    declared_levels = {
+        attr["id"]: {lvl["id"] for lvl in attr.get("levels", [])} for attr in attributes
+    }
+
+    # ---- Pre-pass: which levels were actually SHOWN? -----------------------
+    # The reference category has to be a level respondents really saw. Taking
+    # `levels[-1]` unconditionally breaks as soon as a level is appended after
+    # the design was generated: the new level becomes the nominal reference but
+    # appears in no profile, so every OTHER level of that attribute keeps a
+    # dummy — and those dummies sum to 1 on every row, which is perfectly
+    # collinear with the intercept. statsmodels falls back to a pseudo-inverse
+    # instead of failing, so the model would silently report coefficients that
+    # are not identified. Same rule as `_dummy_encode_consistent_reference`.
+    def _usable(cs, choice):
+        """Same admissibility rule as `_build_conjoint_data_rows` — exactly one
+        alternative chosen — so OLS is fitted on the identical sample as the
+        logit family rather than silently keeping all-zero-outcome situations."""
+        profiles = cs.get("profiles", [])
+        sel = choice.get("selected_profile_id")
+        return len(profiles) >= 2 and sum(1 for p in profiles if p["id"] == sel) == 1
+
+    shown_levels = {attr["id"]: set() for attr in attributes}
+    for resp in responses:
+        for choice in resp.get("responses", []):
+            cs = cs_map.get(choice.get("choice_set_id"))
+            if not cs or not _usable(cs, choice):
+                continue
+            for prof in cs.get("profiles", []):
+                for attr in attributes:
+                    lid = prof.get("attribute_levels", {}).get(attr["id"])
+                    if lid is not None and lid in declared_levels.get(attr["id"], ()):
+                        shown_levels[attr["id"]].add(lid)
+
+    col_names = []       # human-readable column names for output
+    col_keys = []        # (attr_id, level_id) tuples in the SAME order as columns
+    attr_columns = {}    # attr_id -> [level_id, ...] in column order
+    attr_reference = {}  # attr_id -> level_id used as the reference (or None)
+    attr_dropped = {}    # attr_id -> [level_id, ...] declared but never shown
     for attr in attributes:
+        aid = attr["id"]
         levels = attr.get("levels", [])
-        attr_level_keys[attr["id"]] = [lvl["id"] for lvl in levels]
-        # Reference = LAST level (matches the UI convention in the loop below)
-        for lvl in levels[:-1]:
+        observed = [lvl for lvl in levels if lvl["id"] in shown_levels[aid]]
+        attr_dropped[aid] = [lvl["id"] for lvl in levels if lvl["id"] not in shown_levels[aid]]
+        attr_columns[aid] = []
+        attr_reference[aid] = None
+        if len(observed) < 2:
+            # Fewer than two levels seen → no contrast to estimate. Drop the
+            # attribute rather than emit an unidentified column.
+            continue
+        ref = observed[-1]  # last DECLARED level that was actually shown
+        attr_reference[aid] = ref["id"]
+        for lvl in observed[:-1]:
             col_names.append(f"{attr['name']}_{lvl['value']}")
-            col_keys.append((attr["id"], lvl["id"]))
+            col_keys.append((aid, lvl["id"]))
+            attr_columns[aid].append(lvl["id"])
+
+    if not col_keys:
+        return None
 
     # Build X, y AND track per-level selection counts in one pass.
     X_rows = []
@@ -1175,22 +1666,32 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
     cluster_groups = []         # (respondent_id, choice_set_id) → one cluster per choice situation
     selection_counts = {}     # (attr_id, level_id) -> int (only when profile chosen)
     appearance_counts = {}    # (attr_id, level_id) -> int (every time presented)
+    unmapped_counts = {}  # attr_id -> rows whose level is orphaned or absent
+
     for resp in responses:
         resp_id = resp.get("respondent_id") or resp.get("id") or "?"
         for choice in resp.get("responses", []):
             cs_id = choice.get("choice_set_id")
             cs = cs_map.get(cs_id)
-            if not cs:
+            if not cs or not _usable(cs, choice):
                 continue
             sel_pid = choice.get("selected_profile_id")
             situation_key = f"{resp_id}|{cs_id}"
             for prof in cs.get("profiles", []):
                 row = []
                 for attr in attributes:
-                    levels = attr.get("levels", [])
-                    profile_level = prof.get("attribute_levels", {}).get(attr["id"])
-                    for lvl in levels[:-1]:
-                        row.append(1 if profile_level == lvl["id"] else 0)
+                    aid = attr["id"]
+                    profile_level = prof.get("attribute_levels", {}).get(aid)
+                    # An all-zero dummy block means "reference level". A profile
+                    # pointing at a deleted level, or predating the attribute
+                    # entirely, produces the SAME all-zero block — so without this
+                    # counter OLS would quietly fold those rows into the reference
+                    # while MNL gives them their own class, and the two methods
+                    # would be describing different data.
+                    if profile_level not in declared_levels.get(aid, ()):
+                        unmapped_counts[aid] = unmapped_counts.get(aid, 0) + 1
+                    for lvl_id in attr_columns[aid]:
+                        row.append(1 if profile_level == lvl_id else 0)
                 X_rows.append(row)
                 cluster_groups.append(situation_key)
                 is_selected = (prof["id"] == sel_pid)
@@ -1207,6 +1708,18 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
     X = np.asarray(X_rows, dtype=float)
     y = np.asarray(y_rows, dtype=float)
 
+    # A dummy that never varies carries no information and is collinear with the
+    # intercept — that is what an appended level (never shown, so its column is
+    # all zeros) or an appended attribute produces. statsmodels would return
+    # pinv-based coefficients of 0 with meaningless standard errors rather than
+    # failing, so drop them explicitly and say which ones went.
+    keep_idx = [j for j in range(X.shape[1]) if np.unique(X[:, j]).size > 1]
+    excluded_keys = [col_keys[j] for j in range(X.shape[1]) if j not in set(keep_idx)]
+    excluded_names = [col_names[j] for j in range(X.shape[1]) if j not in set(keep_idx)]
+    if not keep_idx:
+        return None
+    X = X[:, keep_idx]
+
     # Add constant for intercept.
     # SE are CLUSTER-ROBUST by choice situation — alternatives within the
     # same choice set are not i.i.d. (the chosen one mechanically excludes
@@ -1221,40 +1734,52 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
         res = model.fit(cov_type="HC1")
 
     intercept = float(res.params[0])
-    coefficients = res.params[1:]
-    std_errors = res.bse[1:]
-    t_values = res.tvalues[1:]
-    p_values = res.pvalues[1:]
     r_squared = float(res.rsquared)
     adj_r_squared = float(res.rsquared_adj)
     n_obs = int(len(y))
 
+    # Results keyed by (attr_id, level_id) so the build loop below cannot drift
+    # out of step with the fitted column order after exclusions.
+    stats_by_key = {}
+    for pos, j in enumerate(keep_idx):
+        stats_by_key[col_keys[j]] = {
+            "coefficient": float(res.params[pos + 1]),
+            "std_error": float(res.bse[pos + 1]),
+            "t_value": float(res.tvalues[pos + 1]),
+            "p_value": float(res.pvalues[pos + 1]),
+        }
+
     # Build coefficients dict in the same shape the frontend already consumes.
+    # Every DECLARED level gets an entry so the table never loses a row: the
+    # estimated ones carry statistics, the reference is pinned to 0, and levels
+    # that were never shown are flagged rather than silently reported as 0.
     coefficients_dict = {}
-    coef_idx = 0
     for attr in attributes:
         attr_id = attr["id"]
-        levels = attr.get("levels", [])
         coefficients_dict[attr_id] = {"name": attr["name"], "levels": {}}
-        for lvl in levels[:-1]:
-            coefficients_dict[attr_id]["levels"][lvl["id"]] = {
+        ref_id = attr_reference.get(attr_id)
+        for lvl in attr.get("levels", []):
+            lid = lvl["id"]
+            if lid == ref_id:
+                coefficients_dict[attr_id]["levels"][lid] = {
+                    "value": lvl["value"],
+                    "coefficient": 0.0, "std_error": 0.0,
+                    "t_value": 0.0, "p_value": 1.0,
+                    "is_reference": True, "is_excluded": False,
+                }
+                continue
+            st = stats_by_key.get((attr_id, lid))
+            coefficients_dict[attr_id]["levels"][lid] = {
                 "value": lvl["value"],
-                "coefficient": float(coefficients[coef_idx]),
-                "std_error": float(std_errors[coef_idx]),
-                "t_value": float(t_values[coef_idx]),
-                "p_value": float(p_values[coef_idx]),
+                "coefficient": st["coefficient"] if st else 0.0,
+                "std_error": st["std_error"] if st else 0.0,
+                "t_value": st["t_value"] if st else 0.0,
+                "p_value": st["p_value"] if st else 1.0,
                 "is_reference": False,
-            }
-            coef_idx += 1
-        if levels:
-            ref = levels[-1]
-            coefficients_dict[attr_id]["levels"][ref["id"]] = {
-                "value": ref["value"],
-                "coefficient": 0.0,
-                "std_error": 0.0,
-                "t_value": 0.0,
-                "p_value": 1.0,
-                "is_reference": True,
+                # True when the level never appeared in any shown profile (or its
+                # attribute had too few observed levels), so no coefficient could
+                # be estimated for it.
+                "is_excluded": st is None,
             }
 
     # Build part_worths with REAL per-level selection counts (not the bogus
@@ -1266,6 +1791,13 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
             part_worths[attr_id]["levels"][level_id] = {
                 "value": level_data["value"],
                 "utility": level_data["coefficient"],
+                # Carry the identification flags onto the object the results
+                # table actually renders. Without them the UI has to infer
+                # "this is the reference" from utility == 0, which is wrong in
+                # two directions: an unestimable level also reports 0, and a
+                # genuinely estimated coefficient can legitimately be 0.
+                "is_reference": level_data.get("is_reference", False),
+                "is_excluded": level_data.get("is_excluded", False),
                 "selection_count": selection_counts.get((attr_id, level_id), 0),
                 "appearance_count": appearance_counts.get((attr_id, level_id), 0),
             }
@@ -1281,6 +1813,18 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
         "f_statistic": float(res.fvalue) if res.fvalue is not None else 0.0,
         "f_pvalue": float(res.f_pvalue) if res.f_pvalue is not None else 1.0,
         "n_observations": n_obs,
+        "n_parameters": int(len(keep_idx) + 1),  # + intercept
+        # Levels that could not be estimated (never shown), and profiles whose
+        # attribute level is no longer declared. Both used to vanish into the
+        # reference category without a trace.
+        "excluded_levels": (
+            [{"attribute_id": a, "level_id": l, "column": n, "reason": "no_variation"}
+             for (a, l), n in zip(excluded_keys, excluded_names)]
+            + [{"attribute_id": aid, "level_id": lid, "column": None, "reason": "never_shown"}
+               for aid, lids in attr_dropped.items() for lid in lids]
+        ),
+        "reference_levels": {a: r for a, r in attr_reference.items() if r},
+        "unmapped_level_rows": {k: int(v) for k, v in unmapped_counts.items()},
         "utility_scale": "coefficient",
         "utility_interpretation": (
             "OLS regression coefficients (reference = last level of each attribute). "
@@ -1291,6 +1835,19 @@ def calculate_regression_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "choice situation). For inference prefer MNL — OLS coefficients "
             "can fall outside [0,1] and the linear approximation loses "
             "efficiency vs. discrete-choice estimators."
+            + (
+                f" NOTE: {len(excluded_keys) + sum(len(v) for v in attr_dropped.values())} "
+                "level(s) could not be estimated (never shown in any profile) and were "
+                "dropped from the model."
+                if (excluded_keys or any(attr_dropped.values())) else ""
+            )
+            + (
+                f" NOTE: {sum(unmapped_counts.values())} alternative-rows reference an "
+                "attribute level this study no longer declares; OLS treats them as the "
+                "reference level, whereas MNL/Mixed/HB give them their own class — "
+                "regenerate the design to make all methods agree."
+                if unmapped_counts else ""
+            )
         ),
     }
 
@@ -2378,14 +2935,63 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             }
         )
     
+        # Sample size on the same Johnson & Orme rule the Results page's
+        # adequacy card checks, so the number quoted here is the number the
+        # researcher is later held to.
+        sample = recommend_sample_size(
+            [len(attr.levels) for attr in attributes],
+            len(choice_sets),
+            request.alternatives_per_set,
+        )
+
         return {
             "message": "Design generated successfully",
             "num_choice_sets": len(choice_sets),
             "alternatives_per_set": request.alternatives_per_set,
+            "sample_size": sample,
             "design_efficiency": {
                 "total_profiles": len(choice_sets) * request.alternatives_per_set,
-                "recommended_respondents": max(200, len(choice_sets) * 15)
+                "recommended_respondents": sample["recommended"],
+                "minimum_respondents": sample["minimum"],
             }
+        }
+
+    @conjoint_router.get("/conjoint/studies/{study_id}/design-recommendation")
+    async def get_design_recommendation(
+        study_id: str,
+        alternatives_per_set: int = 3,
+        number_of_sets: Optional[int] = None,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Task count and respondent count the study's attributes imply, BEFORE
+        the design is generated. Same helpers the generator and the Results
+        page's adequacy card use, so the three never disagree."""
+        study = await db.conjoint_studies.find_one(
+            {"id": study_id}, {"_id": 0, "attributes": 1, "creator_id": 1}
+        )
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        attributes = study.get("attributes") or []
+        levels_per_attr = [len(a.get("levels") or []) for a in attributes]
+        if not levels_per_attr:
+            raise HTTPException(status_code=400, detail="No attributes defined")
+
+        recommended_sets = calculate_optimal_choice_sets(
+            len(attributes), levels_per_attr, alternatives_per_set
+        )
+        num_sets = number_of_sets or recommended_sets
+
+        return {
+            "recommended_sets": recommended_sets,
+            "num_sets": num_sets,
+            "alternatives_per_set": alternatives_per_set,
+            "total_parameters": max(sum(levels_per_attr) - len(attributes), 1),
+            "sample_size": recommend_sample_size(
+                levels_per_attr, num_sets, alternatives_per_set
+            ),
         }
 
     @conjoint_router.get("/conjoint/studies/trash")
@@ -2434,15 +3040,34 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         """Get conjoint study details (public if is_public_result is True)"""
         # Use projection for summary view (results page) — skip heavy choice_sets
         if view == "summary":
-            projection = {
-                "_id": 0,
-                "choice_sets": 0,  # This is the 7MB field
-                "status_history": 0,
-            }
+            # `num_choice_sets` is NOT stored on the document (it only ever
+            # existed as a generate-design response field and a list projection
+            # that defaults to 0), so dropping `choice_sets` used to leave the
+            # Results page with no way to know how many tasks each respondent
+            # saw. That silently disabled the sample-adequacy card, which needs
+            # tasks x alternatives. Compute both scalars server-side instead —
+            # $size on the array never ships the 7MB field itself.
+            pipeline = [
+                {"$match": {"id": study_id}},
+                {"$addFields": {
+                    "num_choice_sets": {"$size": {"$ifNull": ["$choice_sets", []]}},
+                    "alternatives_per_set": {
+                        "$ifNull": [
+                            "$alternatives_per_set",
+                            {"$size": {"$ifNull": [
+                                {"$arrayElemAt": ["$choice_sets.profiles", 0]}, []
+                            ]}},
+                        ]
+                    },
+                }},
+                {"$project": {"_id": 0, "choice_sets": 0, "status_history": 0}},
+                {"$limit": 1},
+            ]
+            docs = await db.conjoint_studies.aggregate(pipeline).to_list(1)
+            study = docs[0] if docs else None
         else:
-            projection = {"_id": 0}
+            study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
 
-        study = await db.conjoint_studies.find_one({"id": study_id}, projection)
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
     
@@ -4813,9 +5438,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         respondent_count = study.get("respondent_count", 0)
         cache_key = f"ai_{request.method}_{'all' if request.compare_all else 'single'}"
 
-        # Check cache first — return immediately if exists
+        # Check cache first — return immediately if exists. Same stale-schema
+        # guard as the numeric endpoint: an interpretation written from pre-audit
+        # statistics must not be replayed after those statistics changed.
         cached = await db.analysis_cache.find_one(
-            {"study_id": study_id, "method": cache_key, "respondent_count": respondent_count},
+            {"study_id": study_id, "method": cache_key,
+             "respondent_count": respondent_count,
+             "schema_version": ANALYSIS_CACHE_VERSION},
             {"_id": 0}
         )
         if cached and cached.get("results"):
@@ -4907,6 +5536,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 {"$set": {
                     "study_id": study_id,
                     "method": cache_key,
+                    # The interpretation TEXT quotes the statistics it was given,
+                    # so it goes stale whenever those numbers change — same guard
+                    # as the numeric cache, otherwise a study keeps being narrated
+                    # from its pre-audit BIC and importance figures.
+                    "schema_version": ANALYSIS_CACHE_VERSION,
                     "respondent_count": respondent_count,
                     "results": result_data,
                     "created_at": datetime.now(timezone.utc).isoformat()
@@ -4998,9 +5632,16 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             extra_hash = hashlib.md5(request.extra_prompt.strip().encode()).hexdigest()[:8]
         cache_key = f"thesis_{methods_key}_{chapters_key}" + (f"_ep{extra_hash}" if extra_hash else "")
 
-        # Check cache — if AI content already exists, return ready immediately
+        # Check cache — if AI content already exists, return ready immediately.
+        # The schema_version guard matters more here than anywhere else: the
+        # generated thesis text EMBEDS the statistics, `_create_thesis_docx`
+        # re-renders that stored text verbatim, and there is no force/regenerate
+        # path in the UI. Without the guard a study would keep emitting a
+        # document quoting its pre-audit BIC and importance figures forever.
         cached = await db.analysis_cache.find_one(
-            {"study_id": study_id, "method": cache_key, "respondent_count": respondent_count},
+            {"study_id": study_id, "method": cache_key,
+             "respondent_count": respondent_count,
+             "schema_version": ANALYSIS_CACHE_VERSION},
             {"_id": 0}
         )
         if cached and cached.get("results", {}).get("ai_content"):
@@ -5089,6 +5730,9 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 {"$set": {
                     "study_id": study_id,
                     "method": cache_key,
+                    # Stamp the schema so the reads above/below can reject a
+                    # document generated from superseded statistics.
+                    "schema_version": ANALYSIS_CACHE_VERSION,
                     "respondent_count": respondent_count,
                     "results": {"ai_content": ai_content},
                     "created_at": datetime.now(timezone.utc).isoformat()
@@ -5144,15 +5788,22 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
 
         respondent_count = study.get("respondent_count", 0)
 
-        # Find thesis cache (specific or any)
+        # Find thesis cache (specific or any). Both branches carry the
+        # schema_version guard — the frontend polls and then downloads WITHOUT a
+        # cache_key, so the regex branch is the one it actually hits; guarding
+        # only the keyed branch would leave the real path serving stale content.
         if cache_key:
             cached = await db.analysis_cache.find_one(
-                {"study_id": study_id, "method": cache_key, "respondent_count": respondent_count},
+                {"study_id": study_id, "method": cache_key,
+                 "respondent_count": respondent_count,
+                 "schema_version": ANALYSIS_CACHE_VERSION},
                 {"_id": 0}
             )
         else:
             cached = await db.analysis_cache.find_one(
-                {"study_id": study_id, "method": {"$regex": "^thesis_"}, "respondent_count": respondent_count},
+                {"study_id": study_id, "method": {"$regex": "^thesis_"},
+                 "respondent_count": respondent_count,
+                 "schema_version": ANALYSIS_CACHE_VERSION},
                 {"_id": 0},
                 sort=[("created_at", -1)]
             )

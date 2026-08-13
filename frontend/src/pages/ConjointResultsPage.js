@@ -811,6 +811,109 @@ const ConjointResultsPage = () => {
 
   const topFeatures = sortedImportance; // Show all features
 
+  // ---------------------------------------------------------------------------
+  // Plain-language readout for users without a statistics background.
+  //
+  // `sampleAdequacy` replaces a status card that was hardcoded to "พร้อมวิเคราะห์ /
+  // ข้อมูลเพียงพอแล้ว" no matter how many people had actually responded — a study
+  // with 4 respondents was told it was ready to report. The rule used here is the
+  // standard planning heuristic for choice-based conjoint (Orme, "Getting Started
+  // with Conjoint Analysis", ch. 7):
+  //
+  //      n · t · a / c  ≥  500
+  //
+  // n = respondents, t = choice tasks each one saw, a = alternatives per task,
+  // c = the largest level count of any single attribute (the attribute that needs
+  // the most data). 500 is the minimum for main effects; 1000 is the comfortable
+  // target. Expressing the gap as "how many more people" is what makes the number
+  // actionable to someone who will never read a power calculation.
+  // ---------------------------------------------------------------------------
+  // NOTE: deliberately a plain IIFE, not `useMemo`. This runs BELOW the two
+  // early returns above (`loading`, `insufficient_data`), so a hook here would
+  // execute a different number of times per render and React would throw
+  // "Rendered more hooks than during the previous render", taking the whole
+  // Results page down the moment data finished loading. The computation is
+  // O(attributes) — memoising it buys nothing.
+  const sampleAdequacy = (() => {
+    const n = currentResults?.respondent_count ?? results?.respondent_count ?? 0;
+    // The summary view of a study omits `choice_sets` (it can be megabytes), so
+    // prefer the scalar counts the API provides and fall back to the array only
+    // when the full document is present. Reading the array alone made this whole
+    // block return null on the Results page, leaving the card stuck on
+    // "กำลังตรวจสอบ" forever — the exact state it was written to replace.
+    const t = study?.num_choice_sets || study?.choice_sets?.length || 0;
+    const a = study?.alternatives_per_set || study?.choice_sets?.[0]?.profiles?.length || 0;
+    const levelCounts = (study?.attributes || []).map(x => (x.levels || []).length);
+    const c = levelCounts.length ? Math.max(...levelCounts) : 0;
+    if (!t || !a || !c) return null;
+
+    const ratio = (n * t * a) / c;
+    const peopleFor = (target) => Math.ceil((target * c) / (t * a));
+    const needMin = peopleFor(500);
+    const needGood = peopleFor(1000);
+
+    // MNL cannot be estimated at all on a handful of respondents; the page also
+    // gates auto-analysis at 30, so keep the two consistent.
+    if (n < 30) {
+      return {
+        key: 'blocked', n, ratio, needMin, needGood,
+        title: 'ยังวิเคราะห์ไม่ได้',
+        detail: `มีผู้ตอบ ${n} คน — ต้องมีอย่างน้อย 30 คนก่อนจึงจะประมาณค่าแบบจำลองได้`,
+        action: `ขออีก ${30 - n} คน`,
+        tone: { card: 'from-red-50 to-white border-red-200', dot: 'bg-red-500', text: 'text-red-600' },
+      };
+    }
+    if (ratio < 500) {
+      return {
+        key: 'weak', n, ratio, needMin, needGood,
+        title: 'ดูแนวโน้มได้ แต่ยังไม่ควรสรุป',
+        detail: `ตอนนี้ได้คะแนนความเพียงพอ ${Math.round(ratio)} จากเกณฑ์ขั้นต่ำ 500 — ตัวเลขจะยังแกว่ง`,
+        action: `ขออีก ${Math.max(0, needMin - n)} คนเพื่อถึงเกณฑ์`,
+        tone: { card: 'from-amber-50 to-white border-amber-200', dot: 'bg-amber-500', text: 'text-amber-600' },
+      };
+    }
+    if (ratio < 1000) {
+      return {
+        key: 'ok', n, ratio, needMin, needGood,
+        title: 'เพียงพอตามเกณฑ์ขั้นต่ำ',
+        detail: `คะแนนความเพียงพอ ${Math.round(ratio)} (เกณฑ์ขั้นต่ำ 500) — สรุปผลรวมได้`,
+        action: `ถ้าต้องการแยกดูรายกลุ่ม ควรมีราว ${needGood} คน`,
+        tone: { card: 'from-lime-50 to-white border-lime-200', dot: 'bg-lime-500', text: 'text-lime-600' },
+      };
+    }
+    return {
+      key: 'strong', n, ratio, needMin, needGood,
+      title: 'ข้อมูลเพียงพอ',
+      detail: `คะแนนความเพียงพอ ${Math.round(ratio)} (เกณฑ์สบายๆ คือ 1000)`,
+      action: 'แยกวิเคราะห์รายกลุ่มย่อยได้',
+      tone: { card: 'from-green-50 to-white border-green-200', dot: 'bg-green-500', text: 'text-green-600' },
+    };
+  })();
+
+  // A three-sentence answer to "แล้วมันแปลว่าอะไร" — the winning level of every
+  // attribute, ordered by how much that attribute actually drove the choice.
+  // Plain IIFE for the same reason as `sampleAdequacy` above.
+  const plainSummary = (() => {
+    if (!sortedImportance.length || !currentResults?.part_worths) return null;
+    const rows = sortedImportance.map((feat) => {
+      const levels = Object.values(currentResults.part_worths?.[feat.id]?.levels || {});
+      if (!levels.length) return null;
+      const best = levels.reduce((a, b) => (b.utility > a.utility ? b : a));
+      const worst = levels.reduce((a, b) => (b.utility < a.utility ? b : a));
+      return {
+        id: feat.id,
+        name: feat.name,
+        importance: feat.importance,
+        best: best.value,
+        worst: worst.value,
+        flat: Math.abs(best.utility - worst.utility) < 1e-9,
+      };
+    }).filter(Boolean);
+    if (!rows.length) return null;
+    const fit = statisticalData?.results?.pseudo_r_squared;
+    return { rows, top: rows[0], fit };
+  })();
+
   // Prepare data for Pie Chart
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
   const pieData = sortedImportance.map((feature, index) => ({
@@ -1049,7 +1152,9 @@ const ConjointResultsPage = () => {
           </div>
         </div>
 
-        {/* Statistical Method Selector */}
+        {/* Statistical Method Selector — every option carries the reason you
+            would pick it, so the choice does not require knowing what the
+            acronyms expand to. MNL stays the default. */}
         <div className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 shadow-sm border-2 border-blue-200">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -1064,11 +1169,11 @@ const ConjointResultsPage = () => {
               }}
               className="w-full sm:w-auto px-3 sm:px-4 py-2 border-2 border-blue-300 rounded-lg bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
             >
-              <option value="counting">📊 Counting Method (นับความถี่)</option>
-              <option value="mnl">⭐ Multinomial Logit (MNL)</option>
-              <option value="linear_regression">📈 Linear Regression (OLS)</option>
-              <option value="mixed_logit">🔀 Mixed Logit</option>
-              <option value="hierarchical_bayes">🎯 Hierarchical Bayes</option>
+              <option value="mnl">⭐ แนะนำ — ใช้วิธีมาตรฐาน (MNL)</option>
+              <option value="counting">📊 ดูแบบง่ายที่สุด: นับความถี่ (Counting)</option>
+              <option value="mixed_logit">🔀 เมื่อคนแต่ละกลุ่มชอบไม่เหมือนกัน (Mixed Logit)</option>
+              <option value="hierarchical_bayes">🎯 เมื่อต้องการผลรายบุคคล (Hierarchical Bayes)</option>
+              <option value="linear_regression">📈 baseline เชิงพรรณนา (OLS)</option>
             </select>
             {loadingStatistical && (
               <div className="flex items-center gap-2 text-blue-600">
@@ -1077,6 +1182,10 @@ const ConjointResultsPage = () => {
               </div>
             )}
           </div>
+          <p className="text-[11px] text-gray-500 mt-2 pl-1">
+            ไม่แน่ใจว่าเลือกอันไหน? ใช้ค่าตั้งต้น <b>MNL</b> ได้เลย — เป็นวิธีที่งานวิจัยส่วนใหญ่รายงาน
+            หรือเปิดแท็บ <b>เปรียบเทียบวิธี</b> เพื่อให้ระบบบอกว่าควรใช้อันไหนกับข้อมูลชุดนี้
+          </p>
         </div>
 
         {/* Filter Bar — time + demographic segments (shows segment chips
@@ -1113,6 +1222,7 @@ const ConjointResultsPage = () => {
         <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6 bg-white rounded-lg p-2 shadow-sm">
           <button
             onClick={() => setActiveTab('overview')}
+            data-testid="tab-overview"
             className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'overview'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
@@ -1126,6 +1236,7 @@ const ConjointResultsPage = () => {
           </button>
           <button
             onClick={() => setActiveTab('academic')}
+            data-testid="tab-academic"
             className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'academic'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
@@ -1139,6 +1250,7 @@ const ConjointResultsPage = () => {
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
+            data-testid="tab-advanced"
             className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'advanced'
                 ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
@@ -1169,6 +1281,76 @@ const ConjointResultsPage = () => {
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <>
+            {/* Plain-language answer first. Everything below this card is the
+                evidence for it; a reader who stops here should still leave with
+                the correct conclusion. */}
+            {plainSummary && (
+              <Card className="p-4 sm:p-6 mb-6 bg-white border-2 border-blue-300" data-testid="conjoint-plain-summary">
+                <div className="flex items-center gap-2 mb-3">
+                  <Lightbulb className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">สรุปผลแบบอ่านง่าย</h2>
+                  <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded font-medium">
+                    ไม่ต้องรู้สถิติก็อ่านได้
+                  </span>
+                </div>
+
+                <p className="text-sm sm:text-base text-gray-800 leading-relaxed mb-4">
+                  สิ่งที่ผู้ตอบให้ความสำคัญมากที่สุดคือ{' '}
+                  <b className="text-blue-700">{plainSummary.top.name}</b>{' '}
+                  (คิดเป็น {plainSummary.top.importance?.toFixed(1)}% ของการตัดสินใจทั้งหมด)
+                  {plainSummary.rows.length > 1 && (
+                    <> รองลงมาคือ <b>{plainSummary.rows[1].name}</b> ที่ {plainSummary.rows[1].importance?.toFixed(1)}%</>
+                  )}
+                </p>
+
+                <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 flex justify-between">
+                    <span>ถ้าจะออกแบบสินค้าให้ถูกใจที่สุด ควรเลือก</span>
+                    <span>ความสำคัญ</span>
+                  </div>
+                  {plainSummary.rows.map((r, i) => (
+                    <div key={r.id}
+                         className={`px-4 py-3 flex items-center justify-between gap-3 text-sm ${i % 2 ? 'bg-gray-50/60' : 'bg-white'}`}>
+                      <div className="min-w-0">
+                        <span className="text-gray-600">{r.name}:</span>{' '}
+                        {r.flat ? (
+                          <span className="text-gray-400">ไม่ต่างกันอย่างมีนัย — เลือกแบบไหนก็ได้</span>
+                        ) : (
+                          <>
+                            <b className="text-emerald-700">{r.best}</b>
+                            <span className="text-gray-400 text-xs"> (แทนที่จะเป็น {r.worst})</span>
+                          </>
+                        )}
+                      </div>
+                      <span className="font-mono text-xs text-gray-500 flex-shrink-0">
+                        {r.importance?.toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-3 border-t text-xs text-gray-600 space-y-1">
+                  <p>
+                    <b>เชื่อผลนี้ได้แค่ไหน?</b>{' '}
+                    {sampleAdequacy?.key === 'strong' || sampleAdequacy?.key === 'ok'
+                      ? 'จำนวนผู้ตอบผ่านเกณฑ์แล้ว '
+                      : 'จำนวนผู้ตอบยังไม่ผ่านเกณฑ์ ตัวเลขอาจเปลี่ยนได้เมื่อมีคนตอบเพิ่ม '}
+                    {typeof plainSummary.fit === 'number' && (
+                      <>· ความแม่นของแบบจำลอง (McFadden ρ²) = <b>{plainSummary.fit.toFixed(3)}</b>{' '}
+                        {plainSummary.fit < 0.1
+                          ? '— ค่อนข้างต่ำ แปลว่าผู้ตอบอาจเลือกเกือบสุ่ม หรือปัจจัยที่วัดยังไม่ใช่ตัวหลัก'
+                          : plainSummary.fit < 0.2 ? '— พอใช้' : '— อยู่ในเกณฑ์ดี'}
+                      </>
+                    )}
+                  </p>
+                  <p className="text-gray-500">
+                    ตัวเลข &quot;ความสำคัญ&quot; บอกว่าปัจจัยนั้นทำให้คนเปลี่ยนใจได้มากแค่ไหน เมื่อเทียบกับปัจจัยอื่นในแบบสอบถามนี้
+                    — รวมกันทุกปัจจัยได้ 100%
+                  </p>
+                </div>
+              </Card>
+            )}
+
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
@@ -1184,15 +1366,26 @@ const ConjointResultsPage = () => {
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-white border-2 border-green-200">
+          {/* Sample adequacy — computed, not assumed. See `sampleAdequacy`. */}
+          <Card
+            className={`p-4 sm:p-6 bg-gradient-to-br border-2 ${sampleAdequacy?.tone.card || 'from-gray-50 to-white border-gray-200'}`}
+            data-testid="conjoint-sample-adequacy"
+          >
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${sampleAdequacy?.tone.dot || 'bg-gray-400'}`}>
+                {sampleAdequacy?.key === 'blocked' || sampleAdequacy?.key === 'weak'
+                  ? <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  : <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-600">สถานะ</p>
-                <p className="text-lg sm:text-xl font-bold text-green-600">พร้อมวิเคราะห์</p>
-                <p className="text-xs text-gray-500">ข้อมูลเพียงพอแล้ว</p>
+                <p className="text-xs sm:text-sm text-gray-600">ข้อมูลพอหรือยัง</p>
+                <p className={`text-lg sm:text-xl font-bold ${sampleAdequacy?.tone.text || 'text-gray-600'}`}>
+                  {sampleAdequacy?.title || 'กำลังตรวจสอบ'}
+                </p>
+                <p className="text-xs text-gray-500">{sampleAdequacy?.detail || '—'}</p>
+                {sampleAdequacy?.action && (
+                  <p className="text-xs font-semibold text-gray-700 mt-1">→ {sampleAdequacy.action}</p>
+                )}
               </div>
             </div>
           </Card>
@@ -2189,14 +2382,6 @@ const ConjointResultsPage = () => {
               </div>
             </Card>
 
-            {/* Statistical Summary */}
-            <Card className="p-6 mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">สถิติการวิจัย</h2>
             {/* Part-Worth Utilities Table */}
             <Card className="p-6 mb-8">
               <div className="flex items-center gap-3 mb-6">
@@ -2292,6 +2477,7 @@ const ConjointResultsPage = () => {
                   </label>
                   <select
                     value={selectedMethod}
+                    data-testid="academic-method-select"
                     onChange={(e) => setSelectedMethod(e.target.value)}
                     className="w-full p-3 border-2 border-indigo-300 rounded-lg font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                   >
@@ -2305,6 +2491,7 @@ const ConjointResultsPage = () => {
                 <div className="flex items-end">
                   <Button
                     onClick={() => loadStatisticalAnalysis(selectedMethod)}
+                    data-testid="academic-calc-btn"
                     disabled={loadingStatistical}
                     className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold h-12"
                   >
@@ -2440,9 +2627,9 @@ const ConjointResultsPage = () => {
                   {statisticalData.method === 'mnl' && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                       <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-200">
-                        <p className="text-xs text-gray-600 mb-1">Pseudo R² (McFadden)</p>
+                        <p className="text-xs text-gray-600 mb-1">Pseudo R² (McFadden ρ²)</p>
                         <p className="text-2xl font-black text-indigo-600">
-                          {((statisticalData.results?.pseudo_r_squared || 0) * 100).toFixed(2)}%
+                          {(statisticalData.results?.pseudo_r_squared ?? 0).toFixed(3)}
                         </p>
                         <p className="text-[10px] text-gray-500 mt-1">
                           {(statisticalData.results?.pseudo_r_squared || 0) > 0.2 ? 'Good fit' :
@@ -2556,6 +2743,107 @@ const ConjointResultsPage = () => {
                     </div>
                   )}
 
+                  {/* ===== MODEL SPECIFICATION (fields from the 2026-08 audit) ===== */}
+                  {(() => {
+                    const r = statisticalData.results || {};
+                    const hasAny = [
+                      r.pseudo_r_squared_adj, r.n_choice_situations, r.n_parameters,
+                      r.random_vars, r.fixed_vars, r.reference_levels, r.excluded_levels,
+                    ].some(v => v !== undefined && v !== null);
+                    if (!hasAny) return null;
+                    const refPairs = Object.entries(r.reference_levels || {});
+                    const excluded = r.excluded_levels || [];
+                    const pw = r.part_worths || {};
+                    const attrName = (aid) => pw[aid]?.name || aid;
+                    const levelName = (aid, lid) => pw[aid]?.levels?.[lid]?.value || lid;
+                    return (
+                      <div className="mb-6 p-5 bg-white border-2 border-slate-200 rounded-xl" data-testid="model-specification-card">
+                        <p className="text-xs uppercase tracking-wider text-slate-500 font-mono">Model Specification</p>
+                        <h4 className="text-lg font-bold text-slate-800 mb-4">รายละเอียดโมเดลที่ประมาณค่า</h4>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200" data-testid="spec-rho-adj">
+                            <p className="text-xs text-slate-500 font-mono">Adjusted ρ²</p>
+                            <p className="text-xl font-bold text-slate-800">
+                              {r.pseudo_r_squared_adj != null ? Number(r.pseudo_r_squared_adj).toFixed(3) : '—'}
+                            </p>
+                            <p className="text-[11px] text-slate-500">ปรับตามจำนวนพารามิเตอร์</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200" data-testid="spec-situations">
+                            <p className="text-xs text-slate-500 font-mono">Choice situations</p>
+                            <p className="text-xl font-bold text-slate-800">
+                              {r.n_choice_situations != null ? Number(r.n_choice_situations).toLocaleString() : '—'}
+                            </p>
+                            <p className="text-[11px] text-slate-500">ฐานคำนวณ AIC/BIC</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200" data-testid="spec-parameters">
+                            <p className="text-xs text-slate-500 font-mono">Parameters (K)</p>
+                            <p className="text-xl font-bold text-slate-800">
+                              {r.n_parameters != null ? Number(r.n_parameters).toLocaleString() : '—'}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {r.ic_sample_basis ? `basis: ${r.ic_sample_basis}` : 'ค่าที่ถูกลงโทษใน BIC'}
+                            </p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200" data-testid="spec-random-fixed">
+                            <p className="text-xs text-slate-500 font-mono">Random / Fixed</p>
+                            <p className="text-xl font-bold text-slate-800">
+                              {r.random_vars ? `${r.random_vars.length} / ${(r.fixed_vars || []).length}` : '—'}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {r.random_vars ? 'สัมประสิทธิ์ที่ยอมให้แตกต่างรายบุคคล' : 'ไม่ใช้กับวิธีนี้'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {r.random_vars && r.random_vars.length > 0 && (
+                          <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg" data-testid="spec-random-list">
+                            <p className="text-xs font-bold text-purple-900 mb-1">Random coefficients</p>
+                            <p className="text-xs text-gray-700 break-words">{r.random_vars.join(', ')}</p>
+                            {(r.fixed_vars || []).length > 0 && (
+                              <>
+                                <p className="text-xs font-bold text-purple-900 mt-2 mb-1">
+                                  Fixed (taste SD ไม่มีนัยสำคัญ จึงตรึงไว้)
+                                </p>
+                                <p className="text-xs text-gray-700 break-words">{r.fixed_vars.join(', ')}</p>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {refPairs.length > 0 && (
+                          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg" data-testid="spec-reference-levels">
+                            <p className="text-xs font-bold text-blue-900 mb-1">Reference levels (β = 0)</p>
+                            <ul className="text-xs text-gray-700 space-y-0.5">
+                              {refPairs.map(([attr, lvl]) => (
+                                <li key={attr}>• <b>{attrName(attr)}</b>: {levelName(attr, lvl)}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {excluded.length > 0 && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg" data-testid="spec-excluded-levels">
+                            <p className="text-xs font-bold text-amber-900 mb-1">
+                              Levels ที่ประมาณค่าไม่ได้ ({excluded.length})
+                            </p>
+                            <ul className="text-xs text-gray-700 space-y-0.5">
+                              {excluded.map((e, i) => (
+                                <li key={i}>
+                                  • <b>{attrName(e.attribute_id)}</b>: {levelName(e.attribute_id, e.level_id)}
+                                  {e.reason === 'never_shown' ? ' (ไม่เคยถูกแสดง)' : ' (ไม่มีความแปรผัน)'}
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="text-[11px] text-amber-800 mt-1">
+                              เกิดจากไม่มีความแปรผันภายใน choice set หรือไม่เคยถูกแสดงให้ผู้ตอบเห็น
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Utility Scale Info */}
                   {statisticalData.results?.utility_interpretation && (
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -2642,7 +2930,16 @@ const ConjointResultsPage = () => {
                             const sdVal = stdCoefs[colKey];
                             const popSdVal = popStd[colKey];
                             const utilVal = level.utility ?? level.coefficient ?? 0;
-                            const isRef = utilVal === 0 && !pVal;
+                            // Prefer the explicit flags the backend now sends.
+                            // Inferring "reference" from utility === 0 is wrong in
+                            // both directions: a level that could not be estimated
+                            // also reports 0, and a genuinely estimated coefficient
+                            // can legitimately be 0. Keep the old heuristic only as
+                            // a fallback for methods that do not send the flags.
+                            const isExcluded = level.is_excluded === true;
+                            const isRef = level.is_reference !== undefined
+                              ? level.is_reference === true
+                              : (utilVal === 0 && !pVal);
 
                             return (
                               <tr key={`${attrId}-${levelIdx}`} className="hover:bg-indigo-50">
@@ -2702,7 +2999,14 @@ const ConjointResultsPage = () => {
                                 )}
 
                                 <td className="border-2 border-indigo-200 px-4 py-3 text-center">
-                                  {isRef ? (
+                                  {isExcluded ? (
+                                    <span
+                                      className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-bold"
+                                      title="ระดับนี้ไม่เคยถูกแสดงให้ผู้ตอบเห็น จึงประมาณค่าไม่ได้ — ค่า 0 ที่แสดงไม่ใช่ผลการประมาณ"
+                                    >
+                                      ประมาณค่าไม่ได้
+                                    </span>
+                                  ) : isRef ? (
                                     <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">Reference</span>
                                   ) : statisticalData.method === 'mnl' && pVal != null ? (
                                     pVal < 0.05 ? (
@@ -2793,6 +3097,14 @@ const ConjointResultsPage = () => {
               )}
             </Card>
 
+            {/* Statistical Summary */}
+            <Card className="p-6 mb-8" data-testid="research-statistics-card">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">สถิติการวิจัย</h2>
                   <p className="text-sm text-gray-600">
                     ข้อมูลสถิติพื้นฐานของการศึกษา
                   </p>

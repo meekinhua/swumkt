@@ -1,0 +1,67 @@
+{
+  "summary": "Frontend E2E verification of Conjoint audit patch (Aug-2026). Verified Results page mounts without React errors, plain-summary + sample-adequacy cards render with real numbers, Design page sample-size-recommendation card responds live to alternatives-per-choice-set, Academic tab renders model-fit-diagnostics + model-specification-card + all spec-* sub-testids for mnl / mixed_logit / hierarchical_bayes / linear_regression with decimal-formatted Adjusted rho and human-readable OLS reference levels, research-statistics-card is intact, and (when authenticated) the Compare tab fires all four methods, produces a BIC-based verdict ('ใช้ MNL — ได้ค่า BIC ต่ำสุด และนำ HB อยู่ 3.2 จุด'), excludes OLS from ranking, and shows the BIC/ρ² columns. Mobile 390px shows no overflow. ONE HIGH-priority bug found: the Compare tab is completely inert on the PUBLIC /conjoint/results/:studyId route because ConjointCompareMethods.jsx bails out when `token` is null.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ConjointCompareMethods.jsx",
+        "issue": "Compare tab makes ZERO /statistical-analysis calls when the Results page is opened via the public route /conjoint/results/:studyId (unauthenticated). useEffect at line 74-75 guards with `if (!studyId || !token) return;` so all four methods stay blank (table full of '—' and no compare-verdict card). Authenticated navigation works correctly. Because App.js explicitly registers this route as 'Public Conjoint Results — No authentication required', the effect should fire without a token (or headers should be built conditionally). Reproduce: log out, open https://mnl-results-hub.preview.emergentagent.com/conjoint/results/6099ac5b-4376-4c14-9d51-3c0637ca4260 → click 'เปรียบเทียบวิธี' → table is empty, no verdict.",
+        "selector": "[data-testid=\"tab-compare-methods\"] then [data-testid=\"compare-verdict\"] (missing) / [data-testid=\"compare-fit-table\"] (empty)",
+        "priority": "HIGH"
+      },
+      {
+        "component": "ConjointResultsPage.js — Statistical Analysis method picker",
+        "issue": "The <select value={selectedMethod}> in the Academic tab (line ~2475) and its 'คำนวณด้วย {method}' button (line ~2488) have no data-testid, forcing tests to match by Thai text. Add data-testid=\"academic-method-select\" and data-testid=\"academic-calc-btn\".",
+        "selector": "select in the Academic tab / button 'คำนวณด้วย ...'",
+        "priority": "LOW"
+      },
+      {
+        "component": "ConjointResultsPage.js — main tab buttons",
+        "issue": "Only tab-compare-methods has a data-testid. Overview / Academic / Advanced buttons (lines 1223, 1237, 1249) have none — add data-testid=\"tab-overview\", \"tab-academic\", \"tab-advanced\" for parity and reliable automation.",
+        "selector": "buttons ภาพรวมและคำแนะนำ / เชิงวิชาการและสถิติ / เทคนิคขั้นสูง",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_acceptance_criteria": [
+    "Results page for 6099ac5b (120 respondents) mounts cleanly, no React error in console, both conjoint-plain-summary and conjoint-sample-adequacy present.",
+    "Plain-language summary shows real numbers: ราคา 32.1%, ขนาดบรรจุ 21.7%, ประเภทนม 17.1%, ความสะดวกในการเปิด 16.2%, แบรนด์ 12.9% — plus 'McFadden ρ² = 0.003' and recommended optimal profile.",
+    "Sample-adequacy card renders a real band ('ข้อมูลเพียงพอ', adequacy score 1440, target ≥1000) — NOT the placeholder 'กำลังตรวจสอบ' and NOT hardcoded 'ข้อมูลเพียงพอแล้ว'.",
+    "Small study 993a5ce4 (2 respondents) is NOT reported as adequate — page shows the DASHBOARD-LOCKED gate 'ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์ / need 28 more'.",
+    "Academic tab (เชิงวิชาการและสถิติ) selecting mnl / mixed_logit / hierarchical_bayes / linear_regression + pressing 'คำนวณด้วย ...' all render model-fit-diagnostics (except OLS which correctly omits it) and the new model-specification-card.",
+    "spec-rho-adj shows Adjusted ρ² as a DECIMAL: MNL -0.004, Mixed -0.003, HB -0.003, OLS —.",
+    "spec-situations = 1,440, spec-parameters = 13 (mnl) / 14 (mixed/HB) / 12 (OLS), spec-random-fixed = '—' for MNL and OLS, '1 / 12' for Mixed & HB.",
+    "spec-random-list present for mixed_logit and hierarchical_bayes (lists random + fixed coefficients; some labels prefixed '___ORPHAN___' due to stale study data — see note).",
+    "spec-reference-levels for linear_regression shows HUMAN-READABLE attribute AND level names ('ราคา: 46 บาทขึ้นไป · แบรนด์: เมจิ · ประเภทนม: นมสูตรพิเศษ · ขนาดบรรจุ: 450-500 ml · ความสะดวกในการเปิด: ขวดแก้ว + ฝาโลหะ') — no UUIDs.",
+    "Pseudo R² in the MNL summary tile renders as decimal 0.003 (not %).",
+    "research-statistics-card ('สถิติการวิจัย') renders heading + 4 stat tiles (120 respondents, 5 attributes, 16 levels, Choice-Based Conjoint) + วิธีการทางสถิติ list.",
+    "Compare tab (AUTHENTICATED): all 4 statistical-analysis calls fire, table shows LL / McFadden ρ² / adj-ρ² / AIC / BIC / K / choice_situations for MNL, Mixed, HB and separately R²/Adj-R² for OLS with the explicit disclaimer that OLS is not on the same scale.",
+    "Compare verdict is BIC-based: 'ใช้ Multinomial Logit — ได้ค่า BIC ต่ำสุด และนำวิธีถัดไป (HB) อยู่ 3.2 จุด' with an explanation about why LL alone is misleading — NOT a hardcoded MNL recommendation.",
+    "OLS is excluded from the best-fit ranking (footer text: '— เป็น baseline เชิงพรรณนา วัดคนละสเกลกับกลุ่ม logit จึงเทียบ LL/AIC/BIC กันไม่ได้').",
+    "compare-integrity-warning appears for study 6099ac5b explaining stale attribute/level references (data issue on the study, not a bug in the patch).",
+    "Design page for 7ce71f78 shows sample-size-recommendation card with sample-size-min=63 and sample-size-recommended=125; contains Johnson & Orme rule 'n*t*a/c ≥ 500'; old hardcoded 'Recommended Sample: 200' is gone.",
+    "Changing 'Alternatives ต่อ Choice Set' fires GET /conjoint/studies/{id}/design-recommendation: 2 alts → min=94 rec=188, 4 alts → min=47 rec=94.",
+    "Mobile 390px: conjoint-sample-adequacy and conjoint-plain-summary have scrollWidth==clientWidth (no horizontal overflow, no clipping)."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "HIGH: Fix ConjointCompareMethods.jsx useEffect (lines 74-99) so the Compare tab works on the PUBLIC /conjoint/results/:studyId route. Options: (a) drop the `!token` guard and only add Authorization headers when a token exists, or (b) mirror the pattern used by the Results page which already fetches /results and /statistical-analysis anonymously on the public route.",
+    "LOW: Add data-testid attributes for the main-tab buttons in ConjointResultsPage.js (`tab-overview`, `tab-academic`, `tab-advanced`) and for the Academic-tab method select + 'คำนวณด้วย ...' button (`academic-method-select`, `academic-calc-btn`).",
+    "INFO (data, not code): Study 6099ac5b ('นมหมี') has 2,880 responses that reference attribute/level IDs no longer in the current study config, so mixed/HB random-lists include ORPHAN labels and OLS ref-levels differ from the choice-family. The UI correctly surfaces this via compare-integrity-warning — user should regenerate the design to clean up."
+  ],
+  "critical_code_review_comments": [
+    "ConjointCompareMethods.jsx L74-75 — `if (!studyId || !token) return;` silently disables the entire Compare tab on the public route. Prefer `if (!studyId) return;` and build `headers` conditionally: `const headers = token ? { Authorization: `Bearer ${token}` } : {};`.",
+    "ConjointResultsPage.js is ~3,885 lines — well past the 700-line soft cap. The Academic and Compare panes are clear split candidates (already partially extracted for Compare).",
+    "spec-random-list falls back to internal attribute keys when reference lookup fails, producing '___ORPHAN_xxxxxxxx__' strings that leak internal IDs to end-users. Consider substituting a Thai fallback like 'คุณลักษณะที่ถูกลบไปแล้ว' when the attribute lookup misses."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "~90% — 1 HIGH bug (public Compare tab), 2 LOW test-id gaps"},
+  "seed_data_creation": "None — used pre-existing studies 6099ac5b (120r), 993a5ce4 (2r), 7ce71f78 (design).",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@swu.ac.th / admin123",
+  "context_for_next_testing_agent": "The Compare tab regression is triggered only when the URL is opened anonymously. Log OUT first, then go to /conjoint/results/6099ac5b-... and click 'เปรียบเทียบวิธี' — network tab will show ZERO /statistical-analysis?method=... calls. When authenticated the tab works correctly (BIC verdict, all rows populated, OLS excluded). Academic-tab and Design-page checks all pass. Take screenshots at the compare verdict + design sample-size card if you want visual regression evidence.",
+  "rca_of_the_issue": "ConjointCompareMethods.jsx guards its data-fetch useEffect with `if (!studyId || !token) return;`. On the intentionally-public /conjoint/results/:studyId route the AuthContext token is null, so the guard bails out and none of the four /statistical-analysis?method=... requests are ever issued. The table then stays fully empty (all '—') and the BIC-based compare-verdict never mounts. Fix: remove the `!token` half of the guard and pass the Authorization header only when a token is present, matching how the parent ConjointResultsPage already fetches /results and /statistical-analysis on the public route."
+}

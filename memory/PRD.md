@@ -68,6 +68,19 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - AI Interpretation: Background task + polling (same as thesis, prevents 502)
 - **Trash Bin** (Feb 2026): soft-delete with 30-day recovery, restore + purge endpoints, UI tabs in `ConjointAnalysisTool.js`
 - **Stats correctness audit (May 29, 2026)**: all 5 methods verified via synthetic ground-truth tests (`backend/tests/test_conjoint_stats_correctness.py`, 12 PASS). Confirmed low McFadden ρ² on live studies is genuine (random/test responses), not a calculation bug. Added `ANALYSIS_CACHE_VERSION` to `analysis_cache` so new fit-diagnostic fields (LR test, fit_label) self-heal stale caches instead of serving null.
+- **Theoretical audit (Jun 2026, applied from `conjoint-audit-2026-08` package)** — see `/app/memory/CONJOINT_AUDIT_2026_08.md` + `/app/HANDOFF_CONJOINT.md`:
+  - D-optimal generator rewritten as modified Fedorov on the β=0 MNL information matrix (+45-60% D-efficiency, 5-40× faster); seeded, `EVAL_BUDGET=400_000`
+  - BIC (choice-situation basis) is now the model-selection criterion; OLS excluded from ranking; Raftery gap grading
+  - HB importance = mean of per-respondent importances (Sawtooth); HB no longer crashes on skipped tasks
+  - Mixed/HB keep only coefficients with a significant taste SD as random; coefficient lookup is name-based
+  - OLS reference level must exist in data; adjusted McFadden ρ² emitted; task-count/sample-size rules unified (cap 24)
+  - Sample adequacy card computed (Johnson & Orme) instead of hardcoded; plain-language summary; intent-based method picker
+  - `ANALYSIS_CACHE_VERSION` 2→4, `schema_version` guard added to AI-interpretation and thesis caches (first view per study recomputes — expected)
+  - Tests: `backend/tests/test_conjoint_audit_2026_08.py` (31 PASS) + existing conjoint suites (55 PASS)
+- **P1 follow-ups (Jun 2026)**:
+  - Academic tab: new `Model Specification` card (adjusted ρ², choice situations, K, random/fixed vars, reference & excluded levels with human-readable names); repaired the previously broken/orphaned `สถิติการวิจัย` card JSX; MNL ρ² no longer rendered as a percentage
+  - New `GET /api/conjoint/studies/{id}/design-recommendation` → recommended tasks + required respondents; Design page shows ขั้นต่ำ/แนะนำ live (replaces hardcoded "Recommended Sample: 200"); `generate-design` returns `sample_size`
+  - Compare tab now works on the PUBLIC results route (token no longer required)
 
 ### Customer Value Lab (NEW — May 29, 2026) — COMPLETE
 **Reference concept (permanent asset): `/app/memory/CONCEPT_marketing_principles_intaka.md`** — always consult before changing this tool.

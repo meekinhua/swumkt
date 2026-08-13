@@ -1,3 +1,36 @@
+## 2026-06-14 — Conjoint theoretical audit applied (external `conjoint-audit-2026-08` package) + P1 follow-ups
+
+Applied the external audit package verbatim onto base commit `24c3aaf` (matched HEAD, clean apply),
+then normalised its CRLF line endings back to LF.
+
+**Backend** (`routes/conjoint.py`, ~600 lines changed)
+- F1 D-optimal generator → modified Fedorov on the β=0 MNL information matrix (+45–60% D-efficiency, 5–40× faster)
+- F2 encoder picks a reference level that exists in the data; drops columns with no within-set variation
+- F3 model selection on **BIC** (not raw log-likelihood), OLS excluded, Raftery gap grading
+- F4 BIC/AIC on the choice-situation basis for MNL, Mixed and HB alike
+- F5 HB no longer crashes on tasks with no recorded selection; F6 HB importance = mean of per-respondent importances
+- F7 only coefficients with a significant taste SD stay random; coefficient lookup name-based
+- F8 OLS reference level must have been shown; F9 adjusted McFadden ρ²; F10 task-count rule on contrasts, cap 24
+- `ANALYSIS_CACHE_VERSION` 2→4, `schema_version` guard on AI-interpretation and thesis caches
+- `view=summary` now returns `num_choice_sets` + `alternatives_per_set` without shipping `choice_sets`
+- **NEW** `GET /api/conjoint/studies/{id}/design-recommendation` → recommended tasks + Johnson & Orme respondent counts; `generate-design` now returns `sample_size`
+
+**Frontend**
+- `ConjointResultsPage.js`: computed sample-adequacy card (was hardcoded), plain-language summary, method picker,
+  ρ² no longer shown as a percentage; **NEW** `Model Specification` card (adj ρ², choice situations, K, random/fixed
+  vars, reference & excluded levels resolved to attribute/level names); repaired the previously orphaned
+  `สถิติการวิจัย` card JSX; added `tab-overview` / `tab-academic` / `tab-advanced` / `academic-method-select` /
+  `academic-calc-btn` testids
+- `ConjointCompareMethods.jsx`: BIC-based verdict; **fix** — Compare tab now loads on the PUBLIC results route
+  (it bailed out when `token` was null)
+- `ConjointDesignPage.js`: live "ต้องการผู้ตอบกี่คน" card from the new endpoint (replaces the hardcoded
+  "Recommended Sample: 200"), fallback task formula mirrors the backend (contrasts, cap 24)
+
+**Verification**: 31 audit tests + 55 existing conjoint tests PASS · all 4 methods exercised over the API on a real
+120-respondent study · design generation exercised end-to-end · frontend E2E via testing agent (iteration_24) — all
+acceptance criteria met after the public-Compare fix.
+
+
 ## 2026-06-14 — meekintube REPLACED with mytube-pwa (static), rebranded "meekinTube"
 
 User asked to remove the old meekintube (Flask downloader) entirely and replace it with
