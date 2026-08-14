@@ -28,6 +28,11 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - Full researcher journey walked end to end by the testing agent (iteration_28, 22/22) plus 108 unit tests.
 - Last defect found and fixed: internal encoder placeholders (`__ORPHAN_…`) leaked into thesis coefficient tables as level names; humanised and cache version bumped to 5 (iteration_29 re-certified).
 - Known gap (not requested): no market-simulation / share-of-preference what-if tool.
+
+### Backward compatibility — audited Jun 14 2026
+- `backend/scripts/compat_sweep.py` exercises every endpoint against every study in the database (129 checks). Re-run it after any change to aggregation, export or significance code.
+- Two production 500s found on OLD data and fixed: thesis export for Thai brand names (latin-1 Content-Disposition), and segment-significance on zero-variance groups (NaN not JSON-serialisable). Verified by iteration_30.
+- Studies whose questionnaire was republished are handled everywhere via `legacy_ids` pooling (aggregation, Cronbach α, significance tests).
 - Aaker's 4-dimension framework: Awareness · Quality · Identity vs Image · Loyalty
 - Auto-generated questions (~18) from template lib + brand/competitor/category context
 - 4-step Wizard: Brand basics → Identity traits (3-8) → Segments → Question review

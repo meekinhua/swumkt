@@ -11,6 +11,8 @@ import os
 import re
 import uuid
 import json
+import math
+from urllib.parse import quote
 import hashlib
 import logging
 import asyncio
@@ -1589,6 +1591,18 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
 _TESTABLE_TYPES = {"likert_5", "likert_7", "comparative_7", "nps_0_10"}
 
 
+def _json_safe(obj):
+    """NaN and inf are not JSON — they surface as a 500 rather than a bad number.
+    Any non-finite float becomes None so the caller sees "no value", not an error."""
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
 def _respondent_dimension_scores(study: dict, responses: List[dict]) -> Dict[str, List[float]]:
     """dimension -> [per-respondent 0-100 score]. Rating items only.
 
@@ -1719,14 +1733,14 @@ def _wave_significance(study: dict, resp_a: List[dict], resp_b: List[dict]) -> d
             + ("" if sig else " — ยังแยกจากความคลาดเคลื่อนของการสุ่มไม่ได้")
         )
 
-    return {
+    return _json_safe({
         "method": "Welch two-sample t-test on respondent-level dimension scores (POMP 0-100), "
                   "Holm-Bonferroni adjusted across 4 dimensions, alpha = 0.05",
         "alpha": 0.05,
         "by_dimension": tests,
         "caveat": "ทดสอบจากคะแนนระดับบุคคลของแต่ละมิติ (เฉลี่ยข้อมาตรวัดในมิตินั้น) — "
                   "ไม่ได้ทดสอบ BES โดยตรง เพราะ BES เป็นดัชนีถ่วงน้ำหนัก ไม่ใช่ค่าเฉลี่ยของการวัดเดียว",
-    }
+    })
 
 
 
@@ -3380,13 +3394,21 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         )
 
         brand_safe = (study.get("brand", {}).get("name") or "brand").strip()
-        brand_safe = "".join(c if c.isalnum() else "_" for c in brand_safe) or "brand"
-        filename = f"thesis-{brand_safe}-{datetime.now(timezone.utc).strftime('%Y%m%d')}.docx"
+        # Thai characters pass `isalnum()`, so the old sanitiser kept them and the
+        # Content-Disposition header then failed to encode as latin-1 — every study
+        # with a Thai brand name returned a 500 instead of a document. ASCII for the
+        # legacy filename, RFC 5987 `filename*` for the real one.
+        ascii_safe = "".join(c if c.isascii() and c.isalnum() else "_" for c in brand_safe).strip("_")
+        ascii_safe = ascii_safe or "brand"
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+        filename = f"thesis-{ascii_safe}-{stamp}.docx"
+        utf8_name = quote(f"thesis-{brand_safe}-{stamp}.docx")
 
         return StreamingResponse(
             buf,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            headers={"Content-Disposition":
+                     f'attachment; filename="{filename}"; filename*=UTF-8\'\'{utf8_name}'},
         )
 
     # ========================================================================
@@ -3704,7 +3726,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             logging.exception(f"[BE-Thesis-DL] appendix enrich failed — falling back to base: {e}")
             docx_bytes = base_bytes  # graceful degradation
 
-        brand_safe = "".join(c if c.isalnum() else "_" for c in title) or "brand"
+        # ASCII only: Thai passes isalnum(), and a Thai filename cannot be encoded
+        # into the latin-1 Content-Disposition header (it 500s on download).
+        brand_safe = "".join(c if c.isascii() and c.isalnum() else "_" for c in title).strip("_") or "brand"
         ch_label = ""
         if "thesis" in cache_key:
             # cache_key looks like be_thesis_{studyid}_{ch1_ch2_..}_{sig}[..]
@@ -3714,11 +3738,13 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             if digits:
                 ch_label = "_Ch" + "Ch".join(digits)
         filename = f"BE_Thesis_{brand_safe}{ch_label}.docx"
+        utf8_name = quote(f"BE_Thesis_{title}{ch_label}.docx")
 
         return Response(
             content=docx_bytes,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            headers={"Content-Disposition":
+                     f'attachment; filename="{filename}"; filename*=UTF-8\'\'{utf8_name}'},
         )
 
     @brand_equity_router.get("/studies/{study_id}/dashboard")
@@ -4144,18 +4170,30 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             g: _respondent_dimension_scores(study, rs) for g, rs in groups.items()
         }
         order = sorted(groups.keys())
+
+        def _has_variance(vals: List[float]) -> bool:
+            # A group where everyone answered identically has zero variance. Welch
+            # ANOVA divides by it and returns NaN, which then fails JSON encoding —
+            # a real 500 on live data (a 3-person group in an old study).
+            return len(vals) >= 3 and max(vals) - min(vals) > 1e-9
+
         by_dimension: Dict[str, Any] = {}
         raw_p: List[tuple] = []
 
         for dim in DIMENSIONS:
             samples = [(g, scores_by_group[g].get(dim) or []) for g in order]
-            usable = [(g, s) for g, s in samples if len(s) >= 3]
+            usable = [(g, s) for g, s in samples if _has_variance(s)]
+            dropped = [g for g, s in samples if len(s) >= 3 and not _has_variance(s)]
             if len(usable) < 2:
                 by_dimension[dim] = {
                     "testable": False,
                     "groups": {g: len(s) for g, s in samples},
-                    "reason": "too_few_respondents_per_group",
-                    "interpretation": "ผู้ตอบต่อกลุ่มน้อยเกินไปสำหรับมิตินี้ (ต้องการ 3 คนขึ้นไปต่อกลุ่ม)",
+                    "reason": "too_few_respondents_per_group" if not dropped else "zero_variance_in_group",
+                    "interpretation": (
+                        "ผู้ตอบต่อกลุ่มน้อยเกินไปสำหรับมิตินี้ (ต้องการ 3 คนขึ้นไปต่อกลุ่ม)"
+                        if not dropped else
+                        f"บางกลุ่ม ({', '.join(dropped)}) ตอบเหมือนกันทุกคน จึงไม่มีความแปรผันให้ทดสอบ"
+                    ),
                 }
                 continue
 
@@ -4189,9 +4227,18 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                     stat, p = float(ag.statistic), float(ag.pvalue)
                     test_name = "alexander_govern_welch_anova"
                 except Exception:
+                    stat, p, test_name = float("nan"), float("nan"), "alexander_govern_welch_anova"
+                if not (math.isfinite(stat) and math.isfinite(p)):
                     f = _st.f_oneway(*arrays)
                     stat, p = float(f.statistic), float(f.pvalue)
-                    test_name = "one_way_anova"
+                    test_name = "one_way_anova_fallback"
+                if not (math.isfinite(stat) and math.isfinite(p)):
+                    by_dimension[dim] = {
+                        "testable": False, "groups": group_stats,
+                        "reason": "test_not_computable",
+                        "interpretation": "ข้อมูลในกลุ่มใกล้เคียงกันเกินไปจนคำนวณสถิติทดสอบไม่ได้",
+                    }
+                    continue
                 # Pairwise Welch post-hoc, Holm-adjusted within the dimension.
                 pairs = []
                 for i in range(len(usable)):
@@ -4236,7 +4283,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 + ("" if t["significant"] else " — ยังแยกจากความคลาดเคลื่อนของการสุ่มไม่ได้")
             )
 
-        return {
+        return _json_safe({
             "field": field,
             "testable": True,
             "groups": {g: len(rs) for g, rs in groups.items()},
@@ -4246,7 +4293,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "by_dimension": by_dimension,
             "caveat": "ทดสอบจากคะแนนระดับบุคคลของแต่ละมิติ ไม่ได้ทดสอบ BES โดยตรง "
                       "และผู้ตอบมาจากการเลือกแบบสะดวก จึงสรุปเชิงสาเหตุไม่ได้",
-        }
+        })
 
     @brand_equity_router.get("/studies/{study_id}/drafts-summary")
     async def drafts_summary(study_id: str, current_user=Depends(get_current_user)):

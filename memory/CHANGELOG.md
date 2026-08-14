@@ -1,3 +1,31 @@
+## 2026-06-14 (round 4) — Compatibility audit of ALL existing data: two production 500s found and fixed
+
+Question asked: are both modules ready, and do they handle data already collected plus instruments edited afterwards.
+Answered by sweeping every study in the database rather than by inspection — `backend/scripts/compat_sweep.py`
+(129 checks: dashboard, score-history × 3 granularities, segment-significance × 2 fields, drafts-summary,
+thesis-export for every Brand Equity study; summary view, design-recommendation and 2 analysis methods for every
+Conjoint study). First run surfaced two real bugs on OLD data:
+
+- **Thesis export 500 for any Thai brand name.** The download filename was built with
+  `c if c.isalnum() else "_"` — Thai passes `isalnum()`, so Thai characters survived into the
+  `Content-Disposition` header, which must encode as latin-1. Every study named in Thai (ชาไทยมะลิ, มาม่า, …) got a
+  500 instead of a document, on both the plain and the AI thesis download paths. Fixed with an ASCII fallback
+  filename plus RFC 5987 `filename*=UTF-8''…` so the real Thai name still reaches the browser.
+- **segment-significance 500 on zero-variance groups.** A demographic group where everyone answered identically
+  (common in small legacy groups — Mali has a 3-person gender group) makes Welch ANOVA return NaN, and NaN cannot
+  be JSON-encoded. Fixed by excluding zero-variance groups with an explicit Thai reason, falling back to one-way
+  ANOVA, reporting non-computable results as not-testable, and running both significance endpoints through a
+  `_json_safe` non-finite sanitiser.
+
+Second sweep: **129 checks, 0 failures** — including studies with 0 / 1 / 2 responses, studies republished twice
+(18 and 41 questions carrying legacy ids) and the seeded demo data.
+
+**iteration_30** independently verified both fixes and swept old data in the browser: 140 backend tests pass,
+4 Brand Equity dashboards and 4 Conjoint result pages render clean on legacy data, importances still sum to 100.0,
+no placeholder tokens in the DOM, and a zero-response conjoint study degrades to `insufficient_data` rather than
+crashing. New suite: `backend/tests/test_iter30_thai_export_zero_variance.py`.
+
+
 ## 2026-06-14 (round 3) — Simulated data, segment significance, resume links, score history + FINAL conjoint certification
 
 **Reliability Boost — realistic simulated dataset** `backend/scripts/seed_simulated_brand_study.py`
