@@ -155,6 +155,7 @@ const BrandEquityRespondentPage = () => {
   const [answers, setAnswers] = useState({});
   const [demographics, setDemographics] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
   const [startedAt] = useState(Date.now());
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem('be_lang') || 'th'; } catch { return 'th'; }
@@ -237,6 +238,13 @@ const BrandEquityRespondentPage = () => {
   }, {});
   const totalQ = (study.questions || []).length;
   const answered = Object.keys(answers).length;
+  // Honest time estimate. `estimated_minutes` came from the wizard and understated
+  // a 36-40 question survey badly; 15-25 s per item is the usual planning range
+  // for short self-administered items, so quote a RANGE and never less than the
+  // stored figure.
+  const timeLo = Math.max(Number(study.estimated_minutes) || 0, Math.ceil(totalQ * 15 / 60));
+  const timeHi = Math.max(timeLo + 1, Math.ceil(totalQ * 25 / 60));
+  const timeEstimate = `${timeLo}-${timeHi}`;
 
   // Lang toggle pill — shown on every screen
   const LangToggle = () => (
@@ -284,7 +292,7 @@ const BrandEquityRespondentPage = () => {
               {study.brand?.name}
             </h1>
             <div className="be-muted" style={{ marginBottom: 24, lineHeight: 1.7 }}>
-              {T.welcomeAsk(study.estimated_minutes)}
+              {T.welcomeAsk(timeEstimate)}
             </div>
             <div className="be-card" style={{ background: 'var(--paper-2)' }}>
               <div className="be-eyebrow" style={{ marginBottom: 10 }}>{T.welcomeWhat}</div>
@@ -345,21 +353,45 @@ const BrandEquityRespondentPage = () => {
                     {c.options.map(opt => (
                       <div key={opt}
                            className={'be-resp-mcq-opt ' + (demographics[s] === opt ? 'sel' : '')}
-                           onClick={() => setDemographics({ ...demographics, [s]: opt })}
+                           onClick={() => setDemographics(prev => {
+                             // Tapping the selected option clears it. Every
+                             // demographic answer used to be permanent once
+                             // tapped — a mis-tap could not be undone.
+                             const next = { ...prev };
+                             if (next[s] === opt) delete next[s];
+                             else next[s] = opt;
+                             return next;
+                           })}
                            data-testid={`be-resp-demo-${s}-${opt}`}>
                         <div className="check">{demographics[s] === opt && <Icon name="check" size={10}/>}</div>
                         <span>{opt}</span>
                       </div>
                     ))}
                   </div>
+                  {demographics[s] && (
+                    <button className="be-btn be-btn-ghost be-tiny" style={{ marginTop: 8 }}
+                            onClick={() => setDemographics(prev => {
+                              const next = { ...prev }; delete next[s]; return next;
+                            })}
+                            data-testid={`be-resp-demo-clear-${s}`}>
+                      {lang === 'en' ? 'Clear' : 'ล้างคำตอบนี้'}
+                    </button>
+                  )}
                 </div>
               );
             })}
-            <button className="be-btn be-btn-red be-btn-lg"
-                    style={{ width: '100%', marginTop: 20, justifyContent: 'center' }}
-                    onClick={submit} disabled={submitting} data-testid="be-respondent-submit">
-              {submitting ? T.sending : T.submit}<Icon name="check" size={12}/>
-            </button>
+            <div className="be-resp-foot">
+              {/* The last screen had no way back at all: a respondent who
+                  wanted to change an answer had to abandon the survey. */}
+              <button className="be-btn be-btn-ghost" onClick={() => setSection(3)}
+                      data-testid="be-respondent-demo-back">
+                <Icon name="chevronL" size={11}/>{T.back}
+              </button>
+              <button className="be-btn be-btn-red"
+                      onClick={submit} disabled={submitting} data-testid="be-respondent-submit">
+                {submitting ? T.sending : T.submit}<Icon name="check" size={12}/>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -390,14 +422,34 @@ const BrandEquityRespondentPage = () => {
   const dim = dims[section];
   const sectionQs = questionsByDim[dim] || [];
 
-  const canProceed = sectionQs.every(q => {
-    if (!q.required) return true;
+  const isAnswered = (q) => {
     const v = answers[q.id];
     if (v == null || v === '') return false;
     if (Array.isArray(v) && v.length === 0) return false;
     if (q.type === 'trait_grid' && Array.isArray(v) && v.length < (q.min || 3)) return false;
     return true;
-  });
+  };
+  const missingQs = sectionQs.filter(q => q.required && !isAnswered(q));
+  const canProceed = missingQs.length === 0;
+
+  // The Next button used to be `disabled` with no explanation, on a 36-question
+  // required-heavy survey — the respondent had no way to know which item was
+  // blocking them. It now always clicks, and says what is missing.
+  const handleNext = () => {
+    if (!canProceed) {
+      setShowMissing(true);
+      toast.error(
+        lang === 'en'
+          ? `${missingQs.length} required question(s) still unanswered — highlighted in red`
+          : `ยังมี ${missingQs.length} ข้อที่ต้องตอบ — ทำเครื่องหมายสีแดงไว้ให้แล้ว`
+      );
+      const el = document.querySelector('.be-resp-q-missing');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setShowMissing(false);
+    setSection(section + 1);
+  };
 
   async function submit() {
     setSubmitting(true);
@@ -530,11 +582,19 @@ const BrandEquityRespondentPage = () => {
                   </div>
                 </div>
               )}
-              {g.qs.map(q => (
-                <div className="be-resp-q" key={q.id}>
+              {g.qs.map(q => {
+                const missing = showMissing && q.required && !isAnswered(q);
+                return (
+                <div className={'be-resp-q' + (missing ? ' be-resp-q-missing' : '')} key={q.id}
+                     data-testid={missing ? `be-resp-q-missing-${q.id}` : undefined}>
                   <div className="be-resp-q-num">
                     <span className="be-dot-sm" style={{ background: 'var(--ink)' }}/>
                     {q.template_id || q.id.slice(0, 5)}
+                    {missing && (
+                      <span className="be-resp-q-missing-tag">
+                        {lang === 'en' ? 'not answered' : 'ยังไม่ได้ตอบ'}
+                      </span>
+                    )}
                   </div>
                   <div className="be-resp-q-prompt">
                     {tx(q, 'prompt')}
@@ -570,7 +630,8 @@ const BrandEquityRespondentPage = () => {
                   <QuestionInput q={q} value={answers[q.id]} onChange={v => setAnswers({ ...answers, [q.id]: v })}
                                  lang={lang} T={T}/>
                 </div>
-              ))}
+                );
+              })}
             </React.Fragment>
           ));
         })()}
@@ -582,13 +643,21 @@ const BrandEquityRespondentPage = () => {
               <Icon name="chevronL" size={11}/>{T.back}
             </button>
           ) : <span/>}
-          <button className="be-btn be-btn-primary" disabled={!canProceed}
-                  onClick={() => setSection(section + 1)} data-testid="be-respondent-next">
+          <button className="be-btn be-btn-primary"
+                  onClick={handleNext} data-testid="be-respondent-next">
             {section === 3
               ? (lang === 'en' ? 'Next · about you' : 'ถัดไป · ข้อมูล')
               : T.untilNext}<Icon name="arrowR" size={11}/>
           </button>
         </div>
+        {!canProceed && (
+          <div className="be-small" data-testid="be-respondent-missing-hint"
+               style={{ paddingBottom: 14, color: 'var(--be-red)', lineHeight: 1.5 }}>
+            {lang === 'en'
+              ? `${missingQs.length} required question(s) left in this section`
+              : `เหลืออีก ${missingQs.length} ข้อที่ต้องตอบในตอนนี้`}
+          </div>
+        )}
       </div>
     </div>
   );

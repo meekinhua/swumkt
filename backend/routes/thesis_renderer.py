@@ -239,37 +239,80 @@ def render_thesis_docx(
        "left. Open-ended items (top-of-mind, recall) are AI-normalized into "
        "canonical brand buckets and contribute share-of-respondents (0–100).")
 
+    # Weight table generated from the live DIMENSION_WEIGHTS rather than
+    # hand-copied. The previous literal had already drifted from the code (it
+    # still described a "≈0.50" bundle and predated the removal of unreachable
+    # entries), so the methodology section documented a model the software did
+    # not run.
     _h(doc, "Dimension weights", level=1)
-    _data_table(doc, ["Dimension", "Signal", "Weight"],
-        [
-            ["Awareness", "Top-of-Mind",          "0.40"],
-            ["Awareness", "Spontaneous Recall",   "0.25"],
-            ["Awareness", "Aided Recognition",    "0.20"],
-            ["Awareness", "Brand Familiarity",    "0.15"],
-            ["Quality",   "Overall Quality",      "0.35"],
-            ["Quality",   "Reliability",          "0.20"],
-            ["Quality",   "Value-for-Money",      "0.20"],
-            ["Quality",   "Comparative vs Competitor", "0.15"],
-            ["Quality",   "Design",               "0.10"],
-            ["Identity",  "Trait-Grid Pickup vs Intended", "0.20"],
-            ["Identity",  "Brand Promise Match",  "0.15"],
-            ["Identity",  "Aaker 4 Perspectives (Org/Person/Symbol/Product)", "≈0.50"],
-            ["Identity",  "AI Identity-Image Alignment", "0.10"],
-            ["Loyalty",   "Net Promoter Score",   "0.40"],
-            ["Loyalty",   "Repurchase Intent",    "0.30"],
-            ["Loyalty",   "Switching Resistance", "0.30"],
-        ])
+    try:
+        from .brand_equity import DIMENSION_WEIGHTS as _DW
+        _dim_labels = {"awareness": "Awareness", "quality": "Perceived Quality",
+                       "identity": "Brand Identity", "loyalty": "Loyalty"}
+        _wrows = [[_dim_labels.get(d, d), k, f"{w:.2f}"]
+                  for d, wm in _DW.items() for k, w in wm.items()]
+        _data_table(doc, ["Dimension", "Signal (kind)", "Weight"], _wrows)
+        _p(doc, "Weights renormalise over the signals a given study actually "
+                "collected. Brand Identity additionally includes the AI "
+                "identity–image alignment at 0.10 when that analysis has run.",
+           size=9, color=GREY, italic=True)
+    except Exception:
+        _p(doc, "Dimension weights could not be read from the scoring module.",
+           size=9, color=GREY, italic=True)
+
+    # ---- Reliability -----------------------------------------------------
+    # Internal consistency is reported here, whatever it says. Nothing used to
+    # compute it, while the AI-written chapters asserted a threshold had been
+    # met — see memory/BRAND_EQUITY_AUDIT_2026_08.md.
+    reliability = (aggregate or {}).get("reliability") or {}
+    if reliability:
+        _h(doc, "Reliability (internal consistency)", level=1)
+        _rows = []
+        for _k, _label in (("awareness", "Awareness"), ("quality", "Perceived Quality"),
+                           ("identity", "Brand Identity"), ("loyalty", "Loyalty")):
+            r = reliability.get(_k) or {}
+            a = r.get("alpha")
+            _rows.append([
+                _label,
+                str(r.get("k_items", "—")),
+                str(r.get("n_complete", "—")),
+                "—" if a is None else f"{a:.3f}",
+                "—" if r.get("mean_inter_item_r") is None else f"{r['mean_inter_item_r']:.3f}",
+                ("Not estimable" if a is None
+                 else ("Meets .70 criterion" if r.get("meets_threshold") else "Below .70 criterion")),
+            ])
+        _data_table(doc, ["Dimension", "k items", "n", "Cronbach's α",
+                          "Mean inter-item r", "Assessment"], _rows)
+        _p(doc, "α is estimated only from multi-item Likert scales within a "
+                "dimension. Where a dimension is measured mainly by open-ended or "
+                "recognition items (typically Awareness), internal consistency is "
+                "not defined and is reported as not estimable rather than "
+                "substituted with a value. Criterion: α ≥ .70 "
+                "(Nunnally & Bernstein, 1994).",
+           size=9, color=GREY, italic=True)
+        _p(doc, "Construct validity has not been assessed: no exploratory or "
+                "confirmatory factor analysis was performed, and average variance "
+                "extracted and composite reliability are not reported. The Brand "
+                "Equity Score is a theory-weighted composite index, not a latent "
+                "variable estimated from a structural model.",
+           size=9, color=GREY, italic=True)
 
     _h(doc, "Sample", level=1)
+    adequacy = (aggregate or {}).get("sample_adequacy") or {}
     _kv_table(doc, [
         ("Total responses collected", sample_n_total),
         ("Responses included in this report", sample_n_filtered),
         ("Filter applied",
          _format_filter(filter_info) if filter_info else "None — full sample"),
-        ("Sample-size note",
-         "n ≥ 30 recommended for thesis-grade inference; n ≥ 10 enables "
-         "indicative reporting only."),
+        ("Sample adequacy",
+         adequacy.get("message")
+         or "n ≥ 30 recommended for thesis-grade inference; n ≥ 10 enables "
+            "indicative reporting only."),
     ])
+    _p(doc, "All between-brand, between-segment and between-wave differences in "
+            "this report are descriptive. No significance testing was performed, "
+            "so differences should not be described as statistically significant.",
+       size=9, color=GREY, italic=True)
 
     # ============ RESULTS ============
     doc.add_page_break()

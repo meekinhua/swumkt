@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
 import { BeTopbar, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
+import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -16,7 +17,9 @@ const LOGO_GRADIENTS = [
   'linear-gradient(140deg,#374151,#6B7280)',
 ];
 
-const tierColor = (s) => s == null ? '#A6A8AF' : s >= 70 ? '#10B981' : s >= 40 ? '#D4A017' : '#C8102E';
+// One canonical scale — see @/lib/brandHealthVerdict. The private >=70 / >=40
+// mapping that used to live here disagreed with the dashboard and the thesis.
+const tierColor = (s) => s == null ? '#A6A8AF' : getBrandHealthTier(s).color;
 
 const BrandEquityListPage = () => {
   const { user, token } = useAuth();
@@ -530,10 +533,23 @@ const BrandEquityListPage = () => {
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                           <span className="big" style={{ color: tierColor(score) }}>{Math.round(score)}</span>
                           <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>BES</span>
+                          {/* Same tier label the dashboard hero shows, so the two
+                              surfaces cannot disagree about a brand's health. */}
+                          <span data-testid={`be-study-tier-${s.id}`}
+                                style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.10em',
+                                         color: tierColor(score), border: `1px solid ${tierColor(score)}`,
+                                         padding: '1px 6px' }}>
+                            {getBrandHealthTier(score).label}
+                          </span>
                         </div>
                       ) : (
-                        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>
-                          BES locked · {Math.max(0, 10 - n)} more
+                        /* The list endpoint does not compute aggregates, so a study
+                           with plenty of responses also arrives with score = null.
+                           Saying "BES locked" there was wrong — the score exists,
+                           it just is not in this payload. */
+                        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}
+                              data-testid={`be-study-bes-hint-${s.id}`}>
+                          {n >= 10 ? 'เปิดดูคะแนน →' : `BES locked · ${Math.max(0, 10 - n)} more`}
                         </span>
                       )}
                     </div>

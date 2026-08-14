@@ -40,14 +40,18 @@ export function getBrandHealthTier(bes) {
 }
 
 // Identify the weakest dimension for a "watch this" callout.
+// `scores._measured` (served by the backend) lists the dimensions that actually
+// produced a score; unmeasured ones arrive as 0 and must not be named as the
+// brand's weak point.
 export function getWeakestDimension(scores) {
   if (!scores) return null;
+  const measured = Array.isArray(scores._measured) ? scores._measured : null;
   const dims = [
     { key: 'awareness', label: 'Awareness', labelTh: 'การรู้จัก' },
     { key: 'quality', label: 'Perceived Quality', labelTh: 'คุณภาพที่รับรู้' },
     { key: 'identity', label: 'Identity vs Image', labelTh: 'ภาพลักษณ์' },
     { key: 'loyalty', label: 'Loyalty', labelTh: 'ความภักดี' },
-  ];
+  ].filter(d => !measured || measured.includes(d.key));
   let weakest = null;
   for (const d of dims) {
     const v = Number(scores[d.key] ?? 0);

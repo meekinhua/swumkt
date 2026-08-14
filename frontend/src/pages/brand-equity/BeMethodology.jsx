@@ -14,13 +14,16 @@ const SECTIONS = [
     id: 'overall',
     eyebrow: 'METHOD · 00',
     title: 'Brand Equity Score (BES) · คะแนนรวม',
-    short: 'น้ำหนัก default 25/25/25/25 ของ 4 มิติ — ปรับได้ที่ Wizard step 4',
+    short: 'น้ำหนัก default 25/25/25/25 ของ 4 มิติ — ปรับได้จากปุ่ม "น้ำหนักมิติ" บนหน้านี้',
     body: (
       <>
         <p><strong>BES = Σ (D<sub>i</sub> × w<sub>i</sub>) / Σw<sub>i</sub></strong></p>
         <p>เมื่อ D<sub>i</sub> = composite score ของแต่ละมิติ (0-100) และ w<sub>i</sub> = น้ำหนัก
-          (default 25 ทุกมิติ; ปรับได้ที่ Wizard → "น้ำหนักมิติ")</p>
-        <p>Tier mapping: ≥80 Champion · 65-79 Strong · 50-64 Healthy · 35-49 At Watch · &lt;35 At Risk</p>
+          (default 25 ทุกมิติ — ไม่มีงานวิจัยกำหนดว่าควรเป็นเท่าไร จึงถ่วงเท่ากันเป็นค่ากลาง;
+          ปรับได้จากปุ่ม <strong>"น้ำหนักมิติ"</strong> ที่หัวหน้า dashboard หรือปุ่มด้านล่างนี้
+          แล้วคะแนนจะคำนวณใหม่ทันที)</p>
+        <p>Tier mapping: ≥80 Champion · 65-79 Strong · 50-64 Healthy · 35-49 At Watch · &lt;35 At Risk
+          (สเกลชุดเดียวกันทุกหน้าจอ รวมถึงการ์ดหน้าแรกและไฟล์วิทยานิพนธ์)</p>
         <p className="be-muted-line">มิติที่ไม่มี data จะถูก skip ออกจาก BES (ไม่นับเป็น 0)
           เพื่อไม่ให้ score ถูกดึงลงโดย artefact ของ data ขาด</p>
       </>
@@ -47,9 +50,13 @@ const SECTIONS = [
             <br/>Score = % ของ respondent ที่ติ๊ก target brand</li>
           <li><strong>Brand Familiarity — 0.15</strong> (likert_5)
             <br/>Score = (mean−1)/4 × 100</li>
-          <li><strong>Visual Recognition — 0.05-0.10</strong> (เมื่อมี logo asset)
-            <br/>logo_unaided + logo_aided + color_recall</li>
         </ul>
+        <p>น้ำหนัก 4 ตัวนี้รวมเป็น 1.00 พอดี · <strong>คำถามด้านภาพ (logo / สี)</strong> ถูกจัดอยู่ใน
+          dimension <em>identity</em> จึงไม่ได้เข้าสูตร Awareness (ก่อนหน้านี้ตารางน้ำหนักระบุไว้ 0.25
+          แต่จับคู่กับคำถามไม่ได้เลย ทำให้น้ำหนักรวมเป็น 1.25)</p>
+        <p>TOM และ Unaided Recall เป็นคำถามปลายเปิด — ระบบ<strong>นับชื่อแบรนด์จากข้อความได้เองโดยไม่ต้องรอ AI</strong>
+          (จับคู่ชื่อแบบตรงตัวก่อน แล้วจึงใช้ token ที่ไม่กำกวม) การรัน AI เป็นการเพิ่มความแม่นกับคำสะกดผิด
+          ชื่อเล่น และคำทับศัพท์ · หน้า dashboard แสดงว่าใช้ฐานไหนอยู่</p>
         <p>น้ำหนักจะ <strong>renormalize</strong> เมื่อ signal บางตัวไม่มี — เช่น study ที่ไม่ใส่
           AW-4 likert ก็ยังได้ Awareness composite จาก 3 signal ที่เหลือ</p>
       </>
@@ -68,9 +75,15 @@ const SECTIONS = [
           <li><strong>Reliability — 0.20</strong> ไว้ใจได้ ทำงานตามที่คาดหวัง</li>
           <li><strong>Value-for-Money — 0.20</strong> คุ้มค่ากับราคา</li>
           <li><strong>Comparative vs Competitor — 0.15</strong> (comparative_7 semantic differential)
-            <br/>"เทียบ {`{brand}`} กับ {`{competitor}`}" — score = % เห็น brand ดีกว่า + half ของ neutral</li>
+            <br/>"เทียบ {`{brand}`} กับ {`{competitor}`}" — แบรนด์เราอยู่ซ้ายเสมอ (1) คู่แข่งอยู่ขวา (7)
+            <br/>score = <strong>(7 − mean) / 6 × 100</strong> · mean 1 = เราชนะเต็ม (100), mean 4 = เสมอ (50), mean 7 = แพ้ (0)</li>
           <li><strong>Design / Aesthetics — 0.10</strong></li>
         </ul>
+        <p className="be-muted-line">น้ำหนัก 5 ตัวรวมเป็น 1.00 · คำถาม "คุณภาพในมุม as Product" อยู่ใน
+          dimension identity จึงไม่ได้เข้าสูตรนี้</p>
+        <p className="be-muted-line">คุณลักษณะที่ผู้ใช้เพิ่มเองซึ่งเป็น<strong>ข้อความเชิงลบ</strong>
+          (เช่น "แพงเกินไป") ต้องประกาศ polarity ไว้ ระบบจะกลับคะแนนให้ (reverse coding);
+          ถ้ายังไม่ประกาศ ระบบจะ<strong>ตั้งธงเตือนและไม่นำเข้าคะแนน</strong> แทนการนับเป็นข้อดี</p>
         <p className="be-muted-line">Open-ended <em>"อะไรทำให้คุณรู้สึกว่ามีคุณภาพ"</em> ไม่ใช่ score input
           แต่ feed AI theme extraction ในส่วน Insights</p>
       </>
@@ -88,14 +101,21 @@ const SECTIONS = [
         <ul>
           <li><strong>Trait Pickup vs Intended — 0.20</strong> (trait_grid; key metric)
             <br/>คำถาม BI-1: <em>"เลือก 3-5 ข้อที่อธิบาย {`{brand}`} ได้ดีที่สุด"</em>
-            <br/>Score = mean (% pickup ของ traits ที่อยู่ใน "Intended Identity") /
-              จำนวน intended traits → ถ้าลูกค้าเลือก trait ที่แบรนด์ตั้งใจ ครบและถี่ → score สูง</li>
+            <br/>Score = ค่าเฉลี่ย % ที่ถูกเลือกของ intended traits <strong>ที่ปรากฏใน grid จริง</strong>
+              แล้วหารด้วย<strong>เพดานที่ทำได้</strong> (จำนวนที่เลือกได้สูงสุด ÷ จำนวน intended traits)
+            <br/><span className="be-muted-line">เดิมหารด้วยจำนวน intended traits ตรง ๆ ทำให้แบรนด์ที่ทุกคน
+              รับรู้ตรงเป๊ะได้แค่ 41.7 คะแนนถ้าใส่ 12 traits แต่ได้ 100 ถ้าใส่ 3 traits — ตัววัดวัด
+              "จำนวน trait ที่พิมพ์เข้าไป" ไม่ใช่ตัวแบรนด์</span></li>
           <li><strong>Brand Promise Match — 0.15</strong> (BI-4 likert_5)
             <br/>"{`{brand}`} ทำตามสัญญา: '{`{brand_promise}`}'"</li>
           <li><strong>Aaker "Brand as ..." Perspectives</strong>:
             <ul>
               <li><em>as Organization</em> (Trust, Innovation, Responsibility) — 0.06+0.06+0.05</li>
-              <li><em>as Person</em> (Personality grid, Relatable, Aspirational) — 0.06+0.05+0.06</li>
+              <li><em>as Person</em> (Personality grid, Relatable, Aspirational) — 0.06+0.05+0.06
+                <br/><span className="be-muted-line">Personality grid ใช้คลังคำบุคลิกที่ทับกับ intended
+                  traits เพียง 2 จาก 17 คำ — ถ้าคำถามไม่มี intended trait ให้เลือกเลย ระบบจะ
+                  <strong>ตัดข้อนั้นออกจากคะแนน</strong> ไม่ใช่ให้ 0 (การให้ 0 คือการลงโทษแบรนด์
+                  ด้วยข้อจำกัดของแบบสอบถาม)</span></li>
               <li><em>as Symbol</em> (Recognizability, Distinctiveness) — 0.06+0.06</li>
               <li><em>as Product</em> (Premium, Variety, Quality) — 0.06+0.05+0.04</li>
             </ul>
@@ -153,6 +173,40 @@ const SECTIONS = [
       </>
     ),
   },
+  {
+    id: 'validity',
+    eyebrow: 'METHOD · 06',
+    title: 'ความน่าเชื่อถือและข้อจำกัด · Reliability & Limitations',
+    short: 'Cronbach\u2019s α ต่อมิติ · 95% CI · สิ่งที่เครื่องมือนี้ยังไม่ได้ทำ',
+    body: (
+      <>
+        <p><strong>สิ่งที่รายงานจริง</strong></p>
+        <ul>
+          <li><strong>Cronbach's α ต่อมิติ</strong> (Cronbach, 1951) — คำนวณจากข้อ Likert ในมิติเดียวกัน
+            พร้อม mean inter-item r, จำนวนข้อ (k) และ n · ถ้า k &lt; 2 หรือ n &lt; 30 หรือความแปรปรวนเป็น 0
+            ระบบจะ<strong>แจ้งว่าประเมินไม่ได้ ไม่ใส่ค่าเดา</strong></li>
+          <li><strong>95% Confidence Interval</strong> ของทุกคะแนน Likert (t-distribution)</li>
+          <li><strong>Sample adequacy</strong> 4 ระดับ (&lt;10 / &lt;30 / &lt;100 / ≥100) แสดงคู่กับคะแนนรวมเสมอ</li>
+          <li><strong>POMP transform</strong> (ค่าเฉลี่ย−1)/(สูงสุด−1)×100 ตาม Cohen, Cohen, Aiken &amp; West (1999)</li>
+        </ul>
+        <p><strong>ข้อจำกัดที่ต้องเขียนในรายงาน</strong></p>
+        <ul>
+          <li>ยัง<strong>ไม่มี EFA / CFA</strong> — ไม่ได้ยืนยันโครงสร้างองค์ประกอบด้วยข้อมูลจริง</li>
+          <li>ยัง<strong>ไม่มี AVE / Composite Reliability</strong> (Fornell &amp; Larcker, 1981) จึงไม่ได้ตรวจ convergent /
+            discriminant validity</li>
+          <li>BES เป็น <strong>weighted composite index</strong> ไม่ใช่ latent variable — น้ำหนักมาจากกรอบทฤษฎี
+            ไม่ได้ประมาณค่าจากข้อมูล</li>
+          <li>การเปรียบเทียบทุกชุด (แบรนด์ vs คู่แข่ง, wave vs wave, segment vs segment)
+            เป็น<strong>เชิงพรรณนา</strong> — ยังไม่มีการทดสอบนัยสำคัญของผลต่าง</li>
+          <li>ผู้ตอบมาจาก<strong>การเลือกแบบสะดวก (convenience sampling)</strong> ผ่านลิงก์ที่แชร์
+            ไม่ใช่ตัวแทนประชากรแบบสุ่ม</li>
+        </ul>
+        <p className="be-muted-line">References: Cronbach (1951); Nunnally &amp; Bernstein (1994);
+          Cohen, Cohen, Aiken &amp; West (1999); Fornell &amp; Larcker (1981); J. L. Aaker (1997)
+          Dimensions of Brand Personality</p>
+      </>
+    ),
+  },
 ];
 
 
@@ -184,6 +238,7 @@ export const BeMethodology = ({
   extraPrompt,               // string
   onExtraPromptChange,       // (str) => void
   onStartThesisExport,       // () => void
+  onOpenWeights,             // () => void — opens the dimension-weight editor (owner only)
 }) => {
   const [openId, setOpenId] = useState(null);
   // Outer panels default closed — like the filter bar — to keep the report clean.
@@ -238,6 +293,12 @@ export const BeMethodology = ({
               Aaker (1991, 1996) + Keller (1993) + Reichheld (2003) ได้ครบ
               — กดที่หัวข้อด้านล่างเพื่อดูสูตร น้ำหนัก และเหตุผลที่ใช้
             </p>
+            {onOpenWeights && (
+              <button type="button" className="be-btn" style={{ marginBottom: 14 }}
+                      onClick={onOpenWeights} data-testid="be-methodology-open-weights">
+                ปรับน้ำหนักมิติของ study นี้ →
+              </button>
+            )}
             <div className="be-method-list">
               {SECTIONS.map(s => (
                 <div key={s.id}

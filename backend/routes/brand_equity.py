@@ -31,6 +31,47 @@ class BrandThesisExportRequest(BaseModel):
     chapters: List[int] = Field(default_factory=lambda: [3, 4, 5])
     extra_prompt: str = ""
 
+# Canonical Brand-Health tier scale. ONE definition, served to every surface.
+# It previously existed as two incompatible mappings: this 5-tier scale (in
+# frontend/src/lib/brandHealthVerdict.js, BeMethodology.jsx, routes/share.py and
+# routes/thesis_renderer.py) and a separate 3-tier scale hard-coded in the
+# dashboard hero (>=70 Healthy / >=40 At watch). A BES of 62 was therefore
+# labelled "เฝ้าระวัง" by the headline and "สุขภาพดี" by the methodology box
+# further down the SAME page, and the exported thesis agreed with the second.
+BRAND_HEALTH_TIERS = [
+    {"min": 80, "label": "Champion", "label_th": "ผู้นำตลาด",
+     "note": "Top of mind · สร้าง defensive moat ได้"},
+    {"min": 65, "label": "Strong", "label_th": "แข็งแกร่ง",
+     "note": "แบรนด์มี loyalty + identity ชัด"},
+    {"min": 50, "label": "Healthy", "label_th": "สุขภาพดี",
+     "note": "มี base ดี · ต้องปั้น edge เพิ่ม"},
+    {"min": 35, "label": "At Watch", "label_th": "เฝ้าระวัง",
+     "note": "สัญญาณอ่อนใน 1-2 มิติ ต้องลงมือ"},
+    {"min": 0, "label": "At Risk", "label_th": "เสี่ยง",
+     "note": "หลุดจากใจลูกค้าเร็ว · ต้อง reposition"},
+]
+
+
+def brand_health_tier(score: Optional[float]) -> Optional[dict]:
+    if score is None:
+        return None
+    v = float(score)
+    for t in BRAND_HEALTH_TIERS:
+        if v >= t["min"]:
+            return dict(t)
+    return dict(BRAND_HEALTH_TIERS[-1])
+
+
+# Bump when the SCORING or the generated thesis TEXT changes meaning, so cached
+# artefacts built from superseded numbers are treated as a miss and regenerated.
+# v1 (2026-08, audit): reliability now computed and reported; unaided brand
+#   mentions counted deterministically (Awareness no longer swings 30-51 points
+#   on whether the AI pass ran); dead dimension weights removed; identity ceiling
+#   fixed; reverse coding; sample SD; the thesis chapters stopped asserting an
+#   untested Cronbach's alpha and stopped misattributing POMP / brand personality.
+# A thesis cached before this is a different document about different numbers.
+BE_ANALYSIS_SCHEMA_VERSION = 1
+
 DIMENSIONS = ["awareness", "quality", "identity", "loyalty"]
 DIM_LABELS = {
     "awareness": "Brand Awareness",
@@ -326,6 +367,12 @@ class BrandSetup(BaseModel):
     industry_context: Optional[str] = None
     custom_quality_attributes: List[str] = []  # extra Likert-7 attributes per brand
     custom_quality_attributes_en: List[str] = []  # auto-translated EN versions (parallel index)
+    # Parallel index: True marks a NEGATIVELY worded attribute ("แพงเกินไป"),
+    # where agreement means LESS quality and the item must be reverse-scored.
+    # Free text carries no polarity, so anything left undeclared is treated as
+    # polarity-unknown and kept out of the aggregate scores rather than being
+    # silently counted as a virtue.
+    custom_quality_attributes_reverse: List[bool] = []
 
 
 class VisualAsset(BaseModel):
@@ -605,7 +652,24 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
     competitors_top = list(brand_setup.competitors or [])
     primary_competitor = competitors_top[0] if competitors_top else "คู่แข่ง"
     brand_list = [brand_setup.name] + (brand_setup.competitors or [])
-    trait_pool = list(set(DEFAULT_TRAIT_POOL + (identity.traits or [])))
+    # Trait grid options. This used to be `list(set(DEFAULT_TRAIT_POOL + traits))`
+    # sliced to [:24], which had two consequences:
+    #   1. `set` iteration order over strings is not stable across processes, so
+    #      the same study produced a DIFFERENT questionnaire after every server
+    #      restart — the instrument was not reproducible;
+    #   2. because the brand's own intended traits landed in random positions,
+    #      the [:24] truncation could silently drop them — removing from the grid
+    #      the very traits the identity-overlap metric then scores against.
+    # Intended traits now come FIRST (so truncation can never reach them) and the
+    # rest keep the pool's declared order.
+    _seen_traits = set()
+    trait_pool = []
+    for t in list(identity.traits or []) + list(DEFAULT_TRAIT_POOL):
+        key = str(t).strip().lower()
+        if not key or key in _seen_traits:
+            continue
+        _seen_traits.add(key)
+        trait_pool.append(t)
     # Build matching TH list (preserve order of trait_pool)
     trait_pool_th = [TRAIT_TH_MAP.get(t, t) for t in trait_pool]
 
@@ -746,10 +810,13 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
     import re
     custom_attrs = (brand_setup.custom_quality_attributes or [])[:5]
     custom_attrs_en = (brand_setup.custom_quality_attributes_en or [])
+    custom_attrs_rev = (brand_setup.custom_quality_attributes_reverse or [])
     for idx, attr in enumerate(custom_attrs):
         attr_clean = attr.strip()
         if not attr_clean:
             continue
+        declared_reverse = bool(custom_attrs_rev[idx]) if idx < len(custom_attrs_rev) else None
+        suspected_reverse = _looks_negatively_worded(attr_clean)
         # Use translated EN version if available, else fall back to TH text
         attr_en = (custom_attrs_en[idx] if idx < len(custom_attrs_en) and custom_attrs_en[idx] else attr_clean).strip()
         slug = re.sub(r"[^a-zA-Z0-9]", "", attr_clean).lower() or uuid.uuid4().hex[:4]
@@ -765,6 +832,12 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
         }, "quality")
         # Override EN prompt with proper translation
         q_brand["prompt_en"] = f"{brand_setup.name} is a brand that is {attr_en}"
+        # Polarity. Declared wins; otherwise flag for the researcher to confirm
+        # and keep the item out of any aggregate until they do.
+        q_brand["reverse_scored"] = bool(declared_reverse) if declared_reverse is not None else False
+        q_brand["polarity_declared"] = declared_reverse is not None
+        q_brand["polarity_suspected_negative"] = suspected_reverse
+        q_brand["score_eligible"] = (declared_reverse is not None) or (not suspected_reverse)
         questions.append(q_brand)
         # Parallel competitor questions — one per competitor (was top-1 only; now full list)
         for comp in competitors_top:
@@ -779,6 +852,10 @@ def _generate_questions_from_template(brand_setup: BrandSetup, identity: Identit
                 "required": False,
             }, "quality", override_competitor=comp)
             q_comp["prompt_en"] = f"{comp} is a brand that is {attr_en}"
+            q_comp["reverse_scored"] = bool(declared_reverse) if declared_reverse is not None else False
+            q_comp["polarity_declared"] = declared_reverse is not None
+            q_comp["polarity_suspected_negative"] = suspected_reverse
+            q_comp["score_eligible"] = (declared_reverse is not None) or (not suspected_reverse)
             questions.append(q_comp)
 
     # === Re-order within each dimension so brand+competitor questions for the same
@@ -842,14 +919,120 @@ def _group_questions_for_comparison(questions: List[dict], brand_name: str, comp
 
 # ============ STATS ENGINE ============
 
-def _likert_stats(values: List[int], scale_max: int = 7) -> dict:
+# Markers that make a free-text attribute read as a NEGATIVE statement. Used
+# only to raise a flag for the researcher to confirm — never to decide polarity
+# automatically, because guessing wrong flips a score silently.
+_NEGATIVE_MARKERS_TH = (
+    "เกินไป", "ไม่ดี", "ไม่คุ้ม", "ไม่น่า", "ไม่ค่อย", "ไม่มี", "ไม่ได้", "ไม่สะดวก",
+    "แพง", "ช้า", "แย่", "ยาก", "ล้าสมัย", "น่าเบื่อ", "ธรรมดา", "ด้อย", "ขาด",
+    "เชย", "จำเจ", "ผิดหวัง", "เสีย",
+)
+_NEGATIVE_MARKERS_EN = (
+    "too ", "not ", "hard to", "difficult", "expensive", "overpriced", "slow",
+    "poor", "bad", "outdated", "boring", "lacks", "lack of", "cheap-looking",
+)
+
+
+def _norm_brand_token(s: Any) -> str:
+    """Casefold a free-text answer for brand matching: drop spaces, punctuation
+    and Thai vowel-length variation that respondents type inconsistently."""
+    t = str(s or "").strip().lower()
+    if not t:
+        return ""
+    t = re.sub(r"[\s​\-_.,;:!?'\"()\[\]/\\]+", "", t)
+    return t
+
+
+def _deterministic_brand_counts(values: List[Any], brand_list: List[str]) -> Optional[dict]:
+    """Count unaided brand mentions WITHOUT the LLM.
+
+    Why this exists
+    ---------------
+    `_question_signal_100` used to return None for every open-ended question
+    until an AI normalisation job had run. Top-of-Mind (weight .40) and Unaided
+    Recall (.25) are open-ended, so 65 % of the Awareness weight simply vanished
+    and the composite renormalised over what was left. Because unaided recall is
+    always lower than aided recognition, dropping it did not merely add noise —
+    it INFLATED the score, by up to ~30 points on identical raw data, and the
+    inflated version was publishable to the public showcase.
+
+    So we always produce a defensible count from the raw text. A mention is
+    attributed to a brand only on an exact normalised match, or when the brand
+    token is contained in the answer AND no other brand in the study matches more
+    specifically. That last clause is the guard against the previous substring
+    behaviour, where a focal brand whose name is a substring of a competitor's
+    (or vice versa) could be credited with the competitor's mentions.
+
+    The AI pass still improves on this — it catches misspellings, transliteration
+    and nicknames — but it is now an ENHANCEMENT, not the difference between
+    having a score and not having one.
+    """
+    if not values or not brand_list:
+        return None
+    norm_brands = [(b, _norm_brand_token(b)) for b in brand_list if _norm_brand_token(b)]
+    if not norm_brands:
+        return None
+
+    counts: Dict[str, int] = {}
+    total = 0
+    for v in values:
+        raw = v if not isinstance(v, list) else " ".join(str(x) for x in v)
+        tok = _norm_brand_token(raw)
+        if not tok:
+            continue
+        total += 1
+        exact = [b for b, nb in norm_brands if nb == tok]
+        if exact:
+            counts[exact[0]] = counts.get(exact[0], 0) + 1
+            continue
+        # Substring fallback — attribute only to the LONGEST matching brand
+        # token, and only when that match is unambiguous.
+        contained = [(b, nb) for b, nb in norm_brands if nb and nb in tok]
+        if contained:
+            contained.sort(key=lambda x: len(x[1]), reverse=True)
+            longest = len(contained[0][1])
+            if sum(1 for _b, nb in contained if len(nb) == longest) == 1:
+                counts[contained[0][0]] = counts.get(contained[0][0], 0) + 1
+
+    if not total:
+        return None
+    return {
+        "total": total,
+        "counts": [
+            {"label": b, "count": c, "pct": round(c / total * 100, 1)}
+            for b, c in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
+        ],
+    }
+
+
+def _looks_negatively_worded(text: str) -> bool:
+    """Heuristic only — flags an attribute for human confirmation."""
+    t = (text or "").strip().lower()
+    if not t:
+        return False
+    return (any(m in t for m in _NEGATIVE_MARKERS_TH)
+            or any(m in t for m in _NEGATIVE_MARKERS_EN))
+
+
+def _likert_stats(values: List[int], scale_max: int = 7, reverse: bool = False) -> dict:
+    """Descriptives for a Likert item.
+
+    `reverse=True` marks a NEGATIVELY worded item ("brand X is overpriced"):
+    agreement then means *less* of the construct, so the 0-100 score is flipped.
+    Without this, agreeing that a brand is overpriced raised its Perceived
+    Quality — the item was scored as if every custom attribute were a virtue.
+    """
     if not values:
         return {"n": 0}
     n = len(values)
     mean = sum(values) / n
     sorted_v = sorted(values)
     median = sorted_v[n // 2] if n % 2 else (sorted_v[n // 2 - 1] + sorted_v[n // 2]) / 2
-    var = sum((v - mean) ** 2 for v in values) / n
+    # Sample standard deviation (n-1). The population form (÷n) understates
+    # dispersion, and this value is exported under an "SD" column in the thesis
+    # appendix and handed to the AI writer as `sd=` — both of which mean the
+    # sample estimate. At n=8 the difference is ~6.5%.
+    var = sum((v - mean) ** 2 for v in values) / (n - 1) if n > 1 else 0.0
     std = var ** 0.5
     # T2B (top-2-box)
     t2b = sum(1 for v in values if v >= scale_max - 1) / n * 100
@@ -863,11 +1046,38 @@ def _likert_stats(values: List[int], scale_max: int = 7) -> dict:
     # cross-scale comparability. Confirmed correct per Aaker (1996) ch.7,
     # Keller CBBE measurement, and DeVellis (Scale Development, 2017).
     score_100 = (mean - 1) / (scale_max - 1) * 100 if scale_max > 1 else 0
+    if reverse and scale_max > 1:
+        score_100 = 100.0 - score_100
+        t2b, b2b = b2b, t2b        # "top box" now means the favourable end
+        nq = t2b - b2b
+    # 95% CI for the mean, and for the 0-100 score. Every score in this module
+    # used to be reported as a bare point estimate, so a dimension resting on 12
+    # respondents looked exactly as firm as one resting on 400.
+    ci_low = ci_high = None
+    score_ci_low = score_ci_high = None
+    if n > 1 and std > 0:
+        se = std / (n ** 0.5)
+        try:
+            from scipy import stats as _st
+            crit = float(_st.t.ppf(0.975, n - 1))
+        except Exception:
+            crit = 1.96
+        ci_low, ci_high = mean - crit * se, mean + crit * se
+        if scale_max > 1:
+            lo = (ci_low - 1) / (scale_max - 1) * 100
+            hi = (ci_high - 1) / (scale_max - 1) * 100
+            if reverse:
+                lo, hi = 100.0 - hi, 100.0 - lo
+            score_ci_low, score_ci_high = max(0.0, lo), min(100.0, hi)
     return {
         "n": n, "mean": round(mean, 2), "median": median,
         "std": round(std, 2), "t2b": round(t2b, 1), "b2b": round(b2b, 1),
         "net": round(nq, 1), "distribution": distribution,
         "score_100": round(score_100, 1),
+        "reverse_scored": bool(reverse),
+        "mean_ci95": [round(ci_low, 2), round(ci_high, 2)] if ci_low is not None else None,
+        "score_100_ci95": ([round(score_ci_low, 1), round(score_ci_high, 1)]
+                           if score_ci_low is not None else None),
     }
 
 
@@ -967,15 +1177,46 @@ def _question_signal_100(
         intended_lower = {t.strip().lower() for t in intended_traits if t}
         if not intended_lower:
             return None
+
+        # Only intended traits that are actually OFFERED in this grid can be
+        # picked. Scoring against traits the respondent was never shown is not a
+        # measurement of anything — most importantly it is what made
+        # `as_person_personality` return a hard 0.0 in essentially every study:
+        # that question offers PERSONALITY_TRAIT_POOL, which shares only 2 of its
+        # 17 labels with the pool the brand's intended traits are drawn from. A
+        # question that cannot express the construct must be EXCLUDED (None), not
+        # scored as a failure (0.0) that drags the dimension down.
+        options = [str(o).strip().lower() for o in (q.get("options") or []) if o]
+        options_th = [str(o).strip().lower() for o in (q.get("options_th") or []) if o]
+        offered = set(options) | set(options_th)
+        answerable = intended_lower & offered if offered else intended_lower
+        if not answerable:
+            return None
+
         matched_pcts = []
         for c in counts:
             label = (c.get("label") or "").strip().lower()
-            if label in intended_lower:
+            if label in answerable:
                 matched_pcts.append(float(c.get("pct") or 0))
-        if not matched_pcts:
-            return 0.0
-        # average pickup AMONG intended traits, capped 100
-        return min(100.0, sum(matched_pcts) / len(intended_lower))
+        raw = sum(matched_pcts) / len(answerable)
+
+        # Respondents may tick at most `max` traits, so the raw average pickup has
+        # a structural ceiling of max_picks/len(answerable) x 100. Dividing by the
+        # trait count alone made the metric unreachable: with 12 intended traits
+        # and a 5-pick cap, a brand every respondent recognised perfectly scored
+        # 41.7, while the same brand with 3 intended traits scored 100 — the score
+        # measured how many traits the student typed into the wizard, not the
+        # brand. Normalise by the achievable ceiling so 100 means "every intended
+        # trait that could be picked, was picked".
+        try:
+            max_picks = int(q.get("max") or len(answerable))
+        except (TypeError, ValueError):
+            max_picks = len(answerable)
+        max_picks = max(1, min(max_picks, len(answerable)))
+        ceiling = 100.0 * max_picks / len(answerable)
+        if ceiling <= 0:
+            return None
+        return max(0.0, min(100.0, raw / ceiling * 100.0))
 
     # Brand-mention questions (aided / aided-logo) → % who picked target brand
     if qtype in ("mcq_multi", "mcq_single"):
@@ -996,8 +1237,12 @@ def _question_signal_100(
         # word counts not brand counts → can't score against a target_brand. Skip them.
         if (q.get("ai_processing") or "") == "word_cloud":
             return None
-        if not s.get("ai_normalized"):
-            return None
+        # This used to be `if not s.get("ai_normalized"): return None`, which made
+        # Top-of-Mind (w .40) and Unaided Recall (w .25) contribute NOTHING until
+        # an LLM job had run — 65 % of the Awareness weight, renormalised away in
+        # a direction that always raised the score. `_aggregate_responses` now
+        # supplies deterministic counts when the AI pass has not run, so a signal
+        # always exists; `normalization_basis` records which one produced it.
         if not counts or not n:
             return None
         for c in counts:
@@ -1017,21 +1262,30 @@ def _question_signal_100(
 DIMENSION_WEIGHTS: Dict[str, Dict[str, float]] = {
     "awareness": {
         # Aaker's awareness pyramid — TOM is the strongest signal.
+        # NOTE: `logo_aided`, `logo_unaided` and `color_recall` used to be listed
+        # here with a combined weight of 0.25. They are real questions, but
+        # TEMPLATE_LIB files them under the `identity` dimension, and
+        # `_compute_dim_composite` only ever looks at questions whose
+        # `dimension` equals the dimension being scored — so those 0.25 could
+        # never match anything. They were dead entries that made this table read
+        # as though visual recognition contributed a quarter of Awareness when
+        # it contributed nothing. (If visual recognition SHOULD count toward
+        # Awareness — it is defensible under Aaker — the fix is to re-file those
+        # questions' `dimension`, not to re-add unreachable weights here.)
         "unaided_top_of_mind": 0.40,
         "unaided_recall":      0.25,
         "aided_recognition":   0.20,
-        "logo_aided":          0.10,    # visual recognition (when present)
-        "logo_unaided":        0.10,
-        "color_recall":        0.05,
         "brand_familiarity":   0.15,
     },
     "quality": {
+        # `as_product_quality` was listed here at 0.05 but is an `identity`
+        # question — same dead-entry problem as above. It still carries its
+        # legitimate 0.04 weight inside `identity` below.
         "overall_quality":       0.35,
         "attribute_reliability": 0.20,
         "attribute_value":       0.20,
         "brand_vs_competitor":   0.15,
         "attribute_design":      0.10,
-        "as_product_quality":    0.05,
     },
     "identity": {
         # Aaker's "brand as ..." 4-perspective framework + identity-image overlap
@@ -1104,6 +1358,8 @@ def _compute_dim_composite(
             continue
         if q.get("compare_brand"):
             continue
+        if q.get("score_eligible") is False:
+            continue  # polarity unconfirmed — see `_looks_negatively_worded`
         signal = _question_signal_100(
             q, q.get("stats", {}), target_brand,
             intended_traits=intended_traits,
@@ -1126,6 +1382,12 @@ def _compute_dim_composite(
         weighted_sum += float(identity_alignment) * align_w
         total_weight += align_w
         present_kinds.append("ai_identity_alignment")
+        # The alignment weight has to enter the DENOMINATOR too. It used to be
+        # added only to `total_weight`, which inflated coverage — the function
+        # reported 1.0 (clamped) while its own `missing_kinds` list was still
+        # non-empty, i.e. it claimed complete data for a dimension it knew was
+        # incomplete.
+        designed_weight_total += align_w
 
     # Coverage = actual_weight / designed_weight (1.0 = every designed signal had data)
     coverage = (total_weight / designed_weight_total) if designed_weight_total > 0 else 0.0
@@ -1142,14 +1404,154 @@ def _compute_dim_composite(
     }
 
     if total_weight > 0:
-        score = weighted_sum / total_weight
-        if fallback_signals:
-            fb_avg = sum(fallback_signals) / len(fallback_signals)
-            score = score * 0.85 + fb_avg * 0.15
-        return round(score, 1), meta
+        # No ad-hoc blend. This used to be
+        #     score = score * 0.85 + fb_avg * 0.15
+        # which handed the *unweighted* questions — the ones deliberately left
+        # out of DIMENSION_WEIGHTS because they are descriptive, not scoring
+        # signals — a flat 15% of the dimension. That is more than every designed
+        # signal in `identity` except one, and the 0.85/0.15 split had no source.
+        # Unweighted questions now stay descriptive-only, which is what the
+        # methodology page already tells users happens.
+        return round(weighted_sum / total_weight, 1), meta
     if fallback_signals:
+        # Only when the dimension produced NO weighted signal at all: fall back to
+        # the plain mean of whatever is available, so a partially-designed study
+        # still shows something rather than a blank.
         return round(sum(fallback_signals) / len(fallback_signals), 1), meta
     return None, meta
+
+
+def _cronbach_alpha(matrix: List[List[float]]) -> Optional[float]:
+    """Cronbach's alpha for a complete-case respondent x item matrix.
+
+        alpha = k/(k-1) * (1 - sum(var_i) / var_total)
+
+    Sample variance (n-1). Returns None when it cannot be estimated.
+    """
+    if not matrix:
+        return None
+    k = len(matrix[0])
+    n = len(matrix)
+    if k < 2 or n < 3:
+        return None
+
+    def _var(xs):
+        m = sum(xs) / len(xs)
+        return sum((x - m) ** 2 for x in xs) / (len(xs) - 1)
+
+    item_vars = [_var([row[j] for row in matrix]) for j in range(k)]
+    totals = [sum(row) for row in matrix]
+    var_total = _var(totals)
+    if var_total <= 0:
+        return None
+    return (k / (k - 1)) * (1 - sum(item_vars) / var_total)
+
+
+def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict]:
+    """Per-dimension internal-consistency reliability from the raw item matrix.
+
+    Why this exists
+    ---------------
+    Nothing in this module used to compute a reliability or validity statistic,
+    yet the generated thesis asserted "Cronbach's alpha >= 0.7" as an established
+    property of the instrument. That assertion was unfalsifiable *and* wrong to
+    make: `_aggregate_responses` collapses answers into per-question buckets and
+    never reconstructs the respondent x item matrix, so no covariance between
+    items reached any reported number. Two datasets on the same 4-item Perceived
+    Quality scale — one loading on a single factor (alpha = 0.93), the other with
+    each item column independently shuffled so the items share nothing
+    (alpha = -0.02) — produced byte-identical output: same composite, same
+    coverage of 1.0, same tier.
+
+    So: compute it from the data that was already in hand, report it honestly,
+    and let the caller refuse to claim what has not been shown. A dimension with
+    fewer than 2 Likert items has no internal consistency to estimate — that is
+    reported as a reason, not as a number.
+
+    References: Cronbach (1951); Nunnally & Bernstein (1994) for the .70
+    convention; Churchill (1979) for the scale-development paradigm.
+    """
+    by_dim_items: Dict[str, List[str]] = {d: [] for d in DIMENSIONS}
+    scale_of: Dict[str, int] = {}
+    for q in study.get("questions", []) or []:
+        if q.get("compare_brand"):
+            continue  # competitor items measure a different object
+        if q.get("type") not in ("likert_5", "likert_7"):
+            continue  # alpha is defined for the multi-item rating scale only
+        d = q.get("dimension")
+        if d in by_dim_items:
+            by_dim_items[d].append(q["id"])
+            scale_of[q["id"]] = 5 if q["type"] == "likert_5" else 7
+
+    # respondent -> {question_id: numeric value}
+    per_resp: List[Dict[str, float]] = []
+    for r in responses:
+        row: Dict[str, float] = {}
+        for ans in r.get("answers", []) or []:
+            qid = ans.get("question_id")
+            val = ans.get("value")
+            if qid in scale_of and isinstance(val, (int, float)) and not isinstance(val, bool):
+                row[qid] = float(val)
+        if row:
+            per_resp.append(row)
+
+    out: Dict[str, dict] = {}
+    for d, qids in by_dim_items.items():
+        k = len(qids)
+        if k < 2:
+            out[d] = {"alpha": None, "k_items": k, "n_complete": 0,
+                      "reason": "fewer_than_2_likert_items",
+                      "interpretation": "ไม่สามารถประเมินความเที่ยงได้ (มีข้อคำถามมาตรวัดน้อยกว่า 2 ข้อ)"}
+            continue
+        matrix = [[row[q] for q in qids] for row in per_resp if all(q in row for q in qids)]
+        n = len(matrix)
+        if n < 30:
+            out[d] = {"alpha": None, "k_items": k, "n_complete": n,
+                      "reason": "n_below_30",
+                      "interpretation": f"ยังประเมินความเที่ยงไม่ได้ — มีผู้ตอบครบทุกข้อเพียง {n} คน (ต้องการ 30 ขึ้นไป)"}
+            continue
+        a = _cronbach_alpha(matrix)
+        if a is None:
+            out[d] = {"alpha": None, "k_items": k, "n_complete": n,
+                      "reason": "zero_variance",
+                      "interpretation": "ยังประเมินความเที่ยงไม่ได้ — คำตอบไม่มีความแปรปรวน"}
+            continue
+        # Mean inter-item correlation — diagnoses WHY alpha is low (Clark & Watson
+        # 1995 recommend .15-.50 for a broad construct).
+        cols = [[row[j] for row in matrix] for j in range(k)]
+        rs = []
+        for x in range(k):
+            for y in range(x + 1, k):
+                xs, ys = cols[x], cols[y]
+                mx, my = sum(xs) / n, sum(ys) / n
+                cov = sum((xs[t] - mx) * (ys[t] - my) for t in range(n))
+                dx = sum((v - mx) ** 2 for v in xs) ** 0.5
+                dy = sum((v - my) ** 2 for v in ys) ** 0.5
+                if dx > 0 and dy > 0:
+                    rs.append(cov / (dx * dy))
+        mean_r = round(sum(rs) / len(rs), 3) if rs else None
+
+        if a >= 0.90:
+            label, interp = "excellent", "ความเที่ยงสูงมาก (อาจมีข้อคำถามซ้ำซ้อนกัน)"
+        elif a >= 0.80:
+            label, interp = "good", "ความเที่ยงดี"
+        elif a >= 0.70:
+            label, interp = "acceptable", "ความเที่ยงผ่านเกณฑ์ที่ยอมรับได้ (≥ 0.70)"
+        elif a >= 0.60:
+            label, interp = "questionable", "ความเที่ยงต่ำกว่าเกณฑ์ 0.70 — ควรระมัดระวังในการตีความ"
+        else:
+            label, interp = "unacceptable", "ความเที่ยงไม่ผ่านเกณฑ์ — ข้อคำถามในมิตินี้อาจไม่ได้วัดสิ่งเดียวกัน"
+
+        out[d] = {
+            "alpha": round(a, 3),
+            "k_items": k,
+            "n_complete": n,
+            "mean_inter_item_r": mean_r,
+            "meets_threshold": bool(a >= 0.70),
+            "label": label,
+            "interpretation": interp,
+        }
+    return out
 
 
 def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None) -> dict:
@@ -1168,6 +1570,10 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
     out_questions = []
     dim_aggregates: Dict[str, List[float]] = {d: [] for d in DIMENSIONS}
     normalized = normalized or {}
+    # Focal brand first, then competitors — used by `_deterministic_brand_counts`
+    # so an unaided mention can be attributed without waiting for the LLM.
+    _bs = study.get("brand") or {}
+    _brand_list_for_matching = [_bs.get("name") or ""] + list(_bs.get("competitors") or [])
 
     for q in questions:
         qid = q["id"]
@@ -1188,7 +1594,7 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         if q["type"] in ("likert_5", "likert_7"):
             scale_max = 5 if q["type"] == "likert_5" else 7
             numeric = [int(v) for v in values if isinstance(v, (int, float)) or (isinstance(v, str) and v.isdigit())]
-            stats = _likert_stats(numeric, scale_max)
+            stats = _likert_stats(numeric, scale_max, reverse=bool(q.get("reverse_scored")))
             if stats.get("score_100") is not None:
                 dim_aggregates[q["dimension"]].append(stats["score_100"])
         elif q["type"] == "nps_0_10":
@@ -1206,6 +1612,19 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
                         "n": norm.get("total", stats.get("n", 0)),
                         "counts": norm["counts"],
                         "ai_normalized": True,
+                        "normalization_basis": "ai",
+                    }
+            # No AI pass yet → count brand mentions deterministically so the
+            # dimension keeps its signal instead of silently renormalising it away.
+            if (q.get("ai_processing") in ("extract_brand", "extract_brands")
+                    and not stats.get("ai_normalized")):
+                det = _deterministic_brand_counts(values, _brand_list_for_matching)
+                if det:
+                    stats = {
+                        "n": det["total"],
+                        "counts": det["counts"],
+                        "ai_normalized": False,
+                        "normalization_basis": "deterministic",
                     }
         elif q["type"] == "open_long":
             # If AI normalized this open_long (e.g., extract_brands), use it; otherwise raw responses
@@ -1215,10 +1634,20 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
                     "n": norm.get("total", len(values)),
                     "counts": norm.get("counts", []),
                     "ai_normalized": True,
+                    "normalization_basis": "ai",
                     "responses": [v for v in values if v][:10],  # keep sample
                 }
             else:
                 stats = {"n": len(values), "responses": [v for v in values if v]}
+                if q.get("ai_processing") in ("extract_brand", "extract_brands"):
+                    det = _deterministic_brand_counts(values, _brand_list_for_matching)
+                    if det:
+                        stats.update({
+                            "n": det["total"],
+                            "counts": det["counts"],
+                            "ai_normalized": False,
+                            "normalization_basis": "deterministic",
+                        })
         elif q["type"] == "comparative_7":
             numeric = [int(v) for v in values if isinstance(v, (int, float)) or (isinstance(v, str) and v.isdigit())]
             stats = _comparative_stats(numeric)
@@ -1277,6 +1706,13 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         weight_sum += w
     composite["overall"] = round(weighted_total / weight_sum, 1) if weight_sum > 0 else None
 
+    # Which dimensions actually produced a score. Kept explicitly because the
+    # next block coerces `None` to 0 for backward compatibility, and a 0 that
+    # means "not measured" is indistinguishable from a 0 that means "measured,
+    # scored zero". The public home page read those coerced zeros and named an
+    # UNMEASURED dimension as the brand's weakest.
+    composite["_measured"] = [d for d in DIMENSIONS if composite.get(d) is not None]
+
     # Cast missing dims back to 0 for backward-compat with frontends that expect numeric;
     # the dashboard's `v > 0 ? v : '—'` will still render '—' but downstream sorting & exports
     # don't choke on null. Keep `null` only for `overall` so a fully-empty study is identifiable.
@@ -1299,6 +1735,11 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
     }
     for q in out_questions:
         persp = q.get("perspective")
+        # `score_eligible is False` marks a free-text attribute whose polarity the
+        # researcher has not confirmed and which reads as negative. Averaging it
+        # in either direction would be a guess, so it stays descriptive-only.
+        if q.get("score_eligible") is False:
+            continue
         if persp in perspective_scores and not q.get("compare_brand"):
             s = q["stats"].get("score_100")
             if s is not None:
@@ -1315,9 +1756,29 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
     # ========== Brand Image Radar (focal brand + competitors) ==========
     # Collect axis_label means for the focal brand (from non-competitor questions)
     # and per competitor (from compare_brand questions)
+    # Each axis entry carries mean, the POMP 0-100 score and n. The 0-100 value
+    # used to be `mean / 7 * 100`, which is the normalisation this module's own
+    # `_likert_stats` comment calls broken: it leaves an arbitrary floor at
+    # (1/max)x100 and is not comparable across scale lengths. POMP —
+    # (mean-1)/(max-1)x100, already computed as `score_100` — is used instead, so
+    # the radar and every dimension score are finally on the same scale.
+    # `n` is carried because a focal item answered by 100 people and an OPTIONAL
+    # competitor item answered by 3 were drawn as equal polygons with no n shown
+    # anywhere.
+    def _axis_entry(q: dict) -> Optional[dict]:
+        st = q.get("stats") or {}
+        m = st.get("mean")
+        if m is None:
+            return None
+        score = st.get("score_100")
+        if score is None:
+            smax = 5 if q.get("type") == "likert_5" else 7
+            score = round((m - 1) / (smax - 1) * 100, 1) if smax > 1 else None
+        return {"mean": m, "score": score, "n": st.get("n") or 0}
+
     radar_axes_set = []  # ordered, deduped axis labels
     seen_axis = set()
-    brand_axis: Dict[str, float] = {}  # axis -> mean (1-7)
+    brand_axis: Dict[str, dict] = {}  # axis -> {mean, score, n}
     for q in out_questions:
         ax = q.get("axis_label")
         if not ax or q.get("compare_brand"):
@@ -1325,46 +1786,71 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         if ax not in seen_axis:
             seen_axis.add(ax)
             radar_axes_set.append(ax)
-        m = q["stats"].get("mean")
-        if m is not None:
-            brand_axis[ax] = m
+        e = _axis_entry(q)
+        if e:
+            brand_axis[ax] = e
 
     # Per competitor
-    competitor_axes: Dict[str, Dict[str, float]] = {}  # comp_name -> {axis -> mean}
+    competitor_axes: Dict[str, Dict[str, dict]] = {}  # comp_name -> {axis -> entry}
     for q in out_questions:
         ax = q.get("axis_label")
         comp = q.get("compare_brand")
         if not ax or not comp:
             continue
-        m = q["stats"].get("mean")
-        if m is not None:
-            competitor_axes.setdefault(comp, {})[ax] = m
+        e = _axis_entry(q)
+        if e:
+            competitor_axes.setdefault(comp, {})[ax] = e
         if ax not in seen_axis:
             seen_axis.add(ax)
             radar_axes_set.append(ax)
 
-    # Build radar payload (scaled to 0-100 for unified rendering)
-    def to_pct(v: Optional[float]) -> Optional[float]:
-        return round(v / 7 * 100, 1) if v is not None else None
+    def _radar_series(name: str, kind: str, axmap: Dict[str, dict]) -> dict:
+        ns = [(axmap.get(ax) or {}).get("n") for ax in radar_axes_set]
+        present_ns = [v for v in ns if v]
+        return {
+            "name": name,
+            "kind": kind,
+            "values": [(axmap.get(ax) or {}).get("score") for ax in radar_axes_set],
+            "raw_means": [(axmap.get(ax) or {}).get("mean") for ax in radar_axes_set],
+            "n_values": ns,
+            "n_min": min(present_ns) if present_ns else 0,
+            "n_max": max(present_ns) if present_ns else 0,
+        }
 
     image_radar = {
         "axes": radar_axes_set,
         "series": [],
+        "scale": "pomp_0_100",
     }
     if brand_axis:
-        image_radar["series"].append({
-            "name": study["brand"]["name"],
-            "kind": "brand",
-            "values": [to_pct(brand_axis.get(ax)) for ax in radar_axes_set],
-            "raw_means": [brand_axis.get(ax) for ax in radar_axes_set],
-        })
+        image_radar["series"].append(
+            _radar_series(study["brand"]["name"], "brand", brand_axis)
+        )
     for comp_name, comp_axes in competitor_axes.items():
-        image_radar["series"].append({
-            "name": comp_name,
-            "kind": "competitor",
-            "values": [to_pct(comp_axes.get(ax)) for ax in radar_axes_set],
-            "raw_means": [comp_axes.get(ax) for ax in radar_axes_set],
-        })
+        image_radar["series"].append(_radar_series(comp_name, "competitor", comp_axes))
+
+    # Internal-consistency reliability per dimension. Reported whether or not it
+    # is flattering — the thesis export reads THIS instead of asserting a
+    # threshold it never tested.
+    reliability = _dimension_reliability(study, responses)
+
+    # Sample adequacy. There was no minimum-n gate anywhere: a single respondent
+    # produced a full Brand Equity Score and a "Champion" verdict with no
+    # warning. These bands are stated as rules of thumb, not as a power
+    # calculation, and the UI is expected to say so.
+    n_resp = len(responses)
+    if n_resp < 10:
+        adequacy = {"level": "insufficient", "n": n_resp, "min_next": 10,
+                    "message": f"มีผู้ตอบ {n_resp} คน — ยังน้อยเกินกว่าจะสรุปผลได้ ควรมีอย่างน้อย 30 คน"}
+    elif n_resp < 30:
+        adequacy = {"level": "provisional", "n": n_resp, "min_next": 30,
+                    "message": f"มีผู้ตอบ {n_resp} คน — ดูแนวโน้มได้ แต่ตัวเลขจะยังแกว่ง ควรเก็บให้ถึง 30 คน"}
+    elif n_resp < 100:
+        adequacy = {"level": "adequate", "n": n_resp, "min_next": 100,
+                    "message": f"มีผู้ตอบ {n_resp} คน — เพียงพอสำหรับสรุปผลรวม (ถ้าจะแยกดูรายกลุ่ม ควรมี 100 คนขึ้นไป)"}
+    else:
+        adequacy = {"level": "strong", "n": n_resp, "min_next": None,
+                    "message": f"มีผู้ตอบ {n_resp} คน — เพียงพอทั้งภาพรวมและการแยกกลุ่มย่อย"}
 
     return {
         "total_responses": len(responses),
@@ -1374,6 +1860,26 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         "awareness_extras": awareness_extras,
         "association": association,
         "image_radar": image_radar,
+        "reliability": reliability,
+        "sample_adequacy": adequacy,
+        # Served so no surface has to re-derive the tier and drift from the rest.
+        "brand_health_tier": brand_health_tier(composite.get("overall")),
+        "brand_health_tiers": BRAND_HEALTH_TIERS,
+        # Which basis produced the unaided brand-mention counts. Scores no longer
+        # depend on the AI job having run, but accuracy still improves with it
+        # (misspellings, transliteration, nicknames), so the UI can offer it as an
+        # enhancement without implying the current numbers are provisional.
+        "normalization": {
+            "basis": ("ai" if any(
+                (q["stats"].get("normalization_basis") == "ai") for q in out_questions
+            ) else ("deterministic" if any(
+                (q["stats"].get("normalization_basis") == "deterministic") for q in out_questions
+            ) else "none")),
+            "ai_questions": sum(1 for q in out_questions
+                                if q["stats"].get("normalization_basis") == "ai"),
+            "deterministic_questions": sum(1 for q in out_questions
+                                           if q["stats"].get("normalization_basis") == "deterministic"),
+        },
     }
 
 
@@ -1694,16 +2200,48 @@ Return ONLY JSON, no markdown:"""
 
 async def _ai_master_insights(study: dict, agg: dict) -> List[dict]:
     """Generate 5 actionable insights."""
+    # The payload used to be `agg["questions"][:20]` serialised whole and then
+    # sliced with `[:6000]`. Two consequences, both silent:
+    #   • the slice cut the JSON mid-string, so the model received malformed data
+    #     and had to guess where it ended;
+    #   • the questionnaire is ordered awareness → quality → identity → loyalty
+    #     with ~27 identity items, so the first 20 questions NEVER reached a
+    #     single Loyalty item — insights were generated for a brand whose loyalty
+    #     the model had never seen.
+    # Fix: send a compact, per-dimension-balanced digest that fits comfortably,
+    # and serialise it whole so the JSON is always valid.
+    def _slim(q: dict) -> dict:
+        s = q.get("stats") or {}
+        out = {"qid": q["id"], "kind": q.get("kind"), "dim": q.get("dimension"),
+               "n": s.get("n")}
+        for k in ("score_100", "mean", "t2b", "b2b", "net", "score", "promoters_pct",
+                  "detractors_pct"):
+            if s.get(k) is not None:
+                out[k] = s[k]
+        if s.get("counts"):
+            out["top"] = [{"label": c.get("label"), "pct": c.get("pct")}
+                          for c in s["counts"][:5]]
+        return out
+
+    per_dim_cap = 6
+    picked, seen = [], {d: 0 for d in DIMENSIONS}
+    for q in agg["questions"]:
+        d = q.get("dimension")
+        if d in seen and seen[d] < per_dim_cap and not q.get("compare_brand"):
+            picked.append(_slim(q))
+            seen[d] += 1
+
     summary = {
         "brand": study["brand"]["name"],
         "category": study["brand"]["category"],
         "competitors": study["brand"]["competitors"],
         "intended_identity": study["identity"]["traits"],
-        "scores": agg["composite"],
-        "key_stats": [
-            {"qid": q["id"], "kind": q["kind"], "stats": q["stats"]}
-            for q in agg["questions"][:20]
-        ],
+        "scores": {k: v for k, v in agg["composite"].items() if k != "_measured"},
+        "measured_dimensions": agg["composite"].get("_measured"),
+        "sample": agg.get("sample_adequacy"),
+        "reliability": {d: (agg.get("reliability") or {}).get(d, {}).get("alpha")
+                        for d in DIMENSIONS},
+        "key_stats": picked,
     }
     prompt = f"""คุณคือ senior brand strategist วิเคราะห์ข้อมูล Brand Health ด้านล่าง สร้าง 5 actionable insights แต่ละ insight มี:
 - headline: 1 บรรทัด
@@ -1711,8 +2249,13 @@ async def _ai_master_insights(study: dict, agg: dict) -> List[dict]:
 - recommendation: 1 action ที่ทำได้จริง
 - priority: high | medium | low
 
+ข้อกำหนด: ใช้เฉพาะตัวเลขที่ปรากฏด้านล่าง ห้ามเดาหรือคำนวณเพิ่ม ·
+ครอบคลุมทั้ง 4 มิติเท่าที่มีข้อมูล · ถ้ามิติใดไม่อยู่ใน measured_dimensions
+หรือค่า reliability เป็น null ห้ามสรุปหนักแน่นเกี่ยวกับมิตินั้น ·
+ถ้า sample.level เป็น insufficient/provisional ให้ระบุความไม่แน่นอนไว้ใน evidence
+
 Data:
-{json.dumps(summary, ensure_ascii=False)[:6000]}
+{json.dumps(summary, ensure_ascii=False)}
 
 Return JSON array of 5 objects, no markdown:"""
     text = await _gemini_call(prompt)
@@ -2198,12 +2741,74 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(404, "Study not found")
         if study.get("status") not in ("collecting", "analyzing"):
             raise HTTPException(410, "Study is not accepting responses")
+
+        # Validate answers against the study's own instrument before storing.
+        # This endpoint is PUBLIC and unauthenticated, and nothing used to check
+        # the payload: a scale value outside its range flows straight into
+        # `_likert_stats`, whose POMP transform is unbounded, so a single
+        # response of 9 on a 7-point item pushes that question's score_100 to
+        # 133.3 (and 0 pushes it to -25.0). Those feed the dimension composite and
+        # the published Brand Equity Score. Out-of-range values are dropped rather
+        # than rejected wholesale, so one bad field cannot discard an otherwise
+        # complete response.
+        valid_q = {q["id"]: q for q in (study.get("questions") or [])}
+        clean_answers, dropped = [], 0
+        for ans in (data.answers or []):
+            if not isinstance(ans, dict):
+                dropped += 1
+                continue
+            q = valid_q.get(ans.get("question_id"))
+            if not q:
+                dropped += 1  # unknown/stale question id
+                continue
+            val, qtype = ans.get("value"), q.get("type")
+            ok = True
+            if qtype in ("likert_5", "likert_7", "nps_0_10", "comparative_7"):
+                lo, hi = {"likert_5": (1, 5), "likert_7": (1, 7),
+                          "nps_0_10": (0, 10), "comparative_7": (1, 7)}[qtype]
+                if isinstance(val, bool) or not isinstance(val, (int, float)):
+                    ok = False
+                elif not (lo <= float(val) <= hi):
+                    ok = False
+            elif qtype in ("mcq_single",):
+                opts = q.get("options") or []
+                ok = (not opts) or (val in opts)
+            elif qtype in ("mcq_multi", "trait_grid"):
+                if not isinstance(val, list):
+                    ok = False
+                else:
+                    opts = set(q.get("options") or [])
+                    if opts:
+                        val = [v for v in val if v in opts]
+                    mx = q.get("max")
+                    if isinstance(mx, int) and mx > 0:
+                        val = val[:mx]   # honour the instrument's own pick cap
+                    ans = {**ans, "value": val}
+            elif qtype in ("open_short", "open_long"):
+                if val is None:
+                    ok = False
+                else:
+                    ans = {**ans, "value": str(val)[:2000]}  # bound free text
+            if ok:
+                clean_answers.append(ans)
+            else:
+                dropped += 1
+
+        if not clean_answers:
+            raise HTTPException(400, "ไม่พบคำตอบที่ใช้ได้ในแบบสอบถามนี้")
+        if dropped:
+            logging.warning(
+                "[BE] study %s: dropped %d invalid answer(s) from a public response",
+                study["id"], dropped,
+            )
+
         resp = {
             "id": str(uuid.uuid4()),
             "study_id": study["id"],
             "respondent_id": None,  # anonymous
             "demographics": data.demographics,
-            "answers": data.answers,
+            "answers": clean_answers,
+            "invalid_answers_dropped": dropped,
             "duration_sec": data.duration_sec,
             "started_at": _now_iso(),
             "submitted_at": _now_iso(),
@@ -2578,6 +3183,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 {"$set": {
                     "study_id": study_id,
                     "cache_key": cache_key,
+                    # Stamp the scoring/text schema so a thesis written against
+                    # superseded numbers is never replayed. See
+                    # BE_ANALYSIS_SCHEMA_VERSION.
+                    "schema_version": BE_ANALYSIS_SCHEMA_VERSION,
                     "ai_content": ai_md,
                     "chapters": sorted(chapters),
                     "n_filtered": len(filtered),
@@ -2655,9 +3264,14 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         ch_key = "_".join(str(c) for c in chapters)
         cache_key = f"be_thesis_{study_id}_{ch_key}_{sig}" + (f"_ep{ep_hash}" if ep_hash else "")
 
-        # Cache hit — return ready immediately
+        # Cache hit — return ready immediately. The schema guard matters here more
+        # than anywhere: the generated text EMBEDS the statistics, the DOCX
+        # re-renders that stored text verbatim, and there is no regenerate button
+        # in the UI — so without it a study keeps emitting a thesis built on
+        # pre-audit numbers forever.
         cached = await db.brand_thesis_cache.find_one(
-            {"cache_key": cache_key, "study_id": study_id}, {"_id": 0},
+            {"cache_key": cache_key, "study_id": study_id,
+             "schema_version": BE_ANALYSIS_SCHEMA_VERSION}, {"_id": 0},
         )
         if cached and cached.get("ai_content"):
             return {"status": "ready", "job_id": cache_key,
@@ -2699,7 +3313,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         # If job_id IS a cache_key (cache hit path), short-circuit to ready
         if job_id.startswith("be_thesis_") and "_" in job_id and job_id.count("_") >= 4:
             cached = await db.brand_thesis_cache.find_one(
-                {"cache_key": job_id, "study_id": study_id}, {"_id": 0},
+                {"cache_key": job_id, "study_id": study_id,
+                 "schema_version": BE_ANALYSIS_SCHEMA_VERSION}, {"_id": 0},
             )
             if cached:
                 return {"status": "ready", "cache_key": job_id, "cached": True}
@@ -2732,7 +3347,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             raise HTTPException(403)
 
         cached = await db.brand_thesis_cache.find_one(
-            {"cache_key": cache_key, "study_id": study_id}, {"_id": 0},
+            {"cache_key": cache_key, "study_id": study_id,
+             "schema_version": BE_ANALYSIS_SCHEMA_VERSION}, {"_id": 0},
         )
         if not cached or not cached.get("ai_content"):
             raise HTTPException(404, "ยังไม่มีเนื้อหาวิทยานิพนธ์ — กรุณาสร้างก่อน")

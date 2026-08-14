@@ -12,13 +12,22 @@ import {
 } from './be-components';
 import { BeFilterBar } from './BeFilterBar';
 import { BeMethodology } from './BeMethodology';
+import { BeWeightEditor } from './BeWeightEditor';
+import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const tierFor = (s) => s >= 70 ? { name: 'Healthy', th: 'แข็งแรง', color: '#10B981' }
-                    : s >= 40 ? { name: 'At watch', th: 'เฝ้าระวัง', color: '#D4A017' }
-                              : { name: 'At risk', th: 'เสี่ยง',     color: '#C8102E' };
+// Brand-health tier. Delegates to the ONE canonical scale in
+// `@/lib/brandHealthVerdict` — this used to be a private 3-tier mapping
+// (>=70 Healthy / >=40 At watch) while the methodology box further down THIS
+// page, the home-page card, the social preview and the exported thesis all used
+// the 5-tier scale. A BES of 62 was headlined "เฝ้าระวัง" here and called
+// "สุขภาพดี" a few hundred pixels lower.
+const tierFor = (s) => {
+  const t = getBrandHealthTier(s);
+  return { name: t.label, th: t.labelTh, color: t.color };
+};
 
 const findStat = (questions, kindOrType, dim) => {
   return questions.find(q => (q.kind === kindOrType || q.type === kindOrType) && (!dim || q.dimension === dim));
@@ -295,6 +304,7 @@ const BrandEquityDashboardPage = () => {
   // server-side whitelist (admin / อาจารย์ / นิสิต). Server stub at /api/brand-equity/thesis-eligible
   // returns {eligible: false} for everyone today; flip when ready to roll out.
   const [canExportThesis, setCanExportThesis] = useState(false);
+  const [weightEditorOpen, setWeightEditorOpen] = useState(false);
   useEffect(() => {
     if (isShowcase || !studyId) { setCanExportThesis(false); return; }
     (async () => {
@@ -474,6 +484,15 @@ const BrandEquityDashboardPage = () => {
   const composite = aggregate?.composite || {};
   const score = Math.round(composite.overall || 0);
   const tier = tierFor(score);
+  const agg = aggregate;
+  // Lowest per-dimension coverage the backend reported. `composite_meta[d].coverage`
+  // was already computed server-side as the incomplete-data flag but nothing
+  // rendered it, so a headline resting on a third of its designed signals looked
+  // exactly like one resting on all of them.
+  const coverages = Object.values(aggregate?.composite_meta || {})
+    .map(m => (typeof m?.coverage === 'number' ? m.coverage : null))
+    .filter(v => v !== null);
+  const minCoverage = coverages.length ? Math.min(...coverages) : null;
   const responseCount = aggregate?.total_responses || 0;
   const targetN = study.target_responses || 100;
 
@@ -556,6 +575,10 @@ const BrandEquityDashboardPage = () => {
                     <Icon name="copy" size={11}/>Copy showcase URL
                   </button>
                 )}
+                <button className="be-btn" onClick={() => setWeightEditorOpen(true)}
+                        data-testid="be-dashboard-weights">
+                  <Icon name="edit" size={11}/>น้ำหนักมิติ
+                </button>
                 <button className="be-btn" onClick={load} data-testid="be-dashboard-refresh">
                   <Icon name="refresh" size={11}/>Refresh
                 </button>
@@ -593,11 +616,56 @@ const BrandEquityDashboardPage = () => {
                   <span className="be-tier" style={{ color: tier.color }}>{tier.name}</span>
                   <span className="be-mono be-tiny be-muted">{tier.th}</span>
                 </div>
+                {/* Note comes from the same canonical tier as the label above,
+                    so the headline and its explanation cannot disagree. */}
                 <div className="be-muted be-small" style={{ maxWidth: 320, lineHeight: 1.55, marginTop: 4 }}>
-                  {score >= 70 ? 'Brand sits in healthy band — protect & defend.' :
-                   score >= 40 ? 'At watch — focus on weakest dimension to lift overall.' :
-                                  'At risk — fundamentals need attention.'}
+                  {getBrandHealthTier(score).note}
                 </div>
+                {/* How much to trust this number. Both come from the backend. */}
+                {agg?.sample_adequacy && (
+                  <div
+                    className="be-small"
+                    data-testid="be-sample-adequacy"
+                    style={{
+                      marginTop: 8, lineHeight: 1.5, maxWidth: 340,
+                      color: agg.sample_adequacy.level === 'insufficient' ? 'var(--be-red)'
+                           : agg.sample_adequacy.level === 'provisional' ? 'var(--be-gold)'
+                           : 'var(--be-muted)',
+                    }}
+                  >
+                    {agg.sample_adequacy.level === 'insufficient' || agg.sample_adequacy.level === 'provisional'
+                      ? '⚠ ' : ''}
+                    {agg.sample_adequacy.message}
+                  </div>
+                )}
+                {minCoverage != null && minCoverage < 1 && (
+                  <div className="be-small" data-testid="be-coverage-warning"
+                       style={{ marginTop: 6, color: 'var(--be-gold)', maxWidth: 340, lineHeight: 1.5 }}>
+                    ⚠ คะแนนนี้ยังไม่ครบทุกสัญญาณ (ครบ {Math.round(minCoverage * 100)}% ของที่ออกแบบไว้)
+                    — ถือเป็นตัวเลขเบื้องต้น
+                  </div>
+                )}
+                {/* Method note — the audit corrected several scoring defects that
+                    inflated scores (dead weights, an unreachable identity ceiling,
+                    reverse-worded items counted as virtues, and Awareness losing
+                    65% of its weight until an AI job ran). A brand's number may be
+                    lower than it was before; that is the correction, not a bug. */}
+                <div className="be-tiny be-muted" data-testid="be-method-update-note"
+                     style={{ marginTop: 8, maxWidth: 360, lineHeight: 1.5 }}>
+                  หมายเหตุ: วิธีคำนวณคะแนนได้รับการปรับให้ถูกต้องตามหลักวิชาการ (มิ.ย. 2026)
+                  — บาง study อาจเห็นคะแนนต่างจากเดิม · ดูรายละเอียดได้ที่ภาคผนวกวิธีวิจัยด้านล่าง
+                </div>
+                {agg?.normalization?.basis && agg.normalization.basis !== 'none' && (
+                  <div className="be-tiny be-muted" data-testid="be-normalization-basis"
+                       style={{ marginTop: 6, maxWidth: 360, lineHeight: 1.5 }}>
+                    การนับชื่อแบรนด์จากคำถามปลายเปิด:{' '}
+                    <b>{agg.normalization.basis === 'ai' ? 'ผ่าน AI แล้ว (แม่นกับคำสะกดผิด/ชื่อเล่น)'
+                                                          : 'นับตรงจากข้อความ (ยังไม่ได้รัน AI)'}</b>
+                    {agg.normalization.basis === 'deterministic'
+                      ? ' — คะแนนไม่ได้รอ AI แล้ว แต่กด "Run AI analysis" จะช่วยให้แม่นขึ้น'
+                      : ''}
+                  </div>
+                )}
               </div>
             </div>
             <div className="be-dim-grid" data-testid="be-dim-grid">
@@ -620,6 +688,85 @@ const BrandEquityDashboardPage = () => {
             </div>
           </div>
         </div>
+
+        {/* ===== ความน่าเชื่อถือของการวัด =====
+            Cronbach's alpha per dimension, computed server-side. Shown next to
+            the score because a number nobody can check is not a measurement —
+            and because the exported thesis used to assert this had been tested
+            when it never had been. */}
+        {agg?.reliability && (
+          <div className="be-card" style={{ padding: 20, marginTop: 18 }} data-testid="be-reliability-card">
+            <div className="be-eyebrow" style={{ marginBottom: 6 }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-blue)' }}/>
+              ความน่าเชื่อถือของการวัด (RELIABILITY)
+            </div>
+            <p className="be-muted be-small" style={{ marginBottom: 12, lineHeight: 1.6 }}>
+              ค่านี้บอกว่า <b>ข้อคำถามในมิติเดียวกันวัดเรื่องเดียวกันจริงไหม</b> —
+              ถ้าต่ำ แปลว่าคำถามในมิตินั้นกระจัดกระจาย คะแนนรวมของมิติจึงตีความยาก
+              (เกณฑ์ที่ยอมรับกันคือ α ≥ 0.70)
+            </p>
+            <div className="be-dim-grid">
+              {Object.values(DIMENSIONS).map(d => {
+                const r = agg.reliability[d.key] || {};
+                const a = r.alpha;
+                const col = a == null ? 'var(--ink-4)'
+                          : a >= 0.70 ? 'var(--be-green)'
+                          : a >= 0.60 ? 'var(--be-gold)' : 'var(--be-red)';
+                return (
+                  <div key={d.key} className="be-dim-card" data-testid={`be-reliability-${d.key}`}>
+                    <div className="be-dim-name">{d.label}</div>
+                    <div className="be-dim-num" style={{ color: col, fontSize: 26 }}>
+                      {a == null ? '—' : a.toFixed(2)}
+                    </div>
+                    <div className="be-mono be-tiny be-muted">
+                      {a == null ? 'ประเมินไม่ได้' : `α · ${r.k_items} ข้อ · n=${r.n_complete}`}
+                    </div>
+                    <div className="be-small be-muted" style={{ marginTop: 6, lineHeight: 1.45 }}>
+                      {r.interpretation || '—'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="be-muted be-tiny" style={{ marginTop: 10, lineHeight: 1.55 }}>
+              มิติที่ขึ้นว่า &quot;ประเมินไม่ได้&quot; ส่วนใหญ่เพราะมีข้อคำถามแบบมาตรวัดน้อยกว่า 2 ข้อ
+              (เช่น Awareness ที่ใช้คำถามปลายเปิด/เลือกตอบเป็นหลัก) ซึ่งไม่ได้แปลว่าผลไม่ดี
+              แต่แปลว่ายังคำนวณค่านี้ไม่ได้ · ระบบจะไม่เดาค่าให้
+            </p>
+          </div>
+        )}
+
+        {/* ===== อ่านค่าตัวเลขบนหน้านี้ยังไง (GLOSSARY) =====
+            Every one of these terms appeared on the dashboard — and in the
+            methodology appendix that claims to explain every score — without ever
+            being defined. */}
+        {ready_for_dashboard && (
+          <div className="be-card" style={{ padding: 20, marginTop: 18 }} data-testid="be-glossary-card">
+            <div className="be-eyebrow" style={{ marginBottom: 10 }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>
+              อ่านค่าตัวเลขบนหน้านี้ยังไง
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+              {[
+                ['t2b', 'TOP-2-BOX (T2B)', 'สัดส่วนคนที่ตอบ 2 ระดับบนสุดของมาตรวัด (เช่น 6-7 จาก 7) = "กลุ่มที่เห็นด้วยชัดเจน"'],
+                ['b2b', 'BOTTOM-2-BOX (B2B)', 'สัดส่วนคนที่ตอบ 2 ระดับล่างสุด (1-2) = "กลุ่มที่ไม่เห็นด้วยชัดเจน"'],
+                ['netq', 'NET Q-SCORE', 'T2B − B2B · บวก = คนชมมากกว่าคนติ, ลบ = คนติมากกว่าคนชม (ช่วง −100 ถึง +100)'],
+                ['sd', 'σ (SD)', 'ส่วนเบี่ยงเบนมาตรฐาน — ยิ่งสูง ความเห็นยิ่งกระจาย (คนเห็นต่างกันมาก) แม้ค่าเฉลี่ยจะเท่ากัน'],
+                ['pomp', 'คะแนน 0-100 (POMP)', '(ค่าเฉลี่ย − 1) / (สูงสุด − 1) × 100 — แปลงทุกมาตรวัดให้เทียบกันได้ ต่ำสุด = 0 สูงสุด = 100'],
+                ['ci', '95% CI', 'ช่วงที่ค่าจริงของประชากรน่าจะอยู่ · ยิ่งผู้ตอบน้อย ช่วงยิ่งกว้าง = ตัวเลขยังไม่นิ่ง'],
+                ['alpha', 'α (Cronbach\u2019s alpha)', 'วัดว่าคำถามในมิติเดียวกันวัดเรื่องเดียวกันไหม · ที่ยอมรับกันคือ ≥ 0.70'],
+                ['nps', 'NPS', '% ผู้แนะนำ (9-10) − % ผู้ไม่แนะนำ (0-6) · ช่วง −100 ถึง +100 · แสดงเป็น 0-100 ด้วยสูตร (NPS+100)/2'],
+                ['n', 'n', 'จำนวนคนที่ตอบคำถามนั้นจริง — ไม่ใช่จำนวนผู้ตอบทั้ง study เพราะบางข้อไม่บังคับตอบ'],
+              ].map(([key, term, desc]) => (
+                <div key={key} data-testid={`be-glossary-term-${key}`}
+                     style={{ padding: 12, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
+                  <div className="be-mono be-tiny" style={{ letterSpacing: '0.08em', color: 'var(--ink)' }}>{term}</div>
+                  <div className="be-small be-muted" style={{ marginTop: 6, lineHeight: 1.5 }}>{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* FILTER BAR — time + segments + wave compare (sticky) */}
         <BeWaveSelector
@@ -785,6 +932,7 @@ const BrandEquityDashboardPage = () => {
           <BeMethodology
             canExportThesis={canExportThesis}
             showExport={!isShowcase}
+            onOpenWeights={isShowcase ? null : () => setWeightEditorOpen(true)}
             thesisProgress={thesisProgress}
             thesisError={thesisError}
             selectedChapters={thesisChapters}
@@ -795,6 +943,12 @@ const BrandEquityDashboardPage = () => {
           />
         )}
       </div>
+
+      {weightEditorOpen && !isShowcase && (
+        <BeWeightEditor study={study} token={token}
+                        onClose={() => setWeightEditorOpen(false)}
+                        onSaved={load}/>
+      )}
 
       {/* Showcase footer — Powered by SWU MKT (only on public showcase view) */}
       {isShowcase && (
@@ -1136,6 +1290,11 @@ const SectionQuality = ({ study, aggregate, ai }) => {
               <div className="be-card-stat">
                 <span className="be-big be-num">{overall.stats?.mean}</span>
                 <span className="be-unit">mean · σ {overall.stats?.std}</span>
+                {overall.stats?.score_100_ci95 && (
+                  <span className="be-mono be-tiny be-muted" data-testid="be-quality-ci95">
+                    95% CI {overall.stats.score_100_ci95[0]}–{overall.stats.score_100_ci95[1]} (0-100)
+                  </span>
+                )}
               </div>
             </div>
             <Histogram values={overall.stats.distribution} color={DIMENSIONS.quality.color}
@@ -1229,10 +1388,16 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
   const statusMap = {};
   intended.forEach(t => { statusMap[t] = aligned.includes(t) ? 'aligned' : 'lost'; });
 
-  // Build image col from perceived (top 8)
+  // Build image col from perceived (top 8).
+  // `p.count` is a respondent count; it was rendered directly as a percentage.
+  // Convert against the number of respondents so the bar means something.
+  const totalResp = aggregate?.total_responses || 0;
   const imageCol = perceived.slice(0, 8).map(p => ({
     trait: p.trait,
-    pct: typeof p.count === 'number' ? Math.min(100, p.count) : 0,
+    pct: typeof p.count === 'number'
+      ? (totalResp ? Math.min(100, Math.round(p.count / totalResp * 100)) : 0)
+      : 0,
+    count: typeof p.count === 'number' ? p.count : null,
     kind: aligned.includes(p.trait) ? 'aligned' : unintended.includes(p.trait) ? 'unintended' : 'lost',
   }));
 
@@ -1346,8 +1511,20 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
             <div>
               <h3 className="be-card-t">Brand Association · 4 perspectives</h3>
               <div className="be-card-d">
-                Aaker framework — image ที่ผู้บริโภครับรู้แต่ละมิติเทียบกับ identity ที่ตั้งใจ
+                Aaker framework — คะแนน <b>ภาพลักษณ์ที่ผู้บริโภครับรู้</b> ในแต่ละมุมมอง (0-100)
                 · overall <strong style={{ color: 'var(--ink)' }}>{association.overall}/100</strong>
+              </div>
+              {/* This card used to say it compared perceived image against the
+                  intended identity and labelled low scores "misaligned". The
+                  computation never reads `study.identity` — it averages the
+                  perceived-image items per perspective. Labels now say what is
+                  actually measured; the intended-vs-perceived comparison lives in
+                  the Identity vs Image table below. */}
+              <div className="be-tiny be-muted" style={{ marginTop: 6, lineHeight: 1.5 }}
+                   data-testid="be-association-scope-note">
+                หมายเหตุ: ค่านี้วัด "ผู้บริโภครับรู้แรงแค่ไหน" ในแต่ละมุมมองเท่านั้น
+                ยังไม่ได้เทียบกับอัตลักษณ์ที่แบรนด์ตั้งใจ — การเทียบ intended vs perceived อยู่ในตาราง
+                Identity vs Image ด้านล่าง
               </div>
             </div>
           </div>
@@ -1373,7 +1550,7 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
                     <div className="be-dim-bar-fill" style={{ width: v + '%', background: tier }}/>
                   </div>
                   <div className="be-mono be-tiny be-muted">
-                    {v >= 70 ? 'aligned' : v >= 40 ? 'mixed' : 'misaligned'}
+                    {v >= 70 ? 'รับรู้ชัดเจน' : v >= 40 ? 'รับรู้ปานกลาง' : 'รับรู้อ่อน'}
                   </div>
                 </div>
               );
@@ -1445,14 +1622,33 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
               {imageRadar.series.map((s, i) => (
                 <div key={s.name}
                      data-testid={`be-radar-legend-${s.name}`}
-                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12 }}>
+                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12,
+                              flexWrap: 'wrap' }}>
                   <span style={{ width: 16, height: 3,
                           background: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
                           borderTop: s.kind !== 'brand' ? '1px dashed' : 'none' }}/>
                   <span style={{ fontWeight: s.kind === 'brand' ? 600 : 400 }}>{s.name}</span>
                   {s.kind === 'brand' && <span className="be-mono be-tiny be-muted">· focal</span>}
+                  {/* n per series. The focal items are REQUIRED and the competitor
+                      items are OPTIONAL, so a polygon built on 3 answers used to be
+                      drawn identically to one built on 100 — with no n anywhere. */}
+                  {s.n_max != null && (
+                    <span className="be-mono be-tiny" data-testid={`be-radar-legend-n-${s.name}`}
+                          style={{ color: (s.n_min || 0) < 10 ? 'var(--be-red)' : 'var(--ink-3)' }}>
+                      · n={s.n_min === s.n_max ? s.n_max : `${s.n_min}-${s.n_max}`}
+                      {(s.n_min || 0) < 10 ? ' ⚠ น้อยเกินไป' : ''}
+                    </span>
+                  )}
                 </div>
               ))}
+              <div className="be-tiny be-muted" style={{ marginTop: 10, lineHeight: 1.5 }}
+                   data-testid="be-radar-scale-note">
+                สเกล 0-100 แบบ POMP · (ค่าเฉลี่ย−1)/(สูงสุด−1)×100 — เท่ากับสเกลของคะแนนมิติอื่นทุกตัว
+                {imageRadar.series.some(s => (s.n_min || 0) < 10) && (
+                  <> · <b style={{ color: 'var(--be-red)' }}>บางแบรนด์มีผู้ตอบน้อยกว่า 10 คน</b> —
+                  รูปหลายเหลี่ยมของแบรนด์นั้นยังไม่นิ่ง อ่านเป็นแนวโน้มเท่านั้น</>
+                )}
+              </div>
               {radarMode === 'common' && imageRadar.axes.length > displayedRadar.axes.length && (
                 <div className="be-tiny be-muted" style={{ marginTop: 14, paddingTop: 10,
                        borderTop: '1px dashed var(--rule)', lineHeight: 1.5 }}>
@@ -1696,12 +1892,19 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
               </div>
             </div>
             {loyThemes.map((t, i) => {
-              const pct = Math.min(100, (t.count || 0));
+              // `count` is a respondent count, not a percentage. It was piped
+              // straight into a `width: {pct}%` bar, so a theme mentioned by 8
+              // people drew an 8%-wide bar regardless of how many people answered.
+              // Scale against the largest theme and label the axis honestly.
+              const maxCount = Math.max(...loyThemes.map(x => x.count || 0), 1);
+              const total = aggregate?.total_responses || 0;
+              const pct = Math.min(100, ((t.count || 0) / maxCount) * 100);
+              const shareTxt = total ? ` · ${Math.round((t.count || 0) / total * 100)}% ของผู้ตอบ` : '';
               return (
                 <div key={i} style={{ padding: '10px 0', borderBottom: i < loyThemes.length - 1 ? '1px dashed var(--rule)' : 'none' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
                     <span style={{ fontWeight: 500 }}>{t.name}</span>
-                    <span className="be-mono be-tiny be-muted">n={t.count}</span>
+                    <span className="be-mono be-tiny be-muted">n={t.count}{shareTxt}</span>
                   </div>
                   <div className="be-hbar" style={{ height: 3, marginBottom: 6 }}>
                     <div className="be-hbar-fill" style={{ width: pct + '%', background: DIMENSIONS.loyalty.color }}/>

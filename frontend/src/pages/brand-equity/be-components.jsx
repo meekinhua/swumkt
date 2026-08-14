@@ -3,6 +3,7 @@
    All components are scoped via .be-root parent. */
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import UnifiedTopbar from '@/components/UnifiedTopbar';
+import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 
 // ============ Inline icon system (line-art, 16px viewBox) ============
 const ICON_PATHS = {
@@ -49,7 +50,10 @@ export const DIMENSIONS = {
 export const ScoreRing = ({ value = 0, size = 148, stroke = 9, color }) => {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const tier = value >= 70 ? '#10B981' : value >= 40 ? '#D4A017' : '#C8102E';
+  // One canonical 5-tier scale for every surface (see @/lib/brandHealthVerdict).
+  // This was a private >=70 / >=40 mapping, so the ring could be green while the
+  // headline next to it said "เฝ้าระวัง".
+  const tier = getBrandHealthTier(value).color;
   const ringColor = color || tier;
   const [v, setV] = useState(0);
   useEffect(() => { const t = setTimeout(() => setV(value), 80); return () => clearTimeout(t); }, [value]);

@@ -1,0 +1,44 @@
+{
+  "summary": "Full backend + frontend acceptance of the Brand Equity audit follow-up patch (BE audit 2026-08 P1+P2). Backend: 5/5 dedicated tests PASS — public respond drops out-of-range answers (200 OK), dashboard payload now carries reliability/sample_adequacy/normalization/composite._measured/composite_meta[dim] and image_radar with scale=pomp_0_100 + per-series n_values/n_min/n_max, and PUT /brand-equity/studies/{id} accepts integer weight percentages. Frontend: dashboard for Mali c5b3458f renders all expected testids (be-dashboard-page, be-reliability-card + 4 dimension tiles, be-sample-adequacy, be-method-update-note, be-normalization-basis, be-glossary-card, be-dashboard-weights); the dimension-weight editor opens from both the hero button and the methodology appendix, live effective % + sum-100 counter work, saving 40/10 for aw/quality moves BES 57→55, reset returns to 57 (study left as found at 25/25/25/25); methodology sections overall/awareness/quality/identity/loyalty/data/validity all expand and the quality section carries the corrected (7 − mean)/6 × 100 formula; no 'Wizard step 4' or 'AI GENERATION COMPLETE' text anywhere; on study a407a08f be-radar-scale-note mentions POMP and be-radar-legend-n-<brand> is rendered for all three series (Mali/Starbucks/Inthanin n=13); the public respondent survey welcome quotes the honest range '13-22 นาที', clicking be-respondent-next without answers is NOT silently disabled — it triggers a toast 'ยังมี N ข้อที่ต้องตอบ', be-respondent-missing-hint text and 4x be-resp-q-missing-<id> red highlights; mobile 390x844 renders section 1 without horizontal overflow; and the wizard's question-review eyebrow reads 'แบบสอบถามพร้อมแล้ว'. Verdict: patch is production-ready. Two minor observations reported.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Brand Equity list page (/brand-equity)", "issues": ["The list card renders the BES value coloured by the canonical tier scale (getBrandHealthTier) but does NOT display the tier LABEL text ('Healthy/สุขภาพดี'). The review request wanted the label on both surfaces; today only the hero shows the label. Colour scale IS unified, so this is a cosmetic gap, not a regression — flag for the developer agent to decide whether to add the label chip on list cards."]},
+      {"screen": "Brand Equity dashboard — be-glossary-card", "issues": ["The 9 term boxes inside be-glossary-card render but do NOT expose individual data-testid attributes (be-glossary-term-<key>). Adding per-term testids would make future automation less brittle."]}
+    ]
+  },
+  "verified_acceptance_criteria": [
+    "Dashboard c5b3458f: be-dashboard-page, be-reliability-card, be-reliability-{awareness,quality,identity,loyalty}, be-sample-adequacy, be-method-update-note, be-normalization-basis, be-glossary-card, be-dashboard-weights all present (be-coverage-warning is conditional and correctly absent for this study).",
+    "Weight editor: opens from both be-dashboard-weights and be-methodology-open-weights; be-weight-row-*/slider-*/input-*/effective-* and be-weight-sum all present; sum shows 'รวม 100 · ครบ 100'; setting aw=40 & quality=10 saved successfully, modal closed, BES reloaded 57→55; be-weight-reset restored 25/25/25/25 and BES returned to 57 (study left as found).",
+    "Methodology sections overall/awareness/quality/identity/loyalty/data/validity all expand; validity section carries the Thai title 'ความน่าเชื่อถือและข้อจำกัด'; source shows the corrected (7 − mean)/6 × 100 formula in the quality section; no 'Wizard step 4' text anywhere in the app.",
+    "Identity section a407a08f: be-association-scope-note present, be-radar-scale-note mentions POMP, and be-radar-legend-n-Mali/Starbucks/Inthanin each show 'n=13'.",
+    "Public respondent survey 0edb6beab1b6: welcome shows time range '13-22 นาที'; be-respondent-next is enabled and clicking it without answers triggers a toast 'ยังมี 4 ข้อที่ต้องตอบ', be-respondent-missing-hint 'เหลืออีก 4 ข้อที่ต้องตอบในตอนนี้', and 4x be-resp-q-missing-<id> red highlights.",
+    "Mobile 390x844 respondent survey section 1: no horizontal overflow (scrollWidth == innerWidth == 390), only two undersized controls are the TH/EN language toggle chips (~36×26px, cosmetic).",
+    "App-wide: no 'AI GENERATION COMPLETE' string anywhere; wizard uses 'แบบสอบถามพร้อมแล้ว' (source verified).",
+    "Public home page: featured brand TEST_UIBrand shows featured-score-{awareness,quality,identity,loyalty} = 95, 78, 43, 90 — all measured, no spurious 0. (Unmeasured '—/ยังไม่ได้วัด' path could not be exercised because no featured brand currently has an unmeasured dimension; frontend logic verified in HomePage.jsx + brandHealthVerdict.js.)",
+    "Colour scale: dashboard hero for BES 57 (c5b3458f) and BES 60 (a407a08f) both display the 'Healthy / สุขภาพดี' tier from the canonical getBrandHealthTier — the private ≥70/≥40 scale is gone; the list page tints the BES number with the same tier colour.",
+    "Backend follow-up test file /app/backend/tests/test_brand_equity_audit_followup.py: 5/5 passed (JUnit /app/test_reports/pytest/brand_equity_followup.xml)."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_audit_followup.py",
+    "/app/test_reports/pytest/brand_equity_followup.xml"
+  ],
+  "action_items": [
+    "LOW / cosmetic: consider adding data-testid to each glossary term card (e.g. be-glossary-term-t2b, -b2b, -netq, -sd, -pomp, -ci, -alpha, -nps, -n) for test stability.",
+    "LOW / cosmetic: consider surfacing the canonical tier label ('Healthy/สุขภาพดี' etc.) as a chip on the Brand Equity list cards, matching the dashboard hero. Colour is already unified so this is a labelling parity nit, not a bug.",
+    "INFO: The demographics-back-button and double-tap-to-clear flow (be-respondent-demo-back, be-resp-demo-clear-<field>) were verified by source (BrandEquityRespondentPage.jsx L376 and L387) but not exercised end-to-end because it would require filling ~46 required answers across four sections; a targeted E2E test with a helper that programmatically fills valid answers would be a good future-proofing add."
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_audit_followup.py (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% of tested testids/copy; 2 minor non-blocking cosmetic observations"},
+  "seed_data_creation": "None — used pre-existing studies c5b3458f (Mali, 21 resp, 4 weights left at 25/25/25/25) and a407a08f (Mali, 13 resp). A single validation-drop response was POSTed to the public respond endpoint of c5b3458f (out-of-range values dropped, valid ones accepted) — response count went 21→22 on that study.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@swu.ac.th / admin123; public survey token 0edb6beab1b6 (no login)",
+  "context_for_next_testing_agent": "All P1+P2 follow-ups are green. The two cosmetic observations (missing glossary-term testids and no tier label chip on list cards) are the only unresolved items and are not part of the audit spec. Backend test file /app/backend/tests/test_brand_equity_audit_followup.py should be kept as a regression suite. Study c5b3458f has one extra anonymous response now (22 instead of the pre-test 21) from the validation-drop test.",
+  "rca_of_the_issue": "N/A — no defects. The validation-drop backend contract is enforced in brand_equity.py L2745-2803 (silent drop with warning log, 200 unless zero clean answers). The dashboard payload nests all new audit fields under `aggregate`, so any test that reads them must go through data.aggregate.<field>."
+}

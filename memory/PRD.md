@@ -18,7 +18,9 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 
 ## System 1: Marketing Research Tool (COMPLETE)
 
-### Brand Equity / Brand Health Check (COMPLETE — Feb 2026, polished Apr 27 2026)
+### Brand Equity / Brand Health Check (COMPLETE — Feb 2026, polished Apr 27 2026, correctness audit Jun 2026)
+- **Correctness audit applied Jun 14 2026** (`/app/memory/BRAND_EQUITY_AUDIT_2026_08.md`, `/app/memory/THESIS_EXPORT_AUDIT_2026_08.md`, CHANGELOG entry of the same date): Cronbach's α actually computed, dead weights removed (Awareness summed to 1.25), identity ceiling fixed, Awareness no longer waits for AI, reverse coding, public-answer validation, 95% CI, sample adequacy, one canonical verdict scale, thesis prompts no longer claim uncomputed statistics. **Some studies now show a LOWER (correct) score than before.** 103 tests.
+- **Frontend follow-ups shipped Jun 14 2026**: respondent survey UX (explained Next, Back on demographics, clearable answers, honest time range), full mobile layout for answer controls, glossary card, new `BeWeightEditor.jsx` dimension-weight editor, corrected methodology appendix + new limitations section, count-vs-percent bar fixes, n on the image radar, honest Brand Association labels, unified tier scale, unmeasured dimensions render "—" not 0.
 - Aaker's 4-dimension framework: Awareness · Quality · Identity vs Image · Loyalty
 - Auto-generated questions (~18) from template lib + brand/competitor/category context
 - 4-step Wizard: Brand basics → Identity traits (3-8) → Segments → Question review

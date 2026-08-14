@@ -433,7 +433,38 @@ const HomePage = () => {
                             { k: 'identity', label: 'Identity vs Image', color: '#8B5CF6' },
                             { k: 'loyalty', label: 'Loyalty', color: '#10B981' },
                           ].map(d => {
+                            // `_measured` (from the backend) lists the dimensions
+                            // that actually produced a score. Missing ones are
+                            // coerced to 0 for backward compatibility, and this
+                            // card used to render that 0 as a real result — and
+                            // getWeakestDimension then named it as the brand's
+                            // weakest point.
+                            const measured = featured.scores._measured;
+                            const isMeasured = !Array.isArray(measured) || measured.includes(d.k);
                             const v = Number(featured.scores[d.k] || 0);
+                            if (!isMeasured) {
+                              return (
+                                <div key={d.k} data-testid={`featured-score-${d.k}`}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between',
+                                                  marginBottom: 3, alignItems: 'baseline' }}>
+                                    <span style={{ fontFamily: 'var(--mono)', fontSize: 9,
+                                                      color: 'var(--ink-2)', textTransform: 'uppercase',
+                                                      letterSpacing: '0.06em' }}>
+                                      {d.label}
+                                    </span>
+                                    <span className="serif" style={{ fontSize: 13, fontWeight: 500,
+                                                                        color: 'var(--ink-3)' }}>
+                                      —
+                                    </span>
+                                  </div>
+                                  <div style={{ height: 4, background: 'rgba(26,26,26,0.06)', borderRadius: 999 }}/>
+                                  <div style={{ fontSize: 8.5, color: 'var(--ink-3)', marginTop: 2,
+                                                  fontFamily: 'var(--mono)', letterSpacing: '0.06em' }}>
+                                    ยังไม่ได้วัด
+                                  </div>
+                                </div>
+                              );
+                            }
                             return (
                               <div key={d.k} data-testid={`featured-score-${d.k}`}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between',

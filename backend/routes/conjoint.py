@@ -2150,13 +2150,22 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
 
         # Linear regression-specific
         if method == 'linear_regression':
-            for key in ['r_squared', 'adj_r_squared', 'intercept', 'f_statistic', 'f_p_value']:
+            # NOTE: the estimator emits `f_pvalue`, not `f_p_value` — the old key
+            # never matched, so the writer was told to report an F statistic it
+            # had never been given a p-value for.
+            for key in ['r_squared', 'adj_r_squared', 'intercept', 'f_statistic',
+                        'f_pvalue', 'n_observations', 'n_parameters']:
                 val = data.get(key)
                 if val is not None:
                     lines.append(f"{key}: {val}")
+            # APA 7 requires F(df1, df2). Supply both so the writer need not guess.
+            _k, _n = data.get('n_parameters'), data.get('n_observations')
+            if _k and _n:
+                lines.append(f"f_df1: {int(_k) - 1}")
+                lines.append(f"f_df2: {int(_n) - int(_k)}")
             coeffs = data.get('coefficients', {})
             if coeffs:
-                lines.append("Coefficients:")
+                lines.append("Coefficients (cluster-robust SE by choice situation):")
                 for attr_key, attr_info in list(coeffs.items()):
                     if isinstance(attr_info, dict) and 'name' in attr_info:
                         attr_name = attr_info['name']
@@ -2165,93 +2174,175 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
                             if isinstance(lvl_data, dict):
                                 val = lvl_data.get('coefficient', 0)
                                 ref = " (ref)" if lvl_data.get('is_reference') else ""
+                                if lvl_data.get('is_excluded'):
+                                    ref = " (ประมาณค่าไม่ได้ — ไม่เคยแสดงในโปรไฟล์ใด)"
                                 v = f"{val:.4f}" if isinstance(val, (int, float)) else str(val)
-                                lines.append(f"  {attr_name}/{lvl_data.get('value','?')}: {v}{ref}")
+                                se = lvl_data.get('std_error')
+                                t = lvl_data.get('t_value')
+                                p = lvl_data.get('p_value')
+                                st = (f", SE={se:.4f}, t={t:.4f}, p={p:.6f}"
+                                      if None not in (se, t, p) and not lvl_data.get('is_reference')
+                                      else "")
+                                lines.append(
+                                    f"  {attr_name}/{lvl_data.get('value','?')}: β={v}{st}{ref}")
                     elif isinstance(attr_info, (int, float)):
                         lines.append(f"  {attr_key}: {attr_info:.4f}")
 
         # Mixed logit-specific
         if method == 'mixed_logit':
-            for key in ['preference_heterogeneity', 'log_likelihood', 'aic']:
+            # `preference_heterogeneity` is never returned by the estimator; the
+            # taste SDs live in `std_coefficients` and their tests in
+            # `sd_p_values`. The old lookup silently produced nothing.
+            for key in ['pseudo_r_squared', 'pseudo_r_squared_adj', 'log_likelihood',
+                        'log_likelihood_null', 'lr_statistic', 'lr_df', 'lr_p_value',
+                        'aic', 'bic', 'n_respondents', 'n_choice_situations',
+                        'n_parameters', 'n_draws']:
                 val = data.get(key)
                 if val is not None:
                     lines.append(f"{key}: {val}")
+            _m = data.get('coefficients', {}) or {}
+            _se = data.get('std_errors', {}) or {}
+            _z = data.get('z_values', {}) or {}
+            _p = data.get('p_values', {}) or {}
+            _sd = data.get('std_coefficients', {}) or {}
+            _sdp = data.get('sd_p_values', {}) or {}
+            if _m:
+                lines.append("Coefficients (mean β; σ̂ = taste heterogeneity SD):")
+                for name in _m:
+                    def _f(d, k, fmt="{:.4f}"):
+                        v = d.get(k)
+                        return fmt.format(v) if isinstance(v, (int, float)) else "?"
+                    lines.append(
+                        f"  {name}: β={_f(_m, name)}, SE={_f(_se, name)}, "
+                        f"z={_f(_z, name)}, p={_f(_p, name, '{:.6f}')}, "
+                        f"σ̂={_f(_sd, name)}, p(σ̂)={_f(_sdp, name, '{:.6f}')}")
+            lines.append(f"random_vars: {data.get('random_vars')}")
+            lines.append(f"fixed_vars: {data.get('fixed_vars')}")
 
         # HB-specific
         if method == 'hierarchical_bayes':
-            for key in ['convergence', 'n_iterations']:
+            # `convergence` / `n_iterations` are never returned — this is
+            # Empirical Bayes via SMLE, not MCMC, so there is no sampler to
+            # diagnose. Report what the method genuinely produces instead.
+            for key in ['pseudo_r_squared', 'pseudo_r_squared_adj', 'log_likelihood',
+                        'log_likelihood_null', 'lr_statistic', 'lr_df', 'lr_p_value',
+                        'aic', 'bic', 'n_respondents', 'n_choice_situations',
+                        'n_parameters', 'n_draws', 'n_individual_draws',
+                        'importance_basis']:
                 val = data.get(key)
                 if val is not None:
                     lines.append(f"{key}: {val}")
+            _pm = data.get('population_mean', {}) or {}
+            _ps = data.get('population_std', {}) or {}
+            if _pm:
+                lines.append("Population-level means (SD = spread between respondents, NOT a standard error):")
+                for name in _pm:
+                    sd = _ps.get(name)
+                    sd_f = f"{sd:.4f}" if isinstance(sd, (int, float)) else "?"
+                    lines.append(f"  {name}: β̄={_pm[name]:.4f}, SD={sd_f}")
 
     return "\n".join(lines)
 
 def _get_method_equations(method: str) -> str:
-    """Return detailed statistical equations and test criteria for the given method."""
+    """Equations for the method — describing ONLY what this module actually runs.
+
+    These strings go straight into a thesis methodology chapter, so every line is
+    a claim the student will defend in a viva. The previous version described
+    procedures the code never executes, which is a fabricated methodology rather
+    than a documentation slip. Removed accordingly:
+
+      • HB: a full MCMC specification (Gibbs sampling, Metropolis-Hastings within
+        Gibbs, Wishart hyperpriors, Gelman-Rubin R̂, burn-in). No MCMC runs here at
+        all — `calculate_hierarchical_bayes_analysis` fits a panel Mixed Logit by
+        Maximum Simulated Likelihood and then derives per-respondent posteriors
+        from the conditional distribution (Train, 2009, ch. 11). Convergence
+        diagnostics for a sampler that never ran cannot be reported.
+      • MNL: "IIA Assumption … (Hausman test)" — no Hausman–McFadden test is
+        computed.
+      • Counting: "ทดสอบนัยสำคัญ: Chi-square test for independence" — no χ² test
+        is computed.
+      • OLS: classical `SE(β̂) = √[MSE·(X'X)⁻¹]`, VIF, and a Durbin–Watson
+        assumption check. The module reports CLUSTER-ROBUST standard errors by
+        choice situation, and computes neither VIF nor Durbin–Watson. Listing
+        homoscedasticity as a satisfied assumption is also wrong for a linear
+        probability model, which is heteroscedastic by construction — that is
+        precisely why the robust estimator is used.
+      • Mixed Logit: a Cholesky factor L (i.e. CORRELATED random parameters), a
+        menu of four mixing distributions, and a willingness-to-pay formula.
+        The estimator fits INDEPENDENT normal random parameters, and no WTP is
+        computed anywhere in this module.
+    """
     equations = {
         "counting": """
-สูตรและสมการทางสถิติ (Counting/Part-worth Method):
-- Part-worth Utility: U(level_j) = (จำนวนครั้งที่ level_j ถูกเลือก) / (จำนวนครั้งทั้งหมดที่ level_j ปรากฏ)
-- Importance Score: I(attribute_k) = [max(U_k) - min(U_k)] / Σ[max(U_i) - min(U_i)] × 100%
-- ค่า Part-worth Utility ที่สูงกว่า = ผู้บริโภคให้ความชอบมากกว่า
-- Importance Score รวมทุก Attribute = 100%
-- ทดสอบนัยสำคัญ: Chi-square test for independence""",
+สูตรและสมการทางสถิติ (Counting Method):
+- Part-worth (อัตราการถูกเลือกแบบมีเงื่อนไข):
+  U(level_j) = (จำนวนครั้งที่โปรไฟล์ซึ่งมี level_j ถูกเลือก) / (จำนวนครั้งที่ level_j ถูกนำเสนอ) × 100
+- Importance Score: I(attribute_k) = [max(U_k) − min(U_k)] / Σᵢ[max(U_i) − min(U_i)] × 100%
+- Importance รวมทุก attribute = 100%
+- ข้อจำกัด: เป็นสถิติเชิงพรรณนา ไม่ได้ประมาณค่าพารามิเตอร์และ**ไม่มีการทดสอบนัยสำคัญ**
+  หากต้องการ inference ให้รายงานผลจาก MNL""",
 
         "mnl": """
-สูตรและสมการทางสถิติ (Multinomial Logit Model - MNL):
-- Utility Function: V_j = β₁X₁ⱼ + β₂X₂ⱼ + ... + βₖXₖⱼ
-  โดย V_j = deterministic utility ของทางเลือก j, β = estimated coefficients, X = attribute levels (dummy coded)
-- Random Utility Model: U_j = V_j + ε_j โดย ε ~ iid Extreme Value Type I (Gumbel distribution)
-- Choice Probability: P(j) = exp(V_j) / Σₖ exp(V_k)  (Softmax function)
-- Log-Likelihood: LL = Σᵢ Σⱼ yᵢⱼ × ln(P_ij) โดย yᵢⱼ = 1 ถ้าผู้ตอบ i เลือกทางเลือก j
-- Null Log-Likelihood: LL₀ = N × ln(1/J) โดย N = จำนวนสถานการณ์, J = จำนวนทางเลือก
-- McFadden's Pseudo R²: ρ² = 1 - (LL/LL₀) — ค่า 0.2-0.4 ถือว่า fit ดีมาก
-- AIC = -2LL + 2k โดย k = จำนวน parameters
-- BIC = -2LL + k×ln(N)
-- Wald Test: z = β̂/SE(β̂) — ทดสอบ H₀: β = 0, ปฏิเสธ H₀ เมื่อ |z| > 1.96 (α=0.05)
-- IIA Assumption: Independence of Irrelevant Alternatives (Hausman test)
-- Likelihood Ratio Test: LR = -2(LL_restricted - LL_unrestricted) ~ χ²(df)""",
+สูตรและสมการทางสถิติ (Multinomial Logit / Conditional Logit — MNL):
+- Utility: V_j = β₁X₁ⱼ + β₂X₂ⱼ + … + βₖXₖⱼ  (X = dummy coding, reference level = 0)
+- Random Utility: U_j = V_j + ε_j โดย ε ~ iid Extreme Value Type I (Gumbel)
+- Choice Probability (ภายในชุดทางเลือก s): P(j) = exp(V_j) / Σ_{k∈s} exp(V_k)
+- Log-Likelihood: LL = Σ_s Σ_{j∈s} y_sj · ln P(j)
+- Null Log-Likelihood: LL₀ = −Σ_s ln(J_s) โดย J_s = จำนวนทางเลือกในชุด s
+  (รูปแบบ N·ln(1/J) ใช้ได้เฉพาะเมื่อทุกชุดมีจำนวนทางเลือกเท่ากัน)
+- McFadden's Pseudo R²: ρ² = 1 − LL/LL₀ — ค่า 0.2–0.4 ถือว่า fit ดีถึงดีมาก
+  (ไม่ใช่สัดส่วนความแปรปรวนแบบ R² ของ OLS)
+- Adjusted McFadden: ρ²_adj = 1 − (LL − k)/LL₀ — ใช้เมื่อเทียบแบบจำลองที่ขนาดต่างกัน
+- AIC = −2LL + 2k
+- BIC = −2LL + k·ln(N_situations) โดย N_situations = จำนวน**ชุดคำถาม** ไม่ใช่จำนวนแถวทางเลือก
+  (ใช้ฐานเดียวกับ Mixed Logit/HB เพื่อให้เทียบกันได้)
+- Wald test: z = β̂/SE(β̂), ปฏิเสธ H₀: β = 0 เมื่อ |z| > 1.96 (α = .05)
+- Likelihood Ratio test เทียบกับ null model: LR = 2(LL − LL₀) ~ χ²(k)
+- สมมติฐาน IIA (Independence of Irrelevant Alternatives) เป็นข้อสมมติของ MNL
+  — รายงานนี้**ไม่ได้ทดสอบ** IIA (เช่น Hausman–McFadden test) จึงต้องระบุเป็นข้อจำกัด""",
 
         "linear_regression": """
-สูตรและสมการทางสถิติ (Linear Regression / OLS):
-- Regression Model: Y = β₀ + β₁X₁ + β₂X₂ + ... + βₖXₖ + ε
-  โดย Y = preference/choice score, β₀ = intercept, βₖ = regression coefficients, ε ~ N(0, σ²)
-- OLS Estimation: β̂ = (X'X)⁻¹X'Y (minimize sum of squared residuals)
-- R² = 1 - (SS_res/SS_tot) = 1 - [Σ(yᵢ-ŷᵢ)²/Σ(yᵢ-ȳ)²] — สัดส่วนความแปรปรวนที่อธิบายได้
-- Adjusted R² = 1 - [(1-R²)(n-1)/(n-k-1)] — ปรับตามจำนวนตัวแปร
-- F-statistic: F = (R²/k)/[(1-R²)/(n-k-1)] ~ F(k, n-k-1)  ทดสอบ H₀: β₁=β₂=...=βₖ=0
-- t-test: t = β̂ⱼ/SE(β̂ⱼ) — ทดสอบนัยสำคัญของแต่ละ coefficient
-- Standard Error: SE(β̂) = √[MSE × (X'X)⁻¹ⱼⱼ]
-- Multicollinearity: VIF = 1/(1-R²ⱼ) — VIF > 10 อาจเป็นปัญหา
-- Assumptions: Normality, Homoscedasticity, No autocorrelation (Durbin-Watson test)""",
+สูตรและสมการทางสถิติ (Linear Probability Model / OLS):
+- Model: Y = β₀ + β₁X₁ + … + βₖXₖ + ε โดย Y ∈ {0,1} = ถูกเลือกหรือไม่
+- OLS: β̂ = (X'X)⁻¹X'Y
+- R² = 1 − SS_res/SS_tot ; Adjusted R² = 1 − (1−R²)(n−1)/(n−k−1)
+- Standard errors: **cluster-robust** โดยจัดกลุ่มตามชุดคำถาม (choice situation)
+  เพราะทางเลือกภายในชุดเดียวกันไม่เป็นอิสระต่อกัน — การเลือกหนึ่งตัวบังคับให้ตัวอื่นไม่ถูกเลือก
+  (Liang & Zeger, 1986) ค่า SE, t และ p ทั้งหมดในรายงานนี้มาจากตัวประมาณแบบ robust
+- t-test: t = β̂ⱼ/SE_robust(β̂ⱼ)
+- ข้อจำกัดของ LPM: ค่าทำนายอาจหลุดช่วง [0,1] และความแปรปรวนของ ε ไม่คงที่โดยธรรมชาติ
+  (heteroscedastic by construction) จึงใช้ SE แบบ robust ข้างต้นแทนสูตร classical
+- รายงานนี้**ไม่ได้คำนวณ** VIF และ Durbin–Watson — ให้ใช้ MNL เป็นหลักในการ inference
+  ส่วน OLS ใช้เป็น baseline เชิงพรรณนาเท่านั้น""",
 
         "mixed_logit": """
 สูตรและสมการทางสถิติ (Mixed Logit / Random Parameters Logit):
-- Random Coefficients: βₙ = β̄ + Lωₙ โดย β̄ = mean coefficients, L = Cholesky factor, ωₙ ~ N(0,I)
-- Choice Probability: P(j|n) = ∫ [exp(β'ₙx_j) / Σₖ exp(β'ₙx_k)] f(β|θ) dβ
-- Simulated Log-Likelihood: SLL = Σₙ ln[(1/R) Σᵣ Πₜ P(jₙₜ|βⁿʳ)]
-  โดย R = จำนวน Halton draws, βⁿʳ = random draw r สำหรับบุคคล n
-- Preference Heterogeneity: วัดจาก SD ของ random coefficients
-  — SD สูง = ความชอบแตกต่างกันมากระหว่างผู้ตอบ
-- Distribution Assumptions: Normal, Lognormal, Triangular, Uniform
-- WTP (Willingness to Pay): WTP_k = -β_k/β_price
-  — SD(WTP) สะท้อนความแตกต่างของ WTP ระหว่างบุคคล
-- IIA Relaxation: Mixed Logit ผ่อนคลายสมมติฐาน IIA ของ MNL""",
+- Random coefficients: β_nk = β̄_k + σ_k·ω_nk โดย ω_nk ~ N(0,1) เป็นอิสระต่อกันในแต่ละ k
+  (แบบจำลองนี้ใช้การแจกแจงปกติแบบ**ไม่มีสหสัมพันธ์ระหว่างพารามิเตอร์** — ไม่มี Cholesky factor)
+- Choice probability: P_n(j) = ∫ [exp(β'x_j) / Σₖ exp(β'x_k)] f(β|θ) dβ
+- Simulated Log-Likelihood: SLL = Σₙ ln[(1/R) Σᵣ Π_t P(j_nt | β^{nr})]
+  โดย R = จำนวน Halton draws, panel structure จับความสัมพันธ์ภายในผู้ตอบคนเดียวกัน
+- Taste heterogeneity: วัดจาก σ̂_k — σ̂ สูง = ความชอบต่างกันมากระหว่างผู้ตอบ
+- การเลือกพารามิเตอร์แบบสุ่ม: ระบบทดสอบนัยสำคัญของ σ̂_k แล้วตรึงตัวที่ไม่มีนัยสำคัญ
+  ให้เป็นค่าคงที่ (fixed) เพื่อไม่ให้แบบจำลองมีพารามิเตอร์เกินจำเป็น
+- Mixed Logit ผ่อนคลายข้อสมมติ IIA ของ MNL
+- หมายเหตุ: รายงานนี้**ไม่ได้คำนวณ** willingness-to-pay (WTP)""",
 
         "hierarchical_bayes": """
-สูตรและสมการทางสถิติ (Hierarchical Bayes - HB):
-- Population Prior: βₙ ~ N(μ, Σ) โดย μ = population mean, Σ = covariance matrix
-- Likelihood: P(data_n|βₙ) = Πₜ [exp(β'ₙx_jt) / Σₖ exp(β'ₙx_kt)]
-- Posterior: P(βₙ|data_n, μ, Σ) ∝ P(data_n|βₙ) × P(βₙ|μ, Σ)
-- Hyperpriors: μ ~ N(μ₀, Σ₀), Σ⁻¹ ~ Wishart(ν₀, V₀)
-- MCMC (Gibbs Sampling):
-  Step 1: Draw βₙ|data, μ, Σ (Metropolis-Hastings within Gibbs)
-  Step 2: Draw μ|{βₙ}, Σ
-  Step 3: Draw Σ|{βₙ}, μ
-- Convergence Diagnostics: Gelman-Rubin statistic (R̂ < 1.1), trace plots
-- Burn-in: ทิ้ง iterations แรก (ก่อน convergence)
-- Individual-level estimates: E[βₙ|data] — ค่าเฉลี่ยจาก posterior draws
-- HB ให้ individual-level part-worths ที่น่าเชื่อถือแม้ข้อมูลต่อคนน้อย"""
+สูตรและสมการทางสถิติ (Hierarchical Bayes — Empirical Bayes ผ่าน SMLE):
+- ขั้นที่ 1 — ประมาณค่าระดับประชากร: ประมาณ β̄ และ σ ของ panel mixed logit ด้วย
+  Maximum Simulated Likelihood (Halton draws) ได้การแจกแจงประชากร f(β | θ̂)
+- ขั้นที่ 2 — ค่าประมาณระดับบุคคลจาก conditional distribution (Train, 2009, บทที่ 11):
+  P(β | y_n) ∝ f(β | θ̂) · L_n(β)
+  E[β | y_n] ≈ Σᵣ β_r · w_{r,n}   โดย  w_{r,n} = L_n(β_r) / Σᵣ L_n(β_r)
+  และ L_n(β) = Π_t [exp(β'x_{j,n,t}) / Σₖ exp(β'x_{k,n,t})]
+- ผลลัพธ์: part-worth ราย**บุคคล** ซึ่ง Mixed Logit ระดับประชากรให้ไม่ได้
+  ใช้ต่อยอด segmentation และ market simulation ได้
+- **ข้อจำกัดที่ต้องระบุ**: วิธีนี้ไม่ใช่ full Bayesian MCMC — ไม่มีการทำ Gibbs sampling,
+  ไม่มี Metropolis-Hastings, ไม่มี Wishart hyperprior, ไม่มี burn-in และ
+  **ไม่มีค่าสถิติ convergence เช่น Gelman-Rubin R̂** ให้รายงาน
+  จึงต้องเรียกวิธีนี้ว่า Empirical Bayes / conditional-distribution approach
+  ห้ามบรรยายว่าใช้ MCMC"""
     }
     return equations.get(method, equations["counting"])
 
@@ -2281,7 +2372,20 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
         "และ $...$ สำหรับสมการในบรรทัด (inline equation) เช่น:\n"
         "$$U_j = \\sum_{k=1}^{K} \\beta_k x_{jk} + \\varepsilon_j$$\n"
         "หรือ ค่า $\\beta_1 = 0.245$ มีนัยสำคัญทางสถิติ\n"
-        "ห้ามเขียนสมการเป็นข้อความธรรมดา ต้องใช้ LaTeX syntax เสมอ"
+        "ห้ามเขียนสมการเป็นข้อความธรรมดา ต้องใช้ LaTeX syntax เสมอ\n\n"
+        # Without this the writer had no instruction against filling gaps itself,
+        # while Chapter 4 demanded statistics the summary never contained.
+        "**กฎห้ามสร้างตัวเลขขึ้นเอง**:\n"
+        "1. ใช้เฉพาะค่าสถิติที่ปรากฏใน 'ผลวิเคราะห์สรุป' ที่ให้มาเท่านั้น "
+        "ห้ามคำนวณเอง ห้ามประมาณ ห้ามเดา และห้ามใส่ placeholder\n"
+        "2. ค่าใดไม่ได้ให้มา ให้เขียนตรงๆ ว่า 'รายงานนี้ไม่ได้คำนวณค่าดังกล่าว' "
+        "แล้วนำไประบุไว้ในข้อจำกัดของการวิจัยด้วย\n"
+        "3. ห้ามรายงานผลการทดสอบสมมติฐาน การตรวจสอบข้อตกลงเบื้องต้น หรือค่าความเที่ยง "
+        "ที่ระบบไม่ได้คำนวณ (เช่น Hausman test สำหรับ IIA, VIF, Durbin-Watson, "
+        "Gelman-Rubin R̂) แม้จะเป็นสิ่งที่ตำราแนะนำก็ตาม — ให้ระบุเป็นข้อจำกัดแทน\n"
+        "4. รายงานค่าสถิติตามแบบ APA 7: ตัวแปรสถิติเป็นตัวเอียง (M, SD, n, p, z, t, F, χ²), "
+        "รายงาน p < .001 แทน p = .000, ค่าที่มีขอบเขต 0-1 ไม่ต้องใส่ศูนย์นำหน้า (p = .032), "
+        "และรายงาน F พร้อม degrees of freedom เสมอ"
     )
 
     # Append extra prompt to system message if provided
@@ -2292,17 +2396,44 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
     all_equations = "\n".join(_get_method_equations(m) for m in methods)
     summary = _summarize_results_for_thesis(all_method_results)
 
-    # Build per-method result sections for Ch4
+    # Build per-method result sections for Ch4.
+    #
+    # These bullets used to be identical for every method: "report SE, a test
+    # statistic and a p-value for every coefficient" plus a significance-star
+    # legend. Only MNL actually supplies per-coefficient p-values. Counting is
+    # purely descriptive and estimates no parameters at all; HB here is Empirical
+    # Bayes and reports a between-respondent SD, not a standard error; OLS
+    # reports cluster-robust statistics that need naming as such. A blanket
+    # instruction to star everything leaves the writer no honest way to comply.
+    STAT_BULLETS = {
+        "mnl": ("- แสดงค่า Coefficients ทุกตัว พร้อม SE, z และ p-value ตามที่ให้มา\n"
+                "- อธิบายนัยสำคัญทางสถิติ: *** p<.001, ** p<.01, * p<.05, ns"),
+        "mixed_logit": ("- แสดง mean β ทุกตัว พร้อม SE, z, p-value และ σ̂ (taste heterogeneity) พร้อม p(σ̂)\n"
+                        "- ระบุว่าสัมประสิทธิ์ใดถูกประมาณเป็น random และตัวใดถูกตรึงเป็น fixed "
+                        "(ดู random_vars / fixed_vars)\n"
+                        "- อธิบายนัยสำคัญทางสถิติ: *** p<.001, ** p<.01, * p<.05, ns"),
+        "linear_regression": ("- แสดง Coefficients ทุกตัว พร้อม **cluster-robust SE**, t และ p-value\n"
+                              "- รายงาน F ตามรูปแบบ APA: F(f_df1, f_df2) = x.xx, p = .xxx โดยใช้ค่าที่ให้มา\n"
+                              "- ระบุระดับอ้างอิง (reference level) ของแต่ละคุณลักษณะ และระบุระดับที่ประมาณค่าไม่ได้\n"
+                              "- อธิบายนัยสำคัญทางสถิติ: *** p<.001, ** p<.01, * p<.05, ns"),
+        "hierarchical_bayes": ("- แสดง part-worth ระดับประชากร (β̄) พร้อม SD ซึ่งคือ**การกระจายระหว่างบุคคล ไม่ใช่ standard error**\n"
+                               "- **ห้ามรายงาน SE, z/t, p-value หรือดอกจันรายสัมประสิทธิ์** — วิธีนี้เป็น Empirical Bayes "
+                               "ไม่ได้ทำ Wald test รายพารามิเตอร์\n"
+                               "- นัยสำคัญให้รายงานที่ระดับแบบจำลองด้วย LR test: χ²(lr_df) = lr_statistic, p = lr_p_value"),
+        "counting": ("- แสดงค่า Part-worths และ Importance ตามตัวเลขที่ให้มาเท่านั้น\n"
+                     "- **ห้ามรายงาน SE, test statistic, p-value หรือดอกจันโดยเด็ดขาด** — "
+                     "Counting เป็นสถิติเชิงพรรณนา ไม่มีการประมาณค่าพารามิเตอร์และไม่มีการทดสอบนัยสำคัญ"),
+    }
     method_sections_ch4 = ""
     for i, m in enumerate(methods, start=2):
         md = METHOD_NAMES.get(m, m)
+        stat_req = STAT_BULLETS.get(m, STAT_BULLETS["counting"])
         method_sections_ch4 += f"""
 ### 4.{i} ผลการวิเคราะห์ด้วย {md}
 - แสดงสมการที่ใช้ + แทนค่าจริงลงในสมการ
-- แสดงค่า Coefficients/Part-worths ทุกตัว พร้อม SE, test statistic, p-value
+{stat_req}
 - แสดง Model fit statistics ทั้งหมดตามวิธี
 - ใช้ [ตาราง 4.X: ชื่อ] แล้วแสดง Markdown table
-- อธิบายนัยสำคัญทางสถิติ: *** p<0.001, ** p<0.01, * p<0.05, ns
 """
     next_section = len(methods) + 2
 

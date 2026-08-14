@@ -1,3 +1,49 @@
+## 2026-06-14 — Brand Equity + thesis-export correctness audit applied, plus ALL frontend P1+P2 follow-ups
+
+Applied the external `brand-equity-audit-2026-08` package (base `aedda54` = HEAD, CRLF normalised to LF).
+Audit docs: `/app/memory/BRAND_EQUITY_AUDIT_2026_08.md`, `/app/memory/THESIS_EXPORT_AUDIT_2026_08.md`,
+`/app/HANDOFF_BRAND_EQUITY.md`.
+
+**Backend (from the package)** — `brand_equity.py`, `be_thesis_ai.py`, `thesis_renderer.py`, `conjoint.py`
+- Cronbach's α now actually computed per dimension (it was claimed in every thesis but never calculated)
+- Dead dimension weights removed (Awareness weights summed to 1.25); identity trait-pickup ceiling fixed
+- Awareness no longer waits for an AI job: deterministic brand-name counting, so the score stops jumping
+- Reverse-worded custom attributes are reverse-coded or flagged, never counted as virtues
+- Public survey answers validated (out-of-range values dropped, response still accepted)
+- 95% CI on every Likert score, 4-band sample adequacy, one canonical verdict scale everywhere
+- Thesis prompts/renderers no longer claim Hausman tests, VIF, Gibbs/R̂, Cholesky or mis-attributed citations
+- 103 new tests PASS (`test_brand_equity_audit_2026_08.py`, `test_thesis_export_academic_2026_08.py`)
+
+**Backend (added here)**
+- `image_radar` now uses the POMP `score_100` scale (was `mean/7`) and carries `n_values` / `n_min` / `n_max`
+
+**Frontend (all 10 follow-ups the package left open)**
+- Respondent survey: Next button explains itself (toast + red `be-resp-q-missing-*` highlights + hint) instead of
+  being silently disabled; demographics screen finally has a Back button and answers can be cleared;
+  honest time RANGE instead of the understated single figure
+- Full mobile layout for every answer control (≥44px targets, NPS wraps to 2×6) — the survey had none
+- Wizard no longer advertises "AI GENERATION COMPLETE" for template-generated questions
+- Dashboard: `be-glossary-card` defines T2B/B2B/Net-Q/σ/POMP/CI/α/NPS/n; method-update note; normalization
+  basis; 95% CI on the quality card; loyalty theme bars and perceived-trait bars no longer plot raw COUNTS as
+  percentages; radar legend shows n per brand and warns under n=10; Brand Association card no longer claims to
+  compare against intended identity (it never read it)
+- **NEW `BeWeightEditor.jsx`** — real dimension-weight editor (hero button + methodology appendix link).
+  The appendix had pointed at a "Wizard step 4" screen that never existed; the backend already accepted
+  `study.weights`, nothing ever wrote it. Verified BES moves 57→55 at 40/10/25/25 and back on reset.
+- Methodology appendix: corrected comparative formula `(7 − mean)/6 × 100`, corrected Awareness/Identity
+  descriptions, and a new §06 "ความน่าเชื่อถือและข้อจำกัด" listing what is and is not measured (no EFA/CFA/AVE,
+  descriptive comparisons only, convenience sampling)
+- One canonical brand-health scale on every surface (`@/lib/brandHealthVerdict`); tier chip added to list cards;
+  the misleading "BES locked" on studies that already have ≥10 responses now reads "เปิดดูคะแนน →"
+- Public home page renders "— / ยังไม่ได้วัด" for unmeasured dimensions instead of 0, and never names one as the
+  brand's weak point
+
+**Verification**: 103 audit tests + 5 follow-up backend tests PASS · testing agent iteration_25 = 100% pass,
+0 critical/minor issues (2 cosmetic notes, both fixed) · mobile 390px verified with 0 horizontal overflow.
+Pre-existing stale suites (`test_brand_equity.py`, `_v3`, `_showcase`, `_translation`) still fail identically on
+pre-audit code — outdated expectations, not regressions.
+
+
 ## 2026-06-14 — Conjoint theoretical audit applied (external `conjoint-audit-2026-08` package) + P1 follow-ups
 
 Applied the external audit package verbatim onto base commit `24c3aaf` (matched HEAD, clean apply),
