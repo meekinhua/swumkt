@@ -1274,3 +1274,63 @@
 @media (max-width: 780px) {
   .be-table { display: block; overflow-x: auto; white-space: nowrap; }
 }
+
+/* ============ Selection chips / toggles inside .be-root ============
+   The Conjoint pages are wrapped in `.be-root`, where Tailwind colour utilities
+   are rewritten into the editorial palette. A demographic chip carried BOTH
+   `bg-blue-600` and `border-blue-700`, so it matched the "primary button" rule
+   AND the "outline button" rule — the later outline rule won on `background`, and
+   the SELECTED chip rendered transparent, identical to the unselected ones. The
+   respondent could not see what they had picked. These classes own their look
+   outright instead of depending on which utility rule wins. */
+.be-root button.be-chip, button.be-chip {
+  background: var(--paper) !important;
+  color: var(--ink-2) !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  min-height: 40px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.be-root button.be-chip:hover, button.be-chip:hover {
+  border-color: var(--ink) !important;
+  color: var(--ink) !important;
+}
+.be-root button.be-chip[aria-pressed="true"], button.be-chip[aria-pressed="true"] {
+  background: var(--ink) !important;
+  color: var(--paper) !important;
+  border-color: var(--ink) !important;
+  font-weight: 600 !important;
+  box-shadow: 2px 2px 0 var(--be-red);
+}
+.be-root button.be-chip[aria-pressed="true"]:hover, button.be-chip[aria-pressed="true"]:hover {
+  background: var(--be-red) !important;
+  border-color: var(--be-red) !important;
+  color: #fff !important;
+}
+.be-chip-check { font-size: 11px; margin-right: 6px; }
+
+/* Card-style multi-select toggle (which demographics to collect) */
+.be-root button.be-toggle-card, button.be-toggle-card {
+  background: var(--paper) !important;
+  color: var(--ink-2) !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 0 !important;
+  text-align: left !important;
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+  font-size: 13px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  padding: 10px 12px !important;
+}
+.be-root button.be-toggle-card[aria-pressed="true"], button.be-toggle-card[aria-pressed="true"] {
+  background: var(--paper-2) !important;
+  color: var(--ink) !important;
+  border-color: var(--ink) !important;
+  box-shadow: inset 3px 0 0 var(--be-red);
+}

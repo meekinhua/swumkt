@@ -1,0 +1,20 @@
+{
+  "summary": "Verified the .be-chip / .be-toggle-card fix that makes selected demographic controls visually distinct across all 3 surfaces reported by the user. Confirmed via COMPUTED backgroundColor / color / boxShadow (not just class presence).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "Created a temporary TEST_ChipVisibilityStudy2 (uuid varies) via /api/conjoint/studies, seeded 3 attributes, generated design, started survey; then soft-deleted and purged so no residue remains.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@swu.ac.th / admin123",
+  "context_for_next_testing_agent": "Chip visibility fix verified end-to-end: (1) create-study modal chips on /market-research/conjoint-analysis - selected rgb(10,10,10)/white text w/ ✓ vs unselected rgb(247,244,238)/dark text; hover on a pressed chip flips it to red rgb(200,16,46) as intended. (2) Design page demo-config toggles (be-toggle-card) - selected shows tinted bg rgb(240,235,225) + red inset boxShadow '3px 0 0 rgb(200,16,46) inset' + ✓ box vs unselected paper rgb(247,244,238) w/ no shadow; save persists after reload. (3) Public respondent survey (ConjointDemographicsStep) at /survey/conjoint/:studyId - selected chip bg=rgb(200,16,46) color=white pressed=true w/ ✓ span vs unselected bg=rgb(247,244,238) color=rgb(59,61,67) pressed=false; single-select per field works (highlight moves). Mobile 390x844: chip height 40px, no horizontal overflow. Regression on /brand-equity and /conjoint/results/6099ac5b-4376-4c14-9d51-3c0637ca4260 shows no broken/label-less buttons.",
+  "rca_of_the_issue": "Original bug: .be-root Tailwind override CSS made a chip carrying both bg-blue-* and border-blue-* match two conflicting rules; outline rule won on `background` so selected chips were transparent, identical to unselected. Fix by developer replaces utility classes with self-contained .be-chip / .be-chip-check / .be-toggle-card blocks (lines ~1286-1336 of brand-equity-styles.css) using !important + aria-pressed selectors. Verified the selected state cannot be masked by the existing .be-root primary/outline overrides."
+}

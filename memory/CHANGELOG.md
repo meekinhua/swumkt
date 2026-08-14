@@ -1,3 +1,26 @@
+## 2026-06-14 (round 7) — BUG: selected demographic options were invisible ("ดูไม่ออกว่าเลือกอะไรไปแล้ว")
+
+Same family of defect as the dead modal: the `.be-root` stylesheet rewrites Tailwind colour utilities with
+`!important`, and the demographic chip carried BOTH `bg-blue-600` and `border-blue-700`. It therefore matched the
+primary-button rule AND the outline-button rule; the outline rule won on `background`, so the SELECTED chip rendered
+transparent — pixel-identical to its unselected siblings. Nothing about the markup or the state logic was wrong,
+which is why it survived every previous round.
+
+- Fix: two self-contained classes that do not depend on which utility rule wins —
+  `.be-chip` (pill; `aria-pressed="true"` → dark fill, light text, red offset shadow, ✓ prefix) and
+  `.be-toggle-card` (`aria-pressed="true"` → tinted background with a red inset bar). Selection state is now carried
+  by `aria-pressed`, which is also the accessible way to express it.
+- Applied on all three surfaces the user could have meant: the respondent survey demographics step
+  (`ConjointDemographicsStep.jsx`), the create-study modal chips (`ConjointAnalysisTool.js`) and the
+  "ข้อมูลผู้ตอบที่จะเก็บ" toggles on the Design page (`ConjointDemographicsConfig.jsx`).
+- Verified by iteration_34 using COMPUTED styles rather than class presence (the whole bug was that both states
+  looked the same): survey chip selected `rgb(200,16,46)` on white vs unselected paper on ink; config toggle gets a
+  `3px 0 0 inset` red bar; single-select moves the highlight; 40px tap targets and no overflow at 390px; no button
+  regressions on Brand Equity or the conjoint results page.
+- Rule of thumb for this codebase: inside `.be-root`, never express state with Tailwind colour utilities — give the
+  component its own class.
+
+
 ## 2026-06-14 (round 6) — BUG: Conjoint Phase 1 "เริ่มวิเคราะห์" failed (retired Claude model + 30s axios timeout)
 
 Two independent causes behind one user-visible failure.
