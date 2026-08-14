@@ -235,6 +235,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Stale bookmarks / hand-typed URLs used to land on a blank page. */}
+            <Route path="/conjoint" element={<Navigate to="/market-research/conjoint-analysis" replace />} />
             <Route
               path="/market-research/conjoint-analysis"
               element={

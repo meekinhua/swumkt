@@ -1,3 +1,25 @@
+## 2026-06-14 (round 5) — BUG: Conjoint "สร้างการศึกษาใหม่" did nothing (CSS cascade)
+
+User report: clicking the create-study button on the Conjoint page was completely dead.
+
+Root cause was NOT the button or the API. The dialog mounted correctly, but
+`.be-root > * { position: relative; z-index: 1 }` in `brand-equity-styles.css` matched the Tailwind
+`fixed inset-0` overlay (same specificity, later in the cascade) and demoted it to `position: relative`, so the
+dialog was laid out as an ordinary block at the BOTTOM of the document — measured at top: 2799px, far below the
+fold. Any DOM-presence assertion would have passed, which is why five previous testing rounds missed it.
+
+- Fix: `.be-root > *:not(.fixed) { position: relative; z-index: 1 }` plus `.be-root > .fixed { z-index: 50 }`.
+  This also un-broke the other overlays that live directly inside a `.be-root` page (3 more in
+  ConjointAnalysisTool, 1 in ConjointQualitativePage, 1 in ConjointResultsPage).
+- Added a redirect for the plain `/conjoint` path, which rendered a blank page (correct route is
+  `/market-research/conjoint-analysis`) — an easy hit from a stale bookmark.
+- Verified by testing agent iteration_31: create-study flow works end to end, every `.fixed.inset-0` overlay on
+  `.be-root` pages now computes `position: fixed` inside the viewport, and no layering regressions on the
+  Brand Equity dashboard / respondent / weight-editor screens.
+- Lesson recorded: when asserting "a modal is open", assert its computed position and bounding rect, not just DOM
+  presence.
+
+
 ## 2026-06-14 (round 4) — Compatibility audit of ALL existing data: two production 500s found and fixed
 
 Question asked: are both modules ready, and do they handle data already collected plus instruments edited afterwards.

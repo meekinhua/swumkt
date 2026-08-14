@@ -67,7 +67,12 @@
   background-position: 0 0, 1px 1px;
   z-index: 0;
 }
-.be-root > * { position: relative; z-index: 1; }
+/* Direct children sit above the grain overlay. Exclude fixed-position children:
+   this rule silently demoted every Tailwind `fixed inset-0` modal inside a
+   `.be-root` page to `position: relative`, which laid the dialog out at the bottom
+   of the document — the Conjoint "สร้างการศึกษาใหม่" button looked completely dead. */
+.be-root > *:not(.fixed) { position: relative; z-index: 1; }
+.be-root > .fixed { z-index: 50; }
 
 .be-root *, .be-root *::before, .be-root *::after { box-sizing: border-box; }
 .be-root button { font-family: inherit; cursor: pointer; }
