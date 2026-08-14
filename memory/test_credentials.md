@@ -18,3 +18,9 @@
 - Owner: `admin@swu.ac.th`
 
 Delete via `DELETE /api/brand-equity/studies/0a0a1f3b-54f9-4d06-addb-10a4c620d187` (admin auth).
+
+## Brand Equity QA seed (Jun 2026)
+- Wave-significance test study: `zz-wavesig-0001` (title/brand ZZ_WaveSigTest), owner admin@swu.ac.th
+  - 90 responses: 45 in Apr 2026 (wave 1) + 45 in Jun 2026 (wave 2, ratings shifted +1.1)
+  - Public survey token: `zzwavesig01`
+  - Re-seed with: `cd /app/backend && python scripts/seed_wave_significance_study.py`

@@ -157,6 +157,50 @@ const BrandEquityRespondentPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
   const [startedAt] = useState(Date.now());
+  const [savedDraft, setSavedDraft] = useState(null); // resume prompt on the welcome screen
+  const DRAFT_KEY = `be_draft_${token}`;
+
+  // Save progress locally on every change. The survey is 40+ items on a phone;
+  // a lost tab, a phone call or a browser refresh used to mean starting over.
+  useEffect(() => {
+    if (section < 0 || section > 4) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        answers, demographics, section, saved_at: Date.now(),
+      }));
+    } catch { /* private mode / quota — progress just is not saved */ }
+    /* eslint-disable-next-line */
+  }, [answers, demographics, section]);
+
+  // Look for a draft once the study is known, so the welcome screen can offer it.
+  useEffect(() => {
+    if (!study) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      const answered = Object.keys(d?.answers || {}).length;
+      // Ignore anything older than 7 days or with nothing in it.
+      if (!answered || Date.now() - (d.saved_at || 0) > 7 * 24 * 3600 * 1000) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      setSavedDraft({ ...d, answered });
+    } catch { /* ignore */ }
+    /* eslint-disable-next-line */
+  }, [study]);
+
+  const resumeDraft = () => {
+    if (!savedDraft) return;
+    setAnswers(savedDraft.answers || {});
+    setDemographics(savedDraft.demographics || {});
+    setSection(Math.min(4, Math.max(0, savedDraft.section ?? 0)));
+    setSavedDraft(null);
+  };
+  const discardDraft = () => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+    setSavedDraft(null);
+  };
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem('be_lang') || 'th'; } catch { return 'th'; }
   });
@@ -305,6 +349,29 @@ const BrandEquityRespondentPage = () => {
                        : <>คำตอบเป็น <strong>anonymous</strong> — เราไม่เก็บอีเมล/ชื่อ</>}</div>
               </div>
             </div>
+            {savedDraft && (
+              <div className="be-card" data-testid="be-resume-draft"
+                   style={{ marginTop: 16, borderColor: 'var(--be-red)', background: 'rgba(200,16,46,0.04)' }}>
+                <div className="be-eyebrow" style={{ marginBottom: 8 }}>
+                  <span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>
+                  {lang === 'en' ? 'UNFINISHED RESPONSE' : 'มีคำตอบที่ค้างไว้'}
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+                  {lang === 'en'
+                    ? <>You answered <strong>{savedDraft.answered}</strong> question(s) on this device before —
+                        continue where you left off?</>
+                    : <>เครื่องนี้ตอบไว้แล้ว <strong>{savedDraft.answered}</strong> ข้อ — ทำต่อจากที่ค้างไว้ไหม?</>}
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                  <button className="be-btn be-btn-red" onClick={resumeDraft} data-testid="be-resume-continue">
+                    {lang === 'en' ? 'Continue' : 'ทำต่อ'}<Icon name="arrowR" size={11}/>
+                  </button>
+                  <button className="be-btn be-btn-ghost" onClick={discardDraft} data-testid="be-resume-discard">
+                    {lang === 'en' ? 'Start over' : 'เริ่มใหม่'}
+                  </button>
+                </div>
+              </div>
+            )}
             <button className="be-btn be-btn-red be-btn-lg" style={{ width: '100%', marginTop: 24, justifyContent: 'center' }}
                     onClick={() => setSection(0)} data-testid="be-respondent-start">
               {T.start}<Icon name="arrowR" size={12}/>
@@ -461,6 +528,7 @@ const BrandEquityRespondentPage = () => {
         duration_sec: Math.round((Date.now() - startedAt) / 1000),
       });
       setSection(5);
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
     } catch (e) {
       toast.error('ส่งไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
     }
@@ -658,6 +726,12 @@ const BrandEquityRespondentPage = () => {
               : `เหลืออีก ${missingQs.length} ข้อที่ต้องตอบในตอนนี้`}
           </div>
         )}
+        <div className="be-tiny be-muted" data-testid="be-autosave-note"
+             style={{ paddingBottom: 18, lineHeight: 1.5 }}>
+          {lang === 'en'
+            ? 'Your answers are saved on this device — you can close the page and come back to finish.'
+            : 'คำตอบถูกบันทึกไว้ในเครื่องนี้อัตโนมัติ — ปิดหน้านี้แล้วกลับมาทำต่อได้'}
+        </div>
       </div>
     </div>
   );

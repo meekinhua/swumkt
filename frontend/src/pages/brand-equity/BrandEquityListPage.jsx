@@ -31,10 +31,11 @@ const BrandEquityListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState('all'); // admin-only: 'all' | 'mine' | <email>
+  const [scores, setScores] = useState({}); // study_id -> {overall, awareness, ...}
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
-  useEffect(() => { loadStudies(); loadTrashCount(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadStudies(); loadTrashCount(); loadScores(); /* eslint-disable-next-line */ }, []);
   useEffect(() => {
     if (view === 'trash') loadTrash();
     /* eslint-disable-next-line */
@@ -49,6 +50,15 @@ const BrandEquityListPage = () => {
       console.error(e);
     }
     setLoading(false);
+  };
+
+  // Scores are fetched separately so the cards paint immediately; the study list
+  // endpoint carries no aggregates.
+  const loadScores = async () => {
+    try {
+      const r = await axios.get(`${API}/brand-equity/studies/scores`, authH);
+      setScores(r.data.scores || {});
+    } catch (e) { /* cards fall back to the "open to see" hint */ }
   };
 
   const loadTrashCount = async () => {
@@ -427,13 +437,14 @@ const BrandEquityListPage = () => {
          ) : (
           <div className="be-list-grid" data-testid="be-list-grid">
             {filtered.map((s, i) => {
+              const sc = scores[s.id] || {};
               const dims = [
-                ['AW', '#1B75BC', s.aggregate?.composite?.awareness ?? 0],
-                ['PQ', '#D4A017', s.aggregate?.composite?.quality ?? 0],
-                ['BI', '#C8102E', s.aggregate?.composite?.identity ?? 0],
-                ['LY', '#10B981', s.aggregate?.composite?.loyalty ?? 0],
+                ['AW', '#1B75BC', sc.awareness ?? s.aggregate?.composite?.awareness ?? 0],
+                ['PQ', '#D4A017', sc.quality ?? s.aggregate?.composite?.quality ?? 0],
+                ['BI', '#C8102E', sc.identity ?? s.aggregate?.composite?.identity ?? 0],
+                ['LY', '#10B981', sc.loyalty ?? s.aggregate?.composite?.loyalty ?? 0],
               ];
-              const score = s.aggregate?.composite?.overall ?? null;
+              const score = sc.overall ?? s.aggregate?.composite?.overall ?? null;
               const targetN = s.target_responses || 100;
               const n = s.response_count || 0;
               return (
@@ -543,13 +554,9 @@ const BrandEquityListPage = () => {
                           </span>
                         </div>
                       ) : (
-                        /* The list endpoint does not compute aggregates, so a study
-                           with plenty of responses also arrives with score = null.
-                           Saying "BES locked" there was wrong — the score exists,
-                           it just is not in this payload. */
                         <span style={{ fontSize: 10, color: 'var(--ink-3)' }}
                               data-testid={`be-study-bes-hint-${s.id}`}>
-                          {n >= 10 ? 'เปิดดูคะแนน →' : `BES locked · ${Math.max(0, 10 - n)} more`}
+                          {n >= 10 ? 'กำลังคำนวณ…' : `BES locked · ${Math.max(0, 10 - n)} more`}
                         </span>
                       )}
                     </div>

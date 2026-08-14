@@ -1930,7 +1930,7 @@ export default BrandEquityDashboardPage;
 // with a delta arrow + value between them. Used by owner dashboard for
 // brand-tracking-health comparisons (e.g. Q1 vs Q2, segment A vs segment B).
 const WaveCompareCard = ({ data }) => {
-  const { wave_a, wave_b, deltas } = data || {};
+  const { wave_a, wave_b, deltas, significance } = data || {};
   if (!wave_a || !wave_b) return null;
 
   const rows = [
@@ -1943,8 +1943,10 @@ const WaveCompareCard = ({ data }) => {
 
   const fmt = (v) => (v == null ? '—' : (Number.isFinite(v) ? Math.round(v * 10) / 10 : '—'));
   const fmtDelta = (d) => (d == null ? '—' : (d > 0 ? `+${d}` : `${d}`));
+  const sig = significance?.by_dimension || {};
 
   return (
+    <>
     <div className="be-wave-compare" data-testid="be-wave-compare">
       <div className="be-wave-compare-col">
         <h5>● WAVE A · ACTIVE</h5>
@@ -1961,11 +1963,23 @@ const WaveCompareCard = ({ data }) => {
         {rows.map(r => {
           const d = deltas?.[r.key];
           const dir = d == null ? 'flat' : (d > 0.1 ? 'up' : (d < -0.1 ? 'down' : 'flat'));
+          const t = sig[r.key];
           return (
             <div key={r.key} className={`be-wave-compare-delta ${dir}`}
                  data-testid={`be-wave-delta-${r.key}`}>
               <span className="arrow">{dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'}</span>
               <span className="be-mono be-tiny" style={{ fontWeight: 600 }}>{fmtDelta(d)}</span>
+              {/* Significance marker: a delta alone cannot tell a real shift from
+                  sampling noise. ns = not significant after Holm adjustment. */}
+              {t?.testable && (
+                <span className="be-mono" data-testid={`be-wave-sig-${r.key}`}
+                      title={t.interpretation}
+                      style={{ fontSize: 9, padding: '0 4px', marginLeft: 4,
+                               border: `1px solid ${t.significant ? 'var(--be-green)' : 'var(--ink-4)'}`,
+                               color: t.significant ? 'var(--be-green)' : 'var(--ink-3)' }}>
+                  {t.significant ? 'SIG' : 'ns'}
+                </span>
+              )}
             </div>
           );
         })}
@@ -1982,5 +1996,55 @@ const WaveCompareCard = ({ data }) => {
         ))}
       </div>
     </div>
+
+    {significance && (
+      <div style={{ marginTop: 14, padding: 14, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}
+           data-testid="be-wave-significance">
+        <div className="be-eyebrow" style={{ marginBottom: 8 }}>
+          <span className="be-dot-sm" style={{ background: 'var(--logo-blue)' }}/>
+          ผลต่างนี้มีนัยสำคัญไหม · SIGNIFICANCE TEST
+        </div>
+        <table className="be-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th>มิติ</th><th>Wave A</th><th>Wave B</th><th>ผลต่าง (95% CI)</th>
+              <th>t (df)</th><th>p (Holm)</th><th>Effect</th><th>สรุป</th>
+            </tr>
+          </thead>
+          <tbody>
+            {['awareness', 'quality', 'identity', 'loyalty'].map(k => {
+              const t = sig[k];
+              if (!t) return null;
+              return (
+                <tr key={k} data-testid={`be-wave-sig-row-${k}`}>
+                  <td style={{ textTransform: 'uppercase' }} className="be-mono be-tiny">{k}</td>
+                  {t.testable ? (
+                    <>
+                      <td>{t.mean_a} <span className="be-muted be-tiny">(n={t.n_a})</span></td>
+                      <td>{t.mean_b} <span className="be-muted be-tiny">(n={t.n_b})</span></td>
+                      <td>{t.diff > 0 ? `+${t.diff}` : t.diff}{' '}
+                        <span className="be-muted be-tiny">[{t.diff_ci95[0]}, {t.diff_ci95[1]}]</span></td>
+                      <td className="be-mono be-tiny">{t.t} ({t.df})</td>
+                      <td className="be-mono be-tiny"
+                          style={{ color: t.significant ? 'var(--be-green)' : 'var(--ink-3)', fontWeight: 600 }}>
+                        {t.p_value_holm < 0.001 ? '< 0.001' : t.p_value_holm.toFixed(3)}
+                      </td>
+                      <td className="be-mono be-tiny">{t.cohens_d} · {t.effect_label}</td>
+                      <td className="be-tiny">{t.interpretation}</td>
+                    </>
+                  ) : (
+                    <td colSpan={7} className="be-tiny be-muted">{t.interpretation}</td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div className="be-tiny be-muted" style={{ marginTop: 10, lineHeight: 1.6 }}>
+          วิธี: {significance.method} · {significance.caveat}
+        </div>
+      </div>
+    )}
+    </>
   );
 };

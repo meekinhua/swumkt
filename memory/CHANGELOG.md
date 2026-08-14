@@ -1,3 +1,47 @@
+## 2026-06-14 (later) — Brand Equity follow-ups: list scores, wave significance testing, resume-draft, thesis parity check
+
+**1. Thesis Export Check (verified, no code change needed for parity)**
+- Exported `c5b3458f` (Mali) and diffed the DOCX against `/dashboard`: BES + all four dimension scores, tier
+  labels and the Awareness weight table (now summing to 1.00) match exactly.
+- Found and fixed a real defect while checking it: `_dimension_reliability` matched question ids only, so every
+  response collected before the instrument was regenerated looked like a missing value and Cronbach's α reported
+  `n complete = 0`. Legacy ids are now pooled the same way `_aggregate_responses` pools them (Mali: quality
+  n 0→16, loyalty 0→23; the seeded 90-response study now reports α 0.65 / 0.80 / 0.32).
+
+**2. List Page Scores**
+- NEW `GET /api/brand-equity/studies/scores` — BES + 4 dimensions for every visible study, cached on the study
+  document keyed by response count + weights signature (cache invalidates when weights change). ~0.6s cold,
+  <0.3s warm.
+- List cards show the real BES, the AW/PQ/BI/LY mini scores and a tier chip; only studies under 10 responses
+  still say "BES locked · N more".
+
+**3. Wave Comparison significance testing**
+- `_respondent_dimension_scores` → per-respondent POMP 0-100 score per dimension (legacy ids pooled),
+  `_welch_t_test` (Welch two-sample, 95% CI of the difference, Cohen's d + effect label),
+  `_holm_adjust` (Holm–Bonferroni across the 4 dimensions), `_wave_significance` wiring it together with Thai
+  interpretations and an explicit caveat that the BES index itself is not what is tested.
+- Dashboard wave-compare now shows a SIG / ns marker per delta plus a full table (means, Δ with 95% CI, t(df),
+  Holm p, d, verdict sentence). Under-powered waves say so instead of printing a fabricated p.
+- Fixed two real bugs found while wiring it: `/compare` crashed with `TypeError: unsupported operand type(s)
+  for -: 'list' and 'list'` because the audit added the `_measured` metadata key to `composite`, and it silently
+  ignored a `wave` selector (comparing "wave 1 vs wave 2" actually pooled every response).
+- Tests: `backend/tests/test_brand_equity_wave_significance.py` (6) — includes a null case that must come back
+  not-significant and a real +1.1-point shift that must be detected.
+- QA seed: `backend/scripts/seed_wave_significance_study.py` → study `zz-wavesig-0001`, 45+45 responses.
+
+**4. Respondent Progress Save**
+- Answers, demographics and section position autosave to `localStorage['be_draft_<shareToken>']` on every change;
+  the welcome screen offers ทำต่อ / เริ่มใหม่ (`be-resume-draft`), drafts older than 7 days are dropped and the
+  draft is cleared on successful submit. Footer note tells respondents they can close the page.
+
+**Rounding-order fix (from the iteration_26 report)**: `getBrandHealthTier` / `brand_health_tier` now classify the
+ROUNDED score, so a raw 49.7 can no longer display as "50 · At Watch" on a card and "50 · Healthy" on the hero.
+
+**Verification**: 90 backend tests PASS (audit 49 + thesis 23 + wave-sig 6 + follow-ups 12) · testing agent
+iteration_26: 100% of acceptance criteria, 0 critical/minor, the single low-priority tier-boundary note fixed and
+re-verified by screenshot.
+
+
 ## 2026-06-14 — Brand Equity + thesis-export correctness audit applied, plus ALL frontend P1+P2 follow-ups
 
 Applied the external `brand-equity-audit-2026-08` package (base `aedda54` = HEAD, CRLF normalised to LF).

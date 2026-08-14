@@ -1256,3 +1256,16 @@
 @media (max-width: 600px) {
   .be-modal { padding: 18px; }
 }
+
+/* ============ Wave significance table ============ */
+.be-table { border-collapse: collapse; font-size: 12px; }
+.be-table th {
+  text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+  border-bottom: 1px solid var(--rule-strong); padding: 6px 8px; white-space: nowrap;
+}
+.be-table td { padding: 8px; border-bottom: 1px dashed var(--rule); vertical-align: top; }
+.be-table tr:last-child td { border-bottom: none; }
+@media (max-width: 780px) {
+  .be-table { display: block; overflow-x: auto; white-space: nowrap; }
+}

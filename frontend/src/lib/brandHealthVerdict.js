@@ -35,7 +35,10 @@ export const BRAND_HEALTH_TIERS = [
 ];
 
 export function getBrandHealthTier(bes) {
-  const v = Number(bes ?? 0);
+  // Classify the value the user SEES. Every surface displays a rounded BES, so
+  // classifying the raw number made 49.7 display as "50 · At Watch" on the list
+  // card and "50 · Healthy" on the dashboard hero.
+  const v = Math.round(Number(bes ?? 0));
   return BRAND_HEALTH_TIERS.find(t => v >= t.min && v <= t.max) || BRAND_HEALTH_TIERS[BRAND_HEALTH_TIERS.length - 1];
 }
 

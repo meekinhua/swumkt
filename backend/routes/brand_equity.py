@@ -55,7 +55,9 @@ BRAND_HEALTH_TIERS = [
 def brand_health_tier(score: Optional[float]) -> Optional[dict]:
     if score is None:
         return None
-    v = float(score)
+    # Classify the value the reader sees: scores are always displayed rounded, so
+    # 49.7 must not print as "50" next to the tier for 49.
+    v = float(round(score))
     for t in BRAND_HEALTH_TIERS:
         if v >= t["min"]:
             return dict(t)
@@ -1473,6 +1475,7 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
     """
     by_dim_items: Dict[str, List[str]] = {d: [] for d in DIMENSIONS}
     scale_of: Dict[str, int] = {}
+    legacy_of: Dict[str, str] = {}  # legacy question id -> current question id
     for q in study.get("questions", []) or []:
         if q.get("compare_brand"):
             continue  # competitor items measure a different object
@@ -1482,6 +1485,13 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
         if d in by_dim_items:
             by_dim_items[d].append(q["id"])
             scale_of[q["id"]] = 5 if q["type"] == "likert_5" else 7
+            # Responses collected before the instrument was regenerated carry the
+            # old question id. `_aggregate_responses` pools those via legacy_ids;
+            # without the same pooling here, every respondent from an earlier wave
+            # looks like a missing value and alpha reports n_complete = 0 on a
+            # study with hundreds of answers.
+            for lid in (q.get("legacy_ids") or []):
+                legacy_of[lid] = q["id"]
 
     # respondent -> {question_id: numeric value}
     per_resp: List[Dict[str, float]] = []
@@ -1489,6 +1499,7 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
         row: Dict[str, float] = {}
         for ans in r.get("answers", []) or []:
             qid = ans.get("question_id")
+            qid = legacy_of.get(qid, qid)
             val = ans.get("value")
             if qid in scale_of and isinstance(val, (int, float)) and not isinstance(val, bool):
                 row[qid] = float(val)
@@ -1552,6 +1563,163 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
             "interpretation": interp,
         }
     return out
+
+
+# ---------------------------------------------------------------------------
+# Wave significance testing
+#
+# Every comparison this module produced was descriptive: two BES numbers side by
+# side with a delta, and no way to tell a real shift from sampling noise. A BES
+# is a weighted index, so it cannot be t-tested directly. What CAN be tested is
+# the respondent-level dimension score: for each respondent, the mean of the
+# rating items belonging to a dimension, expressed 0-100 on the same POMP scale
+# the dashboard uses. Those are independent observations, so Welch's t-test
+# (unequal variances — the standard recommendation over Student's when group
+# sizes and variances differ) applies.
+# ---------------------------------------------------------------------------
+
+_TESTABLE_TYPES = {"likert_5", "likert_7", "comparative_7", "nps_0_10"}
+
+
+def _respondent_dimension_scores(study: dict, responses: List[dict]) -> Dict[str, List[float]]:
+    """dimension -> [per-respondent 0-100 score]. Rating items only.
+
+    comparative_7 is reversed ((7-v)/6) because 1 means "our brand is better",
+    and nps_0_10 is rescaled v/10 — both so every item points the same way as the
+    dimension score shown on the dashboard.
+    """
+    meta: Dict[str, tuple] = {}  # qid (incl. legacy ids) -> (dimension, scale type)
+    for q in study.get("questions") or []:
+        if q.get("type") in _TESTABLE_TYPES and q.get("dimension") and not q.get("compare_brand"):
+            # Legacy ids matter: responses collected in an earlier wave carry the
+            # question id of that wave. `_aggregate_responses` pools them for the
+            # same semantic slot, and so must the test, or wave A comes back with
+            # zero testable respondents.
+            for key in [q["id"]] + list(q.get("legacy_ids") or []):
+                meta[key] = (q["dimension"], q["type"])
+
+    out: Dict[str, List[float]] = {}
+    for r in responses:
+        buckets: Dict[str, List[float]] = {}
+        for ans in r.get("answers") or []:
+            m = meta.get(ans.get("question_id"))
+            val = ans.get("value")
+            if not m or not isinstance(val, (int, float)) or isinstance(val, bool):
+                continue
+            dim, qtype = m
+            v = float(val)
+            if qtype == "likert_5":
+                s = (v - 1) / 4 * 100
+            elif qtype == "likert_7":
+                s = (v - 1) / 6 * 100
+            elif qtype == "comparative_7":
+                s = (7 - v) / 6 * 100
+            else:  # nps_0_10
+                s = v / 10 * 100
+            buckets.setdefault(dim, []).append(max(0.0, min(100.0, s)))
+        for dim, vals in buckets.items():
+            out.setdefault(dim, []).append(sum(vals) / len(vals))
+    return out
+
+
+def _welch_t_test(a: List[float], b: List[float]) -> Optional[dict]:
+    """Welch's t-test on two independent samples of respondent-level scores."""
+    if len(a) < 3 or len(b) < 3:
+        return None
+    import numpy as np
+    from scipy import stats as _st
+
+    xa, xb = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+    ma, mb = float(xa.mean()), float(xb.mean())
+    va, vb = float(xa.var(ddof=1)), float(xb.var(ddof=1))
+    na, nb = len(xa), len(xb)
+    se = ((va / na) + (vb / nb)) ** 0.5
+    if se == 0:
+        return None
+    t = (mb - ma) / se
+    df = ((va / na + vb / nb) ** 2) / (
+        (va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1)
+    )
+    p = float(2 * _st.t.sf(abs(t), df))
+    tcrit = float(_st.t.ppf(0.975, df))
+    diff = mb - ma
+    # Hedges-corrected Cohen's d on the pooled SD.
+    pooled = (((na - 1) * va + (nb - 1) * vb) / (na + nb - 2)) ** 0.5 if na + nb > 2 else 0.0
+    d = (diff / pooled) if pooled > 0 else None
+    return {
+        "mean_a": round(ma, 1), "mean_b": round(mb, 1),
+        "sd_a": round(va ** 0.5, 1), "sd_b": round(vb ** 0.5, 1),
+        "n_a": na, "n_b": nb,
+        "diff": round(diff, 1),
+        "diff_ci95": [round(diff - tcrit * se, 1), round(diff + tcrit * se, 1)],
+        "t": round(t, 3), "df": round(df, 1),
+        "p_value": round(p, 6),
+        "cohens_d": round(d, 2) if d is not None else None,
+        "effect_label": (
+            None if d is None else
+            "negligible" if abs(d) < 0.2 else
+            "small" if abs(d) < 0.5 else
+            "medium" if abs(d) < 0.8 else "large"
+        ),
+        "test": "welch_t_two_sided",
+    }
+
+
+def _holm_adjust(pairs: List[tuple]) -> Dict[str, float]:
+    """Holm-Bonferroni step-down adjustment. Four dimensions are tested on the
+    same data, so an unadjusted 0.05 threshold would call a false positive
+    roughly one time in five."""
+    ordered = sorted(pairs, key=lambda kv: kv[1])
+    m = len(ordered)
+    adjusted: Dict[str, float] = {}
+    running = 0.0
+    for i, (key, p) in enumerate(ordered):
+        val = min(1.0, (m - i) * p)
+        running = max(running, val)  # enforce monotonicity
+        adjusted[key] = round(running, 6)
+    return adjusted
+
+
+def _wave_significance(study: dict, resp_a: List[dict], resp_b: List[dict]) -> dict:
+    """Per-dimension Welch t-tests between two waves, Holm-adjusted."""
+    sa = _respondent_dimension_scores(study, resp_a)
+    sb = _respondent_dimension_scores(study, resp_b)
+
+    tests: Dict[str, Any] = {}
+    for dim in ("awareness", "quality", "identity", "loyalty"):
+        res = _welch_t_test(sa.get(dim) or [], sb.get(dim) or [])
+        if res is None:
+            tests[dim] = {
+                "testable": False,
+                "n_a": len(sa.get(dim) or []), "n_b": len(sb.get(dim) or []),
+                "reason": "too_few_respondents_with_rating_items",
+                "interpretation": "ผู้ตอบที่มีข้อมูลมาตรวัดในมิตินี้น้อยเกินไป (ต้องการอย่างน้อย 3 คนต่อรอบ)",
+            }
+        else:
+            tests[dim] = {"testable": True, **res}
+
+    adj = _holm_adjust([(k, v["p_value"]) for k, v in tests.items() if v.get("testable")])
+    for k, p_adj in adj.items():
+        tests[k]["p_value_holm"] = p_adj
+        tests[k]["significant"] = bool(p_adj < 0.05)
+        sig = tests[k]["significant"]
+        diff = tests[k]["diff"]
+        tests[k]["interpretation"] = (
+            f"{'เพิ่มขึ้น' if diff > 0 else 'ลดลง'} {abs(diff):.1f} คะแนน และ"
+            f"{'มีนัยสำคัญทางสถิติ' if sig else 'ยังไม่มีนัยสำคัญทางสถิติ'} "
+            f"(p {'< 0.001' if p_adj < 0.001 else f'= {p_adj:.3f}'} หลังปรับ Holm)"
+            + ("" if sig else " — ยังแยกจากความคลาดเคลื่อนของการสุ่มไม่ได้")
+        )
+
+    return {
+        "method": "Welch two-sample t-test on respondent-level dimension scores (POMP 0-100), "
+                  "Holm-Bonferroni adjusted across 4 dimensions, alpha = 0.05",
+        "alpha": 0.05,
+        "by_dimension": tests,
+        "caveat": "ทดสอบจากคะแนนระดับบุคคลของแต่ละมิติ (เฉลี่ยข้อมาตรวัดในมิตินั้น) — "
+                  "ไม่ได้ทดสอบ BES โดยตรง เพราะ BES เป็นดัชนีถ่วงน้ำหนัก ไม่ใช่ค่าเฉลี่ยของการวัดเดียว",
+    }
+
 
 
 def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None) -> dict:
@@ -2357,6 +2525,55 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         for s in items:
             s["response_count"] = await db.brand_responses.count_documents({"study_id": s["id"]})
         return {"studies": items, "total": len(items)}
+
+    @brand_equity_router.get("/studies/scores")
+    async def list_study_scores(current_user=Depends(get_current_user)):
+        """BES + 4 dimension scores for every study the caller can see.
+
+        The list endpoint returns study documents only, so every card said
+        "BES locked" even for studies with plenty of responses — the score
+        existed, it just was not in that payload, and the only way to see it was
+        to open each study one at a time. This computes it for all of them and
+        caches the result on the study document, keyed by response count and
+        weights, so repeat loads are a single read.
+        """
+        owner_q = {} if _is_admin(current_user) else _owner_query(current_user)
+        not_trashed = {"deleted_at": {"$exists": False}}
+        query = {"$and": [owner_q, not_trashed]} if owner_q else not_trashed
+        items = await db.brand_studies.find(query, {"_id": 0}).to_list(500)
+
+        out: Dict[str, Any] = {}
+        for s in items:
+            sid = s["id"]
+            n = await db.brand_responses.count_documents({"study_id": sid})
+            weights_sig = json.dumps(s.get("weights") or {}, sort_keys=True)
+            cache = s.get("bes_cache") or {}
+            if cache.get("response_count") == n and cache.get("weights_sig") == weights_sig:
+                out[sid] = cache.get("scores")
+                continue
+            if n < 10:
+                out[sid] = {"overall": None, "response_count": n, "locked": True}
+                continue
+            responses = await db.brand_responses.find({"study_id": sid}, {"_id": 0}).to_list(5000)
+            normalized = (s.get("ai_cache") or {}).get("normalized_by_question") or {}
+            agg = _aggregate_responses(s, responses, normalized=normalized)
+            comp = agg.get("composite") or {}
+            scores = {
+                "overall": comp.get("overall"),
+                "awareness": comp.get("awareness"),
+                "quality": comp.get("quality"),
+                "identity": comp.get("identity"),
+                "loyalty": comp.get("loyalty"),
+                "measured": comp.get("_measured") or [],
+                "response_count": n,
+                "locked": False,
+            }
+            out[sid] = scores
+            await db.brand_studies.update_one({"id": sid}, {"$set": {"bes_cache": {
+                "response_count": n, "weights_sig": weights_sig,
+                "scores": scores, "computed_at": _now_iso(),
+            }}})
+        return {"scores": out}
 
     @brand_equity_router.get("/studies/trash")
     async def list_trashed_studies(current_user=Depends(get_current_user)):
@@ -3526,6 +3743,13 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         def _wave_summary(wave: Dict[str, Any]) -> Dict[str, Any]:
             f_iso = (wave or {}).get("from")
             t_iso = (wave or {}).get("to")
+            # Wave A is the dashboard's active filter, which may select a
+            # published wave by number instead of a date range. That key used to
+            # be ignored here, so the comparison silently used every response
+            # while the screen said a wave was selected.
+            w_param = (wave or {}).get("wave")
+            if w_param and w_param != "all" and not (f_iso or t_iso):
+                f_iso, t_iso, _lbl = _wave_bounds(study.get("wave_history") or [], str(w_param))
             segs = (wave or {}).get("segments") or {}
             if isinstance(segs, str):
                 segs = _parse_segments_param(segs)
@@ -3537,17 +3761,24 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 "filter": {"from": f_iso, "to": t_iso, "segments": segs},
                 "n": len(filtered),
                 "composite": agg.get("composite") or {},
+                "_responses": filtered,
             }
 
         wave_a = _wave_summary(body.get("wave_a") or {})
         wave_b = _wave_summary(body.get("wave_b") or {})
+        resp_a = wave_a.pop("_responses")
+        resp_b = wave_b.pop("_responses")
 
-        # Compute delta (b - a) for each shared dimension
+        # Delta (b - a) per shared dimension. `composite` also carries metadata
+        # keys like `_measured` (a list), so only numeric entries are diffed.
         deltas: Dict[str, Any] = {}
         for k in set((wave_a["composite"] or {}).keys()) | set((wave_b["composite"] or {}).keys()):
+            if k.startswith("_"):
+                continue
             a = wave_a["composite"].get(k)
             b = wave_b["composite"].get(k)
-            if a is not None and b is not None:
+            if isinstance(a, (int, float)) and isinstance(b, (int, float)) \
+                    and not isinstance(a, bool) and not isinstance(b, bool):
                 deltas[k] = round(b - a, 1)
             else:
                 deltas[k] = None
@@ -3556,6 +3787,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "wave_a": wave_a,
             "wave_b": wave_b,
             "deltas": deltas,
+            "significance": _wave_significance(study, resp_a, resp_b),
             "responses_total": len(all_responses),
         }
 

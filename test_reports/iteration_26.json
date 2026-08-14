@@ -1,0 +1,48 @@
+{
+  "summary": "Iter 26 — full backend + frontend acceptance of the 4 Brand Equity follow-ups (List-page BES + tier chips, Wave-comparison significance, Respondent progress save, Thesis-DOCX numbers). Backend: 7/7 new tests + 6/6 wave-significance unit tests + 5/5 audit-follow-up tests PASS. GET /api/brand-equity/studies/scores returns {overall, awareness, quality, identity, loyalty, response_count, locked, measured} for every study, second call is cached (<0.3s), and PUT weights on zz-wavesig-0001 correctly invalidates the cache (overall moved when weights changed 25/25/25/25 → 10/10/10/70, then reset). POST /studies/{id}/compare now honours {wave_a:{wave:'1'}, wave_b:{wave:'2'}} — on zz-wavesig-0001 all 4 dims are significant with Cohen's d 0.6–3+ (p<0.001 after Holm) and no more crash on the composite `_measured` metadata key. Thesis DOCX for c5b3458f contains BES + 4 dim scores that exactly match the current /dashboard aggregate.composite (n=23 responses at test time). Frontend: /brand-equity list renders be-study-tier-<id> chips (Mali=Healthy, TEST_UIBrand=Strong, ZZ=At Watch, a407a08f=Healthy) plus the 4 mini-scores AW/PQ/BI/LY and BES for every unlocked study; be-study-bes-hint-<id> 'BES locked · N more' for the 7 locked ones. Dashboard zz-wavesig-0001: turning on be-filter-compare-toggle exposes Wave B pane; setting Wave A=2026-04 vs Wave B=2026-06/07 renders be-wave-compare + be-wave-significance table with all 4 rows (be-wave-sig-row-{awareness,quality,identity,loyalty}) carrying WaveA mean, WaveB mean, Δ+95%CI, t(df), Holm p '< 0.001', Cohen's d + effect label ('medium'/'large') and a Thai sentence — be-wave-sig-{dim} markers all show SIG. Respondent /brand-equity/respond/zzwavesig01: be-autosave-note visible ('คำตอบถูกบันทึกไว้ในเครื่องนี้อัตโนมัติ'), localStorage key be_draft_zzwavesig01 persists on autosave, reload shows be-resume-draft with 'เครื่องนี้ตอบไว้แล้ว 2 ข้อ — ทำต่อจากที่ค้างไว้ไหม?' + be-resume-continue and be-resume-discard; continue restores the likert selection, discard removes the localStorage key and the card no longer appears; submit path (BrandEquityRespondentPage.jsx L531) removes the same key. Regression on iter25 fixes: be-glossary-card + per-term testids (be-glossary-term-t2b/-pomp/-alpha and 6 others), be-reliability-card, be-sample-adequacy, be-method-update-note, be-dashboard-weights all render on Mali dashboard.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Brand Equity list vs dashboard hero — tier label boundary", "issues": [
+        "For zz-wavesig-0001 the raw overall from /studies/scores is 49.7. The list-page tier chip runs getBrandHealthTier(49.7) → 'At Watch' (35–49.99), while the dashboard hero shows the displayed BES=50 with tier 'Healthy' (>=50). Same underlying number ends up with two different tier labels on the two surfaces because rounding happens after the tier lookup on one side and before it on the other. Suggest normalising: compute the tier on the same rounded value that the user sees in both places (either always raw or always rounded)."
+      ]},
+      {"screen": "Sticky filter bar — expand/collapse", "issues": [
+        "When compare mode is off, the Wave B pane is hidden (expected). Turning on be-filter-compare-toggle briefly collapses the bar in some scenarios and the user has to click be-filter-toggle again to configure the B date range. Minor UX rough edge — worth verifying manually on a real click sequence. Not blocking."
+      ]}
+    ]
+  },
+  "verified_acceptance_criteria": [
+    "GET /api/brand-equity/studies/scores returns overall + 4 dims + response_count + locked; keys match dashboard aggregate.composite within rounding; 2nd call is cached fast.",
+    "PUT /studies/{id} weights invalidates the /studies/scores cache — verified on zz-wavesig-0001 (weights left back at 25/25/25/25).",
+    "POST /studies/{id}/compare with wave_a/wave_b={wave:'1'|'2'|'latest'} returns significance.by_dimension with all 4 dims testable+significant on zz-wavesig-0001; does not crash on Mali's composite._measured metadata.",
+    "Thesis DOCX for Mali c5b3458f contains BES + AW/PQ/BI/LY values that match the current /dashboard aggregate.composite.",
+    "List page: 4 unlocked studies (Mali, TEST_UIBrand, a407a08f, zz-wavesig) show be-study-tier-<id>, BES number, AW/PQ/BI/LY mini scores; 7 locked studies show be-study-bes-hint-<id> 'BES locked · N more'.",
+    "Wave compare UI: be-filter-compare-toggle → Wave B panel → be-wave-compare + be-wave-significance rendered with 4 rows be-wave-sig-row-* carrying WaveA/WaveB means + n, Δ [CI95], t(df), Holm p, d+label, Thai interpretation; be-wave-sig-{dim} markers show SIG for all 4 dims (April vs June+ on zz-wavesig).",
+    "Respondent survey: be-autosave-note visible, localStorage be_draft_<token> autosaves, reload shows be-resume-draft with count of saved answers + be-resume-continue/discard; continue restores state (verified likert 4 restored on AW-4); discard clears both the key and the card on next reload; submit path removes the same key (BrandEquityRespondentPage.jsx L531).",
+    "Regression: dashboard Mali c5b3458f still exposes be-glossary-card + per-term be-glossary-term-{t2b,b2b,netq,sd,pomp,ci,alpha,nps,n}, be-reliability-card, be-sample-adequacy, be-method-update-note, be-dashboard-weights.",
+    "No console errors on any tested flow."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_iter26_followup.py",
+    "/app/backend/tests/test_brand_equity_wave_significance.py",
+    "/app/backend/tests/test_brand_equity_audit_followup.py",
+    "/app/test_reports/pytest/iter26.xml"
+  ],
+  "action_items": [
+    "LOW: normalise tier lookup between list card and dashboard hero so the same displayed BES always yields the same tier label. Boundary case observed: raw overall=49.7 → list chip 'At Watch', hero (rounded 50) 'Healthy'. Cleanest fix is to round-then-tier in both places or raw-then-tier in both (getBrandHealthTier(Math.round(x)) or getBrandHealthTier(x)).",
+    "INFO: The 'not testable' behaviour on Mali's compare can't be exercised from the UI without a wave that has ~2 responses; backend unit test (tiny_waves_are_not_tested_rather_than_guessed) covers it and passes."
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_iter26_followup.py (new)"
+  ],
+  "success_rate": {"backend": "100% (7/7 new + 6/6 wave-sig + 5/5 audit follow-up)", "frontend": "100% of acceptance criteria; 1 low-priority tier-label boundary observation"},
+  "seed_data_creation": "None — used seeded studies zz-wavesig-0001 (weights reset to 25/25/25/25 at end of the cache-invalidation test) and c5b3458f (Mali). Public respondent test posted 1 partial draft to localStorage only (no server responses created).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@swu.ac.th / admin123; public token zzwavesig01",
+  "context_for_next_testing_agent": "All 4 follow-ups + regression are green. Only one low-priority observation: tier label mismatch at BES ~49.7-50 boundary between list chip and dashboard hero. zz-wavesig-0001 weights were left at 25/25/25/25 as required. Backend test file test_brand_equity_iter26_followup.py should be kept as regression — it verifies the /studies/scores endpoint (shape + cache + cache invalidation), the /compare wave_a/wave_b selector + no-crash on _measured, and thesis-export/dashboard parity.",
+  "rca_of_the_issue": "The tier boundary label inconsistency is a rounding-order bug: BrandEquityListPage.jsx L553 calls getBrandHealthTier(score) with the raw score (49.7 → At Watch), while the dashboard hero renders the tier next to the rounded display value (50 → Healthy). Because the tier scale uses an inclusive lower bound at 50, values in [49.50, 49.99] display as 50 but classify as At Watch."
+}
