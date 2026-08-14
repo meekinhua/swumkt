@@ -1,0 +1,53 @@
+{
+  "summary": "Verified the Anthropic model rename fix (claude-sonnet-4-20250514 → claude-sonnet-4-6). Backend side is FULLY FIXED: /api/conjoint/studies/{id}/qualitative-analysis returns 200 with Thai suggested_attributes in ~40-45s, no more litellm NotFoundError. Conjoint AI thesis interpretation and Brand Equity ai-analyze background job also complete cleanly with no model-not-found errors. All 65 regression tests (test_conjoint_audit_2026_08, test_conjoint_final_e2e, test_conjoint_stats_correctness) still pass. HOWEVER, the reported end-user flow is STILL BROKEN through the UI: axios.defaults.timeout is set globally to 30000ms in /app/frontend/src/pages/../App.js:86, but the LLM analysis takes ~40-45s. The frontend request is aborted at 30s → user sees no result even though the backend completed 200. Same latency-vs-timeout mismatch will affect every long Claude call that inherits the global axios default (currently: ConjointQualitativePage handleAnalyze, and any other page that does not pass an explicit timeout override).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ConjointQualitativePage.handleAnalyze (uses global axios default 30s)",
+        "issue": "Global axios.defaults.timeout = 30000 in /app/frontend/src/App.js line 86 causes the POST /api/conjoint/studies/{id}/qualitative-analysis call to be aborted after 30s, but the backend legitimately needs ~40-45s to run the Claude call. Result: user clicks 'เริ่มวิเคราะห์', sees the button re-enable after 30s with either no visible feedback or the toast 'ไม่สามารถวิเคราะห์ข้อมูลได้'. The original NotFoundError is fixed, but the user-facing flow is still broken by this timeout. Backend log shows 200 OK at 40.15s after the frontend already gave up.",
+        "selector": "button:has-text('เริ่มวิเคราะห์') on /research/conjoint/{id}/qualitative",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Conjoint PHASE 1 (Qualitative) → เริ่มวิเคราะห์",
+        "issue": "Axios global timeout (30s) < LLM latency (~45s). The API succeeds but the browser has already aborted; the user never sees suggested_attributes.",
+        "affected_selectors": ["button:has-text('เริ่มวิเคราะห์')"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter32_claude_rename.py",
+    "/app/backend/tests/test_conjoint_audit_2026_08.py",
+    "/app/backend/tests/test_conjoint_final_e2e.py",
+    "/app/backend/tests/test_conjoint_stats_correctness.py"
+  ],
+  "action_items": [
+    "Pass an explicit per-request timeout on the qualitative-analysis axios call in /app/frontend/src/pages/ConjointQualitativePage.js (recommend { timeout: 120000 }) — mirrors what /app/frontend/src/pages/cms/cmsApi.js already does for aiText/aiFull (90-120s).",
+    "Audit every axios.post that hits a Claude endpoint (grep for with_model('anthropic') in backend to find endpoints, then find the matching frontend calls) and pass timeout: 90000-120000. Candidate list from server.py: /api/conjoint/studies/{id}/thesis-ai (and its ai-interpretation variants), any Brand Equity ai-analyze polling that eventually POSTs, learn/chat assistant calls. The BE ai-analyze pattern is fine (POST returns queued immediately, GET ai-status polls) so it is not affected, but a truly synchronous Claude POST inheriting the 30s default will break.",
+    "Consider raising axios.defaults.timeout from 30000 to 60000 (or removing the global default for /api/**/ai* / **/analyze / **/qualitative-analysis / **/thesis-ai routes) so future long-LLM endpoints do not silently break the same way.",
+    "Redeploy to swumkt.org only after the frontend timeout is applied, otherwise the user's original report reproduces (with a timeout error instead of NotFoundError)."
+  ],
+  "critical_code_review_comments": [
+    "The retired-alias guard in /app/backend/routes/conjoint.py analyze_qualitative_data (only coerces names starting with 'claude-sonnet-4-2025') is narrower than the actual retirement list. If Emergent later retires 'claude-3-5-sonnet-*' or 'claude-opus-4-*' the same way, the guard will not catch it. Consider a positive allow-list of currently-served models instead of a negative prefix match, and log a warning whenever a saved prompt config points at a model not in the allow-list."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter32_claude_rename.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5 new + 65/65 regression)",
+    "frontend": "0% (UI flow blocked by 30s axios timeout even though model rename fix itself works)"
+  },
+  "seed_data_creation": "Created and purged test conjoint studies during API + UI tests (TEST_iter32_qual_*, TEST_iter32_UI_*). Left demo-sim-chathai-001, zz-wavesig-0001, 6099ac5b-4376-4c14-9d51-3c0637ca4260 intact. Kicked off one Brand Equity ai-analyze on demo-sim-chathai-001 which completed to 'ready'.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@swu.ac.th / admin123 (from /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "The model rename itself (claude-sonnet-4-6) is verified working end-to-end at the API level — do NOT waste LLM credits re-testing that dimension. Focus retest on the frontend axios timeout fix. Reproduction of the remaining bug: (1) admin login → /market-research/conjoint-analysis → 'สร้างการศึกษาใหม่' → title anything → 'สร้างและเริ่มต้น' → navigate to /research/conjoint/{id}/qualitative. (2) click 'เพิ่มข้อมูลเชิงคุณภาพ' (there are TWO buttons with similar labels — the toolbar one and the empty-state one; either works). (3) In modal, paste Thai text into the textarea (label 'เนื้อหา *'), then click the modal's black submit button labelled 'เพิ่มข้อมูล'. Do NOT match 'เพิ่ม' by partial name because the toolbar 'เพิ่มข้อมูล' button behind the overlay will intercept — use `page.locator('div.fixed.inset-0 >> button:has-text(\"เพิ่มข้อมูล\")').first`. (4) click 'เริ่มวิเคราะห์'. Backend takes ~40-45s. On success, page body will contain 'คุณสมบัติที่แนะนำ' or 'Suggested Attributes'. On the current bug, request is aborted at 30s (console: 'Request timeout: .../qualitative-analysis' and 'Error analyzing: AxiosError'). Cleanup: DELETE /api/conjoint/studies/{id} then DELETE /api/conjoint/studies/{id}/purge (not ?permanent=true). Also: the LLM prompt admin GET returns 200 with no retired alias in payload; saving a prompt not re-tested since it costs no LLM and is low risk.",
+  "rca_of_the_issue": "Two-layer bug. LAYER 1 (fixed by developer): Anthropic retired the dated alias claude-sonnet-4-20250514, so every backend with_model('anthropic', 'claude-sonnet-4-20250514') call — 18 sites in server.py + conjoint.py + one stored llm_prompts.model_name — returned litellm NotFoundError. Developer renamed all 18 sites to claude-sonnet-4-6, migrated the Mongo config, and added a defensive guard in analyze_qualitative_data that coerces any saved model starting with 'claude-sonnet-4-2025' back to claude-sonnet-4-6. Verified: 5/5 iter32 API tests pass, 65/65 regression tests pass, backend logs show POST qualitative-analysis → 200 in 40.15s with Thai suggested_attributes. LAYER 2 (still broken, must be fixed before redeploy): /app/frontend/src/App.js sets axios.defaults.timeout = 30000 globally. ConjointQualitativePage.handleAnalyze does not pass an explicit timeout, so the axios call inherits 30s. Since the Claude call takes ~40-45s, the browser aborts before the response arrives; the interceptor logs 'Request timeout: .../qualitative-analysis'; handleAnalyze catches an axios error with no error.response, so error.response?.data?.detail is undefined and the fallback toast 'ไม่สามารถวิเคราะห์ข้อมูลได้' is shown for ~3s then disappears. The user perceives 'nothing happened' or 'analysis failed' even though the backend completed 200. Fix: pass { timeout: 120000 } to the axios.post in ConjointQualitativePage.js handleAnalyze (and audit other Claude-backed synchronous frontend calls for the same latent bug — Brand Equity ai-analyze uses queue+poll and is fine)."
+}

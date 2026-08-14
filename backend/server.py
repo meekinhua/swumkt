@@ -525,7 +525,7 @@ class ContentStatus(str, Enum):
 class AIModel(str, Enum):
     GPT_4O = "gpt-4o"
     GPT_4_TURBO = "gpt-4-turbo"
-    CLAUDE_SONNET = "claude-sonnet-4-20250514"
+    CLAUDE_SONNET = "claude-sonnet-4-6"
     GEMINI_FLASH = "gemini-2.0-flash-exp"
 
 class AISettings(BaseModel):
@@ -3524,7 +3524,7 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
             api_key=api_key,
             session_id=f"journey-map-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         # Determine language instruction
         language_name = "Thai" if request.target_language == "th" else "English"
@@ -4203,7 +4203,7 @@ async def generate_behavior_analysis(
             api_key=api_key,
             session_id=f"behavior-analysis-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         # Determine language
         language_name = "Thai" if request.target_language == "th" else "English"
@@ -4667,7 +4667,7 @@ No explanation, just the style name."""
             api_key=api_key,
             session_id=f"style-detect-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response = await chat.send_message(msg)
@@ -4777,7 +4777,7 @@ Extract ALL formatting specifications as comprehensive JSON."""
             api_key=api_key,
             session_id=f"extract-specs-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response = await chat.send_message(msg)
@@ -5076,12 +5076,12 @@ async def get_format_editor_model():
 def get_llm_provider_and_model(model_name: str):
     """Map model name to provider and full model identifier"""
     model_map = {
-        "claude-sonnet-4": ("anthropic", "claude-sonnet-4-20250514"),
+        "claude-sonnet-4": ("anthropic", "claude-sonnet-4-6"),
         "gpt-5": ("openai", "gpt-5"),
         "gemini-2.5-pro": ("google", "gemini-2.5-pro-preview-01-17"),
         "gemini-flash": ("google", "gemini-2.0-flash-exp")
     }
-    return model_map.get(model_name, ("anthropic", "claude-sonnet-4-20250514"))
+    return model_map.get(model_name, ("anthropic", "claude-sonnet-4-6"))
 
 def split_document_into_sections(text: str):
     """Split document into logical sections for processing"""
@@ -5281,7 +5281,7 @@ async def generate_perception_questions(
             api_key=api_key,
             session_id=f"perception-questions-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         user_message = UserMessage(text=user_prompt)
         
@@ -5339,7 +5339,7 @@ async def generate_perception_analysis(
             api_key=api_key,
             session_id=f"perception-analysis-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         user_message = UserMessage(text=user_prompt)
         
@@ -5756,7 +5756,7 @@ Please suggest suitable academic journals for this research."""
             api_key=api_key,
             session_id=f"journal-finder-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response_text = await chat.send_message(msg)
@@ -6045,7 +6045,7 @@ If you're not certain about specific details, indicate that with "Note: Please v
             api_key=api_key,
             session_id=f"fetch-guidelines-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response_text = await chat.send_message(msg)
@@ -7635,7 +7635,7 @@ class LLMPromptTemplate(BaseModel):
     prompt_template: str
     system_message: Optional[str] = None
     model_provider: str = "anthropic"
-    model_name: str = "claude-sonnet-4-20250514"
+    model_name: str = "claude-sonnet-4-6"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_by: Optional[str] = None
@@ -7698,7 +7698,7 @@ Output Format (JSON):
 
 Respond in {target_language} language.""",
             "model_provider": "anthropic",
-            "model_name": "claude-sonnet-4-20250514",
+            "model_name": "claude-sonnet-4-6",
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc)
         }

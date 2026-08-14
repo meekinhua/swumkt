@@ -85,9 +85,19 @@ export const API = `${BACKEND_URL}/api`;
 // Set default timeout for all requests (30 seconds)
 axios.defaults.timeout = 30000;
 
+// LLM-backed and heavy statistical endpoints legitimately run 40-120s. With the
+// 30s default the browser aborted while the backend was still working and the
+// user saw "ไม่สามารถวิเคราะห์ข้อมูลได้" on a request that actually succeeded —
+// exactly what happened to Conjoint Phase 1. Widen the window for those paths
+// only, so a genuinely hung normal request still fails fast.
+const SLOW_API_PATTERN = /\/(qualitative-analysis|statistical-analysis|ai-analysis|ai-analyze|ai-suggest|ai-needs|ai-step|ai-interpretation|interpretation|thesis|export-thesis|generate-image|generate-questions|regenerate-questions|compare|score-history|segment-significance|dashboard)/i;
+
 // Request interceptor - add timestamp for debugging
 axios.interceptors.request.use(
   (config) => {
+    if (SLOW_API_PATTERN.test(config.url || '')) {
+      config.timeout = 180000;
+    }
     config.metadata = { startTime: new Date() };
     return config;
   },

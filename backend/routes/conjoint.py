@@ -2909,13 +2909,19 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
         
+            # Retired dated aliases (e.g. claude-sonnet-4-20250514) still sit in
+            # saved prompt configs and make the provider return 404 not_found.
+            model_name = prompt_config.get("model_name") or "claude-sonnet-4-6"
+            if model_name.startswith("claude-sonnet-4-2025"):
+                model_name = "claude-sonnet-4-6"
+
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"conjoint-qual-{study_id}",
                 system_message=prompt_config.get("system_message", "You are an expert marketing researcher.")
             ).with_model(
                 prompt_config.get("model_provider", "anthropic"),
-                prompt_config.get("model_name", "claude-sonnet-4-20250514")
+                model_name
             )
         
             response_text = await chat.send_message(UserMessage(text=analysis_prompt))

@@ -1,3 +1,29 @@
+## 2026-06-14 (round 6) — BUG: Conjoint Phase 1 "เริ่มวิเคราะห์" failed (retired Claude model + 30s axios timeout)
+
+Two independent causes behind one user-visible failure.
+
+1. **Retired model alias.** `claude-sonnet-4-20250514` is no longer served through the Emergent LLM key; the
+   provider returns `not_found_error`. Switched all 18 call sites in `server.py` and `routes/conjoint.py` to
+   `claude-sonnet-4-6`, migrated the one stored prompt config in the `llm_prompts` collection, and added a guard in
+   the qualitative endpoint that coerces any saved `claude-sonnet-4-2025…` alias to the current model, so an old
+   admin-saved prompt cannot resurrect the 404.
+2. **Frontend aborted the request before the backend finished.** `axios.defaults.timeout = 30000` (App.js) killed a
+   call that legitimately takes ~43s, so even after the model fix the user saw "ไม่สามารถวิเคราะห์ข้อมูลได้" on a
+   request the backend answered 200. Added an axios request interceptor raising the timeout to 180s for slow paths
+   only (`SLOW_API_PATTERN`: qualitative/statistical analysis, ai-*, interpretation, thesis, generate-*, compare,
+   score-history, segment-significance, dashboard); everything else still fails fast at 30s.
+
+Verified by testing agent iteration_32 (backend: 200 with Thai attributes, 65 regression tests pass) and
+iteration_33 (browser: Phase 1 completes at 43.5s and renders the Thai attribute suggestions, no ECONNABORTED, no
+regressions on normal pages).
+
+Noted for later (not urgent): the slow-path regex matches bare substrings like `/dashboard` and `/compare`; if it
+ever needs tightening, anchor it to `/api/` prefixes.
+
+Earlier the same day: the user's "still cannot create a study" follow-up turned out to be a stale browser cache on
+their production domain (swumkt.org) — resolved by a hard refresh, no code change.
+
+
 ## 2026-06-14 (round 5) — BUG: Conjoint "สร้างการศึกษาใหม่" did nothing (CSS cascade)
 
 User report: clicking the create-study button on the Conjoint page was completely dead.
