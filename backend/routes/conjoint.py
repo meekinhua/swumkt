@@ -14,6 +14,7 @@ NOTE: router has NO prefix on purpose — endpoints keep their full original pat
 """
 
 import os
+import re
 import base64
 import uuid
 import logging
@@ -50,7 +51,32 @@ conjoint_router = APIRouter(tags=["conjoint"])
 #   logit methods (v3 computed it but never returned it), choice situations with
 #   no usable selection now excluded from every method's sample, and the thesis
 #   cache gained the same guard. Values move again, so v3 rows must not be served.
-ANALYSIS_CACHE_VERSION = 4
+# v5 (2026-06): internal placeholder classes (`__ORPHAN_xxxx__`, `__MISSING__`)
+#   are humanised before results are cached or returned — one leaked into a
+#   generated thesis coefficient table as a level name. Cached v4 rows still hold
+#   the raw tokens, so they must not be served.
+ANALYSIS_CACHE_VERSION = 5
+
+
+_ORPHAN_LABEL_RE = re.compile(r"__ORPHAN_([0-9a-fA-F]{1,12})__")
+
+
+def _humanize_internal_labels(obj):
+    """Replace internal encoder placeholders with something a reader can parse.
+
+    `__ORPHAN_8b5ca0c7__` is how the encoder keeps a level that the study editor
+    removed after the design was generated — necessary for estimation, but it was
+    printed verbatim as a level name in a thesis coefficient table.
+    """
+    if isinstance(obj, str):
+        s = _ORPHAN_LABEL_RE.sub(lambda m: f"ระดับที่ถูกลบภายหลัง ({m.group(1)})", obj)
+        return s.replace("__MISSING__", "ไม่ได้แสดงในรอบนั้น")
+    if isinstance(obj, dict):
+        return {(_humanize_internal_labels(k) if isinstance(k, str) else k):
+                _humanize_internal_labels(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_humanize_internal_labels(v) for v in obj]
+    return obj
 
 
 # ============================ MODELS ============================
@@ -4856,6 +4882,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         if not results:
             raise HTTPException(status_code=500, detail=f"Failed to perform {method} analysis")
+
+        results = _humanize_internal_labels(results)
     
         # Save to cache keyed by filter signature too.
         await db.analysis_cache.update_one(

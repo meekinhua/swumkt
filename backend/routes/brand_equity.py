@@ -420,6 +420,14 @@ class ResponseSubmit(BaseModel):
     demographics: Dict[str, Any] = {}
     answers: List[Dict[str, Any]]  # [{question_id, value}]
     duration_sec: Optional[int] = 0
+    draft_id: Optional[str] = None  # server-side draft to clear on success
+
+
+class DraftSave(BaseModel):
+    draft_id: Optional[str] = None
+    demographics: Dict[str, Any] = {}
+    answers: List[Dict[str, Any]] = []
+    section: int = 0
 
 
 # ============ HELPERS ============
@@ -2475,6 +2483,15 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             clauses.append({"owner_email": {"$regex": f"^{re.escape(uem)}$", "$options": "i"}})
         return {"$or": clauses} if len(clauses) > 1 else clauses[0]
 
+    async def _get_owned_study(study_id: str, u) -> dict:
+        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if not _owns(u, study):
+            raise HTTPException(403, "Not authorized")
+        return study
+
+
     @brand_equity_router.get("/templates")
     async def list_templates():
         """Return raw template library for browsing/preview."""
@@ -3032,7 +3049,62 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "channel": "public_link",
         }
         await db.brand_responses.insert_one(resp)
+        # A finished response makes its draft obsolete.
+        if data.draft_id:
+            await db.brand_response_drafts.delete_one(
+                {"id": data.draft_id, "study_id": study["id"]}
+            )
         return {"message": "Response saved", "id": resp["id"]}
+
+    # ---- Resumable drafts (server-side, so a respondent can finish on any device) ----
+
+    @brand_equity_router.post("/public/{share_token}/draft")
+    async def save_draft(share_token: str, data: DraftSave):
+        """Store a partially completed response and hand back a resume link.
+
+        Progress used to live only in the respondent's browser storage, so a
+        cleared browser or a switch from phone to laptop lost 40 answered items and
+        there was no way to nudge anyone back.
+        """
+        study = await db.brand_studies.find_one(
+            {"share_token": share_token}, {"_id": 0, "id": 1, "status": 1}
+        )
+        if not study:
+            raise HTTPException(404, "Study not found")
+        if study.get("status") not in ("collecting", "analyzing"):
+            raise HTTPException(410, "Study is not accepting responses")
+
+        draft_id = data.draft_id or str(uuid.uuid4())
+        now = _now_iso()
+        await db.brand_response_drafts.update_one(
+            {"id": draft_id},
+            {"$set": {
+                "id": draft_id,
+                "study_id": study["id"],
+                "share_token": share_token,
+                "answers": data.answers or [],
+                "demographics": data.demographics or {},
+                "section": data.section or 0,
+                "answered_count": len(data.answers or []),
+                "updated_at": now,
+            }, "$setOnInsert": {"created_at": now}},
+            upsert=True,
+        )
+        return {"draft_id": draft_id, "answered_count": len(data.answers or []), "updated_at": now}
+
+    @brand_equity_router.get("/public/{share_token}/draft/{draft_id}")
+    async def get_draft(share_token: str, draft_id: str):
+        d = await db.brand_response_drafts.find_one(
+            {"id": draft_id, "share_token": share_token}, {"_id": 0}
+        )
+        if not d:
+            raise HTTPException(404, "Draft not found")
+        return d
+
+    @brand_equity_router.delete("/public/{share_token}/draft/{draft_id}")
+    async def delete_draft(share_token: str, draft_id: str):
+        await db.brand_response_drafts.delete_one({"id": draft_id, "share_token": share_token})
+        return {"message": "Draft discarded"}
 
     # ---- Public Showcase (read-only sanitized dashboard view, no auth) ----
 
@@ -3952,6 +4024,245 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             logging.exception(f"[BrandEquity] AI analysis failed: {e}")
             await db.brand_studies.update_one({"id": study_id},
                 {"$set": {f"{cache_path}.status": "error", f"{cache_path}.error": str(e)}})
+
+    @brand_equity_router.get("/studies/{study_id}/score-history")
+    async def score_history(
+        study_id: str,
+        granularity: str = "wave",   # wave | month | week
+        current_user=Depends(get_current_user),
+    ):
+        """BES + dimension scores over time, so a tracking study shows a trend and
+        not just two waves side by side."""
+        study = await _get_owned_study(study_id, current_user)
+        responses = await db.brand_responses.find(
+            {"study_id": study_id}, {"_id": 0}
+        ).to_list(20000)
+        normalized = (study.get("ai_cache") or {}).get("normalized_by_question") or {}
+
+        def _dt(r):
+            raw = r.get("submitted_at") or r.get("created_at") or ""
+            try:
+                return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+            except Exception:
+                return None
+
+        buckets: List[dict] = []
+        if granularity == "wave":
+            wh = sorted(
+                (study.get("wave_history") or []),
+                key=lambda w: str(w.get("published_at") or ""),
+            )
+            if not wh:
+                granularity = "month"
+            else:
+                for i, w in enumerate(wh):
+                    start = str(w.get("published_at") or "")
+                    end = str(wh[i + 1].get("published_at")) if i + 1 < len(wh) else None
+                    buckets.append({
+                        "label": f"Wave {w.get('wave', i + 1)}",
+                        "from": start, "to": end,
+                    })
+        if granularity in ("month", "week"):
+            keyed: Dict[str, List[dict]] = {}
+            for r in responses:
+                d = _dt(r)
+                if not d:
+                    continue
+                if granularity == "month":
+                    key = d.strftime("%Y-%m")
+                else:
+                    iso = d.isocalendar()
+                    key = f"{iso[0]}-W{iso[1]:02d}"
+                keyed.setdefault(key, []).append(r)
+            buckets = [{"label": k, "responses": v} for k, v in sorted(keyed.items())]
+
+        points = []
+        for b in buckets:
+            if "responses" in b:
+                subset = b["responses"]
+            else:
+                subset = _apply_response_filter(
+                    responses, from_iso=b.get("from"), to_iso=b.get("to"), segments={},
+                )
+            if not subset:
+                points.append({"label": b["label"], "n": 0, "composite": {}})
+                continue
+            agg = _aggregate_responses(study, subset, normalized=normalized)
+            comp = agg.get("composite") or {}
+            points.append({
+                "label": b["label"],
+                "n": len(subset),
+                "from": b.get("from"),
+                "to": b.get("to"),
+                "composite": {k: v for k, v in comp.items() if not k.startswith("_")},
+                "measured": comp.get("_measured") or [],
+            })
+
+        return {
+            "granularity": granularity,
+            "points": points,
+            "note": "แต่ละจุดคำนวณจากผู้ตอบในช่วงนั้นเท่านั้น — จุดที่ n น้อยจะแกว่งง่าย "
+                    "ควรอ่านคู่กับ n ที่กำกับไว้",
+        }
+
+    @brand_equity_router.get("/studies/{study_id}/segment-significance")
+    async def segment_significance(
+        study_id: str,
+        field: str,
+        current_user=Depends(get_current_user),
+    ):
+        """Test whether the gap between demographic groups is real.
+
+        Two groups -> Welch's t-test. Three or more -> Welch's one-way ANOVA with
+        pairwise Welch post-hoc tests. Holm-adjusted across the four dimensions
+        either way. The dashboard could always SLICE by segment, but it never said
+        whether a 6-point gap between two groups of 15 meant anything.
+        """
+        study = await _get_owned_study(study_id, current_user)
+        responses = await db.brand_responses.find(
+            {"study_id": study_id}, {"_id": 0}
+        ).to_list(20000)
+
+        groups: Dict[str, List[dict]] = {}
+        for r in responses:
+            v = (r.get("demographics") or {}).get(field)
+            if v in (None, ""):
+                continue
+            groups.setdefault(str(v), []).append(r)
+        # A group of one or two cannot carry a variance estimate.
+        groups = {k: v for k, v in groups.items() if len(v) >= 3}
+
+        if len(groups) < 2:
+            return {
+                "field": field, "testable": False,
+                "groups": {k: len(v) for k, v in groups.items()},
+                "reason": "fewer_than_2_groups_with_enough_respondents",
+                "interpretation": f"ต้องมีอย่างน้อย 2 กลุ่มที่มีผู้ตอบ 3 คนขึ้นไปในตัวแปร '{field}'",
+            }
+
+        scores_by_group = {
+            g: _respondent_dimension_scores(study, rs) for g, rs in groups.items()
+        }
+        order = sorted(groups.keys())
+        by_dimension: Dict[str, Any] = {}
+        raw_p: List[tuple] = []
+
+        for dim in DIMENSIONS:
+            samples = [(g, scores_by_group[g].get(dim) or []) for g in order]
+            usable = [(g, s) for g, s in samples if len(s) >= 3]
+            if len(usable) < 2:
+                by_dimension[dim] = {
+                    "testable": False,
+                    "groups": {g: len(s) for g, s in samples},
+                    "reason": "too_few_respondents_per_group",
+                    "interpretation": "ผู้ตอบต่อกลุ่มน้อยเกินไปสำหรับมิตินี้ (ต้องการ 3 คนขึ้นไปต่อกลุ่ม)",
+                }
+                continue
+
+            group_stats = {
+                g: {"n": len(s), "mean": round(sum(s) / len(s), 1)} for g, s in usable
+            }
+            if len(usable) == 2:
+                res = _welch_t_test(usable[0][1], usable[1][1])
+                if res is None:
+                    by_dimension[dim] = {
+                        "testable": False, "groups": group_stats,
+                        "reason": "zero_variance",
+                        "interpretation": "คำตอบไม่มีความแปรผัน จึงทดสอบไม่ได้",
+                    }
+                    continue
+                by_dimension[dim] = {
+                    "testable": True, "test": "welch_t_two_sided",
+                    "groups": group_stats,
+                    "group_a": usable[0][0], "group_b": usable[1][0],
+                    **{k: v for k, v in res.items() if k != "test"},
+                }
+                raw_p.append((dim, res["p_value"]))
+            else:
+                import numpy as np
+                from scipy import stats as _st
+                arrays = [np.asarray(s, dtype=float) for _, s in usable]
+                # Welch ANOVA via scipy's alexandergovern (does not assume equal
+                # variances, unlike the classic F test).
+                try:
+                    ag = _st.alexandergovern(*arrays)
+                    stat, p = float(ag.statistic), float(ag.pvalue)
+                    test_name = "alexander_govern_welch_anova"
+                except Exception:
+                    f = _st.f_oneway(*arrays)
+                    stat, p = float(f.statistic), float(f.pvalue)
+                    test_name = "one_way_anova"
+                # Pairwise Welch post-hoc, Holm-adjusted within the dimension.
+                pairs = []
+                for i in range(len(usable)):
+                    for j in range(i + 1, len(usable)):
+                        r = _welch_t_test(usable[i][1], usable[j][1])
+                        if r:
+                            pairs.append({
+                                "group_a": usable[i][0], "group_b": usable[j][0],
+                                "diff": r["diff"], "p_value": r["p_value"],
+                                "cohens_d": r["cohens_d"], "effect_label": r["effect_label"],
+                            })
+                pair_adj = _holm_adjust([(f"{p_['group_a']}|{p_['group_b']}", p_["p_value"]) for p_ in pairs])
+                for p_ in pairs:
+                    key = f"{p_['group_a']}|{p_['group_b']}"
+                    p_["p_value_holm"] = pair_adj.get(key)
+                    p_["significant"] = bool((pair_adj.get(key) or 1) < 0.05)
+                by_dimension[dim] = {
+                    "testable": True, "test": test_name,
+                    "groups": group_stats,
+                    "statistic": round(stat, 3),
+                    "p_value": round(p, 6),
+                    "pairwise": pairs,
+                    "spread": round(max(v["mean"] for v in group_stats.values())
+                                    - min(v["mean"] for v in group_stats.values()), 1),
+                }
+                raw_p.append((dim, round(p, 6)))
+
+        adj = _holm_adjust(raw_p)
+        for dim, p_adj in adj.items():
+            t = by_dimension[dim]
+            t["p_value_holm"] = p_adj
+            t["significant"] = bool(p_adj < 0.05)
+            p_txt = "< 0.001" if p_adj < 0.001 else f"= {p_adj:.3f}"
+            if t.get("test") == "welch_t_two_sided":
+                lead = (f"{t['group_b']} {'สูงกว่า' if t['diff'] > 0 else 'ต่ำกว่า'} "
+                        f"{t['group_a']} {abs(t['diff']):.1f} คะแนน")
+            else:
+                lead = f"ช่องว่างระหว่างกลุ่มมากสุด {t.get('spread')} คะแนน"
+            t["interpretation"] = (
+                f"{lead} และ{'มีนัยสำคัญทางสถิติ' if t['significant'] else 'ยังไม่มีนัยสำคัญทางสถิติ'} "
+                f"(p {p_txt} หลังปรับ Holm)"
+                + ("" if t["significant"] else " — ยังแยกจากความคลาดเคลื่อนของการสุ่มไม่ได้")
+            )
+
+        return {
+            "field": field,
+            "testable": True,
+            "groups": {g: len(rs) for g, rs in groups.items()},
+            "excluded_note": "กลุ่มที่มีผู้ตอบน้อยกว่า 3 คนถูกตัดออกจากการทดสอบ",
+            "method": "Welch t-test (2 กลุ่ม) หรือ Alexander-Govern Welch ANOVA + post-hoc Welch (3 กลุ่มขึ้นไป), "
+                      "ปรับ Holm-Bonferroni ข้าม 4 มิติ, alpha = 0.05",
+            "by_dimension": by_dimension,
+            "caveat": "ทดสอบจากคะแนนระดับบุคคลของแต่ละมิติ ไม่ได้ทดสอบ BES โดยตรง "
+                      "และผู้ตอบมาจากการเลือกแบบสะดวก จึงสรุปเชิงสาเหตุไม่ได้",
+        }
+
+    @brand_equity_router.get("/studies/{study_id}/drafts-summary")
+    async def drafts_summary(study_id: str, current_user=Depends(get_current_user)):
+        """How many people started but never finished, for the owner's nudge card."""
+        await _get_owned_study(study_id, current_user)
+        drafts = await db.brand_response_drafts.find(
+            {"study_id": study_id}, {"_id": 0, "answered_count": 1, "updated_at": 1, "section": 1}
+        ).to_list(2000)
+        return {
+            "unfinished": len(drafts),
+            "median_answered": (
+                sorted(d.get("answered_count", 0) for d in drafts)[len(drafts) // 2]
+                if drafts else 0
+            ),
+            "last_activity": max((d.get("updated_at") or "") for d in drafts) if drafts else None,
+        }
 
     @brand_equity_router.post("/studies/{study_id}/ai-analyze")
     async def start_ai_analysis(

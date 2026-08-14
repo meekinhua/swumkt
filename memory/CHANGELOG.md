@@ -1,3 +1,48 @@
+## 2026-06-14 (round 3) — Simulated data, segment significance, resume links, score history + FINAL conjoint certification
+
+**Reliability Boost — realistic simulated dataset** `backend/scripts/seed_simulated_brand_study.py`
+- Study `demo-sim-chathai-001` "DEMO · ชาไทยมะลิ (ข้อมูลจำลอง)", 183 completed responses over 2 waves (Feb + May)
+  plus ~27 abandoned drafts. Flagged `is_simulated` and badged in the UI so it can never be mistaken for fieldwork.
+- Built as a measurement model, not noise: latent brand attitude per respondent from 5 archetypes → graded-response
+  thresholds per item, per-dimension factors correlated r≈0.75 with the overall attitude, and facet sub-factors
+  inside a dimension (as_person / as_product …). That is what produces credible α (quality 0.89, identity 0.93,
+  loyalty 0.72) instead of the ~0.0 uniform random answers would give, or the implausible 0.97 a single latent gave.
+- Also modelled: acquiescence, extreme and midpoint response styles, 3% straight-liners, speeders, item
+  non-response, 12% true drop-offs stored as drafts, Thai open-ended text per archetype with typos and nicknames,
+  a plausible campaign lift in wave 2 (awareness most, loyalty least), and **demographic effects** (under-25s
+  warmer, 45+ cooler, biting hardest on identity/loyalty) so the segment tests have something real to find.
+
+**Segment Significance** — `GET /studies/{id}/segment-significance?field=`
+- Two groups → Welch t-test; three or more → Alexander-Govern Welch ANOVA plus pairwise Welch post-hoc, all
+  Holm-adjusted across the four dimensions. Groups under 3 respondents are excluded and said so; nothing is
+  reported when it cannot be tested. New `BeSegmentSignificance.jsx` card with field switcher.
+- On the demo study: age is significant on identity (p=0.010) and loyalty (p<0.001), gender is ns — both paths visible.
+
+**Survey Reminder / Resume Link**
+- Drafts now live on the server (`brand_response_drafts`): `POST/GET/DELETE /public/{token}/draft`, debounced
+  autosave from the respondent page, `?draft=<id>` resume link with a copy button (works across devices, no email
+  needed), draft deleted when the response is submitted (`respond` accepts `draft_id`).
+- Owner-side `GET /studies/{id}/drafts-summary` + `BeUnfinishedCard`: how many started and never finished, median
+  items answered, and a copyable Thai nudge message.
+
+**Score History Chart** — `GET /studies/{id}/score-history?granularity=wave|month|week`
+- New `TrendLine` SVG component and `BeScoreHistory.jsx`: BES solid with value labels, four dimensions dashed,
+  n printed under every point, togglable legend, and an honest empty state when there is only one period.
+
+**FINAL CONJOINT CERTIFICATION**
+- 108 conjoint tests + 4 skips PASS. testing agent iteration_28 walked the full researcher journey on a fresh
+  study (create → attributes → sample-size card → D-optimal design → 14 public responses → overview → all four
+  methods → BIC compare → trash/restore → edge cases): 22/22 checks green, no defects.
+- Found by my own DOCX inspection afterwards (missed by every earlier round): the thesis coefficient table printed
+  the encoder's internal placeholder `ORPHAN_8b5ca0c7` as a level name for levels deleted after the design was
+  generated. Fixed with `_humanize_internal_labels` applied before results are cached or returned
+  (`__ORPHAN_xxxx__` → "ระดับที่ถูกลบภายหลัง (xxxx)", `__MISSING__` → "ไม่ได้แสดงในรอบนั้น") and
+  `ANALYSIS_CACHE_VERSION` 4→5 so stale rows carrying raw tokens cannot be served.
+- iteration_29 re-certified the fix: zero raw tokens across all four methods, cache invalidation confirmed, and a
+  freshly generated DOCX shows the readable label with all 13 β values matching the API exactly.
+- Not present in the module (reported, not requested): no market-simulation / share-of-preference what-if tool.
+
+
 ## 2026-06-14 (later) — Brand Equity follow-ups: list scores, wave significance testing, resume-draft, thesis parity check
 
 **1. Thesis Export Check (verified, no code change needed for parity)**

@@ -1,0 +1,46 @@
+{
+  "summary": "Iter 27 — final acceptance of the 4 new Brand Equity features (SIMULATED DEMO + reliability, Score History Chart, Segment Significance, Survey Reminder/Resume) + the owner nudge card, plus regression verification of the iter24 conjoint public-route HIGH bug. Backend: 14/14 new tests in /app/backend/tests/test_brand_equity_iter27_final.py PASS covering score-history (wave/month/week + non-owner 403), segment-significance (age SIG on identity+loyalty w/ pairwise Holm, gender ns, small-study not-testable + 403), drafts-summary (>=15 unfinished on demo + 403), full public draft lifecycle (create → get → update → delete + 404 after delete), draft-deleted-on-submit, and Conjoint public /results + /statistical-analysis (all 4 methods) reachable without a token. Existing conjoint regression suite test_conjoint_audit_2026_08.py + test_conjoint_stats_correctness.py 43/43 still PASS (no drift). Frontend: on /brand-equity/studies/demo-sim-chathai-001 be-simulated-badge, be-reliability-card (α: quality 0.89 · 4 items · n=164, identity 0.93 · 11 items · n=126, loyalty 0.72 · 2 items · n=183, awareness correctly refuses α with 'มีข้อคำถามมาตรวัดน้อยกว่า 2 ข้อ'), be-score-history (wave default with 2 wave points 53 → 60, month + week re-fetch and render, legend toggle for quality drops+restores its trendline series), be-segment-significance (age → identity SIG, loyalty SIG, awareness/quality ns; Alexander-Govern Welch ANOVA with pairwise rows including Holm-adjusted p; gender ns as expected; 4 age group means with n visible), be-unfinished-card showing count=27 + be-unfinished-copy button, be-sample-adequacy / be-glossary-card / be-dashboard-weights all render, zero console errors. Respondent resume-link flow verified end-to-end on /brand-equity/respond/demosimchathai: be-autosave-note + be-copy-resume-link appear after answering; draft id in localStorage key be_draft_id_demosimchathai; opening /brand-equity/respond/demosimchathai?draft=<uuid> in a fresh context (localStorage.clear + cookies cleared) restores the answers from the SERVER and shows a Thai success toast ('กู้คำตอบที่ทำไว้ 1 ข้อกลับมาแล้ว'). Iter-24 HIGH bug (Compare tab inert on public route) is FIXED: opened /conjoint/results/6099ac5b-... anonymously → tab-compare-methods populates compare-verdict ('ใช้ Multinomial Logit — ได้ค่า BIC ต่ำสุด และนำวิธีถัดไป (HB) อยู่ 3.2 จุด') + compare-fit-table + BIC column + integrity warning, zero console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BeScoreHistory · TrendLine legend / testids", "issues": [
+        "The BES trendline series uses data-testid=\"be-trendline-series-overall\" (series key = 'overall' in be-components.jsx L262), NOT 'be-trendline-series-bes' as the review request expected. The line renders correctly (solid black, thicker stroke, value labels 53 / 60), so this is purely a naming inconsistency between spec and code. Consider renaming series.key from 'overall' → 'bes' (or aliasing the testid to 'be-trendline-series-bes') so external test automation matches the spec vocabulary. LOW."
+      ]}
+    ]
+  },
+  "verified_acceptance_criteria": [
+    "GET /score-history?granularity=wave|month|week returns points[label/n/composite], owner-only (student1 → 403).",
+    "GET /segment-significance?field=age on demo-sim-chathai-001: testable=true, identity + loyalty significant, pairwise rows carry Holm-adjusted p, Alexander-Govern Welch ANOVA name; gender field → all four dimensions ns.",
+    "Small-study segment-significance returns testable=false with a reason (verified on TEST_UIBrand 0a0a1f3b, n=12) — no invented p-value.",
+    "GET /drafts-summary returns unfinished>=15 on demo (measured 27) and 403 for non-owner.",
+    "POST/GET/DELETE public/{token}/draft full lifecycle works; second POST with the same draft_id updates in place (upsert); GET after DELETE → 404.",
+    "POST public/{token}/respond with draft_id deletes the referenced draft (verified via subsequent GET → 404).",
+    "Conjoint public route: /api/conjoint/studies/{id}/results AND /statistical-analysis?method=mnl|mixed_logit|hierarchical_bayes|linear_regression all return 200 without auth — iter24 HIGH bug fix confirmed at API layer.",
+    "Frontend dashboard demo-sim-chathai-001: be-simulated-badge, be-reliability-card + per-dim be-reliability-{awareness,quality,identity,loyalty} all present; alpha numbers match spec (0.89 / 0.93 / 0.72), n>100 for quality (164) and loyalty (183); awareness correctly shown as unmeasurable.",
+    "be-score-history default = wave (2 points Wave 1 n=89, Wave 2 n=94); switching to be-history-gran-month and be-history-gran-week re-fetches; legend toggle be-history-legend-quality drops be-trendline-series-quality (1→0) and re-adds it (0→1).",
+    "be-segment-significance: age/gender/occupation field buttons all present; age verdicts render 'SIG' badges for identity + loyalty and 'ns' for awareness + quality; each row shows group means with n, test statistic, Holm-adjusted p, and Thai interpretation sentence.",
+    "be-unfinished-card renders be-unfinished-count=27 + working be-unfinished-copy button.",
+    "Respondent resume-link: be-autosave-note visible, be-copy-resume-link appears after debounced save; localStorage be_draft_id_demosimchathai holds the draft uuid; opening ?draft=<uuid> in a fresh cookie/storage-cleared context restores answers via the server and shows the Thai restore toast.",
+    "Conjoint public route (LOGGED OUT) /conjoint/results/6099ac5b-...: conjoint-plain-summary + conjoint-sample-adequacy mount, tab-compare-methods renders compare-verdict + compare-fit-table with a BIC-based verdict ('ใช้ Multinomial Logit — ได้ค่า BIC ต่ำสุด และนำ HB อยู่ 3.2 จุด'), zero console errors — iter24 HIGH bug fixed."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_brand_equity_iter27_final.py",
+    "/app/test_reports/pytest/iter27.xml"
+  ],
+  "action_items": [
+    "LOW / cosmetic: rename TrendLine BES series key from 'overall' to 'bes' (or add an alias testid) so the review-spec identifier be-trendline-series-bes exists — today it lives as be-trendline-series-overall. Purely a testability/nomenclature nit; the line renders correctly."
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_brand_equity_iter27_final.py (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14 new + 43/43 conjoint regression)", "frontend": "100% of tested acceptance criteria; 1 low-priority cosmetic testid nit"},
+  "seed_data_creation": "None permanent. Test flow created + deleted its own drafts via the public draft endpoints (create → update → delete verified). One 'draft_deleted_on_submit' test may have inserted 1 anonymous response on demo-sim-chathai-001 if the payload passed validation (respondent count went from 183 in seed to whatever /list reports now — check via GET /studies).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@swu.ac.th / admin123; student1@swu.ac.th / student123 (used for 403 check); public token demosimchathai",
+  "context_for_next_testing_agent": "All 4 new BE features and the iter24 conjoint public-route regression are green. Only unresolved item is a low-priority naming inconsistency: the BES series in BeScoreHistory's TrendLine is testid be-trendline-series-overall, not the spec-word be-trendline-series-bes. Backend regression file to keep: /app/backend/tests/test_brand_equity_iter27_final.py. Mali (c5b3458f) now has 2 waves so the be-score-history-empty state could not be exercised via the UI, but the testid exists in source (BeScoreHistory.jsx L72).",
+  "rca_of_the_issue": "N/A — no functional defects. The one cosmetic action item stems from be-components.jsx L262 where series key 'overall' is used verbatim as the testid suffix, so a series-key rename cascades into the testid. Choosing an explicit testidSuffix map ({overall: 'bes'}) would decouple the two."
+}

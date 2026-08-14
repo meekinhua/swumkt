@@ -225,6 +225,62 @@ export const HBar = ({ rows, color = '#1B75BC' }) => (
   </div>
 );
 
+// ============ TrendLine (score history over time) ============
+// points: [{ label, n, values: { key: number|null } }]
+// series: [{ key, label, color }]
+export const TrendLine = ({ points = [], series = [], height = 240, testid = 'be-trendline' }) => {
+  const W = 860, PAD_L = 44, PAD_R = 24, PAD_T = 14, PAD_B = 34;
+  const H = height;
+  const n = points.length;
+  const x = (i) => (n <= 1 ? PAD_L : PAD_L + (i * (W - PAD_L - PAD_R)) / (n - 1));
+  const y = (v) => PAD_T + (1 - (v / 100)) * (H - PAD_T - PAD_B);
+
+  return (
+    <div style={{ overflowX: 'auto' }} data-testid={testid}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 520, display: 'block' }}>
+        {[0, 25, 50, 75, 100].map(g => (
+          <g key={g}>
+            <line x1={PAD_L} x2={W - PAD_R} y1={y(g)} y2={y(g)}
+                  stroke="rgba(26,26,26,0.10)" strokeDasharray={g === 0 ? '' : '3 4'}/>
+            <text x={PAD_L - 8} y={y(g) + 3} textAnchor="end"
+                  style={{ fontSize: 9, fontFamily: 'IBM Plex Mono, monospace', fill: '#8A8D94' }}>{g}</text>
+          </g>
+        ))}
+        {points.map((p, i) => (
+          <text key={i} x={x(i)} y={H - 14}
+                textAnchor={n > 1 && i === 0 ? 'start' : n > 1 && i === n - 1 ? 'end' : 'middle'}
+                style={{ fontSize: 9.5, fontFamily: 'IBM Plex Mono, monospace', fill: '#5C5F66' }}>
+            {p.label} <tspan style={{ fill: '#A6A8AF' }}>n={p.n}</tspan>
+          </text>
+        ))}
+        {series.map(s => {
+          const pts = points.map((p, i) => [i, p.values?.[s.key]])
+                            .filter(([, v]) => typeof v === 'number');
+          if (!pts.length) return null;
+          const d = pts.map(([i, v], k) => `${k === 0 ? 'M' : 'L'}${x(i)},${y(v)}`).join(' ');
+          return (
+            <g key={s.key} data-testid={`${testid}-series-${s.testid || s.key}`}>
+              <path d={d} fill="none" stroke={s.color} strokeWidth={s.key === 'overall' ? 2.6 : 1.6}
+                    strokeDasharray={s.key === 'overall' ? '' : '5 4'}/>
+              {pts.map(([i, v]) => (
+                <g key={i}>
+                  <circle cx={x(i)} cy={y(v)} r={s.key === 'overall' ? 4.5 : 3} fill={s.color}/>
+                  {s.key === 'overall' && (
+                    <text x={x(i)} y={y(v) - 10} textAnchor="middle"
+                          style={{ fontSize: 10, fontWeight: 700, fill: s.color,
+                                   fontFamily: 'IBM Plex Mono, monospace' }}>{Math.round(v)}</text>
+                  )}
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
+
 // ============ Histogram ============
 export const Histogram = ({ values, peakIdx, color = '#D4A017', labels }) => {
   const max = Math.max(...values, 1);

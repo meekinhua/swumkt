@@ -1,0 +1,35 @@
+{
+  "summary": "Iter 29 — targeted certification of the ORPHAN/MISSING label humanisation fix on study 6099ac5b-4376-4c14-9d51-3c0637ca4260 (per user's iter28 self-audit find). Backend: new suite /app/backend/tests/test_conjoint_orphan_fix_iter29.py (9/9 PASS). For all 4 methods (mnl, mixed_logit, hierarchical_bayes, linear_regression) the serialised statistical-analysis JSON contains ZERO occurrences of '__ORPHAN', 'ORPHAN_' or '__MISSING__' — and where the encoder had emitted such a token (MNL/mixed_logit/HB brand column) the Thai replacement 'ระดับที่ถูกลบภายหลัง (xxxx)' appears instead, e.g. MNL coefficients now read 'แบรนด์_ระดับที่ถูกลบภายหลัง (8b5ca0c7)' and '(94033a59)'. Fit diagnostics still ship: pseudo_r_squared, pseudo_r_squared_adj, n_choice_situations, n_parameters, aic, bic for the 3 discrete-choice methods (linear_regression legitimately reports r_squared/adj_r_squared/f_statistic/f_pvalue instead — pre-existing OLS behaviour, iter28-approved). Cache-version regression: ?force=true returns cached=false; the following identical call is served from cache with the same numbers and still humanised — confirms ANALYSIS_CACHE_VERSION 4→5 invalidated the stale v4 rows carrying raw tokens. Thesis DOCX export (POST /export-thesis {'methods':['mnl'],'chapters':[4]}) returned cached and downloaded as 43757 bytes; the document text contains NO 'ORPHAN' or 'MISSING__' anywhere; the coefficient table shows the readable Thai replacement label; every one of MNL's 13 coefficient β values (0.096, -0.095, -0.010, 0.065, -0.092, -0.077, -0.034, 0.017, -0.085, -0.074, -0.129, -0.075, 0.022) is present in the DOCX table exactly as returned by /statistical-analysis?method=mnl; Hausman-McFadden IS mentioned but only inside the disclaimer sentence 'รายงานนี้ไม่ได้ทำการทดสอบข้อสมมติฐาน IIA (เช่น Hausman–McFadden test)' — spec-compliant. Frontend UI (Playwright, admin@swu.ac.th): logged in, opened /conjoint/results/6099ac5b-…, walked the Academic tab for all 4 methods via academic-method-select + academic-calc-btn. On no page did the strings 'ORPHAN' or 'MISSING__' appear. For attribute 'แบรนด์' the visible level labels in the part-worth utilities table are: '⭐ เมจิ' (reference) and 'หนองโพ' across all 4 methods; the mixed_logit and hierarchical_bayes coefficient/random-vars views additionally render 'แบรนด์_ระดับที่ถูกลบภายหลัง (8b5ca0c7)' — humanised text confirmed present in the DOM. Linear-regression view shows only declared levels (หนองโพ, เมจิ) in its coefficient row list; MNL coefficient section on the results page similarly restricts to declared brand levels — no raw tokens, no user-facing regression. Brand-Equity smoke on /brand-equity/studies/demo-sim-chathai-001: be-reliability-card, be-score-history, be-segment-significance and be-unfinished-card all render (1 each), be-trendline-series-bes exists (1), the old be-trendline-series-overall alias returns 0 — iter27 rename is in place. NO-DRIFT: re-ran the 4 existing conjoint suites (test_conjoint_audit_2026_08.py + test_conjoint_stats_correctness.py + test_conjoint_refactor.py + test_conjoint_final_e2e.py) — 108 passed, 4 skipped, 0 failures after the cache-version bump. Iter28 verdict stands.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "verified_acceptance_criteria": [
+    "ORPHAN/MISSING placeholders fully humanised in /statistical-analysis for all 4 methods on 6099ac5b — 0 occurrences of '__ORPHAN', 'ORPHAN_' or '__MISSING__' in serialised JSON",
+    "Readable Thai label 'ระดับที่ถูกลบภายหลัง (xxxx)' present in MNL/mixed_logit/HB coefficient tables where orphans exist",
+    "Fit diagnostics preserved: pseudo_r_squared, pseudo_r_squared_adj, n_choice_situations, n_parameters, aic, bic (MNL/mixed/HB) and r_squared/adj_r_squared/f_statistic/f_pvalue (OLS)",
+    "Cache-version regression: forced ?force=true recomputes (cached=false); second identical call is cached=true with identical numbers and identical humanised strings — ANALYSIS_CACHE_VERSION 4→5 invalidated stale rows",
+    "Thesis DOCX export: 0 'ORPHAN'/'MISSING__' text in paragraphs OR tables; coefficient table shows humanised label; β values match /statistical-analysis?method=mnl exactly; Hausman-McFadden mentioned only inside disclaimer",
+    "Frontend Academic tab walked for all 4 methods — visible attribute 'แบรนด์' labels are 'เมจิ' (⭐ reference) + 'หนองโพ', with 'ระดับที่ถูกลบภายหลัง (8b5ca0c7)' additionally visible in mixed_logit/HB DOM; NO 'ORPHAN'/'MISSING__' anywhere",
+    "Brand-Equity smoke on demo-sim-chathai-001: be-reliability-card / be-score-history / be-segment-significance / be-unfinished-card all render; be-trendline-series-bes present (iter27 alias rename in place)",
+    "NO-DRIFT: test_conjoint_audit_2026_08.py + test_conjoint_stats_correctness.py + test_conjoint_refactor.py + test_conjoint_final_e2e.py — 108/108 tests pass after cache-version bump"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_conjoint_orphan_fix_iter29.py",
+    "/app/test_reports/pytest/iter29_orphan.xml",
+    "/app/test_reports/pytest/iter29_no_drift.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_conjoint_orphan_fix_iter29.py (new — 9 tests, all pass)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 new orphan-fix tests + 108/108 existing conjoint regression tests)",
+    "frontend": "100% of walked acceptance criteria; 0 raw placeholder tokens visible on UI"
+  },
+  "seed_data_creation": "None. Read-only calls on 6099ac5b-... + demo-sim-chathai-001. zz-wavesig-0001 not touched.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@swu.ac.th / admin123",
+  "context_for_next_testing_agent": "The ORPHAN/MISSING placeholder humanisation fix (routes/conjoint.py _humanize_internal_labels + _ORPHAN_LABEL_RE at ~L61, applied at L4886 before results caching; ANALYSIS_CACHE_VERSION=5) is verified end-to-end (API + cache + DOCX + UI) across all 4 methods on 6099ac5b. No regression in the 4 existing conjoint suites. Keep /app/backend/tests/test_conjoint_orphan_fix_iter29.py as an ongoing regression. Frontend brand-labels visible on /conjoint/results for attribute 'แบรนด์' are: '⭐ เมจิ' (reference) + 'หนองโพ' + (mixed_logit & HB only) 'ระดับที่ถูกลบภายหลัง (8b5ca0c7)'.",
+  "rca_of_the_issue": "N/A — verification run only. Fix confirmed: `_humanize_internal_labels(results)` recurses through the results dict prior to caching so the placeholders emitted by the design encoder for post-deletion levels (__ORPHAN_<hexid>__ and __MISSING__) are replaced with Thai-readable strings before any downstream consumer (analysis cache, /statistical-analysis response, thesis-DOCX generator) touches them. The cache-version bump 4→5 was necessary because pre-fix v4 rows still contained the raw tokens; the schema_version guard in the cache reader (L4831, L5862) now skips v4 documents and forces a recompute on first hit."
+}

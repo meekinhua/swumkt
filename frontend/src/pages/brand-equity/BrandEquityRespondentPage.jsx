@@ -158,7 +158,10 @@ const BrandEquityRespondentPage = () => {
   const [showMissing, setShowMissing] = useState(false);
   const [startedAt] = useState(Date.now());
   const [savedDraft, setSavedDraft] = useState(null); // resume prompt on the welcome screen
+  const [serverDraftId, setServerDraftId] = useState(null);
+  const [resumeLinkCopied, setResumeLinkCopied] = useState(false);
   const DRAFT_KEY = `be_draft_${token}`;
+  const DRAFT_ID_KEY = `be_draft_id_${token}`;
 
   // Save progress locally on every change. The survey is 40+ items on a phone;
   // a lost tab, a phone call or a browser refresh used to mean starting over.
@@ -171,6 +174,53 @@ const BrandEquityRespondentPage = () => {
     } catch { /* private mode / quota — progress just is not saved */ }
     /* eslint-disable-next-line */
   }, [answers, demographics, section]);
+
+  // ...and to the SERVER, debounced. Local storage is tied to one browser on one
+  // device; a resume link works from anywhere and lets the study owner see who
+  // started but never finished.
+  useEffect(() => {
+    if (section < 0 || section > 4) return;
+    const payload = Object.entries(answers).map(([question_id, value]) => ({ question_id, value }));
+    if (!payload.length) return;
+    const t = setTimeout(() => {
+      axios.post(`${API}/brand-equity/public/${token}/draft`, {
+        draft_id: serverDraftId, answers: payload, demographics, section,
+      }).then(r => {
+        if (r.data?.draft_id && r.data.draft_id !== serverDraftId) {
+          setServerDraftId(r.data.draft_id);
+          try { localStorage.setItem(DRAFT_ID_KEY, r.data.draft_id); } catch { /* ignore */ }
+        }
+      }).catch(() => { /* offline or private mode — local copy still holds */ });
+    }, 1500);
+    return () => clearTimeout(t);
+    /* eslint-disable-next-line */
+  }, [answers, demographics, section]);
+
+  // Resume link in the URL (?draft=<id>) wins over the local copy: it is how a
+  // respondent moves from phone to laptop.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const did = params.get('draft') || (() => {
+      try { return localStorage.getItem(DRAFT_ID_KEY); } catch { return null; }
+    })();
+    if (!did) return;
+    setServerDraftId(did);
+    if (!params.get('draft')) return;   // only auto-load when the link was used
+    axios.get(`${API}/brand-equity/public/${token}/draft/${did}`)
+      .then(r => {
+        const d = r.data || {};
+        const asObj = {};
+        (d.answers || []).forEach(a => { asObj[a.question_id] = a.value; });
+        if (Object.keys(asObj).length) {
+          setAnswers(asObj);
+          setDemographics(d.demographics || {});
+          setSection(Math.min(4, Math.max(0, d.section ?? 0)));
+          toast.success(`กู้คำตอบที่ทำไว้ ${Object.keys(asObj).length} ข้อกลับมาแล้ว`);
+        }
+      })
+      .catch(() => { /* stale link — respondent just starts fresh */ });
+    /* eslint-disable-next-line */
+  }, [token]);
 
   // Look for a draft once the study is known, so the welcome screen can offer it.
   useEffect(() => {
@@ -198,7 +248,14 @@ const BrandEquityRespondentPage = () => {
     setSavedDraft(null);
   };
   const discardDraft = () => {
-    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(DRAFT_ID_KEY);
+    } catch { /* ignore */ }
+    if (serverDraftId) {
+      axios.delete(`${API}/brand-equity/public/${token}/draft/${serverDraftId}`).catch(() => {});
+      setServerDraftId(null);
+    }
     setSavedDraft(null);
   };
   const [lang, setLang] = useState(() => {
@@ -526,9 +583,13 @@ const BrandEquityRespondentPage = () => {
         demographics,
         answers: answersList,
         duration_sec: Math.round((Date.now() - startedAt) / 1000),
+        draft_id: serverDraftId,
       });
       setSection(5);
-      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(DRAFT_ID_KEY);
+      } catch { /* ignore */ }
     } catch (e) {
       toast.error('ส่งไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
     }
@@ -729,8 +790,26 @@ const BrandEquityRespondentPage = () => {
         <div className="be-tiny be-muted" data-testid="be-autosave-note"
              style={{ paddingBottom: 18, lineHeight: 1.5 }}>
           {lang === 'en'
-            ? 'Your answers are saved on this device — you can close the page and come back to finish.'
-            : 'คำตอบถูกบันทึกไว้ในเครื่องนี้อัตโนมัติ — ปิดหน้านี้แล้วกลับมาทำต่อได้'}
+            ? 'Your answers are saved automatically — you can close the page and come back to finish.'
+            : 'คำตอบถูกบันทึกอัตโนมัติ — ปิดหน้านี้แล้วกลับมาทำต่อได้'}
+          {serverDraftId && (
+            <>
+              {' '}
+              <button className="be-btn be-tiny" style={{ marginLeft: 4 }}
+                      data-testid="be-copy-resume-link"
+                      onClick={() => {
+                        const url = `${window.location.origin}/brand-equity/respond/${token}?draft=${serverDraftId}`;
+                        navigator.clipboard?.writeText(url);
+                        setResumeLinkCopied(true);
+                        toast.success(lang === 'en' ? 'Resume link copied' : 'คัดลอกลิงก์ทำต่อแล้ว');
+                        setTimeout(() => setResumeLinkCopied(false), 2500);
+                      }}>
+                {resumeLinkCopied
+                  ? (lang === 'en' ? 'Copied' : 'คัดลอกแล้ว')
+                  : (lang === 'en' ? 'Copy resume link' : 'คัดลอกลิงก์ทำต่อ (ใช้ได้ทุกเครื่อง)')}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

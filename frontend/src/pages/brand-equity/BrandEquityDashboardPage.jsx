@@ -13,6 +13,8 @@ import {
 import { BeFilterBar } from './BeFilterBar';
 import { BeMethodology } from './BeMethodology';
 import { BeWeightEditor } from './BeWeightEditor';
+import { BeScoreHistory, BeUnfinishedCard } from './BeScoreHistory';
+import { BeSegmentSignificance } from './BeSegmentSignificance';
 import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 
@@ -543,6 +545,14 @@ const BrandEquityDashboardPage = () => {
                 <div className="be-mono be-tiny be-muted" style={{ marginTop: 6 }}>
                   {study.brand?.category} · {responseCount} / {targetN} respondents
                 </div>
+                {study.is_simulated && (
+                  <div className="be-mono be-tiny" data-testid="be-simulated-badge"
+                       style={{ marginTop: 8, display: 'inline-block', padding: '2px 8px',
+                                border: '1px dashed var(--be-gold)', color: 'var(--be-gold)',
+                                letterSpacing: '0.08em' }}>
+                    ⚠ ข้อมูลจำลอง · SIMULATED DATA — ใช้สาธิต/ทดสอบระบบ ไม่ใช่ผลสำรวจจริง
+                  </div>
+                )}
               </div>
             </div>
             {!isShowcase ? (
@@ -802,6 +812,18 @@ const BrandEquityDashboardPage = () => {
         {/* WAVE COMPARE — side-by-side BES + 4 Aaker dims with delta */}
         {compareData && !isShowcase && (
           <WaveCompareCard data={compareData}/>
+        )}
+
+        {/* SCORE HISTORY + SEGMENT SIGNIFICANCE + UNFINISHED NUDGE */}
+        {ready_for_dashboard && !isShowcase && (
+          <>
+            <BeScoreHistory studyId={studyId} token={token}/>
+            <BeSegmentSignificance
+              studyId={studyId} token={token}
+              fields={Object.keys(data.segments_available || {})}/>
+            <BeUnfinishedCard studyId={studyId} token={token}
+                              shareToken={study?.share_token}/>
+          </>
         )}
 
         {/* NOT READY */}
