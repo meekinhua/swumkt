@@ -33,7 +33,12 @@
   background: var(--paper);
   color: var(--ink);
   min-height: 100vh;
-  overflow-x: hidden; /* defensive — guards against SVG label bleeds & wide content */
+  /* `overflow-x: hidden` computes to `overflow: hidden auto`, which turns this
+     element into the scrolling ancestor for any `position: sticky` descendant —
+     and since it never actually scrolls (the window does), the shared topbar
+     silently stopped sticking on every .be-root page. `clip` gives the same
+     protection against wide content WITHOUT creating a scroll container. */
+  overflow-x: clip;
 }
 
 /* Allow grid/flex children to shrink below their intrinsic min-content width
@@ -53,8 +58,8 @@
 /* Defensive: cards must clip overflowing children on mobile.
    Without this, long brand names / SVG dots / NPS labels can push the card
    wider than its column and break the entire grid layout. */
-.be-root .be-card { overflow-x: hidden; }
-.be-root .be-page { overflow-x: hidden; max-width: 100vw; }
+.be-root .be-card { overflow-x: clip; }
+.be-root .be-page { overflow-x: clip; max-width: 100vw; }
 
 /* Subtle paper grain — pure CSS, no images */
 .be-root::before {
@@ -73,6 +78,28 @@
    of the document — the Conjoint "สร้างการศึกษาใหม่" button looked completely dead. */
 .be-root > *:not(.fixed) { position: relative; z-index: 1; }
 .be-root > .fixed { z-index: 50; }
+
+/* The blanket rule above wins on specificity (0,2,0) over `.utb-root` (0,1,0),
+   so it was silently overriding the topbar's own `position: sticky; z-index: 50`
+   with `position: relative; z-index: 1`. Two consequences on every `.be-root`
+   page: the topbar stopped being sticky, and — because the sibling that follows
+   it also sits at z-index 1 and paints later — the topbar's "เครื่องมือ" dropdown
+   opened UNDERNEATH the page content and could not be clicked. `.utb-dd-menu`
+   carries `z-index: 100`, but that only orders it inside the topbar's own
+   stacking context; it cannot escape a parent pinned at z-index 1.
+   Same specificity, declared later, so these win. Same fix for the two legacy
+   in-file topbars, which have the identical rule.
+
+   z-index 40 is deliberate: above ordinary page content (which the rule above
+   pins at 1) but still BELOW `.be-root > .fixed` modals at 50, so a dialog keeps
+   covering the topbar rather than opening behind it. */
+.be-root > .utb-root,
+.be-root > .be-topbar,
+.be-root > .be-public-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
 
 .be-root *, .be-root *::before, .be-root *::after { box-sizing: border-box; }
 .be-root button { font-family: inherit; cursor: pointer; }

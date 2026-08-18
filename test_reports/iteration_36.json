@@ -1,0 +1,22 @@
+{
+  "summary": "Re-verified the sticky-topbar fix (overflow-x: hidden → overflow-x: clip on .be-root, .be-card, .be-page) called out in iteration_35. RESULT: fix works exactly as expected on every page previously flagged. On /market-research/conjoint-analysis, /conjoint/results/6099ac5b-4376-4c14-9d51-3c0637ca4260, /research/conjoint/6099ac5b-…/design, /brand-equity, and /brand-equity/studies/demo-sim-chathai-001 the topbar reports getBoundingClientRect().top = 0 with window.scrollY = 1000, position:sticky, z-index:40, and .be-root computed overflow = 'clip visible' / overflow-x = 'clip'. The 'เครื่องมือ' dropdown still opens above content (menu z-index 100, 7 items, first item visible & clickable) while scrolled to y=1000. NO horizontal bleed at either 1440px or 390px: document.documentElement.scrollWidth === window.innerWidth on all chart-heavy pages including demo-sim-chathai-001 (radar/trend SVGs), 6099… results (utility/compare tables) and /brand-equity/respond/demosimchathai. The respondent page uses its own public topbar (not .utb-root); no bleed there either. Modal regression checks pass: conjoint-new-study opens with position:fixed z-index:50 filling the viewport, weight editor overlays with position:fixed z-index:60 centered. Chromium in this harness supports overflow-x: clip (computed value confirmed). Backend not retested — request scope was frontend-only.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "brand-equity-styles.css correctly uses overflow-x: clip on .be-root, .be-card, .be-page. Because 'clip' does NOT establish a scroll container, position:sticky on the child UnifiedTopbar now attaches to the window as intended. Wide SVG/table content is still visually clipped, so no horizontal bleed regression at either 1440px or 390px. This is the standard, minimally-invasive fix; the earlier hidden→auto computed-value trap is gone."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only scope)", "frontend": "100% on sticky topbar + no horizontal bleed + modal layering"},
+  "seed_data_creation": "None — demo-sim-chathai-001, zz-wavesig-0001 and 6099ac5b-4376-4c14-9d51-3c0637ca4260 were left untouched.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@swu.ac.th / admin123",
+  "context_for_next_testing_agent": "Sticky topbar fix from iteration_35 recommendation is fully in place and verified. The .be-chip aria-pressed contrast check in the request could not be exercised on demo-sim-chathai-001 because the visible .be-chip elements on that dashboard render as static HIGH/MEDIUM/LOW badges (no aria-pressed attribute, no interactive selected state). This is not a regression — the chip CSS/specificity was not touched by the recent change. If a chip-selection UI must be verified explicitly, point the tester at a page that actually renders selectable demographic filter chips (aria-pressed toggles).",
+  "rca_of_the_issue": "Iteration_35's medium regression was that .be-root { overflow-x: hidden } computes to overflow: hidden auto, turning .be-root into the sticky ancestor while the window remained the real scroller — so the topbar scrolled off. Switching to overflow-x: clip keeps wide-content clipping without creating a scroll container, so the sticky ancestor is the window and the topbar now stays pinned at top=0 as content scrolls."
+}

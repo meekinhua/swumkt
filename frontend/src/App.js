@@ -34,7 +34,10 @@ const KanbanBoard = lazy(() => import('@/pages/KanbanBoard'));
 const ContentEditor = lazy(() => import('@/pages/ContentEditor'));
 const ContentBrowse = lazy(() => import('@/pages/ContentBrowse'));
 const ContentDetail = lazy(() => import('@/pages/ContentDetail'));
-const CustomerJourneyTool = lazy(() => import('@/pages/CustomerJourneyTool'));
+const CustomerJourneyHub = lazy(() => import('@/pages/journey/CustomerJourneyHub'));
+const JourneyWizardPage = lazy(() => import('@/pages/journey/JourneyWizardPage'));
+const JourneyDashboardPage = lazy(() => import('@/pages/journey/JourneyDashboardPage'));
+const JourneyRespondentPage = lazy(() => import('@/pages/journey/JourneyRespondentPage'));
 const CustomerBehaviorTool = lazy(() => import('@/pages/CustomerBehaviorTool'));
 const CustomerPerceptionTool = lazy(() => import('@/pages/CustomerPerceptionTool'));
 const CustomerValueListPage = lazy(() => import('@/pages/customer-value/CustomerValueListPage'));
@@ -225,10 +228,36 @@ function App() {
               path="/market-research/customer-journey"
               element={
                 <ProtectedRoute>
-                  <CustomerJourneyTool />
+                  <CustomerJourneyHub />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/market-research/customer-journey/quant/new"
+              element={
+                <ProtectedRoute>
+                  <JourneyWizardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/market-research/customer-journey/quant/:studyId/wizard"
+              element={
+                <ProtectedRoute>
+                  <JourneyWizardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/market-research/customer-journey/quant/:studyId"
+              element={
+                <ProtectedRoute>
+                  <JourneyDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Public respondent link — no auth */}
+            <Route path="/journey/r/:token" element={<JourneyRespondentPage />} />
             <Route
               path="/market-research/customer-behavior"
               element={

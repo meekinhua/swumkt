@@ -367,9 +367,51 @@ async def create_indexes():
     # Content course_id index for filtering by course
     await safe_create_index(db.contents, "course_id", background=True)
     
-    # Analysis cache indexes
-    await safe_create_index(db.analysis_cache, [("study_id", 1), ("method", 1)], unique=True, background=True)
+    # Analysis cache indexes.
+    #
+    # The unique key MUST include `filter_sig`. Conjoint upserts its statistical
+    # analysis on (study_id, method, filter_sig) so each date/segment slice gets
+    # its own cached row, but this index used to be unique on (study_id, method)
+    # alone. The first slice inserted fine; viewing a SECOND slice matched no
+    # document, attempted an insert, and the narrower unique index rejected it
+    # with DuplicateKeyError — surfacing as a 500 on the results page every time
+    # a user filtered by segment or date.
+    #
+    # Deployed databases already carry the old two-field index, and
+    # `safe_create_index` swallows failures, so simply declaring the wider one
+    # would leave the old constraint in force. Drop it first.
+    try:
+        await db.analysis_cache.drop_index("study_id_1_method_1")
+        logging.info("[INDEXES] dropped stale unique index analysis_cache.study_id_1_method_1")
+    except Exception:
+        pass  # never existed, or already dropped
+    # AI-interpretation and thesis rows write no `filter_sig`; Mongo indexes a
+    # missing key as null, so those keep exactly one row per (study_id, method),
+    # which is the existing intent.
+    await safe_create_index(
+        db.analysis_cache,
+        [("study_id", 1), ("method", 1), ("filter_sig", 1)],
+        unique=True, background=True,
+    )
     await safe_create_index(db.analysis_cache, "created_at", background=True)
+
+    # Customer Journey (quantitative). Its analysis cache is a SEPARATE
+    # collection on purpose (spec 8.2): rebuilding a unique index on the shared
+    # `analysis_cache` would put two shipping modules at risk for no gain.
+    await safe_create_index(db.journey_studies, "id", unique=True, background=True)
+    await safe_create_index(db.journey_studies, "share_token", background=True)
+    await safe_create_index(db.journey_studies, "owner_id", background=True)
+    await safe_create_index(db.journey_responses, "study_id", background=True)
+    await safe_create_index(db.journey_responses, "respondent_token", background=True)
+    await safe_create_index(db.journey_response_drafts, "id", unique=True, background=True)
+    await safe_create_index(db.journey_recontacts, "respondent_token", background=True)
+    await safe_create_index(db.qualitative_runs, "id", unique=True, background=True)
+    await safe_create_index(db.qualitative_runs, "owner_id", background=True)
+    await safe_create_index(
+        db.journey_analysis_cache,
+        [("study_id", 1), ("method", 1), ("filter_sig", 1)],
+        unique=True, background=True,
+    )
     
     logging.info(f"[INDEXES] Created: {indexes_created}, Skipped (already exist): {indexes_skipped}")
 
@@ -3371,6 +3413,10 @@ class JourneyMapRequest(BaseModel):
 class JourneyMapResponse(BaseModel):
     mermaid_code: str
     analysis_summary: str
+    # Persisted id of the stored qualitative run, so the quantitative journey
+    # module can seed a study from it. This endpoint used to be stateless, which
+    # left `/journey/studies/{id}/seed` with nothing to read.
+    qualitative_run_id: Optional[str] = None
 
 class JourneyMapContentCreate(BaseModel):
     title: str = Field(..., description="Content title")
@@ -3587,9 +3633,26 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
                 analysis_summary = response_text
                 mermaid_code = "graph TD\n    A[Start] --> B[Process Data]\n    B --> C[End]"
         
+        # Persist the run so the quantitative module can seed a study from it.
+        run_id = str(uuid.uuid4())
+        try:
+            await db.qualitative_runs.insert_one({
+                "id": run_id,
+                "owner_id": current_user.id,
+                "raw_text": (request.raw_data or "")[:20000],
+                "context": request.research_context or "",
+                "mermaid_code": mermaid_code,
+                "analysis": analysis_summary,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as persist_err:
+            logging.warning(f"[Journey] qualitative_runs persist failed: {persist_err}")
+            run_id = None
+
         return JourneyMapResponse(
             mermaid_code=mermaid_code,
-            analysis_summary=analysis_summary
+            analysis_summary=analysis_summary,
+            qualitative_run_id=run_id,
         )
         
     except Exception as e:
@@ -7991,6 +8054,12 @@ from routes.customer_value import get_customer_value_routes
 
 cv_routes = get_customer_value_routes(db, get_current_user, get_current_user_optional)
 api_router.include_router(cv_routes)
+
+# ============ CUSTOMER JOURNEY (quantitative) ============
+from routes.journey import get_journey_routes
+
+journey_routes = get_journey_routes(db, get_current_user, get_current_user_optional)
+api_router.include_router(journey_routes)
 
 # ============ SHARE — OG / Social Media Preview Bridges ============
 from routes.share import get_share_routes

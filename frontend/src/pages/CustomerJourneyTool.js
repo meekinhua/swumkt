@@ -16,7 +16,7 @@ import ShareJourneyMapModal from '@/components/ShareJourneyMapModal';
 import mermaid from 'mermaid';
 import { copyToClipboard } from '@/lib/clipboard';
 
-const CustomerJourneyTool = () => {
+const CustomerJourneyTool = ({ embedded = false }) => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user, token, logout } = useAuth();
@@ -507,13 +507,16 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
       )}
 
       <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F5F7FA 50%, #E8ECF1 100%)' }}>
-        {/* Navigation */}
-        <div className="fixed top-0 w-full z-50">
-          <Navigation />
-        </div>
+        {/* Navigation — suppressed when embedded inside the Journey hub, which
+            renders the unified topbar itself. */}
+        {!embedded && (
+          <div className="fixed top-0 w-full z-50">
+            <Navigation />
+          </div>
+        )}
 
       {/* Main Content */}
-      <div className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className={`${embedded ? 'pt-6' : 'pt-32'} pb-16 px-4 sm:px-6 lg:px-8`}>
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-12 text-center fade-in-up">

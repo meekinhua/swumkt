@@ -4892,19 +4892,31 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         results = _humanize_internal_labels(results)
     
         # Save to cache keyed by filter signature too.
-        await db.analysis_cache.update_one(
-            {"study_id": study_id, "method": method, "filter_sig": filter_sig},
-            {"$set": {
-                "study_id": study_id,
-                "method": method,
-                "filter_sig": filter_sig,
-                "schema_version": ANALYSIS_CACHE_VERSION,
-                "respondent_count": len(responses),
-                "results": results,
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }},
-            upsert=True
-        )
+        #
+        # Caching is an optimisation: the analysis already succeeded, so a failed
+        # write must never turn a good result into a 500. This upsert sits outside
+        # the try/except above, and until the unique index was widened to include
+        # `filter_sig` it raised DuplicateKeyError on the second filter slice of
+        # every study — the user saw a server error instead of their segment.
+        try:
+            await db.analysis_cache.update_one(
+                {"study_id": study_id, "method": method, "filter_sig": filter_sig},
+                {"$set": {
+                    "study_id": study_id,
+                    "method": method,
+                    "filter_sig": filter_sig,
+                    "schema_version": ANALYSIS_CACHE_VERSION,
+                    "respondent_count": len(responses),
+                    "results": results,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }},
+                upsert=True
+            )
+        except Exception as e:
+            logging.warning(
+                "Analysis cache write failed for study=%s method=%s filter=%s: %s",
+                study_id, method, filter_sig, e,
+            )
     
         return {
             "status": "success",

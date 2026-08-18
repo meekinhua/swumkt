@@ -574,3 +574,36 @@ endpoints ทั้งหมดมี projection ตัด heavy fields ออ�
 - **Object storage migration (when cleanup runs):** conjoint_studies ~20MB → expected ~50KB
 - **React Query caching:** เปลี่ยนหน้าระหว่าง dashboard/showcase → instant (จาก cache)
 - **Polling load:** tab idle → 0 API calls (was 2 req/min per tab)
+
+---
+
+## Quantitative Customer Journey (CJM) — Phase 0b + Phase 1 · 18 ส.ค. 2026
+
+Source of truth: `/app/HANDOFF_CJM.md` + `/app/memory/CJM_QUANT_SPEC.md` (1,438 บรรทัด).
+งานเดิมของ package (index `analysis_cache`, cache-write guard, ipma, sticky topbar) เสร็จและผ่าน testing agent iteration 35–36 แล้ว
+
+### สิ่งที่ลงในรอบนี้ (iteration 37 — ผ่านทั้ง backend และ frontend)
+**Phase 0b (แบบเบา ตามที่ตกลง)**
+- `backend/lib/consent.py` — consent object 3 ข้อแยกกัน (participation บังคับ / recontact / linkage), รหัสถอนความยินยอม 128-bit, blocklist PDPA ม.26 (reject จริง ไม่ใช่เตือน), retention เพดาน 24 เดือน
+- collections ใหม่ + index: `journey_studies`, `journey_responses`, `journey_response_drafts`, `journey_recontacts`, `qualitative_runs`, และ `journey_analysis_cache` (unique `study_id + method + filter_sig` แยกจาก `analysis_cache` เดิม)
+- `/api/generate-journey-map` บันทึกผลลง `qualitative_runs` และคืน `qualitative_run_id` (เดิมไม่เก็บอะไรเลย)
+- ตัด gate "อาจารย์ที่ปรึกษาอนุมัติ" ออก (ผู้สร้างเผยแพร่เองได้) · ยังไม่ retrofit Brand Equity
+
+**Phase 1 (model-free layer — ไม่มีสมมติฐาน Markov)**
+- `backend/routes/journey.py` — CRUD, seed จากแผนที่เชิงคุณภาพ, budget hard-block, design-preview, lock-instrument, ลิงก์สาธารณะ + draft/resume, withdraw (hard delete), analysis
+- `backend/routes/journey_instrument.py` — 3 เทมเพลตขั้นตอน, state id คงที่เมื่อแก้ถ้อยคำ, `structure_hash` (คีย์เดียวที่ใช้ pool ข้อมูล), คำถามกลุ่มแบบช่วง 5 ข้อ
+- `backend/routes/_analysis_common.py` — สำเนา filter/segment helper (import-only, ไม่แตะโมดูลที่ ship แล้ว)
+- ผลวิเคราะห์: เส้นทางจริง + Wilson CI, reach/ทำซ้ำ/rework รายขั้น, Burden 0–100 (POMP บนปลายสเกล ไม่ normalize ตาม sample), pain incidence + severity แบบมีเงื่อนไข, adequacy band + จำนวน "ลิงก์ที่ต้องส่งเพิ่ม", diagnostics ทุกตัวมีผลจริง (option position, late addition, mask violation, other, unknown, exclusions), careless battery คัดออกเมื่อเข้า ≥2 ข้อที่ประเมินได้เท่านั้น
+- ห้ามอ้างเกินข้อมูล: `matrix`/`map`/`priority` = null, gate ทั้งสองเป็น `not_run` และ p = null, สัดส่วนเส้นทางถูกซ่อนเมื่อผู้ตอบ < 30 คน
+- Frontend: `pages/journey/` — Hub (แท็บเชิงปริมาณ/เชิงคุณภาพ), List, Wizard 4 ขั้น (พื้นฐาน → ขั้นตอน → งบเวลา+สิ่งที่ได้ → ลิงก์), Dashboard แบบตารางล้วน, Respondent flow เต็ม (consent → recency → checklist → ก้าวทีละก้าว + trap → replay แก้ลำดับแบบแตะ → grid → pain → outcome → segments), PathBuilder (ไม่ใช้ drag)
+- Route: `/market-research/customer-journey`, `.../quant/new`, `.../quant/:id/wizard`, `.../quant/:id`, สาธารณะ `/journey/r/:token`
+- ทดสอบ: `backend/tests/test_journey_phase1.py` 29 เคส + testing agent สร้าง `test_journey_api_phase1.py` 12 เคส (ผ่านหมด) + main agent เดินฟลอว์ผู้ตอบครบทุกหน้าจนส่งคำตอบและถอนความยินยอมสำเร็จ
+- Seed: `backend/scripts/seed_journey_demo.py` → `demo-journey-kafae-001` (140 คำตอบจำลอง, ลิงก์ `/journey/r/demojourney1`)
+
+### Backlog CJM ที่ยังเหลือ (ตามลำดับ)
+- **P0 · Phase 2** — เมทริกซ์การเปลี่ยนขั้น, Gate A (order test) / Gate B (predictive), loss decomposition, bootstrap BCa, แผนที่ถ่วงน้ำหนัก
+- **P1 · Phase 3** — counterfactual Δ, tier, รายการ "ควรแก้อะไรก่อน", quadrant
+- **P1 · Phase 4** — เปรียบเทียบกลุ่มย่อย (ตัว filter/segment พร้อมแล้วใน backend)
+- **P2 · Phase 5** — Level B สินค้าใหม่ที่ยังไม่มีตัวเทียบ
+- **P2 · Phase 6** — narrative AI + export วิทยานิพนธ์ของ CJM
+- **P2** — retrofit consent/retention ไปยัง Brand Equity ตาม spec 2.10

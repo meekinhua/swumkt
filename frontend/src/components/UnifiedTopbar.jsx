@@ -216,7 +216,7 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
 
           {showInternal && (
             <Dropdown testid="utb-tools-dd"
-                      trigger={<span className={active === 'tools' || ['brand_equity', 'conjoint', 'surveys'].includes(active) ? 'is-active' : ''}>เครื่องมือ</span>}>
+                      trigger={<span className={active === 'tools' || ['brand_equity', 'conjoint', 'surveys', 'customer_journey'].includes(active) ? 'is-active' : ''}>เครื่องมือ</span>}>
               {TOOLS_LINKS.map(t => (
                 <Link key={t.to} to={t.to} className="utb-dd-item" data-testid={`utb-tools-${t.hint.toLowerCase()}`}>
                   <span className="utb-dd-label">{t.label}</span>

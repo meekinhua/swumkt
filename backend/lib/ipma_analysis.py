@@ -75,7 +75,7 @@ def determine_quadrant(importance: float, performance: float) -> Dict[str, str]:
     """
     Determine which quadrant the attribute falls into
     
-    Quadrants (using median as threshold):
+    Quadrants (threshold = 50 on the normalised 0-100 scale, NOT the median):
     - Q1 (High Importance, High Performance): "Maintain" - รักษาระดับ
     - Q2 (High Importance, Low Performance): "Improve" - ต้องปรับปรุงด่วน
     - Q3 (Low Importance, Low Performance): "Low Priority" - ไม่เร่งด่วน
@@ -88,7 +88,14 @@ def determine_quadrant(importance: float, performance: float) -> Dict[str, str]:
     Returns:
         Quadrant information
     """
-    # Use 50 as threshold (median of 0-100 scale)
+    # Fixed midpoint of the normalised scale. The docstring used to say "median",
+    # which it never was — and the distinction matters, because
+    # `normalize_scores` rescales on the SAMPLE min/max. An attribute is therefore
+    # classified relative to the other attributes IN THIS STUDY, not against any
+    # absolute standard: rescaling guarantees at least one attribute at 0 and one
+    # at 100, so some attribute always lands in "ต้องปรับปรุงด่วน" even when every
+    # attribute performs well. Report the quadrant as a within-study comparison,
+    # never as an absolute verdict.
     importance_threshold = 50
     performance_threshold = 50
     

@@ -32,3 +32,10 @@ Delete via `DELETE /api/brand-equity/studies/0a0a1f3b-54f9-4d06-addb-10a4c620d18
   - Cronbach α: quality ~0.89, identity ~0.93, loyalty ~0.72 (awareness has 1 Likert item by design)
   - Segment significance: `age` is SIGNIFICANT on identity + loyalty, `gender` is ns (by construction)
   - Re-seed with: `cd /app/backend && python scripts/seed_simulated_brand_study.py`
+
+## Customer Journey quantitative demo (Aug 2026, Phase 1)
+- `demo-journey-kafae-001` — "DEMO · เส้นทางลูกค้าร้านกาแฟ (ข้อมูลจำลอง)", owner admin@swu.ac.th, `is_simulated: true`
+  - 140 simulated responses, status `collecting`, 6 states (s1–s6), step s4 is the painful one (Burden ≈ 71, rework 1.32)
+  - Public respondent URL: `/journey/r/demojourney1`
+  - Owner dashboard: `/market-research/customer-journey/quant/demo-journey-kafae-001`
+  - Re-seed with: `cd /app/backend && python scripts/seed_journey_demo.py`
