@@ -85,6 +85,9 @@ class StudyUpdate(BaseModel):
     states: Optional[List[dict]] = None
     absorbing: Optional[dict] = None
     pain_options: Optional[Dict[str, List[str]]] = None
+    channel_options: Optional[List[str]] = None
+    ask_channel_per_step: Optional[bool] = None
+    state_meta: Optional[List[dict]] = None
     expected_transitions: Optional[dict] = None
     custom_segment: Optional[dict] = None
     status: Optional[str] = None
@@ -161,16 +164,20 @@ def _clean_submission(study: dict, data: JourneySubmit) -> dict:
     late = [s for s in data.late_additions if s in known]
 
     experience: Dict[str, dict] = {}
+    channels = set(study.get("channel_options") or ji.DEFAULT_CHANNEL_OPTIONS)
     for sid, val in (data.experience or {}).items():
         if sid not in known or not isinstance(val, dict):
             continue
         d = val.get("difficulty_1_5")
         e = val.get("emotion")
+        ch = val.get("channel")
         row: Dict[str, Any] = {}
         if isinstance(d, (int, float)) and not isinstance(d, bool) and 1 <= float(d) <= 5:
             row["difficulty_1_5"] = float(d)
         if isinstance(e, (int, float)) and not isinstance(e, bool) and -1 <= float(e) <= 1:
             row["emotion"] = float(e)
+        if ch in channels:
+            row["channel"] = str(ch)
         if row:
             experience[sid] = row
 
@@ -370,6 +377,18 @@ def compute_model_free(study: dict, responses: List[dict],
             for c in ((r.get("pain") or {}).get(sid) or {}).get("categories") or []:
                 cats[c] += 1
 
+        # Touchpoint: which channel the customer actually used at this step,
+        # counted from their own answers rather than assigned by the researcher.
+        chan = Counter()
+        for r in kept:
+            c = ((r.get("experience") or {}).get(sid) or {}).get("channel")
+            if c:
+                chan[c] += 1
+        chan_total = sum(chan.values())
+        channels = [{"label": c, "count": n,
+                     "share": (n / chan_total) if chan_total else None}
+                    for c, n in chan.most_common()]
+
         nodes[sid] = {
             "label_th": labels.get(sid),
             "stage_id": next((s.get("stage_id") for s in study.get("states") or []
@@ -394,6 +413,10 @@ def compute_model_free(study: dict, responses: List[dict],
                                      "m": len(sev),
                                      "caveat_th": copy_th.SEVERITY_CAVEAT},
             "pain_categories": [{"label": c, "count": n} for c, n in cats.most_common(6)],
+            "channels": channels,
+            "dominant_channel": channels[0]["label"] if channels else None,
+            "dominant_channel_share": channels[0]["share"] if channels else None,
+            "n_channel": chan_total,
             "no_visitors": n_visit == 0,
         }
 
@@ -437,8 +460,13 @@ def compute_model_free(study: dict, responses: List[dict],
     }
     diagnostics["warnings"] = _diagnostic_warnings(diagnostics)
 
+    # --- touchpoint + stage views (customer-side cuts) --------------------
+    touchpoints = _touchpoint_summary(study, kept)
+    stages_summary = _stage_summary(study, kept, nodes)
+
     # --- observed flow map (model-free) ----------------------------------
-    observed_flow = _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R)
+    observed_flow = _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R,
+                                   study.get('stages') or ji.DEFAULT_STAGES)
 
     unlocked = ["counts", "steps", "pain"]
     if R >= MIN_R_FOR_ROUTE_SHARE:
@@ -465,6 +493,8 @@ def compute_model_free(study: dict, responses: List[dict],
                    "none_route_share": (none_route / R) if R else 0.0,
                    "shares_hidden": not show_share},
         "nodes": nodes,
+        "touchpoints": touchpoints,
+        "stages_summary": stages_summary,
         "observed_flow": observed_flow,
         "diagnostics": diagnostics,
         "matrix": None, "loss": None, "priority": None, "map": None,
@@ -479,7 +509,98 @@ def compute_model_free(study: dict, responses: List[dict],
     return json_safe(results)
 
 
-def _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R) -> dict:
+def _touchpoint_summary(study: dict, kept: List[dict]) -> dict:
+    """Aggregate by the channel the CUSTOMER said they used.
+
+    The unit is a step-visit, not a respondent: one person can use the app at one
+    step and the shop at the next, and both facts belong to their own channel.
+    Burden and pain are therefore per visit as well, and `n` is printed beside
+    every number so nobody reads a 3-visit channel as a finding.
+    """
+    known = {s["id"] for s in (study.get("states") or [])}
+    rows: Dict[str, dict] = {}
+    for r in kept:
+        nominated = set((r.get("pain") or {}).get("nominated") or [])
+        for sid, exp in (r.get("experience") or {}).items():
+            ch = (exp or {}).get("channel")
+            if not ch or sid not in known:
+                continue
+            row = rows.setdefault(ch, {"label": ch, "n_visit": 0, "difficulties": [],
+                                       "emotions": [], "n_pain": 0, "steps": set()})
+            row["n_visit"] += 1
+            row["steps"].add(sid)
+            if isinstance(exp.get("difficulty_1_5"), (int, float)):
+                row["difficulties"].append(float(exp["difficulty_1_5"]))
+            if isinstance(exp.get("emotion"), (int, float)):
+                row["emotions"].append(float(exp["emotion"]))
+            if sid in nominated:
+                row["n_pain"] += 1
+
+    total = sum(v["n_visit"] for v in rows.values())
+    out = []
+    for row in sorted(rows.values(), key=lambda x: -x["n_visit"]):
+        burden, ci = _burden(row["difficulties"])
+        out.append({
+            "label": row["label"],
+            "n_visit": row["n_visit"],
+            "share_of_visits": (row["n_visit"] / total) if total else None,
+            "n_steps": len(row["steps"]),
+            "burden": burden,
+            "burden_ci95": ci,
+            "emotion": (sum(row["emotions"]) / len(row["emotions"])) if row["emotions"] else None,
+            "pain_rate": (row["n_pain"] / row["n_visit"]) if row["n_visit"] else None,
+            "pain_rate_ci95": mj.wilson_interval(row["n_pain"], row["n_visit"]),
+            "thin": row["n_visit"] < 10,
+        })
+    return {
+        "rows": out,
+        "total_visits": total,
+        "asked": bool(study.get("ask_channel_per_step")),
+        "measured": total > 0,
+        "unit_th": "หน่วยนับคือ “การผ่านหนึ่งขั้นของหนึ่งคน” ไม่ใช่จำนวนคน",
+        "note_th": ("ช่องทางมาจากคำตอบของผู้ตอบเองว่าตอนนั้นทำผ่านอะไร "
+                    "ไม่ได้มาจากที่ผู้วิจัยกำหนดแทนลูกค้า"),
+        "not_measured_th": ("การศึกษานี้ยังไม่ได้ถามช่องทางรายขั้น "
+                            "เปิดได้ที่หน้าแก้ไขการศึกษา (เพิ่มเวลาตอบประมาณ 16 วินาที)"),
+    }
+
+
+def _stage_summary(study: dict, kept: List[dict], nodes: dict) -> dict:
+    """Reach / burden / pain by the customer's phase, not by a funnel template."""
+    stages = study.get("stages") or ji.DEFAULT_STAGES
+    stage_of = {s["id"]: s.get("stage_id") for s in (study.get("states") or [])}
+    R = len(kept)
+    out = []
+    for st in stages:
+        sids = [sid for sid, stg in stage_of.items() if stg == st["id"]]
+        reached = sum(1 for r in kept
+                      if any(p.get("state_id") in sids for p in (r.get("path") or [])))
+        diffs, n_pain, n_rated = [], 0, 0
+        for r in kept:
+            nominated = set((r.get("pain") or {}).get("nominated") or [])
+            for sid in sids:
+                exp = (r.get("experience") or {}).get(sid) or {}
+                if isinstance(exp.get("difficulty_1_5"), (int, float)):
+                    diffs.append(float(exp["difficulty_1_5"]))
+                    n_rated += 1
+                    if sid in nominated:
+                        n_pain += 1
+        burden, ci = _burden(diffs)
+        out.append({
+            "id": st["id"], "label_th": st.get("label_th"),
+            "n_steps": len(sids),
+            "step_ids": sids,
+            "reach": (reached / R) if R else 0.0,
+            "n_reached": reached,
+            "burden": burden, "burden_ci95": ci,
+            "pain_rate": (n_pain / n_rated) if n_rated else None,
+            "n_rated": n_rated,
+        })
+    return {"rows": out,
+            "note_th": "ระยะคือสิ่งที่ลูกค้ากำลังทำ ไม่ใช่ขั้นตอนภายในของแบรนด์"}
+
+
+def _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R, stages=None) -> dict:
     """Counted transitions between steps — the map layer that is honest at Phase 1.
 
     This is NOT `results.map`: no probability is estimated, no certainty band is
@@ -517,6 +638,8 @@ def _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R) -> dict
             "stage_id": n.get("stage_id"), "n_visit": n.get("n_visit", 0),
             "reach": n.get("reach"), "burden": n.get("burden"),
             "revisit": n.get("revisit"),
+            "dominant_channel": n.get("dominant_channel"),
+            "dominant_channel_share": n.get("dominant_channel_share"),
             "pain_nomination_rate": n.get("pain_nomination_rate"),
         })
     for key in (mj.CONV, mj.ABANDON, mj.UNKNOWN):
@@ -529,6 +652,8 @@ def _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R) -> dict
     return {
         "nodes": flow_nodes,
         "edges": edges,
+        "stages": [{"id": s.get("id"), "label_th": s.get("label_th")}
+                   for s in (stages or [])],
         "max_edge_count": max_count,
         "total_transitions": int(sum(pair.values())),
         "share_floor": MIN_OUT_FOR_EDGE_SHARE,
@@ -706,6 +831,8 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             "absorbing": ji.default_absorbing(data.analysis_level),
             "expected_transitions": ji.default_expected_transitions(states),
             "pain_options": ji.default_pain_options(states),
+            "channel_options": list(ji.DEFAULT_CHANNEL_OPTIONS),
+            "ask_channel_per_step": True,
             "segment_questions": ji.build_segment_questions(),
             "consent": default_consent(data.researcher_name, data.advisor_name, data.contact),
             "content_revision": 1,
@@ -775,6 +902,28 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             upd["absorbing"] = {**(study.get("absorbing") or {}), **data.absorbing}
         if data.pain_options is not None:
             upd["pain_options"] = data.pain_options
+        if data.channel_options is not None:
+            opts = [str(o).strip() for o in data.channel_options if str(o).strip()][:8]
+            if len(opts) < 2:
+                raise HTTPException(400, "ต้องมีช่องทางให้ผู้ตอบเลือกอย่างน้อย 2 ช่องทาง")
+            violations = check_blocklist(opts)
+            if violations:
+                raise HTTPException(400, "ชื่อช่องทางมีข้อมูลอ่อนไหวตาม PDPA: " + ", ".join(violations))
+            upd["channel_options"] = opts
+        if data.ask_channel_per_step is not None:
+            upd["ask_channel_per_step"] = bool(data.ask_channel_per_step)
+        if data.state_meta is not None:
+            # Stage is a customer-side framing (what the customer is doing), so it
+            # is editable at any time and never changes `structure_hash`.
+            stage_ids = {s.get("id") for s in (after.get("stages") or ji.DEFAULT_STAGES)}
+            meta = {m.get("id"): m for m in data.state_meta if m.get("id")}
+            upd["states"] = [
+                {**s, "stage_id": (meta.get(s["id"], {}).get("stage_id")
+                                   if meta.get(s["id"], {}).get("stage_id") in stage_ids
+                                   else s.get("stage_id"))}
+                for s in (upd.get("states") or study.get("states") or [])
+            ]
+            after["states"] = upd["states"]
         if data.expected_transitions is not None:
             upd["expected_transitions"] = {"matrix": data.expected_transitions.get("matrix") or [],
                                            "role": "instrument_and_diagnostic_only"}
@@ -900,6 +1049,7 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             r_target=int(study.get("target_responses") or 100),
             level="solution" if study.get("analysis_level") == "solution" else "product",
             n_segment_items=len(study.get("segment_questions") or []),
+            ask_channel_per_step=bool(study.get("ask_channel_per_step")),
         )
         return json_safe(est)
 
@@ -943,7 +1093,8 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             raise HTTPException(400, "ต้องมีอย่างน้อย 3 ขั้นตอนก่อนเปิดเก็บข้อมูล")
         est = jb.check_design(m_states=m, r_target=int(study.get("target_responses") or 100),
                               level="solution" if study.get("analysis_level") == "solution" else "product",
-                              n_segment_items=len(study.get("segment_questions") or []))
+                              n_segment_items=len(study.get("segment_questions") or []),
+                              ask_channel_per_step=bool(study.get("ask_channel_per_step")))
         if est["blocked"]:
             raise HTTPException(400, "แบบสอบถามเกินเพดานที่ผู้ตอบรับไหว: " + " · ".join(est["blockers"]))
         if not (study.get("sampling_frame") or "").strip():
@@ -965,7 +1116,8 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             raise HTTPException(410, "แบบสอบถามนี้ปิดรับคำตอบแล้ว")
         await db.journey_studies.update_one({"id": study["id"]}, {"$inc": {"link_starts": 1}})
         est = jb.estimate(m_states=len(study.get("states") or []),
-                          n_segment_items=len(study.get("segment_questions") or []))
+                          n_segment_items=len(study.get("segment_questions") or []),
+                          ask_channel_per_step=bool(study.get("ask_channel_per_step")))
         return {
             "id": study["id"], "share_token": share_token,
             "title": study.get("title"), "analysis_level": study.get("analysis_level"),
@@ -974,6 +1126,8 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             "absorbing": study.get("absorbing"),
             "expected_transitions": study.get("expected_transitions"),
             "pain_options": study.get("pain_options"),
+            "channel_options": study.get("channel_options") or ji.DEFAULT_CHANNEL_OPTIONS,
+            "ask_channel_per_step": bool(study.get("ask_channel_per_step")),
             "segment_questions": study.get("segment_questions"),
             "recency_bands": ji.RECENCY_BANDS,
             "recall_window_days": study.get("recall_window_days"),

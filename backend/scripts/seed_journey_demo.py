@@ -40,6 +40,25 @@ STEPS = [
 # Per-step difficulty centre (1-5) — step 4 is the painful one on purpose.
 DIFF = {"s1": 1.8, "s2": 2.2, "s3": 2.6, "s4": 3.9, "s5": 2.9, "s6": 2.1}
 
+# Which channel the (simulated) customer used at each step, with realistic mixes.
+CHANNELS = {
+    "s1": [("โซเชียลมีเดีย/รีวิว", 0.7), ("คนรู้จัก/ปากต่อปาก", 0.3)],
+    "s2": [("แอป/เว็บไซต์", 0.6), ("หน้าร้าน/สถานที่จริง", 0.25), ("โซเชียลมีเดีย/รีวิว", 0.15)],
+    "s3": [("โซเชียลมีเดีย/รีวิว", 0.5), ("คนรู้จัก/ปากต่อปาก", 0.5)],
+    "s4": [("แอป/เว็บไซต์", 0.65), ("หน้าร้าน/สถานที่จริง", 0.35)],
+    "s5": [("หน้าร้าน/สถานที่จริง", 0.45), ("แอป/เว็บไซต์", 0.35), ("พนักงาน/ตัวแทน", 0.2)],
+    "s6": [("หน้าร้าน/สถานที่จริง", 0.7), ("พนักงาน/ตัวแทน", 0.3)],
+}
+
+
+def pick_channel(rnd, sid):
+    roll, acc = rnd.random(), 0.0
+    for label, w in CHANNELS[sid]:
+        acc += w
+        if roll <= acc:
+            return label
+    return CHANNELS[sid][-1][0]
+
 
 async def main():
     client = AsyncIOMotorClient(os.environ["MONGO_URL"])
@@ -73,6 +92,8 @@ async def main():
         "absorbing": ji.default_absorbing("product"),
         "expected_transitions": ji.default_expected_transitions(states),
         "pain_options": ji.default_pain_options(states),
+        "channel_options": list(ji.DEFAULT_CHANNEL_OPTIONS),
+        "ask_channel_per_step": True,
         "segment_questions": ji.build_segment_questions(),
         "consent": default_consent("นิสิตปริญญาโท", "อาจารย์ที่ปรึกษา", "swumkt@swu.ac.th"),
         "content_revision": 1,
@@ -117,7 +138,8 @@ async def main():
         for sid in uniq:
             d = max(1, min(5, round(rnd.gauss(DIFF[sid], 0.9))))
             experience[sid] = {"difficulty_1_5": float(d),
-                               "emotion": float(rnd.choice([-1, 0, 0, 1]) if d < 4 else -1)}
+                               "emotion": float(rnd.choice([-1, 0, 0, 1]) if d < 4 else -1),
+                               "channel": pick_channel(rnd, sid)}
         nominated = [sid for sid in uniq if experience[sid]["difficulty_1_5"] >= 4
                      and rnd.random() < 0.7][:2]
         pain = {"nominated": nominated}

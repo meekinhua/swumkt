@@ -79,6 +79,33 @@ const JourneyWizardPage = () => {
     // eslint-disable-next-line
   }, [token]);
 
+  const stageOf = (i) => study?.states?.[i]?.stage_id;
+
+  const setStage = async (i, stageId) => {
+    const sid = study?.states?.[i]?.id;
+    if (!sid) return;
+    setStudy((s) => ({
+      ...s,
+      states: s.states.map((x, k) => (k === i ? { ...x, stage_id: stageId } : x)),
+    }));
+    try {
+      const r = await axios.put(`${API}/journey/studies/${study.id}`,
+        { state_meta: [{ id: sid, stage_id: stageId }] }, authH);
+      setStudy(r.data);
+    } catch (e) { setError('บันทึกระยะไม่สำเร็จ'); }
+  };
+
+  const saveChannels = async (opts, ask) => {
+    try {
+      const r = await axios.put(`${API}/journey/studies/${study.id}`,
+        { channel_options: opts, ask_channel_per_step: ask }, authH);
+      setStudy(r.data);
+      await refreshBudget(study.id);
+    } catch (e) {
+      setError(e?.response?.data?.detail || 'บันทึกช่องทางไม่สำเร็จ');
+    }
+  };
+
   const createOrUpdate = async () => {
     setSaving(true); setError('');
     try {
@@ -253,14 +280,31 @@ const JourneyWizardPage = () => {
                 3–10 ขั้น · ชื่อขั้นควรเป็นสิ่งที่ลูกค้า “ทำ” ไม่ใช่สิ่งที่แบรนด์ทำ
               </p>
               {labels.map((l, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <input className="be-input" data-testid={`journey-state-${i}`} value={l}
-                         onChange={(e) => setLabels(labels.map((x, k) => (k === i ? e.target.value : x)))} />
-                  <button className="jy-icon-btn" data-testid={`journey-state-up-${i}`}
-                          disabled={i === 0}
-                          onClick={() => { const n = [...labels]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setLabels(n); }}>↑</button>
-                  <button className="jy-icon-btn" data-testid={`journey-state-del-${i}`}
-                          onClick={() => setLabels(labels.filter((_, k) => k !== i))}>✕</button>
+                <div key={i} style={{ marginTop: 12 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input className="be-input" data-testid={`journey-state-${i}`} value={l}
+                           onChange={(e) => setLabels(labels.map((x, k) => (k === i ? e.target.value : x)))} />
+                    <button className="jy-icon-btn" data-testid={`journey-state-up-${i}`}
+                            disabled={i === 0}
+                            onClick={() => { const n = [...labels]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setLabels(n); }}>↑</button>
+                    <button className="jy-icon-btn" data-testid={`journey-state-del-${i}`}
+                            onClick={() => setLabels(labels.filter((_, k) => k !== i))}>✕</button>
+                  </div>
+                  {study.states?.[i] && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                      <span className="be-tiny" style={{ color: 'var(--ink-3)', alignSelf: 'center' }}>
+                        ตอนนี้ลูกค้ากำลัง:
+                      </span>
+                      {(study.stages || []).map((st) => (
+                        <button key={st.id} className="be-chip be-chip-sm"
+                                aria-pressed={stageOf(i) === st.id}
+                                data-testid={`journey-stage-${i}-${st.id}`}
+                                onClick={() => setStage(i, st.id)}>
+                          {st.label_th}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               <button className="be-btn be-btn-sm" style={{ marginTop: 12 }} data-testid="journey-state-add"
@@ -275,6 +319,48 @@ const JourneyWizardPage = () => {
                   {saving ? 'กำลังบันทึก…' : 'บันทึกและดูงบเวลา'}
                 </button>
               </div>
+            </div>
+
+            <div className="be-card" style={{ marginTop: 14 }} data-testid="journey-channel-card">
+              <h3 className="be-card-t">ช่องทางที่ลูกค้าใช้ (touchpoint)</h3>
+              <p className="be-card-d">
+                เราไม่เดาแทนลูกค้า — ผู้ตอบจะเลือกเองว่าแต่ละขั้นทำผ่านช่องทางไหน
+                แล้วหน้าผลจะสรุปให้ว่าช่องทางไหนยุ่งยากและเป็นปัญหามากที่สุด
+              </p>
+              <button className="be-chip" style={{ marginTop: 6 }}
+                      aria-pressed={!!study.ask_channel_per_step}
+                      data-testid="journey-channel-toggle"
+                      onClick={() => saveChannels(study.channel_options || [], !study.ask_channel_per_step)}>
+                {study.ask_channel_per_step ? 'ถามช่องทางรายขั้น (เปิดอยู่)' : 'ไม่ถามช่องทางรายขั้น'}
+              </button>
+              {study.ask_channel_per_step && (
+                <>
+                  {(study.channel_options || []).map((c, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <input className="be-input" data-testid={`journey-channel-${i}`} value={c}
+                             onChange={(e) => setStudy((s) => ({
+                               ...s,
+                               channel_options: s.channel_options.map((x, k) => (k === i ? e.target.value : x)),
+                             }))} />
+                      <button className="jy-icon-btn" data-testid={`journey-channel-del-${i}`}
+                              onClick={() => saveChannels(
+                                (study.channel_options || []).filter((_, k) => k !== i), true)}>✕</button>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                    <button className="be-btn be-btn-sm" data-testid="journey-channel-add"
+                            disabled={(study.channel_options || []).length >= 8}
+                            onClick={() => setStudy((s) => ({
+                              ...s, channel_options: [...(s.channel_options || []), ''] }))}>
+                      + เพิ่มช่องทาง
+                    </button>
+                    <button className="be-btn be-btn-sm be-btn-primary" data-testid="journey-channel-save"
+                            onClick={() => saveChannels(study.channel_options || [], true)}>
+                      บันทึกช่องทาง
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="be-card" style={{ marginTop: 14 }} data-testid="journey-seed-card">

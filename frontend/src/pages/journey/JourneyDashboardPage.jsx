@@ -69,6 +69,7 @@ const JourneyDashboardPage = () => {
   const diag = res.diagnostics || {};
   const shareUrl = `${window.location.origin}/journey/r/${study.share_token}`;
   const stateOrder = (study.states || []).map((s) => s.id);
+  const stageLabel = (id) => (study.stages || []).find((s) => s.id === id)?.label_th || '—';
 
   return (
     <div className="be-root jy-root">
@@ -118,7 +119,7 @@ const JourneyDashboardPage = () => {
         {/* ---- observed-flow map ---------------------------------------- */}
         <Card title="แผนที่เส้นทางที่พบจริง" testid="journey-map"
               desc={`นับจากผู้ตอบ ${res.n_disclosure?.R_analysed ?? R} คน · การเปลี่ยนขั้นทั้งหมด ${res.observed_flow?.total_transitions ?? 0} ครั้ง`}>
-          <JourneyFlowMap flow={res.observed_flow} />
+          <JourneyFlowMap flow={res.observed_flow} touchpoints={res.touchpoints} />
         </Card>
 
         {/* ---- terminals ------------------------------------------------ */}
@@ -171,7 +172,8 @@ const JourneyDashboardPage = () => {
             <table className="be-table" style={{ width: '100%', minWidth: 760 }}>
               <thead>
                 <tr>
-                  <th>ขั้นตอน</th><th>ผ่านขั้นนี้</th><th>สัดส่วน (95%)</th>
+                  <th>ขั้นตอน</th><th>ระยะ</th><th>ช่องทางหลักที่ลูกค้าใช้</th>
+                  <th>ผ่านขั้นนี้</th><th>สัดส่วน (95%)</th>
                   <th>ทำซ้ำเฉลี่ย</th><th>ความยุ่งยาก 0–100</th><th>ช่วง 95%</th>
                   <th>ความรู้สึก</th><th>ระบุว่ามีปัญหา</th><th>ความรุนแรง (เฉพาะผู้เลือก)</th>
                 </tr>
@@ -182,6 +184,12 @@ const JourneyDashboardPage = () => {
                   return (
                     <tr key={sid} data-testid={`journey-step-${sid}`}>
                       <td>{n.label_th || sid}{n.no_visitors && <div className="be-tiny" style={{ color: 'var(--ink-3)' }}>ไม่มีผู้ตอบผ่านขั้นนี้</div>}</td>
+                      <td>{stageLabel(n.stage_id)}</td>
+                      <td>{n.dominant_channel || '—'}
+                        {n.dominant_channel && (
+                          <div className="be-tiny">{fmtPct(n.dominant_channel_share, 0)} · n={n.n_channel}</div>
+                        )}
+                      </td>
                       <td className="be-num">{n.n_visit ?? 0}</td>
                       <td className="be-num">{fmtPct(n.reach, 1)}<div className="be-tiny">{fmtCI(n.reach_ci95, 0)}</div></td>
                       <td className="be-num">{fmtNum(n.revisit, 2)}</td>
@@ -212,6 +220,73 @@ const JourneyDashboardPage = () => {
           <p className="be-tiny" style={{ color: 'var(--ink-3)', marginTop: 12, lineHeight: 1.6 }}>
             {res.interval_caveat_th || COPY.intervalCaveat}
           </p>
+        </Card>
+
+        {/* ---- touchpoints (customer-side channels) ---------------------- */}
+        <Card title="สรุปตามช่องทางที่ลูกค้าใช้ (touchpoint)" testid="journey-touchpoints"
+              desc={res.touchpoints?.measured
+                ? `${res.touchpoints.unit_th} · รวม ${res.touchpoints.total_visits} ครั้ง`
+                : null}>
+          {!res.touchpoints?.measured ? (
+            <div className="jy-locked" data-testid="journey-touchpoints-empty">
+              {res.touchpoints?.asked
+                ? 'ยังไม่มีผู้ตอบระบุช่องทาง — รอคำตอบเพิ่ม'
+                : res.touchpoints?.not_measured_th}
+            </div>
+          ) : (
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="be-table" style={{ width: '100%', minWidth: 640 }}>
+                  <thead>
+                    <tr><th>ช่องทาง</th><th>ผ่านกี่ครั้ง</th><th>% ของการผ่านทั้งหมด</th>
+                      <th>อยู่กี่ขั้น</th><th>ความยุ่งยาก 0–100</th><th>ช่วง 95%</th>
+                      <th>ความรู้สึก</th><th>ระบุว่ามีปัญหา</th></tr>
+                  </thead>
+                  <tbody>
+                    {res.touchpoints.rows.map((t) => (
+                      <tr key={t.label} data-testid={`journey-touchpoint-${t.label}`}>
+                        <td>{t.label}{t.thin && <div className="be-tiny" style={{ color: 'var(--ink-3)' }}>ข้อมูลยังน้อย</div>}</td>
+                        <td className="be-num">{t.n_visit}</td>
+                        <td className="be-num">{fmtPct(t.share_of_visits, 1)}</td>
+                        <td className="be-num">{t.n_steps}</td>
+                        <td className="be-num">{fmtNum(t.burden, 1)}</td>
+                        <td className="be-num">{fmtCIRaw(t.burden_ci95, 1)}</td>
+                        <td className="be-num">{fmtNum(t.emotion, 2)}</td>
+                        <td className="be-num">{fmtPct(t.pain_rate, 0)}
+                          <div className="be-tiny">{fmtCI(t.pain_rate_ci95, 0)}</div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="be-tiny" style={{ color: 'var(--ink-3)', marginTop: 10, lineHeight: 1.6 }}>
+                {res.touchpoints.note_th}
+              </p>
+            </>
+          )}
+        </Card>
+
+        {/* ---- stages (what the customer is doing) ----------------------- */}
+        <Card title="สรุปตามระยะของลูกค้า" desc={res.stages_summary?.note_th} testid="journey-stages">
+          <table className="be-table" style={{ width: '100%' }}>
+            <thead>
+              <tr><th>ระยะ</th><th>ขั้นตอน</th><th>ผู้ตอบที่มาถึงระยะนี้</th>
+                <th>ความยุ่งยาก 0–100</th><th>ช่วง 95%</th><th>ระบุว่ามีปัญหา</th></tr>
+            </thead>
+            <tbody>
+              {(res.stages_summary?.rows || []).map((s) => (
+                <tr key={s.id} data-testid={`journey-stage-${s.id}`}>
+                  <td>{s.label_th}</td>
+                  <td className="be-num">{s.n_steps}</td>
+                  <td className="be-num">{s.n_reached} · {fmtPct(s.reach, 0)}</td>
+                  <td className="be-num">{fmtNum(s.burden, 1)}</td>
+                  <td className="be-num">{fmtCIRaw(s.burden_ci95, 1)}</td>
+                  <td className="be-num">{fmtPct(s.pain_rate, 0)}
+                    <div className="be-tiny">n={s.n_rated}</div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
 
         {/* ---- pain categories ------------------------------------------ */}

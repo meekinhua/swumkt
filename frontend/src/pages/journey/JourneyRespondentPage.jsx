@@ -526,7 +526,8 @@ const JourneyRespondentPage = () => {
   if (screen === 'grid') {
     const setVal = (sid, key, v) =>
       setExperience((p) => ({ ...p, [sid]: { ...(p[sid] || {}), [key]: v } }));
-    const complete = gridStates.every((s) => experience[s]?.difficulty_1_5);
+    const complete = gridStates.every((s) => experience[s]?.difficulty_1_5
+      && (!study.ask_channel_per_step || experience[s]?.channel));
     return (
       <JyFrame {...frameProps} title="แต่ละขั้นยุ่งยากแค่ไหน" sub="ตอบเฉพาะขั้นที่คุณทำจริง · 1 = ง่ายมาก, 5 = ยุ่งยากมาก"
              testid="jy-screen-grid" next={() => go('pain')} nextDisabled={!complete}>
@@ -550,6 +551,21 @@ const JourneyRespondentPage = () => {
                         onClick={() => setVal(sid, 'emotion', v)}>{lab}</button>
               ))}
             </div>
+            {study.ask_channel_per_step && (
+              <>
+                <div className="be-label" style={{ marginTop: 12 }}>
+                  ตอนนั้นคุณทำขั้นนี้ผ่านช่องทางไหน
+                </div>
+                <div className="jy-optlist">
+                  {(study.channel_options || []).map((c) => (
+                    <button key={c} type="button"
+                            className={`jy-opt ${experience[sid]?.channel === c ? 'jy-on' : ''}`}
+                            data-testid={`jy-chan-${sid}-${c}`}
+                            onClick={() => setVal(sid, 'channel', c)}>{c}</button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ))}
       </JyFrame>

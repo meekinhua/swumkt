@@ -111,3 +111,5 @@
   border: 1px dashed var(--rule); font-family: 'IBM Plex Mono', monospace;
   font-size: 11px; line-height: 1.6; overflow-x: auto; white-space: pre;
 }
+.jy-sw-pain { background: transparent; border: 3px solid #B0332A; }
+.be-chip-sm { font-size: 12px !important; padding: 5px 10px !important; min-height: 30px !important; }

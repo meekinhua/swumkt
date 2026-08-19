@@ -62,7 +62,7 @@ def _multi(k_options: int) -> float:
 def estimate(m_states: int, mean_path_length: float = 4.0,
              pain_nominations: float = 1.3, incident_share: float = 0.65,
              n_segment_items: int = 6, level: str = "product",
-             n_odi_outcomes: int = 0) -> Dict:
+             n_odi_outcomes: int = 0, ask_channel_per_step: bool = False) -> Dict:
     """Expected screens, scored items and seconds for one instrument.
 
     `mean_path_length` is the observed L-bar, calibrated at 4.0 rather than the
@@ -88,9 +88,15 @@ def estimate(m_states: int, mean_path_length: float = 4.0,
     add("Q3-Qk", "ถามทีละก้าว", mean_path_length, mean_path_length,
         mean_path_length * SEC_BRANCH)
     add("Q10", "ทวนและแก้ลำดับ", 1, 1, SEC_REPLAY)
-    # Experience grid over visited steps: 2 cells each.
-    add("G1", "ความยุ่งยาก/ความรู้สึกรายขั้น", 1, 2 * mean_path_length,
-        SEC_GRID_OVERHEAD + SEC_GRID_ROW_2CELL * mean_path_length)
+    # Experience grid over visited steps: 2 cells each, 3 when the touchpoint
+    # (which channel the customer used) is measured per step instead of assumed.
+    if ask_channel_per_step:
+        add("G1", "ความยุ่งยาก/ความรู้สึก/ช่องทางรายขั้น", 1, 3 * mean_path_length,
+            SEC_GRID_OVERHEAD
+            + (SEC_GRID_ROW_2CELL + SEC_GRID_ROW_1CELL) * mean_path_length)
+    else:
+        add("G1", "ความยุ่งยาก/ความรู้สึกรายขั้น", 1, 2 * mean_path_length,
+            SEC_GRID_OVERHEAD + SEC_GRID_ROW_2CELL * mean_path_length)
     add("P1", "เลือกขั้นที่มีปัญหา", 1, 1, _multi(m_states))
     add("P2-P3", "รายละเอียดปัญหา", pain_nominations, 2 * pain_nominations,
         pain_nominations * (SEC_SLIDER_0_10 + _multi(6)))

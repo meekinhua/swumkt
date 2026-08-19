@@ -17,9 +17,22 @@ from lib.consent import check_blocklist
 # Vocabulary
 # ---------------------------------------------------------------------------
 DEFAULT_STAGES = [
-    {"id": "pre", "label_th": "ก่อนตัดสินใจ", "order": 1},
-    {"id": "purchase", "label_th": "ตอนตัดสินใจ/ซื้อ", "order": 2},
-    {"id": "post", "label_th": "หลังซื้อ", "order": 3},
+    # Named from the CUSTOMER's point of view — this is UX research, so a stage
+    # is what the customer is doing, never what the brand is doing to them.
+    {"id": "pre", "label_th": "ยังหาข้อมูล/เทียบตัวเลือก", "order": 1},
+    {"id": "purchase", "label_th": "กำลังตัดสินใจและซื้อ", "order": 2},
+    {"id": "post", "label_th": "ได้ของแล้วและใช้งาน", "order": 3},
+]
+
+# Touchpoint options as the CUSTOMER experiences them. Measured per step from
+# each respondent — never declared by the researcher on the customer's behalf.
+DEFAULT_CHANNEL_OPTIONS = [
+    "แอป/เว็บไซต์",
+    "หน้าร้าน/สถานที่จริง",
+    "โซเชียลมีเดีย/รีวิว",
+    "คนรู้จัก/ปากต่อปาก",
+    "พนักงาน/ตัวแทน",
+    "โทรศัพท์/แชท",
 ]
 
 OWNERS = ["brand", "partner", "customer", "social"]
@@ -200,6 +213,8 @@ def compute_structure_hash(study: dict) -> str:
                       for q in (study.get("segment_questions") or [])],
         "pain_option_counts": {k: len(v or []) for k, v in
                                (study.get("pain_options") or {}).items()},
+        "channel_options": len(study.get("channel_options") or []),
+        "ask_channel_per_step": bool(study.get("ask_channel_per_step")),
         "recall_window_days": study.get("recall_window_days"),
         "analysis_level": study.get("analysis_level"),
     }

@@ -366,3 +366,105 @@ def test_observed_flow_nodes_cover_start_steps_and_three_terminals():
     kinds = [n["kind"] for n in flow["nodes"]]
     assert kinds.count("start") == 1 and kinds.count("terminal") == 3
     assert kinds.count("step") == len(study["states"])
+
+
+# ---------------------------------------------------------------------------
+# Touchpoints and stages — read from the customer, not declared for them
+# ---------------------------------------------------------------------------
+def _resp_ch(rid, path, terminal, rows, nominated=None):
+    r = resp(rid, path, terminal, {sid: d for sid, (d, _) in rows.items()})
+    for sid, (d, ch) in rows.items():
+        r["experience"][sid]["channel"] = ch
+    if nominated:
+        r["pain"] = {"nominated": nominated,
+                     **{sid: {"severity_0_10": 7.0, "categories": []} for sid in nominated}}
+    return r
+
+
+def test_touchpoints_are_counted_per_step_visit_not_per_respondent():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    study["channel_options"] = list(ji.DEFAULT_CHANNEL_OPTIONS)
+    app, shop = "แอป/เว็บไซต์", "หน้าร้าน/สถานที่จริง"
+    responses = [_resp_ch(f"r{i}", ["s1", "s2"], "CONV",
+                          {"s1": (2, app), "s2": (4, shop)}) for i in range(10)]
+    tp = J.compute_model_free(study, responses)["touchpoints"]
+    rows = {r["label"]: r for r in tp["rows"]}
+    assert tp["total_visits"] == 20 and tp["measured"] is True
+    assert rows[app]["n_visit"] == 10 and rows[shop]["n_visit"] == 10
+    assert rows[app]["share_of_visits"] == pytest.approx(0.5)
+    assert rows[app]["burden"] == pytest.approx(25.0)     # difficulty 2 -> 25
+    assert rows[shop]["burden"] == pytest.approx(75.0)    # difficulty 4 -> 75
+    assert "การผ่านหนึ่งขั้นของหนึ่งคน" in tp["unit_th"]
+
+
+def test_touchpoint_pain_rate_uses_that_channels_visits():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    app, shop = "แอป/เว็บไซต์", "หน้าร้าน/สถานที่จริง"
+    responses = ([_resp_ch(f"p{i}", ["s1", "s2"], "CONV",
+                           {"s1": (2, app), "s2": (5, shop)}, nominated=["s2"])
+                  for i in range(6)]
+                 + [_resp_ch(f"q{i}", ["s1", "s2"], "CONV",
+                             {"s1": (2, app), "s2": (3, shop)}) for i in range(4)])
+    rows = {r["label"]: r for r in J.compute_model_free(study, responses)["touchpoints"]["rows"]}
+    assert rows[shop]["pain_rate"] == pytest.approx(0.6)
+    assert rows[app]["pain_rate"] == pytest.approx(0.0)
+    assert rows[shop]["pain_rate_ci95"] is not None
+
+
+def test_touchpoints_report_not_asked_rather_than_zero():
+    study = make_study()
+    study["ask_channel_per_step"] = False
+    responses = [resp(f"r{i}", ["s1", "s2"], "CONV", {"s1": 3}) for i in range(10)]
+    tp = J.compute_model_free(study, responses)["touchpoints"]
+    assert tp["measured"] is False and tp["asked"] is False and tp["rows"] == []
+    assert "ยังไม่ได้ถามช่องทาง" in tp["not_measured_th"]
+
+
+def test_dominant_channel_on_the_step_comes_from_respondents():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    app, shop = "แอป/เว็บไซต์", "หน้าร้าน/สถานที่จริง"
+    responses = ([_resp_ch(f"a{i}", ["s1"], "CONV", {"s1": (3, app)}) for i in range(7)]
+                 + [_resp_ch(f"b{i}", ["s1"], "CONV", {"s1": (3, shop)}) for i in range(3)])
+    node = J.compute_model_free(study, responses)["nodes"]["s1"]
+    assert node["dominant_channel"] == app
+    assert node["dominant_channel_share"] == pytest.approx(0.7)
+    assert node["n_channel"] == 10
+
+
+def test_unknown_channel_value_is_dropped_not_stored():
+    study = make_study()
+    study["channel_options"] = list(ji.DEFAULT_CHANNEL_OPTIONS)
+    clean = J._clean_submission(study, J.JourneySubmit(
+        consent={"participation": True}, terminal="CONV",
+        path=[{"state_id": "s1", "order": 0}],
+        experience={"s1": {"difficulty_1_5": 3, "channel": "ช่องทางที่ไม่มีในลิสต์"}}))
+    assert "channel" not in clean["experience"]["s1"]
+
+
+def test_stage_summary_reports_customer_phases():
+    study = make_study()
+    responses = [resp(f"r{i}", ["s1", "s2", "s4"], "CONV",
+                      {"s1": 2, "s2": 2, "s4": 5}) for i in range(10)]
+    rows = {r["id"]: r for r in J.compute_model_free(study, responses)["stages_summary"]["rows"]}
+    assert rows["pre"]["n_reached"] == 10
+    assert rows["pre"]["burden"] == pytest.approx(25.0)
+    assert rows["purchase"]["n_reached"] == 10        # s4 is in the purchase stage
+    assert rows["purchase"]["burden"] == pytest.approx(100.0)
+    assert rows["post"]["n_reached"] == 0
+
+
+def test_stage_labels_are_written_from_the_customer_side():
+    joined = " ".join(s["label_th"] for s in ji.DEFAULT_STAGES)
+    for phrase in ("หาข้อมูล", "ตัดสินใจ", "ใช้งาน"):
+        assert phrase in joined
+
+
+def test_channel_question_is_inside_the_time_budget():
+    without = jb.check_design(6, 150, ask_channel_per_step=False)
+    with_ch = jb.check_design(6, 150, ask_channel_per_step=True)
+    assert with_ch["seconds_median"] > without["seconds_median"]
+    assert with_ch["scored_items"] > without["scored_items"]
+    assert with_ch["blocked"] is False       # still inside the cap at m=6
