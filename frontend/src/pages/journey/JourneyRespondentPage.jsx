@@ -534,9 +534,11 @@ const JourneyRespondentPage = () => {
       return { ...p, [sid]: { ...row, channels: next, channel: next[0] } };
     });
     const complete = gridStates.every((s) => experience[s]?.difficulty_1_5
+      && (!study.ask_anxiety_per_step || experience[s]?.anxiety_1_5)
       && (!study.ask_channel_per_step || (experience[s]?.channels || []).length > 0));
     return (
-      <JyFrame {...frameProps} title="แต่ละขั้นยุ่งยากแค่ไหน" sub="ตอบเฉพาะขั้นที่คุณทำจริง · 1 = ง่ายมาก, 5 = ยุ่งยากมาก"
+      <JyFrame {...frameProps} title="แต่ละขั้นเป็นอย่างไรสำหรับคุณ"
+             sub="ตอบเฉพาะขั้นที่คุณทำจริง · ทั้งความยุ่งยาก ความรู้สึก ความกังวล และช่องทางที่ใช้"
              testid="jy-screen-grid" next={() => go('pain')} nextDisabled={!complete}>
         {gridStates.map((sid) => (
           <div className="be-card" key={sid} style={{ marginBottom: 12 }} data-testid={`jy-grid-${sid}`}>
@@ -558,6 +560,20 @@ const JourneyRespondentPage = () => {
                         onClick={() => setVal(sid, 'emotion', v)}>{lab}</button>
               ))}
             </div>
+            {study.ask_anxiety_per_step && (
+              <>
+                <div className="be-label" style={{ marginTop: 12 }}>
+                  ตอนนั้นคุณกังวลหรือไม่มั่นใจแค่ไหน (1 = มั่นใจมาก, 5 = กังวลมาก)
+                </div>
+                <div className="jy-scale">
+                  {[1, 2, 3, 4, 5].map((v) => (
+                    <button key={v} type="button" data-testid={`jy-anx-${sid}-${v}`}
+                            className={experience[sid]?.anxiety_1_5 === v ? 'jy-on' : ''}
+                            onClick={() => setVal(sid, 'anxiety_1_5', v)}>{v}</button>
+                  ))}
+                </div>
+              </>
+            )}
             {study.ask_channel_per_step && (
               <>
                 <div className="be-label" style={{ marginTop: 12 }}>

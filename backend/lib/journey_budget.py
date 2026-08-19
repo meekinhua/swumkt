@@ -63,7 +63,8 @@ def estimate(m_states: int, mean_path_length: float = 4.0,
              pain_nominations: float = 1.3, incident_share: float = 0.65,
              n_segment_items: int = 6, level: str = "product",
              n_odi_outcomes: int = 0, ask_channel_per_step: bool = False,
-             channel_multi: bool = False, n_channel_options: int = 6) -> Dict:
+             channel_multi: bool = False, n_channel_options: int = 6,
+             ask_anxiety_per_step: bool = False) -> Dict:
     """Expected screens, scored items and seconds for one instrument.
 
     `mean_path_length` is the observed L-bar, calibrated at 4.0 rather than the
@@ -95,6 +96,8 @@ def estimate(m_states: int, mean_path_length: float = 4.0,
         # Multi-select costs more than a single pick, and a step really does have
         # several touchpoints, so the extra seconds are charged honestly.
         chan_sec = _multi(n_channel_options) if channel_multi else SEC_GRID_ROW_1CELL
+        if ask_anxiety_per_step:
+            chan_sec += SEC_GRID_ROW_1CELL
         add("G1", "ความยุ่งยาก/ความรู้สึก/ช่องทางรายขั้น", 1, 3 * mean_path_length,
             SEC_GRID_OVERHEAD + (SEC_GRID_ROW_2CELL + chan_sec) * mean_path_length)
     else:

@@ -106,6 +106,7 @@ async def main():
         "channel_modes": ji.default_channel_modes(),
         "channel_multi": True,
         "ask_channel_per_step": True,
+        "ask_anxiety_per_step": True,
         "segment_questions": ji.build_segment_questions(),
         "consent": default_consent("นิสิตปริญญาโท", "อาจารย์ที่ปรึกษา", "swumkt@swu.ac.th"),
         "content_revision": 1,
@@ -152,6 +153,8 @@ async def main():
             chans = pick_channels(rnd, sid)
             experience[sid] = {"difficulty_1_5": float(d),
                                "emotion": float(rnd.choice([-1, 0, 0, 1]) if d < 4 else -1),
+                               "anxiety_1_5": float(max(1, min(5, round(rnd.gauss(
+                                   DIFF[sid] - 0.4 if sid != "s5" else 4.2, 0.9))))),
                                "channels": chans, "channel": chans[0]}
         nominated = [sid for sid in uniq if experience[sid]["difficulty_1_5"] >= 4
                      and rnd.random() < 0.7][:2]

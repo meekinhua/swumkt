@@ -187,7 +187,8 @@ const JourneyDashboardPage = () => {
                   <th>ขั้นตอน</th><th>ระยะ</th><th>ช่องทางหลักที่ลูกค้าใช้</th>
                   <th>ผ่านขั้นนี้</th><th>สัดส่วน (95%)</th>
                   <th>ทำซ้ำเฉลี่ย</th><th>ความยุ่งยาก 0–100</th><th>ช่วง 95%</th>
-                  <th>ความรู้สึก</th><th>ระบุว่ามีปัญหา</th><th>ความรุนแรง (เฉพาะผู้เลือก)</th>
+                  <th>ความกังวล 0–100</th><th>ความรู้สึก</th><th>ระบุว่ามีปัญหา</th>
+                  <th>ความรุนแรง (เฉพาะผู้เลือก)</th><th>จับตา</th>
                 </tr>
               </thead>
               <tbody>
@@ -216,12 +217,22 @@ const JourneyDashboardPage = () => {
                         )}
                       </td>
                       <td className="be-num">{fmtCIRaw(n.burden_ci95, 1)}</td>
+                      <td className="be-num">{fmtNum(n.anxiety, 1)}
+                        <div className="be-tiny">{fmtCIRaw(n.anxiety_ci95, 1)}</div></td>
                       <td className="be-num">{fmtNum(n.emotion, 2)}</td>
                       <td className="be-num">{fmtPct(n.pain_nomination_rate, 0)}
                         <div className="be-tiny">n={n.n_visit ?? 0}</div></td>
                       <td className="be-num">
                         {n.severity_conditional?.mean === null || n.severity_conditional?.mean === undefined
                           ? '—' : `${fmtNum(n.severity_conditional.mean, 1)} (m=${n.severity_conditional.m})`}
+                      </td>
+                      <td>
+                        {(n.watch_flags || []).length === 0
+                          ? <span className="be-tiny" style={{ color: 'var(--ink-3)' }}>—</span>
+                          : (n.watch_flags || []).map((f) => (
+                            <div className="be-tiny" key={f.key}
+                                 style={{ color: 'var(--be-red)' }}>• {f.label_th}</div>
+                          ))}
                       </td>
                     </tr>
                   );
@@ -475,6 +486,23 @@ const JourneyDashboardPage = () => {
             </div>
           ) : (
             <>
+              {(res.pain_matrix.by_type || []).length > 0 && (
+                <div style={{ marginBottom: 18 }} data-testid="journey-pain-types">
+                  <div className="be-label">ปัญหาแบ่งตามประเภท</div>
+                  <table className="be-table" style={{ width: '100%' }}>
+                    <thead><tr><th>ประเภทปัญหา</th><th>จำนวนครั้งที่ระบุ</th><th>%</th></tr></thead>
+                    <tbody>
+                      {res.pain_matrix.by_type.map((t) => (
+                        <tr key={t.type} data-testid={`journey-paintype-${t.type}`}>
+                          <td>{t.label_th}</td>
+                          <td className="be-num">{t.count}</td>
+                          <td className="be-num">{fmtPct(t.share, 1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <div style={{ overflowX: 'auto' }}>
                 <table className="be-table" style={{ width: '100%', minWidth: 720 }}>
                   <thead>

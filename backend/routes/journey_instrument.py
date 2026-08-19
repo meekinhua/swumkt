@@ -55,14 +55,39 @@ RECENCY_BANDS = [
     {"id": "never", "label_th": "ไม่เคยทำเลย", "days": -1},
 ]
 
-DEFAULT_PAIN_OPTIONS = [
-    "ขั้นตอนยุ่งยาก/ซับซ้อน",
-    "ใช้เวลานานเกินไป",
-    "ข้อมูลไม่ชัดเจนหรือหายาก",
-    "ราคา/ค่าใช้จ่ายไม่คุ้ม",
-    "พนักงานหรือบริการไม่ช่วยเหลือ",
-    "ระบบ/แอป/เว็บมีปัญหา",
+# Pain is not only effort. The taxonomy keeps each option in ONE type so the
+# results can be grouped without double counting, and the wording stays in the
+# customer's voice ("ฉันเจออะไร") rather than the brand's diagnosis.
+PAIN_TYPES = {
+    "process": "กระบวนการ/ขั้นตอน",
+    "time": "เวลาและความพยายาม",
+    "information": "ข้อมูลและความชัดเจน",
+    "money": "ค่าใช้จ่าย",
+    "service": "คนและบริการ",
+    "functional": "ระบบ/ของใช้งานไม่ได้",
+    "emotional": "ความรู้สึกและความมั่นใจ",
+    "access": "การเข้าถึง",
+}
+
+PAIN_TAXONOMY = [
+    ("ขั้นตอนยุ่งยาก/ซับซ้อน", "process"),
+    ("ต้องทำซ้ำหรือต้องตามเรื่องเอง", "process"),
+    ("ใช้เวลานานเกินไป/รอนาน", "time"),
+    ("ข้อมูลไม่ชัดเจนหรือหายาก", "information"),
+    ("ราคา/ค่าใช้จ่ายไม่คุ้มหรือมีค่าใช้จ่ายแฝง", "money"),
+    ("พนักงานหรือบริการไม่ช่วยเหลือ", "service"),
+    ("ระบบ/แอป/เว็บมีปัญหา", "functional"),
+    ("ไม่มั่นใจ/กังวลว่าจะถูกเอาเปรียบหรือข้อมูลไม่ปลอดภัย", "emotional"),
+    ("รู้สึกหงุดหงิดหรืออึดอัดกับสถานการณ์", "emotional"),
+    ("เดินทางลำบาก/เข้าถึงยาก/เวลาไม่สะดวก", "access"),
 ]
+
+DEFAULT_PAIN_OPTIONS = [label for label, _ in PAIN_TAXONOMY]
+PAIN_TYPE_OF = {label: t for label, t in PAIN_TAXONOMY}
+
+
+def pain_type_of(label: str) -> str:
+    return PAIN_TYPE_OF.get(label, "process")
 
 # Behavioural first, demographic last. Banded values only (PDPA, spec 2.10).
 SEGMENT_QUESTIONS = [
@@ -266,6 +291,7 @@ def compute_structure_hash(study: dict) -> str:
         "channel_options": len(study.get("channel_options") or []),
         "ask_channel_per_step": bool(study.get("ask_channel_per_step")),
         "channel_multi": bool(study.get("channel_multi")),
+        "ask_anxiety_per_step": bool(study.get("ask_anxiety_per_step")),
         "recall_window_days": study.get("recall_window_days"),
         "analysis_level": study.get("analysis_level"),
     }

@@ -59,6 +59,7 @@ const buildMermaid = (flow, channelOrder, stepTouchpoints, { showLoops, hideThin
     }
     if (tp?.mixed_types) bits.push('ผสมทั้งไปที่จริงและออนไลน์');
     if (n.burden !== null && n.burden !== undefined) bits.push(`ยุ่งยาก ${fmtNum(n.burden, 0)}/100`);
+    if (n.anxiety !== null && n.anxiety !== undefined) bits.push(`กังวล ${fmtNum(n.anxiety, 0)}/100`);
     if (n.pain_nomination_rate) bits.push(`มีปัญหา ${fmtPct(n.pain_nomination_rate, 0)}`);
     if (n.revisit > 1.05) bits.push(`ทำซ้ำ ${fmtNum(n.revisit, 2)} ครั้ง`);
     const sh = shapeOf(n.dominant_channel);

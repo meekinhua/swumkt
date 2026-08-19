@@ -672,3 +672,82 @@ def test_multi_select_channel_costs_more_time_but_still_fits():
     multi = jb.check_design(6, 150, ask_channel_per_step=True, channel_multi=True)
     assert multi["seconds_median"] > single["seconds_median"]
     assert multi["blocked"] is False
+
+
+# ---------------------------------------------------------------------------
+# Pain is more than effort: uncertainty, emotion, rework and a typed taxonomy
+# ---------------------------------------------------------------------------
+def test_anxiety_is_its_own_axis_not_folded_into_burden():
+    study = make_study()
+    study["ask_anxiety_per_step"] = True
+    responses = []
+    for i in range(10):
+        r = resp(f"r{i}", ["s1"], "CONV", {"s1": 2})       # easy...
+        r["experience"]["s1"]["anxiety_1_5"] = 5.0         # ...but frightening
+        responses.append(r)
+    node = J.compute_model_free(study, responses)["nodes"]["s1"]
+    assert node["burden"] == pytest.approx(25.0)
+    assert node["anxiety"] == pytest.approx(100.0)
+    assert node["n_anxiety"] == 10 and node["anxiety_ci95"] is not None
+    keys = {f["key"] for f in node["watch_flags"]}
+    assert "anxiety" in keys and "burden" not in keys     # flagged, never averaged
+
+
+def test_watch_flags_cover_every_pain_axis_and_never_average_them():
+    study = make_study()
+    study["ask_anxiety_per_step"] = True
+    responses = []
+    for i in range(10):
+        r = resp(f"r{i}", ["s1", "s1"], "CONV", {"s1": 5})
+        r["experience"]["s1"].update({"anxiety_1_5": 5.0, "emotion": -1.0})
+        r["pain"] = {"nominated": ["s1"], "s1": {"severity_0_10": 9.0, "categories": []}}
+        responses.append(r)
+    node = J.compute_model_free(study, responses)["nodes"]["s1"]
+    assert {f["key"] for f in node["watch_flags"]} == {"burden", "anxiety", "emotion",
+                                                       "pain", "rework"}
+    assert "pain_index" not in node and "composite" not in node
+
+
+def test_pain_taxonomy_covers_more_than_effort():
+    types = {ji.pain_type_of(label) for label in ji.DEFAULT_PAIN_OPTIONS}
+    assert {"emotional", "access", "money", "information", "functional",
+            "service", "time", "process"} <= types | {"process"}
+    assert any("ไม่มั่นใจ" in o for o in ji.DEFAULT_PAIN_OPTIONS)
+    assert any("เดินทางลำบาก" in o for o in ji.DEFAULT_PAIN_OPTIONS)
+    assert len(set(ji.DEFAULT_PAIN_OPTIONS)) == len(ji.DEFAULT_PAIN_OPTIONS)
+
+
+def test_pain_matrix_groups_categories_into_types_without_double_counting():
+    study = make_study()
+    responses = []
+    for i in range(10):
+        r = resp(f"r{i}", ["s1"], "CONV", {"s1": 4})
+        r["pain"] = {"nominated": ["s1"],
+                     "s1": {"severity_0_10": 8.0,
+                            "categories": ["ไม่มั่นใจ/กังวลว่าจะถูกเอาเปรียบหรือข้อมูลไม่ปลอดภัย",
+                                           "รู้สึกหงุดหงิดหรืออึดอัดกับสถานการณ์",
+                                           "ใช้เวลานานเกินไป/รอนาน"]}}
+        responses.append(r)
+    mx = J.compute_model_free(study, responses)["pain_matrix"]
+    by_type = {t["type"]: t for t in mx["by_type"]}
+    assert by_type["emotional"]["count"] == 20      # two emotional options
+    assert by_type["time"]["count"] == 10
+    assert sum(t["count"] for t in mx["by_type"]) == mx["total"]
+    assert by_type["emotional"]["share"] == pytest.approx(20 / 30)
+
+
+def test_anxiety_question_is_charged_to_the_time_budget():
+    without = jb.check_design(6, 150, ask_channel_per_step=True, channel_multi=True)
+    with_anx = jb.check_design(6, 150, ask_channel_per_step=True, channel_multi=True,
+                               ask_anxiety_per_step=True)
+    assert with_anx["seconds_median"] > without["seconds_median"]
+    assert with_anx["blocked"] is False
+
+
+def test_out_of_range_anxiety_is_dropped():
+    study = make_study()
+    clean = J._clean_submission(study, J.JourneySubmit(
+        consent={"participation": True}, terminal="CONV",
+        path=[{"state_id": "s1", "order": 0}],
+        experience={"s1": {"difficulty_1_5": 3, "anxiety_1_5": 11}}))
+    assert "anxiety_1_5" not in clean["experience"]["s1"]
