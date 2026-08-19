@@ -11,6 +11,16 @@ import { copyToClipboard } from '@/lib/clipboard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Heat cell: shade by weight inside the matrix, and never print a bare 0.
+const cell = (v, total) => {
+  if (!v) return <span style={{ color: 'var(--ink-3)' }}>·</span>;
+  const alpha = Math.min(0.55, 0.10 + (v / Math.max(1, total)) * 2.2);
+  return (
+    <span style={{ background: `rgba(176,51,42,${alpha.toFixed(2)})`,
+                   padding: '2px 7px', borderRadius: 2 }}>{v}</span>
+  );
+};
+
 const Card = ({ title, desc, children, testid, right }) => (
   <div className="be-card" style={{ marginBottom: 16 }} data-testid={testid}>
     <div className="be-card-h">
@@ -35,6 +45,7 @@ const JourneyDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [openChannel, setOpenChannel] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -119,7 +130,8 @@ const JourneyDashboardPage = () => {
         {/* ---- observed-flow map ---------------------------------------- */}
         <Card title="แผนที่เส้นทางที่พบจริง" testid="journey-map"
               desc={`นับจากผู้ตอบ ${res.n_disclosure?.R_analysed ?? R} คน · การเปลี่ยนขั้นทั้งหมด ${res.observed_flow?.total_transitions ?? 0} ครั้ง`}>
-          <JourneyFlowMap flow={res.observed_flow} touchpoints={res.touchpoints} />
+          <JourneyFlowMap flow={res.observed_flow} touchpoints={res.touchpoints}
+                          stepTouchpoints={res.step_touchpoints} />
         </Card>
 
         {/* ---- terminals ------------------------------------------------ */}
@@ -235,6 +247,77 @@ const JourneyDashboardPage = () => {
             </div>
           ) : (
             <>
+              {(res.touchpoints.by_type?.two_way || []).length > 0 && (
+                <div style={{ marginBottom: 18 }} data-testid="journey-touchpoint-types">
+                  <div className="be-label">ประเภทช่องทาง</div>
+                  <table className="be-table" style={{ width: '100%' }}>
+                    <thead>
+                      <tr><th>ประเภท</th><th>ผ่านกี่ครั้ง</th><th>%</th>
+                        <th>ความยุ่งยาก</th><th>ช่วง 95%</th><th>ความรู้สึก</th><th>ระบุว่ามีปัญหา</th></tr>
+                    </thead>
+                    <tbody>
+                      {[...res.touchpoints.by_type.two_way, ...res.touchpoints.by_type.three_way]
+                        .map((t, i) => {
+                        const isRollup = i < res.touchpoints.by_type.two_way.length;
+                        return (
+                          <tr key={`${t.type}-${i}`} data-testid={`journey-tptype-${t.type}`}
+                              style={isRollup ? { fontWeight: 500 } : { color: 'var(--ink-2)' }}>
+                            <td>{isRollup ? t.label_th : `— ${t.label_th}`}
+                              <div className="be-tiny" style={{ color: 'var(--ink-3)' }}>
+                                {(t.channels || []).join(' · ')}
+                              </div>
+                            </td>
+                            <td className="be-num">{t.n_visit}</td>
+                            <td className="be-num">{fmtPct(t.share_of_visits, 1)}</td>
+                            <td className="be-num">{fmtNum(t.burden, 1)}</td>
+                            <td className="be-num">{fmtCIRaw(t.burden_ci95, 1)}</td>
+                            <td className="be-num">{fmtNum(t.emotion, 2)}</td>
+                            <td className="be-num">{fmtPct(t.pain_rate, 0)}
+                              <div className="be-tiny">{fmtCI(t.pain_rate_ci95, 0)}</div></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p className="be-tiny" style={{ color: 'var(--ink-3)', marginTop: 8, lineHeight: 1.6 }}>
+                    {res.touchpoints.by_type.note_th}
+                  </p>
+                </div>
+              )}
+
+              {(res.touchpoints.by_mode?.rows || []).length > 0 && (
+                <div style={{ marginBottom: 18 }} data-testid="journey-touchpoint-modes">
+                  <div className="be-label">รูปแบบการปฏิสัมพันธ์</div>
+                  <table className="be-table" style={{ width: '100%' }}>
+                    <thead>
+                      <tr><th>รูปแบบ</th><th>ผ่านกี่ครั้ง</th><th>%</th>
+                        <th>ความยุ่งยาก</th><th>ช่วง 95%</th><th>ความรู้สึก</th><th>ระบุว่ามีปัญหา</th></tr>
+                    </thead>
+                    <tbody>
+                      {res.touchpoints.by_mode.rows.map((m) => (
+                        <tr key={m.mode} data-testid={`journey-tpmode-${m.mode}`}>
+                          <td>{m.label_th}
+                            <div className="be-tiny" style={{ color: 'var(--ink-3)' }}>
+                              {(m.channels || []).join(' · ')}
+                            </div>
+                          </td>
+                          <td className="be-num">{m.n_visit}</td>
+                          <td className="be-num">{fmtPct(m.share_of_visits, 1)}</td>
+                          <td className="be-num">{fmtNum(m.burden, 1)}</td>
+                          <td className="be-num">{fmtCIRaw(m.burden_ci95, 1)}</td>
+                          <td className="be-num">{fmtNum(m.emotion, 2)}</td>
+                          <td className="be-num">{fmtPct(m.pain_rate, 0)}
+                            <div className="be-tiny">{fmtCI(m.pain_rate_ci95, 0)}</div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="be-tiny" style={{ color: 'var(--ink-3)', marginTop: 8, lineHeight: 1.6 }}>
+                    {res.touchpoints.by_mode.note_th}
+                  </p>
+                </div>
+              )}
+              <div className="be-label">แยกตามช่องทาง (กดที่แถวเพื่อดูปัญหาในช่องทางนั้น)</div>
               <div style={{ overflowX: 'auto' }}>
                 <table className="be-table" style={{ width: '100%', minWidth: 640 }}>
                   <thead>
@@ -244,17 +327,56 @@ const JourneyDashboardPage = () => {
                   </thead>
                   <tbody>
                     {res.touchpoints.rows.map((t) => (
-                      <tr key={t.label} data-testid={`journey-touchpoint-${t.label}`}>
-                        <td>{t.label}{t.thin && <div className="be-tiny" style={{ color: 'var(--ink-3)' }}>ข้อมูลยังน้อย</div>}</td>
-                        <td className="be-num">{t.n_visit}</td>
-                        <td className="be-num">{fmtPct(t.share_of_visits, 1)}</td>
-                        <td className="be-num">{t.n_steps}</td>
-                        <td className="be-num">{fmtNum(t.burden, 1)}</td>
-                        <td className="be-num">{fmtCIRaw(t.burden_ci95, 1)}</td>
-                        <td className="be-num">{fmtNum(t.emotion, 2)}</td>
-                        <td className="be-num">{fmtPct(t.pain_rate, 0)}
-                          <div className="be-tiny">{fmtCI(t.pain_rate_ci95, 0)}</div></td>
-                      </tr>
+                      <React.Fragment key={t.label}>
+                        <tr data-testid={`journey-touchpoint-${t.label}`}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setOpenChannel(openChannel === t.label ? null : t.label)}>
+                          <td>
+                            <span className="be-mono be-tiny" style={{ marginRight: 6 }}>
+                              {openChannel === t.label ? '−' : '+'}
+                            </span>
+                            {t.label}
+                            {t.thin && <div className="be-tiny" style={{ color: 'var(--ink-3)' }}>ข้อมูลยังน้อย</div>}
+                          </td>
+                          <td className="be-num">{t.n_visit}</td>
+                          <td className="be-num">{fmtPct(t.share_of_visits, 1)}</td>
+                          <td className="be-num">{t.n_steps}</td>
+                          <td className="be-num">{fmtNum(t.burden, 1)}</td>
+                          <td className="be-num">{fmtCIRaw(t.burden_ci95, 1)}</td>
+                          <td className="be-num">{fmtNum(t.emotion, 2)}</td>
+                          <td className="be-num">{fmtPct(t.pain_rate, 0)}
+                            <div className="be-tiny">{fmtCI(t.pain_rate_ci95, 0)}</div></td>
+                        </tr>
+                        {openChannel === t.label && (
+                          <tr data-testid={`journey-touchpoint-detail-${t.label}`}>
+                            <td colSpan={8} style={{ background: 'var(--paper-2)' }}>
+                              {(t.pain_categories || []).length === 0 ? (
+                                <span className="be-tiny">ยังไม่มีผู้ตอบระบุปัญหาในช่องทางนี้</span>
+                              ) : (
+                                <div className="be-grid-2" style={{ gap: 20 }}>
+                                  <div>
+                                    <div className="be-label">ปัญหาที่พบในช่องทางนี้ ({t.n_pain} ครั้งที่ระบุ)</div>
+                                    {t.pain_categories.map((c) => (
+                                      <div className="jy-kv" key={c.label}>
+                                        <span>{c.label}</span>
+                                        <b>{c.count} · {fmtPct(c.share_of_pain, 0)}</b>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div>
+                                    <div className="be-label">เกิดที่ขั้นตอนไหน</div>
+                                    {(t.pain_steps || []).map((s) => (
+                                      <div className="jy-kv" key={s.state_id}>
+                                        <span>{s.label_th}</span><b>{s.count}</b>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -306,6 +428,107 @@ const JourneyDashboardPage = () => {
               </div>
             );
           })}
+        </Card>
+
+        {/* ---- step x touchpoint ----------------------------------------- */}
+        {(res.step_touchpoints || []).some((r) => (r.channels || []).length > 0) && (
+          <Card title="ขั้นตอน × ช่องทางที่ลูกค้าใช้" testid="journey-step-touchpoints"
+                desc="หนึ่งขั้นมีได้หลายช่องทางพร้อมกัน · ตัวเลขคือจำนวนผู้ตอบที่ใช้ช่องทางนั้นในขั้นนั้น">
+            <div style={{ overflowX: 'auto' }}>
+              <table className="be-table" style={{ width: '100%', minWidth: 720 }}>
+                <thead>
+                  <tr><th>ขั้นตอน</th><th>ผ่านขั้นนี้</th><th>ช่องทางเฉลี่ยต่อคน</th>
+                    <th>ช่องทางที่ใช้ (คน)</th><th>ลักษณะ</th></tr>
+                </thead>
+                <tbody>
+                  {(res.step_touchpoints || []).map((r) => (
+                    <tr key={r.state_id} data-testid={`journey-steptp-${r.state_id}`}>
+                      <td>{r.label_th}</td>
+                      <td className="be-num">{r.n_visit}</td>
+                      <td className="be-num">{fmtNum(r.channels_per_visit, 2)}</td>
+                      <td>
+                        {(r.channels || []).length === 0 ? '—' : (r.channels || []).map((c) => (
+                          <div className="jy-kv" key={c.label}>
+                            <span>{c.label} <span className="be-tiny" style={{ color: 'var(--ink-3)' }}>
+                              ({c.type_label_th})</span></span>
+                            <b>{c.count} · {fmtPct(c.share, 0)}</b>
+                          </div>
+                        ))}
+                      </td>
+                      <td>{r.mixed_types
+                        ? <span style={{ color: 'var(--be-red)' }}>ผสมทั้งไปที่จริงและออนไลน์</span>
+                        : <span className="be-tiny" style={{ color: 'var(--ink-3)' }}>ช่องทางเดียวประเภท</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {/* ---- pain type x step / touchpoint ----------------------------- */}
+        <Card title="ปัญหาแบบไหน เกิดที่ขั้นไหน และช่องทางไหน" testid="journey-pain-matrix"
+              desc={res.pain_matrix?.note_th}>
+          {(res.pain_matrix?.categories || []).length === 0 ? (
+            <div className="jy-locked" data-testid="journey-pain-matrix-empty">
+              ยังไม่มีผู้ตอบระบุประเภทของปัญหา
+            </div>
+          ) : (
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="be-table" style={{ width: '100%', minWidth: 720 }}>
+                  <thead>
+                    <tr>
+                      <th>ขั้นตอน</th>
+                      {res.pain_matrix.categories.map((c) => <th key={c}>{c}</th>)}
+                      <th>รวม</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {res.pain_matrix.by_step.map((row) => (
+                      <tr key={row.state_id} data-testid={`journey-painmx-step-${row.state_id}`}>
+                        <td>{row.label_th}</td>
+                        {res.pain_matrix.categories.map((c) => (
+                          <td className="be-num" key={c}>{cell(row.counts[c], res.pain_matrix.total)}</td>
+                        ))}
+                        <td className="be-num"><b>{row.total}</b></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {(res.pain_matrix.by_channel || []).length > 0 && (
+                <div style={{ overflowX: 'auto', marginTop: 18 }}>
+                  <table className="be-table" style={{ width: '100%', minWidth: 720 }}>
+                    <thead>
+                      <tr>
+                        <th>ช่องทางที่ลูกค้าใช้</th>
+                        {res.pain_matrix.categories.map((c) => <th key={c}>{c}</th>)}
+                        <th>รวม</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {res.pain_matrix.by_channel.map((row) => (
+                        <tr key={row.label} data-testid={`journey-painmx-chan-${row.label}`}>
+                          <td>{row.label}</td>
+                          {res.pain_matrix.categories.map((c) => (
+                            <td className="be-num" key={c}>{cell(row.counts[c], res.pain_matrix.total)}</td>
+                          ))}
+                          <td className="be-num"><b>{row.total}</b></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="be-label" style={{ marginTop: 18 }}>ข้อจำกัดที่ต้องเขียนไว้ในรายงาน</div>
+              <ul className="be-tiny" style={{ paddingLeft: 18, lineHeight: 1.8, margin: 0, color: 'var(--ink-3)' }}>
+                {(res.pain_matrix.limitations_th || []).map((l) => <li key={l}>{l}</li>)}
+              </ul>
+            </>
+          )}
         </Card>
 
         {/* ---- diagnostics ---------------------------------------------- */}

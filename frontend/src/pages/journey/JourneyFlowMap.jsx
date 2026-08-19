@@ -36,7 +36,7 @@ const burdenClass = (b) => {
 
 const PAIN_FLAG = 0.30;   // a step a third of its visitors call a problem
 
-const buildMermaid = (flow, channelOrder, { showLoops, hideThin, groupStages }) => {
+const buildMermaid = (flow, channelOrder, stepTouchpoints, { showLoops, hideThin, groupStages }) => {
   if (!flow?.nodes?.length) return '';
   const lines = ['flowchart LR'];
   const classes = { hot: [], warm: [], cool: [], ndata: [], term: [], start: [] };
@@ -50,9 +50,14 @@ const buildMermaid = (flow, channelOrder, { showLoops, hideThin, groupStages }) 
 
   const stepLine = (n) => {
     const bits = [sanitize(n.label_th), `ผ่าน ${n.n_visit} คน · ${fmtPct(n.reach, 0)}`];
-    if (n.dominant_channel) {
+    const tp = stepTouchpoints[n.id];
+    (tp?.channels || []).slice(0, 3).forEach((c, ci) => {
+      bits.push(`${ci === 0 ? 'ช่องทาง: ' : ''}${sanitize(c.label)} ${fmtPct(c.share, 0)}`);
+    });
+    if (!tp && n.dominant_channel) {
       bits.push(`ผ่าน${sanitize(n.dominant_channel)} ${fmtPct(n.dominant_channel_share, 0)}`);
     }
+    if (tp?.mixed_types) bits.push('ผสมทั้งไปที่จริงและออนไลน์');
     if (n.burden !== null && n.burden !== undefined) bits.push(`ยุ่งยาก ${fmtNum(n.burden, 0)}/100`);
     if (n.pain_nomination_rate) bits.push(`มีปัญหา ${fmtPct(n.pain_nomination_rate, 0)}`);
     if (n.revisit > 1.05) bits.push(`ทำซ้ำ ${fmtNum(n.revisit, 2)} ครั้ง`);
@@ -119,7 +124,7 @@ const buildMermaid = (flow, channelOrder, { showLoops, hideThin, groupStages }) 
   return lines.join('\n');
 };
 
-export const JourneyFlowMap = ({ flow, touchpoints }) => {
+export const JourneyFlowMap = ({ flow, touchpoints, stepTouchpoints = [] }) => {
   const [showLoops, setShowLoops] = useState(true);
   const [hideThin, setHideThin] = useState(false);
   const [groupStages, setGroupStages] = useState(true);
@@ -131,9 +136,14 @@ export const JourneyFlowMap = ({ flow, touchpoints }) => {
     [touchpoints],
   );
 
+  const tpByStep = useMemo(
+    () => Object.fromEntries((stepTouchpoints || []).map((s) => [s.state_id, s])),
+    [stepTouchpoints],
+  );
+
   const code = useMemo(
-    () => buildMermaid(flow, channelOrder, { showLoops, hideThin, groupStages }),
-    [flow, channelOrder, showLoops, hideThin, groupStages],
+    () => buildMermaid(flow, channelOrder, tpByStep, { showLoops, hideThin, groupStages }),
+    [flow, channelOrder, tpByStep, showLoops, hideThin, groupStages],
   );
 
   if (!flow?.edges?.length) {

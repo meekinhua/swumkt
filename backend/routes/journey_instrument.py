@@ -122,6 +122,56 @@ def _state_id(idx: int) -> str:
     return f"s{idx + 1}"
 
 
+# Touchpoint TYPE. The two-way cut the literature cares about is physical vs
+# non-physical, but "คนต่อคน" sits across both (a shop assistant is physical, a
+# friend on the phone is not), so the type is stored in three values and rolled
+# up to the two-way view in the payload rather than being forced into it here.
+CHANNEL_TYPES = {
+    "digital": "ดิจิทัล/ออนไลน์",
+    "physical": "กายภาพ/สถานที่จริง",
+    "human": "คนต่อคน",
+}
+PHYSICAL_TYPES = {"physical"}
+
+DEFAULT_CHANNEL_TYPES = {
+    "แอป/เว็บไซต์": "digital",
+    "โซเชียลมีเดีย/รีวิว": "digital",
+    "หน้าร้าน/สถานที่จริง": "physical",
+    "คนรู้จัก/ปากต่อปาก": "human",
+    "พนักงาน/ตัวแทน": "human",
+    "โทรศัพท์/แชท": "human",
+}
+
+
+# Interaction cardinality. one_to_many is the brand talking to a crowd,
+# many_to_many is customers talking to each other — the part the brand does not
+# control and usually cannot fix, which is why it is reported separately.
+CHANNEL_MODES = {
+    "one_to_one": "ตัวต่อตัว (one-to-one)",
+    "one_to_many": "แบรนด์ถึงคนหมู่มาก (one-to-many)",
+    "many_to_many": "ลูกค้าคุยกันเอง (many-to-many)",
+}
+
+DEFAULT_CHANNEL_MODES = {
+    "แอป/เว็บไซต์": "one_to_many",
+    "โซเชียลมีเดีย/รีวิว": "many_to_many",
+    "หน้าร้าน/สถานที่จริง": "one_to_many",
+    "คนรู้จัก/ปากต่อปาก": "many_to_many",
+    "พนักงาน/ตัวแทน": "one_to_one",
+    "โทรศัพท์/แชท": "one_to_one",
+}
+
+
+def default_channel_modes(options: Optional[List[str]] = None) -> Dict[str, str]:
+    return {o: DEFAULT_CHANNEL_MODES.get(o, "one_to_many")
+            for o in (options or DEFAULT_CHANNEL_OPTIONS)}
+
+
+def default_channel_types(options: Optional[List[str]] = None) -> Dict[str, str]:
+    return {o: DEFAULT_CHANNEL_TYPES.get(o, "digital")
+            for o in (options or DEFAULT_CHANNEL_OPTIONS)}
+
+
 def build_states_from_template(template_key: str) -> List[dict]:
     tpl = TEMPLATES.get(template_key) or TEMPLATES["retail_product"]
     return [
@@ -215,6 +265,7 @@ def compute_structure_hash(study: dict) -> str:
                                (study.get("pain_options") or {}).items()},
         "channel_options": len(study.get("channel_options") or []),
         "ask_channel_per_step": bool(study.get("ask_channel_per_step")),
+        "channel_multi": bool(study.get("channel_multi")),
         "recall_window_days": study.get("recall_window_days"),
         "analysis_level": study.get("analysis_level"),
     }

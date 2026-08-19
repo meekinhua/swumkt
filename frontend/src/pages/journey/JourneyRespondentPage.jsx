@@ -526,8 +526,15 @@ const JourneyRespondentPage = () => {
   if (screen === 'grid') {
     const setVal = (sid, key, v) =>
       setExperience((p) => ({ ...p, [sid]: { ...(p[sid] || {}), [key]: v } }));
+    const toggleChannel = (sid, c) => setExperience((p) => {
+      const row = p[sid] || {};
+      if (!study.channel_multi) return { ...p, [sid]: { ...row, channels: [c], channel: c } };
+      const cur = row.channels || [];
+      const next = cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c];
+      return { ...p, [sid]: { ...row, channels: next, channel: next[0] } };
+    });
     const complete = gridStates.every((s) => experience[s]?.difficulty_1_5
-      && (!study.ask_channel_per_step || experience[s]?.channel));
+      && (!study.ask_channel_per_step || (experience[s]?.channels || []).length > 0));
     return (
       <JyFrame {...frameProps} title="แต่ละขั้นยุ่งยากแค่ไหน" sub="ตอบเฉพาะขั้นที่คุณทำจริง · 1 = ง่ายมาก, 5 = ยุ่งยากมาก"
              testid="jy-screen-grid" next={() => go('pain')} nextDisabled={!complete}>
@@ -554,15 +561,23 @@ const JourneyRespondentPage = () => {
             {study.ask_channel_per_step && (
               <>
                 <div className="be-label" style={{ marginTop: 12 }}>
-                  ตอนนั้นคุณทำขั้นนี้ผ่านช่องทางไหน
+                  {study.channel_multi
+                    ? 'ตอนนั้นคุณทำขั้นนี้ผ่านช่องทางไหน (เลือกได้หลายข้อ)'
+                    : 'ตอนนั้นคุณทำขั้นนี้ผ่านช่องทางไหน'}
                 </div>
                 <div className="jy-optlist">
-                  {(study.channel_options || []).map((c) => (
-                    <button key={c} type="button"
-                            className={`jy-opt ${experience[sid]?.channel === c ? 'jy-on' : ''}`}
-                            data-testid={`jy-chan-${sid}-${c}`}
-                            onClick={() => setVal(sid, 'channel', c)}>{c}</button>
-                  ))}
+                  {(study.channel_options || []).map((c) => {
+                    const on = study.channel_multi
+                      ? (experience[sid]?.channels || []).includes(c)
+                      : experience[sid]?.channel === c;
+                    return (
+                      <button key={c} type="button" className={`jy-opt ${on ? 'jy-on' : ''}`}
+                              data-testid={`jy-chan-${sid}-${c}`}
+                              onClick={() => toggleChannel(sid, c)}>
+                        {study.channel_multi ? (on ? '☑ ' : '☐ ') : ''}{c}
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}

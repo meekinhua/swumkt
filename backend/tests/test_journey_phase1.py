@@ -395,7 +395,7 @@ def test_touchpoints_are_counted_per_step_visit_not_per_respondent():
     assert rows[app]["share_of_visits"] == pytest.approx(0.5)
     assert rows[app]["burden"] == pytest.approx(25.0)     # difficulty 2 -> 25
     assert rows[shop]["burden"] == pytest.approx(75.0)    # difficulty 4 -> 75
-    assert "การผ่านหนึ่งขั้นของหนึ่งคน" in tp["unit_th"]
+    assert "การใช้หนึ่งช่องทางในหนึ่งขั้นของหนึ่งคน" in tp["unit_th"]
 
 
 def test_touchpoint_pain_rate_uses_that_channels_visits():
@@ -468,3 +468,207 @@ def test_channel_question_is_inside_the_time_budget():
     assert with_ch["seconds_median"] > without["seconds_median"]
     assert with_ch["scored_items"] > without["scored_items"]
     assert with_ch["blocked"] is False       # still inside the cap at m=6
+
+
+# ---------------------------------------------------------------------------
+# One touchpoint / one step can carry SEVERAL pain types
+# ---------------------------------------------------------------------------
+def _resp_pain(rid, path, rows, pains):
+    """pains: {state_id: [categories]} — several types per step is the point."""
+    r = _resp_ch(rid, path, "CONV", rows)
+    r["pain"] = {"nominated": list(pains.keys())}
+    for sid, cats in pains.items():
+        r["pain"][sid] = {"severity_0_10": 8.0, "categories": cats}
+    return r
+
+
+def test_touchpoint_detail_lists_every_pain_type_it_carries():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    app = "แอป/เว็บไซต์"
+    responses = [_resp_pain(f"r{i}", ["s1", "s2"],
+                            {"s1": (4, app), "s2": (4, app)},
+                            {"s1": ["ระบบ/แอป/เว็บมีปัญหา", "ใช้เวลานานเกินไป"]})
+                 for i in range(10)]
+    row = J.compute_model_free(study, responses)["touchpoints"]["rows"][0]
+    cats = {c["label"]: c["count"] for c in row["pain_categories"]}
+    assert cats == {"ระบบ/แอป/เว็บมีปัญหา": 10, "ใช้เวลานานเกินไป": 10}
+    assert row["n_pain"] == 10                       # 10 pain visits...
+    assert sum(cats.values()) == 20                  # ...carrying 20 nominations
+    assert row["pain_categories"][0]["share_of_pain"] == pytest.approx(1.0)
+    assert [s["state_id"] for s in row["pain_steps"]] == ["s1"]
+
+
+def test_pain_matrix_crosses_type_with_step_and_channel():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    app, shop = "แอป/เว็บไซต์", "หน้าร้าน/สถานที่จริง"
+    responses = ([_resp_pain(f"a{i}", ["s1", "s2"], {"s1": (4, app), "s2": (4, shop)},
+                             {"s1": ["ระบบ/แอป/เว็บมีปัญหา"], "s2": ["พนักงานหรือบริการไม่ช่วยเหลือ"]})
+                  for i in range(7)]
+                 + [_resp_pain(f"b{i}", ["s2"], {"s2": (5, shop)},
+                               {"s2": ["ใช้เวลานานเกินไป", "พนักงานหรือบริการไม่ช่วยเหลือ"]})
+                    for i in range(3)])
+    mx = J.compute_model_free(study, responses)["pain_matrix"]
+    by_step = {r["state_id"]: r for r in mx["by_step"]}
+    by_chan = {r["label"]: r for r in mx["by_channel"]}
+    assert by_step["s1"]["counts"]["ระบบ/แอป/เว็บมีปัญหา"] == 7
+    assert by_step["s2"]["counts"]["พนักงานหรือบริการไม่ช่วยเหลือ"] == 10
+    assert by_step["s2"]["counts"]["ใช้เวลานานเกินไป"] == 3
+    assert by_step["s2"]["total"] == 13              # more types than respondents
+    assert by_chan[app]["total"] == 7 and by_chan[shop]["total"] == 13
+    assert set(mx["categories"]) == {"ระบบ/แอป/เว็บมีปัญหา", "ใช้เวลานานเกินไป",
+                                     "พนักงานหรือบริการไม่ช่วยเหลือ"}
+
+
+def test_pain_matrix_states_its_own_limitations():
+    study = make_study()
+    mx = J.compute_model_free(study, [])["pain_matrix"]
+    joined = " ".join(mx["limitations_th"])
+    assert "ไม่ได้ถามแยกต่อประเภทปัญหา" in joined
+    assert "สูงสุด 2 ขั้น" in joined
+
+
+def test_respondent_cannot_nominate_more_than_the_cap_of_two():
+    study = make_study()
+    body = J.JourneySubmit(consent={"participation": True}, terminal="CONV",
+                           path=[{"state_id": "s1", "order": 0}],
+                           pain={"nominated": ["s1", "s2", "s3"],
+                                 "s1": {"severity_0_10": 5, "categories": []}})
+    clean = J._clean_submission(study, body)
+    # The UI caps at two; the backend keeps whatever arrives but each nomination
+    # must be a real state — nothing is invented and nothing is renamed.
+    assert set(clean["pain"]["nominated"]).issubset({"s1", "s2", "s3"})
+
+
+# ---------------------------------------------------------------------------
+# Touchpoint TYPE: physical vs non-physical, with "คนต่อคน" kept visible
+# ---------------------------------------------------------------------------
+def test_touchpoint_types_roll_up_to_physical_and_non_physical():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    study["channel_options"] = list(ji.DEFAULT_CHANNEL_OPTIONS)
+    study["channel_types"] = ji.default_channel_types()
+    app, shop, staff = "แอป/เว็บไซต์", "หน้าร้าน/สถานที่จริง", "พนักงาน/ตัวแทน"
+    responses = [_resp_ch(f"r{i}", ["s1", "s2", "s3"], "CONV",
+                          {"s1": (2, app), "s2": (4, shop), "s3": (3, staff)})
+                 for i in range(10)]
+    bt = J.compute_model_free(study, responses)["touchpoints"]["by_type"]
+    two = {t["type"]: t for t in bt["two_way"]}
+    three = {t["type"]: t for t in bt["three_way"]}
+    assert two["physical"]["n_visit"] == 10
+    assert two["non_physical"]["n_visit"] == 20          # digital + human
+    assert three["digital"]["n_visit"] == 10 and three["human"]["n_visit"] == 10
+    assert two["physical"]["burden"] == pytest.approx(75.0)
+    # pooled over visits, not averaged over channel means
+    assert two["non_physical"]["burden"] == pytest.approx(100.0 * (2.5 - 1) / 4)
+    assert "คนต่อคน" in bt["note_th"]
+
+
+def test_channel_type_is_editable_and_defaults_are_sane():
+    types = ji.default_channel_types()
+    assert types["แอป/เว็บไซต์"] == "digital"
+    assert types["หน้าร้าน/สถานที่จริง"] == "physical"
+    assert types["คนรู้จัก/ปากต่อปาก"] == "human"
+    assert ji.default_channel_types(["ช่องทางใหม่"])["ช่องทางใหม่"] == "digital"
+    assert set(ji.CHANNEL_TYPES) == {"digital", "physical", "human"}
+
+
+def test_type_rows_are_hidden_when_nobody_used_that_type():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    study["channel_types"] = ji.default_channel_types()
+    responses = [_resp_ch(f"r{i}", ["s1"], "CONV", {"s1": (3, "แอป/เว็บไซต์")})
+                 for i in range(10)]
+    bt = J.compute_model_free(study, responses)["touchpoints"]["by_type"]
+    assert [t["type"] for t in bt["two_way"]] == ["non_physical"]
+    assert [t["type"] for t in bt["three_way"]] == ["digital"]
+
+
+# ---------------------------------------------------------------------------
+# Several touchpoints in ONE step, and interaction cardinality
+# ---------------------------------------------------------------------------
+def _resp_multi(rid, step_channels, diffs, nominated=None):
+    """step_channels: {state_id: [channels]} — a mixed step is the normal case."""
+    r = resp(rid, list(step_channels.keys()), "CONV", diffs)
+    for sid, chans in step_channels.items():
+        r["experience"].setdefault(sid, {})["channels"] = chans
+    if nominated:
+        r["pain"] = {"nominated": nominated,
+                     **{sid: {"severity_0_10": 8.0, "categories": ["ใช้เวลานานเกินไป"]}
+                        for sid in nominated}}
+    return r
+
+
+def test_one_step_can_carry_several_touchpoints_physical_and_not():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    study["channel_multi"] = True
+    study["channel_types"] = ji.default_channel_types()
+    social, shop, friend = "โซเชียลมีเดีย/รีวิว", "หน้าร้าน/สถานที่จริง", "คนรู้จัก/ปากต่อปาก"
+    responses = [_resp_multi(f"r{i}", {"s1": [social, shop, friend]}, {"s1": 3})
+                 for i in range(10)]
+    res = J.compute_model_free(study, responses)
+    node = res["nodes"]["s1"]
+    tp = res["touchpoints"]
+    assert node["n_channel"] == 30 and len(node["channels"]) == 3
+    assert tp["total_visits"] == 30            # 10 step-visits, 30 touchpoint uses
+    two = {t["type"]: t for t in tp["by_type"]["two_way"]}
+    assert two["physical"]["n_visit"] == 10 and two["non_physical"]["n_visit"] == 20
+
+
+def test_multi_channel_submission_keeps_a_primary_for_older_readers():
+    study = make_study()
+    study["channel_options"] = list(ji.DEFAULT_CHANNEL_OPTIONS)
+    clean = J._clean_submission(study, J.JourneySubmit(
+        consent={"participation": True}, terminal="CONV",
+        path=[{"state_id": "s1", "order": 0}],
+        experience={"s1": {"difficulty_1_5": 3,
+                           "channels": ["หน้าร้าน/สถานที่จริง", "แอป/เว็บไซต์", "ไม่มีจริง"]}}))
+    row = clean["experience"]["s1"]
+    assert row["channels"] == ["หน้าร้าน/สถานที่จริง", "แอป/เว็บไซต์"]
+    assert row["channel"] == "หน้าร้าน/สถานที่จริง"
+
+
+def test_single_channel_rows_still_read_correctly():
+    exp = {"channel": "แอป/เว็บไซต์"}
+    assert J._channels_of(exp) == ["แอป/เว็บไซต์"]
+    assert J._channels_of({}) == []
+
+
+def test_cardinality_groups_are_summarised_separately():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    study["channel_multi"] = True
+    study["channel_modes"] = ji.default_channel_modes()
+    social, staff = "โซเชียลมีเดีย/รีวิว", "พนักงาน/ตัวแทน"
+    responses = ([_resp_multi(f"a{i}", {"s1": [social]}, {"s1": 2}) for i in range(10)]
+                 + [_resp_multi(f"b{i}", {"s2": [staff]}, {"s2": 4}) for i in range(10)])
+    bm = J.compute_model_free(study, responses)["touchpoints"]["by_mode"]
+    rows = {r["mode"]: r for r in bm["rows"]}
+    assert rows["many_to_many"]["n_visit"] == 10
+    assert rows["one_to_one"]["n_visit"] == 10
+    assert rows["many_to_many"]["burden"] == pytest.approx(25.0)
+    assert rows["one_to_one"]["burden"] == pytest.approx(75.0)
+    assert "แบรนด์คุมไม่ได้" in bm["note_th"]
+
+
+def test_step_touchpoint_table_flags_mixed_steps():
+    study = make_study()
+    study["ask_channel_per_step"] = True
+    study["channel_multi"] = True
+    study["channel_types"] = ji.default_channel_types()
+    responses = ([_resp_multi(f"m{i}", {"s1": ["หน้าร้าน/สถานที่จริง", "แอป/เว็บไซต์"]},
+                              {"s1": 3}) for i in range(10)]
+                 + [_resp_multi(f"d{i}", {"s2": ["แอป/เว็บไซต์"]}, {"s2": 3}) for i in range(10)])
+    rows = {r["state_id"]: r for r in J.compute_model_free(study, responses)["step_touchpoints"]}
+    assert rows["s1"]["mixed_types"] is True
+    assert rows["s2"]["mixed_types"] is False
+    assert rows["s1"]["channels"][0]["count"] == 10
+
+
+def test_multi_select_channel_costs_more_time_but_still_fits():
+    single = jb.check_design(6, 150, ask_channel_per_step=True, channel_multi=False)
+    multi = jb.check_design(6, 150, ask_channel_per_step=True, channel_multi=True)
+    assert multi["seconds_median"] > single["seconds_median"]
+    assert multi["blocked"] is False

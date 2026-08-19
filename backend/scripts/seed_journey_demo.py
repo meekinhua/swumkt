@@ -60,6 +60,15 @@ def pick_channel(rnd, sid):
     return CHANNELS[sid][-1][0]
 
 
+def pick_channels(rnd, sid):
+    """One step often involves several touchpoints at once."""
+    picked = [pick_channel(rnd, sid)]
+    for label, w in CHANNELS[sid]:
+        if label not in picked and rnd.random() < 0.35 * w + 0.12:
+            picked.append(label)
+    return picked
+
+
 async def main():
     client = AsyncIOMotorClient(os.environ["MONGO_URL"])
     db = client[os.environ["DB_NAME"]]
@@ -93,6 +102,9 @@ async def main():
         "expected_transitions": ji.default_expected_transitions(states),
         "pain_options": ji.default_pain_options(states),
         "channel_options": list(ji.DEFAULT_CHANNEL_OPTIONS),
+        "channel_types": ji.default_channel_types(),
+        "channel_modes": ji.default_channel_modes(),
+        "channel_multi": True,
         "ask_channel_per_step": True,
         "segment_questions": ji.build_segment_questions(),
         "consent": default_consent("นิสิตปริญญาโท", "อาจารย์ที่ปรึกษา", "swumkt@swu.ac.th"),
@@ -137,9 +149,10 @@ async def main():
         experience = {}
         for sid in uniq:
             d = max(1, min(5, round(rnd.gauss(DIFF[sid], 0.9))))
+            chans = pick_channels(rnd, sid)
             experience[sid] = {"difficulty_1_5": float(d),
                                "emotion": float(rnd.choice([-1, 0, 0, 1]) if d < 4 else -1),
-                               "channel": pick_channel(rnd, sid)}
+                               "channels": chans, "channel": chans[0]}
         nominated = [sid for sid in uniq if experience[sid]["difficulty_1_5"] >= 4
                      and rnd.random() < 0.7][:2]
         pain = {"nominated": nominated}

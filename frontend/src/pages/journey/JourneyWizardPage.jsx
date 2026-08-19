@@ -10,6 +10,16 @@ import { copyToClipboard } from '@/lib/clipboard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const STEPS = ['พื้นฐาน', 'ขั้นตอนของลูกค้า', 'งบเวลา + สิ่งที่ได้', 'เปิดเก็บข้อมูล'];
+const CHANNEL_MODE_LABELS = {
+  one_to_one: 'ตัวต่อตัว',
+  one_to_many: 'แบรนด์ถึงคนหมู่มาก',
+  many_to_many: 'ลูกค้าคุยกันเอง',
+};
+const CHANNEL_TYPE_LABELS = {
+  digital: 'ดิจิทัล/ออนไลน์',
+  physical: 'กายภาพ/สถานที่จริง',
+  human: 'คนต่อคน',
+};
 
 const JourneyWizardPage = () => {
   const { studyId } = useParams();
@@ -104,6 +114,24 @@ const JourneyWizardPage = () => {
     } catch (e) {
       setError(e?.response?.data?.detail || 'บันทึกช่องทางไม่สำเร็จ');
     }
+  };
+
+  const saveChannelType = async (label, type) => {
+    setStudy((s) => ({ ...s, channel_types: { ...(s.channel_types || {}), [label]: type } }));
+    try {
+      const r = await axios.put(`${API}/journey/studies/${study.id}`,
+        { channel_types: { [label]: type } }, authH);
+      setStudy(r.data);
+    } catch (e) { setError('บันทึกประเภทช่องทางไม่สำเร็จ'); }
+  };
+
+  const saveChannelMode = async (label, mode) => {
+    setStudy((s) => ({ ...s, channel_modes: { ...(s.channel_modes || {}), [label]: mode } }));
+    try {
+      const r = await axios.put(`${API}/journey/studies/${study.id}`,
+        { channel_modes: { [label]: mode } }, authH);
+      setStudy(r.data);
+    } catch (e) { setError('บันทึกรูปแบบปฏิสัมพันธ์ไม่สำเร็จ'); }
   };
 
   const createOrUpdate = async () => {
@@ -336,15 +364,39 @@ const JourneyWizardPage = () => {
               {study.ask_channel_per_step && (
                 <>
                   {(study.channel_options || []).map((c, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <input className="be-input" data-testid={`journey-channel-${i}`} value={c}
-                             onChange={(e) => setStudy((s) => ({
-                               ...s,
-                               channel_options: s.channel_options.map((x, k) => (k === i ? e.target.value : x)),
-                             }))} />
-                      <button className="jy-icon-btn" data-testid={`journey-channel-del-${i}`}
-                              onClick={() => saveChannels(
-                                (study.channel_options || []).filter((_, k) => k !== i), true)}>✕</button>
+                    <div key={i} style={{ marginTop: 10 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input className="be-input" data-testid={`journey-channel-${i}`} value={c}
+                               onChange={(e) => setStudy((s) => ({
+                                 ...s,
+                                 channel_options: s.channel_options.map((x, k) => (k === i ? e.target.value : x)),
+                               }))} />
+                        <button className="jy-icon-btn" data-testid={`journey-channel-del-${i}`}
+                                onClick={() => saveChannels(
+                                  (study.channel_options || []).filter((_, k) => k !== i), true)}>✕</button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                        <span className="be-tiny" style={{ color: 'var(--ink-3)', alignSelf: 'center' }}>
+                          ประเภท:
+                        </span>
+                        {Object.entries(CHANNEL_TYPE_LABELS).map(([k, lab]) => (
+                          <button key={k} className="be-chip be-chip-sm"
+                                  aria-pressed={(study.channel_types || {})[c] === k}
+                                  data-testid={`journey-chtype-${i}-${k}`}
+                                  onClick={() => saveChannelType(c, k)}>{lab}</button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                        <span className="be-tiny" style={{ color: 'var(--ink-3)', alignSelf: 'center' }}>
+                          ปฏิสัมพันธ์:
+                        </span>
+                        {Object.entries(CHANNEL_MODE_LABELS).map(([k, lab]) => (
+                          <button key={k} className="be-chip be-chip-sm"
+                                  aria-pressed={(study.channel_modes || {})[c] === k}
+                                  data-testid={`journey-chmode-${i}-${k}`}
+                                  onClick={() => saveChannelMode(c, k)}>{lab}</button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                   <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>

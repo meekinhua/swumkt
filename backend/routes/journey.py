@@ -86,6 +86,8 @@ class StudyUpdate(BaseModel):
     absorbing: Optional[dict] = None
     pain_options: Optional[Dict[str, List[str]]] = None
     channel_options: Optional[List[str]] = None
+    channel_types: Optional[Dict[str, str]] = None
+    channel_modes: Optional[Dict[str, str]] = None
     ask_channel_per_step: Optional[bool] = None
     state_meta: Optional[List[dict]] = None
     expected_transitions: Optional[dict] = None
@@ -170,14 +172,18 @@ def _clean_submission(study: dict, data: JourneySubmit) -> dict:
             continue
         d = val.get("difficulty_1_5")
         e = val.get("emotion")
-        ch = val.get("channel")
+        chs = val.get("channels")
+        if not isinstance(chs, list):
+            chs = [val.get("channel")] if val.get("channel") else []
         row: Dict[str, Any] = {}
         if isinstance(d, (int, float)) and not isinstance(d, bool) and 1 <= float(d) <= 5:
             row["difficulty_1_5"] = float(d)
         if isinstance(e, (int, float)) and not isinstance(e, bool) and -1 <= float(e) <= 1:
             row["emotion"] = float(e)
-        if ch in channels:
-            row["channel"] = str(ch)
+        picked = [str(c) for c in chs if c in channels][:6]
+        if picked:
+            row["channels"] = picked
+            row["channel"] = picked[0]      # primary, kept for older readers
         if row:
             experience[sid] = row
 
@@ -381,8 +387,7 @@ def compute_model_free(study: dict, responses: List[dict],
         # counted from their own answers rather than assigned by the researcher.
         chan = Counter()
         for r in kept:
-            c = ((r.get("experience") or {}).get(sid) or {}).get("channel")
-            if c:
+            for c in _channels_of((r.get("experience") or {}).get(sid)):
                 chan[c] += 1
         chan_total = sum(chan.values())
         channels = [{"label": c, "count": n,
@@ -463,6 +468,10 @@ def compute_model_free(study: dict, responses: List[dict],
     # --- touchpoint + stage views (customer-side cuts) --------------------
     touchpoints = _touchpoint_summary(study, kept)
     stages_summary = _stage_summary(study, kept, nodes)
+    pain_matrix = _pain_matrix(study, kept)
+    channel_types = {**ji.default_channel_types(study.get("channel_options")),
+                     **(study.get("channel_types") or {})}
+    step_touchpoints = _step_touchpoints(study, nodes, channel_types)
 
     # --- observed flow map (model-free) ----------------------------------
     observed_flow = _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R,
@@ -494,6 +503,8 @@ def compute_model_free(study: dict, responses: List[dict],
                    "shares_hidden": not show_share},
         "nodes": nodes,
         "touchpoints": touchpoints,
+        "pain_matrix": pain_matrix,
+        "step_touchpoints": step_touchpoints,
         "stages_summary": stages_summary,
         "observed_flow": observed_flow,
         "diagnostics": diagnostics,
@@ -509,6 +520,16 @@ def compute_model_free(study: dict, responses: List[dict],
     return json_safe(results)
 
 
+def _channels_of(exp: dict) -> List[str]:
+    """Every touchpoint used at one step. Old rows hold a single `channel`."""
+    if not isinstance(exp, dict):
+        return []
+    chs = exp.get("channels")
+    if isinstance(chs, list) and chs:
+        return [str(c) for c in chs]
+    return [str(exp["channel"])] if exp.get("channel") else []
+
+
 def _touchpoint_summary(study: dict, kept: List[dict]) -> dict:
     """Aggregate by the channel the CUSTOMER said they used.
 
@@ -518,30 +539,41 @@ def _touchpoint_summary(study: dict, kept: List[dict]) -> dict:
     every number so nobody reads a 3-visit channel as a finding.
     """
     known = {s["id"] for s in (study.get("states") or [])}
+    labels = {s["id"]: s.get("label_th") for s in (study.get("states") or [])}
     rows: Dict[str, dict] = {}
     for r in kept:
         nominated = set((r.get("pain") or {}).get("nominated") or [])
         for sid, exp in (r.get("experience") or {}).items():
-            ch = (exp or {}).get("channel")
-            if not ch or sid not in known:
+            if sid not in known:
                 continue
-            row = rows.setdefault(ch, {"label": ch, "n_visit": 0, "difficulties": [],
-                                       "emotions": [], "n_pain": 0, "steps": set()})
-            row["n_visit"] += 1
-            row["steps"].add(sid)
-            if isinstance(exp.get("difficulty_1_5"), (int, float)):
-                row["difficulties"].append(float(exp["difficulty_1_5"]))
-            if isinstance(exp.get("emotion"), (int, float)):
-                row["emotions"].append(float(exp["emotion"]))
-            if sid in nominated:
-                row["n_pain"] += 1
+            for ch in _channels_of(exp):
+                row = rows.setdefault(ch, {"label": ch, "n_visit": 0, "difficulties": [],
+                                                   "emotions": [], "n_pain": 0, "steps": set(),
+                                                   "cats": Counter(), "pain_steps": Counter()})
+                row["n_visit"] += 1
+                row["steps"].add(sid)
+                if isinstance(exp.get("difficulty_1_5"), (int, float)):
+                    row["difficulties"].append(float(exp["difficulty_1_5"]))
+                if isinstance(exp.get("emotion"), (int, float)):
+                    row["emotions"].append(float(exp["emotion"]))
+                if sid in nominated:
+                    row["n_pain"] += 1
+                    row["pain_steps"][sid] += 1
+                    # One touchpoint can carry SEVERAL pain types, and one
+                    # respondent can name several at the same step.
+                    for c in ((r.get("pain") or {}).get(sid) or {}).get("categories") or []:
+                        row["cats"][c] += 1
 
     total = sum(v["n_visit"] for v in rows.values())
+    types = {**ji.default_channel_types(study.get("channel_options")),
+             **(study.get("channel_types") or {})}
     out = []
     for row in sorted(rows.values(), key=lambda x: -x["n_visit"]):
         burden, ci = _burden(row["difficulties"])
         out.append({
             "label": row["label"],
+            "type": types.get(row["label"], "digital"),
+            "type_label_th": ji.CHANNEL_TYPES.get(types.get(row["label"], "digital")),
             "n_visit": row["n_visit"],
             "share_of_visits": (row["n_visit"] / total) if total else None,
             "n_steps": len(row["steps"]),
@@ -550,18 +582,171 @@ def _touchpoint_summary(study: dict, kept: List[dict]) -> dict:
             "emotion": (sum(row["emotions"]) / len(row["emotions"])) if row["emotions"] else None,
             "pain_rate": (row["n_pain"] / row["n_visit"]) if row["n_visit"] else None,
             "pain_rate_ci95": mj.wilson_interval(row["n_pain"], row["n_visit"]),
+            "n_pain": row["n_pain"],
+            "pain_categories": [
+                {"label": c, "count": n,
+                 "share_of_pain": (n / row["n_pain"]) if row["n_pain"] else None}
+                for c, n in row["cats"].most_common()],
+            "pain_steps": [{"state_id": sid, "label_th": labels.get(sid), "count": n}
+                           for sid, n in row["pain_steps"].most_common()],
             "thin": row["n_visit"] < 10,
         })
+    modes = {**ji.default_channel_modes(study.get("channel_options")),
+             **(study.get("channel_modes") or {})}
+    for row in out:
+        row["mode"] = modes.get(row["label"], "one_to_many")
+        row["mode_label_th"] = ji.CHANNEL_MODES.get(row["mode"])
     return {
         "rows": out,
+        "by_type": _by_type(rows, types, total),
+        "by_mode": _by_mode(rows, modes, total),
+        "mode_labels_th": ji.CHANNEL_MODES,
+        "type_labels_th": ji.CHANNEL_TYPES,
         "total_visits": total,
         "asked": bool(study.get("ask_channel_per_step")),
         "measured": total > 0,
-        "unit_th": "หน่วยนับคือ “การผ่านหนึ่งขั้นของหนึ่งคน” ไม่ใช่จำนวนคน",
+        "unit_th": ("หน่วยนับคือ “การใช้หนึ่งช่องทางในหนึ่งขั้นของหนึ่งคน” ไม่ใช่จำนวนคน "
+                    "หนึ่งขั้นใช้ได้หลายช่องทาง ผลรวมจึงมากกว่าจำนวนการผ่านขั้น"),
         "note_th": ("ช่องทางมาจากคำตอบของผู้ตอบเองว่าตอนนั้นทำผ่านอะไร "
                     "ไม่ได้มาจากที่ผู้วิจัยกำหนดแทนลูกค้า"),
         "not_measured_th": ("การศึกษานี้ยังไม่ได้ถามช่องทางรายขั้น "
                             "เปิดได้ที่หน้าแก้ไขการศึกษา (เพิ่มเวลาตอบประมาณ 16 วินาที)"),
+    }
+
+
+def _pool(rows: dict, classify: dict, keys: List[str], default: str, total: int) -> dict:
+    """Pool over visit-level ratings, never over per-channel means."""
+    diffs, emos, n_visit, n_pain, chans = [], [], 0, 0, []
+    for r in rows.values():
+        if classify.get(r["label"], default) not in keys:
+            continue
+        diffs += r["difficulties"]
+        emos += r["emotions"]
+        n_visit += r["n_visit"]
+        n_pain += r["n_pain"]
+        chans.append(r["label"])
+    burden, ci = _burden(diffs)
+    return {"channels": chans, "n_visit": n_visit,
+            "share_of_visits": (n_visit / total) if total else None,
+            "burden": burden, "burden_ci95": ci,
+            "emotion": (sum(emos) / len(emos)) if emos else None,
+            "pain_rate": (n_pain / n_visit) if n_visit else None,
+            "pain_rate_ci95": mj.wilson_interval(n_pain, n_visit),
+            "thin": n_visit < 10}
+
+
+def _by_mode(rows: dict, modes: dict, total: int) -> dict:
+    out = []
+    for key, label in ji.CHANNEL_MODES.items():
+        row = _pool(rows, modes, [key], "one_to_many", total)
+        if row["n_visit"]:
+            out.append({**row, "mode": key, "label_th": label})
+    return {
+        "rows": out,
+        "note_th": ("many-to-many คือลูกค้าคุยกันเอง (รีวิว โซเชียล ปากต่อปาก) "
+                    "ซึ่งแบรนด์คุมไม่ได้โดยตรง จึงต้องอ่านแยกจากช่องทางที่แบรนด์คุมเอง"),
+    }
+
+
+def _step_touchpoints(study: dict, nodes: dict, types: dict) -> List[dict]:
+    """Step x touchpoint, with a flag when one step mixes physical and not."""
+    out = []
+    for s in (study.get("states") or []):
+        n = nodes.get(s["id"]) or {}
+        chans = n.get("channels") or []
+        kinds = {("physical" if types.get(c["label"]) in ji.PHYSICAL_TYPES
+                  else "non_physical") for c in chans}
+        out.append({
+            "state_id": s["id"], "label_th": n.get("label_th"),
+            "stage_id": n.get("stage_id"),
+            "n_visit": n.get("n_visit", 0),
+            "n_channel_uses": n.get("n_channel", 0),
+            "channels": [{**c, "type": types.get(c["label"], "digital"),
+                          "type_label_th": ji.CHANNEL_TYPES.get(types.get(c["label"], "digital"))}
+                         for c in chans],
+            "channels_per_visit": ((n.get("n_channel") or 0) / n["n_visit"]) if n.get("n_visit") else None,
+            "mixed_types": len(kinds) > 1,
+        })
+    return out
+
+
+def _by_type(rows: dict, types: dict, total: int) -> dict:
+    """Roll channels up to their type, then to the physical / non-physical cut.
+
+    Burden is pooled over the raw visit-level ratings, never averaged over
+    channel means — a 3-visit channel must not weigh the same as a 200-visit one.
+    """
+    def agg(keys: List[str], label: str) -> dict:
+        return {**_pool(rows, types, keys, "digital", total), "label_th": label}
+
+    three = [dict(agg([k], v), type=k) for k, v in ji.CHANNEL_TYPES.items()]
+    non_physical = [k for k in ji.CHANNEL_TYPES if k not in ji.PHYSICAL_TYPES]
+    two = [dict(agg(list(ji.PHYSICAL_TYPES), "ต้องไปถึงที่จริง (physical)"), type="physical"),
+           dict(agg(non_physical, "ไม่ต้องไปถึงที่จริง (non-physical)"), type="non_physical")]
+    return {
+        "three_way": [t for t in three if t["n_visit"] > 0],
+        "two_way": [t for t in two if t["n_visit"] > 0],
+        "note_th": ("ประเภทช่องทางเป็นการจัดกลุ่มโดยผู้วิจัย (แก้ได้ในหน้าแก้ไขการศึกษา) "
+                    "ส่วนช่องทางที่ใช้จริงมาจากคำตอบของลูกค้า · "
+                    "“คนต่อคน” ถูกนับเป็นฝั่งไม่ต้องไปถึงที่จริง เพราะรวมทั้งโทร แชท และปากต่อปาก"),
+    }
+
+
+def _pain_matrix(study: dict, kept: List[dict]) -> dict:
+    """Pain TYPE x step, and pain TYPE x touchpoint.
+
+    A step — and therefore a touchpoint — can carry several pain types at once,
+    so the cell is a count of nominations, and row totals exceed the number of
+    respondents on purpose.
+    """
+    labels = {s["id"]: s.get("label_th") for s in (study.get("states") or [])}
+    order = [s["id"] for s in (study.get("states") or [])]
+    cats: Counter = Counter()
+    by_step: Dict[str, Counter] = {sid: Counter() for sid in order}
+    by_channel: Dict[str, Counter] = {}
+    step_nominations: Counter = Counter()
+    channel_nominations: Counter = Counter()
+
+    for r in kept:
+        pain = r.get("pain") or {}
+        for sid in (pain.get("nominated") or []):
+            if sid not in by_step:
+                continue
+            step_nominations[sid] += 1
+            chans = _channels_of((r.get("experience") or {}).get(sid))
+            for ch in chans:
+                channel_nominations[ch] += 1
+                by_channel.setdefault(ch, Counter())
+            for c in ((pain.get(sid) or {}).get("categories") or []):
+                cats[c] += 1
+                by_step[sid][c] += 1
+                for ch in chans:
+                    by_channel[ch][c] += 1
+
+    cat_order = [c for c, _ in cats.most_common()]
+    return {
+        "categories": cat_order,
+        "by_step": [{"state_id": sid, "label_th": labels.get(sid),
+                     "n_nominations": step_nominations.get(sid, 0),
+                     "counts": {c: by_step[sid].get(c, 0) for c in cat_order},
+                     "total": sum(by_step[sid].values())}
+                    for sid in order],
+        "by_channel": [{"label": ch,
+                        "n_nominations": channel_nominations.get(ch, 0),
+                        "counts": {c: cnt.get(c, 0) for c in cat_order},
+                        "total": sum(cnt.values())}
+                       for ch, cnt in sorted(by_channel.items(),
+                                             key=lambda kv: -sum(kv[1].values()))],
+        "total": int(sum(cats.values())),
+        "note_th": ("หนึ่งขั้นและหนึ่งช่องทางมีได้หลายปัญหา ตัวเลขในช่องคือจำนวนครั้งที่ผู้ตอบระบุ "
+                    "ผลรวมจึงมากกว่าจำนวนคนได้"),
+        "limitations_th": [
+            "ความรุนแรง 0–10 ถูกถามต่อ “ขั้นตอน” ไม่ได้ถามแยกต่อประเภทปัญหา "
+            "จึงจัดลำดับปัญหาได้ด้วยจำนวนคนที่ระบุ แต่ยังเทียบความหนักระหว่างประเภทในขั้นเดียวกันไม่ได้",
+            "ผู้ตอบหนึ่งคนเลือกขั้นที่เป็นปัญหาได้สูงสุด 2 ขั้น (คุมเวลาตอบ) "
+            "ภาพรวมจึงเป็นการนับจากทุกคนรวมกัน ไม่ใช่รายการปัญหาทั้งหมดของแต่ละคน",
+            "นับจากคนที่ผ่านขั้นนั้นเท่านั้น ขั้นที่มีคนผ่านน้อยจะแกว่งมาก",
+        ],
     }
 
 
@@ -832,7 +1017,12 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             "expected_transitions": ji.default_expected_transitions(states),
             "pain_options": ji.default_pain_options(states),
             "channel_options": list(ji.DEFAULT_CHANNEL_OPTIONS),
+            "channel_types": ji.default_channel_types(),
+            "channel_modes": ji.default_channel_modes(),
             "ask_channel_per_step": True,
+            # One step can involve several touchpoints at once — asking for a
+            # single one under-counts every mixed step, physical ones first.
+            "channel_multi": True,
             "segment_questions": ji.build_segment_questions(),
             "consent": default_consent(data.researcher_name, data.advisor_name, data.contact),
             "content_revision": 1,
@@ -910,6 +1100,18 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             if violations:
                 raise HTTPException(400, "ชื่อช่องทางมีข้อมูลอ่อนไหวตาม PDPA: " + ", ".join(violations))
             upd["channel_options"] = opts
+            existing_types = {**ji.default_channel_types(opts),
+                              **(study.get("channel_types") or {})}
+            upd["channel_types"] = {o: existing_types.get(o, "digital") for o in opts}
+            existing_modes = {**ji.default_channel_modes(opts),
+                              **(study.get("channel_modes") or {})}
+            upd["channel_modes"] = {o: existing_modes.get(o, "one_to_many") for o in opts}
+        if data.channel_modes is not None:
+            valid = {k: v for k, v in data.channel_modes.items() if v in ji.CHANNEL_MODES}
+            upd["channel_modes"] = {**(study.get("channel_modes") or {}), **valid}
+        if data.channel_types is not None:
+            valid = {k: v for k, v in data.channel_types.items() if v in ji.CHANNEL_TYPES}
+            upd["channel_types"] = {**(study.get("channel_types") or {}), **valid}
         if data.ask_channel_per_step is not None:
             upd["ask_channel_per_step"] = bool(data.ask_channel_per_step)
         if data.state_meta is not None:
@@ -1050,6 +1252,7 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             level="solution" if study.get("analysis_level") == "solution" else "product",
             n_segment_items=len(study.get("segment_questions") or []),
             ask_channel_per_step=bool(study.get("ask_channel_per_step")),
+            channel_multi=bool(study.get("channel_multi")),
         )
         return json_safe(est)
 
@@ -1094,7 +1297,8 @@ def get_journey_routes(db, get_current_user, get_optional_user):
         est = jb.check_design(m_states=m, r_target=int(study.get("target_responses") or 100),
                               level="solution" if study.get("analysis_level") == "solution" else "product",
                               n_segment_items=len(study.get("segment_questions") or []),
-                              ask_channel_per_step=bool(study.get("ask_channel_per_step")))
+                              ask_channel_per_step=bool(study.get("ask_channel_per_step")),
+                          channel_multi=bool(study.get("channel_multi")))
         if est["blocked"]:
             raise HTTPException(400, "แบบสอบถามเกินเพดานที่ผู้ตอบรับไหว: " + " · ".join(est["blockers"]))
         if not (study.get("sampling_frame") or "").strip():
@@ -1117,7 +1321,8 @@ def get_journey_routes(db, get_current_user, get_optional_user):
         await db.journey_studies.update_one({"id": study["id"]}, {"$inc": {"link_starts": 1}})
         est = jb.estimate(m_states=len(study.get("states") or []),
                           n_segment_items=len(study.get("segment_questions") or []),
-                          ask_channel_per_step=bool(study.get("ask_channel_per_step")))
+                          ask_channel_per_step=bool(study.get("ask_channel_per_step")),
+                          channel_multi=bool(study.get("channel_multi")))
         return {
             "id": study["id"], "share_token": share_token,
             "title": study.get("title"), "analysis_level": study.get("analysis_level"),
@@ -1127,6 +1332,9 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             "expected_transitions": study.get("expected_transitions"),
             "pain_options": study.get("pain_options"),
             "channel_options": study.get("channel_options") or ji.DEFAULT_CHANNEL_OPTIONS,
+            "channel_types": study.get("channel_types") or ji.default_channel_types(
+                study.get("channel_options")),
+            "channel_multi": bool(study.get("channel_multi")),
             "ask_channel_per_step": bool(study.get("ask_channel_per_step")),
             "segment_questions": study.get("segment_questions"),
             "recency_bands": ji.RECENCY_BANDS,
