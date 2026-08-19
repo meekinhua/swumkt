@@ -18,9 +18,9 @@ const CustomerJourneyHub = () => {
       <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" />
       <div className="be-page">
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-          <button className={`be-chip ${tab === 'quant' ? 'solid' : ''}`} data-testid="journey-tab-quant"
+          <button className={`be-chip ${tab === 'quant' ? 'solid' : ''}`} aria-pressed={tab === 'quant'} data-testid="journey-tab-quant"
                   onClick={() => setTab('quant')}>เชิงปริมาณ (เก็บข้อมูลจริง)</button>
-          <button className={`be-chip ${tab === 'qual' ? 'solid' : ''}`} data-testid="journey-tab-qual"
+          <button className={`be-chip ${tab === 'qual' ? 'solid' : ''}`} aria-pressed={tab === 'qual'} data-testid="journey-tab-qual"
                   onClick={() => setTab('qual')}>เชิงคุณภาพ (สร้างแผนที่ด้วย AI)</button>
         </div>
 

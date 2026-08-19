@@ -33,11 +33,15 @@ from routes._analysis_common import (parse_segments_param, apply_response_filter
 
 journey_router = APIRouter(prefix="/journey", tags=["Customer Journey"])
 
-ANALYSIS_SCHEMA_VERSION = 1
+ANALYSIS_SCHEMA_VERSION = 2
 METHOD_MODEL_FREE = "model_free"
 MAX_PATH_STEPS = 12
 DEFAULT_COMPLETION_RATE = 0.55
 MIN_R_FOR_ROUTE_SHARE = 30
+# Edge labels: a share needs a denominator worth dividing by, and a thin edge is
+# drawn dashed rather than given a percentage it cannot support.
+MIN_OUT_FOR_EDGE_SHARE = 10
+MIN_COUNT_FOR_SOLID_EDGE = 5
 QUALITY_REFERENCE_FREEZE_AT = 50
 
 
@@ -433,9 +437,16 @@ def compute_model_free(study: dict, responses: List[dict],
     }
     diagnostics["warnings"] = _diagnostic_warnings(diagnostics)
 
+    # --- observed flow map (model-free) ----------------------------------
+    observed_flow = _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R)
+
     unlocked = ["counts", "steps", "pain"]
     if R >= MIN_R_FOR_ROUTE_SHARE:
         unlocked.append("routes")
+    if observed_flow["edges"]:
+        # NOT the weighted Markov map: these are counted transitions, no
+        # estimated probabilities, no certainty bands (that is Phase 2).
+        unlocked.append("observed_flow")
     if len(segments_available(kept, [q["id"] for q in study.get("segment_questions") or []])) and R >= 25:
         unlocked.append("segments_view")
 
@@ -454,6 +465,7 @@ def compute_model_free(study: dict, responses: List[dict],
                    "none_route_share": (none_route / R) if R else 0.0,
                    "shares_hidden": not show_share},
         "nodes": nodes,
+        "observed_flow": observed_flow,
         "diagnostics": diagnostics,
         "matrix": None, "loss": None, "priority": None, "map": None,
         "scope_note_th": copy_th.PHASE1_SCOPE,
@@ -465,6 +477,67 @@ def compute_model_free(study: dict, responses: List[dict],
                          "n_transitions": int(n_ij.sum())},
     }
     return json_safe(results)
+
+
+def _observed_flow(seqs, states, labels, absorbing, nodes, terminals, R) -> dict:
+    """Counted transitions between steps — the map layer that is honest at Phase 1.
+
+    This is NOT `results.map`: no probability is estimated, no certainty band is
+    drawn and nothing is smoothed. Each edge is "how many respondents went from
+    here to there", and a share is emitted only when the source has at least
+    MIN_OUT_FOR_EDGE_SHARE outgoing transitions to divide by.
+    """
+    out_total = Counter()
+    pair = Counter()
+    for seq in seqs:
+        for a, b in zip(seq, seq[1:]):
+            pair[(a, b)] += 1
+            out_total[a] += 1
+
+    edges = []
+    for (a, b), c in sorted(pair.items(), key=lambda kv: -kv[1]):
+        src_total = out_total[a]
+        share = (c / src_total) if src_total >= MIN_OUT_FOR_EDGE_SHARE else None
+        edges.append({
+            "from": a, "to": b, "count": c,
+            "from_label": _label_of(a, labels, absorbing),
+            "to_label": _label_of(b, labels, absorbing),
+            "share_of_source": share,
+            "self_loop": a == b,
+            "thin": c < MIN_COUNT_FOR_SOLID_EDGE,
+            "to_terminal": b in mj.ABSORBING,
+        })
+
+    flow_nodes = [{"id": mj.START, "label_th": "เริ่มต้น", "kind": "start",
+                   "n_visit": R, "burden": None}]
+    for sid in states:
+        n = nodes.get(sid) or {}
+        flow_nodes.append({
+            "id": sid, "label_th": n.get("label_th") or sid, "kind": "step",
+            "stage_id": n.get("stage_id"), "n_visit": n.get("n_visit", 0),
+            "reach": n.get("reach"), "burden": n.get("burden"),
+            "revisit": n.get("revisit"),
+            "pain_nomination_rate": n.get("pain_nomination_rate"),
+        })
+    for key in (mj.CONV, mj.ABANDON, mj.UNKNOWN):
+        t = terminals.get(key) or {}
+        flow_nodes.append({"id": key, "label_th": t.get("label_th") or key,
+                           "kind": "terminal", "n_visit": t.get("count", 0),
+                           "reach": t.get("share"), "burden": None})
+
+    max_count = max([e["count"] for e in edges] or [1])
+    return {
+        "nodes": flow_nodes,
+        "edges": edges,
+        "max_edge_count": max_count,
+        "total_transitions": int(sum(pair.values())),
+        "share_floor": MIN_OUT_FOR_EDGE_SHARE,
+        "thin_floor": MIN_COUNT_FOR_SOLID_EDGE,
+        "note_th": ("แผนที่นี้คือ “การนับจริง” ของการเดินจากขั้นหนึ่งไปอีกขั้น "
+                    "ความหนาของเส้นแทนจำนวนคน ไม่ใช่ความน่าจะเป็นที่ประมาณจากแบบจำลอง "
+                    "และไม่มีการถ่วงน้ำหนักหรือช่วงความเชื่อมั่นบนเส้น "
+                    f"เปอร์เซ็นต์จะแสดงเฉพาะขั้นที่มีการออกจากขั้นนั้นตั้งแต่ {MIN_OUT_FOR_EDGE_SHARE} ครั้งขึ้นไป"),
+    }
 
 
 def _label_of(token: str, labels: dict, absorbing: dict) -> str:

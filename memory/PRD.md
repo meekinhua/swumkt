@@ -607,3 +607,11 @@ Source of truth: `/app/HANDOFF_CJM.md` + `/app/memory/CJM_QUANT_SPEC.md` (1,438 
 - **P2 · Phase 5** — Level B สินค้าใหม่ที่ยังไม่มีตัวเทียบ
 - **P2 · Phase 6** — narrative AI + export วิทยานิพนธ์ของ CJM
 - **P2** — retrofit consent/retention ไปยัง Brand Equity ตาม spec 2.10
+
+### เพิ่มเติม 19 ส.ค. 2026 — แผนที่ (Mermaid) ในโมดูลเชิงปริมาณ
+- ผู้ใช้ขอให้มีแผนที่ วาดด้วย Mermaid แนวเดิม "ปรับปรุงได้ แต่ห้ามแย่ลง"
+- ทำเป็น **แผนที่เส้นทางที่พบจริง (observed flow)** ซึ่งเป็น model-free จึงไม่ขัดกับ spec (spec ปฏิเสธ Mermaid เฉพาะ *weighted map* ของ Phase 2 ที่ต้องเข้ารหัสน้ำหนักต่อเนื่อง + ความไม่แน่นอน)
+- Backend: `results.observed_flow` (nodes/edges, `count`, `share_of_source` แสดงเฉพาะขั้นที่มีทางออก ≥10 ครั้ง, `thin` เมื่อ <5 คน, self-loop = การทำซ้ำ) · `gates.unlocked` เพิ่ม `observed_flow` แยกจาก `map` ที่ยังเป็น null · `ANALYSIS_SCHEMA_VERSION` = 2
+- Frontend: `pages/journey/JourneyFlowMap.jsx` สร้างโค้ด Mermaid แล้ว render ผ่าน `components/MermaidViewer` ตัวเดิม (ได้ zoom/pan/fullscreen ครบ) — ความหนาเส้น = จำนวนคน, สีกล่อง = ระดับความยุ่งยาก, เส้นประ = หลักฐานบาง, ปุ่มสลับ "ทำซ้ำในขั้นเดิม / ซ่อนเส้นบาง / ดูโค้ด / คัดลอกโค้ด"
+- แก้บั๊ก UI: `.be-chip` ต้องใช้ `aria-pressed` (CSS `!important` ทับ `.solid`) → สถานะเลือกของแท็บ Hub / ปุ่มแผนที่ / เทมเพลตในวิซาร์ด มองเห็นชัดแล้ว
+- ทดสอบ: unit 34 + API 12 = 46 เคสผ่าน · ตรวจหน้าจริงด้วย Playwright (แผนที่ render, ปุ่มสลับทำงาน, แท็บเชิงคุณภาพยังใช้ได้)

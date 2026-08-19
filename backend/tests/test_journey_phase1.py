@@ -312,3 +312,57 @@ def test_unknown_terminal_when_respondent_cannot_say():
     body = J.JourneySubmit(consent={"participation": True}, terminal="???",
                            path=[{"state_id": "s1", "order": 0}])
     assert J._clean_submission(study, body)["terminal"] == mj.UNKNOWN
+
+
+# ---------------------------------------------------------------------------
+# Observed-flow map (Mermaid layer) — counted transitions, never estimates
+# ---------------------------------------------------------------------------
+def test_observed_flow_counts_transitions_including_self_loops():
+    study = make_study()
+    responses = ([resp(f"c{i}", ["s1", "s2", "s2", "s3"], "CONV", {"s1": 3}) for i in range(12)]
+                 + [resp(f"a{i}", ["s1", "s2"], "ABANDON", {"s1": 4}) for i in range(8)])
+    flow = J.compute_model_free(study, responses)["observed_flow"]
+    edges = {(e["from"], e["to"]): e for e in flow["edges"]}
+    assert edges[("START", "s1")]["count"] == 20
+    assert edges[("s2", "s2")]["count"] == 12 and edges[("s2", "s2")]["self_loop"] is True
+    assert edges[("s2", "ABANDON")]["count"] == 8
+    assert edges[("s2", "ABANDON")]["to_terminal"] is True
+    assert flow["total_transitions"] == sum(e["count"] for e in flow["edges"])
+
+
+def test_observed_flow_hides_share_without_enough_exits():
+    study = make_study()
+    responses = [resp(f"r{i}", ["s1", "s2"], "CONV", {"s1": 3}) for i in range(4)]
+    flow = J.compute_model_free(study, responses)["observed_flow"]
+    assert all(e["share_of_source"] is None for e in flow["edges"])
+    assert all(e["thin"] is True for e in flow["edges"])   # 4 < MIN_COUNT_FOR_SOLID_EDGE
+
+
+def test_observed_flow_share_is_of_source_exits_not_of_respondents():
+    study = make_study()
+    responses = ([resp(f"c{i}", ["s1", "s2"], "CONV", {"s1": 3}) for i in range(15)]
+                 + [resp(f"a{i}", ["s1"], "ABANDON", {"s1": 3}) for i in range(5)])
+    flow = J.compute_model_free(study, responses)["observed_flow"]
+    e = next(x for x in flow["edges"] if (x["from"], x["to"]) == ("s1", "s2"))
+    assert e["share_of_source"] == pytest.approx(15 / 20)
+    assert e["thin"] is False
+
+
+def test_observed_flow_carries_no_probability_and_no_band():
+    study = make_study()
+    responses = [resp(f"r{i}", ["s1", "s2", "s3"], "CONV", {"s1": 3}) for i in range(40)]
+    res = J.compute_model_free(study, responses)
+    flow = res["observed_flow"]
+    assert "observed_flow" in res["gates"]["unlocked"]
+    assert res["map"] is None and res["matrix"] is None      # the weighted map is Phase 2
+    for e in flow["edges"]:
+        assert set(e.keys()).isdisjoint({"probability", "ci95", "p", "smoothed"})
+
+
+def test_observed_flow_nodes_cover_start_steps_and_three_terminals():
+    study = make_study()
+    responses = [resp(f"r{i}", ["s1", "s2"], "CONV", {"s1": 3}) for i in range(10)]
+    flow = J.compute_model_free(study, responses)["observed_flow"]
+    kinds = [n["kind"] for n in flow["nodes"]]
+    assert kinds.count("start") == 1 and kinds.count("terminal") == 3
+    assert kinds.count("step") == len(study["states"])

@@ -80,12 +80,34 @@
   border: 1px dashed var(--rule); padding: 18px; text-align: center;
   font-size: 12.5px; color: var(--ink-3); line-height: 1.6;
 }
-.jy-token {
-  font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: .06em;
+.jy-token {  font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: .06em;
   word-break: break-all; border: 1.5px dashed var(--ink); padding: 12px; background: var(--paper-2);
 }
 
 @media (max-width: 720px) {
   .jy-chip-row { padding: 8px; }
   .jy-chip-row .jy-label { font-size: 13px; }
+}
+
+/* Observed-flow map (Mermaid) */
+.jy-map-legend {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+  font-size: 11.5px; color: var(--ink-3); margin-bottom: 10px;
+}
+.jy-map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.jy-sw { width: 14px; height: 14px; display: inline-block; border: 1.5px solid var(--ink); }
+.jy-sw-cool { background: #E7EFE9; border-color: #2F6B4F; }
+.jy-sw-warm { background: #FBEEDC; border-color: #B4761F; }
+.jy-sw-hot  { background: #F6DCD9; border-color: #B0332A; }
+.jy-sw-nd   { background: #F2F0EC; border-color: #B7B2A8; border-style: dashed; }
+
+.jy-map-wrap { border: 1.5px solid var(--ink); background: #fff; }
+.jy-map-wrap > div { margin: 0 !important; }
+.jy-map-wrap h3 { display: none; }          /* the card already carries a Thai title */
+.jy-map-wrap svg { max-width: none; }
+
+.jy-code {
+  margin-top: 12px; padding: 14px; background: var(--paper-2);
+  border: 1px dashed var(--rule); font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; line-height: 1.6; overflow-x: auto; white-space: pre;
 }

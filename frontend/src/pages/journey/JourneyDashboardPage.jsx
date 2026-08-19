@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import '../brand-equity/brand-equity-styles.css';
 import './journey-styles.css';
 import { BeTopbar, BeLoading } from '../brand-equity/be-components';
+import JourneyFlowMap from './JourneyFlowMap';
 import { COPY, fmtPct, fmtNum, fmtCI, fmtCIRaw } from './copy-th';
 import { copyToClipboard } from '@/lib/clipboard';
 
@@ -112,6 +113,12 @@ const JourneyDashboardPage = () => {
               {adequacy.loss_view_reason}
             </div>
           )}
+        </Card>
+
+        {/* ---- observed-flow map ---------------------------------------- */}
+        <Card title="แผนที่เส้นทางที่พบจริง" testid="journey-map"
+              desc={`นับจากผู้ตอบ ${res.n_disclosure?.R_analysed ?? R} คน · การเปลี่ยนขั้นทั้งหมด ${res.observed_flow?.total_transitions ?? 0} ครั้ง`}>
+          <JourneyFlowMap flow={res.observed_flow} />
         </Card>
 
         {/* ---- terminals ------------------------------------------------ */}

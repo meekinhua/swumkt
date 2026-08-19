@@ -226,6 +226,7 @@ const JourneyWizardPage = () => {
                   {Object.entries(templates.templates).map(([k, v]) => (
                     <button key={k} type="button"
                             className={`be-chip ${form.template_key === k ? 'solid' : ''}`}
+                            aria-pressed={form.template_key === k}
                             data-testid={`journey-tpl-${k}`}
                             onClick={() => setForm({ ...form, template_key: k })}>
                       {v.label_th}
