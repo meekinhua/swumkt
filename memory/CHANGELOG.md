@@ -1,3 +1,33 @@
+## 2026-06-20 — CJM: ketchup-bottle UX teaching case, end to end (qualitative → codebook → quantitative)
+
+New demo study seeded through the REAL API by `backend/scripts/seed_journey_ketchup.py`: 8 verbatim interviews →
+codebook extract → 9 approved pain codes (each with its quote and its `pain_type`) → activation (only after the
+qualitative collection-method gate is satisfied) → instrument lock → 160 simulated responses that carry
+`category_ids`, not labels. Public link `/journey/r/demoketchup1`.
+
+**The bug that made the chain look broken**: `compute_model_free()` counted pain only from the legacy free-text
+`categories` list. A study fielded with a codebook stores `category_ids`, so every pain view (per-step pain list,
+pain × step matrix, pain × touchpoint, pain-by-type) was empty while the provenance card correctly said
+"qualitative v1". Fixed by resolving ids through the active codebook:
+- `_code_index(codebook)` / `_pain_codes(cell, codes)` / `_pain_type_of(label, codes)` in `routes/journey.py`
+- `compute_model_free(study, responses, quality_reference, codebook)`; `_pain_matrix` / `_touchpoint_summary` take `codes`
+- pain *type* now comes from the codebook row, not from keyword-matching the label
+- back-coded ids (`back_coded_ids`) count too, de-duplicated against the chosen ids
+- analysis cache key now includes `codebook_version`
+- legacy free-text studies (coffee demo) are untouched — verified
+
+**Follow-ups from testing agent iteration_39** (all fixed):
+- `GET /codebook` blockers stated "no draft yet" for a locked study; now states the real reason (answers exist, n)
+- `POST /pain-back-code` accepted any approved code; now only codes that step actually offered
+- `GET /pain-other-texts` returns `allowed_categories` per pending item; the queue UI shows only those chips
+- `JourneyCodebookStep` ignored `can_edit=false`; now renders a read-only record of the approved codes, their types,
+  the supporting quotes and the qualitative method note, instead of a dead extract panel
+
+Ketchup demo numbers: R=160, CONV 84.4% / ABANDON 9.4% / UNKNOWN 6.3%, burden peaks on "เคาะก้นขวด" (78/100) and
+"ใช้มีดแคะ" (81/100), 265 pain nominations across 7 pain types. Tests: 247 journey/markov tests pass (3 new cases for
+id-resolution, back-coding and unapproved ids).
+
+
 ## 2026-06-14 (round 7) — BUG: selected demographic options were invisible ("ดูไม่ออกว่าเลือกอะไรไปแล้ว")
 
 Same family of defect as the dead modal: the `.be-root` stylesheet rewrites Tailwind colour utilities with

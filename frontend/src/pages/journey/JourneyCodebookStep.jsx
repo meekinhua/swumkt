@@ -135,6 +135,7 @@ const JourneyCodebookStep = ({ study, token, onBack, onDone }) => {
   const [budget, setBudget] = useState(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [canEdit, setCanEdit] = useState(true);
 
   const states = study?.states || [];
 
@@ -152,6 +153,7 @@ const JourneyCodebookStep = ({ study, token, onBack, onDone }) => {
       // Server-side gates arrive with the codebook, so the activate button is
       // disabled with its reasons on first paint rather than after a click.
       setBlockers(cb.data.blockers || []);
+      setCanEdit(cb.data.can_edit !== false);
       setRuns(qr.data?.runs || qr.data || []);
     } catch (e) {
       setError(e?.response?.data?.detail || 'โหลดชุดรหัสไม่ได้');
@@ -218,6 +220,66 @@ const JourneyCodebookStep = ({ study, token, onBack, onDone }) => {
     { ...d, [key]: (d[key] || []).filter((r) => r.id !== id) }));
 
   const approvedPain = ((draft || active)?.pain_categories || []).filter((r) => r.status === 'approved');
+
+  // Once answers exist the vocabulary is frozen. Showing the extract/edit panel
+  // anyway only produces a 400 on click, so the step turns into the record of
+  // what was approved — with the quotes, which is what a reader must check.
+  if (!canEdit) {
+    const cb = active || draft;
+    const rows = (cb?.pain_categories || []).filter((r) => r.status === 'approved');
+    const typeLabel = (t) => (PAIN_TYPES.find(([v]) => v === t) || [null, 'อื่น ๆ'])[1];
+    return (
+      <div data-testid="journey-step-codebook">
+        <div className="be-card" style={{ marginBottom: 16 }} data-testid="cb-readonly">
+          <h3 className="be-card-t">
+            {cb ? `ชุดรหัสเวอร์ชัน ${cb.version} · แก้ไขไม่ได้แล้ว` : 'ยังไม่มีชุดรหัส'}
+          </h3>
+          <p className="be-card-d">
+            ประเภทปัญหา {rows.length} รายการ
+            {cb?.activated_at ? ` · เปิดใช้เมื่อ ${(cb.activated_at || '').slice(0, 10)}` : ''}
+          </p>
+          {blockers.map((b, i) => <div className="jy-warn" key={i}>{b}</div>)}
+          {(cb?.source?.collection_method_th) && (
+            <div className="jy-kv" style={{ marginTop: 10 }}>
+              <span>วิธีเก็บข้อมูลเชิงคุณภาพ</span><b>{cb.source.collection_method_th}</b>
+            </div>
+          )}
+          {cb?.source?.n_interviews != null && (
+            <div className="jy-kv"><span>จำนวนผู้ให้สัมภาษณ์</span>
+              <b>{cb.source.n_interviews} ราย</b></div>
+          )}
+        </div>
+
+        <div className="be-card" style={{ marginBottom: 16 }}>
+          <h3 className="be-card-t">ประเภทปัญหาที่อนุมัติแล้ว และข้อความต้นทาง</h3>
+          <p className="be-card-d">ทุกประเภทต้องมีคำพูดของผู้ให้สัมภาษณ์รองรับ — นี่คือหลักฐานนั้น</p>
+          {rows.map((r) => (
+            <div key={r.id} style={{ border: '1px solid var(--rule)', padding: 12, marginTop: 10 }}
+                 data-testid={`cb-ro-${r.id}`}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+                <b style={{ fontSize: 14 }}>{r.label_th}</b>
+                <span className="be-tiny" style={{ color: 'var(--ink-3)' }}>
+                  {typeLabel(r.pain_type)}
+                </span>
+              </div>
+              {r.definition_th && (
+                <div className="be-tiny" style={{ marginTop: 4, lineHeight: 1.7 }}>{r.definition_th}</div>
+              )}
+              {((r.provenance || {}).quotes || []).map((q, i) => (
+                <div className="be-tiny" key={i}
+                     style={{ marginTop: 6, paddingLeft: 10, borderLeft: '3px solid var(--rule)',
+                              lineHeight: 1.7 }}>
+                  “{q.text}”{q.source_ref ? <span style={{ color: 'var(--ink-3)' }}> — {q.source_ref}</span> : null}
+                </div>
+              ))}
+            </div>
+          ))}
+          <button className="be-btn" style={{ marginTop: 16 }} onClick={onBack}
+                  data-testid="cb-back">ย้อนกลับ</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div data-testid="journey-step-codebook">

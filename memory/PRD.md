@@ -668,3 +668,11 @@ Source of truth: `/app/HANDOFF_CJM.md` + `/app/memory/CJM_QUANT_SPEC.md` (1,438 
   5. ปุ่ม activate เคย enable ก่อนคลิกครั้งแรก → `GET /codebook` คืน `blockers`/`warnings` มาด้วย ปุ่มจึง disable พร้อมเหตุผลตั้งแต่โหลด
   + ปรับ `_cue_hits` ให้ไม่จับคำผิด (รอบ/เรียบร้อย/ไม่แพง/เสียงดัง) ตามที่ agent ภายนอกตั้งข้อสังเกต
 - **ยังเหลือจาก handoff (ยังไม่ทำ):** ฝัง provenance/คำเตือน/κ/saturation ลง **ไฟล์ export** · ปุ่ม merge candidate · LLM booster (stub บน dev)
+
+### 20 มิ.ย. 2026 — เดโม "UX ซอสมะเขือเทศขวดแก้ว" ครบสาย qualitative → codebook → quantitative
+คำสั่งผู้ใช้: "จำลอง sample data ใหม่ให้ 1 กรณี ... UX ของคนใช้ซอสมะเขือเทศขวดแก้ว ... ทำทั้งระบบ ตั้งแต่ qualitative ไปจน quantitative"
+- `backend/scripts/seed_journey_ketchup.py` เดินผ่าน API จริงทุกขั้น: บทสัมภาษณ์ 8 ราย → extract → อนุมัติ 9 รหัสปัญหา (แต่ละรหัสมี quote + pain_type + ขั้นที่ใช้) → activate (ผ่าน gate วิธีเก็บข้อมูลเชิงคุณภาพ) → lock → 160 คำตอบจำลองที่เก็บ `category_ids` จริง · ลิงก์ผู้ตอบ `/journey/r/demoketchup1`
+- **บั๊กที่พบและแก้ (ตัวตัดสายเชิงคุณภาพ→เชิงปริมาณ):** analysis นับปัญหาจาก free text `categories` เท่านั้น การศึกษาที่ใช้ codebook เก็บเป็น `category_ids` จึงทำให้ทุกมุมมองปัญหาว่างเปล่าแม้ provenance บอกว่า qualitative v1 → เพิ่ม `_code_index` / `_pain_codes` / `_pain_type_of`, ส่ง codebook เข้า `compute_model_free`, ประเภทปัญหามาจาก codebook (ไม่ใช่เดาจากคำ), นับ `back_coded_ids` ด้วย, cache key รวม `codebook_version` · การศึกษาเดิมแบบ free text (เดโมกาแฟ) ยังทำงานเหมือนเดิม
+- **แก้ตาม testing agent iteration_39:** blockers ของ `GET /codebook` บอกเหตุผลจริงเมื่อมีคำตอบแล้ว · back-code รับได้เฉพาะรหัสที่ขั้นนั้นถามจริง · `/pain-other-texts` คืน `allowed_categories` รายข้อ และ UI แสดงเฉพาะชิปเหล่านั้น · วิซาร์ดขั้น 3 เคารพ `can_edit=false` → แสดงเป็น "บันทึกหลักฐาน" (รหัส + ประเภท + quote + วิธีเก็บข้อมูล) แทนแผงแก้ไขที่กดแล้วได้ 400
+- ทดสอบ: pytest journey/markov **247 เคสผ่าน** (เพิ่ม 3 เคสเรื่องการแปลง id → ป้าย, back-code, รหัสที่ยังไม่อนุมัติ) · testing agent iteration_39 backend 19/19 + frontend 90% (ข้อที่ fail คือ can_edit ซึ่งแก้แล้ว)
+- **ค้างระดับ LOW:** วิซาร์ดขั้น 1 ยังไม่มีแถบ "ล็อกแล้ว" เมื่อมีคำตอบ · แผนที่ Mermaid เว้นพื้นที่ว่างซ้ายมากที่ 1920px

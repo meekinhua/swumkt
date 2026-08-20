@@ -391,9 +391,53 @@ def _t_crit(n: int) -> float:
         return 1.96
 
 
+def _code_index(codebook: Optional[dict]) -> dict:
+    """id -> label / pain type, from the ACTIVE codebook.
+
+    Responses fielded with a codebook carry category ids, not labels: without
+    this map every pain count downstream is empty even though the answers exist.
+    """
+    by_id: Dict[str, dict] = {}
+    type_by_label: Dict[str, str] = {}
+    for row in ((codebook or {}).get("pain_categories") or []):
+        if row.get("status") != "approved" or not row.get("id"):
+            continue
+        label = row.get("label_th") or row["id"]
+        ptype = row.get("pain_type") or "process"
+        by_id[row["id"]] = {"label": label, "pain_type": ptype}
+        type_by_label[label] = ptype
+    return {"by_id": by_id, "type_by_label": type_by_label}
+
+
+def _pain_codes(cell: Optional[dict], codes: dict) -> List[str]:
+    """Pain labels named at one step by one respondent.
+
+    Ids (plus anything back-coded from the free text) are resolved through the
+    codebook; free-text label lists from pre-codebook studies still count.
+    """
+    if not isinstance(cell, dict):
+        return []
+    by_id = codes.get("by_id") or {}
+    out: List[str] = []
+    for cid in list(cell.get("category_ids") or []) + list(cell.get("back_coded_ids") or []):
+        row = by_id.get(cid)
+        if row and row["label"] not in out:
+            out.append(row["label"])
+    for label in (cell.get("categories") or []):
+        if label and label not in out:
+            out.append(label)
+    return out
+
+
+def _pain_type_of(label: str, codes: dict) -> str:
+    return (codes.get("type_by_label") or {}).get(label) or ji.pain_type_of(label)
+
+
 def compute_model_free(study: dict, responses: List[dict],
-                       quality_reference: Optional[dict] = None) -> dict:
+                       quality_reference: Optional[dict] = None,
+                       codebook: Optional[dict] = None) -> dict:
     """Everything Phase 1 renders. No transition matrix is estimated."""
+    codes = _code_index(codebook)
     states = [s["id"] for s in (study.get("states") or [])]
     labels = {s["id"]: s.get("label_th") for s in (study.get("states") or [])}
     absorbing = study.get("absorbing") or ji.default_absorbing(study.get("analysis_level"))
@@ -452,7 +496,7 @@ def compute_model_free(study: dict, responses: List[dict],
         burden, burden_ci = _burden(diffs)
         cats = Counter()
         for r in nominated:
-            for c in ((r.get("pain") or {}).get(sid) or {}).get("categories") or []:
+            for c in _pain_codes((r.get("pain") or {}).get(sid), codes):
                 cats[c] += 1
 
         # Touchpoint: which channel the customer actually used at this step,
@@ -492,7 +536,10 @@ def compute_model_free(study: dict, responses: List[dict],
             "severity_conditional": {"mean": (sum(sev) / len(sev)) if sev else None,
                                      "m": len(sev),
                                      "caveat_th": copy_th.SEVERITY_CAVEAT},
-            "pain_categories": [{"label": c, "count": n} for c, n in cats.most_common(6)],
+            "pain_categories": [{"label": c, "count": n,
+                                 "pain_type": _pain_type_of(c, codes),
+                                 "type_label_th": ji.PAIN_TYPES.get(_pain_type_of(c, codes))}
+                                for c, n in cats.most_common(6)],
             "channels": channels,
             "dominant_channel": channels[0]["label"] if channels else None,
             "dominant_channel_share": channels[0]["share"] if channels else None,
@@ -544,9 +591,9 @@ def compute_model_free(study: dict, responses: List[dict],
     diagnostics["warnings"] = _diagnostic_warnings(diagnostics)
 
     # --- touchpoint + stage views (customer-side cuts) --------------------
-    touchpoints = _touchpoint_summary(study, kept)
+    touchpoints = _touchpoint_summary(study, kept, codes)
     stages_summary = _stage_summary(study, kept, nodes)
-    pain_matrix = _pain_matrix(study, kept)
+    pain_matrix = _pain_matrix(study, kept, codes)
     channel_types = {**ji.default_channel_types(study.get("channel_options")),
                      **(study.get("channel_types") or {})}
     step_touchpoints = _step_touchpoints(study, nodes, channel_types)
@@ -649,7 +696,7 @@ def _channels_of(exp: dict) -> List[str]:
     return [str(exp["channel"])] if exp.get("channel") else []
 
 
-def _touchpoint_summary(study: dict, kept: List[dict]) -> dict:
+def _touchpoint_summary(study: dict, kept: List[dict], codes: Optional[dict] = None) -> dict:
     """Aggregate by the channel the CUSTOMER said they used.
 
     The unit is a step-visit, not a respondent: one person can use the app at one
@@ -683,7 +730,7 @@ def _touchpoint_summary(study: dict, kept: List[dict]) -> dict:
                     row["pain_steps"][sid] += 1
                     # One touchpoint can carry SEVERAL pain types, and one
                     # respondent can name several at the same step.
-                    for c in ((r.get("pain") or {}).get(sid) or {}).get("categories") or []:
+                    for c in _pain_codes((r.get("pain") or {}).get(sid), codes or {}):
                         row["cats"][c] += 1
 
     total = sum(v["n_visit"] for v in rows.values())
@@ -817,7 +864,7 @@ def _by_type(rows: dict, types: dict, total: int) -> dict:
     }
 
 
-def _pain_matrix(study: dict, kept: List[dict]) -> dict:
+def _pain_matrix(study: dict, kept: List[dict], codes: Optional[dict] = None) -> dict:
     """Pain TYPE x step, and pain TYPE x touchpoint.
 
     A step — and therefore a touchpoint — can carry several pain types at once,
@@ -842,7 +889,7 @@ def _pain_matrix(study: dict, kept: List[dict]) -> dict:
             for ch in chans:
                 channel_nominations[ch] += 1
                 by_channel.setdefault(ch, Counter())
-            for c in ((pain.get(sid) or {}).get("categories") or []):
+            for c in _pain_codes(pain.get(sid), codes or {}):
                 cats[c] += 1
                 by_step[sid][c] += 1
                 for ch in chans:
@@ -851,10 +898,10 @@ def _pain_matrix(study: dict, kept: List[dict]) -> dict:
     cat_order = [c for c, _ in cats.most_common()]
     type_counts: Counter = Counter()
     for c, n in cats.items():
-        type_counts[ji.pain_type_of(c)] += n
+        type_counts[_pain_type_of(c, codes or {})] += n
     return {
         "categories": cat_order,
-        "category_types": {c: ji.pain_type_of(c) for c in cat_order},
+        "category_types": {c: _pain_type_of(c, codes or {}) for c in cat_order},
         "by_type": [{"type": t, "label_th": ji.PAIN_TYPES.get(t), "count": n,
                      "share": (n / sum(type_counts.values())) if type_counts else None}
                     for t, n in type_counts.most_common()],
@@ -1481,15 +1528,23 @@ def get_journey_routes(db, get_current_user, get_optional_user):
     async def get_codebook(study_id: str, current_user=Depends(get_current_user)):
         study = await _get_owned(study_id, current_user)
         active, draft = await _codebooks(study_id)
+        n_resp = await _n_responses(study_id)
         # Blockers travel with the GET so the activate button is already
         # disabled on first paint, with its reasons, instead of after a click.
-        blockers = jcb.validate_for_activation(draft) if draft else [
-            "ยังไม่มีชุดรหัสฉบับร่าง — สกัดจากข้อมูลเชิงคุณภาพก่อน"]
+        if n_resp:
+            # The real reason, not "no draft yet": once answers exist the
+            # vocabulary is frozen, and the write endpoints say exactly that.
+            blockers = ["มีคำตอบเข้ามาแล้ว (%d คน) จึงแก้หรือเปลี่ยนชุดรหัสไม่ได้ — "
+                        "สร้างการศึกษาใหม่หากต้องเปลี่ยนประเภทปัญหา" % n_resp]
+        elif draft:
+            blockers = jcb.validate_for_activation(draft)
+        else:
+            blockers = ["ยังไม่มีชุดรหัสฉบับร่าง — สกัดจากข้อมูลเชิงคุณภาพก่อน"]
         return {"active": active, "draft": draft,
                 "pain_source": study.get("pain_source") or "library_default",
                 "blockers": blockers,
                 "warnings": jcb.soft_warnings(draft) if draft else [],
-                "can_edit": (await _n_responses(study_id)) == 0}
+                "can_edit": n_resp == 0}
 
     @journey_router.post("/studies/{study_id}/codebook/extract")
     async def extract_codebook(study_id: str, body: CodebookExtract,
@@ -1662,6 +1717,11 @@ def get_journey_routes(db, get_current_user, get_optional_user):
         the queue for doing something about it.
         """
         await _get_owned(study_id, current_user)
+        study = await db.journey_studies.find_one({"id": study_id}, {"_id": 0})
+        active, _ = await _codebooks(study_id)
+        labels = {c["id"]: c.get("label_th") for c in ((active or {}).get("pain_categories") or [])
+                  if c.get("status") == "approved"}
+        offered = study.get("pain_category_ids") or {}
         rows = await db.journey_responses.find({"study_id": study_id},
                                                {"_id": 0}).to_list(5000)
         pending, done = [], 0
@@ -1675,8 +1735,15 @@ def get_journey_routes(db, get_current_user, get_optional_user):
                 if cell.get("back_coded_ids"):
                     done += 1
                     continue
+                # Only the codes this step actually offered: coding an answer
+                # with a label the respondent never saw would put a number in
+                # the matrix that no respondent ever agreed to.
+                allowed = [cid for cid in (offered.get(sid) or []) if cid in labels]
                 pending.append({"response_id": r.get("id"), "state_id": sid,
-                                "text": text, "submitted_at": r.get("created_at")})
+                                "text": text, "submitted_at": r.get("created_at"),
+                                "allowed_category_ids": allowed,
+                                "allowed_categories": [{"id": cid, "label_th": labels[cid]}
+                                                       for cid in allowed]})
         total = len(pending) + done
         return {"pending": pending, "n_pending": len(pending), "n_back_coded": done,
                 "back_coded_rate": round(done / total, 4) if total else None}
@@ -1696,9 +1763,14 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             raise HTTPException(400, "ต้องเปิดใช้ชุดรหัสก่อนจึงจะลงรหัสย้อนกลับได้")
         allowed = {c["id"] for c in (active.get("pain_categories") or [])
                    if c.get("status") == "approved"}
+        # And only what that step offered: back-coding may repair a missing
+        # label, never introduce one the respondent was never shown.
+        offered = (study.get("pain_category_ids") or {}).get(body.state_id)
+        if offered:
+            allowed &= set(offered)
         picked = [c for c in dict.fromkeys(body.category_ids or []) if c in allowed]
         if not picked:
-            raise HTTPException(400, "ไม่มีรหัสที่ใช้ได้ — ต้องเป็นประเภทที่อนุมัติแล้วในชุดรหัสที่ใช้อยู่")
+            raise HTTPException(400, "ไม่มีรหัสที่ใช้ได้ — ต้องเป็นประเภทที่อนุมัติแล้วและถูกถามในขั้นนี้")
 
         resp = await db.journey_responses.find_one(
             {"id": body.response_id, "study_id": study_id}, {"_id": 0})
@@ -1978,6 +2050,7 @@ def get_journey_routes(db, get_current_user, get_optional_user):
         if (cached and not force
                 and cached.get("schema_version") == ANALYSIS_SCHEMA_VERSION
                 and cached.get("respondent_count") == len(responses)
+                and cached.get("codebook_version") == int(study.get("codebook_version") or 0)
                 and cached.get("structure_hash") == study.get("structure_hash")):
             return {"status": "ok", "method": METHOD_MODEL_FREE, "cached": True,
                     "filter_signature": sig, "respondent_count": len(responses),
@@ -2001,7 +2074,11 @@ def get_journey_routes(db, get_current_user, get_optional_user):
                 await db.journey_studies.update_one(
                     {"id": study_id}, {"$set": {"quality_reference": quality_reference}})
 
-        results = compute_model_free(study, responses, quality_reference)
+        codebook = None
+        if study.get("codebook_id"):
+            codebook = await db.journey_codebooks.find_one(
+                {"id": study["codebook_id"]}, {"_id": 0})
+        results = compute_model_free(study, responses, quality_reference, codebook)
 
         try:
             await db.journey_analysis_cache.update_one(
@@ -2009,6 +2086,7 @@ def get_journey_routes(db, get_current_user, get_optional_user):
                 {"$set": {"study_id": study_id, "method": METHOD_MODEL_FREE, "filter_sig": sig,
                           "schema_version": ANALYSIS_SCHEMA_VERSION,
                           "respondent_count": len(responses),
+                          "codebook_version": int(study.get("codebook_version") or 0),
                           "structure_hash": study.get("structure_hash"),
                           "results": results, "created_at": _now_iso()}},
                 upsert=True)

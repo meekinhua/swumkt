@@ -751,3 +751,68 @@ def test_out_of_range_anxiety_is_dropped():
         path=[{"state_id": "s1", "order": 0}],
         experience={"s1": {"difficulty_1_5": 3, "anxiety_1_5": 11}}))
     assert "anxiety_1_5" not in clean["experience"]["s1"]
+
+
+def _codebook_with(pc):
+    return {"id": "cb1", "version": 1, "status": "active", "pain_categories": pc}
+
+
+def test_pain_ids_from_the_codebook_reach_every_pain_view():
+    """A codebook study stores ids, not labels: the analysis must resolve them."""
+    study = make_study()
+    study["pain_source"] = "qualitative"
+    study["pain_category_ids"] = {"s1": ["pc1", "pc2"]}
+    codebook = _codebook_with([
+        {"id": "pc1", "label_th": "ต้องเคาะขวดเอง", "pain_type": "process",
+         "status": "approved", "state_ids": ["s1"], "applies_to": "states"},
+        {"id": "pc2", "label_th": "ไม่รู้ว่าต้องทำอย่างไร", "pain_type": "information",
+         "status": "approved", "state_ids": ["s1"], "applies_to": "states"},
+    ])
+    responses = []
+    for i in range(10):
+        r = resp(f"r{i}", ["s1"], "CONV", {"s1": 4})
+        r["experience"]["s1"]["channels"] = ["ที่ร้าน/สาขา"]
+        r["pain"] = {"nominated": ["s1"],
+                     "s1": {"severity_0_10": 8.0, "categories": [],
+                            "category_ids": ["pc1", "pc2"]}}
+        responses.append(r)
+
+    out = J.compute_model_free(study, responses, None, codebook)
+    mx = out["pain_matrix"]
+    assert mx["total"] == 20
+    assert set(mx["categories"]) == {"ต้องเคาะขวดเอง", "ไม่รู้ว่าต้องทำอย่างไร"}
+    by_type = {t["type"]: t["count"] for t in mx["by_type"]}
+    assert by_type == {"process": 10, "information": 10}
+    node_cats = {c["label"]: c["pain_type"] for c in out["nodes"]["s1"]["pain_categories"]}
+    assert node_cats["ต้องเคาะขวดเอง"] == "process"
+    tp = out["touchpoints"]["rows"][0]
+    assert sum(c["count"] for c in tp["pain_categories"]) == 20
+
+
+def test_back_coded_free_text_is_counted_once_alongside_chosen_ids():
+    study = make_study()
+    study["pain_category_ids"] = {"s1": ["pc1", "pc2"]}
+    codebook = _codebook_with([
+        {"id": "pc1", "label_th": "ต้องเคาะขวดเอง", "pain_type": "process",
+         "status": "approved", "state_ids": ["s1"], "applies_to": "states"},
+        {"id": "pc2", "label_th": "ฝาเปิดยาก", "pain_type": "functional",
+         "status": "approved", "state_ids": ["s1"], "applies_to": "states"},
+    ])
+    r = resp("r1", ["s1"], "CONV", {"s1": 4})
+    r["pain"] = {"nominated": ["s1"],
+                 "s1": {"severity_0_10": 7.0, "category_ids": ["pc1"],
+                        "other_text": "ฝาแข็ง", "back_coded_ids": ["pc1", "pc2"]}}
+    mx = J.compute_model_free(study, [r], None, codebook)["pain_matrix"]
+    assert mx["total"] == 2
+    assert mx["by_step"][0]["counts"]["ต้องเคาะขวดเอง"] == 1
+
+
+def test_unapproved_codebook_ids_are_never_counted():
+    study = make_study()
+    codebook = _codebook_with([
+        {"id": "pc9", "label_th": "รหัสที่ยังไม่อนุมัติ", "pain_type": "process",
+         "status": "candidate", "state_ids": ["s1"], "applies_to": "states"}])
+    r = resp("r1", ["s1"], "CONV", {"s1": 4})
+    r["pain"] = {"nominated": ["s1"], "s1": {"category_ids": ["pc9"]}}
+    mx = J.compute_model_free(study, [r], None, codebook)["pain_matrix"]
+    assert mx["total"] == 0

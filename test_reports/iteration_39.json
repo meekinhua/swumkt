@@ -1,0 +1,47 @@
+{
+  "summary": "Full backend + frontend E2E test of the new ketchup UX teaching case (study a1dfeb64-19ea-46a5-9fb1-8fc2cbce058d). 19 new pytest cases (all pass) + 228 existing journey tests still pass. Verified: analysis renders 160 respondents with provenance = qualitative codebook v1 / 8 interviews / Thai collection-method sentence; pain views are now populated from category_ids (pain_matrix.total = 265 nominations, 9 ketchup codes, 7 pain types, 6-row step x type matrix, 3-row channel matrix, per-step pain_categories on 5 of 6 steps); Mermaid observed-flow map renders (10 nodes, 3 stage clusters, 19-21 edges with counts) and all 5 toggles work; touchpoint rollups + step x touchpoint show multi-channel numbers for s3/s4/s5; back-coding queue loads, chip + 'ลงรหัสข้อความนี้' persists (pending 13->12, back-coded 1->2, survives reload); public link /journey/r/demoketchup1 completes end-to-end twice (step 'คว่ำขวดแล้วรอให้ซอสไหล' correctly offers exactly 5 qualitative codes + 'อื่น ๆ'), dashboard count rose 160->162 (both QA responses withdrawn afterwards, back to 160); coffee regression demo-journey-kafae-001 still shows library_default provenance with non-empty pain categories. One real defect found: the wizard codebook step ignores the API's can_edit=false and still renders the extract/edit panel for a locked study.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/journey/studies/{id}/codebook", "issue": "blockers text is misleading for a locked study: returns can_edit=false but blockers=['ยังไม่มีชุดรหัสฉบับร่าง — สกัดจากข้อมูลเชิงคุณภาพก่อน'] instead of the real reason 'มีคำตอบเข้ามาแล้ว แก้ชุดรหัสไม่ได้' that PUT/extract/activate return"},
+      {"endpoint": "POST /api/journey/studies/{id}/pain-back-code", "issue": "accepts any approved codebook category, even one that was never offered for that step (study.pain_category_ids[state]). A back-coded code can therefore appear in the step x pain-type matrix for a step where respondents were never shown it. Confirm this is intended; if yes, the matrix note should say so"},
+      {"endpoint": "GET /api/journey/studies/{id}/pain-other-texts", "issue": "response carries no category list, so the UI has to fall back to all 9 codebook categories (see frontend issue) — consider returning the step-scoped allowed ids"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "JourneyCodebookStep (wizard step 3 'ลงรหัสปัญหา')", "issue": "Study has 160 responses and API returns can_edit=false, but the page still renders the full editing panel: empty transcript textarea, '+ เพิ่มบทสัมภาษณ์', Mermaid input and 'อ่านและเสนอรายการ' (extract). Component never reads cb.data.can_edit; blockers are only rendered inside the draft section which does not exist here, so no reason is shown. Clicking extract would only fail with a 400 from the server.", "selector": "[data-testid=\"journey-step-basics\"] / codebook step panel", "priority": "MEDIUM"},
+      {"component": "JourneyCodebookStep read-only summary", "issue": "For a locked study only 'ใช้ชุดรหัสเวอร์ชัน 1 อยู่ · ประเภทปัญหา 9 รายการ' is shown — the 9 approved categories, their types and supporting quotes are not viewable anywhere in the wizard, so the qualitative provenance cannot be reviewed after activation", "selector": "wizard step 3", "priority": "LOW"},
+      {"component": "JourneyBackCoding", "issue": "Chip list shows all 9 codebook categories for every pending item regardless of the step's offered set (e.g. an s3 item shows 9 chips although only 5 codes were offered at s3), which invites coding with a code respondents never saw at that step", "selector": "[data-testid^=\"bc-cat-\"]", "priority": "LOW"},
+      {"component": "JourneyWizardPage step 1", "issue": "Basic fields (title/brand/frame/target) are still editable and 'บันทึกและไปต่อ' is enabled after the instrument is locked and 160 responses exist — no locked banner shown (not verified whether the backend rejects the save)", "selector": "[data-testid=\"journey-basics-next\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Ketchup dashboard - แผนที่เส้นทางที่พบจริง", "issues": ["Mermaid canvas leaves a large empty area on the left while terminal nodes and long edges crowd the right edge; readable but wastes ~35% of the width at 1920px"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_journey_ketchup_iter39.py",
+    "/app/test_reports/pytest/iter39_ketchup.xml",
+    "/app/test_reports/pytest/iter39_journey.xml"
+  ],
+  "action_items": [
+    "JourneyCodebookStep: honour can_edit=false — render read-only codebook view (version, 9 categories with quotes) plus the real blocker reason instead of the extract/edit panel",
+    "Backend: make GET /codebook blockers state the actual reason ('มีคำตอบเข้ามาแล้ว แก้ชุดรหัสไม่ได้') when responses exist",
+    "Decide + document whether back-coding may assign a code that was not offered at that step; if not, scope the chip list (and backend validation) to study.pain_category_ids[state_id]",
+    "Optional: show a locked banner / disable save on wizard step 1 once responses exist"
+  ],
+  "critical_code_review_comments": [
+    "backend/routes/journey.py is 2111 lines — split (codebook, analysis, public respondent, wizard CRUD) into modules",
+    "JourneyCodebookStep.jsx fetches can_edit but never uses it; edit affordances are gated only by server-side 400s",
+    "Analysis cache correctly keys on codebook_version and is invalidated on back-code and withdraw (verified: count 162 -> 160 and pain total tracks back-coded additions)"
+  ],
+  "updated_files": ["/app/backend/tests/test_journey_ketchup_iter39.py"],
+  "success_rate": {"backend": "100% (19/19 new + 228/228 regression)", "frontend": "90% (all dashboard/flow-map/back-coding/respondent flows pass; codebook read-only requirement fails)"},
+  "seed_data_creation": "No new seed study created. Side effects on the ketchup demo study: 2 free-text items were back-coded via the queue (n_back_coded 0 -> 2, pending 14 -> 12, back_coded_rate 14%, pain_matrix.total 265 -> 267). 2 QA respondent submissions were created via the public link and then withdrawn, so respondent_count is back to 160. Re-run backend/scripts/seed_journey_ketchup.py if a pristine 265/0% state is required for a demo.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@swu.ac.th / admin123 from /app/memory/test_credentials.md (login returns access_token)",
+  "context_for_next_testing_agent": "Ketchup study id a1dfeb64-19ea-46a5-9fb1-8fc2cbce058d, public token demoketchup1, codebook v1 with 9 codes; per-step allowed codes = {s1:1, s2:1, s3:5, s4:4, s5:2, s6:1}. Analysis payload shape: top-level respondent_count/provenance/results; pain data at results.pain_matrix (categories/by_type/by_step/by_channel/total) and results.nodes.<sid>.pain_categories; flow data at results.observed_flow. pain-other-texts returns key 'pending' (not 'items'). Regression file /app/backend/tests/test_journey_ketchup_iter39.py consumes one pending free-text item per run (12 left).",
+  "rca_of_the_issue": "Codebook read-only gap: GET /codebook returns can_edit=false and every mutating endpoint returns 400 'มีคำตอบเข้ามาแล้ว แก้ชุดรหัสไม่ได้', but JourneyCodebookStep.jsx only consumes cb.data.blockers (rendered inside the draft branch) and never can_edit, so for an activated+locked study it falls through to the 'นำข้อมูลเชิงคุณภาพเข้ามา' editor with no blocker text. Repro: login as admin -> /market-research/customer-journey/quant/a1dfeb64-19ea-46a5-9fb1-8fc2cbce058d/wizard -> click step 'ลงรหัสปัญหา'."
+}

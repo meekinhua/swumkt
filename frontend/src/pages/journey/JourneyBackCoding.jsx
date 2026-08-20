@@ -98,11 +98,18 @@ const JourneyBackCoding = ({ studyId, token, categories = [], states = [], onCha
               ขั้น: {stepLabel}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-              {categories.map((c) => (
+              {(it.allowed_categories && it.allowed_categories.length
+                ? it.allowed_categories
+                : categories.filter((c) => !it.allowed_category_ids
+                                          || it.allowed_category_ids.includes(c.id))
+              ).map((c) => (
                 <button key={c.id} className="be-chip be-chip-sm" aria-pressed={sel.includes(c.id)}
                         data-testid={`bc-cat-${k}-${c.id}`}
                         onClick={() => toggle(it, c.id)}>{c.label_th}</button>
               ))}
+            </div>
+            <div className="be-tiny" style={{ color: 'var(--ink-3)', marginTop: 6 }}>
+              เลือกได้เฉพาะประเภทที่ถูกถามในขั้นนี้
             </div>
             <button className="be-btn be-btn-sm" style={{ marginTop: 10 }}
                     data-testid={`bc-apply-${k}`}
