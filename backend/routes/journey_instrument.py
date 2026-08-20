@@ -295,6 +295,13 @@ def compute_structure_hash(study: dict) -> str:
         "recall_window_days": study.get("recall_window_days"),
         "analysis_level": study.get("analysis_level"),
     }
+    # Swapping the codebook changes what every pain option MEANS, so it is a
+    # structural change. Added only when a codebook is actually in use: keying
+    # it unconditionally would move the hash of every study fielded before this
+    # feature existed, and a moved hash makes even a typo fix return 400.
+    if study.get("codebook_version"):
+        payload["codebook_version"] = int(study["codebook_version"])
+
     blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 

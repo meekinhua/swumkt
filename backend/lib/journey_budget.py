@@ -64,7 +64,10 @@ def estimate(m_states: int, mean_path_length: float = 4.0,
              n_segment_items: int = 6, level: str = "product",
              n_odi_outcomes: int = 0, ask_channel_per_step: bool = False,
              channel_multi: bool = False, n_channel_options: int = 6,
-             ask_anxiety_per_step: bool = False) -> Dict:
+             ask_anxiety_per_step: bool = False,
+             n_pain_options: int = 6, allow_other_text: bool = False,
+             p_other: float = 0.15, severity_scope: str = "state",
+             mean_categories_selected: float = 1.4) -> Dict:
     """Expected screens, scored items and seconds for one instrument.
 
     `mean_path_length` is the observed L-bar, calibrated at 4.0 rather than the
@@ -104,8 +107,23 @@ def estimate(m_states: int, mean_path_length: float = 4.0,
         add("G1", "ความยุ่งยาก/ความรู้สึกรายขั้น", 1, 2 * mean_path_length,
             SEC_GRID_OVERHEAD + SEC_GRID_ROW_2CELL * mean_path_length)
     add("P1", "เลือกขั้นที่มีปัญหา", 1, 1, _multi(m_states))
-    add("P2-P3", "รายละเอียดปัญหา", pain_nominations, 2 * pain_nominations,
-        pain_nominations * (SEC_SLIDER_0_10 + _multi(6)))
+    # The list of pain options used to be assumed to be 6. Once it comes from a
+    # study-specific codebook it varies, and the time budget is the only hard
+    # ceiling on how long that list may get (spec 3.5) — so it has to see the
+    # real number rather than a constant.
+    pain_sec = pain_nominations * (SEC_SLIDER_0_10 + _multi(n_pain_options))
+    pain_items = 2 * pain_nominations
+    if severity_scope == "state_and_category":
+        # Severity per nominated category, not a full grid: the respondent has
+        # already picked those categories, so the ask is bounded by how many
+        # they picked rather than by how many exist.
+        pain_sec += pain_nominations * mean_categories_selected * SEC_SLIDER_0_10
+        pain_items += pain_nominations * mean_categories_selected
+    if allow_other_text:
+        # Only the share who pick "other" pay for the free-text box.
+        pain_sec += pain_nominations * p_other * SEC_OPEN_SHORT
+        pain_items += pain_nominations * p_other
+    add("P2-P3", "รายละเอียดปัญหา", pain_nominations, pain_items, pain_sec)
     add("P6", "เล่าเหตุการณ์ (ไม่บังคับ)", incident_share, incident_share,
         incident_share * SEC_INCIDENT)
     add("O1-O2", "ผลลัพธ์ + ความพึงพอใจ", 1, 2, SEC_SINGLE_SMALL + SEC_SLIDER_0_10)

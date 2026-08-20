@@ -8117,7 +8117,16 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    # `force=True` is load-bearing. `_install_llm_concurrency_patch()` runs at
+    # import time (above) and ends in a module-level `logging.info(...)`. The
+    # root `logging.info` helper calls `basicConfig()` with no arguments when
+    # root has no handler, which installs a default StreamHandler and leaves
+    # the root level at WARNING. This call would then be a silent no-op, and
+    # every `logging.info` in the backend — the [INDEXES] migration line, the
+    # [LLM-PATCH] line, every diagnostic — would be discarded, with the format
+    # above never applied. `force` replaces that handler instead of yielding.
+    force=True,
 )
 logger = logging.getLogger(__name__)
 

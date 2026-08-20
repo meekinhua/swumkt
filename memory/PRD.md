@@ -652,3 +652,19 @@ Source of truth: `/app/HANDOFF_CJM.md` + `/app/memory/CJM_QUANT_SPEC.md` (1,438 
 - สเปกครอบคลุม: collection `journey_pain_codebooks` (มี version + provenance + verbatim quote บังคับ), pipeline S0–S6 (สกัด → ลงรหัส → อนุมัติ → วัด → back-code → รายงาน), API 7 endpoint ใหม่, gate ก่อน activate (บล็อกจริง), ช่อง "อื่น ๆ ระบุ" + other_rate warning, inter-coder κ, ผลกระทบ structure_hash/งบเวลา, migration ของการศึกษาเดิม (`pain_source: library_default` + คำเตือนใน dashboard/export), เกณฑ์ยอมรับ 19 ข้อ และลำดับงาน P0–P2
 - **สถานะ: สเปกเท่านั้น ยังไม่แตะโค้ด** (ผู้ใช้สั่งให้ agent ตัวถัดไปดึงผ่าน git)
 - คำถามค้างให้ผู้ใช้ตัดสิน 4 ข้อ (cap 2/3 ขั้น · บังคับ coder คนที่ 2 หรือไม่ · severity ต่อประเภทปัญหา · อนุญาต library_default หรือบล็อก)
+
+### 20 ส.ค. 2026 — รับแพ็กเกจ `journey-codebook-2026-08` จาก agent ภายนอก แล้วปิดช่องว่างที่เหลือ
+- แพ็กเกจ implement `CJM_PAINPOINT_SPEC.md` (revision 2): pain point มาจากข้อมูลเชิงคุณภาพของการศึกษานั้นจริง
+  - `backend/lib/journey_codebook.py` (แกนคำนวณล้วน), collection `journey_codebooks`, endpoint `/codebook/extract`, `/codebook` GET+PUT, `/codebook/activate`, `/codebook/reliability`, `/pain-other-texts`, `/pain-back-code`
+  - frontend: `JourneyCodebookStep.jsx` (วิซาร์ดเป็น 5 ขั้น ขั้นที่ 3 = ลงรหัสปัญหา), `JourneyProvenance.jsx`, `JourneyBackCoding.jsx`
+  - respondent เก็บ `category_ids` + `อื่น ๆ` free text, dashboard มี provenance / saturation / qualitative audit / reliability
+  - base commit ตรงกับ HEAD จึงคัดลอกไฟล์เต็มทั้งชุด (patch มี offset เพี้ยน — ใช้ full-file copy ตาม BASE.txt)
+- **ทดสอบหลังรับเข้า:** pytest journey ทั้งหมด **225 เคสผ่าน** · testing agent (frontend-only, `test_reports/iteration_38.json`) เดินฟลอว์เต็มผ่าน 95%
+- **แก้ 5 ข้อที่ testing agent พบ (ทำเองรอบนี้):**
+  1. คิว back-coding แสดง `s3` ดิบ → แสดงชื่อขั้นภาษาไทย และ `data-testid` เปลี่ยนเป็น `bc-item-${response_id|state_id}` (คนเดียวมีได้หลายแถว)
+  2. การ์ด qualitative audit แสดง state id ดิบในคอลัมน์จาก/ไป → map เป็นชื่อขั้น + START/CONV/ABANDON/UNKNOWN เป็นไทย
+  3. `journey-provenance-line` ซ้ำ 2 จุด → อันในการ์ด pain matrix เป็น `journey-provenance-line-matrix`
+  4. `journey-tptype-physical` ซ้ำ (roll-up vs 3-way) → เปลี่ยนเป็น `journey-tptype-roll-*` / `journey-tptype-detail-*`
+  5. ปุ่ม activate เคย enable ก่อนคลิกครั้งแรก → `GET /codebook` คืน `blockers`/`warnings` มาด้วย ปุ่มจึง disable พร้อมเหตุผลตั้งแต่โหลด
+  + ปรับ `_cue_hits` ให้ไม่จับคำผิด (รอบ/เรียบร้อย/ไม่แพง/เสียงดัง) ตามที่ agent ภายนอกตั้งข้อสังเกต
+- **ยังเหลือจาก handoff (ยังไม่ทำ):** ฝัง provenance/คำเตือน/κ/saturation ลง **ไฟล์ export** · ปุ่ม merge candidate · LLM booster (stub บน dev)

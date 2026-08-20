@@ -5,11 +5,12 @@ import { useAuth } from '@/context/AuthContext';
 import '../brand-equity/brand-equity-styles.css';
 import './journey-styles.css';
 import { BeTopbar, BeLoading, Stepper } from '../brand-equity/be-components';
+import JourneyCodebookStep from './JourneyCodebookStep';
 import { COPY, fmtCI } from './copy-th';
 import { copyToClipboard } from '@/lib/clipboard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const STEPS = ['พื้นฐาน', 'ขั้นตอนของลูกค้า', 'งบเวลา + สิ่งที่ได้', 'เปิดเก็บข้อมูล'];
+const STEPS = ['พื้นฐาน', 'ขั้นตอนของลูกค้า', 'ลงรหัสปัญหา', 'งบเวลา + สิ่งที่ได้', 'เปิดเก็บข้อมูล'];
 const CHANNEL_MODE_LABELS = {
   one_to_one: 'ตัวต่อตัว',
   one_to_many: 'แบรนด์ถึงคนหมู่มาก',
@@ -172,6 +173,8 @@ const JourneyWizardPage = () => {
         { state_labels: labels.filter((l) => (l || '').trim()) }, authH);
       hydrate(r.data);
       await refreshBudget(study.id);
+      // straight into coding: the pain list must come from this study's own
+      // qualitative material, so the step cannot be something you skip past
       setStep(2);
     } catch (e) {
       setError(e?.response?.data?.detail || 'บันทึกขั้นตอนไม่สำเร็จ');
@@ -196,7 +199,7 @@ const JourneyWizardPage = () => {
     try {
       const r = await axios.post(`${API}/journey/studies/${study.id}/lock-instrument`, {}, authH);
       setStudy((s) => ({ ...s, status: 'collecting', structure_hash: r.data.structure_hash }));
-      setStep(3);
+      setStep(4);
     } catch (e) {
       setError(e?.response?.data?.detail || 'เปิดเก็บข้อมูลไม่สำเร็จ');
     }
@@ -217,7 +220,7 @@ const JourneyWizardPage = () => {
         <div className="be-section-num">QUANTITATIVE CJM · {study ? 'แก้ไข' : 'สร้างใหม่'}</div>
         <h1 className="be-h2" style={{ marginBottom: 18 }}>ออกแบบการศึกษาเส้นทางลูกค้า</h1>
         <Stepper steps={STEPS} current={step}
-                 onStepClick={study ? (i) => { setStep(i); if (i === 2) refreshBudget(study.id); } : null} />
+                 onStepClick={study ? (i) => { setStep(i); if (i === 3) refreshBudget(study.id); } : null} />
 
         {error && <div className="jy-warn" data-testid="journey-wizard-error">{error}</div>}
 
@@ -344,7 +347,7 @@ const JourneyWizardPage = () => {
                 <button className="be-btn be-btn-primary" data-testid="journey-states-next"
                         disabled={saving || labels.filter((x) => (x || '').trim()).length < 3}
                         onClick={saveLabels}>
-                  {saving ? 'กำลังบันทึก…' : 'บันทึกและดูงบเวลา'}
+                  {saving ? 'กำลังบันทึก…' : 'บันทึกและไปลงรหัสปัญหา'}
                 </button>
               </div>
             </div>
@@ -448,6 +451,14 @@ const JourneyWizardPage = () => {
 
         {/* ---- 3. budget + design preview -------------------------------- */}
         {step === 2 && study && (
+          <JourneyCodebookStep
+            study={study} token={token}
+            onBack={() => setStep(1)}
+            onDone={() => { setStep(3); refreshBudget(study.id); }}
+          />
+        )}
+
+        {step === 3 && study && (
           <div data-testid="journey-step-budget">
             <div className="be-card">
               <h3 className="be-card-t">งบเวลาของผู้ตอบ</h3>
@@ -513,7 +524,7 @@ const JourneyWizardPage = () => {
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
-              <button className="be-btn" onClick={() => setStep(1)} data-testid="journey-budget-back">ย้อนกลับ</button>
+              <button className="be-btn" onClick={() => setStep(2)} data-testid="journey-budget-back">ย้อนกลับ</button>
               <button className="be-btn be-btn-primary" data-testid="journey-publish-btn"
                       disabled={saving || budget?.blocked} onClick={publish}>
                 {saving ? 'กำลังเปิด…' : 'เปิดเก็บข้อมูลและรับลิงก์'}
@@ -523,7 +534,7 @@ const JourneyWizardPage = () => {
         )}
 
         {/* ---- 4. share -------------------------------------------------- */}
-        {step === 3 && study && (
+        {step === 4 && study && (
           <div className="be-card" data-testid="journey-step-share">
             <h3 className="be-card-t">เปิดเก็บข้อมูลแล้ว</h3>
             <p className="be-card-d">ส่งลิงก์นี้ให้ผู้ตอบ · เปิดบนมือถือได้ · ตอบค้างไว้แล้วกลับมาต่อได้</p>

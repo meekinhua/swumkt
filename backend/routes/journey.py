@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from lib import markov_journey as mj
 from lib import journey_budget as jb
+from lib import journey_codebook as jcb
 from lib import journey_copy_th as copy_th
 from lib.consent import (default_consent, consent_record, new_respondent_token,
                          purge_after_iso, check_blocklist, CONSENT_VERSION)
@@ -89,6 +90,9 @@ class StudyUpdate(BaseModel):
     channel_types: Optional[Dict[str, str]] = None
     channel_modes: Optional[Dict[str, str]] = None
     ask_channel_per_step: Optional[bool] = None
+    allow_pain_other_text: Optional[bool] = None
+    pain_nomination_cap: Optional[int] = None
+    severity_scope: Optional[str] = None
     state_meta: Optional[List[dict]] = None
     expected_transitions: Optional[dict] = None
     custom_segment: Optional[dict] = None
@@ -100,6 +104,37 @@ class SeedBody(BaseModel):
     raw_text: Optional[str] = None
     mermaid_code: Optional[str] = None
     apply_states: bool = True
+
+
+class CodebookExtract(BaseModel):
+    qualitative_run_ids: List[str] = Field(default_factory=list)
+    raw_text: Optional[str] = None
+    mermaid_code: Optional[str] = None
+    # One entry per informant. Supplying this instead of a single blob is what
+    # makes a saturation curve possible.
+    interviews: List[str] = Field(default_factory=list)
+
+
+class BackCodeBody(BaseModel):
+    response_id: str
+    state_id: str
+    category_ids: List[str] = Field(default_factory=list)
+
+
+class CodebookUpdate(BaseModel):
+    """Partial replacement of the draft. Absent keys are left alone."""
+    source: Optional[dict] = None
+    states: Optional[List[dict]] = None
+    edges: Optional[List[dict]] = None
+    touchpoints: Optional[List[dict]] = None
+    pain_categories: Optional[List[dict]] = None
+
+
+class ReliabilityBody(BaseModel):
+    mode: str = "second_coder"
+    coder_ref: Optional[str] = None
+    coder_a: List[List[str]] = Field(default_factory=list)
+    coder_b: List[List[str]] = Field(default_factory=list)
 
 
 class ConsentBody(BaseModel):
@@ -190,16 +225,47 @@ def _clean_submission(study: dict, data: JourneySubmit) -> dict:
         if row:
             experience[sid] = row
 
-    pain: Dict[str, Any] = {"nominated": [s for s in (data.pain.get("nominated") or [])
-                                          if s in known]}
-    for sid in pain["nominated"]:
+    # The cap is a study setting, enforced here. Before this it lived only in
+    # the UI, so what was stored could disagree with what was designed.
+    nominated = jcb.enforce_nomination_cap(
+        [s for s in (data.pain.get("nominated") or []) if s in known],
+        int(study.get("pain_nomination_cap") or 2))
+    pain: Dict[str, Any] = {"nominated": nominated}
+    id_map = study.get("pain_category_ids") or {}
+    allow_other = study.get("allow_pain_other_text", True)
+    for sid in nominated:
         raw = data.pain.get(sid) or {}
         sev = raw.get("severity_0_10")
         row = {}
         if isinstance(sev, (int, float)) and not isinstance(sev, bool) and 0 <= float(sev) <= 10:
             row["severity_0_10"] = float(sev)
+
+        # Legacy free-text categories are still accepted so studies fielded
+        # before the codebook keep working; new ones carry ids.
         allowed = set((study.get("pain_options") or {}).get(sid) or ji.DEFAULT_PAIN_OPTIONS)
         row["categories"] = [c for c in (raw.get("categories") or []) if c in allowed]
+
+        allowed_ids = set(id_map.get(sid) or [])
+        if allowed_ids:
+            seen_ids = []
+            for cid in (raw.get("category_ids") or []):
+                if cid in allowed_ids and cid not in seen_ids:
+                    seen_ids.append(cid)
+            row["category_ids"] = seen_ids
+            sev_by_cat = raw.get("category_severity") or {}
+            picked = {}
+            for cid in seen_ids:
+                v = sev_by_cat.get(cid)
+                if isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= float(v) <= 10:
+                    picked[cid] = float(v)
+            if picked:
+                row["category_severity"] = picked
+
+        if allow_other:
+            other = raw.get("other_text")
+            if other and str(other).strip():
+                row["other_text"] = str(other)[:300]
+
         note = raw.get("note")
         if note:
             row["note"] = str(note)[:300]
@@ -518,6 +584,7 @@ def compute_model_free(study: dict, responses: List[dict],
         "pain_matrix": pain_matrix,
         "step_touchpoints": step_touchpoints,
         "stages_summary": stages_summary,
+        "qualitative_audit": _qualitative_audit(study, n_ij, states),
         "observed_flow": observed_flow,
         "diagnostics": diagnostics,
         "matrix": None, "loss": None, "priority": None, "map": None,
@@ -530,6 +597,31 @@ def compute_model_free(study: dict, responses: List[dict],
                          "n_transitions": int(n_ij.sum())},
     }
     return json_safe(results)
+
+
+def _qualitative_audit(study: dict, n_ij, states) -> Optional[dict]:
+    """Does the qualitative map survive contact with the data?
+
+    Step 1 asserts a set of edges and a linear/nonlinear shape. Step 2 has the
+    transitions actually taken. Reporting the three-way split — claimed and
+    seen, claimed and absent, seen but never claimed — is what turns the
+    quantitative stage into a test of the qualitative one rather than a
+    decoration on top of it.
+    """
+    claimed = study.get("claimed_edges")
+    if not claimed:
+        return None
+    order = {s: i for i, s in enumerate(states)}
+    cov = jcb.edge_coverage([(a, b) for a, b in claimed], n_ij, states,
+                            mj.wilson_interval,
+                            journey_style=study.get("journey_style_claimed") or "nonlinear",
+                            order=order)
+    cov["unmatched_claimed_edges"] = int(study.get("claimed_edges_unmatched") or 0)
+    if cov["unmatched_claimed_edges"]:
+        cov["unmatched_note_th"] = (
+            "มีเส้นทางจากขั้นเชิงคุณภาพ %d เส้นที่จับคู่กับขั้นตอนในแบบสอบถามไม่ได้ "
+            "จึงตรวจสอบไม่ได้" % cov["unmatched_claimed_edges"])
+    return cov
 
 
 def _watch_flags(node: dict) -> List[dict]:
@@ -1075,6 +1167,16 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             "share_token": uuid.uuid4().hex[:12],
             "link_starts": 0,
             "quality_reference": None,
+            # Declared from the start so every export can state where the pain
+            # list came from. Activating a codebook flips this to "qualitative".
+            "pain_source": "library_default",
+            "codebook_id": None,
+            "codebook_version": 0,
+            "allow_pain_other_text": True,
+            # The UI used to cap nominations on its own while the backend
+            # accepted anything; the value lives here now and is enforced.
+            "pain_nomination_cap": 2,
+            "severity_scope": "state",
             "created_at": _now_iso(),
             "updated_at": _now_iso(),
         }
@@ -1240,6 +1342,10 @@ def get_journey_routes(db, get_current_user, get_optional_user):
         await db.journey_response_drafts.delete_many({"study_id": study_id})
         await db.journey_analysis_cache.delete_many({"study_id": study_id})
         await db.journey_recontacts.delete_many({"study_id": study_id})
+        # Codebooks hold verbatim interview quotes. A purge is the PDPA hard
+        # delete, so leaving them behind would keep personal data after the
+        # study that justified collecting it is gone.
+        await db.journey_codebooks.delete_many({"study_id": study_id})
         return {"message": "ลบถาวรแล้ว"}
 
     # ---- seed from the qualitative tool ---------------------------------
@@ -1286,6 +1392,332 @@ def get_journey_routes(db, get_current_user, get_optional_user):
         await db.journey_studies.update_one({"id": study_id}, {"$set": upd})
         return {"applied": body.apply_states, "labels": labels,
                 "study": await db.journey_studies.find_one({"id": study_id}, {"_id": 0})}
+
+    # ---- journey codebook: the qualitative -> quantitative contract ------
+    # Spec: memory/CJM_PAINPOINT_SPEC.md rev 2. Nothing here reaches a
+    # respondent unless a human approved it and a verbatim quote backs it.
+
+    async def _provenance_for(study: dict, responses: List[dict]) -> dict:
+        """Where every pain number on this page came from.
+
+        Recomputed on each call rather than cached with the results: it reflects
+        the codebook, which can be corrected (labels, method note) without the
+        responses changing.
+        """
+        codebook = None
+        if study.get("codebook_id"):
+            codebook = await db.journey_codebooks.find_one(
+                {"id": study["codebook_id"]}, {"_id": 0})
+
+        n_other = n_nom = n_back = 0
+        for r in responses:
+            pain = r.get("pain") or {}
+            for sid in (pain.get("nominated") or []):
+                row = pain.get(sid) or {}
+                n_nom += 1
+                if (row.get("other_text") or "").strip():
+                    n_other += 1
+                if row.get("back_coded_ids"):
+                    n_back += 1
+
+        block = jcb.provenance_block(
+            codebook, study,
+            other=jcb.other_rate(n_other, n_nom, mj.wilson_interval),
+            back_coded_rate=round(n_back / n_other, 4) if n_other else None)
+        return block
+
+    def _public_pain_options(study: dict, codebook: Optional[dict]):
+        """What the respondent UI renders per step.
+
+        Falls back to the study's label lists when no codebook is active, so a
+        study fielded before this feature is unaffected.
+        """
+        if codebook:
+            return {st["id"]: jcb.pain_options_for_state(codebook, st["id"])
+                    for st in (study.get("states") or [])}
+        legacy = study.get("pain_options") or {}
+        return {sid: [{"id": None, "label_th": lbl} for lbl in (labels or [])]
+                for sid, labels in legacy.items()}
+
+    async def _codebooks(study_id: str):
+        rows = await db.journey_codebooks.find({"study_id": study_id},
+                                               {"_id": 0}).to_list(100)
+        active = next((r for r in rows if r.get("status") == "active"), None)
+        draft = next((r for r in rows if r.get("status") == "draft"), None)
+        return active, draft
+
+    async def _n_responses(study_id: str) -> int:
+        return int(await db.journey_responses.count_documents({"study_id": study_id}))
+
+    def _blank_codebook(study: dict, version: int) -> dict:
+        seed = study.get("qualitative_seed") or {}
+        return {"id": str(uuid.uuid4()), "study_id": study["id"], "version": version,
+                "status": "draft",
+                "source": {"qualitative_run_ids": [], "pasted_text_sha1": [],
+                           "n_interviews": None, "collection_method_th": "",
+                           "journey_style": seed.get("journey_style") or "nonlinear"},
+                "states": [], "edges": [], "touchpoints": [], "pain_categories": [],
+                "reliability": {"mode": "none"}, "saturation": [],
+                "created_at": _now_iso(), "updated_at": _now_iso(),
+                "activated_at": None}
+
+    async def _budget_for(study: dict, codebook: dict) -> dict:
+        """Budget computed from the codebook's real option counts.
+
+        The per-state ceiling is advice; this is the ceiling that blocks, so it
+        has to see the actual numbers rather than an assumed constant.
+        """
+        approved = [st for st in (codebook.get("states") or [])
+                    if st.get("status") == "approved"]
+        states = approved or (study.get("states") or [])
+        per_state = [len(jcb.pain_options_for_state(codebook, st.get("id") or ""))
+                     for st in states] or [0]
+        return jb.check_design(
+            m_states=max(1, len(states)),
+            r_target=int(study.get("target_responses") or 100),
+            n_pain_options=max(per_state))
+
+    @journey_router.get("/studies/{study_id}/codebook")
+    async def get_codebook(study_id: str, current_user=Depends(get_current_user)):
+        study = await _get_owned(study_id, current_user)
+        active, draft = await _codebooks(study_id)
+        # Blockers travel with the GET so the activate button is already
+        # disabled on first paint, with its reasons, instead of after a click.
+        blockers = jcb.validate_for_activation(draft) if draft else [
+            "ยังไม่มีชุดรหัสฉบับร่าง — สกัดจากข้อมูลเชิงคุณภาพก่อน"]
+        return {"active": active, "draft": draft,
+                "pain_source": study.get("pain_source") or "library_default",
+                "blockers": blockers,
+                "warnings": jcb.soft_warnings(draft) if draft else [],
+                "can_edit": (await _n_responses(study_id)) == 0}
+
+    @journey_router.post("/studies/{study_id}/codebook/extract")
+    async def extract_codebook(study_id: str, body: CodebookExtract,
+                               current_user=Depends(get_current_user)):
+        study = await _get_owned(study_id, current_user)
+        if await _n_responses(study_id):
+            raise HTTPException(400, "มีคำตอบเข้ามาแล้ว แก้ชุดรหัสไม่ได้")
+
+        raw_parts, mermaid_parts, run_ids, styles = [], [], [], []
+        for rid in (body.qualitative_run_ids or []):
+            run = await db.qualitative_runs.find_one({"id": rid}, {"_id": 0})
+            if not run:
+                raise HTTPException(404, "ไม่พบผลวิเคราะห์เชิงคุณภาพ")
+            owner = run.get("owner_id")
+            if owner and owner != current_user.id and not _is_admin(current_user):
+                raise HTTPException(403, "Not authorized")
+            raw_parts.append(run.get("raw_text") or "")
+            mermaid_parts.append(run.get("mermaid_code") or "")
+            if run.get("journey_style"):
+                styles.append(run["journey_style"])
+            run_ids.append(rid)
+        if body.raw_text:
+            raw_parts.append(body.raw_text)
+        if body.mermaid_code:
+            mermaid_parts.append(body.mermaid_code)
+        # `interviews` is the primary path — it is the only input that can carry
+        # a saturation curve — so it has to count as material on its own.
+        supplied = raw_parts + mermaid_parts + list(body.interviews or [])
+        if not any((p or "").strip() for p in supplied):
+            raise HTTPException(400, "ต้องระบุ qualitative_run_ids หรือวางข้อความเข้ามา")
+
+        found = jcb.extract_candidates(raw_text="\n".join(raw_parts),
+                                       mermaid="\n".join(mermaid_parts),
+                                       run_ids=run_ids,
+                                       interviews=list(body.interviews or []))
+
+        active, draft = await _codebooks(study_id)
+        version = ((active or {}).get("version") or 0) + 1
+        cb = draft or _blank_codebook(study, version)
+        for key in ("states", "edges", "touchpoints", "pain_categories"):
+            cb[key] = found[key]
+        cb["source"]["qualitative_run_ids"] = run_ids
+        if body.interviews:
+            cb["source"]["n_interviews"] = len(body.interviews)
+        if styles:
+            cb["source"]["journey_style"] = styles[0]
+        cb["updated_at"] = _now_iso()
+        await db.journey_codebooks.update_one({"id": cb["id"]}, {"$set": cb}, upsert=True)
+        return {"draft": cb, "n_sentences": found["n_sentences"],
+                "note_th": ("ทุกรายการเป็นข้อเสนอ ต้องอนุมัติทีละรายการ "
+                            "และต้องมีข้อความต้นทางอ้างอิง ก่อนนำไปเก็บข้อมูล")}
+
+    @journey_router.put("/studies/{study_id}/codebook")
+    async def put_codebook(study_id: str, body: CodebookUpdate,
+                           current_user=Depends(get_current_user)):
+        study = await _get_owned(study_id, current_user)
+        if await _n_responses(study_id):
+            raise HTTPException(400, "มีคำตอบเข้ามาแล้ว แก้ชุดรหัสไม่ได้")
+        active, draft = await _codebooks(study_id)
+        cb = draft or _blank_codebook(study, ((active or {}).get("version") or 0) + 1)
+
+        patch = body.model_dump(exclude_none=True)
+        for key in ("source", "states", "edges", "touchpoints", "pain_categories"):
+            if key in patch:
+                cb[key] = patch[key]
+        # Approval is stamped here, never accepted from the client: the whole
+        # gate rests on approved_by being real.
+        for key in ("states", "touchpoints", "pain_categories"):
+            for row in cb.get(key) or []:
+                if row.get("status") == "approved":
+                    if not row.get("approved_by"):
+                        row["approved_by"] = current_user.id
+                        row["approved_at"] = _now_iso()
+                else:
+                    row["approved_by"] = None
+                    row["approved_at"] = None
+        cb["updated_at"] = _now_iso()
+        await db.journey_codebooks.update_one({"id": cb["id"]}, {"$set": cb}, upsert=True)
+
+        budget = await _budget_for(study, cb)
+        blockers = jcb.validate_for_activation(cb, budget=budget)
+        pdpa = jcb.blocklist_terms(cb, check_blocklist)
+        if pdpa:
+            blockers.append("มีคำที่ห้ามถามตาม PDPA: " + ", ".join(pdpa))
+        return {"draft": cb, "blockers": blockers, "pdpa_hits": pdpa,
+                "warnings": jcb.soft_warnings(cb), "budget": budget}
+
+    @journey_router.post("/studies/{study_id}/codebook/activate")
+    async def activate_codebook(study_id: str, current_user=Depends(get_current_user)):
+        study = await _get_owned(study_id, current_user)
+        if await _n_responses(study_id):
+            raise HTTPException(400, "มีคำตอบเข้ามาแล้ว เปลี่ยนชุดรหัสไม่ได้")
+        active, draft = await _codebooks(study_id)
+        if not draft:
+            raise HTTPException(404, "ยังไม่มีชุดรหัสฉบับร่าง")
+
+        budget = await _budget_for(study, draft)
+        blockers = jcb.validate_for_activation(draft, budget=budget)
+        pdpa = jcb.blocklist_terms(draft, check_blocklist)
+        if pdpa:
+            blockers.append("มีคำที่ห้ามถามตาม PDPA: " + ", ".join(pdpa))
+        if blockers:
+            raise HTTPException(400, {"message": "ยังเปิดใช้ชุดรหัสนี้ไม่ได้",
+                                      "blockers": blockers})
+
+        if active:
+            await db.journey_codebooks.update_one(
+                {"id": active["id"]},
+                {"$set": {"status": "superseded", "updated_at": _now_iso()}})
+        draft["status"] = "active"
+        draft["activated_at"] = _now_iso()
+        draft["updated_at"] = _now_iso()
+        # Frozen at activation: both describe the qualitative step, which stops
+        # changing here, and both are read on every analysis afterwards.
+        draft["saturation"] = jcb.saturation_from_codebook(draft)
+        await db.journey_codebooks.update_one({"id": draft["id"]}, {"$set": draft})
+
+        # `pain_options` stays populated so every existing reader keeps working;
+        # it is now derived from the codebook rather than being the source.
+        opts = {st["id"]: jcb.pain_options_for_state(draft, st["id"])
+                for st in (study.get("states") or [])}
+        pain_options = {sid: [o["label_th"] for o in rows] for sid, rows in opts.items()}
+        # Ids are what a submission is validated against; labels stay only so
+        # existing readers and exports keep working.
+        pain_category_ids = {sid: [o["id"] for o in rows] for sid, rows in opts.items()}
+        after = dict(study)
+        after.update({"pain_options": pain_options})
+        new_hash = ji.compute_structure_hash(after)
+        translated = jcb.translate_edges_to_states(draft, study.get("states") or [])
+        await db.journey_studies.update_one({"id": study_id}, {"$set": {
+            "codebook_id": draft["id"], "codebook_version": draft["version"],
+            "pain_source": "qualitative", "pain_options": pain_options,
+            "pain_category_ids": pain_category_ids,
+            "claimed_edges": translated["edges"],
+            "claimed_edges_unmatched": translated["unmatched"],
+            "journey_style_claimed": (draft.get("source") or {}).get("journey_style"),
+            "structure_hash": new_hash, "updated_at": _now_iso()}})
+        return {"codebook": draft, "structure_hash": new_hash,
+                "warnings": jcb.soft_warnings(draft),
+                "claimed_edges": translated["edges"],
+                "claimed_edges_unmatched": translated["unmatched"],
+                "saturation": draft["saturation"]}
+
+    @journey_router.post("/studies/{study_id}/codebook/reliability")
+    async def codebook_reliability(study_id: str, body: ReliabilityBody,
+                                   current_user=Depends(get_current_user)):
+        await _get_owned(study_id, current_user)
+        active, draft = await _codebooks(study_id)
+        cb = active or draft
+        if not cb:
+            raise HTTPException(404, "ยังไม่มีชุดรหัส")
+        ids = [c["id"] for c in (cb.get("pain_categories") or [])
+               if c.get("status") == "approved"]
+        try:
+            report = jcb.reliability_report(body.coder_a, body.coder_b, ids,
+                                            mode=body.mode, coder_ref=body.coder_ref)
+        except jcb.CodebookError as e:
+            raise HTTPException(400, str(e))
+        report["computed_at"] = _now_iso()
+        await db.journey_codebooks.update_one(
+            {"id": cb["id"]}, {"$set": {"reliability": report,
+                                        "updated_at": _now_iso()}})
+        return report
+
+    @journey_router.get("/studies/{study_id}/pain-other-texts")
+    async def pain_other_texts(study_id: str, current_user=Depends(get_current_user)):
+        """Everything a respondent typed under "other" that nobody has coded yet.
+
+        A high other-rate is the signal that the codebook is incomplete; this is
+        the queue for doing something about it.
+        """
+        await _get_owned(study_id, current_user)
+        rows = await db.journey_responses.find({"study_id": study_id},
+                                               {"_id": 0}).to_list(5000)
+        pending, done = [], 0
+        for r in rows:
+            pain = r.get("pain") or {}
+            for sid in (pain.get("nominated") or []):
+                cell = pain.get(sid) or {}
+                text = (cell.get("other_text") or "").strip()
+                if not text:
+                    continue
+                if cell.get("back_coded_ids"):
+                    done += 1
+                    continue
+                pending.append({"response_id": r.get("id"), "state_id": sid,
+                                "text": text, "submitted_at": r.get("created_at")})
+        total = len(pending) + done
+        return {"pending": pending, "n_pending": len(pending), "n_back_coded": done,
+                "back_coded_rate": round(done / total, 4) if total else None}
+
+    @journey_router.post("/studies/{study_id}/pain-back-code")
+    async def pain_back_code(study_id: str, body: BackCodeBody,
+                             current_user=Depends(get_current_user)):
+        """Attach an existing category to one free-text answer.
+
+        Only ids already in the active codebook are accepted. Inventing a new
+        category from here would let a label enter the study without a quote and
+        without approval, which is the one thing this whole module prevents.
+        """
+        study = await _get_owned(study_id, current_user)
+        active, _ = await _codebooks(study_id)
+        if not active:
+            raise HTTPException(400, "ต้องเปิดใช้ชุดรหัสก่อนจึงจะลงรหัสย้อนกลับได้")
+        allowed = {c["id"] for c in (active.get("pain_categories") or [])
+                   if c.get("status") == "approved"}
+        picked = [c for c in dict.fromkeys(body.category_ids or []) if c in allowed]
+        if not picked:
+            raise HTTPException(400, "ไม่มีรหัสที่ใช้ได้ — ต้องเป็นประเภทที่อนุมัติแล้วในชุดรหัสที่ใช้อยู่")
+
+        resp = await db.journey_responses.find_one(
+            {"id": body.response_id, "study_id": study_id}, {"_id": 0})
+        if not resp:
+            raise HTTPException(404, "ไม่พบคำตอบนี้")
+        cell = ((resp.get("pain") or {}).get(body.state_id) or {})
+        if not (cell.get("other_text") or "").strip():
+            raise HTTPException(400, "คำตอบนี้ไม่มีข้อความ \"อื่น ๆ\" ให้ลงรหัส")
+
+        await db.journey_responses.update_one(
+            {"id": body.response_id, "study_id": study_id},
+            {"$set": {f"pain.{body.state_id}.back_coded_ids": picked,
+                      f"pain.{body.state_id}.back_coded_at": _now_iso(),
+                      f"pain.{body.state_id}.back_coded_by": current_user.id}})
+        # Back-coding changes what the pain matrix counts, so the cached
+        # analysis for every filter slice is now wrong.
+        await db.journey_analysis_cache.delete_many({"study_id": study_id})
+        return {"response_id": body.response_id, "state_id": body.state_id,
+                "category_ids": picked}
 
     # ---- budget + preview + lock ----------------------------------------
     @journey_router.get("/studies/{study_id}/budget-estimate")
@@ -1366,11 +1798,19 @@ def get_journey_routes(db, get_current_user, get_optional_user):
         if study.get("status") not in ("collecting", "analyzing"):
             raise HTTPException(410, "แบบสอบถามนี้ปิดรับคำตอบแล้ว")
         await db.journey_studies.update_one({"id": study["id"]}, {"$inc": {"link_starts": 1}})
+        codebook = None
+        if study.get("codebook_id"):
+            codebook = await db.journey_codebooks.find_one(
+                {"id": study["codebook_id"]}, {"_id": 0})
+        per_state = [len(v or []) for v in (study.get("pain_category_ids") or {}).values()]
         est = jb.estimate(m_states=len(study.get("states") or []),
                           n_segment_items=len(study.get("segment_questions") or []),
                           ask_channel_per_step=bool(study.get("ask_channel_per_step")),
                           channel_multi=bool(study.get("channel_multi")),
-                              ask_anxiety_per_step=bool(study.get("ask_anxiety_per_step")))
+                          n_pain_options=max(per_state) if per_state else 6,
+                          allow_other_text=bool(study.get("allow_pain_other_text", True)),
+                          severity_scope=study.get("severity_scope") or "state",
+                          ask_anxiety_per_step=bool(study.get("ask_anxiety_per_step")))
         return {
             "id": study["id"], "share_token": share_token,
             "title": study.get("title"), "analysis_level": study.get("analysis_level"),
@@ -1379,6 +1819,13 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             "absorbing": study.get("absorbing"),
             "expected_transitions": study.get("expected_transitions"),
             "pain_options": study.get("pain_options"),
+            # Per-state options carrying their stable ids, plus the two settings
+            # the respondent UI must honour rather than hard-code.
+            "pain_category_options": _public_pain_options(study, codebook),
+            "allow_pain_other_text": bool(study.get("allow_pain_other_text", True)),
+            "pain_nomination_cap": int(study.get("pain_nomination_cap") or 2),
+            "pain_source": study.get("pain_source") or "library_default",
+            "codebook_version": int(study.get("codebook_version") or 0),
             "channel_options": study.get("channel_options") or ji.DEFAULT_CHANNEL_OPTIONS,
             "channel_types": study.get("channel_types") or ji.default_channel_types(
                 study.get("channel_options")),
@@ -1438,6 +1885,9 @@ def get_journey_routes(db, get_current_user, get_optional_user):
             "submitted_at": _now_iso(),
             **clean,
         }
+        # Pin the answer to the vocabulary that produced it. Without this a
+        # later codebook version would silently reinterpret older answers.
+        resp["codebook_version"] = int(study.get("codebook_version") or 0)
         await db.journey_responses.insert_one(dict(resp))
 
         if data.consent.recontact and data.recontact_value:
@@ -1535,6 +1985,7 @@ def get_journey_routes(db, get_current_user, get_optional_user):
                     "content_revision": study.get("content_revision"),
                     "segments_available": segments_available(
                         all_responses, [q["id"] for q in study.get("segment_questions") or []]),
+                    "provenance": await _provenance_for(study, responses),
                     "results": cached.get("results")}
 
         # Reference medians freeze once, so results stay monotone in n (spec 2.8).
@@ -1570,6 +2021,7 @@ def get_journey_routes(db, get_current_user, get_optional_user):
                 "content_revision": study.get("content_revision"),
                 "segments_available": segments_available(
                     all_responses, [q["id"] for q in study.get("segment_questions") or []]),
+                "provenance": await _provenance_for(study, responses),
                 "results": results}
 
     @journey_router.get("/studies/{study_id}/drafts-summary")

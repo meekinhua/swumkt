@@ -177,6 +177,12 @@ const JourneyRespondentPage = () => {
 
   const vSet = useMemo(() => [...new Set([...visited, ...lateAdditions])], [visited, lateAdditions]);
   const pathStates = useMemo(() => [...new Set(draftPath)], [draftPath]);
+  // Declared here, above every `if (screen === ...)` block: the pain screen
+  // reads it and lives earlier in the file than the pain-depth screen does.
+  // The cap used to be hard-coded while the backend accepted anything, so what
+  // was stored could disagree with the design; it is a study setting now and
+  // the server enforces the same number.
+  const painCap = Number(study?.pain_nomination_cap) || 2;
 
   const plausibleFirst = useCallback((current, ids) => {
     const matrix = study?.expected_transitions?.matrix || [];
@@ -606,9 +612,10 @@ const JourneyRespondentPage = () => {
   // ---- P1 pain nomination ---------------------------------------------
   if (screen === 'pain') {
     const toggle = (id) => setPainNominated((p) =>
-      p.includes(id) ? p.filter((x) => x !== id) : (p.length >= 2 ? p : [...p, id]));
+      p.includes(id) ? p.filter((x) => x !== id) : (p.length >= painCap ? p : [...p, id]));
     return (
-      <JyFrame {...frameProps} title="ขั้นไหนที่เป็นปัญหามากที่สุด" sub="เลือกได้ไม่เกิน 2 ขั้น หรือข้ามได้ถ้าไม่มีปัญหา"
+      <JyFrame {...frameProps} title="ขั้นไหนที่เป็นปัญหามากที่สุด"
+             sub={`เลือกได้ไม่เกิน ${painCap} ขั้น หรือข้ามได้ถ้าไม่มีปัญหา`}
              testid="jy-screen-pain"
              next={() => go(painNominated.length ? 'paindepth' : 'outcome')}
              nextLabel={painNominated.length ? 'ถัดไป' : 'ไม่มีปัญหา ข้ามไป'}>
@@ -628,13 +635,34 @@ const JourneyRespondentPage = () => {
   if (screen === 'paindepth') {
     const sid = painNominated[painIdx];
     const detail = painDetail[sid] || {};
-    const opts = (study.pain_options || {})[sid] || [];
+    // Prefer the codebook's options (each carries a stable id). Fall back to
+    // the legacy string list so a study fielded before the codebook still runs.
+    const rich = (study.pain_category_options || {})[sid];
+    const opts = rich && rich.length
+      ? rich
+      : ((study.pain_options || {})[sid] || []).map((l) => ({ id: null, label_th: l }));
+    const allowOther = study.allow_pain_other_text !== false;
+
     const setDetail = (patch) => setPainDetail((p) => ({ ...p, [sid]: { ...(p[sid] || {}), ...patch } }));
-    const toggleCat = (c) => setDetail({
-      categories: (detail.categories || []).includes(c)
-        ? (detail.categories || []).filter((x) => x !== c)
-        : [...(detail.categories || []), c],
+
+    // Toggle off the live value, not the one captured at render: two taps in
+    // quick succession would otherwise both start from the same array and the
+    // first pick would vanish.
+    const toggleCat = (opt) => setPainDetail((p) => {
+      const cell = p[sid] || {};
+      if (opt.id) {
+        const cur = cell.category_ids || [];
+        return { ...p, [sid]: { ...cell,
+          category_ids: cur.includes(opt.id) ? cur.filter((x) => x !== opt.id) : [...cur, opt.id] } };
+      }
+      const cur = cell.categories || [];
+      return { ...p, [sid]: { ...cell,
+        categories: cur.includes(opt.label_th)
+          ? cur.filter((x) => x !== opt.label_th) : [...cur, opt.label_th] } };
     });
+    const isOn = (opt) => (opt.id
+      ? (detail.category_ids || []).includes(opt.id)
+      : (detail.categories || []).includes(opt.label_th));
     const last = painIdx >= painNominated.length - 1;
     return (
       <JyFrame {...frameProps} title={`ปัญหาที่ “${labelOf(sid)}” หนักแค่ไหน`} testid="jy-screen-paindepth"
@@ -650,12 +678,25 @@ const JourneyRespondentPage = () => {
         </div>
         <div className="be-label" style={{ marginTop: 18 }}>ปัญหาแบบไหน (เลือกได้หลายข้อ)</div>
         <div className="jy-optlist">
-          {opts.map((c) => (
-            <button key={c} type="button"
-                    className={`jy-opt ${(detail.categories || []).includes(c) ? 'jy-on' : ''}`}
-                    data-testid={`jy-paincat-${c}`} onClick={() => toggleCat(c)}>{c}</button>
+          {opts.map((o) => (
+            <button key={o.id || o.label_th} type="button"
+                    className={`jy-opt ${isOn(o) ? 'jy-on' : ''}`}
+                    data-testid={`jy-paincat-${o.id || o.label_th}`}
+                    onClick={() => toggleCat(o)}>{o.label_th}</button>
           ))}
         </div>
+        {allowOther && (
+          <div style={{ marginTop: 12 }}>
+            {/* The share who reach for this box is how the study learns its own
+                category list is incomplete, so it is offered on every step. */}
+            <label className="be-label">ไม่มีข้อไหนตรง? เขียนเองได้</label>
+            <input className="be-input" maxLength={300}
+                   data-testid={`jy-painother-${sid}`}
+                   placeholder="เช่น ที่จอดรถเต็ม"
+                   value={detail.other_text || ''}
+                   onChange={(e) => setDetail({ other_text: e.target.value })} />
+          </div>
+        )}
         <div style={{ marginTop: 14 }}>
           <label className="be-label">เล่าเหตุการณ์สั้น ๆ (ไม่บังคับ)</label>
           <textarea className="be-textarea" rows={3} data-testid={`jy-painnote-${sid}`}

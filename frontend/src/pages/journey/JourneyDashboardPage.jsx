@@ -7,6 +7,9 @@ import './journey-styles.css';
 import { BeTopbar, BeLoading } from '../brand-equity/be-components';
 import JourneyFlowMap from './JourneyFlowMap';
 import { COPY, fmtPct, fmtNum, fmtCI, fmtCIRaw } from './copy-th';
+import { ProvenanceBanner, ProvenanceLine, QualitativeAuditCard,
+         SaturationCard, ReliabilityCard } from './JourneyProvenance';
+import JourneyBackCoding from './JourneyBackCoding';
 import { copyToClipboard } from '@/lib/clipboard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -46,16 +49,22 @@ const JourneyDashboardPage = () => {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [openChannel, setOpenChannel] = useState(null);
+  const [codebook, setCodebook] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [s, a] = await Promise.all([
+        const [s, a, cb] = await Promise.all([
           axios.get(`${API}/journey/studies/${studyId}`, authH),
           axios.get(`${API}/journey/studies/${studyId}/analysis`, authH),
+            // the back-coding queue needs category labels; a study with no
+            // codebook simply has none, so a failure here is not fatal
+            axios.get(`${API}/journey/studies/${studyId}/codebook`, authH)
+              .catch(() => ({ data: { active: null } })),
         ]);
         setStudy(s.data);
         setData(a.data);
+          setCodebook(cb.data?.active || null);
       } catch (e) {
         setError(e?.response?.data?.detail || 'โหลดผลวิเคราะห์ไม่ได้');
       }
@@ -74,6 +83,7 @@ const JourneyDashboardPage = () => {
   }
 
   const res = data?.results || {};
+  const prov = data?.provenance || null;
   const nodes = res.nodes || {};
   const R = data?.respondent_count || 0;
   const adequacy = res.sample_adequacy || {};
@@ -106,6 +116,10 @@ const JourneyDashboardPage = () => {
             </button>
           </div>
         </div>
+
+        {/* ---- where the pain vocabulary came from ---------------------- */}
+        <ProvenanceBanner p={prov} />
+        <QualitativeAuditCard audit={res.qualitative_audit} states={study.states || []} />
 
         {/* ---- adequacy ------------------------------------------------- */}
         <Card title="ขนาดตัวอย่างตอนนี้บอกอะไรได้บ้าง" testid="journey-adequacy"
@@ -271,7 +285,7 @@ const JourneyDashboardPage = () => {
                         .map((t, i) => {
                         const isRollup = i < res.touchpoints.by_type.two_way.length;
                         return (
-                          <tr key={`${t.type}-${i}`} data-testid={`journey-tptype-${t.type}`}
+                          <tr key={`${t.type}-${i}`} data-testid={`journey-tptype-${isRollup ? 'roll' : 'detail'}-${t.type}`}
                               style={isRollup ? { fontWeight: 500 } : { color: 'var(--ink-2)' }}>
                             <td>{isRollup ? t.label_th : `— ${t.label_th}`}
                               <div className="be-tiny" style={{ color: 'var(--ink-3)' }}>
@@ -439,6 +453,7 @@ const JourneyDashboardPage = () => {
               </div>
             );
           })}
+          <ProvenanceLine p={prov} />
         </Card>
 
         {/* ---- step x touchpoint ----------------------------------------- */}
@@ -557,7 +572,20 @@ const JourneyDashboardPage = () => {
               </ul>
             </>
           )}
+          <ProvenanceLine p={prov} testid="journey-provenance-line-matrix" />
         </Card>
+
+        {/* ---- close the loop: code the free text back in ---------------- */}
+        <JourneyBackCoding
+          states={study.states || []}
+          studyId={studyId} token={token}
+          categories={(codebook?.pain_categories || []).filter((c) => c.status === 'approved')}
+          onChanged={() => window.location.reload()} />
+
+        {/* ---- how well the qualitative step was done -------------------- */}
+        <SaturationCard sat={prov?.saturation} />
+        {/* only meaningful once there is a codebook to have coded against */}
+        <ReliabilityCard rel={prov?.codebook_version ? prov.reliability : null} />
 
         {/* ---- diagnostics ---------------------------------------------- */}
         <Card title="คุณภาพของข้อมูลและข้อควรระวัง" testid="journey-diagnostics">
