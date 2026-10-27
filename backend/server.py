@@ -571,7 +571,7 @@ class AIModel(str, Enum):
     GEMINI_FLASH = "gemini-2.0-flash-exp"
 
 class AISettings(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid4()))
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     model: AIModel = AIModel.GPT_4O
     prompt_template: str
     max_tokens: int = 4000
@@ -1520,7 +1520,7 @@ async def create_survey(
 
 @api_router.get("/surveys", response_model=List[Survey])
 async def list_surveys(
-    status: Optional[SurveyStatus] = None,
+    status: Optional[SurveyStatus] = None,  # noqa: F811 — query param, shadows fastapi.status
     survey_type: Optional[SurveyType] = None,
     created_by: Optional[str] = None,
     skip: int = 0,
@@ -1702,7 +1702,7 @@ async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCrede
             _set_cached_user(user.id, user)
             return user
         return None
-    except:
+    except Exception:
         return None
 
 @api_router.post("/surveys/{survey_id}/respond")
@@ -2261,7 +2261,7 @@ async def create_course(
 
 @api_router.get("/admin/courses", response_model=List[Course])
 async def list_all_courses(
-    status: Optional[CourseStatus] = None,
+    status: Optional[CourseStatus] = None,  # noqa: F811 — query param, shadows fastapi.status
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_admin_user)
@@ -2648,7 +2648,7 @@ async def get_my_contents(
 async def get_contents(
     request: Request,
     content_type: Optional[ContentType] = None,
-    status: Optional[ContentStatus] = None,
+    status: Optional[ContentStatus] = None,  # noqa: F811 — query param, shadows fastapi.status
     category: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
@@ -2922,7 +2922,7 @@ async def ai_rearrange_content(
                     if img_data and img_data.startswith('data:image'):
                         # Create vision chat for this image
                         vision_chat = VisionChat(
-                            api_key=emergent_key,
+                            api_key=os.environ.get('EMERGENT_LLM_KEY'),
                             session_id=f"vision_{content_id}_{idx}_{datetime.now().timestamp()}",
                             system_message="คุณเป็นผู้เชี่ยวชาญในการวิเคราะห์รูปภาพ"
                         )
@@ -3052,10 +3052,9 @@ async def ai_rearrange_content(
         
         # Call AI with custom model settings
         from emergentintegrations.llm.chat import LlmChat, UserMessage
-        import os
         
         # Get Emergent LLM key
-        emergent_key = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-8C9010bB74cCfAc069')
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY')
         
         # Parse model name to provider and model
         if model_name == 'gpt-4o' or model_name == 'gpt-4-turbo':
@@ -4885,7 +4884,7 @@ def generate_template_from_specs(specs: dict, output_path: str):
                 color_hex = font_color.lstrip('#')
                 r, g, b = tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
                 normal_font.color.rgb = RGBColor(r, g, b)
-            except:
+            except Exception:
                 pass
         
         # Paragraph formatting
@@ -4979,7 +4978,7 @@ def generate_template_from_specs(specs: dict, output_path: str):
             
             quote_font = quote_style.font
             quote_font.size = Pt(specs.get('block_quote_font_size', 12))
-        except:
+        except Exception:
             pass  # Quote style might not exist
         
         # ============ CAPTION STYLE ============
@@ -4993,7 +4992,7 @@ def generate_template_from_specs(specs: dict, output_path: str):
             cap_alignment = specs.get('caption_alignment', 'left')
             if cap_alignment in alignment_map:
                 cap_para.alignment = alignment_map[cap_alignment]
-        except:
+        except Exception:
             pass
         
         # Add dummy content to activate styles
@@ -5065,7 +5064,7 @@ async def extract_references_to_bib(docx_path: str, output_bib_path: str):
             return False
         
         # Use RefExtract with AI to convert to BibTeX
-        emergent_key = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-8C9010bB74cCfAc069')
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY')
         extractor = RefExtract(api_key=emergent_key, model="gpt-4o")
         
         # Extract references
@@ -5122,7 +5121,7 @@ def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str
         logging.error(f"Pandoc conversion error: {str(e)}")
         return False
 
-async def get_format_editor_model():
+async def fetch_format_editor_model():
     """Get configured LLM model for format editor from admin settings"""
     try:
         settings = await db.admin_settings.find_one(
@@ -7686,9 +7685,9 @@ async def set_thesis_export_permission(
 # because non-conjoint code in this file still depends on them:
 #   - LLMPromptTemplate / UpdateLLMPromptRequest  -> used by /admin/llm-prompts
 #   - initialize_default_prompts                  -> used by /admin/llm-prompts
-#   - SurveyResponse (conjoint variant)           -> intentionally shadows the
-#       survey SurveyResponse defined earlier; preserved to keep existing
-#       global-name behavior unchanged.
+#   - ConjointSurveyResponse                      -> the conjoint request body.
+#       It used to be called SurveyResponse and silently shadowed the survey
+#       model above, so POST /surveys/{id}/responses built the WRONG model.
 # ============================================================================
 
 class LLMPromptTemplate(BaseModel):
@@ -7710,7 +7709,7 @@ class UpdateLLMPromptRequest(BaseModel):
     model_name: Optional[str] = None
 
 
-class SurveyResponse(BaseModel):
+class ConjointSurveyResponse(BaseModel):
     study_id: str
     respondent_id: Optional[str] = None
     respondent_email: Optional[str] = None

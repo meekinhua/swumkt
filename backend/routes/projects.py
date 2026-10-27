@@ -682,6 +682,34 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         
         return new_column
     
+    @project_router.put("/{project_id}/columns/reorder")
+    async def reorder_columns(
+        project_id: str,
+        column_ids: List[str],
+        current_user = Depends(get_current_user)
+    ):
+        """Reorder columns"""
+        project = await db.projects.find_one({"id": project_id})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Update order
+        columns = project.get("columns", [])
+        col_map = {c["id"]: c for c in columns}
+        
+        reordered = []
+        for i, col_id in enumerate(column_ids):
+            if col_id in col_map:
+                col_map[col_id]["order"] = i
+                reordered.append(col_map[col_id])
+        
+        await db.projects.update_one(
+            {"id": project_id},
+            {"$set": {"columns": reordered, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"message": "Columns reordered"}
+    
     @project_router.put("/{project_id}/columns/{column_id}")
     async def update_column(
         project_id: str,
@@ -771,34 +799,6 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         )
         
         return {"message": "Column deleted"}
-    
-    @project_router.put("/{project_id}/columns/reorder")
-    async def reorder_columns(
-        project_id: str,
-        column_ids: List[str],
-        current_user = Depends(get_current_user)
-    ):
-        """Reorder columns"""
-        project = await db.projects.find_one({"id": project_id})
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-        
-        # Update order
-        columns = project.get("columns", [])
-        col_map = {c["id"]: c for c in columns}
-        
-        reordered = []
-        for i, col_id in enumerate(column_ids):
-            if col_id in col_map:
-                col_map[col_id]["order"] = i
-                reordered.append(col_map[col_id])
-        
-        await db.projects.update_one(
-            {"id": project_id},
-            {"$set": {"columns": reordered, "updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
-        
-        return {"message": "Columns reordered"}
     
     # ============ CARD CRUD ============
     

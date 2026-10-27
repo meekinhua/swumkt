@@ -2814,7 +2814,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     import server as _server
     User = _server.User
     UserRole = _server.UserRole
-    SurveyResponse = _server.SurveyResponse
+    SurveyResponse = _server.ConjointSurveyResponse
     compress_base64_image = _server.compress_base64_image
     initialize_default_prompts = _server.initialize_default_prompts
 
@@ -4473,6 +4473,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             await db.conjoint_image_settings.insert_one(default_settings)
+            default_settings.pop("_id", None)
             return default_settings
     
         return settings
