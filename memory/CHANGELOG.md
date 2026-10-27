@@ -1,3 +1,20 @@
+## 2026-10-27 (ครั้งที่ 2) — หน้า "ตั้งค่าเริ่มต้นของเว็บ" สำหรับ production ที่ไม่มี shell
+
+`seed_faculty.py` และ `mint_api_key.py` ต้องรันบนเครื่องที่ต่อ DB ของ production ซึ่งจาก preview ทำไม่ได้ และคีย์ที่ออก
+จาก preview ก็ใช้กับ prod ไม่ได้ จึงย้ายทั้งสองงานมาไว้ในแอป:
+- `scripts/seed_faculty.py` แยก `apply_seed(db, data, dry_run)` + `load_seed()` ออกมาใช้ร่วมกัน (CLI ยังทำงานเหมือนเดิม)
+- `POST /api/cms/faculty/seed?dry_run=` ใน `routes/faculty.py` — admin เท่านั้น, insert-only, ล้างแคชให้ทันทีเมื่อเขียนจริง
+- `/admin/cms/setup` (`CmsSetupPage.jsx`) — ปุ่มตรวจก่อน / นำเข้าข้อมูล + ออกคีย์ sitectl พร้อมเลือก scope,
+  แสดงคีย์ครั้งเดียวในเบราว์เซอร์ของเจ้าของเอง (ไม่ผ่านแชท ไม่ลง commit), มีรายการคีย์ + ปุ่มเพิกถอน
+- ลิงก์ "ตั้งค่าเริ่มต้น" ที่หัวหน้า `/admin/cms`
+
+ตรวจใน preview: dry-run → 0/0 (มีอยู่แล้ว 4/47) · ลบ 1 อาจารย์ + 1 ผลงานแล้วกดนำเข้า → added 1/1 และ `/api/faculty`
+กลับมา 4, `/api/publications` 30 ทันที (แคชถูกล้าง) · ไม่ล็อกอิน → 403 · ออกคีย์ผ่าน UI ได้จริง (scope `cms.*`,
+คีย์ 47 ตัวอักษร) แล้วเพิกถอนคีย์ทดสอบนั้นทิ้ง · `test_faculty` + `test_api_keys` 55 passed
+
+ระวัง: wildcard scope ของระบบคือ `cms.*` ไม่ใช่ `*` — ส่งผิดจะได้ 400 (เจอตอนทดสอบ UI รอบแรก)
+
+
 ## 2026-10-27 — merge `origin/meekintubeDone` @ 82e2822 (perf · content ops · scoped API keys · faculty+SEO)
 
 Pulled from `https://github.com/meekinhua/swumkt.git`, branch `meekintubeDone`. The commit is a direct child of our

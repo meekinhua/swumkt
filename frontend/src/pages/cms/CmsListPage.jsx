@@ -71,6 +71,10 @@ const CmsListPage = () => {
                   className="px-4 py-2 border border-neutral-900 text-sm font-mono uppercase tracking-wider hover:bg-neutral-100 rounded-full">
               Prompt Templates
             </Link>
+            <Link to="/admin/cms/setup" data-testid="cms-setup-link"
+                  className="px-4 py-2 border border-neutral-900 text-sm font-mono uppercase tracking-wider hover:bg-neutral-100 rounded-full">
+              ตั้งค่าเริ่มต้น
+            </Link>
             <button onClick={() => nav('/admin/cms/new')} data-testid="cms-new-post-btn"
                     className="px-5 py-2 bg-blue-600 text-white text-sm font-mono uppercase tracking-wider hover:bg-blue-700 rounded-full">
               + New Post

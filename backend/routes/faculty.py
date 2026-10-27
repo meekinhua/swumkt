@@ -35,12 +35,15 @@ import unicodedata
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+import logging
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
 
 from lib.inline_media import externalize, rehydrate
 from lib.ttl_cache import async_ttl_cache, invalidate_prefix
+
+log = logging.getLogger(__name__)
 
 PAPER_TYPES = ("article", "review", "conference", "chapter", "book",
                "preprint", "thesis", "other")
@@ -322,6 +325,32 @@ def get_faculty_routes(db, get_current_user, require_admin, snapshot=None) -> AP
         _invalidate()
         doc.pop("_id", None)
         return doc
+
+    @router.post("/cms/faculty/seed")
+    async def admin_seed_faculty(dry_run: bool = Query(False),
+                                 current_user=Depends(get_current_user)):
+        """Load `data/faculty_seed.json`, insert-only.
+
+        The CLI script cannot be run against production from here, so the same
+        function is exposed to a signed-in admin. Insert-only, so pressing it
+        twice cannot overwrite a profile a lecturer has since corrected.
+        """
+        require_admin(current_user)
+        import sys as _sys
+        from pathlib import Path as _Path
+        _sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+        from scripts.seed_faculty import apply_seed, load_seed
+        try:
+            data = load_seed()
+        except FileNotFoundError:
+            raise HTTPException(500, "faculty_seed.json is missing from this build")
+        result = await apply_seed(db, data, dry_run)
+        if not dry_run:
+            _invalidate()
+            log.info("[FACULTY-SEED] %s added %d faculty, %d papers",
+                     getattr(current_user, "email", "?"),
+                     result["added_faculty"], result["added_papers"])
+        return result
 
     @router.patch("/cms/faculty/{fid}")
     async def admin_patch_faculty(fid: str, body: Dict[str, Any] = Body(...),

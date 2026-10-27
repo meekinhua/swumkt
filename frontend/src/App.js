@@ -70,6 +70,7 @@ const CmsListPage = lazy(() => import('@/pages/cms/CmsListPage'));
 const CmsEditorPage = lazy(() => import('@/pages/cms/CmsEditorPage'));
 const CmsPromptsPage = lazy(() => import('@/pages/cms/CmsPromptsPage'));
 const CmsLandingPage = lazy(() => import('@/pages/cms/CmsLandingPage'));
+const CmsSetupPage = lazy(() => import('@/pages/cms/CmsSetupPage'));
 
 // Projects
 const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'));
@@ -413,6 +414,7 @@ function App() {
             <Route path="/admin/cms" element={<ProtectedRoute><CmsListPage /></ProtectedRoute>} />
             <Route path="/admin/cms/landing" element={<ProtectedRoute><CmsLandingPage /></ProtectedRoute>} />
             <Route path="/admin/cms/prompts" element={<ProtectedRoute><CmsPromptsPage /></ProtectedRoute>} />
+            <Route path="/admin/cms/setup" element={<ProtectedRoute><CmsSetupPage /></ProtectedRoute>} />
             <Route path="/admin/cms/new" element={<ProtectedRoute><CmsEditorPage /></ProtectedRoute>} />
             <Route path="/admin/cms/:id" element={<ProtectedRoute><CmsEditorPage /></ProtectedRoute>} />
             <Route
