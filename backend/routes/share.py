@@ -23,7 +23,7 @@ import re
 import json
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 
 from lib.ttl_cache import async_ttl_cache

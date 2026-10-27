@@ -1,3 +1,35 @@
+## 2026-10-27 — merge `origin/meekintubeDone` @ 82e2822 (perf · content ops · scoped API keys · faculty+SEO)
+
+Pulled from `https://github.com/meekinhua/swumkt.git`, branch `meekintubeDone`. The commit is a direct child of our
+`3bf602e`, so the only conflicts were two `EMERGENT_LLM_KEY` lines (both sides removed the leaked default; kept
+theirs, `''`) and `yarn.lock` (took theirs — it matches `package.json`). Everything from this session survived the
+merge: codebook pain-id resolution, the `ConjointSurveyResponse` rename, `columns/reorder` route order,
+`fetch_format_editor_model`, `self.clients` in the service worker. See `HANDOFF_2026_10.md` for the package itself.
+
+Lint/correctness sweep done before the merge (pre-existing defects, two of them real):
+- `SurveyResponse` (conjoint) silently shadowed the survey model → `POST /surveys/{id}/respond` built the WRONG
+  model at call time. Renamed to `ConjointSurveyResponse`; `routes/conjoint.py` reads the new name.
+- `PUT /{project_id}/columns/reorder` was shadowed by `columns/{column_id}` → moved above it.
+- `uuid4` undefined in `AISettings`, `emergent_key` undefined in `/content/{id}/ai-rearrange`, duplicate
+  `get_format_editor_model`, bare `except`s, hardcoded `sk-emergent-…` fallbacks removed, `clients` → `self.clients`.
+
+Verified in preview after merging (backend restarted clean, 63 indexes created):
+- `seed_faculty.py --dry-run` then real → 4 faculty, 47 papers (30 public, 17 held at `status=review`, untouched)
+- `/api/faculty` 4 · `/api/publications` 30 · `/people`, `/publications`, `/people/intaka-piriyakul` (16 papers) all render
+- `/api/cms/posts/public` has 0 base64 · public landing externalises to `/api/media/...`
+- **rehydrate guard proven**: seeded a >4 KB base64 hero, GET returned `/api/media/landing/home?f=slides.0.image&v=…`,
+  PUT that document back unchanged → base64 still intact in Mongo and the image still serves (200, image/png).
+  Test hero removed afterwards; slide 0 restored to its original Unsplash URL.
+- `X-Robots-Tag: noindex, nofollow` appears on every preview path including `/` → that one comes from the preview
+  ingress, not the app. The app's own middleware does exclude `/api/share/`, `/api/media/`, `/api/files/`.
+- Tests: `test_inline_media / test_content_ops / test_api_keys / test_faculty / test_journey_ketchup_iter39`
+  → 130 passed, 63 skipped · journey+markov → 248 passed · conjoint refactor/audit → 80 passed, 4 skipped
+
+NOT done, by instruction or because preview cannot: `migrate_b64_to_storage.py` (needs the owner's go-ahead),
+`mint_api_key.py` (a preview-DB key is useless on prod and a key must never be shown in chat), publishing any
+`status=review` paper.
+
+
 ## 2026-06-20 — CJM: ketchup-bottle UX teaching case, end to end (qualitative → codebook → quantitative)
 
 New demo study seeded through the REAL API by `backend/scripts/seed_journey_ketchup.py`: 8 verbatim interviews →
