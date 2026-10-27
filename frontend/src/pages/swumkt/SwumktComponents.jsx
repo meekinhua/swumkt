@@ -42,6 +42,8 @@ export const Footer = () => (
             <li><Link to="/">Homepage</Link></li>
             <li><Link to="/showcase">Brand Showcase</Link></li>
             <li><Link to="/learn">Knowledge Hub</Link></li>
+            <li><Link to="/people">Faculty · คณาจารย์</Link></li>
+            <li><Link to="/publications">Publications</Link></li>
             <li><Link to="/about/swu-marketing">About SWU MKT</Link></li>
           </ul>
         </div>
@@ -89,18 +91,24 @@ export const Footer = () => (
 export const BrandLogo = ({ brand, identity, initial, gradient = 1, size = 'md' }) => {
   const cls = size === 'lg' ? 'blogo blogo--lg' : size === 'xl' ? 'blogo blogo--xl' : 'blogo';
 
+  // Public endpoints now send `image_url` (a path into /api/media) rather than
+  // base64, so the logo is cached by the browser instead of riding inside every
+  // JSON response. Accept a site-relative path as well as an absolute URL.
   const logoAsset = (identity?.visual_assets || []).find(a => a?.kind === 'logo');
-  const inlineLogo = logoAsset?.image_base64
-    ? `data:${logoAsset.mime_type || 'image/png'};base64,${logoAsset.image_base64}`
-    : null;
-  const externalLogo = brand?.logo_url && /^https?:\/\//i.test(brand.logo_url) ? brand.logo_url : null;
-  const src = externalLogo || inlineLogo;
+  const assetLogo = logoAsset?.image_url
+    || (logoAsset?.image_base64
+      ? `data:${logoAsset.mime_type || 'image/png'};base64,${logoAsset.image_base64}`
+      : null);
+  const isSrc = (s) => typeof s === 'string' && /^(https?:\/\/|\/|data:image\/)/i.test(s.trim());
+  const externalLogo = isSrc(brand?.logo_url) ? brand.logo_url : null;
+  const src = externalLogo || assetLogo;
 
   if (src) {
     return (
       <div className={`${cls} blogo--g${gradient}`}
            style={{ background: '#fff', overflow: 'hidden', border: '1px solid var(--rule)' }}>
         <img src={src} alt={brand?.name || 'logo'}
+             loading="lazy" decoding="async"
              style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
       </div>
     );

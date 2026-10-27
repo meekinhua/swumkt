@@ -4,6 +4,7 @@ import axios from 'axios';
 import { BeTopbar, BeLoading } from './brand-equity/be-components';
 import SlideMedia from '../components/SlideMedia';
 import './brand-equity/brand-equity-styles.css';
+import { useSiteText } from '@/hooks/useSiteText';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -40,6 +41,7 @@ const AnnouncementCard = ({ p }) => {
           />
         ) : p.cover_image ? (
           <img src={p.cover_image} alt={p.title}
+               loading="lazy" decoding="async"
                style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}/>
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex',
@@ -91,6 +93,8 @@ const AnnouncementCard = ({ p }) => {
 };
 
 const AnnouncementsPage = () => {
+  const t = useSiteText();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -124,15 +128,16 @@ const AnnouncementsPage = () => {
                          color: '#0A0A0A', fontWeight: 700, marginBottom: 16,
                          display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ width: 32, height: 1, background: '#0A0A0A' }}/>
-            ARCHIVE · ANNOUNCEMENTS
+            {t('announcements.eyebrow', 'ARCHIVE · ANNOUNCEMENTS')}
             <span style={{ color: '#8A8A8A' }}>· {items.length} RECORDS</span>
           </div>
           <h1 style={{ fontFamily: 'IBM Plex Serif, serif',
                        fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 500,
                        margin: 0, lineHeight: 0.98, letterSpacing: '-0.03em',
                        color: '#0A0A0A' }}>
-            ประชาสัมพันธ์<br/>
-            <span style={{ fontStyle: 'italic', fontWeight: 400, color: '#4A4A4A' }}>กิจกรรม</span>
+            {t('announcements.heading', 'ประชาสัมพันธ์')}<br/>
+            <span style={{ fontStyle: 'italic', fontWeight: 400, color: '#4A4A4A' }}>
+              {t('announcements.headingAccent', 'กิจกรรม')}</span>
             <span style={{ display: 'inline-block', width: '0.4em', height: '0.4em',
                             background: '#C8102E', marginLeft: 8, marginBottom: 6,
                             verticalAlign: 'middle' }}/>

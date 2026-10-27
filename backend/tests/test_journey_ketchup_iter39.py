@@ -13,8 +13,25 @@ if not base_url:
     raise RuntimeError("REACT_APP_BACKEND_URL missing")
 BASE_URL = base_url.rstrip("/")
 
-KETCHUP_ID = "a1dfeb64-19ea-46a5-9fb1-8fc2cbce058d"
 KETCHUP_TOKEN = "demoketchup1"
+
+
+def _resolve_ketchup_id():
+    """The seed script creates this study through the API, so the server mints a
+    fresh uuid every run; a hardcoded id only ever matched the one database it
+    was written against. The share token is the stable handle, so resolve
+    through it and let the whole module skip when the demo is not seeded."""
+    try:
+        r = requests.get(f"{BASE_URL}/api/journey/public/{KETCHUP_TOKEN}", timeout=60)
+        return r.json()["id"] if r.status_code == 200 else None
+    except Exception:
+        return None
+
+
+KETCHUP_ID = _resolve_ketchup_id()
+pytestmark = pytest.mark.skipif(
+    KETCHUP_ID is None,
+    reason="ketchup demo not seeded — run backend/scripts/seed_journey_ketchup.py")
 COFFEE_ID = "demo-journey-kafae-001"
 
 KETCHUP_LABELS = [
@@ -22,6 +39,7 @@ KETCHUP_LABELS = [
     "ซอสก้นขวดเอาออกไม่ได้ ต้องแคะ",
     "ไม่รู้ว่าต้องทำอย่างไรให้ซอสออก",
 ]
+
 
 
 @pytest.fixture(scope="session")

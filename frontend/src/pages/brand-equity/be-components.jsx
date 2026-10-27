@@ -599,8 +599,18 @@ export const AIInsightCard = ({ dimension = 'awareness', title, bullets = [], pr
 };
 
 // ============ Brand Logo (real image with fallback to initial+gradient) ============
-// Priority: identity.visual_assets[kind='logo'].image_base64 → brand.logo_url → initial letter on gradient
+// Priority: the asset's image_url or image_base64 → brand.logo_url → initial letter on gradient
 // Pass `logoAsset` directly when available (e.g. from public endpoint).
+//
+// Public endpoints hand back `image_url` (a path into /api/media or /api/files)
+// instead of base64, so the browser can cache the logo instead of re-reading it
+// inside every JSON response. Accept a site-relative path as well as an
+// absolute one — a check for `https?://` alone silently drops both of those.
+// An absolute URL, a site-relative path, or an inline data URI — anything a
+// browser will load as an image. Rejects the empty string and stray values.
+const isImageSrc = (s) =>
+  typeof s === 'string' && /^(https?:\/\/|\/|data:image\/)/i.test(s.trim());
+
 export const BrandLogo = ({
   brand = {}, identity = {}, logoAsset = null,
   size = 48, radius = 0, gradient,
@@ -609,11 +619,12 @@ export const BrandLogo = ({
   const [imgError, setImgError] = React.useState(false);
   const asset = logoAsset
     || (identity?.visual_assets || []).find(a => a?.kind === 'logo');
-  const inlineSrc = asset?.image_base64
-    ? `data:${asset.mime_type || 'image/png'};base64,${asset.image_base64}`
-    : null;
-  const urlSrc = brand?.logo_url && /^https?:\/\//i.test(brand.logo_url) ? brand.logo_url : null;
-  const src = imgError ? null : (inlineSrc || urlSrc);
+  const assetSrc = asset?.image_url
+    || (asset?.image_base64
+      ? `data:${asset.mime_type || 'image/png'};base64,${asset.image_base64}`
+      : null);
+  const urlSrc = isImageSrc(brand?.logo_url) ? brand.logo_url : null;
+  const src = imgError ? null : (assetSrc || urlSrc);
   const initial = (brand?.name?.[0] || 'B').toUpperCase();
   const fallbackBg = gradient || 'linear-gradient(140deg,#14161A 0%,#3A3D45 100%)';
 
@@ -625,6 +636,8 @@ export const BrandLogo = ({
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0 }}>
         <img src={src} alt={brand?.name || 'Brand logo'}
+             loading="lazy" decoding="async"
+             width={size} height={size}
              onError={() => setImgError(true)}
              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}/>
       </div>

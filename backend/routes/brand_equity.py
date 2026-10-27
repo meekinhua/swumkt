@@ -18,12 +18,13 @@ import logging
 import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
-from collections import Counter
+from collections import Counter, OrderedDict
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 
 from lib.ttl_cache import async_ttl_cache
+from lib.inline_media import externalize
 
 brand_equity_router = APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
 
@@ -1744,6 +1745,47 @@ def _wave_significance(study: dict, resp_a: List[dict], resp_b: List[dict]) -> d
 
 
 
+# Composite scores for the public showcase list. Computing one means loading
+# every response for a study and running the full dashboard aggregation; the
+# list did that for all 25 showcases on each cache miss, which was the 3.3 s
+# cold time the homepage waited on — and 24 of the 25 results were discarded,
+# since only the featured card displays scores. The key pins the result to the
+# data it was computed from, so a new response or an edit recomputes and
+# nothing else does.
+_showcase_scores: "OrderedDict[tuple, Any]" = OrderedDict()
+_SHOWCASE_SCORES_MAX = 256
+
+
+async def _showcase_scores_for(db, study_id: str, response_count: int,
+                               updated_at: Any) -> Optional[dict]:
+    key = (study_id, response_count, str(updated_at))
+    if key in _showcase_scores:
+        _showcase_scores.move_to_end(key)
+        return _showcase_scores[key]
+
+    scores = None
+    try:
+        study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        if study:
+            responses = await db.brand_responses.find(
+                {"study_id": study_id}, {"_id": 0}
+            ).to_list(5000)
+            ai_cache = study.get("ai_cache", {}) or {}
+            agg = _aggregate_responses(
+                study, responses,
+                normalized=ai_cache.get("normalized_by_question") or {},
+            )
+            scores = agg.get("composite") or None
+    except Exception:
+        logging.warning("[BE] showcase scores failed for %s", study_id, exc_info=True)
+        return None  # don't cache a failure
+
+    _showcase_scores[key] = scores
+    while len(_showcase_scores) > _SHOWCASE_SCORES_MAX:
+        _showcase_scores.popitem(last=False)
+    return scores
+
+
 def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None) -> dict:
     """Compute stats per question.
     normalized: optional {question_id: {counts: [...], total: N, variants_map: {...}}}
@@ -3139,36 +3181,39 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         ).sort("updated_at", -1)
         items = await cur.to_list(500)
 
+        # One grouped count instead of a count_documents per study.
+        counts = {
+            row["_id"]: row["n"]
+            async for row in db.brand_responses.aggregate([
+                {"$match": {"study_id": {"$in": [s["id"] for s in items]}}},
+                {"$group": {"_id": "$study_id", "n": {"$sum": 1}}},
+            ])
+        }
+
         out = []
         for s in items:
             tok = s.get("share_token")
             if not tok:
                 continue
             brand = s.get("brand") or {}
-            identity = s.get("identity") or {}
+            # 24 of 25 logos were base64 here — 1.25 MB of the 1.26 MB this
+            # endpoint returned. Externalize before picking the logo out, so
+            # the URL records where the asset sits in the stored document.
+            identity = externalize(
+                {"identity": s.get("identity") or {}}, "brand", s["id"],
+            )["identity"]
             logo_asset = next(
                 (a for a in (identity.get("visual_assets") or []) if a.get("kind") == "logo"),
                 None
             )
-            response_count = await db.brand_responses.count_documents({"study_id": s["id"]})
+            response_count = counts.get(s["id"], 0)
 
             # Compute composite scores when enough data — used for the homepage Featured card preview
             scores = None
             if response_count >= 10:
-                try:
-                    full_study = await db.brand_studies.find_one({"id": s["id"]}, {"_id": 0})
-                    if full_study:
-                        responses = await db.brand_responses.find(
-                            {"study_id": s["id"]}, {"_id": 0}
-                        ).to_list(5000)
-                        ai_cache = full_study.get("ai_cache", {}) or {}
-                        agg = _aggregate_responses(
-                            full_study, responses,
-                            normalized=ai_cache.get("normalized_by_question") or {},
-                        )
-                        scores = agg.get("composite") or None
-                except Exception:
-                    scores = None
+                scores = await _showcase_scores_for(
+                    db, s["id"], response_count, s.get("updated_at"),
+                )
 
             out.append({
                 "id": s["id"],

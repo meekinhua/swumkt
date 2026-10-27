@@ -25,6 +25,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ============ LAZY imports — heavy / admin / rarely-used pages ============
 // Heavy tool pages (>= 900 lines each)
+// Faculty — public, crawlable profiles and the department's publications
+const PeopleIndexPage = lazy(() => import('@/pages/people/PeopleIndexPage'));
+const PeopleProfilePage = lazy(() => import('@/pages/people/PeopleProfilePage'));
+const PublicationsPage = lazy(() => import('@/pages/people/PublicationsPage'));
 const ConjointResultsPage = lazy(() => import('@/pages/ConjointResultsPage'));
 const ConjointDesignPage = lazy(() => import('@/pages/ConjointDesignPage'));
 const ConjointAnalysisTool = lazy(() => import('@/pages/ConjointAnalysisTool'));
@@ -169,7 +173,12 @@ const queryClient = new QueryClient({
       staleTime: 60_000,           // data considered fresh for 60s
       gcTime: 5 * 60_000,           // unused cache kept 5 min then GC
       retry: 1,                     // 1 retry on failure (not 3 — fail fast)
-      refetchOnWindowFocus: 'always', // refetch when tab regains focus IF stale
+      // `true`, not `'always'`: refetch on focus only when the data is stale.
+      // `'always'` ignores staleTime, so every alt-tab back to the page
+      // re-ran all four homepage queries — 10.3 MB on production — however
+      // recently they had been fetched. The comment here always said "IF
+      // stale"; the value did not match it.
+      refetchOnWindowFocus: true,
       refetchOnMount: true,
     },
   },
@@ -219,6 +228,9 @@ function App() {
             <Route path="/learn" element={<LearnIndexPage />} />
             <Route path="/learn/:slug" element={<CmsArticleView />} />
             <Route path="/about/swu-marketing" element={<AboutSwuMarketing />} />
+            <Route path="/people" element={<PeopleIndexPage />} />
+            <Route path="/people/:slug" element={<PeopleProfilePage />} />
+            <Route path="/publications" element={<PublicationsPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/content" element={<ContentBrowse />} />

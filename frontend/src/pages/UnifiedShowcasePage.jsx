@@ -4,6 +4,7 @@ import axios from 'axios';
 import { BeTopbar, BeLoading } from './brand-equity/be-components';
 import copyToClipboard from '../lib/clipboard';
 import './brand-equity/brand-equity-styles.css';
+import { useSiteText } from '@/hooks/useSiteText';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -32,6 +33,10 @@ const BrandMark = ({ topic, logoUrl, size = 56 }) => {
         <img
           src={logoUrl}
           alt={t}
+          loading="lazy"
+          decoding="async"
+          width={size}
+          height={size}
           style={{ width: '100%', height: '100%', objectFit: 'cover',
                    background: '#fff', transition: 'transform 400ms ease' }}
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -447,6 +452,8 @@ const EditorPickHero = ({ pick, study, onOpen }) => {
 // MAIN
 // ────────────────────────────────────────────────────────────────────────────
 const UnifiedShowcasePage = () => {
+  const t = useSiteText();
+
   const [data, setData] = useState(null);
   const [landing, setLanding] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -543,8 +550,8 @@ const UnifiedShowcasePage = () => {
                            color: '#0A0A0A', fontWeight: 700, marginBottom: 24,
                            display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ width: 32, height: 1, background: '#0A0A0A' }}/>
-              PUBLIC RESEARCH SHOWCASE
-              <span style={{ color: '#8A8A8A' }}>· OPEN ACCESS</span>
+              {t('showcase.eyebrow', 'PUBLIC RESEARCH SHOWCASE')}
+              <span style={{ color: '#8A8A8A' }}>· {t('showcase.eyebrowNote', 'OPEN ACCESS')}</span>
             </div>
             <h1 style={{
               fontFamily: 'IBM Plex Serif, serif',
