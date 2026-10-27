@@ -31,6 +31,7 @@ from lib.ref_extract import RefExtract
 from lib.citation_replacer import CitationReplacer
 from lib.doc_formatter import DocFormatter
 from lib.ttl_cache import async_ttl_cache
+from lib import api_keys
 from PIL import Image
 from io import BytesIO
 
@@ -313,14 +314,24 @@ async def create_indexes():
     """Create database indexes for better query performance"""
     indexes_created = 0
     indexes_skipped = 0
+    indexes_failed = 0
     
     async def safe_create_index(collection, keys, **kwargs):
-        nonlocal indexes_created, indexes_skipped
+        nonlocal indexes_created, indexes_skipped, indexes_failed
         try:
             await collection.create_index(keys, **kwargs)
             indexes_created += 1
-        except Exception:
-            indexes_skipped += 1
+        except Exception as e:
+            # "already exists" is the expected, harmless case. A unique index
+            # that cannot be built because the collection holds duplicates is
+            # not, and counting both as "skipped" hid it completely.
+            msg = str(e).lower()
+            if "already exists" in msg or "indexoptionsconflict" in msg:
+                indexes_skipped += 1
+            else:
+                indexes_failed += 1
+                logging.warning("[INDEXES] %s %s could not be created: %s",
+                                getattr(collection, "name", "?"), keys, e)
     
     # Content collection indexes (most important for performance)
     await safe_create_index(db.contents, "id", unique=True, background=True)
@@ -412,11 +423,75 @@ async def create_indexes():
         [("study_id", 1), ("method", 1), ("filter_sig", 1)],
         unique=True, background=True,
     )
-    
-    logging.info(f"[INDEXES] Created: {indexes_created}, Skipped (already exist): {indexes_skipped}")
+
+    # CMS and Brand Equity — these four collections sit behind every public
+    # page (homepage, Learn, both showcases) and carried no index but `_id`,
+    # so each of those requests was a full collection scan. `brand_responses`
+    # is the one that hurts: the showcase list counts responses per study.
+    await safe_create_index(db.cms_posts, "id", unique=True, background=True)
+    await safe_create_index(db.cms_posts, "slug", background=True)
+    await safe_create_index(
+        db.cms_posts,
+        [("status", 1), ("type", 1), ("published_at", -1)], background=True)
+    await safe_create_index(
+        db.cms_posts,
+        [("pinned_to_home", 1), ("pinned_order", 1)], background=True)
+    await safe_create_index(db.cms_landing, "key", unique=True, background=True)
+
+    await safe_create_index(db.brand_studies, "id", unique=True, background=True)
+    await safe_create_index(db.brand_studies, "share_token", background=True)
+    await safe_create_index(db.brand_studies, "owner_id", background=True)
+    await safe_create_index(
+        db.brand_studies,
+        [("is_public_showcase", 1), ("updated_at", -1)], background=True)
+    await safe_create_index(db.brand_responses, "study_id", background=True)
+    await safe_create_index(
+        db.brand_responses,
+        [("study_id", 1), ("created_at", -1)], background=True)
+    await safe_create_index(
+        db.conjoint_studies,
+        [("is_public_result", 1), ("updated_at", -1)], background=True)
+
+    # Content ops — revision history is read by doc and sorted by time.
+    await safe_create_index(db.cms_revisions, "id", unique=True, background=True)
+    await safe_create_index(
+        db.cms_revisions,
+        [("collection", 1), ("doc_id", 1), ("saved_at", -1)], background=True)
+    await safe_create_index(db.cms_site_settings, "key", unique=True, background=True)
+    await safe_create_index(db.api_keys, "id", unique=True, background=True)
+    await safe_create_index(db.api_keys, "key_hash", unique=True, background=True)
+
+    # Faculty + publications. Papers are looked up by lecturer (the profile
+    # page) and listed by year (the publications page).
+    await safe_create_index(db.faculty, "id", unique=True, background=True)
+    await safe_create_index(db.faculty, "slug", background=True)
+    await safe_create_index(db.faculty, [("status", 1), ("sort_order", 1)], background=True)
+    await safe_create_index(db.faculty_papers, "id", unique=True, background=True)
+    await safe_create_index(db.faculty_papers, "faculty_ids", background=True)
+    await safe_create_index(db.faculty_papers, [("status", 1), ("year", -1)], background=True)
+    await safe_create_index(db.faculty_papers, "doi", background=True)
+    await safe_create_index(db.cms_posts, "author_faculty_ids", background=True)
+
+    logging.info(f"[INDEXES] Created: {indexes_created}, "
+                 f"Skipped (already exist): {indexes_skipped}, Failed: {indexes_failed}")
 
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'swumkt-secret-key-change-in-production')
+JWT_SECRET = os.environ.get('JWT_SECRET', '')
+if not JWT_SECRET:
+    # This used to fall back to a literal published in this repository, which
+    # let anyone who could read the repo mint a valid admin token. There is no
+    # safe default, and no "is this production" signal to key one off — the
+    # deployment sets no ENVIRONMENT variable — so the only honest options are
+    # to refuse to start or to be insecure. Refuse, and say exactly what to do.
+    if not os.environ.get('ALLOW_INSECURE_JWT_SECRET'):
+        raise RuntimeError(
+            "JWT_SECRET is not set. Every environment must provide its own: add "
+            "JWT_SECRET=<random 32+ chars> to the backend environment. For a "
+            "throwaway local run, export ALLOW_INSECURE_JWT_SECRET=1 instead.")
+    JWT_SECRET = 'swumkt-insecure-local-secret'
+    logging.error("[AUTH] running with a publicly-known JWT secret because "
+                  "ALLOW_INSECURE_JWT_SECRET is set. Never do this on a "
+                  "deployment that real people log in to.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 72
 
@@ -470,6 +545,7 @@ async def log_slow_requests(request, call_next):
 # loads instant.
 # ──────────────────────────────────────────────────────────────
 from lib.object_storage import init_storage, get_object as _objstore_get
+from lib.inline_media import externalize as _externalize_inline
 
 @app.on_event("startup")
 async def _init_object_storage():
@@ -1058,6 +1134,30 @@ async def get_current_user_from_session(session_token: str):
     return User(**user)
 
 
+def _principal_for_key(key_doc: dict) -> "User":
+    """The user object a scoped key acts as.
+
+    It carries the ADMIN role because the CMS endpoints check `role == admin`
+    and there is no value in teaching twenty handlers a second notion of
+    authority. What actually bounds the key is the scope gate in
+    `get_current_user`, which has already refused anything outside
+    `lib/api_keys.SCOPE_RULES` by the time this is called — so the role is
+    only ever exercised on a request the key was explicitly granted.
+
+    The id and email identify the key rather than a person, which is what
+    revision history should record: `actor` becomes the key's label, not a
+    human who was not there.
+    """
+    label = key_doc.get("label") or "api-key"
+    return User(
+        id=f"apikey:{key_doc['id']}",
+        email=f"{key_doc.get('fingerprint', 'key')}@api-key.swumkt",
+        full_name=f"API key · {label}",
+        role=UserRole.ADMIN,
+        auth_method="api_key",
+    )
+
+
 async def _ensure_hardcoded_admin(user_obj: "User") -> "User":
     """If the user's email is in HARDCODED_ADMIN_EMAILS, make sure their role
     is ADMIN — both in-memory and persisted in DB. This way *every* endpoint
@@ -1076,9 +1176,29 @@ async def _ensure_hardcoded_admin(user_obj: "User") -> "User":
     return user_obj
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     token = credentials.credentials
-    
+
+    # An API key travels in the same Authorization header and is recognisable
+    # by its prefix, so it never reaches the JWT decoder. The scope check
+    # happens here, before any principal exists: a key that is not allowed to
+    # make this exact request never becomes a user object at all, so no
+    # downstream admin check can be reached by one.
+    if api_keys.looks_like_api_key(token):
+        try:
+            key_doc = await api_keys.authorize(
+                db, token, request.method, request.url.path)
+        except api_keys.KeyRejected as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
+        await api_keys.touch(db, key_doc["id"])
+        # The path gate cannot see what a generic route will touch — a restore
+        # can roll back any collection — so the handler gets the scopes too.
+        request.state.api_key_scopes = key_doc.get("scopes") or []
+        return _principal_for_key(key_doc)
+
     # Try JWT first (most common path — avoids unnecessary session DB query)
     try:
         payload = decode_token(token)
@@ -3054,7 +3174,7 @@ async def ai_rearrange_content(
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         # Get Emergent LLM key
-        emergent_key = os.environ.get('EMERGENT_LLM_KEY')
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY', '')
         
         # Parse model name to provider and model
         if model_name == 'gpt-4o' or model_name == 'gpt-4-turbo':
@@ -5064,7 +5184,7 @@ async def extract_references_to_bib(docx_path: str, output_bib_path: str):
             return False
         
         # Use RefExtract with AI to convert to BibTeX
-        emergent_key = os.environ.get('EMERGENT_LLM_KEY')
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY', '')
         extractor = RefExtract(api_key=emergent_key, model="gpt-4o")
         
         # Extract references
@@ -7805,22 +7925,34 @@ async def _unified_showcase_index_cached():
          "created_at": 1, "updated_at": 1, "identity.visual_assets": 1},
     ).sort("updated_at", -1)
     be_raw = await be_cur.to_list(500)
+    # One grouped count rather than a count_documents per study.
+    be_counts = {
+        row["_id"]: row["n"]
+        async for row in db.brand_responses.aggregate([
+            {"$match": {"study_id": {"$in": [s["id"] for s in be_raw]}}},
+            {"$group": {"_id": "$study_id", "n": {"$sum": 1}}},
+        ])
+    }
     be_items = []
     for s in be_raw:
         tok = s.get("share_token")
         if not tok:
             continue
         brand = s.get("brand") or {}
-        # Resolve logo: prefer brand.logo_url, else fall back to uploaded
-        # visual asset of kind 'logo' (returned as data URI for direct <img> use)
+        # Resolve logo: prefer brand.logo_url, else the uploaded visual asset
+        # of kind 'logo'. That asset used to be inlined as a data URI, which
+        # made this endpoint 678 KB; `/api/media/...` serves the same bytes as
+        # a cacheable file.
         logo = brand.get("logo_url")
         if not logo:
-            for a in ((s.get("identity") or {}).get("visual_assets") or []):
-                if (a.get("kind") == "logo") and a.get("image_base64"):
-                    mime = a.get("mime_type") or "image/png"
-                    logo = f"data:{mime};base64,{a['image_base64']}"
+            identity = _externalize_inline(
+                {"identity": s.get("identity") or {}}, "brand", s["id"],
+            )["identity"]
+            for a in (identity.get("visual_assets") or []):
+                if (a.get("kind") == "logo") and a.get("image_url"):
+                    logo = a["image_url"]
                     break
-        n_resp = await db.brand_responses.count_documents({"study_id": s["id"]})
+        n_resp = be_counts.get(s["id"], 0)
         be_items.append({
             "method": "brand_equity",
             "id": s["id"],
@@ -8038,9 +8170,28 @@ api_router.include_router(brand_equity_routes)
 
 # ============ CMS — Content Management ============
 from routes.cms import get_cms_routes
+from routes.content_ops import get_content_ops_routes
 
-cms_routes = get_cms_routes(db, get_current_user)
+
+def _require_admin(user):
+    if getattr(user, "role", None) != "admin":
+        raise HTTPException(403, "Admin only")
+
+
+# Built before the CMS routes because they take its snapshot helper — every
+# destructive CMS write stores the prior document so it can be restored.
+content_ops_routes = get_content_ops_routes(db, get_current_user, _require_admin)
+api_router.include_router(content_ops_routes)
+
+cms_routes = get_cms_routes(db, get_current_user,
+                            snapshot_hook=content_ops_routes.snapshot)
 api_router.include_router(cms_routes)
+
+# ============ FACULTY — profiles + publications ============
+from routes.faculty import get_faculty_routes
+
+api_router.include_router(get_faculty_routes(
+    db, get_current_user, _require_admin, snapshot=content_ops_routes.snapshot))
 
 # ============ CONJOINT ANALYSIS ============
 from routes.conjoint import get_conjoint_routes
@@ -8066,6 +8217,11 @@ from routes.brand_equity import _aggregate_responses as _be_aggregate_responses
 
 share_routes = get_share_routes(db, brand_aggregate_helper=_be_aggregate_responses)
 api_router.include_router(share_routes)
+
+# ============ MEDIA — inline base64 served as cacheable image files ============
+from routes.media import get_media_routes
+
+api_router.include_router(get_media_routes(db))
 
 app.include_router(api_router)
 
@@ -8111,8 +8267,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# GZip compression — reduces response size significantly for JSON/text
-app.add_middleware(GZipMiddleware, minimum_size=500)
+# GZip compression — reduces response size significantly for JSON/text.
+# Level 6 rather than Starlette's default 9: on a payload of any size 9 costs
+# several times the CPU of 6 and buys about a percent of ratio, and that CPU is
+# spent on the request's critical path.
+app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
+
+
+# robots.txt now lets crawlers fetch the public data endpoints, because the
+# pages cannot render without them. That must not turn the JSON itself into
+# search results, so API responses say noindex. Exceptions: the share bridge,
+# whose pages carry a canonical to the real page (Google advises against
+# pairing that with noindex), and images, which may usefully appear in image
+# search — a lecturer's portrait among them.
+_INDEXABLE_API_PREFIXES = ("/api/share/", "/api/media/", "/api/files/")
+
+
+@app.middleware("http")
+async def _noindex_api_responses(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/") and not path.startswith(_INDEXABLE_API_PREFIXES):
+        response.headers.setdefault("X-Robots-Tag", "noindex")
+    return response
 
 logging.basicConfig(
     level=logging.INFO,

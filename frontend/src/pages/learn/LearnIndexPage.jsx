@@ -4,10 +4,13 @@ import axios from 'axios';
 import { Topbar, Footer, Eyebrow } from '@/pages/swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
+import { useSiteText } from '@/hooks/useSiteText';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const LearnIndexPage = () => {
+  const t = useSiteText();
+
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,13 +66,14 @@ const LearnIndexPage = () => {
 
       <section style={{ borderBottom: '1px solid var(--ink)', padding: '72px 0 64px' }}>
         <div className="swu-container">
-          <Eyebrow red>● Knowledge Hub · {articles.length} Articles</Eyebrow>
+          <Eyebrow red>● {t('learn.eyebrow', 'Knowledge Hub')} · {articles.length} Articles</Eyebrow>
           <h1 className="h-display" style={{ marginTop: 24, maxWidth: '14ch' }}>
-            อ่านเทรนด์<br/><span className="italic-accent">ก่อนคนอื่น</span>.
+            {t('learn.heading', 'อ่านเทรนด์')}<br/>
+            <span className="italic-accent">{t('learn.headingAccent', 'ก่อนคนอื่น')}</span>.
           </h1>
           <p className="lede" style={{ fontSize: 19, marginTop: 32, maxWidth: '60ch' }}>
-            บทความวิชาการที่เรียบเรียงให้อ่านง่าย — เชื่อมทฤษฎีคลาสสิกกับเครื่องมือวิจัยจริงในแพลตฟอร์ม
-            เพื่อให้นักศึกษา SME และนักการตลาดเห็นจังหวะของผู้บริโภค ก่อนที่ตลาดจะส่งสัญญาณ
+            {t('learn.lede',
+               'บทความวิชาการที่เรียบเรียงให้อ่านง่าย — เชื่อมทฤษฎีคลาสสิกกับเครื่องมือวิจัยจริงในแพลตฟอร์ม เพื่อให้นักศึกษา SME และนักการตลาดเห็นจังหวะของผู้บริโภค ก่อนที่ตลาดจะส่งสัญญาณ')}
           </p>
         </div>
       </section>
@@ -129,6 +133,7 @@ const LearnIndexPage = () => {
                   style={{ textDecoration: 'none', color: 'inherit' }}>
               {a.image && (
                 <img src={a.image} alt={a.title}
+                     loading="lazy" decoding="async"
                      style={{ width: '100%', height: 180, objectFit: 'cover',
                               borderRadius: 8, marginBottom: 16, border: '1px solid var(--ink-2)' }}/>
               )}

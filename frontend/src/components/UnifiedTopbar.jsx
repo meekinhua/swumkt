@@ -26,6 +26,7 @@ import '@/components/unified-topbar.css';
 const PUBLIC_LINKS = [
   { key: 'home',          to: '/',              label: 'หน้าแรก' },
   { key: 'learn',         to: '/learn',         label: 'เรียนรู้' },
+  { key: 'people',        to: '/people',        label: 'คณาจารย์' },
   { key: 'announcements', to: '/announcements', label: 'ประชาสัมพันธ์' },
   { key: 'showcase',      to: '/showcase',      label: 'Showcase' },
 ];

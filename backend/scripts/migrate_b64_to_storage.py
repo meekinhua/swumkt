@@ -236,10 +236,52 @@ async def migrate_brand_studies(db, dry_run: bool):
     log.info(f"[brand_studies] done — changed_docs={changed_docs} uploaded={uploaded} errors={errors}")
 
 
+async def migrate_cms_landing(db, dry_run: bool):
+    """Hero slides on the landing document.
+
+    Replaces the data-URI in `slides[].image` with the stored URL rather than
+    adding a sibling field: the homepage reads `image` directly, so a parallel
+    `image_url` would upload the bytes and still ship them on every page load.
+    """
+    coll = db.cms_landing
+    total = await coll.count_documents({})
+    log.info(f"[cms_landing] scanning {total} docs…")
+    changed_docs = 0; uploaded = 0; errors = 0
+    async for doc in coll.find({}):
+        doc_id = doc.get("key") or doc.get("id") or str(doc.get("_id", "?"))
+        slides = doc.get("slides") or []
+        new_slides = []
+        changed = False
+        for idx, sl in enumerate(slides):
+            if not isinstance(sl, dict):
+                new_slides.append(sl); continue
+            ns = dict(sl)
+            if _looks_like_b64_image(ns.get("image")):
+                if dry_run:
+                    kb = len(ns["image"]) / 1024.0
+                    log.info(f"[cms_landing]   slide[{idx}] would move {kb:.0f} KB to storage")
+                    uploaded += 1; changed = True
+                else:
+                    info = await upload_b64_image(ns["image"], "cms-landing", f"{doc_id}-slide{idx}")
+                    if info:
+                        ns["image_b64_backup"] = ns["image"]
+                        ns["image"] = info["url"]
+                        ns["image_storage_path"] = info["path"]
+                        uploaded += 1; changed = True
+                    else:
+                        errors += 1
+            new_slides.append(ns)
+        if changed and not dry_run:
+            await coll.update_one({"_id": doc["_id"]}, {"$set": {"slides": new_slides}})
+        if changed:
+            changed_docs += 1
+    log.info(f"[cms_landing] done — changed_docs={changed_docs} uploaded={uploaded} errors={errors}")
+
+
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Show what would change without writing")
-    parser.add_argument("--collection", choices=["conjoint_studies", "cms_posts", "brand_studies", "all"],
+    parser.add_argument("--collection", choices=["conjoint_studies", "cms_posts", "brand_studies", "cms_landing", "all"],
                         default="all")
     args = parser.parse_args()
 
@@ -248,13 +290,20 @@ async def main():
     client = AsyncIOMotorClient(mongo_url)
     db = client[db_name]
 
-    await init_storage()
-    log.info(f"Object storage initialised. dry_run={args.dry_run}")
+    # A dry run only measures and reports, so it must not need storage
+    # credentials -- that is what makes it runnable on a dev machine where
+    # EMERGENT_LLM_KEY is absent.
+    if args.dry_run:
+        log.info("dry_run=True — skipping object-storage init (nothing will be uploaded)")
+    else:
+        await init_storage()
+        log.info("Object storage initialised. dry_run=False")
 
     tasks = {
         "conjoint_studies": migrate_conjoint_studies,
         "cms_posts": migrate_cms_posts,
         "brand_studies": migrate_brand_studies,
+        "cms_landing": migrate_cms_landing,
     }
     targets = list(tasks.keys()) if args.collection == "all" else [args.collection]
     for name in targets:

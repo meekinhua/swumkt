@@ -21,6 +21,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from lib.ttl_cache import async_ttl_cache, invalidate_prefix
+from lib.inline_media import externalize, externalize_many, rehydrate
 
 cms_router = APIRouter(prefix="/cms", tags=["CMS"])
 
@@ -57,6 +58,9 @@ class CmsPostCreate(BaseModel):
     cta_url: Optional[str] = None                         # destination link (overrides default /learn/{slug})
     hero_title_lines: Optional[List[str]] = None          # 1-2 short lines shown in homepage hero (overrides title)
     hero_accent_idx: Optional[int] = 1                    # which hero line gets italic-accent red (0 or 1)
+    # Lecturers who wrote it (faculty ids). Drives the byline link to their
+    # profile, the article list on that profile, and the Person in JSON-LD.
+    author_faculty_ids: Optional[List[str]] = []
 
 
 class CmsPostUpdate(BaseModel):
@@ -78,6 +82,11 @@ class CmsPostUpdate(BaseModel):
     cta_url: Optional[str] = None
     hero_title_lines: Optional[List[str]] = None
     hero_accent_idx: Optional[int] = None
+    # The byline used to be stamped from whoever was logged in at creation and
+    # could never change; an article written by a lecturer and entered by an
+    # admin credited the admin forever.
+    author_faculty_ids: Optional[List[str]] = None
+    author_name: Optional[str] = None
 
 
 class PromptTemplateCreate(BaseModel):
@@ -607,7 +616,7 @@ def _is_admin(u) -> bool:
 
 # ============ ROUTE FACTORY ============
 
-def get_cms_routes(db, get_current_user):
+def get_cms_routes(db, get_current_user, snapshot_hook=None):
     """Factory pattern matches brand_equity.py."""
 
     async def _seed_default_templates():
@@ -619,6 +628,25 @@ def get_cms_routes(db, get_current_user):
                 doc["created_at"] = _now()
                 doc["updated_at"] = _now()
                 await db.cms_prompt_templates.insert_one(doc)
+
+    async def _faculty_bylines(ids):
+        """[{slug, display_name_th, display_name_en}] for published faculty,
+        in the order the post lists them. Unknown or unpublished ids are
+        dropped rather than rendered as a dead link."""
+        if not ids:
+            return []
+        from routes.faculty import display_name, _dedupe
+        ids = _dedupe(ids)
+        found = {f["id"]: f async for f in db.faculty.find(
+            {"id": {"$in": ids}, "status": "published", "deleted_at": {"$exists": False}},
+            {"_id": 0, "id": 1, "slug": 1, "title_th": 1, "name_th": 1,
+             "title_en": 1, "name_en": 1})}
+        return [{"slug": found[i]["slug"],
+                 "name_th": found[i].get("name_th"),
+                 "name_en": found[i].get("name_en"),
+                 "display_name_th": display_name(found[i], "th"),
+                 "display_name_en": display_name(found[i], "en")}
+                for i in ids if i in found]
 
     # --------- POSTS (public) ---------
 
@@ -640,6 +668,9 @@ def get_cms_routes(db, get_current_user):
             {"_id": 0, "body_md": 0},  # exclude body for list view (lighter)
         ).sort("published_at", -1).limit(min(limit, 200))
         items = await cur.to_list(length=limit)
+        # Covers and media are base64 in the document; this list was 7 MB on
+        # production for nine cards. Hand back cacheable URLs instead.
+        items = externalize_many(items, "post")
         return {"items": items, "total": len(items)}
 
     @cms_router.get("/announcements/pinned")
@@ -659,6 +690,7 @@ def get_cms_routes(db, get_current_user):
             {"_id": 0, "body_md": 0},
         ).sort([("pinned_order", 1), ("published_at", -1)]).limit(8)
         items = await cur.to_list(length=8)
+        items = externalize_many(items, "post")
         return {"items": items, "total": len(items)}
 
     @cms_router.get("/posts/public/by-slug/{slug}")
@@ -674,7 +706,9 @@ def get_cms_routes(db, get_current_user):
         )
         if not doc:
             raise HTTPException(404, "Post not found or not published")
-        return doc
+        doc["authors"] = await _faculty_bylines(doc.get("author_faculty_ids") or [])
+        doc.pop("author_faculty_ids", None)
+        return externalize(doc, "post", doc.get("id"))
 
     # --------- POSTS (admin) ---------
 
@@ -756,6 +790,9 @@ def get_cms_routes(db, get_current_user):
             "status": "draft",
             "author_id": getattr(current_user, "id", None),
             "author_name": getattr(current_user, "full_name", None) or getattr(current_user, "email", "admin"),
+            # The model accepted this and the document never kept it, so an
+            # article created with its lecturers had no byline.
+            "author_faculty_ids": list(dict.fromkeys(data.author_faculty_ids or [])),
             "created_at": _now(),
             "updated_at": _now(),
         }
@@ -783,6 +820,13 @@ def get_cms_routes(db, get_current_user):
                 upd["published_at"] = _now()
             else:
                 upd[k] = v
+        # The admin editor reads the unexternalized `GET /posts/{id}`, so this
+        # should be a no-op — but a client that saved a post it had loaded from
+        # a public endpoint would otherwise write our own URL over the image.
+        upd = rehydrate(upd, existing)
+        if snapshot_hook:
+            await snapshot_hook("cms_posts", post_id,
+                                getattr(current_user, "email", "unknown"), "post edit")
         await db.cms_posts.update_one({"id": post_id}, {"$set": upd})
         doc = await db.cms_posts.find_one({"id": post_id}, {"_id": 0})
         invalidate_prefix("get_cms_routes.<locals>._list_pinned_announcements_cached")
@@ -798,6 +842,9 @@ def get_cms_routes(db, get_current_user):
             {"id": post_id, "deleted_at": {"$exists": False}},
             {"$set": {"deleted_at": _now()}},
         )
+        invalidate_prefix("get_cms_routes.<locals>._list_pinned_announcements_cached")
+        invalidate_prefix("get_cms_routes.<locals>._list_public_posts_cached")
+        invalidate_prefix("get_cms_routes.<locals>._get_public_post_by_slug_cached")
         if res.matched_count == 0:
             raise HTTPException(404, "Post not found or already trashed")
         return {"ok": True, "id": post_id}
@@ -812,15 +859,29 @@ def get_cms_routes(db, get_current_user):
         )
         if res.matched_count == 0:
             raise HTTPException(404, "Post not in trash")
+        invalidate_prefix("get_cms_routes.<locals>._list_pinned_announcements_cached")
+        invalidate_prefix("get_cms_routes.<locals>._list_public_posts_cached")
+        invalidate_prefix("get_cms_routes.<locals>._get_public_post_by_slug_cached")
         return {"ok": True, "id": post_id}
 
     @cms_router.delete("/posts/{post_id}/purge")
     async def purge_post(post_id: str, current_user=Depends(get_current_user)):
         if not _is_admin(current_user):
             raise HTTPException(403, "Admin only")
+        if snapshot_hook:
+            try:
+                await snapshot_hook("cms_posts", post_id,
+                                    getattr(current_user, "email", "unknown"),
+                                    "before purge", required=True)
+            except Exception as e:
+                raise HTTPException(
+                    503, f"could not save a copy before deleting — refusing to purge ({e})")
         res = await db.cms_posts.delete_one({"id": post_id})
         if res.deleted_count == 0:
             raise HTTPException(404, "Post not found")
+        invalidate_prefix("get_cms_routes.<locals>._list_pinned_announcements_cached")
+        invalidate_prefix("get_cms_routes.<locals>._list_public_posts_cached")
+        invalidate_prefix("get_cms_routes.<locals>._get_public_post_by_slug_cached")
         return {"ok": True, "id": post_id}
 
     # --------- PROMPT TEMPLATES ---------
@@ -1128,13 +1189,16 @@ def get_cms_routes(db, get_current_user):
         if not doc:
             return DEFAULT_LANDING
         # Backfill new fields for legacy docs created before this feature
-        if "featured_articles" not in doc:
-            doc["featured_articles"] = DEFAULT_LANDING["featured_articles"]
-        if "featured_brands" not in doc:
-            doc["featured_brands"] = DEFAULT_LANDING["featured_brands"]
-        if "showcase_editor_pick" not in doc:
-            doc["showcase_editor_pick"] = DEFAULT_LANDING["showcase_editor_pick"]
-        return doc
+        # `not doc.get(...)`, not `not in`: a partial PUT through the old
+        # whole-document route wrote null over these, and a null that only an
+        # absent-key check can heal stays null forever.
+        for field in ("featured_articles", "featured_brands", "showcase_editor_pick"):
+            if not doc.get(field):
+                doc[field] = DEFAULT_LANDING[field]
+        # Hero slides carry their images as base64 — 2.1 MB of the 2.09 MB this
+        # endpoint returned on production, blocking the homepage's first paint.
+        # `update_landing` puts them back when the editor saves.
+        return externalize(doc, "landing", doc.get("key") or "home")
 
     @cms_router.put("/landing")
     async def update_landing(data: LandingDoc, current_user=Depends(get_current_user)):
@@ -1142,7 +1206,26 @@ def get_cms_routes(db, get_current_user):
             raise HTTPException(403, "Admin only")
         await _seed_landing()
         upd = data.model_dump()
+        # The editor loads the same document the homepage does, so its hero
+        # images arrive back as `/api/media/...` URLs. Swap the base64 in
+        # before saving, or the first save overwrites each image with a URL
+        # pointing at the field it just replaced.
+        stored = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
+        upd = rehydrate(upd, stored)
         upd["updated_at"] = _now()
+        # PATCH /api/cms/landing compares against this to detect a concurrent
+        # edit, so a full PUT has to move it too.
+        upd["version"] = int((stored or {}).get("version", 0)) + 1
+        # LandingDoc defaults these to None, so a caller who omits them would
+        # erase the stored config. Keep what is there when the body says
+        # nothing about them.
+        for field in ("featured_articles", "featured_brands", "showcase_editor_pick"):
+            if upd.get(field) is None and (stored or {}).get(field) is not None:
+                upd[field] = stored[field]
+        if snapshot_hook:
+            await snapshot_hook("cms_landing", "home",
+                                getattr(current_user, "email", "unknown"),
+                                "landing full save")
         await db.cms_landing.update_one({"key": "home"}, {"$set": upd})
         invalidate_prefix("get_cms_routes.<locals>._get_landing_cached")
         doc = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
@@ -1152,10 +1235,22 @@ def get_cms_routes(db, get_current_user):
     async def reset_landing(current_user=Depends(get_current_user)):
         if not _is_admin(current_user):
             raise HTTPException(403, "Admin only")
+        prior = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
+        if prior and snapshot_hook:
+            # delete_many + insert_one is unrecoverable otherwise.
+            try:
+                await snapshot_hook("cms_landing", "home",
+                                    getattr(current_user, "email", "unknown"),
+                                    "before landing reset", required=True)
+            except Exception as e:
+                raise HTTPException(
+                    503, f"could not save a copy before resetting — refusing ({e})")
         doc = dict(DEFAULT_LANDING)
         doc["updated_at"] = _now()
+        doc["version"] = int((prior or {}).get("version", 0)) + 1
         await db.cms_landing.delete_many({"key": "home"})
         await db.cms_landing.insert_one(doc)
+        invalidate_prefix("get_cms_routes.<locals>._get_landing_cached")
         out = await db.cms_landing.find_one({"key": "home"}, {"_id": 0})
         return out
 
