@@ -183,3 +183,20 @@ fail ค้างเดิม 156 รายการส่วนใหญ่ har
 - **id อาจารย์ที่สร้างผ่าน API เป็น uuid** ไม่ใช่ `fac-{slug}` (ชุด seed ยังเป็น `fac-{slug}`)
 - **`refetchOnWindowFocus: true` ไม่ใช่ `'always'`** · **`fetchPriority` ไม่ใช่ `fetchpriority`**
 - **cache เป็นราย process** (`lib/ttl_cache.py`) — หลาย worker ล้างได้ทีละตัว ที่เหลือรอ TTL หมด
+
+---
+
+## 7. ภาคผนวก — ตรวจรอบ setup page (`7129655`) แล้วแก้ 3 จุด
+
+หน้า `/admin/cms/setup` ใช้ได้ดี ทดสอบใน sim ครบวงจรแล้ว (ตรวจก่อน → นำเข้า → ออกคีย์ → เพิกถอน)
+แต่ในรอบเดียวกันมี 1 จุดที่เปิดช่องโหว่ จึงแก้ก่อน deploy:
+
+| จุด | ปัญหา | แก้ |
+|---|---|---|
+| `routes/projects.py` · `PUT /{id}/columns/reorder` | ย้าย route ขึ้นมาเหนือ `/columns/{column_id}` ทำให้ handler ที่ไม่เคยถูกเรียกถึงกลายเป็นใช้งานได้ — **ไม่มีการตรวจสิทธิ์** และเขียนทับด้วยเฉพาะ id ที่ส่งมา ผู้ใช้ที่ login แล้วคนไหนก็ส่ง `[]` ลบคอลัมน์ทุกโปรเจกต์ได้ (ทำซ้ำได้จริงใน sim) | ต้องเป็น admin หรือ owner/admin ของโปรเจกต์ แบบเดียวกับ `update_column` · ต้องส่ง id ครบทุกคอลัมน์ ไม่งั้น 400 |
+| `routes/faculty.py` · `POST /cms/faculty/seed` | API key ที่มี `cms.faculty.write` เรียกได้ — เป็นการ insert ก้อนใหญ่ที่ไม่มี snapshot | admin ที่ login เท่านั้น · เพิ่มใน `api_keys.HARD_DENY` |
+| `routes/faculty.py` | `sys.path.insert` ทุกครั้งที่กด → list ยาวขึ้นเรื่อย ๆ | import ปกติ (`scripts/__init__.py` มีอยู่แล้ว) |
+
+**ห้ามย้อนการตรวจสิทธิ์ของ reorder กลับ** — `tests/test_project_columns_reorder.py` ล้ม 6 จาก 7 บนโค้ดก่อนแก้
+
+หมายเหตุเล็ก: มี `yarn.lock` ว่างที่ root ของ repo (มาจากการรัน yarn ผิดโฟลเดอร์) ไม่มีผลกับ build ลบได้

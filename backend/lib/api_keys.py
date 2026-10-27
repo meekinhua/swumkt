@@ -64,6 +64,8 @@ HARD_DENY: Sequence[re.Pattern] = (
     # Lists brand-equity and conjoint studies as AI "sources" — research data
     # that happens to live under /cms, not content a content key should read.
     re.compile(r"^/api/cms/sources(/|$)"),
+    # One-off bootstrap from /admin/cms/setup: a bulk insert, run by a person.
+    re.compile(r"^/api/cms/faculty/seed/?$"),
 )
 
 # (scope, methods, path pattern). First match wins; no match means refused.

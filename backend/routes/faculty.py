@@ -336,9 +336,14 @@ def get_faculty_routes(db, get_current_user, require_admin, snapshot=None) -> AP
         twice cannot overwrite a profile a lecturer has since corrected.
         """
         require_admin(current_user)
-        import sys as _sys
-        from pathlib import Path as _Path
-        _sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+        # A bulk, un-snapshotted insert belongs to a person at the setup page,
+        # like minting a key — not to a scoped key that happens to hold
+        # cms.faculty.write. api_keys.HARD_DENY refuses the path as well.
+        if getattr(current_user, "auth_method", None) == "api_key":
+            raise HTTPException(403, "the seed runs from /admin/cms/setup by a signed-in admin")
+        # A plain import: the backend directory is already importable (this
+        # module imports lib.*). Inserting it into sys.path on every request
+        # grew the list by one entry per click.
         from scripts.seed_faculty import apply_seed, load_seed
         try:
             data = load_seed()

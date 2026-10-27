@@ -377,3 +377,21 @@ def test_public_post_does_not_expose_raw_faculty_ids():
     if r.status_code != 200:
         pytest.skip("test post not present")
     assert "author_faculty_ids" not in r.json()
+
+
+@needs_server
+def test_the_setup_seed_endpoint_dry_run_reports_without_writing(seeded):
+    h = _admin_headers()
+    before = _get("/api/faculty").json()["total"]
+    r = requests.post(f"{BASE_URL}/api/cms/faculty/seed", params={"dry_run": "true"},
+                      headers=h, timeout=60)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["dry_run"] is True
+    assert body["seed_public_papers"] == 30 and body["seed_review_papers"] == 17
+    assert _get("/api/faculty").json()["total"] == before
+
+
+@needs_server
+def test_the_setup_seed_endpoint_needs_a_signed_in_admin():
+    assert requests.post(f"{BASE_URL}/api/cms/faculty/seed", timeout=30).status_code in (401, 403)

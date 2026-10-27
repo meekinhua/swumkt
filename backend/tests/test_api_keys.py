@@ -317,3 +317,10 @@ def test_restoring_a_paper_needs_the_faculty_scope_too():
 
 def test_research_sources_are_out_of_reach_of_any_key():
     assert api_keys.required_scope("GET", "/api/cms/sources") is None
+
+
+def test_the_faculty_seed_is_out_of_reach_of_any_key():
+    """A bulk, un-snapshotted bootstrap — run by a person at /admin/cms/setup."""
+    assert api_keys.required_scope("POST", "/api/cms/faculty/seed") is None
+    # ...while ordinary faculty edits stay within the faculty scope.
+    assert api_keys.required_scope("PATCH", "/api/cms/faculty/fac-x") == "cms.faculty.write"
