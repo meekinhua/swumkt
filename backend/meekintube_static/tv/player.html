@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- YouTube refuses embeds that arrive without a Referer (error 153). This page
+     exists so the player always loads from https://swumkt.org, even when the
+     TV app's own UI runs from local files inside a Tizen package. -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex">
+<title>meekinTube player</title>
+<style>
+  html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:#000; }
+  #p, #p iframe{ position:absolute; left:0; top:0; width:100%; height:100%; border:0; }
+</style>
+</head>
+<body>
+<div id="p"></div>
+<script>
+/* Bridge between the meekinTube TV UI (our parent frame) and the YouTube
+   IFrame Player API.
+
+   parent -> here : {meekin:1, cmd:"load", id, start}
+                    {meekin:1, cmd:"play" | "pause" | "stop"}
+                    {meekin:1, cmd:"seek", t}
+   here -> parent : {meekin:1, ev:"boot" | "ready" | "blocked"}
+                    {meekin:1, ev:"state", s}            YT.PlayerState number
+                    {meekin:1, ev:"time", cur, dur, buf}
+                    {meekin:1, ev:"error", code}
+
+   The parent is a packaged TV app (origin "file://" or "null") or a page on
+   this site, so commands are accepted only from window.parent rather than by
+   origin. Nothing sent back is private: playback state only. */
+(function(){
+  "use strict";
+  // want = what the TV last asked for. Commands can arrive before the YouTube
+  // player is ready (they would be dropped), so onReady applies the latest one.
+  var player = null, apiReady = false, ready = false, pending = null, want = "play", timer = null;
+
+  function send(msg){
+    msg.meekin = 1;
+    try{ window.parent.postMessage(msg, "*"); }catch(e){}
+  }
+
+  function tick(){
+    if(!player || !player.getCurrentTime) return;
+    try{
+      send({ev:"time", cur:player.getCurrentTime() || 0, dur:player.getDuration() || 0,
+            buf:player.getVideoLoadedFraction ? (player.getVideoLoadedFraction() || 0) : 0});
+    }catch(e){}
+  }
+
+  function create(id, start){
+    player = new YT.Player("p", {
+      videoId: id,
+      width: "100%", height: "100%",
+      playerVars: {
+        autoplay: want === "play" ? 1 : 0, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3,
+        playsinline: 1, enablejsapi: 1, start: Math.floor(start || 0),
+        origin: location.origin, widget_referrer: location.href
+      },
+      events: {
+        onReady: function(e){
+          ready = true; send({ev:"ready"});
+          try{
+            if(want === "stop") e.target.stopVideo();
+            else if(want === "pause") e.target.pauseVideo();
+            else if(pending){ var p = pending; pending = null; e.target.loadVideoById({videoId:p.id, startSeconds:Math.floor(p.start || 0)}); }
+            else e.target.playVideo();
+          }catch(x){}
+        },
+        onStateChange: function(e){ send({ev:"state", s:e.data}); },
+        onError: function(e){ send({ev:"error", code:e.data}); },
+        onAutoplayBlocked: function(){ send({ev:"blocked"}); }
+      }
+    });
+    // keep the YouTube frame from ever taking keyboard focus away from the TV UI
+    var f = document.querySelector("#p iframe, iframe#p");
+    if(f){ f.setAttribute("tabindex", "-1"); }
+    if(!timer) timer = setInterval(tick, 500);
+  }
+
+  function load(id, start){
+    if(!/^[A-Za-z0-9_-]{11}$/.test(id || "")) { send({ev:"error", code:2}); return; }
+    want = "play";
+    // before the API or the first player is ready, keep only the latest request
+    if(!apiReady || (player && !ready)){ pending = {id:id, start:start}; return; }
+    if(!player){ pending = null; create(id, start); return; }
+    try{ player.loadVideoById({videoId:id, startSeconds:Math.floor(start || 0)}); }
+    catch(e){ send({ev:"error", code:5}); }
+  }
+
+  window.onYouTubeIframeAPIReady = function(){
+    apiReady = true; clearTimeout(apiTimer);
+    // a stop that arrived meanwhile cleared pending, so nothing starts behind the TV UI
+    if(pending){ var p = pending; pending = null; load(p.id, p.start); }
+  };
+  // if the API (or the widget script it pulls in) never arrives, tell the TV so it can rebuild the frame
+  var apiTimer = setTimeout(function(){ if(!apiReady) send({ev:"error", code:"api"}); }, 20000);
+
+  window.addEventListener("message", function(e){
+    if(e.source !== window.parent) return;
+    var m = e.data;
+    if(!m || m.meekin !== 1 || !m.cmd) return;
+    switch(m.cmd){
+      case "load":  load(m.id, m.start); break;
+      case "play":  want = "play";  if(ready) player.playVideo(); break;
+      case "pause": want = "pause"; if(ready) player.pauseVideo(); break;
+      case "stop":  want = "stop"; pending = null; if(ready) player.stopVideo(); break;
+      case "seek":  if(ready) player.seekTo(Math.max(0, Number(m.t) || 0), true); break;
+    }
+  });
+
+  var s = document.createElement("script");
+  s.src = "https://www.youtube.com/iframe_api";
+  s.onerror = function(){ send({ev:"error", code:"api"}); };
+  document.head.appendChild(s);
+  send({ev:"boot"});
+})();
+</script>
+</body>
+</html>

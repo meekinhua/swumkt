@@ -1,0 +1,9 @@
+# Tizen staging/output
+tizen/build/
+*.wgt
+# Android/Gradle output
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk

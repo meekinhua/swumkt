@@ -200,3 +200,25 @@ fail ค้างเดิม 156 รายการส่วนใหญ่ har
 **ห้ามย้อนการตรวจสิทธิ์ของ reorder กลับ** — `tests/test_project_columns_reorder.py` ล้ม 6 จาก 7 บนโค้ดก่อนแก้
 
 หมายเหตุเล็ก: มี `yarn.lock` ว่างที่ root ของ repo (มาจากการรัน yarn ผิดโฟลเดอร์) ไม่มีผลกับ build ลบได้
+
+---
+
+## 8. ภาคผนวก — meekinTube TV (Samsung + Xiaomi) · 30 ต.ค. 2026
+
+เพิ่มหน้าจอทีวี (คุมด้วยรีโมต) ให้ meekinTube และโปรเจกต์แอปทีวีสองตัว **ไม่มีการแก้ backend Python**
+มีแค่ไฟล์ static ใหม่ใต้ `backend/meekintube_static/tv/` ที่ mount `/api/meekintube` เดิมเสิร์ฟให้เอง
+
+| ไฟล์ | คืออะไร |
+|---|---|
+| `backend/meekintube_static/tv/index.html`, `tv.css`, `tv.js` | UI ทีวี 1920x1080 ใช้ localStorage key ชุดเดียวกับเว็บ meekinTube |
+| `backend/meekintube_static/tv/player.html` | ตัวเล่น YouTube — **ต้องอยู่บน https://swumkt.org เสมอ** (YouTube ไม่เล่นถ้าไม่มี Referer, error 153) แอป Samsung ที่รันจากไฟล์ในเครื่องจะ iframe หน้านี้ |
+| `backend/meekintube_static/sw.js` | ไม่แตะ path `/tv/` แล้ว (เดิม cache-first จะเสิร์ฟ tv.js เก่าค้าง) · CACHE เป็น `mytube-v2` |
+| `meekintube_tv/tizen/` · `meekintube_tv/android/` | โปรเจกต์แอป (.wgt / .apk) ไม่ได้ใช้ตอน deploy เว็บ ดู `meekintube_tv/README.md` |
+
+**หลัง deploy ตรวจ 3 อย่าง**
+1. `https://swumkt.org/api/meekintube/tv/` และ `.../tv/player.html` ตอบ 200 (ตอนนี้ 404)
+2. response ของสองหน้านี้ **ห้ามมี** `X-Frame-Options` หรือ CSP `frame-ancestors` ที่กันการถูก iframe และ `Referrer-Policy` ต้องเป็น `strict-origin-when-cross-origin` (ค่าปัจจุบันของ prod ถูกอยู่แล้ว — อย่าเปลี่ยนเป็น `same-origin`/`no-referrer` ไม่งั้นวิดีโอเล่นไม่ได้ทั้งสองแอป)
+3. แก้ `tv.js`/`tv.css` ครั้งไหนให้ขยับ `?v=` ใน `tv/index.html` ด้วย — Cloudflare cache ไฟล์ .js/.css
+
+แอป Xiaomi โหลด `https://swumkt.org/api/meekintube/tv/?shell=android` ตรง ๆ จึงได้ UI ใหม่ทันทีที่ deploy
+แอป Samsung ฝัง UI ไว้ในแพ็กเกจ ต้อง build `.wgt` ใหม่เมื่อ UI เปลี่ยน (ตัวเล่นยังมาจาก swumkt.org)

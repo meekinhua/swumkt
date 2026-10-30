@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<!-- Laid out at 1920x1080; tv.js scales #stage to whatever the screen reports. -->
+<meta name="viewport" content="width=1920, user-scalable=no">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex">
+<title>meekinTube TV</title>
+<link rel="preconnect" href="https://i.ytimg.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tv.css?v=5">
+</head>
+<body>
+<div id="stage">
+
+  <!-- Left rail: icons only, widens with labels while it holds focus. -->
+  <nav id="rail" aria-label="เมนูหลัก">
+    <div class="brand" aria-label="meekinTube">
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+        <defs><linearGradient id="bm" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs>
+        <circle cx="24" cy="24" r="22" fill="url(#bm)"/>
+        <path d="M19 15.5v17l14-8.5z" fill="#fff"/>
+      </svg>
+      <span class="brand-word">meekin<b>Tube</b></span>
+    </div>
+    <div class="rail-items">
+      <button class="f rail-item" data-view="search" data-fk="rail:search"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16a6.47 6.47 0 0 0 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"/></svg><span>ค้นหา</span></button>
+      <button class="f rail-item" data-view="home" data-fk="rail:home"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>หน้าแรก</span></button>
+      <button class="f rail-item" data-view="shorts" data-fk="rail:shorts"><svg viewBox="0 0 24 24"><path d="M17.8 10.4 16 9.6l1.6-.8a3.7 3.7 0 0 0-3.4-6.6l-8 4.2a3.7 3.7 0 0 0 .1 6.6l1.8.8-1.6.8a3.7 3.7 0 0 0 3.4 6.6l8-4.2a3.7 3.7 0 0 0-.1-6.6M10 14.6V9.4l4.6 2.6z"/></svg><span>Shorts</span></button>
+      <button class="f rail-item" data-view="subs" data-fk="rail:subs"><svg viewBox="0 0 24 24"><path d="M20 8H4V6h16zm-2-6H6v2h12zm4 10v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2m-6 4-6-3.27v6.53z"/></svg><span>การติดตาม</span></button>
+      <button class="f rail-item" data-view="library" data-fk="rail:library"><svg viewBox="0 0 24 24"><path d="M4 6H2v14a2 2 0 0 0 2 2h14v-2H4zm16-4H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2m-8 12.5v-9l6 4.5z"/></svg><span>คลังของฉัน</span></button>
+      <button class="f rail-item" data-view="settings" data-fk="rail:settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 13.93 2h-3.84a.48.48 0 0 0-.47.41l-.36 2.54a7.37 7.37 0 0 0-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.47a.47.47 0 0 0 .12.61l2.03 1.58a7.2 7.2 0 0 0 0 1.88l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54a7.37 7.37 0 0 0 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6"/></svg><span>ตั้งค่า</span></button>
+    </div>
+  </nav>
+
+  <main id="main">
+    <!-- Hero: describes whichever tile holds focus. -->
+    <header id="hero">
+      <div class="hero-bg"><img id="heroImg" alt=""></div>
+      <div class="hero-text">
+        <div id="heroKicker" class="hero-kicker"></div>
+        <h1 id="heroTitle"></h1>
+        <div id="heroMeta" class="hero-meta"></div>
+      </div>
+    </header>
+    <div id="viewport"><div id="rows"></div></div>
+  </main>
+
+  <!-- Player. The YouTube embed lives in player.html on https://swumkt.org
+       (YouTube needs an https Referer); tv.js drives it with postMessage. -->
+  <section id="player" hidden>
+    <div id="ytHost"></div>
+    <div id="playerShield"></div>
+    <div id="playerSpinner" hidden></div>
+    <div id="osd">
+      <div class="osd-bottom">
+        <div class="osd-head"><div id="osdTitle"></div><div id="osdChannel"></div><div class="osd-note" id="osdNote"></div></div>
+        <div class="osd-progress">
+          <div class="f progress-bar" id="progressBar" data-act="seekbar" data-fk="osd:progress">
+            <div class="progress-buf" id="progressBuf"></div>
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-knob" id="progressKnob"></div>
+          </div>
+          <div class="progress-time"><b id="timeCur">0:00</b> / <span id="timeDur">0:00</span></div>
+        </div>
+        <div class="osd-controls">
+          <button class="f ctl" data-act="prev" data-fk="osd:prev" aria-label="ก่อนหน้า"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+          <button class="f ctl" data-act="rew" data-fk="osd:rew" aria-label="ย้อน 10 วินาที"><svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6zm.5-6 8.5 6V6z"/></svg></button>
+          <button class="f ctl ctl-main" data-act="toggle" data-fk="osd:toggle" aria-label="เล่น/หยุด"><svg class="i-play" viewBox="0 0 24 24" hidden><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg></button>
+          <button class="f ctl" data-act="ff" data-fk="osd:ff" aria-label="ไปข้างหน้า 10 วินาที"><svg viewBox="0 0 24 24"><path d="m4 18 8.5-6L4 6zm9-12v12l8.5-6z"/></svg></button>
+          <button class="f ctl" data-act="next" data-fk="osd:next" aria-label="ถัดไป"><svg viewBox="0 0 24 24"><path d="m6 18 8.5-6L6 6zM16 6v12h2V6z"/></svg></button>
+          <button class="f ctl ctl-text" data-act="later" data-fk="osd:later" id="btnLater">+ ดูภายหลัง</button>
+          <button class="f ctl ctl-text" data-act="sub" data-fk="osd:sub" id="btnSub">ติดตาม</button>
+          <button class="f ctl ctl-text" data-act="channel" data-fk="osd:channel">ไปที่ช่อง</button>
+        </div>
+        <div class="osd-upnext">
+          <div class="upnext-title">ถัดไป</div>
+          <div class="track" id="upnextTrack"></div>
+        </div>
+      </div>
+      <div class="shorts-side">
+        <div class="s-title" id="shortTitle"></div>
+        <div class="s-ch" id="shortCh"></div>
+        <div class="s-note" id="sideNote"></div>
+        <div class="s-hint">▲ ▼ เปลี่ยนคลิป<br>OK หยุด / เล่น<br>BACK ออก</div>
+      </div>
+      <div class="shorts-nav">
+        <button class="f ctl" data-act="sprev" data-fk="osd:sprev" aria-label="คลิปก่อนหน้า"><svg viewBox="0 0 24 24"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg></button>
+        <button class="f ctl ctl-main" data-act="toggle" data-fk="osd:stoggle" aria-label="เล่น/หยุด"><svg class="i-play" viewBox="0 0 24 24" hidden><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg></button>
+        <button class="f ctl" data-act="snext" data-fk="osd:snext" aria-label="คลิปถัดไป"><svg viewBox="0 0 24 24"><path d="M7.4 8.6 12 13.2l4.6-4.6L18 10l-6 6-6-6z"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <div id="modal" hidden>
+    <div class="modal-box">
+      <h3 id="modalTitle"></h3>
+      <p id="modalText"></p>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <div id="toast" role="status"></div>
+  <!-- Opens the TV's own keyboard (Thai, voice) from the search screen. -->
+  <input id="nativeInput" type="text" autocomplete="off" spellcheck="false" aria-label="ค้นหา">
+
+  <div id="splash">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <defs><linearGradient id="sp" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs>
+      <circle cx="24" cy="24" r="22" fill="url(#sp)"/>
+      <path d="M19 15.5v17l14-8.5z" fill="#fff"/>
+    </svg>
+    <div class="sw">meekin<b>Tube</b></div>
+  </div>
+</div>
+<script src="tv.js?v=5"></script>
+</body>
+</html>

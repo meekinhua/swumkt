@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- meekinTube TV for Samsung Smart TV (Tizen web app, sideload / developer mode).
+     The UI files (index.html, tv.css, tv.js) are copied in from
+     backend/meekintube_static/tv by build.ps1. The YouTube player itself is
+     framed from https://swumkt.org/api/meekintube/tv/player.html, because
+     YouTube rejects embeds from file: pages (error 153).
+     required_version 4.0 = 2018 sets onward (Chromium 56); tv.js needs async/await. -->
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets"
+        id="https://swumkt.org/meekintube-tv" version="1.0.0" viewmodes="maximized">
+    <tizen:application id="MeekinTube.MeekinTubeTV" package="MeekinTube" required_version="4.0"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/devel.api.version" value="4.0"/>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
+    <icon src="icon.png"/>
+    <name>meekinTube TV</name>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:profile name="tv-samsung"/>
+    <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable"
+                   encryption="disable" install-location="auto" hwkey-event="enable"
+                   pointing-device-support="disable"/>
+    <!-- Network: thumbnails (i.ytimg.com), fonts, the public Invidious/Piped
+         search instances and the hosted player all live on other origins. -->
+    <access origin="*" subdomains="true"/>
+    <!-- Lets the player frame load inside the app instead of opening the TV browser. -->
+    <tizen:allow-navigation>swumkt.org *.swumkt.org youtube.com *.youtube.com *.google.com *.googlevideo.com *.ytimg.com</tizen:allow-navigation>
+</widget>
