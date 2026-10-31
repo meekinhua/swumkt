@@ -44,12 +44,23 @@ public class MainActivity extends ComponentActivity {
 
     private WebView web;
     private boolean offline;
+    // Normally the hosted page. A debug build may be started with
+    //   adb shell am start -n org.swumkt.meekintube.tv/.MainActivity --es url http://10.0.2.2:8791/tv/?shell=android
+    // to test an undeployed page served from the development machine.
+    private String startUrl = START_URL;
+    private String origin = ORIGIN;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true);   // chrome://inspect on debug builds
+            String dev = getIntent().getStringExtra("url");
+            if (dev != null && dev.startsWith("http://10.0.2.2:")) {
+                Uri d = Uri.parse(dev);
+                startUrl = dev;
+                origin = d.getScheme() + "://" + d.getHost() + ":" + d.getPort();
+            }
         }
 
         // targetSdk 36: KEYCODE_BACK no longer reaches onBackPressed/onKeyDown,
@@ -87,13 +98,13 @@ public class MainActivity extends ComponentActivity {
         // injected only into frames from our origin, never into the YouTube frame.
         // (Old WebViews without it fall back to meekin:// navigations, see Client.)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            WebViewCompat.addWebMessageListener(web, "MeekinAndroid", Collections.singleton(ORIGIN),
+            WebViewCompat.addWebMessageListener(web, "MeekinAndroid", Collections.singleton(origin),
                     (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
                         if (isMainFrame) onPageMessage(message.getData());
                     });
         }
 
-        web.loadUrl(START_URL);
+        web.loadUrl(startUrl);
         web.requestFocus();
     }
 
@@ -211,7 +222,7 @@ public class MainActivity extends ComponentActivity {
     private void retry() {
         if (web == null) return;
         offline = false;
-        web.loadUrl(START_URL);
+        web.loadUrl(startUrl);
     }
 
     private class Client extends WebViewClient {
@@ -223,13 +234,14 @@ public class MainActivity extends ComponentActivity {
                 // fallback channel from the page (meekin://exit, meekin://keepon/1);
                 // honoured only while our own page is showing, and never navigated
                 String cur = view.getUrl();
-                if (cur != null && cur.startsWith(ORIGIN + "/")) {
+                if (cur != null && cur.startsWith(origin + "/")) {
                     String host = u.getHost(), path = u.getPath();
                     onPageMessage(path == null || path.length() <= 1 ? host : host + ":" + path.substring(1));
                 }
                 return true;
             }
             // stay on our own site; anything else (a stray link) is swallowed
+            if (u.toString().startsWith(origin + "/")) return false;
             return !("https".equals(u.getScheme()) && HOST.equals(u.getHost()));
         }
 

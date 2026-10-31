@@ -222,3 +222,23 @@ fail ค้างเดิม 156 รายการส่วนใหญ่ har
 
 แอป Xiaomi โหลด `https://swumkt.org/api/meekintube/tv/?shell=android` ตรง ๆ จึงได้ UI ใหม่ทันทีที่ deploy
 แอป Samsung ฝัง UI ไว้ในแพ็กเกจ ต้อง build `.wgt` ใหม่เมื่อ UI เปลี่ยน (ตัวเล่นยังมาจาก swumkt.org)
+
+---
+
+## 9. ภาคผนวก — หน้าช่อง, ตั้งค่าวิดีโอทีวี, แอปเพลง 2 แบบ · 31 ต.ค. 2026
+
+ยังเป็นไฟล์ static ล้วน ไม่มีการแก้ backend Python · deploy แล้วตรวจตามนี้
+
+| path | คืออะไร | ตรวจหลัง deploy |
+|---|---|---|
+| `/api/meekintube/` (index.html) | หน้าช่องจริง: banner, ผู้ติดตาม, แท็บ วิดีโอ/Shorts/ไลฟ์/เพลย์ลิสต์, เรียงล่าสุด/ยอดนิยม, โหลดเพิ่ม | กดชื่อช่องจากผลค้นหา → เห็น banner + แท็บ |
+| `/api/meekintube/tv/` | หน้าช่องบนทีวี, ปุ่ม ⚙ (คำบรรยาย/ความเร็ว/คุณภาพแบบแสดงอย่างเดียว), แก้ zoom 2 เท่าบน Android TV WebView | เปิดในแอป Xiaomi แล้วหน้าจอเต็มพอดี ไม่ซูม |
+| `/api/meekintube/music/` | หน้าเลือก 2 แบบ | 200 |
+| `/api/meekintube/music/ytm/` | meekin Music (หน้าตาแบบ YouTube Music) | เล่นเพลงได้ วิดีโอเล็ก 200x200 ไม่โดนอะไรบัง |
+| `/api/meekintube/music/tunes/` | meekin Tunes (หน้าตาแบบ Spotify) | เหมือนกัน |
+| `/api/meekintube/music/core.js` | engine กลางของทั้งสองแอป (ค้นเพลง ชาร์ต วิทยุ คิว คลังเพลง) | — |
+
+- แอปเพลง**ตั้งใจหยุดเมื่อปิดจอหรือสลับแอป** (ข้อกำหนด YouTube ห้ามเล่นเบื้องหลัง) อย่าแก้ให้เล่นต่อ
+- ทั้งสองแอปใช้ตัวเล่นที่ `/api/meekintube/tv/player.html` ร่วมกับแอปทีวี — Referrer-Policy ต้องคงเป็น `strict-origin-when-cross-origin` และห้ามมี `X-Frame-Options`/`frame-ancestors` ที่กันการ iframe (เหมือนข้อ 8)
+- `sw.js` ข้าม `/tv/` และ `/music/` แล้ว (CACHE `mytube-v3`)
+- แก้ไฟล์ js/css ครั้งไหนให้ขยับ `?v=` ใน index.html ของหน้านั้นด้วย (Cloudflare cache)

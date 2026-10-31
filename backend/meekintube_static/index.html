@@ -276,6 +276,43 @@
   .ch-head h1{margin:0;font-size:22px;}
   .ch-sub{font-size:13px;color:var(--text-dim);margin-top:2px;}
 
+  /* ---------- หน้าช่องแบบ YouTube (แบนเนอร์ / โปรไฟล์ / แท็บ) ---------- */
+  .ch-page{width:100%;min-width:0;}
+  .ch-banner{width:100%;aspect-ratio:6.2/1;max-height:230px;border-radius:12px;overflow:hidden;background:#272727;margin-bottom:20px;}
+  .ch-banner img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ch-av{position:relative;overflow:hidden;}
+  .ch-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+  .ch-av.lg{width:136px;height:136px;font-size:56px;}
+  .card-av[data-ch]{cursor:pointer;}
+  .ch-meta{flex:1;min-width:0;}
+  .ch-page h1.ch-title{display:block;margin:0;font-size:30px;font-weight:700;line-height:1.2;overflow-wrap:anywhere;}
+  .ch-verified{display:inline-block;width:20px;height:20px;fill:var(--text-dim);vertical-align:middle;margin:-3px 0 0 6px;}
+  .ch-page .ch-sub{font-size:14px;margin-top:6px;}
+  .ch-desc{margin-top:8px;font-size:14px;line-height:1.45;color:var(--text-dim);max-width:760px;white-space:pre-line;overflow-wrap:anywhere;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;}
+  .ch-desc.open{display:block;-webkit-line-clamp:unset;}
+  .ch-desc:hover{color:var(--text);}
+  .ch-head .sub-btn{margin-top:12px;}
+  .sub-btn:disabled{opacity:.5;cursor:default;}
+  .ch-tabs{display:flex;margin-top:16px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
+  .ch-tabs::-webkit-scrollbar{display:none;}
+  .ch-tab{flex-shrink:0;height:48px;padding:0 14px;font-size:16px;font-weight:500;color:var(--text-dim);
+    border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+  .ch-tab:hover{color:var(--text);}
+  .ch-tab.active{color:var(--text);border-bottom-color:var(--text);}
+  .ch-sorts{display:flex;gap:12px;padding:16px 0 4px;overflow-x:auto;}
+  .ch-sorts::-webkit-scrollbar{display:none;}
+  .thumb .dur.live{background:#cc0000;}
+  .ch-more{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    padding:24px 16px 40px;color:var(--text-dim);font-size:14px;}
+  .ch-more p{margin:0;}
+  .ch-spin{width:24px;height:24px;border:3px solid #3f3f3f;border-top-color:var(--text);border-radius:50%;
+    display:inline-block;animation:chSpin .8s linear infinite;}
+  @keyframes chSpin{to{transform:rotate(360deg)}}
+  .rpl-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .rpl-ch{color:var(--text);cursor:pointer;}
+  .rpl-ch:hover{text-decoration:underline;}
+
   /* ---------- SHORTS ---------- */
   .grid.as-shorts{display:block;padding:0;}
   .shorts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;padding:8px 24px 40px;}
@@ -411,6 +448,18 @@
     .ch-av{width:44px;height:44px;font-size:20px;}
     .ch-head h1{font-size:18px;}
     .ch-head .sub-btn{flex-shrink:0;}
+    /* หน้าช่อง: แบนเนอร์/โปรไฟล์/แท็บ ขนาดมือถือ */
+    .ch-banner{border-radius:8px;margin-bottom:14px;}
+    .ch-page .ch-head{align-items:flex-start;}
+    .ch-av.lg{width:72px;height:72px;font-size:30px;}
+    .ch-page h1.ch-title{font-size:20px;}
+    .ch-verified{width:16px;height:16px;}
+    .ch-page .ch-sub{font-size:13px;margin-top:4px;}
+    .ch-desc{font-size:13px;}
+    .ch-head .sub-btn{margin-top:10px;}
+    .ch-tabs{margin-top:12px;}
+    .ch-tab{height:44px;padding:0 12px;font-size:14px;}
+    .ch-sorts{padding:12px 0 4px;}
     /* วิดีโอแนะนำ thumb เล็กลงนิด ให้ข้อความหายใจ */
     .rel-thumb{width:150px;}
     .sidebar-backdrop{display:none;position:fixed;inset:0;top:var(--top-offset);background:rgba(0,0,0,.5);z-index:85;}
@@ -759,7 +808,11 @@ function load(){
   subs        = lsGet("mytube_subs", []);
 }
 function save(){ lsSet("mytube_videos", videos); }
-function lite(v){ return {id:v.id, title:v.title, channel:v.channel, views:v.views, age:v.age, dur:v.dur}; }
+function lite(v){
+  const o = {id:v.id, title:v.title, channel:v.channel, views:v.views, age:v.age, dur:v.dur};
+  if(v.chId) o.chId = v.chId;   // รหัสช่อง (UC…) — รายการเก่าที่ไม่มีก็ยังใช้ได้ (ค้นจากชื่อ/รหัสวิดีโอแทน)
+  return o;
+}
 
 /* =========================================================
    YOUTUBE ID PARSER (รับได้ทุกแบบ: youtu.be / watch / embed / iframe / id เปล่า)
@@ -849,32 +902,42 @@ function renderGrid(list, opts){
     g.innerHTML = `<div class="empty">${msg}</div>`;
     return;
   }
-  g.innerHTML = list.map((v)=>{
-    const col = colorFor(v.channel);
-    const init = (v.channel||"?").trim().charAt(0).toUpperCase();
-    let menuBtn;
-    if(mode==="search")          menuBtn = `<button class="card-menu" onclick="event.stopPropagation();addFromSearch('${v.id}')" title="เพิ่มลงคลัง">${ICON_ADD}</button>`;
-    else if(mode==="history")    menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeFromHistory('${v.id}')" title="นำออกจากประวัติ">${ICON_X}</button>`;
-    else if(mode==="watchlater") menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeFromWatchLater('${v.id}')" title="นำออก">${ICON_X}</button>`;
-    else if(mode==="playlist")   menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeFromPlaylist('${opts.plId}','${v.id}')" title="นำออกจากเพลย์ลิสต์">${ICON_X}</button>`;
-    else                         menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeVideo('${v.id}')" title="ลบ">${ICON_DOT}</button>`;
-    return `
+  g.innerHTML = list.map(v=>cardHtml(v, mode, opts)).join("");
+}
+
+/* แอตทริบิวต์ "คลิกแล้วเปิดหน้าช่อง" — ส่งชื่อช่อง + รหัสช่อง (UC…) + รหัสวิดีโอ (ใช้หาช่องให้รายการเก่าที่ไม่มี chId) */
+function chAttrs(v){
+  return `data-ch="${escapeHtml(v.channel)}" data-chid="${escapeHtml(v.chId||"")}" data-vid="${escapeHtml(v.id)}" onclick="event.stopPropagation();showChannel(this.dataset.ch,this.dataset.chid,this.dataset.vid)"`;
+}
+/* การ์ดวิดีโอ 1 ใบ (ใช้ทั้งกริดปกติ และหน้าช่อง/เพลย์ลิสต์ที่ต่อท้ายทีละหน้า)
+   opts.hideChannel = ซ่อนรูป/ชื่อช่อง (อยู่ในหน้าช่องนั้นอยู่แล้ว แบบ YouTube) */
+function cardHtml(v, mode, opts){
+  opts = opts || {};
+  const col = colorFor(v.channel||"");
+  const init = (v.channel||"?").trim().charAt(0).toUpperCase();
+  let menuBtn;
+  if(mode==="search")          menuBtn = `<button class="card-menu" onclick="event.stopPropagation();addFromSearch('${v.id}')" title="เพิ่มลงคลัง">${ICON_ADD}</button>`;
+  else if(mode==="history")    menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeFromHistory('${v.id}')" title="นำออกจากประวัติ">${ICON_X}</button>`;
+  else if(mode==="watchlater") menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeFromWatchLater('${v.id}')" title="นำออก">${ICON_X}</button>`;
+  else if(mode==="playlist")   menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeFromPlaylist('${opts.plId}','${v.id}')" title="นำออกจากเพลย์ลิสต์">${ICON_X}</button>`;
+  else                         menuBtn = `<button class="card-menu" onclick="event.stopPropagation();removeVideo('${v.id}')" title="ลบ">${ICON_DOT}</button>`;
+  const meta = [v.views ? v.views+" ครั้ง" : "", v.age||""].filter(Boolean).join(" • ");
+  return `
     <div class="card" onclick="watch('${v.id}')">
       <div class="thumb">
         <img loading="lazy" src="${thumbUrl(v.id)}" alt="" onerror="this.src='https://i.ytimg.com/vi/${v.id}/mqdefault.jpg'"/>
-        ${v.dur?`<span class="dur">${v.dur}</span>`:""}
+        ${v.dur?`<span class="dur${v.live?" live":""}">${escapeHtml(v.dur)}</span>`:""}
       </div>
       <div class="card-body">
-        <div class="card-av" style="background:${col}">${init}</div>
+        ${opts.hideChannel ? "" : `<div class="card-av" style="background:${col}" ${chAttrs(v)}>${escapeHtml(init)}</div>`}
         <div class="card-info">
           <div class="card-title">${escapeHtml(v.title)}</div>
-          <div class="card-channel" data-ch="${escapeHtml(v.channel)}" onclick="event.stopPropagation();showChannel(this.dataset.ch)">${escapeHtml(v.channel)}</div>
-          <div class="card-meta">${v.views?v.views+" ครั้ง • ":""}${v.age||""}</div>
+          ${opts.hideChannel ? "" : `<div class="card-channel" ${chAttrs(v)}>${escapeHtml(v.channel)}</div>`}
+          <div class="card-meta">${escapeHtml(meta)}</div>
         </div>
         ${menuBtn}
       </div>
     </div>`;
-  }).join("");
 }
 
 function escapeHtml(s){
@@ -1011,8 +1074,8 @@ function relCard(r){
     </div>
     <div class="rel-info">
       <div class="rel-title">${escapeHtml(r.title)}</div>
-      <div class="rel-ch" data-ch="${escapeHtml(r.channel)}" onclick="event.stopPropagation();showChannel(this.dataset.ch)">${escapeHtml(r.channel)}</div>
-      <div class="rel-meta">${r.views?r.views+" ครั้ง":""}</div>
+      <div class="rel-ch" ${chAttrs(r)}>${escapeHtml(r.channel)}</div>
+      <div class="rel-meta">${r.views?escapeHtml(r.views)+" ครั้ง":""}</div>
     </div>
   </div>`;
 }
@@ -1021,6 +1084,7 @@ function setActiveSidebar(id){
   const el = id && document.getElementById(id); if(el) el.classList.add("active");
 }
 function setHeader(html){
+  pagerStop();   // เปลี่ยนหน้า → หยุด infinite scroll ของหน้าช่อง/เพลย์ลิสต์เดิม
   const h = document.getElementById("listHeader");
   h.innerHTML = html || "";
   h.style.display = html ? "flex" : "none";
@@ -1229,10 +1293,7 @@ async function getTrending(region){
       if(!r.ok) continue;
       const arr = await r.json();
       if(!Array.isArray(arr)) continue;
-      const items = arr.filter(x=>x.url && x.url.includes("v=")).map(x=>({
-        id:x.url.split("v=")[1].split("&")[0], title:x.title||"", channel:x.uploaderName||"",
-        views:fmtViews(x.views), age:x.uploadedDate||"", dur:fmtDur(x.duration)
-      }));
+      const items = arr.filter(x=>x.url && x.url.includes("v=")).map(pipedItem).filter(x=>x.id);
       if(items.length) return items;
     }catch(e){}
   }
@@ -1263,10 +1324,11 @@ async function showExplore(cat){
 /* =========================================================
    ช่อง (CHANNEL) + การติดตาม (SUBSCRIPTIONS)
 ========================================================= */
-function isSub(name){ return !!name && subs.some(s=>s.toLowerCase()===String(name).toLowerCase()); }
+function isSub(name){ const k = normName(name); return !!k && subs.some(s=>normName(s)===k); }
 function toggleSub(name){
+  name = cleanName(name);
   if(!name) return;
-  if(isSub(name)){ subs = subs.filter(s=>s.toLowerCase()!==name.toLowerCase()); toast("เลิกติดตามแล้ว"); }
+  if(isSub(name)){ const k = normName(name); subs = subs.filter(s=>normName(s)!==k); toast("เลิกติดตามแล้ว"); }
   else { subs.unshift(name); toast("ติดตามช่องแล้ว ✓"); }
   lsSet("mytube_subs", subs);
 }
@@ -1277,35 +1339,494 @@ function updateSubBtn(){
   b.style.background = on ? "#272727" : "";
   b.style.color = on ? "var(--text)" : "";
 }
-function openCurrentChannel(){ if(currentVideo && currentVideo.channel) showChannel(currentVideo.channel); }
+function openCurrentChannel(){
+  if(currentVideo && (currentVideo.channel || currentVideo.chId || currentVideo.id))
+    showChannel(currentVideo.channel, currentVideo.chId, currentVideo.id);
+}
 function toggleSubCurrent(){ if(currentVideo){ toggleSub(currentVideo.channel); updateSubBtn(); } }
 function toggleChannelFollow(){
   if(!currentChannel) return;
   toggleSub(currentChannel);
-  const btn = document.querySelector(".ch-head .sub-btn");
-  if(btn) btn.textContent = isSub(currentChannel) ? "ติดตามแล้ว ✓" : "ติดตาม";
+  paintChSubBtn();
+}
+function paintChSubBtn(){
+  const btn = document.querySelector(".ch-head .sub-btn"); if(!btn) return;
+  const on = isSub(currentChannel);
+  btn.textContent = on ? "ติดตามแล้ว ✓" : "ติดตาม";
+  btn.style.background = on ? "#272727" : "";
+  btn.style.color = on ? "var(--text)" : "";
 }
 
-async function showChannel(name){
-  if(!name) return;
+/* ---------- หน้าช่องจริงแบบ YouTube (ข้อมูลจาก Invidious, สำรองด้วย Piped) ---------- */
+const CH_TABS = [
+  {key:"videos",    label:"วิดีโอ",     what:"วิดีโอ",     empty:"ช่องนี้ยังไม่มีวิดีโอ"},
+  {key:"shorts",    label:"Shorts",     what:"Shorts",     empty:"ช่องนี้ยังไม่มี Shorts"},
+  {key:"streams",   label:"ไลฟ์",       what:"ไลฟ์",       empty:"ช่องนี้ยังไม่มีไลฟ์"},
+  {key:"playlists", label:"เพลย์ลิสต์", what:"เพลย์ลิสต์", empty:"ช่องนี้ยังไม่มีเพลย์ลิสต์"}
+];
+const CH_PLACEHOLDER = ["ช่องของฉัน"];   // ชื่อช่องสมมติของวิดีโอที่เพิ่มเอง — ห้ามใช้ค้นหา/แคชด้วยชื่อ
+const ICON_VERIFIED = `<svg class="ch-verified" viewBox="0 0 24 24" aria-label="ยืนยันแล้ว"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM9.8 17.3l-4.2-4.1L7 11.8l2.8 2.7L17 7.4l1.4 1.4-8.6 8.5z"/></svg>`;
+let chState = null;           // สถานะหน้าช่องที่เปิดอยู่
+let rplState = null;          // สถานะหน้าเพลย์ลิสต์ของช่อง
+const chInfoCache = {};       // ข้อมูลช่อง (ในหน่วยความจำ) — กดกลับจากเพลย์ลิสต์แล้วขึ้นทันที
+
+/* แคช ชื่อช่อง → รหัสช่อง (localStorage: mytube_chids) สำหรับรายการเก่าที่เก็บไว้แค่ชื่อ */
+function chIdMap(){ const m = lsGet("mytube_chids", {}); return (m && typeof m==="object" && !Array.isArray(m)) ? m : {}; }
+function chIdCacheGet(name){
+  const k = normName(name);
+  if(!k || CH_PLACEHOLDER.includes(k)) return "";
+  return safeChId(chIdMap()[k]);
+}
+function rememberChId(name, id){
+  const k = normName(name); id = safeChId(id);
+  if(!k || !id || CH_PLACEHOLDER.includes(k)) return;
+  const m = chIdMap();
+  if(m[k] === id) return;
+  delete m[k]; m[k] = id;
+  const keys = Object.keys(m);
+  if(keys.length > 400) keys.slice(0, keys.length-400).forEach(x=>delete m[x]);
+  lsSet("mytube_chids", m);
+}
+
+/* เรียก Invidious ทีละ instance (เริ่มจาก prefer ถ้ามี) จนกว่าจะได้ JSON ที่ใช้ได้ */
+async function invFetch(path, ms, prefer){
+  const list = prefer && INVIDIOUS.includes(prefer) ? [prefer, ...INVIDIOUS.filter(b=>b!==prefer)] : INVIDIOUS;
+  for(const base of list){
+    try{
+      const r = await fetchTimeout(base + path, ms || 12000);
+      if(!r.ok) continue;
+      const data = await r.json();
+      if(data && typeof data === "object" && !data.error) return {base, data};
+    }catch(e){ /* ลอง instance ถัดไป */ }
+  }
+  return null;
+}
+function absUrl(u, base){
+  u = String(u||"");
+  if(u.startsWith("//")) return "https:" + u;
+  if(u.startsWith("/")) return (base || INVIDIOUS[0]) + u;
+  return /^https?:\/\//i.test(u) ? u : "";
+}
+function pickImg(arr, minW){
+  arr = (Array.isArray(arr) ? arr : []).filter(x=>x && x.url).slice().sort((a,b)=>(a.width||0)-(b.width||0));
+  if(!arr.length) return "";
+  return (arr.find(x=>(x.width||0) >= minW) || arr[arr.length-1]).url;
+}
+
+/* หา "รหัสช่อง" ของช่องที่รู้แค่ชื่อ: แคช → รายการในหน่วยความจำ → จากรหัสวิดีโอ → ค้นหาช่องด้วยชื่อ */
+async function resolveChannel(name, vid){
+  const cached = chIdCacheGet(name);
+  if(cached) return {id:cached, via:"cache"};
+  const k = normName(name), named = !!k && !CH_PLACEHOLDER.includes(k);
+  if(named){
+    const pools = [viewItems, homeFeed||[], relatedItems, shortsFeed, watchHistory, watchLater, videos, ...playlists.map(p=>p.items||[])];
+    for(const pool of pools) for(const v of pool){ if(v && v.chId && normName(v.channel)===k) return {id:v.chId, via:"memory"}; }
+  }
+  vid = safeId(vid);
+  if(vid.length === 11){
+    const res = await invFetch(`/api/v1/videos/${vid}?fields=author,authorId`, 10000);
+    if(res && safeChId(res.data.authorId)) return {id:safeChId(res.data.authorId), via:"video"};
+    for(const base of PIPED){
+      try{
+        const r = await fetchTimeout(`${base}/streams/${vid}`, 10000);
+        if(!r.ok) continue;
+        const d = await r.json(); const c = chIdFromUrl(d && d.uploaderUrl);
+        if(c) return {id:c, via:"video"};
+      }catch(e){}
+    }
+  }
+  if(named){
+    const q = encodeURIComponent(cleanName(name));
+    const pick = arr => (arr.find(c=>normName(c.name)===k) || arr[0]).id;   // ชื่อตรงเป๊ะก่อน ไม่งั้นเอาอันแรก
+    for(const base of INVIDIOUS){
+      try{
+        const r = await fetchTimeout(`${base}/api/v1/search?type=channel&q=${q}`, 8000);
+        if(!r.ok) continue;
+        const d = await r.json(); if(!Array.isArray(d)) continue;
+        const arr = d.filter(x=>x.type==="channel" && safeChId(x.authorId)).map(x=>({name:x.author, id:safeChId(x.authorId)}));
+        return arr.length ? {id:pick(arr), via:"search"} : null;   // ตอบมาปกติแต่ว่าง = ไม่มีช่องนี้จริง (ไม่ต้องไล่ instance อื่นให้ช้า)
+      }catch(e){}
+    }
+    for(const base of PIPED){
+      try{
+        const r = await fetchTimeout(`${base}/search?filter=channels&q=${q}`, 8000);
+        if(!r.ok) continue;
+        const d = await r.json();
+        const arr = ((d && d.items) || []).map(x=>({name:x.name, id:chIdFromUrl(x.url)})).filter(x=>x.id);
+        if(arr.length) return {id:pick(arr), via:"search"};
+      }catch(e){}
+    }
+  }
+  return null;
+}
+
+/* ข้อมูลช่อง: ชื่อ ผู้ติดตาม แบนเนอร์ รูปโปรไฟล์ คำอธิบาย แท็บที่มี */
+async function fetchChannelInfo(id){
+  const res = await invFetch(`/api/v1/channels/${id}`, 12000);
+  if(res && res.data.author){
+    const d = res.data, base = res.base, dpr = window.devicePixelRatio || 1;
+    return {
+      id, src:"inv", base,
+      name: cleanName(d.author), subs: Number(d.subCount)||0, verified: !!d.authorVerified,
+      desc: String(d.description||"").trim(),
+      avatar: absUrl(pickImg(d.authorThumbnails, 176), base),
+      banner: absUrl(pickImg(d.authorBanners, Math.min(2560, Math.round(window.innerWidth*0.8*dpr))), base),
+      tabs: Array.isArray(d.tabs) ? d.tabs : ["videos","shorts","streams","playlists"]
+    };
+  }
+  // สำรอง: Piped (มีเฉพาะแท็บวิดีโอ)
+  for(const base of PIPED){
+    try{
+      const r = await fetchTimeout(`${base}/channel/${id}`, 10000);
+      if(!r.ok) continue;
+      const d = await r.json();
+      if(!d || !d.name) continue;
+      const name = cleanName(d.name);
+      const fix = v=>{ if(!v.channel) v.channel = name; if(!v.chId) v.chId = id; return v; };
+      return {
+        id, src:"piped", base,
+        name, subs: Number(d.subscriberCount)||0, verified: !!d.verified,
+        desc: String(d.description||"").trim(), avatar: absUrl(d.avatarUrl), banner: absUrl(d.bannerUrl),
+        tabs: ["videos"],
+        first: {items: (d.relatedStreams||[]).map(pipedItem).filter(x=>x.id).map(fix), cont: d.nextpage||null}
+      };
+    }catch(e){}
+  }
+  return null;
+}
+function plItem(x, base){
+  const first = Array.isArray(x.videos) && x.videos[0] ? safeId(x.videos[0].videoId) : "";
+  return { id: safeId(x.playlistId), title: x.title||"(ไม่มีชื่อ)", count: Math.max(0, Number(x.videoCount)||0),   // -1 = ไม่ทราบจำนวน
+           thumb: absUrl(x.playlistThumbnail, base) || (first ? thumbUrl(first) : "") };
+}
+/* ดึงรายการของแท็บ (หน้าแรก หรือหน้าถัดไปด้วย continuation) → {items, cont} หรือ null ถ้าล้มเหลว */
+async function chFetchTab(s, tab, sort, cont){
+  if(s.src === "piped"){
+    if(tab !== "videos") return {items:[], cont:null};
+    if(!cont) return (s.info && s.info.first) || {items:[], cont:null};
+    for(const base of [s.base, ...PIPED.filter(b=>b!==s.base)]){
+      try{
+        const r = await fetchTimeout(`${base}/nextpage/channel/${s.id}?nextpage=${encodeURIComponent(cont)}`, 10000);
+        if(!r.ok) continue;
+        const d = await r.json();
+        return {items: (d.relatedStreams||[]).map(pipedItem).filter(x=>x.id), cont: d.nextpage||null};
+      }catch(e){}
+    }
+    return null;
+  }
+  let path = `/api/v1/channels/${s.id}/${tab}`;
+  if(cont) path += `?continuation=${encodeURIComponent(cont)}`;
+  else if(sort && (tab==="videos" || tab==="streams")) path += `?sort_by=${sort}`;
+  const res = await invFetch(path, 12000, s.base);
+  if(!res) return null;
+  const d = res.data;
+  if(tab === "playlists")
+    return {items: (d.playlists||[]).filter(x=>x.playlistId).map(x=>plItem(x, res.base)).filter(x=>x.id), cont: d.continuation||null};
+  return {items: (d.videos||[]).filter(x=>x.videoId).map(invItem).filter(x=>x.id), cont: d.continuation||null};
+}
+
+/* showChannel(ชื่อช่อง, รหัสช่อง UC…, [รหัสวิดีโอ ใช้หาช่องถ้าไม่มีรหัสช่อง], [แท็บที่อยากเปิด]) */
+async function showChannel(name, chId, vid, wantTab){
+  name = cleanName(name); chId = safeChId(chId); vid = safeId(vid);
+  if(!name && !chId && !vid) return;
   const tok = ++navToken;
-  currentChannel = name;
+  const placeholder = CH_PLACEHOLDER.includes(normName(name));
   exitWatch(); setActiveSidebar("");
-  const init = name.trim().charAt(0).toUpperCase() || "?";
-  setHeader(
-    `<div class="ch-head">
-       <div class="ch-av">${escapeHtml(init)}</div>
-       <div style="flex:1;min-width:0;"><h1>${escapeHtml(name)}</h1><div class="ch-sub">ช่อง</div></div>
-       <button class="sub-btn" onclick="toggleChannelFollow()">${isSub(name)?"ติดตามแล้ว ✓":"ติดตาม"}</button>
-     </div>`);
-  document.getElementById("grid").innerHTML = `<div class="empty"><h3>กำลังโหลดวิดีโอของ “${escapeHtml(name)}” …</h3></div>`;
   window.scrollTo(0,0); closeSidebarMobile();
-  let res = null;
-  try{ res = await searchYouTube(name); }catch(e){ res = null; }
-  if(tok !== navToken) return;
-  if(!res){ document.getElementById("grid").innerHTML = `<div class="empty"><h3>โหลดไม่สำเร็จ</h3><p>ลองใหม่อีกครั้ง</p></div>`; return; }
-  const own = res.filter(v=>(v.channel||"").toLowerCase().includes(name.toLowerCase()));
-  renderGrid(own.length>=4 ? own : res, {mode:"search"});
+  shortsMoreFn = null;
+  const s = chState = {tok, id:chId, vid, name: placeholder ? "" : name, clicked:name, info:null, infoOk:false, tabsAvail:[],
+                       tab:"videos", sort:"newest", items:[], cont:null, base:null, src:"inv", prefetch:null, tabTok:0};
+  currentChannel = s.name;
+  if(chId && chInfoCache[chId]) chApplyInfo(s, chInfoCache[chId]);
+  paintChHeader();
+  const g = document.getElementById("grid");
+  g.classList.remove("as-shorts"); viewItems = [];
+  g.innerHTML = `<div class="empty"><span class="ch-spin"></span><h3 style="margin-top:12px">กำลังเปิดช่อง${s.name?` “${escapeHtml(s.name)}”`:""} …</h3><p>ดึงข้อมูลช่องจาก YouTube</p></div>`;
+
+  // รายการเก่า (เก็บไว้แค่ชื่อ) → หารหัสช่องก่อน
+  let via = "id";
+  if(!s.id){
+    const r = await resolveChannel(name, vid);
+    if(tok !== navToken) return;
+    if(!r){ chFail(s); return; }
+    s.id = r.id; via = r.via;
+  }
+  let info = chInfoCache[s.id] || null;
+  if(!info){
+    // โหลดวิดีโอล่าสุดคู่ขนานไปกับข้อมูลช่อง (แท็บแรกขึ้นเร็วขึ้น)
+    s.prefetch = {key:"videos|newest", p: chFetchTab(s, "videos", "newest", null).catch(()=>null)};
+    info = await fetchChannelInfo(s.id);
+    if(tok !== navToken) return;
+  }
+  if(info){
+    chInfoCache[s.id] = info;
+    chApplyInfo(s, info);
+    rememberChId(info.name, s.id);
+    if(via !== "video") rememberChId(s.clicked, s.id);
+  }else{
+    // โหลดข้อมูลช่องไม่ได้ — ยังลองเปิดแท็บวิดีโอให้
+    s.info = {name: s.name || "ช่อง"}; s.tabsAvail = ["videos"];
+  }
+  paintChHeader();
+  const first = (wantTab && s.tabsAvail.includes(wantTab)) ? wantTab : s.tabsAvail[0];
+  if(!first){ viewItems = []; g.innerHTML = `<div class="empty"><h3>ช่องนี้ยังไม่มีวิดีโอให้แสดง</h3><p>ช่องนี้อาจมีแค่โพสต์หรือหน้าแรก</p></div>`; return; }
+  chSelectTab(first);
+}
+function chApplyInfo(s, info){
+  s.info = info; s.infoOk = true; s.src = info.src; s.base = info.base;
+  if(info.name){ s.name = info.name; currentChannel = info.name; }
+  s.tabsAvail = CH_TABS.map(t=>t.key).filter(k=>(info.tabs||[]).includes(k));
+}
+function chFail(s){
+  s.info = {name: s.name || "ช่อง"}; s.tabsAvail = [];
+  paintChHeader();
+  viewItems = [];
+  document.getElementById("grid").innerHTML =
+    `<div class="empty"><h3>เปิดช่อง${s.name?` “${escapeHtml(s.name)}” `:""}ไม่สำเร็จ</h3><p>ไม่พบช่องนี้ หรือบริการสาธารณะอาจล่มชั่วคราว ลองใหม่อีกครั้ง</p><button class="lh-btn" onclick="chRetry()">ลองใหม่</button></div>`;
+}
+function chRetry(){
+  const s = chState; if(!s) return;
+  if(s.infoOk) chSelectTab(s.tab, s.sort);
+  else showChannel(s.clicked || s.name, s.id, s.vid, s.tab);
+}
+function paintChHeader(){
+  const s = chState; if(!s) return;
+  const info = s.info || {};
+  const name = info.name || s.name || "ช่อง";
+  const init = (name.charAt(0) || "?").toUpperCase();
+  const sub = info.subs > 0 ? `ผู้ติดตาม ${fmtViews(info.subs)} คน` : (s.info ? "" : "กำลังโหลดข้อมูลช่อง…");
+  const tabs = CH_TABS.filter(t=>s.tabsAvail.includes(t.key));
+  setHeader(`<div class="ch-page">
+    ${info.banner ? `<div class="ch-banner"><img src="${escapeHtml(info.banner)}" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"/></div>` : ""}
+    <div class="ch-head">
+      <div class="ch-av lg">${escapeHtml(init)}${info.avatar ? `<img src="${escapeHtml(info.avatar)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()"/>` : ""}</div>
+      <div class="ch-meta">
+        <h1 class="ch-title"><span>${escapeHtml(name)}</span>${info.verified ? ICON_VERIFIED : ""}</h1>
+        ${sub ? `<div class="ch-sub">${escapeHtml(sub)}</div>` : ""}
+        ${info.desc ? `<div class="ch-desc" title="คลิกเพื่อดูเพิ่ม / ย่อ" onclick="this.classList.toggle('open')">${escapeHtml(info.desc)}</div>` : ""}
+        ${s.name ? `<button class="sub-btn" onclick="toggleChannelFollow()">ติดตาม</button>` : ""}
+      </div>
+    </div>
+    ${tabs.length ? `<div class="ch-tabs" role="tablist">${tabs.map(t=>`<button class="ch-tab" role="tab" data-tab="${t.key}" onclick="chSelectTab('${t.key}')">${t.label}</button>`).join("")}</div>
+    <div class="ch-sorts" id="chSorts" style="display:none"><button class="chip" data-sort="newest" onclick="chSort('newest')">ล่าสุด</button><button class="chip" data-sort="popular" onclick="chSort('popular')">ยอดนิยม</button></div>` : ""}
+  </div>`);
+  paintChSubBtn(); paintChTabs();
+}
+function paintChTabs(){
+  const s = chState; if(!s) return;
+  document.querySelectorAll(".ch-tab").forEach(b=>{ const on = b.dataset.tab===s.tab; b.classList.toggle("active", on); b.setAttribute("aria-selected", on?"true":"false"); });
+  const so = document.getElementById("chSorts");
+  if(so){
+    so.style.display = (s.src==="inv" && (s.tab==="videos" || s.tab==="streams")) ? "" : "none";
+    so.querySelectorAll(".chip").forEach(c=>c.classList.toggle("active", c.dataset.sort===s.sort));
+  }
+}
+function chSort(sort){ const s = chState; if(!s || s.sort===sort) return; chSelectTab(s.tab, sort); }
+
+async function chSelectTab(tab, sort){
+  const s = chState;
+  if(!s || s.tok !== navToken || !s.id) return;
+  s.tab = tab; s.sort = sort || "newest";
+  paintChTabs();
+  pagerStop(); shortsMoreFn = null;
+  const myTab = ++s.tabTok;
+  const T = CH_TABS.find(t=>t.key===tab) || CH_TABS[0];
+  const g = document.getElementById("grid");
+  g.classList.remove("as-shorts"); viewItems = [];
+  g.innerHTML = `<div class="empty"><span class="ch-spin"></span><h3 style="margin-top:12px">กำลังโหลด${T.what}…</h3></div>`;
+  const pf = s.prefetch; s.prefetch = null;
+  const res = (pf && pf.key === tab+"|"+s.sort && s.src === "inv") ? await pf.p : await chFetchTab(s, tab, s.sort, null);
+  if(s !== chState || s.tok !== navToken || myTab !== s.tabTok) return;   // ผู้ใช้เปลี่ยนแท็บ/หน้าไปแล้ว
+  if(!res){
+    g.innerHTML = `<div class="empty"><h3>โหลด${T.what}ไม่สำเร็จ</h3><p>บริการสาธารณะอาจล่มชั่วคราว ลองใหม่อีกครั้ง</p><button class="lh-btn" onclick="chRetry()">ลองใหม่</button></div>`;
+    return;
+  }
+  const seen = new Set();
+  s.items = res.items.filter(x=>x.id && !seen.has(x.id) && seen.add(x.id));
+  s.cont = res.cont || null;
+  chRenderGrid();
+}
+function chRenderGrid(){
+  const s = chState, g = document.getElementById("grid");
+  const T = CH_TABS.find(t=>t.key===s.tab) || CH_TABS[0];
+  if(!s.items.length){ g.classList.remove("as-shorts"); viewItems = []; g.innerHTML = `<div class="empty"><h3>${T.empty}</h3></div>`; return; }
+  const p = chMakePager(s);
+  const more = p.done ? "" : `<div class="ch-more" id="chMore"></div>`;
+  if(s.tab === "shorts"){
+    g.classList.add("as-shorts");
+    shortsFeed = s.items.slice(); viewItems = s.items.slice();
+    shortsMoreFn = ()=>pagerNext();      // ดู Shorts จนสุด → โหลดหน้าถัดไปของช่องนี้
+    g.innerHTML = `<div class="shorts-grid">${s.items.map((v,i)=>shortCardHtml(v, i, {hideChannel:true})).join("")}</div>${more}`;
+  }else if(s.tab === "playlists"){
+    g.classList.remove("as-shorts"); viewItems = [];
+    g.innerHTML = s.items.map(chPlCardHtml).join("") + more;
+  }else{
+    g.classList.remove("as-shorts"); viewItems = s.items.slice();
+    g.innerHTML = s.items.map(v=>cardHtml(v, "search", {hideChannel:true})).join("") + more;
+  }
+  if(!p.done) pagerStart(p);
+}
+/* หน้าถัดไปของแท็บช่อง (continuation) — ต่อท้ายกริดโดยไม่ render ใหม่ทั้งหมด */
+function chMakePager(s){
+  const myTab = s.tabTok;
+  const p = {tok:s.tok, loading:false, err:false, done:!s.cont};
+  p.next = async ()=>{
+    const res = await chFetchTab(s, s.tab, s.sort, s.cont);
+    if(p !== pager || s !== chState || myTab !== s.tabTok) return false;
+    if(!res) return false;
+    const seen = new Set(s.items.map(x=>x.id));
+    const fresh = res.items.filter(x=>x.id && !seen.has(x.id) && seen.add(x.id));
+    const start = s.items.length;
+    s.items.push(...fresh);
+    s.cont = res.cont || null;
+    if(!s.cont || !fresh.length) p.done = true;
+    const g = document.getElementById("grid"), m = document.getElementById("chMore");
+    if(s.tab === "shorts"){
+      const sg = g.querySelector(".shorts-grid");
+      if(sg) sg.insertAdjacentHTML("beforeend", fresh.map((v,i)=>shortCardHtml(v, start+i, {hideChannel:true})).join(""));
+      shortsFeed.push(...fresh); viewItems.push(...fresh);
+    }else{
+      const html = s.tab === "playlists" ? fresh.map(chPlCardHtml).join("") : fresh.map(v=>cardHtml(v, "search", {hideChannel:true})).join("");
+      if(m) m.insertAdjacentHTML("beforebegin", html); else g.insertAdjacentHTML("beforeend", html);
+      if(s.tab !== "playlists") viewItems.push(...fresh);
+    }
+    return true;
+  };
+  return p;
+}
+function chPlCardHtml(p){
+  return `
+    <div class="card" data-pl="${escapeHtml(p.id)}" onclick="openRemotePlaylist(this.dataset.pl)">
+      <div class="thumb">
+        ${p.thumb ? `<img loading="lazy" src="${escapeHtml(p.thumb)}" alt="" referrerpolicy="no-referrer"/>` : `<div style="width:100%;height:100%;background:#272727;"></div>`}
+        <span class="dur">▶ ${p.count ? p.count.toLocaleString()+" วิดีโอ" : "เพลย์ลิสต์"}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-info">
+          <div class="card-title">${escapeHtml(p.title)}</div>
+          <div class="card-meta">ดูเพลย์ลิสต์ทั้งหมด</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---------- infinite scroll + ปุ่ม "โหลดเพิ่ม" (ใช้ร่วมกันทั้งแท็บช่อง และเพลย์ลิสต์ของช่อง) ---------- */
+let pager = null, pagerIO = null;
+function pagerStop(){ pager = null; if(pagerIO){ pagerIO.disconnect(); pagerIO = null; } }
+function pagerStart(p){
+  pagerStop(); pager = p; paintMore();
+  const el = document.getElementById("chMore");
+  if(el && "IntersectionObserver" in window){
+    pagerIO = new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) pagerNext(); }, {rootMargin:"0px 0px 800px 0px"});
+    pagerIO.observe(el);
+  }
+}
+async function pagerNext(){
+  const p = pager;
+  if(!p || p.tok !== navToken || p.loading || p.done) return;
+  p.loading = true; p.err = false; paintMore();
+  let ok = false;
+  try{ ok = await p.next(); }catch(e){ ok = false; }
+  if(p !== pager) return;
+  p.loading = false;
+  if(!ok) p.err = true;
+  paintMore();
+  const el = document.getElementById("chMore");
+  if(el && pagerIO && !p.done && !p.err){ pagerIO.unobserve(el); pagerIO.observe(el); }   // ตัวโหลดยังอยู่ในจอ (จอใหญ่) → โหลดต่อ
+}
+function paintMore(){
+  const el = document.getElementById("chMore"); if(!el) return;
+  const p = pager;
+  if(!p || p.done){ el.remove(); return; }
+  el.innerHTML = p.loading ? `<span class="ch-spin"></span><span>กำลังโหลดเพิ่ม…</span>`
+    : p.err ? `<p>โหลดเพิ่มไม่สำเร็จ</p><button class="lh-btn" onclick="pagerNext()">ลองใหม่</button>`
+    : `<button class="lh-btn" onclick="pagerNext()">โหลดเพิ่ม</button>`;
+}
+
+/* ---------- หน้าเพลย์ลิสต์ของช่อง (จาก YouTube) ---------- */
+async function openRemotePlaylist(plId){
+  plId = safeId(plId); if(!plId) return;
+  const from = (chState && chState.tok === navToken) ? chState : null;
+  const tok = ++navToken;
+  const known = from && from.tab === "playlists" ? from.items.find(p=>p.id===plId) : null;
+  const r = rplState = {tok, id:plId, title: known ? known.title : "เพลย์ลิสต์", total: known ? known.count : 0,
+    ch: from && from.id && from.name ? {name:from.name, chId:from.id} : null, items:[], seen:new Set(), page:1, base: from ? from.base : null};
+  exitWatch(); setActiveSidebar("");
+  window.scrollTo(0,0); closeSidebarMobile();
+  shortsMoreFn = null;
+  paintRplHeader();
+  const g = document.getElementById("grid");
+  g.classList.remove("as-shorts"); viewItems = [];
+  g.innerHTML = `<div class="empty"><span class="ch-spin"></span><h3 style="margin-top:12px">กำลังโหลดเพลย์ลิสต์…</h3></div>`;
+  const res = await invFetch(`/api/v1/playlists/${plId}`, 12000, r.base);
+  if(tok !== navToken || r !== rplState) return;
+  if(!res){
+    g.innerHTML = `<div class="empty"><h3>โหลดเพลย์ลิสต์ไม่สำเร็จ</h3><p>บริการสาธารณะอาจล่มชั่วคราว ลองใหม่อีกครั้ง</p><button class="lh-btn" data-pl="${escapeHtml(plId)}" onclick="openRemotePlaylist(this.dataset.pl)">ลองใหม่</button></div>`;
+    return;
+  }
+  const d = res.data; r.base = res.base;
+  r.title = d.title || r.title;
+  if(Number(d.videoCount) > 0) r.total = Number(d.videoCount);
+  if(!r.ch && safeChId(d.authorId)) r.ch = {name: cleanName(d.author), chId: safeChId(d.authorId)};
+  r.items = rplTake(r, d.videos);
+  paintRplHeader();
+  renderGrid(r.items, {mode:"search", emptyHtml:`<h3>เพลย์ลิสต์ว่าง</h3><p>ยังไม่มีวิดีโอที่ดูได้ในเพลย์ลิสต์นี้</p>`});
+  // Invidious แบ่งหน้าเพลย์ลิสต์ด้วย ?page=N (แต่ละหน้าซ้อนกันได้ → กันซ้ำด้วย index)
+  const firstLen = Array.isArray(d.videos) ? d.videos.length : 0;
+  const p = {tok, loading:false, err:false,
+             done: !r.items.length || (r.total > 0 ? r.seen.size >= r.total : firstLen < 100)};   // ไม่รู้จำนวน → หน้าแรกไม่เต็ม = จบ
+  p.next = async ()=>{
+    const page = r.page + 1;
+    const res2 = await invFetch(`/api/v1/playlists/${plId}?page=${page}`, 12000, r.base);
+    if(p !== pager || r !== rplState) return false;
+    if(!res2) return false;
+    r.page = page;
+    const before = r.seen.size;
+    const fresh = rplTake(r, res2.data.videos);
+    if(r.seen.size === before || (r.total > 0 && r.seen.size >= r.total)) p.done = true;
+    if(fresh.length){
+      r.items.push(...fresh); viewItems.push(...fresh);
+      const html = fresh.map(v=>cardHtml(v, "search")).join("");
+      const m = document.getElementById("chMore");
+      if(m) m.insertAdjacentHTML("beforebegin", html); else document.getElementById("grid").insertAdjacentHTML("beforeend", html);
+    }
+    return true;
+  };
+  if(!p.done){ g.insertAdjacentHTML("beforeend", `<div class="ch-more" id="chMore"></div>`); pagerStart(p); }
+}
+function rplTake(r, list){
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(x=>{
+    if(!x || !x.videoId) return;
+    const key = x.index != null ? "i"+x.index : "v"+x.videoId;
+    if(r.seen.has(key)) return;
+    r.seen.add(key);
+    if(/^\[(Deleted|Private) video\]$/i.test(x.title||"")) return;   // คลิปที่ถูกลบ/ส่วนตัว เล่นไม่ได้
+    out.push(invItem(x));
+  });
+  return out;
+}
+function paintRplHeader(){
+  const r = rplState; if(!r) return;
+  const ch = r.ch;
+  const chAttr = ch ? `data-ch="${escapeHtml(ch.name)}" data-chid="${escapeHtml(ch.chId)}"` : "";
+  const meta = [
+    ch ? `<span class="rpl-ch" ${chAttr} onclick="showChannel(this.dataset.ch,this.dataset.chid)">${escapeHtml(ch.name)}</span>` : "",
+    "เพลย์ลิสต์",
+    r.total ? `${r.total.toLocaleString()} วิดีโอ` : ""
+  ].filter(Boolean).join(" • ");
+  setHeader(`<div class="ch-page">
+    <h1>${escapeHtml(r.title)}</h1>
+    <div class="ch-sub">${meta}</div>
+    <div class="rpl-actions">
+      <button class="sub-btn" onclick="playRemotePlaylist()" ${r.items.length ? "" : "disabled"}>▶ เล่นทั้งหมด</button>
+      ${ch ? `<button class="lh-btn" ${chAttr} onclick="showChannel(this.dataset.ch,this.dataset.chid,'','playlists')">← กลับไปที่ช่อง</button>` : ""}
+    </div>
+  </div>`);
+}
+function playRemotePlaylist(){
+  const r = rplState;
+  if(r && r.items.length){ viewItems = r.items.slice(); watch(r.items[0].id); }
 }
 
 async function showSubs(){
@@ -1360,21 +1881,31 @@ async function showShorts(){
 function renderShorts(list){
   shortsFeed = list.slice();
   viewItems = list.slice();
+  shortsMoreFn = null;            // ฟีด Shorts ทั่วไป → เลื่อนสุดแล้วสุ่มโหลดเพิ่มแบบเดิม
   const g = document.getElementById("grid");
   g.classList.add("as-shorts");
-  g.innerHTML = `<div class="shorts-grid">` + list.map((v,i)=>`
+  g.innerHTML = `<div class="shorts-grid">` + list.map((v,i)=>shortCardHtml(v,i)).join("") + `</div>`;
+}
+/* การ์ด Shorts 1 ใบ — opts.hideChannel: ในหน้าช่อง โชว์ยอดวิวแทนชื่อช่อง */
+function shortCardHtml(v, i, opts){
+  opts = opts || {};
+  const sub = opts.hideChannel
+    ? (v.views ? `<div class="short-ch">${escapeHtml(v.views)} ครั้ง</div>` : "")
+    : `<div class="short-ch" ${chAttrs(v)}>${escapeHtml(v.channel)}</div>`;
+  return `
     <div class="short-card" onclick="openShortsViewer(${i})">
       <div class="short-thumb">
         <img loading="lazy" src="${thumbUrl(v.id)}" alt="" onerror="this.src='https://i.ytimg.com/vi/${v.id}/mqdefault.jpg'"/>
         <span class="short-badge"><svg viewBox="0 0 24 24"><path d="M10 14.65v-5.3L15 12l-5 2.65z"/></svg>Shorts</span>
       </div>
       <div class="short-title">${escapeHtml(v.title)}</div>
-      <div class="short-ch" data-ch="${escapeHtml(v.channel)}" onclick="event.stopPropagation();showChannel(this.dataset.ch)">${escapeHtml(v.channel)}</div>
-    </div>`).join("") + `</div>`;
+      ${sub}
+    </div>`;
 }
 
 /* ---------- SHORTS VIEWER (แนวตั้งเต็มจอ แบบ TikTok) ---------- */
 let shortsFeed = [], shortsIndex = 0, shortsOpen = false, svWheelTime = 0, svTouchY = null;
+let shortsMoreFn = null;   // ถ้าเปิดจากหน้าช่อง: ฟังก์ชันโหลด Shorts หน้าถัดไปของช่องนั้น (แทนการสุ่ม)
 function layoutShorts(){
   const st = document.getElementById("svStage");
   const vw = window.innerWidth, vh = window.innerHeight;
@@ -1422,8 +1953,11 @@ async function shortsGo(delta){
   let t = shortsIndex + delta;
   if(t < 0) return;
   if(t >= shortsFeed.length){
-    const more = await getShorts().catch(()=>null);   // โหลดเพิ่มเมื่อถึงท้าย
-    if(more){ const seen=new Set(shortsFeed.map(s=>s.id)); more.forEach(m=>{ if(!seen.has(m.id)){ seen.add(m.id); shortsFeed.push(m); } }); }
+    if(shortsMoreFn){ await Promise.resolve(shortsMoreFn()).catch(()=>null); }   // Shorts ของช่อง: โหลดหน้าถัดไป (ต่อท้าย shortsFeed เอง)
+    else{
+      const more = await getShorts().catch(()=>null);   // โหลดเพิ่มเมื่อถึงท้าย
+      if(more){ const seen=new Set(shortsFeed.map(s=>s.id)); more.forEach(m=>{ if(!seen.has(m.id)){ seen.add(m.id); shortsFeed.push(m); } }); }
+    }
     if(t >= shortsFeed.length) return;
   }
   shortsIndex = t;
@@ -1443,7 +1977,7 @@ function svUpdateWl(){
 function svOpenChannel(){
   const v = shortsFeed[shortsIndex];
   closeShortsViewer();
-  if(v && v.channel) showChannel(v.channel);
+  if(v && (v.channel || v.chId)) showChannel(v.channel, v.chId, v.id);
 }
 (function bindShortsGestures(){
   const sv = document.getElementById("shortsView");
@@ -1544,6 +2078,33 @@ function fetchTimeout(url, ms){
   return fetch(url,{signal:ctrl.signal}).finally(()=>clearTimeout(t));
 }
 
+/* ---- แปลงข้อมูลจาก API ให้เป็นรูปแบบวิดีโอของแอป (เก็บรหัสช่อง chId ไว้ด้วย) ---- */
+function safeId(s){ return String(s||"").replace(/[^A-Za-z0-9_-]/g,""); }
+function safeChId(s){ const c = safeId(s); return /^UC[A-Za-z0-9_-]{10,}$/.test(c) ? c : ""; }
+function chIdFromUrl(u){ const m = String(u||"").match(/\/channel\/(UC[A-Za-z0-9_-]{10,})/); return m ? m[1] : ""; }
+function cleanName(s){ return String(s||"").replace(/[\u200b-\u200f\u2028\u2029\ufeff]/g,"").trim(); }  // ตัด zero-width ที่ติดมากับชื่อช่อง
+function normName(s){ return cleanName(s).toLowerCase(); }
+function invItem(x){
+  const live = !!x.liveNow;
+  const o = {
+    id: safeId(x.videoId), title: x.title||"(ไม่มีชื่อ)", channel: cleanName(x.author),
+    chId: safeChId(x.authorId) || chIdFromUrl(x.authorUrl),
+    views: x.isUpcoming ? "" : fmtViews(x.viewCount),
+    age: x.published===0 ? "" : (x.publishedText||""),          // shorts บางตัวได้ published=0 → "56 years ago" ไม่ต้องโชว์
+    dur: live ? "สด" : (x.isUpcoming ? "เร็ว ๆ นี้" : fmtDur(x.lengthSeconds))
+  };
+  if(live) o.live = true;
+  return o;
+}
+function pipedItem(x){
+  const m = String(x.url||"").match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  return {
+    id: m ? m[1] : "", title: x.title||"(ไม่มีชื่อ)", channel: cleanName(x.uploaderName),
+    chId: chIdFromUrl(x.uploaderUrl),
+    views: fmtViews(x.views), age: x.uploadedDate||"", dur: fmtDur(x.duration)
+  };
+}
+
 async function searchInvidious(q){
   for(const base of INVIDIOUS){
     try{
@@ -1551,10 +2112,7 @@ async function searchInvidious(q){
       if(!r.ok) continue;
       const data = await r.json();
       if(!Array.isArray(data)) continue;
-      const items = data.filter(x=>x.videoId && x.type!=="channel" && x.type!=="playlist").map(x=>({
-        id:x.videoId, title:x.title||"(ไม่มีชื่อ)", channel:x.author||"",
-        views: fmtViews(x.viewCount), age: x.publishedText||"", dur: fmtDur(x.lengthSeconds)
-      }));
+      const items = data.filter(x=>x.videoId && x.type!=="channel" && x.type!=="playlist").map(invItem).filter(x=>x.id);
       if(items.length) return items;
     }catch(e){ /* ลอง instance ถัดไป */ }
   }
@@ -1567,11 +2125,7 @@ async function searchPiped(q){
       if(!r.ok) continue;
       const data = await r.json();
       const arr = (data && data.items) || [];
-      const items = arr.filter(x=>x.url && x.url.includes("v=")).map(x=>({
-        id: x.url.split("v=")[1].split("&")[0],
-        title: x.title||"(ไม่มีชื่อ)", channel: x.uploaderName||"",
-        views: fmtViews(x.views), age: x.uploadedDate||"", dur: fmtDur(x.duration)
-      }));
+      const items = arr.filter(x=>x.url && x.url.includes("v=")).map(pipedItem).filter(x=>x.id);
       if(items.length) return items;
     }catch(e){ /* ลอง instance ถัดไป */ }
   }

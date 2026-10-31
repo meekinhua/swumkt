@@ -2,8 +2,8 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<!-- Laid out at 1920x1080; tv.js scales #stage to whatever the screen reports. -->
-<meta name="viewport" content="width=1920, user-scalable=no">
+<!-- Laid out at 1920x1080; tv.js scales #stage to the real viewport (device-width, so every TV reports its true size). -->
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="robots" content="noindex">
 <title>meekinTube TV</title>
@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tv.css?v=5">
+<link rel="stylesheet" href="tv.css?v=10">
 </head>
 <body>
 <div id="stage">
@@ -73,6 +73,7 @@
           <button class="f ctl ctl-main" data-act="toggle" data-fk="osd:toggle" aria-label="เล่น/หยุด"><svg class="i-play" viewBox="0 0 24 24" hidden><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg></button>
           <button class="f ctl" data-act="ff" data-fk="osd:ff" aria-label="ไปข้างหน้า 10 วินาที"><svg viewBox="0 0 24 24"><path d="m4 18 8.5-6L4 6zm9-12v12l8.5-6z"/></svg></button>
           <button class="f ctl" data-act="next" data-fk="osd:next" aria-label="ถัดไป"><svg viewBox="0 0 24 24"><path d="m6 18 8.5-6L6 6zM16 6v12h2V6z"/></svg></button>
+          <button class="f ctl" data-act="vsettings" data-fk="osd:settings" aria-label="ตั้งค่าวิดีโอ"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 13.93 2h-3.84a.48.48 0 0 0-.47.41l-.36 2.54a7.37 7.37 0 0 0-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.47a.47.47 0 0 0 .12.61l2.03 1.58a7.2 7.2 0 0 0 0 1.88l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54a7.37 7.37 0 0 0 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6"/></svg></button>
           <button class="f ctl ctl-text" data-act="later" data-fk="osd:later" id="btnLater">+ ดูภายหลัง</button>
           <button class="f ctl ctl-text" data-act="sub" data-fk="osd:sub" id="btnSub">ติดตาม</button>
           <button class="f ctl ctl-text" data-act="channel" data-fk="osd:channel">ไปที่ช่อง</button>
@@ -81,6 +82,8 @@
           <div class="upnext-title">ถัดไป</div>
           <div class="track" id="upnextTrack"></div>
         </div>
+        <!-- video settings: shown in place of "next", below the shrunken video, never over it -->
+        <div class="osd-sheet" id="osdSheet"></div>
       </div>
       <div class="shorts-side">
         <div class="s-title" id="shortTitle"></div>
@@ -118,6 +121,6 @@
     <div class="sw">meekin<b>Tube</b></div>
   </div>
 </div>
-<script src="tv.js?v=5"></script>
+<script src="tv.js?v=12"></script>
 </body>
 </html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b12">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex">
+<title>meekin Music</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ color-scheme:dark; }
+  *{ box-sizing:border-box; margin:0; }
+  body{ min-height:100vh; background:#0b0b12; color:#f4f4f8; font-family:"Noto Sans Thai",system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 20px; }
+  h1{ font-size:28px; margin-bottom:6px; }
+  p.sub{ color:#a3a3b8; margin-bottom:28px; text-align:center; }
+  .cards{ display:grid; gap:16px; width:100%; max-width:720px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+  a.card{ display:block; padding:22px; border-radius:20px; text-decoration:none; color:inherit; min-height:150px; position:relative; overflow:hidden; }
+  a.card h2{ font-size:22px; margin-bottom:6px; }
+  a.card span{ color:rgba(255,255,255,.75); font-size:15px; line-height:1.5; display:block; }
+  .ytm{ background:linear-gradient(135deg,#3b0a2a,#16081f); border:1px solid #4a1a3a; }
+  .tunes{ background:linear-gradient(135deg,#06331f,#0a1410); border:1px solid #14532d; }
+  a.card:active{ transform:scale(.98); }
+  .note{ margin-top:28px; max-width:720px; color:#6c6c82; font-size:13px; line-height:1.6; text-align:center; }
+</style>
+</head>
+<body>
+  <h1>meekin Music</h1>
+  <p class="sub">เลือกหน้าตาที่ชอบ ประวัติ เพลงที่ถูกใจ และเพลย์ลิสต์ใช้ร่วมกันทั้งสองแบบ</p>
+  <div class="cards">
+    <a class="card ytm" href="ytm/"><h2>meekin Music</h2><span>เพลงด่วน มิกซ์สำหรับคุณ วิทยุจากเพลง ดูมิวสิกวิดีโอไปด้วย</span></a>
+    <a class="card tunes" href="tunes/"><h2>meekin Tunes</h2><span>เดลี่มิกซ์ หน้าเพลย์ลิสต์สีตามเพลง คลังเพลงของคุณ ค้นหาตามแนวเพลง</span></a>
+  </div>
+  <p class="note">เล่นผ่าน YouTube embedded player · เพลงจะหยุดเมื่อปิดจอหรือสลับแอป (ข้อกำหนดของ YouTube ไม่อนุญาตให้แอปภายนอกเล่นเบื้องหลัง)</p>
+</body>
+</html>

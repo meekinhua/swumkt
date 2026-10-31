@@ -23,10 +23,22 @@
    parent -> here : {meekin:1, cmd:"load", id, start}
                     {meekin:1, cmd:"play" | "pause" | "stop"}
                     {meekin:1, cmd:"seek", t}
+                    {meekin:1, cmd:"prefs", rate, cc}    cc = "off" | language code | "" (YouTube's choice)
+                    {meekin:1, cmd:"rate", r}
+                    {meekin:1, cmd:"cc", lang, tl}       lang "off" or a track code; tl = translate-to code
    here -> parent : {meekin:1, ev:"boot" | "ready" | "blocked"}
                     {meekin:1, ev:"state", s}            YT.PlayerState number
                     {meekin:1, ev:"time", cur, dur, buf}
                     {meekin:1, ev:"error", code}
+                    {meekin:1, ev:"tracks", list, translatable, rates}
+                    {meekin:1, ev:"quality", q}          what YouTube picked (it cannot be forced any more)
+                    {meekin:1, ev:"rate", r}
+
+   Quality: setPlaybackQuality has been a no-op for embeds for years (checked
+   2026-10-30: requests for "small" and "hd1080" both stayed at hd720), so it
+   is reported, not offered. Captions: setOption("captions","track", …) takes
+   effect and YouTube remembers it across videos, but getOption reads back the
+   old track for a few seconds, so we do not echo it as confirmation.
 
    The parent is a packaged TV app (origin "file://" or "null") or a page on
    this site, so commands are accepted only from window.parent rather than by
@@ -36,6 +48,7 @@
   // want = what the TV last asked for. Commands can arrive before the YouTube
   // player is ready (they would be dropped), so onReady applies the latest one.
   var player = null, apiReady = false, ready = false, pending = null, want = "play", timer = null;
+  var prefs = { rate: 1, cc: "" };
 
   function send(msg){
     msg.meekin = 1;
@@ -51,14 +64,17 @@
   }
 
   function create(id, start){
+    var vars = {
+      autoplay: want === "play" ? 1 : 0, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3,
+      playsinline: 1, enablejsapi: 1, start: Math.floor(start || 0),
+      origin: location.origin, widget_referrer: location.href,
+      hl: "th"            // caption track names in Thai (ไทย, อังกฤษ …)
+    };
+    if(prefs.cc && prefs.cc !== "off"){ vars.cc_load_policy = 1; vars.cc_lang_pref = prefs.cc; }
     player = new YT.Player("p", {
       videoId: id,
       width: "100%", height: "100%",
-      playerVars: {
-        autoplay: want === "play" ? 1 : 0, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3,
-        playsinline: 1, enablejsapi: 1, start: Math.floor(start || 0),
-        origin: location.origin, widget_referrer: location.href
-      },
+      playerVars: vars,
       events: {
         onReady: function(e){
           ready = true; send({ev:"ready"});
@@ -69,7 +85,14 @@
             else e.target.playVideo();
           }catch(x){}
         },
-        onStateChange: function(e){ send({ev:"state", s:e.data}); },
+        onStateChange: function(e){
+          send({ev:"state", s:e.data});
+          // a new video can come up at 1x; put the chosen speed back
+          if(e.data === 1 && prefs.rate !== 1){ try{ if(player.getPlaybackRate() !== prefs.rate) player.setPlaybackRate(prefs.rate); }catch(x){} }
+        },
+        onApiChange: function(){ applyCaptions(); },
+        onPlaybackQualityChange: function(e){ send({ev:"quality", q:e.data}); },
+        onPlaybackRateChange: function(e){ send({ev:"rate", r:e.data}); },
         onError: function(e){ send({ev:"error", code:e.data}); },
         onAutoplayBlocked: function(){ send({ev:"blocked"}); }
       }
@@ -78,6 +101,46 @@
     var f = document.querySelector("#p iframe, iframe#p");
     if(f){ f.setAttribute("tabindex", "-1"); }
     if(!timer) timer = setInterval(tick, 500);
+  }
+
+  // Called whenever the captions module (re)loads, i.e. for every video that has captions.
+  function applyCaptions(){
+    if(!player || !player.getOptions) return;
+    var mods = [];
+    try{ mods = player.getOptions() || []; }catch(e){}
+    if(mods.indexOf("captions") < 0) return;
+    var list = [], tls = [];
+    try{ list = player.getOption("captions", "tracklist") || []; }catch(e){}
+    try{ tls = player.getOption("captions", "translationLanguages") || []; }catch(e){}
+    if(prefs.cc === "off"){ try{ player.unloadModule("captions"); }catch(e){} }
+    else if(prefs.cc){
+      var hit = list.filter(function(t){ return t.languageCode === prefs.cc; })[0];
+      try{ if(hit) player.setOption("captions", "track", hit); }catch(e){}
+    }
+    send({ev:"tracks", rates: player.getAvailablePlaybackRates ? player.getAvailablePlaybackRates() : [],
+      translatable: list.some(function(t){ return t.is_translateable; }) && tls.length > 0,
+      tlTh: tls.some(function(t){ return t.languageCode === "th"; }),
+      list: list.map(function(t){ return {code:t.languageCode, name:t.displayName || t.languageName || t.languageCode, kind:t.kind || ""}; })});
+  }
+  function setCaptions(lang, tl){
+    prefs.cc = lang || "";
+    if(!ready) return;
+    if(lang === "off"){ try{ player.unloadModule("captions"); }catch(e){} return; }
+    var mods = [];
+    try{ mods = player.getOptions() || []; }catch(e){}
+    if(mods.indexOf("captions") < 0){ try{ player.loadModule("captions"); }catch(e){} return; }   // onApiChange applies it
+    var list = [];
+    try{ list = player.getOption("captions", "tracklist") || []; }catch(e){}
+    var hit = list.filter(function(t){ return t.languageCode === lang; })[0] || (tl ? list.filter(function(t){ return t.is_translateable; })[0] : null);
+    if(!hit) return;
+    var track = hit;
+    if(tl){
+      var tls = [];
+      try{ tls = player.getOption("captions", "translationLanguages") || []; }catch(e){}
+      var to = tls.filter(function(t){ return t.languageCode === tl; })[0];
+      if(to){ track = {}; for(var k in hit) track[k] = hit[k]; track.translationLanguage = to; }
+    }
+    try{ player.setOption("captions", "track", track); }catch(e){}
   }
 
   function load(id, start){
@@ -108,6 +171,14 @@
       case "pause": want = "pause"; if(ready) player.pauseVideo(); break;
       case "stop":  want = "stop"; pending = null; if(ready) player.stopVideo(); break;
       case "seek":  if(ready) player.seekTo(Math.max(0, Number(m.t) || 0), true); break;
+      case "prefs":
+        prefs.rate = Number(m.rate) || 1; prefs.cc = typeof m.cc === "string" ? m.cc : "";
+        break;
+      case "rate":
+        prefs.rate = Number(m.r) || 1;
+        if(ready){ try{ player.setPlaybackRate(prefs.rate); }catch(x){} }
+        break;
+      case "cc": setCaptions(String(m.lang || ""), m.tl ? String(m.tl) : ""); break;
     }
   });
 

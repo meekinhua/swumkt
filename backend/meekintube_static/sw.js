@@ -1,5 +1,5 @@
 /* MyTube service worker — app-shell cache (network-first for navigations) */
-const CACHE = "mytube-v2";
+const CACHE = "mytube-v3";
 const SHELL = [
   "./",
   "./index.html",
@@ -31,8 +31,8 @@ self.addEventListener("fetch", e => {
   // อย่าแตะคำขอไป YouTube/Google/Invidious/Piped — ปล่อยให้ผ่านปกติ (ต้องออนไลน์)
   if (url.origin !== self.location.origin) return;
 
-  // แอปทีวี (/tv/) ไม่ใช้ cache ของ PWA นี้ — ไม่งั้นจะได้ไฟล์ tv.js/player.html เก่าค้าง
-  if (url.pathname.indexOf("/tv/") !== -1) return;
+  // แอปทีวี (/tv/) และแอปเพลง (/music/) ไม่ใช้ cache ของ PWA นี้ — ไม่งั้นจะได้ไฟล์ tv.js/player.html เก่าค้าง
+  if (url.pathname.indexOf("/tv/") !== -1 || url.pathname.indexOf("/music/") !== -1) return;
 
   // หน้าเว็บ: network-first แล้ว fallback เป็น cache (ใช้งาน offline ได้)
   if (req.mode === "navigate") {

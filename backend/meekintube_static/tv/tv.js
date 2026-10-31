@@ -59,12 +59,12 @@
   }
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function uniq(list) { var seen = {}, out = []; list.forEach(function (v) { if (v && v.id && !seen[v.id]) { seen[v.id] = 1; out.push(v); } }); return out; }
-  function lite(v) { return { id: v.id, title: v.title, channel: v.channel, views: v.views, age: v.age, dur: v.dur }; }
+  function lite(v) { return { id: v.id, title: v.title, channel: v.channel, chId: v.chId || "", views: v.views, age: v.age, dur: v.dur }; }
   function thumb(id) { return "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg"; }
   function sec(v) { return v.sec || durToSec(v.dur); }
   function sameCh(a, b) { return (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase(); }
   // titles sometimes carry object-replacement and zero-width characters that render as boxes on TVs
-  function clean(s) { return String(s || "").replace(/[\u0000-\u001f​-‏‪-‮⁠-⁤﻿￼�]/g, "").trim(); }
+  function clean(s) { if (s === "null" || s === "undefined") return ""; return String(s || "").replace(/[\u0000-\u001f​-‏‪-‮⁠-⁤﻿￼�]/g, "").trim(); }
 
   /* ================= data: public instances ================= */
   // Only instances that answer browsers with CORS (checked 2026-10-30); yewtu.be,
@@ -111,17 +111,19 @@
     if (!Array.isArray(a)) return null;
     return a.filter(function (x) { return x && x.videoId && x.type !== "channel" && x.type !== "playlist"; }).map(function (x) {
       return { id: x.videoId, title: clean(x.title) || "(ไม่มีชื่อ)", channel: clean(x.author), views: fmtViews(x.viewCount),
-        age: x.publishedText || "", dur: fmtDur(x.lengthSeconds), sec: Number(x.lengthSeconds) || 0 };
+        age: x.publishedText || "", dur: fmtDur(x.lengthSeconds), sec: Number(x.lengthSeconds) || 0, chId: x.authorId || "" };
     });
   }
   function pipedId(u) { var m = /[?&]v=([A-Za-z0-9_-]{11})/.exec(u || ""); return m ? m[1] : null; }
+  function pipedCh(u) { var m = /\/channel\/(UC[\w-]{22})/.exec(u || ""); return m ? m[1] : ""; }
   function fromPiped(a) {
     if (a && a.items) a = a.items;
     if (!Array.isArray(a)) return null;
     return a.map(function (x) {
       var id = pipedId(x.url);
       return id && { id: id, title: clean(x.title) || "(ไม่มีชื่อ)", channel: clean(x.uploaderName), views: fmtViews(x.views),
-        age: x.uploadedDate || "", dur: fmtDur(x.duration), sec: Number(x.duration) > 0 ? Number(x.duration) : 0 };
+        age: x.uploadedDate || "", dur: fmtDur(x.duration), sec: Number(x.duration) > 0 ? Number(x.duration) : 0,
+        chId: pipedCh(x.uploaderUrl) };
     }).filter(Boolean);
   }
 
@@ -162,13 +164,102 @@
       all.forEach(function (r) { (r || []).forEach(function (v) { var s = sec(v); if (s > 0 && s <= 75) out.push(v); }); });
       return shuffle(uniq(out));
     },
-    channel: async function (name) {
+    // latest uploads of a channel known by name (subscriptions are stored by name)
+    channel: async function (name, id) {
+      id = id || chids[name] || await api.resolveChannel(name).catch(function () { return null; });
+      if (id) {
+        var t = await api.channelTab(id, "videos", "newest", null).catch(function () { return null; });
+        if (t && t.items.length) return t.items;
+      }
       var r = await api.search(name);
       if (!r) return null;
       var mine = r.filter(function (v) { return sameCh(v.channel, name); });
       return mine.length >= 4 ? mine : r;
+    },
+    resolveChannel: function (name) {
+      if (chids[name]) return Promise.resolve(chids[name]);
+      return cached("rc:" + name, 3600000, async function () {
+        var list = await api.searchChannels(name);
+        if (!list || !list.length) return null;
+        var hit = list.filter(function (c) { return sameCh(c.name, name); })[0] || list[0];
+        rememberCh(name, hit.id);
+        return hit.id;
+      });
+    },
+    searchChannels: function (q) {
+      return cached("sc:" + q, 600000, async function () {
+        var e = encodeURIComponent(q);
+        return (await tryBases(INVIDIOUS, "/api/v1/search?type=channel&q=" + e, 8000, function (a) {
+          return Array.isArray(a) ? a.filter(function (x) { return x && x.type === "channel" && x.authorId; }).map(function (x) {
+            return { id: x.authorId, name: clean(x.author), subs: x.subCount, avatar: pickImg(x.authorThumbnails, 176), verified: !!x.authorVerified };
+          }) : null;
+        })) || (await tryBases(PIPED, "/search?filter=channels&q=" + e, 8000, function (j) {
+          var a = j && j.items;
+          return Array.isArray(a) ? a.map(function (x) {
+            var id = pipedCh(x.url);
+            return id && { id: id, name: clean(x.name), subs: x.subscribers, avatar: x.thumbnail || "", verified: !!x.verified };
+          }).filter(Boolean) : null;
+        }));
+      });
+    },
+    channelInfo: function (id) {
+      return cached("ci:" + id, 1800000, async function () {
+        var r = await tryBases(INVIDIOUS, "/api/v1/channels/" + id, 9000, function (j) { return j && j.authorId ? [j] : null; });
+        if (r) {
+          var j = r[0];
+          return { id: j.authorId, name: clean(j.author), subs: j.subCount, verified: !!j.authorVerified,
+            tabs: Array.isArray(j.tabs) ? j.tabs : ["videos"], avatar: pickImg(j.authorThumbnails, 176),
+            banner: pickImg(j.authorBanners, 2000), desc: clean(j.description || "") };
+        }
+        var p = await tryBases(PIPED, "/channel/" + id, 9000, function (j) { return j && j.name ? [j] : null; });
+        if (!p) return null;
+        var q = p[0];
+        return { id: id, name: clean(q.name), subs: q.subscriberCount, verified: !!q.verified, tabs: ["videos"],
+          avatar: q.avatarUrl || "", banner: q.bannerUrl || "", desc: clean(q.description || "") };
+      });
+    },
+    // one page of a channel tab: videos | shorts | streams | playlists
+    channelTab: function (id, tab, sort, cont) {
+      var path = "/api/v1/channels/" + id + "/" + tab
+        + (cont ? "?continuation=" + encodeURIComponent(cont) : (tab === "videos" ? "?sort_by=" + (sort || "newest") : ""));
+      return cached("ct:" + path, 600000, async function () {
+        var r = await tryBases(INVIDIOUS, path, 10000, function (j) {
+          if (!j) return null;
+          var list = tab === "playlists" ? j.playlists : j.videos;
+          if (!Array.isArray(list)) return null;
+          return [{ items: tab === "playlists" ? fromInvPlaylists(list) : fromInv(list), cont: j.continuation || null }];
+        });
+        return r ? r[0] : null;
+      });
+    },
+    playlist: function (id) {
+      return cached("pl:" + id, 600000, async function () {
+        var r = await tryBases(INVIDIOUS, "/api/v1/playlists/" + id, 10000, function (j) { return j && Array.isArray(j.videos) ? [j] : null; });
+        if (!r) return null;
+        var j = r[0];
+        return { id: id, title: clean(j.title), channel: clean(j.author), chId: j.authorId || "", count: j.videoCount, items: fromInv(j.videos) };
+      });
     }
   };
+  function fromInvPlaylists(a) {
+    return a.filter(function (x) { return x && x.playlistId; }).map(function (x) {
+      return { plId: x.playlistId, title: clean(x.title), count: x.videoCount, channel: clean(x.author),
+        thumb: fixImg(x.playlistThumbnail) || (x.videos && x.videos[0] ? thumb(x.videos[0].videoId) : "") };
+    });
+  }
+  // Invidious hands out proxied image URLs, sometimes relative or protocol-relative
+  function fixImg(u) {
+    if (!u) return "";
+    if (u.indexOf("//") === 0) return "https:" + u;
+    if (u.charAt(0) === "/") return INVIDIOUS[0] + u;
+    return u;
+  }
+  function pickImg(list, want) {
+    if (!Array.isArray(list) || !list.length) return "";
+    var sorted = list.slice().sort(function (a, b) { return (a.width || 0) - (b.width || 0); });
+    var hit = sorted.filter(function (t) { return (t.width || 0) >= want; })[0] || sorted[sorted.length - 1];
+    return fixImg(hit.url);
+  }
 
   /* ================= stored state (shared keys with ../index.html) ================= */
   var store = {
@@ -180,7 +271,13 @@
     searches: arr(lsGet("mytube_tv_searches", [])),
     progress: lsGet("mytube_tv_progress", {}) || {}
   };
-  var settings = Object.assign({ autoplay: true, region: "TH" }, lsGet("mytube_tv_settings", {}) || {});
+  // cc: "" = leave it to YouTube, "off", or a language code; rate: playback speed
+  var settings = Object.assign({ autoplay: true, region: "TH", cc: "", rate: 1 }, lsGet("mytube_tv_settings", {}) || {});
+  // channel name -> UC id (subscriptions and old history entries only carry the name)
+  var chids = lsGet("mytube_chids", {}) || {};
+  function rememberCh(name, id) {
+    if (name && /^UC[\w-]{22}$/.test(id || "") && chids[name] !== id) { chids[name] = id; lsSet("mytube_chids", chids); }
+  }
   function saveSettings() { lsSet("mytube_tv_settings", settings); }
 
   function pushHistory(v) {
@@ -219,7 +316,12 @@
   /* ================= scaling ================= */
   var fitWH = "";
   function fit() {
-    var w = window.innerWidth, h = window.innerHeight;
+    // Android TV WebViews can report innerWidth 1920 while only 960x540 CSS px are shown
+    // (seen on Google TV / WebView 113): take the smallest of the three measures.
+    var vv = window.visualViewport, de = document.documentElement, BIG = 1e9;
+    var w = Math.min(window.innerWidth || BIG, de.clientWidth || BIG, vv && vv.width ? vv.width : BIG);
+    var h = Math.min(window.innerHeight || BIG, de.clientHeight || BIG, vv && vv.height ? vv.height : BIG);
+    if (w === BIG || h === BIG) w = h = 0;
     if (!w || !h) return;            // started hidden / no window yet: keep the last scale
     if (w + "x" + h === fitWH) return;
     fitWH = w + "x" + h;
@@ -228,6 +330,18 @@
   }
   window.addEventListener("resize", fit);
   fit();
+  if (QS.get("debug")) {    // on-screen viewport readout for testing on real TVs
+    var dbg = document.createElement("div");
+    dbg.style.cssText = "position:fixed;left:0;top:0;z-index:999;background:#ff0;color:#000;font:14px monospace;padding:2px 6px";
+    document.body.appendChild(dbg);
+    setInterval(function () {
+      var vv = window.visualViewport;
+      dbg.textContent = "inner " + window.innerWidth + "x" + window.innerHeight + " dpr " + window.devicePixelRatio
+        + " doc " + document.documentElement.clientWidth + "x" + document.documentElement.clientHeight
+        + (vv ? " vv " + Math.round(vv.width) + "x" + Math.round(vv.height) + "@" + vv.scale : "")
+        + " screen " + screen.width + "x" + screen.height + " | " + stage.style.transform;
+    }, 1000);
+  }
 
   /* ================= toast ================= */
   var toastTimer = null;
@@ -361,9 +475,19 @@
   function onFocus(e) {
     var L = layer();
     if (L === "main" && !e.closest("#rail") && current) lastFk[current] = e.dataset.fk;
-    if (L === "main" && e._v) showHero(e._v, e._ctx ? e._ctx.title : "");
-    else if (L === "main" && e.classList.contains("skel")) showHero(null, e._ctx ? e._ctx.title : "");
-    if (L === "player") playerEl.classList.toggle("deep", !!e.closest(".osd-upnext"));
+    var heroOn = !main.classList.contains("nohero");
+    if (L === "main" && e._v && heroOn) showHero(e._v, e._ctx ? e._ctx.title : "");
+    else if (L === "main" && heroOn && e.classList.contains("skel")) showHero(null, e._ctx ? e._ctx.title : "");
+    var grid = e.closest(".ch-grid");
+    if (grid && grid._more) {
+      var per = grid.classList.contains("shorts") ? 6 : 4;
+      var at = Array.prototype.indexOf.call(grid.children, e.closest(".tile"));
+      if (at >= grid.children.length - per * 2) grid._more();
+    }
+    if (L === "player") {
+      playerEl.classList.toggle("deep", !!e.closest(".osd-upnext"));
+      if (playerEl.classList.contains("sheet") && !e.closest(".osd-sheet")) playerEl.classList.remove("sheet");
+    }
     var row = e.closest(".row"), view = e.closest(".view");
     if (row && view && view.dataset.scroll === "rows") nearRows(view, row);
   }
@@ -672,7 +796,7 @@
     store.subs.slice(0, 12).forEach(function (name, i) {
       var b = el("button", "f pill", esc(name));
       b.dataset.fk = "subs:ch" + i;
-      b._act = function () { open("channel", { name: name }); };
+      b._act = function () { open("channel", { name: name, id: chids[name] }); };
       pills.appendChild(b);
     });
     head.appendChild(pills);
@@ -684,27 +808,149 @@
   }
 
   /* ---- channel ---- */
+  // A channel page like YouTube's: banner, avatar, subscribers, follow, and the
+  // Videos / Shorts / Live / Playlists tabs (Videos sortable), loading more as
+  // focus nears the end of the grid.
+  var CH_TABS = [["videos", "วิดีโอ"], ["shorts", "Shorts"], ["streams", "ไลฟ์"], ["playlists", "เพลย์ลิสต์"]];
   function buildChannel(args) {
     var name = args.name || "";
-    var v = viewEl("channel", "rows");
-    var head = headEl(name, "ช่อง");
-    var btn = el("button", "f pill" + (isSub(name) ? " on" : ""), isSub(name) ? "✓ ติดตามแล้ว" : "+ ติดตาม");
-    btn.dataset.fk = "channel:follow";
-    btn.style.marginTop = "26px";
-    btn._act = function () {
-      toggleSub(name);
-      btn.textContent = isSub(name) ? "✓ ติดตามแล้ว" : "+ ติดตาม";
-      btn.classList.toggle("on", isSub(name));
-    };
-    head.appendChild(btn);
-    v.appendChild(head);
-    v.appendChild(makeRow({ key: "ch-latest", title: "วิดีโอจาก " + name, load: function () { return api.channel(name); } }));
-    v.appendChild(makeRow({ key: "ch-pop", title: "ยอดนิยม", load: async function () {
-      var r = await api.search(name + " ยอดนิยม");
-      if (!r) return null;
-      var mine = r.filter(function (x) { return sameCh(x.channel, name); });
-      return mine.length >= 3 ? mine : r;
-    } }));
+    var v = viewEl("channel", "free");
+    var st = { id: args.id || chids[name] || "", tab: "videos", sort: "newest", cont: null, loading: false, items: [], tok: 0 };
+    v.innerHTML = '<div class="ch-banner"><img alt=""></div>'
+      + '<div class="ch-head"><div class="ch-avatar"></div><div class="ch-meta"><h2></h2><p></p></div></div>'
+      + '<div class="ch-bar"><div class="ch-tabs"></div><div class="ch-sort"></div></div>'
+      + '<div class="ch-grid grid"></div><div class="ch-msg"></div>';
+    var banner = v.querySelector(".ch-banner"), av = v.querySelector(".ch-avatar");
+    var h2 = v.querySelector(".ch-meta h2"), sub = v.querySelector(".ch-meta p");
+    var tabsEl = v.querySelector(".ch-tabs"), sortEl = v.querySelector(".ch-sort");
+    var grid = v.querySelector(".ch-grid"), msgEl = v.querySelector(".ch-msg");
+    h2.textContent = name; sub.textContent = "ช่อง";
+    av.textContent = (name || "?").charAt(0).toUpperCase();
+    banner.classList.add("none");
+
+    var follow = el("button", "f pill", "");
+    follow.dataset.fk = "channel:follow";
+    function paintFollow() {
+      follow.textContent = isSub(name) ? "✓ ติดตามแล้ว" : "+ ติดตาม";
+      follow.classList.toggle("on", isSub(name));
+    }
+    follow._act = function () { rememberCh(name, st.id); toggleSub(name); paintFollow(); };
+    paintFollow();
+    // follow sits at the start of the tab bar so Down from it lands on the videos
+    v.querySelector(".ch-bar").insertBefore(follow, tabsEl);
+
+    function tabButtons(available) {
+      tabsEl.innerHTML = "";
+      CH_TABS.forEach(function (t) {
+        if (available && available.indexOf(t[0]) < 0 && t[0] !== "videos") return;
+        var b = el("button", "f pill" + (st.tab === t[0] ? " on" : ""), esc(t[1]));
+        b.dataset.fk = "chtab:" + t[0];
+        b._act = function () { if (st.tab !== t[0]) { st.tab = t[0]; tabButtons(available); load(false); } };
+        tabsEl.appendChild(b);
+      });
+      sortEl.innerHTML = "";
+      if (st.tab === "videos") {
+        [["newest", "ล่าสุด"], ["popular", "ยอดนิยม"]].forEach(function (o) {
+          var b = el("button", "f pill small" + (st.sort === o[0] ? " on" : ""), esc(o[1]));
+          b.dataset.fk = "chsort:" + o[0];
+          b._act = function () { if (st.sort !== o[0]) { st.sort = o[0]; tabButtons(available); load(false); } };
+          sortEl.appendChild(b);
+        });
+      }
+      // keep focus on the pill the user just pressed after the bar is rebuilt
+      if (focused && !focused.isConnected) {
+        var again = findFk(v, focused.dataset.fk);
+        if (again) setFocus(again, { noScroll: true });
+      }
+    }
+    tabButtons(null);
+
+    function paintInfo(info) {
+      if (!info) return;
+      if (info.name) { name = name || info.name; h2.textContent = info.name + (info.verified ? " ✓" : ""); }
+      sub.textContent = [info.subs ? "ผู้ติดตาม " + fmtViews(info.subs) + " คน" : "", info.desc ? info.desc.slice(0, 120) : ""]
+        .filter(Boolean).join("  •  ") || "ช่อง";
+      if (info.avatar) { av.textContent = ""; var i = new Image(); i.alt = ""; i.src = info.avatar; av.appendChild(i); }
+      if (info.banner) {
+        var bi = banner.querySelector("img");
+        bi.onload = function () { banner.classList.remove("none"); };
+        bi.src = info.banner;
+      }
+      tabButtons(info.tabs);
+    }
+
+    function tileFor(item, ctx) {
+      if (!item.plId) return makeTile(item, ctx);
+      var t = el("div", "f tile pl-tile",
+        '<div class="thumb"><img alt="" data-src="' + esc(item.thumb) + '"><span class="dur">☰ ' + esc(String(item.count || "")) + "</span></div>"
+        + '<div class="t-title">' + esc(item.title) + '</div><div class="t-meta">เพลย์ลิสต์</div>');
+      t.dataset.fk = "chpl:" + item.plId;
+      t._act = function () { open("playlist", { id: item.plId, title: item.title }); };
+      return t;
+    }
+    function load(more) {
+      if (!st.id || st.loading || (more && !st.cont)) return;
+      st.loading = true;
+      var tok = more ? st.tok : ++st.tok;
+      if (!more) {
+        st.items = []; st.cont = null;
+        grid.innerHTML = ""; grid.classList.toggle("shorts", st.tab === "shorts");
+        msgEl.textContent = "กำลังโหลด…";
+      } else msgEl.textContent = "กำลังโหลดเพิ่ม…";
+      api.channelTab(st.id, st.tab, st.sort, more ? st.cont : null).then(function (r) {
+        if (tok !== st.tok) return;
+        st.loading = false;
+        if (!r) {
+          msgEl.textContent = "";
+          var retry = el("button", "f pill", "โหลดไม่สำเร็จ · กด OK เพื่อลองใหม่");
+          retry.dataset.fk = "chretry";
+          retry._act = function () { var was = focused === retry; msgEl.innerHTML = ""; load(more); if (was) setFocus(follow, { noScroll: true }); };
+          msgEl.appendChild(retry);
+          return;
+        }
+        st.cont = r.cont;
+        var seen = {}; st.items.forEach(function (x) { seen[x.id || x.plId] = 1; });
+        var fresh = r.items.filter(function (x) { var k = x.id || x.plId; if (seen[k]) return false; seen[k] = 1; return true; });
+        var ctx = { key: "ch-" + st.tab, title: name, items: st.items, shorts: st.tab === "shorts" };
+        fresh.forEach(function (x) { st.items.push(x); grid.appendChild(tileFor(x, ctx)); });
+        hydrate(grid);
+        msgEl.textContent = st.items.length ? "" : "ช่องนี้ยังไม่มีอะไรในแท็บนี้";
+      }, function () { if (tok === st.tok) { st.loading = false; msgEl.textContent = "โหลดไม่สำเร็จ"; } });
+    }
+    grid._more = function () { load(true); };
+
+    (st.id ? Promise.resolve(st.id) : api.resolveChannel(name)).then(function (id) {
+      if (!id) { msgEl.textContent = "ไม่พบช่องนี้"; return; }
+      st.id = id; rememberCh(name, id);
+      api.channelInfo(id).then(paintInfo, function () {});
+      load(false);
+    }, function () { msgEl.textContent = "ไม่พบช่องนี้"; });
+    return v;
+  }
+
+  /* ---- playlist ---- */
+  function buildPlaylist(args) {
+    var v = viewEl("playlist", "free");
+    v.innerHTML = '<div class="view-head"><h2></h2><p></p></div><div class="pl-actions"></div><div class="ch-grid grid"></div><div class="ch-msg">กำลังโหลด…</div>';
+    v.querySelector("h2").textContent = args.title || "เพลย์ลิสต์";
+    var grid = v.querySelector(".ch-grid"), msgEl = v.querySelector(".ch-msg");
+    api.playlist(args.id).then(function (pl) {
+      if (!pl) { msgEl.textContent = "โหลดเพลย์ลิสต์ไม่สำเร็จ"; return; }
+      v.querySelector("h2").textContent = pl.title || args.title || "เพลย์ลิสต์";
+      v.querySelector("p").textContent = [pl.channel, (pl.count || pl.items.length) + " วิดีโอ"].filter(Boolean).join("  •  ");
+      msgEl.textContent = pl.items.length ? "" : "เพลย์ลิสต์นี้ว่าง";
+      if (pl.items.length) {
+        var playAll = el("button", "f pill", "▶ เล่นทั้งหมด");
+        playAll.dataset.fk = "pl:playall";
+        playAll._act = function () { play(pl.items[0], { queue: pl.items.slice(), index: 0, ret: playAll }); };
+        v.querySelector(".pl-actions").appendChild(playAll);
+      }
+      var ctx = { key: "pl-" + args.id, title: pl.title, items: pl.items };
+      pl.items.forEach(function (x) { grid.appendChild(makeTile(x, ctx)); });
+      hydrate(grid);
+      // nothing was focusable when the view opened, so focus fell back to the rail
+      if (current === "playlist" && views.playlist === v && !(focused && v.contains(focused))) enterContent();
+    }, function () { msgEl.textContent = "โหลดเพลย์ลิสต์ไม่สำเร็จ"; });
     return v;
   }
 
@@ -720,6 +966,17 @@
     }
     item("set:autoplay", "เล่นวิดีโอถัดไปอัตโนมัติ", settings.autoplay ? "เปิด" : "ปิด", function () {
       settings.autoplay = !settings.autoplay; saveSettings(); this.querySelector(".val").textContent = settings.autoplay ? "เปิด" : "ปิด";
+    });
+    var CCS = [["", "ตามค่าของ YouTube"], ["off", "ปิด"], ["th", "ไทย"], ["en", "อังกฤษ"]];
+    var ci = Math.max(0, CCS.map(function (c) { return c[0]; }).indexOf(settings.cc));
+    item("set:cc", "คำบรรยายเริ่มต้น", CCS[ci][1], function () {
+      ci = (ci + 1) % CCS.length; settings.cc = CCS[ci][0]; saveSettings();
+      this.querySelector(".val").textContent = CCS[ci][1];
+    });
+    var si = Math.max(0, RATES.indexOf(settings.rate || 1));
+    item("set:rate", "ความเร็วเริ่มต้น", (settings.rate || 1) === 1 ? "ปกติ" : settings.rate + "x", function () {
+      si = (si + 1) % RATES.length; settings.rate = RATES[si]; saveSettings();
+      this.querySelector(".val").textContent = RATES[si] === 1 ? "ปกติ" : RATES[si] + "x";
     });
     var ri = Math.max(0, REGIONS.map(function (r) { return r[0]; }).indexOf(settings.region));
     item("set:region", "ภูมิภาคของ “มาแรง”", REGIONS[ri][1], function () {
@@ -755,7 +1012,7 @@
     return v;
   }
 
-  var BUILD = { library: buildLibrary, subs: buildSubs, channel: buildChannel, settings: buildSettings };
+  var BUILD = { library: buildLibrary, subs: buildSubs, channel: buildChannel, playlist: buildPlaylist, settings: buildSettings };
 
   /* ================= search ================= */
   var TH1 = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ".split("");
@@ -776,7 +1033,7 @@
       + '<div class="kb-tabs"></div><div class="kb-keys"></div><div class="kb-actions"></div>'
       + "</div>"
       + '<div class="s-right"><div class="s-label" id="sChipsLabel"></div><div class="s-chips" id="sChips"></div>'
-      + '<div class="s-results"><div class="yscroll"><div class="s-label" id="sResLabel"></div><div class="grid" id="sGrid"></div></div></div></div>'
+      + '<div class="s-results"><div class="yscroll"><div class="chan-row" id="sChans"></div><div class="s-label" id="sResLabel"></div><div class="grid" id="sGrid"></div></div></div></div>'
       + "</div>";
     S.el = v;
     var tabs = v.querySelector(".kb-tabs");
@@ -863,6 +1120,20 @@
     hydrate(grid);
     if (had) { if (grid.firstChild) setFocus(grid.firstChild); else enterSearchKeys(); }
   }
+  function renderChans(list) {
+    var box = sq("sChans"), had = focused && box.contains(focused);
+    box.innerHTML = "";
+    list.forEach(function (c, i) {
+      var t = el("div", "f chan-tile",
+        '<div class="chan-av">' + (c.avatar ? '<img alt="" src="' + esc(c.avatar) + '">' : esc((c.name || "?").charAt(0))) + "</div>"
+        + '<div class="chan-txt"><div class="chan-name">' + esc(c.name) + (c.verified ? " ✓" : "") + "</div>"
+        + '<div class="chan-subs">' + (c.subs ? "ผู้ติดตาม " + esc(fmtViews(c.subs)) + " คน" : "ช่อง") + "</div></div>");
+      t.dataset.fk = "chan:" + c.id;
+      t._act = function () { rememberCh(c.name, c.id); open("channel", { name: c.name, id: c.id }); };
+      box.appendChild(t);
+    });
+    if (had) { var g = sq("sGrid").querySelector(".f"); if (g) setFocus(g); else enterSearchKeys(); }
+  }
   function showTrendingResults() {
     sq("sResLabel").textContent = "มาแรงตอนนี้";
     api.trending().then(function (t) { if (S.lastQ === null && t) renderGrid("มาแรงตอนนี้", t.slice(0, 18), "strend"); });
@@ -875,6 +1146,8 @@
       lsSet("mytube_tv_searches", store.searches);
     }
     sq("sResLabel").textContent = "กำลังค้นหา “" + q + "” …";
+    renderChans([]);
+    api.searchChannels(q).then(function (list) { if (tok === S.token) renderChans((list || []).slice(0, 3)); }, function () {});
     api.search(q).then(function (r) {
       if (tok !== S.token) return;
       if (!r) { renderGrid("ค้นหาไม่สำเร็จ — บริการค้นหาสาธารณะอาจล่มชั่วคราว ลองอีกครั้ง", [], "search"); return; }
@@ -953,7 +1226,7 @@
     var btns = [{ label: "▶ เล่น", act: function () { playFromTile(tile); } },
       { label: isLater(v.id) ? "นำออกจาก ดูภายหลัง" : "+ ดูภายหลัง", act: function () { toggleLater(v); } }];
     if (v.channel) {
-      btns.push({ label: "ไปที่ช่อง " + v.channel, act: function () { if (!playerEl.hidden) closePlayer(); open("channel", { name: v.channel }); } });
+      btns.push({ label: "ไปที่ช่อง " + v.channel, act: function () { if (!playerEl.hidden) closePlayer(); open("channel", { name: v.channel, id: v.chId }); } });
       btns.push({ label: (isSub(v.channel) ? "เลิกติดตาม " : "ติดตาม ") + v.channel, act: function () { toggleSub(v.channel); } });
     }
     if (ctx.key === "continue" || ctx.key === "history") {
@@ -974,7 +1247,8 @@
     state: -1, cur: 0, dur: 0, buf: 0, started: false, shorts: false, osdTimer: null, ret: null,
     lastSave: 0, seekAt: 0, seekRun: 0, errTimer: null, blocked: false, noteTimer: null,
     gen: 0,              // bumped by every play()/closePlayer(); late async results check it
-    wasPlaying: false, shortsLoading: false };
+    wasPlaying: false, shortsLoading: false,
+    tracks: null, quality: "", rate: 1 };
 
   function ensureFrame() {
     if (P.frame) return;
@@ -1014,6 +1288,9 @@
       var q = P.pending; P.pending = [];
       q.forEach(pcmd);
     } else if (m.ev === "state") onState(m.s);
+    else if (m.ev === "tracks") { P.tracks = m; if (playerEl.classList.contains("sheet")) drawSheet(); }
+    else if (m.ev === "quality") { P.quality = m.q || ""; if (playerEl.classList.contains("sheet")) drawSheet(); }
+    else if (m.ev === "rate") { P.rate = Number(m.r) || 1; }
     else if (m.ev === "time") {
       P.cur = Date.now() - P.seekAt < 1500 ? P.cur : (m.cur || 0);
       P.dur = m.dur || P.dur; P.buf = m.buf || 0;
@@ -1110,6 +1387,9 @@
       var p = progressOf(v.id);
       if (p && p.t > 30 && p.t < p.d - 30) { start = p.t; toast("เล่นต่อจาก " + fmtDur(p.t)); }
     }
+    P.tracks = null; P.quality = "";
+    playerEl.classList.remove("sheet");
+    pcmd({ cmd: "prefs", rate: settings.rate, cc: settings.cc });
     pcmd({ cmd: "load", id: v.id, start: start || 0 });
     if (start) P.cur = start;
     if (P.shorts) { playerEl.classList.remove("osd", "deep"); setFocus(findFk(playerEl, "osd:stoggle"), { noScroll: true }); }
@@ -1190,10 +1470,11 @@
     if (t) setFocus(t, { noScroll: true });    // setFocus parks it in modalReturn while a dialog is open
     armOsd();
   }
-  function osdHide() { playerEl.classList.remove("osd", "deep"); }
+  function osdHide() { playerEl.classList.remove("osd", "deep", "sheet"); }
   function armOsd() {
     clearTimeout(P.osdTimer);
     if (P.shorts) return;
+    if (playerEl.classList.contains("sheet")) return;
     P.osdTimer = setTimeout(function () { if (P.state === 1) osdHide(); }, playerEl.classList.contains("deep") ? 10000 : 5000);
   }
   function togglePlay() {
@@ -1255,6 +1536,69 @@
     var r = P.ret; P.ret = null;
     if (r && isVisible(r)) setFocus(r); else focusDefault();
   }
+  /* ---- video settings panel: subtitles, speed, quality readout ---- */
+  var QUALITY = { hd2160: "4K", hd1440: "1440p", hd1080: "1080p", hd720: "720p", large: "480p",
+    medium: "360p", small: "240p", tiny: "144p", auto: "อัตโนมัติ" };
+  var RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  function openSheet() {
+    playerEl.classList.add("osd", "sheet");
+    clearTimeout(P.osdTimer);
+    drawSheet();
+    var first = $("osdSheet").querySelector(".pill.on") || $("osdSheet").querySelector(".f");
+    if (first) setFocus(first, { noScroll: true });
+  }
+  function sheetPill(row, fk, label, on, act) {
+    var b = el("button", "f pill" + (on ? " on" : ""), esc(label));
+    b.dataset.fk = fk; b._act = act; row.appendChild(b); return b;
+  }
+  function drawSheet() {
+    var box = $("osdSheet"), keep = focused && box.contains(focused) ? focused.dataset.fk : null;
+    box.innerHTML = "";
+    // subtitles: the video's own tracks (Thai and English first), plus YouTube's auto-translate to Thai
+    var cc = el("div", "sheet-row", '<div class="sheet-label">คำบรรยาย</div>');
+    var t = P.tracks, list = t && t.list ? t.list.slice() : [];
+    if (!t) cc.appendChild(el("div", "sheet-note", "กำลังโหลดรายการคำบรรยาย…"));
+    else if (!list.length) cc.appendChild(el("div", "sheet-note", "วิดีโอนี้ไม่มีคำบรรยาย"));
+    else {
+      var rank = function (c) { return c === "th" ? 0 : c === "en" ? 1 : 2; };
+      list.sort(function (a, b) { return rank(a.code) - rank(b.code) || String(a.name).localeCompare(String(b.name)); });
+      var seenCode = {};
+      list = list.filter(function (x) { if (seenCode[x.code + x.kind]) return false; seenCode[x.code + x.kind] = 1; return true; }).slice(0, 7);
+      sheetPill(cc, "cc:off", "ปิด", settings.cc === "off", function () { setCc("off", "", "ปิด"); });
+      list.forEach(function (x) {
+        var label = x.name + (x.kind === "asr" ? " (อัตโนมัติ)" : "");
+        sheetPill(cc, "cc:" + x.code + ":" + x.kind, label, settings.cc === x.code, function () { setCc(x.code, "", label); });
+      });
+      var hasTh = list.some(function (x) { return x.code === "th"; });
+      if (!hasTh && t.translatable && t.tlTh) {
+        sheetPill(cc, "cc:tl-th", "แปลเป็นไทย", settings.cc === "th", function () { setCc("th", "th", "แปลเป็นไทย"); });
+      }
+    }
+    box.appendChild(cc);
+    // speed
+    var sp = el("div", "sheet-row", '<div class="sheet-label">ความเร็ว</div>');
+    RATES.forEach(function (r) {
+      sheetPill(sp, "rate:" + r, r === 1 ? "ปกติ" : r + "x", Math.abs((settings.rate || 1) - r) < 0.01, function () {
+        settings.rate = r; saveSettings(); pcmd({ cmd: "rate", r: r }); drawSheet(); toast("ความเร็ว " + (r === 1 ? "ปกติ" : r + "x"));
+      });
+    });
+    box.appendChild(sp);
+    // quality: YouTube picks it for embedded players; we can only report it
+    var q = el("div", "sheet-row", '<div class="sheet-label">คุณภาพ</div>');
+    q.appendChild(el("div", "sheet-note", "<b>อัตโนมัติ" + (P.quality && QUALITY[P.quality] && P.quality !== "auto" ? " · ตอนนี้ " + QUALITY[P.quality] : "")
+      + "</b> — YouTube เลือกความละเอียดให้เองตามความเร็วอินเทอร์เน็ต แอปภายนอกสั่งเปลี่ยนไม่ได้"));
+    box.appendChild(q);
+    if (keep) { var again = findFk(box, keep); if (again) setFocus(again, { noScroll: true }); }
+  }
+  function setCc(lang, tl, label) {
+    // the choice is saved here and also remembered by YouTube for later videos
+    settings.cc = lang; saveSettings();
+    pcmd({ cmd: "cc", lang: tl ? "" : lang, tl: tl });
+    if (lang !== "off") pcmd({ cmd: "prefs", rate: settings.rate, cc: settings.cc });
+    drawSheet();
+    toast("คำบรรยาย: " + label);
+  }
+
   var shortsReq = 0;
   function openShortsFeed() {
     toast("กำลังโหลด Shorts…");
@@ -1275,8 +1619,9 @@
       case "prev": prev(); break;
       case "seekbar": togglePlay(); break;
       case "later": toggleLater(P.v); drawButtons(); break;
-      case "sub": toggleSub(P.v.channel); drawButtons(); break;
-      case "channel": var ch = P.v.channel; closePlayer(); if (ch) open("channel", { name: ch }); break;
+      case "sub": rememberCh(P.v.channel, P.v.chId); toggleSub(P.v.channel); drawButtons(); break;
+      case "channel": var ch = P.v.channel, cid = P.v.chId; closePlayer(); if (ch) open("channel", { name: ch, id: cid }); break;
+      case "vsettings": openSheet(); break;
       case "sprev": shortsStep(-1); break;
       case "snext": shortsStep(1); break;
     }
@@ -1299,7 +1644,10 @@
       else if (k === "back") closePlayer();
       return;
     }
-    if (k === "back") { osdHide(); return; }
+    if (k === "back") {
+      if (playerEl.classList.contains("sheet")) { playerEl.classList.remove("sheet"); setFocus(findFk(playerEl, "osd:settings"), { noScroll: true }); armOsd(); return; }
+      osdHide(); return;
+    }
     if (focused && focused.id === "progressBar" && (k === "left" || k === "right")) {
       seekBy(k === "left" ? -seekStep() : seekStep()); armOsd(); return;
     }
