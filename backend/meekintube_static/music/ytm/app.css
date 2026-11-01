@@ -10,7 +10,7 @@
   --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
   --toph:calc(56px + var(--sat));
   --navh:56px;
-  --pip:200px;                 /* the collapsed player: never below 200x200 (YouTube API terms) */
+  --pip:200px;                 /* the collapsed video: never below 200x200 (YouTube API terms; video engine only) */
   --dockh:216px;               /* pip + 8px above and below */
   --sidew:0px;
   --npvh:clamp(200px,56.25vw,46vh);   /* video height in "now playing" (phone) */
@@ -260,6 +260,10 @@ body:not(.is-playing) .eq i{animation-play-state:paused}
 .set-row .ic{color:var(--muted)}
 .set-row span{flex:1}
 .set-row:active{background:rgba(255,255,255,.06)}
+.sw{position:relative;width:40px;height:24px;flex:none;border-radius:12px;background:rgba(255,255,255,.22);transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s var(--ease)}
+[aria-checked="true"]>.sw{background:var(--a1)}
+[aria-checked="true"]>.sw::after{transform:translateX(16px)}
 .set-foot{color:var(--dim);font-size:13px;padding:16px}
 
 /* ---------- player dock (collapsed) ---------- */
@@ -275,10 +279,10 @@ body.has-track #dock{display:block}
 /* min-width/overflow: a control can never spill out under the video; padding/margin keep focus rings and the buffering ring visible */
 .mini-ctrls{display:flex;align-items:center;justify-content:space-between;min-width:0;overflow:hidden;padding:4px;margin:-4px}
 .mini-ctrls .ic-btn{width:40px;height:40px}
-/* narrow phones: #mini is (width - 216px) wide, too narrow for three 40px buttons (prev/next stay in "now playing") */
+/* narrow phones, video: #mini is (width - 216px) wide, too narrow for three 40px buttons (prev/next stay in "now playing") */
 @media (max-width:379.98px){#mini{padding-left:6px;padding-right:6px}}
-@media (max-width:355.98px){.mini-ctrls [data-act="prev"]{display:none}}
-@media (max-width:315.98px){.mini-ctrls [data-act="next"]{display:none}.mini-ctrls{justify-content:center}}
+@media (max-width:355.98px){body.eng-video .mini-ctrls [data-act="prev"]{display:none}}
+@media (max-width:315.98px){body.eng-video .mini-ctrls [data-act="next"]{display:none}body.eng-video .mini-ctrls{justify-content:center}}
 .pp .i-pa{display:none}
 body.is-playing .pp .i-pa{display:block}
 body.is-playing .pp .i-pl{display:none}
@@ -288,13 +292,18 @@ body.is-buffering .pp::after{content:"";position:absolute;inset:-3px;border-radi
 .mini-ctrls .pp{background:#fff;color:#0f0f0f}
 .hint{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#fff;border-radius:8px;background:rgba(236,72,153,.18);border:1px solid rgba(236,72,153,.45);padding:6px 8px;line-height:1.3}
 .hint .ic{width:18px;height:18px;color:var(--a2);flex:none}
+.mini-hint .ic,.np-hint .ic{transform:rotate(90deg)}   /* points down at the play button */
+/* the video engine: a play sent to the YouTube frame by postMessage carries no tap, so iOS wants the video itself tapped */
+body.eng-video .h-a,body:not(.eng-video) .h-v{display:none}
+body.eng-video .mini-hint .ic{transform:none}            /* the video is to its right */
+body.eng-video .np-hint .ic{transform:rotate(-90deg)}    /* the video is above it */
 .mini-hint{margin:6px 0 2px;animation:nudge 1.4s ease-in-out infinite}
 @keyframes nudge{50%{transform:translateX(3px)}}
 
-/* ---------- the player host ---------- */
+/* ---------- the player host (the video engine's rules; the audio engine's follow "now playing") ---------- */
 #ph{position:fixed;z-index:70;display:none;background:#000;overflow:hidden;
   left:calc(100% - var(--pip) - 8px - var(--sar));top:calc(100% - var(--navh) - var(--sab) - var(--pip) - 8px);width:var(--pip);height:var(--pip);
-  transition:left .32s var(--ease),top .32s var(--ease),width .32s var(--ease),height .32s var(--ease);box-shadow:0 6px 24px rgba(0,0,0,.55)}
+  transition:left .32s var(--ease),top .32s var(--ease),width .32s var(--ease),height .32s var(--ease),border-radius .32s var(--ease);box-shadow:0 6px 24px rgba(0,0,0,.55)}
 body.has-track #ph{display:block}
 #ph iframe{display:block;width:100%;height:100%;border:0}
 body.np-open #ph{left:0;top:var(--toph);width:100%;height:var(--npvh);box-shadow:none}
@@ -307,7 +316,9 @@ body.np-open #np{transform:none;visibility:visible;transition:transform .32s var
 .np-bg img{width:100%;height:100%;object-fit:cover;filter:blur(48px) saturate(1.5) brightness(.5);transform:scale(1.4);opacity:.9}
 .np-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(3,3,3,.25),rgba(3,3,3,.85) 55%,var(--bg) 85%)}
 .np-head{position:absolute;z-index:2;top:0;left:0;right:0;height:var(--toph);padding:var(--sat) calc(8px + var(--sar)) 0 calc(8px + var(--sal));display:flex;align-items:center;justify-content:space-between}
-.np-tag{height:32px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.14);display:flex;align-items:center;font-size:14px;font-weight:600}
+.np-seg{display:flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.1)}
+.np-seg button{height:30px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted);text-align:center;transition:background .15s,color .15s}
+.np-seg button.on{background:rgba(255,255,255,.22);color:#fff}
 .np-body{position:absolute;z-index:1;left:0;right:0;bottom:0;top:calc(var(--toph) + var(--npvh));overflow-y:auto;overscroll-behavior:contain;padding-bottom:var(--sab)}
 .np-slot{display:none}
 .np-ctl{padding:14px calc(22px + var(--sar)) 6px calc(22px + var(--sal))}
@@ -347,6 +358,31 @@ body.np-open #np{transform:none;visibility:visible;transition:transform .32s var
 .q-note{display:flex;align-items:center;gap:8px;padding:14px 16px 4px;color:var(--dim);font-size:13px}
 .q-note .ic{width:18px;height:18px}
 
+/* ---------- audio engine (body.eng-audio, kept in step with core's "engine" event by app.js) ----------
+   No video on the page, so none of the 200x200 rules apply: #ph only shows the album art (core's .mm-art),
+   as the mini player's thumbnail or the big cover in "now playing", and it sits under menus and toasts. */
+body.eng-audio{--dockh:64px;--thumb:48px;
+  --npart:max(160px,min(calc(100vw - 48px - var(--sal) - var(--sar)),calc(100vh - var(--toph) - 250px),560px));
+  --npvh:calc(var(--npart) + 24px)}
+/* the small viewport: the cover leaves room for the controls while the browser's bars are shown */
+@supports (height:100svh){body.eng-audio{--npart:max(160px,min(calc(100vw - 48px - var(--sal) - var(--sar)),calc(100svh - var(--toph) - 250px),560px))}}
+body.eng-audio #ph{z-index:62;border-radius:4px;box-shadow:none}
+body.eng-audio:not(.np-open) #ph{left:calc(var(--sidew) + 8px + var(--sal));top:calc(100% - var(--navh) - var(--sab) - (var(--dockh) + var(--thumb)) / 2);
+  width:var(--thumb);height:var(--thumb);cursor:pointer}
+body.eng-audio.np-open #ph{left:calc(50% - var(--npart) / 2);top:calc(var(--toph) + 8px);width:var(--npart);height:var(--npart);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+/* compact mini player: cover | title and artist | previous, play, next; a thin progress line along the top */
+body.eng-audio #mini{top:0;bottom:0;left:0;right:0;padding:0 calc(4px + var(--sar)) 0 calc(var(--thumb) + 20px + var(--sal));background:none;border-radius:0;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;align-content:center;column-gap:4px}
+body.eng-audio .mini-info,body.eng-audio .mini-hint{grid-column:1;grid-row:1}
+body.eng-audio .mini-info{padding:12px 0}
+body.eng-audio .mini-t{font-size:14px;-webkit-line-clamp:1}
+body.eng-audio .mini-a{margin-top:0}
+body.eng-audio .mini-hint{justify-self:start;margin:0}
+body.eng-audio .mini-hint .ic{transform:none}            /* the play button is to its right */
+body.eng-audio.hinting .mini-info{display:none}
+body.eng-audio .mini-ctrls{grid-column:2;grid-row:1;gap:2px}
+body.eng-audio .mini-prog{position:absolute;left:0;right:0;top:-1px;height:2px;margin:0;border-radius:0}
+
 /* ---------- sheet (menus / dialogs) ---------- */
 #scrim{position:fixed;inset:0;z-index:64;background:rgba(0,0,0,.6);animation:fade .2s}
 #sheet{position:fixed;z-index:66;left:0;right:0;bottom:0;max-height:80vh;overflow-y:auto;overscroll-behavior:contain;background:var(--bg4);border-radius:16px 16px 0 0;
@@ -355,6 +391,9 @@ body.np-open #np{transform:none;visibility:visible;transition:transform .32s var
 @keyframes up{from{transform:translateY(24px);opacity:0}}
 @keyframes fade{from{opacity:0}}
 .sh-grab{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:4px auto 6px}
+.sh-x{position:absolute;top:4px;right:6px;color:var(--muted)}
+.sh-x .ic{width:22px;height:22px}
+.sh-x~.sh-head,.sh-x~.sh-title{padding-right:56px}
 .sh-head{display:flex;align-items:center;gap:12px;padding:8px 16px 12px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .sh-head .th{width:48px;height:48px}
 .sh-item{display:flex;align-items:center;gap:16px;width:100%;min-height:50px;padding:0 20px;font-size:15px;text-align:left}
@@ -389,18 +428,19 @@ body.np-open #np{transform:none;visibility:visible;transition:transform .32s var
   .ex-b{height:72px;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;font-size:15px}
 }
 
-/* ---------- phones in landscape / short windows: the player dock becomes a column on the right ----------
+/* ---------- phones in landscape / short windows: while the video plays, the player dock becomes a column on the right ----------
    (isSideDock() in app.js uses the same query). Top bar and bottom nav stop at the column, so the content
-   keeps the full height and the 200x200 player sits at the top of the column with the mini controls under it. */
+   keeps the full height and the 200x200 player sits at the top of the column with the mini controls under it.
+   The audio engine keeps the compact mini player at the bottom. */
 @media (orientation:landscape) and (max-height:559.98px){
   :root{--dockw:calc(var(--pip) + 16px + var(--sar))}
-  body.has-track #top{right:var(--dockw);padding-right:4px}
-  body.has-track #nav{right:var(--dockw);padding-right:0}
-  body.has-track #view{padding-right:var(--dockw);padding-bottom:calc(var(--navh) + var(--sab) + 24px)}
-  body.has-track #dock{top:0;bottom:0;left:auto;right:0;width:var(--dockw);height:auto;border-top:0;border-left:1px solid var(--line)}
+  body.has-track.eng-video #top{right:var(--dockw);padding-right:4px}
+  body.has-track.eng-video #nav{right:var(--dockw);padding-right:0}
+  body.has-track.eng-video #view{padding-right:var(--dockw);padding-bottom:calc(var(--navh) + var(--sab) + 24px)}
+  body.has-track.eng-video #dock{top:0;bottom:0;left:auto;right:0;width:var(--dockw);height:auto;border-top:0;border-left:1px solid var(--line)}
   #ph{top:calc(8px + var(--sat))}
   #mini{top:calc(var(--pip) + 16px + var(--sat));bottom:calc(8px + var(--sab));left:8px;right:calc(8px + var(--sar));padding:10px 10px 6px}
-  .mini-hint .ic{transform:rotate(-90deg)}   /* the video is above it here */
+  body.eng-video .mini-hint .ic{transform:rotate(-90deg)}   /* the video is above it here */
 }
 
 /* ---------- desktop (needs the height too: below 560px the two-column "now playing" can't fit its controls) ---------- */
@@ -473,9 +513,22 @@ body.np-open #np{transform:none;visibility:visible;transition:transform .32s var
   .np-side{overflow-y:auto;border-left:1px solid var(--line);background:rgba(0,0,0,.25)}
   body.np-open #ph{left:40px;top:calc(var(--toph) + 24px);width:var(--npvw);height:var(--npvhd)}
   #sheet{border-radius:14px;padding-bottom:8px}
+
+  /* audio engine: a slim player bar with the cover on its left; in "now playing" a big square cover, centred */
+  body.eng-audio{--dockh:96px;--thumb:64px;--npart:max(200px,min(calc(100vh - 330px),calc(100vw - 480px),560px));--npvw:var(--npart);--npvhd:var(--npart)}
+  body.eng-audio:not(.np-open) #ph{left:calc(var(--sidew) + 16px);top:calc(100% - (var(--dockh) + var(--thumb)) / 2)}   /* the bar sits at bottom:0 here */
+  body.eng-audio.np-open #ph{left:calc((100% - 400px - var(--npart)) / 2);top:calc(var(--toph) + 24px)}
+  body.eng-audio #mini{padding:6px 16px 6px calc(var(--thumb) + 32px);grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto auto;column-gap:12px}
+  body.eng-audio .mini-info{padding:0}
+  body.eng-audio .mini-t{font-size:16px}
+  body.eng-audio #miniLike{grid-column:2;grid-row:1}
+  body.eng-audio .mini-ctrls{grid-column:3;grid-row:1;gap:10px}
+  body.eng-audio .mini-seek{grid-column:1 / -1;grid-row:2;align-self:center}
+  body.eng-audio .np-slot{margin:0 auto}
+  body.eng-audio .np-ctl{width:max(var(--npart),340px);margin:0 auto}
 }
-/* desktop player bar below ~980px: six controls (298px) don't fit between the side nav and the video;
-   shuffle and repeat stay available in "now playing" */
+/* desktop player bar below ~980px: six controls (298px) don't fit between the side nav and the video
+   (nor beside the title in the audio bar); shuffle and repeat stay available in "now playing" */
 @media (min-width:900px) and (max-width:979.98px) and (min-height:560px){
   .mini-ctrls [data-act="shuffle"],.mini-ctrls [data-act="repeat"]{display:none}
 }

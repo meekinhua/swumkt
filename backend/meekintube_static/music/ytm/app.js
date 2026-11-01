@@ -1,12 +1,18 @@
 /* meekin Music — YouTube-Music-style front-end (music/ytm/).
    Draws UI only; search, recommendations, library and the player are ../core.js (window.MeekinMusic).
 
-   Player rules kept here (YouTube API Services terms):
+   Player rules kept here:
    - player.attach(#ph) once; #ph is never moved in the DOM. Mini player <-> "now playing"
      only change #ph's CSS (body.np-open), so playback never reloads.
-   - #ph stays >= 200x200 and on top of everything (z-index 70) while a song is loaded;
-     menus, dialogs and toasts are placed so they never overlap it.
-   - no background play (core.js pauses on visibilitychange); see the note in settings. */
+   - songs play as audio by default: they go on with the screen locked or another app in front, and the
+     lock screen, notification and headset controls work (core.js, Media Session). #ph then shows the
+     album art (core's .mm-art): the mini player's thumbnail, the big cover in "now playing". Nothing has
+     to stay on top of it, so menus and toasts may cover it.
+   - the listener may choose the video ("เพลง | วิดีโอ" in now playing, or settings: player.setVideo).
+     body.eng-audio / body.eng-video follow core's "engine" event, never that choice: hiding the page hands
+     a playing video to the audio at the same spot, and showing the page again brings the video back.
+   - while the video plays (YouTube API Services terms): #ph stays >= 200x200 and on top of everything
+     (z-index 70); menus, dialogs and toasts are placed so they never overlap it. */
 (function () {
   "use strict";
   const M = window.MeekinMusic;
@@ -26,7 +32,8 @@
   const fmt = s => util.fmtDur(s) || "0:00";
   // keep these two in step with the media queries in app.css
   const isDesk = () => window.matchMedia("(min-width:900px) and (min-height:560px)").matches;
-  const isSideDock = () => window.matchMedia("(orientation:landscape) and (max-height:559.98px)").matches;   // player dock = column on the right
+  const isSideDock = () => window.matchMedia("(orientation:landscape) and (max-height:559.98px)").matches;   // video: player dock = column on the right
+  const videoOn = () => player.engine === "video";   // the YouTube player is on the page (its layout rules apply)
   const initial = n => esc((String(n || "?").trim().charAt(0) || "?").toUpperCase());
   const plural = n => n + " เพลง";
   function img(src, alt) { return src ? '<img src="' + esc(src) + '" alt="' + esc(alt || "") + '" loading="lazy" decoding="async">' : ""; }
@@ -199,8 +206,11 @@
   function rerender() { const y = window.scrollY; render(route, y); }
 
   /* ---------------- top bar ---------------- */
-  function topRoot() {
-    topEl.innerHTML =
+  // inApp: a genre page (a chip on home) steps back inside the app. The tab roots leave the app for the
+  // chooser page with a plain link, so the browser's back comes back here.
+  function topRoot(inApp) {
+    topEl.innerHTML = (inApp ? '<button class="ic-btn" data-act="back" aria-label="ย้อนกลับ">' + ic("back") + '</button>'
+      : '<a class="ic-btn" href="../" aria-label="ย้อนกลับ">' + ic("back") + '</a>') +
       '<button class="brand" data-go="home" aria-label="meekin Music หน้าแรก"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg><span class="wm"><b>meekin</b> Music</span></button>' +
       '<div class="top-search d-only" role="button" tabindex="0" data-go="search">' + ic("search") + '<span>ค้นหาเพลง ศิลปิน อัลบั้ม</span></div>' +
       '<div class="top-act"><button class="ic-btn m-only" data-go="search" aria-label="ค้นหา">' + ic("search") + '</button>' +
@@ -289,7 +299,7 @@
   ROUTES.genre = (args, tok) => {
     const g = api.GENRES.find(x => x.key === args[0]);
     if (!g) { ROUTES.home([], tok); return; }
-    topRoot();
+    topRoot(true);
     view.innerHTML = '<div class="page">' + chipsHTML(g.key) +
       '<div class="genre-band" style="--c:' + esc(g.color) + '"><h1>' + esc(g.name) + '</h1><div class="btns" id="gBtns"></div></div>' +
       '<div class="list" id="gList">' + skRows(10) + '</div></div>';
@@ -644,8 +654,9 @@
   ROUTES.settings = () => {
     topSub("ตั้งค่า");
     view.innerHTML = '<div class="page"><h1 class="pg-title">ตั้งค่า</h1>' +
-      '<div class="set-card"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg><div><h2>meekin Music</h2><p>ฟังเพลงพร้อมดูวิดีโอผ่านเครื่องเล่นแบบฝังอย่างเป็นทางการ · เวอร์ชัน 1</p></div></div>' +
-      '<div class="set-note">' + ic("info") + '<span>เพลงจะหยุดเมื่อล็อกหน้าจอหรือสลับไปแอปอื่น เพราะข้อกำหนดของ YouTube ไม่อนุญาตให้แอปภายนอกเล่นเบื้องหลัง</span></div>' +
+      '<div class="set-card"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg><div><h2>meekin Music</h2><p>ฟังเพลง หรือเลือกดูมิวสิกวิดีโอ · เวอร์ชัน 1</p></div></div>' +
+      '<div class="set-note">' + ic("info") + '<span>เพลงเล่นต่อได้เมื่อล็อกจอหรือสลับแอป และควบคุมได้จากหน้าล็อกจอ หูฟัง หรือการแจ้งเตือน · ถ้าเลือกดูวิดีโอ ล็อกจอแล้วจะสลับเป็นเสียงอย่างเดียวให้เอง</span></div>' +
+      '<button class="set-row" data-act="vidpref" role="switch" aria-checked="' + player.video + '">' + ic("video") + '<span>ดูมิวสิกวิดีโอแทนภาพปก</span><i class="sw" aria-hidden="true"></i></button>' +
       '<button class="set-row" data-act="clearhist">' + ic("clock") + '<span>ล้างประวัติการฟัง</span><small class="sec-sub">' + plural(lib.history.length) + '</small></button>' +
       '<button class="set-row" data-act="clearsearch">' + ic("search") + '<span>ล้างประวัติการค้นหา</span><small class="sec-sub">' + lib.searches.length + ' รายการ</small></button>' +
       '<a class="set-row" href="../">' + ic("spark") + '<span>เปลี่ยนหน้าตาแอป</span>' + ic("chev-right") + '</a>' +
@@ -806,9 +817,33 @@
   M.on("time", t => setTimes(t.cur, t.dur));
   M.on("queue", () => { scheduleQueue(); updateModes(); });
   M.on("like", () => { updateLike(); const n = parse(route).name; if (n === "liked" || n === "library") rerender(); else refreshSide(); });
-  M.on("blocked", () => { $("#miniHint").hidden = false; $("#npHint").hidden = false; });
+  // the browser would not start playback without a tap (iOS): point at the play button, or at the video (app.css)
+  M.on("blocked", () => { $("#miniHint").hidden = false; $("#npHint").hidden = false; body.classList.add("hinting"); });
   M.on("error", e => toast((e && e.message ? e.message : "เล่นเพลงนี้ไม่ได้") + (e && e.final ? "" : " · กำลังข้ามไปเพลงถัดไป")));
-  function hideHint() { $("#miniHint").hidden = true; $("#npHint").hidden = true; }
+  function hideHint() { $("#miniHint").hidden = true; $("#npHint").hidden = true; body.classList.remove("hinting"); }
+
+  // what plays the song (core decides, also while the page is hidden): the layout follows it
+  let engNote = "";   // song id + reason of the last engine toast, so it shows once per song
+  M.on("engine", e => {
+    syncEngine();
+    const c = player.current;
+    if (!c) return;
+    const note = (k, msg) => { if (engNote !== c.id + k) { engNote = c.id + k; toast(msg); } };
+    if (e.fallback) note("f", "เพลงนี้ไม่มีไฟล์เสียง เล่นเป็นวิดีโอแทน · ล็อกจอแล้วจะหยุด");
+    // the video was chosen but would not play here (the page is in view, so this is not the lock screen hand-over)
+    else if (e.video && e.engine === "audio" && !document.hidden) note("v", "วิดีโอนี้เล่นในแอปไม่ได้ · เล่นเป็นเพลงแทน");
+  });
+  function syncEngine() {
+    const v = videoOn();
+    body.classList.toggle("eng-video", v);
+    body.classList.toggle("eng-audio", !v);
+    // the switch shows the listener's choice; a video played for want of an audio stream counts as video
+    const vid = player.video || player.fallback;
+    $$('[data-act="vidmode"]').forEach(b => { const on = (b.dataset.v === "1") === vid; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+    $$('[data-act="vidpref"]').forEach(b => b.setAttribute("aria-checked", player.video));
+    // #ph moves by CSS (a .32s transition); a menu placed around the video is placed again once it has settled
+    if (sheetOpen) { placeFloating(sheet, 8); setTimeout(() => { if (sheetOpen) placeFloating(sheet, 8); }, 360); }
+  }
 
   const seeks = [{ el: $("#npSeek"), cur: $("#npCur"), dur: $("#npDur"), drag: false }, { el: $("#miniSeek"), cur: $("#miniCur"), dur: $("#miniDur"), drag: false }];
   function setTimes(c, d) {
@@ -858,9 +893,9 @@
   }
 
   /* ---------------- sheet: menus and small dialogs ---------------- */
-  // Placed so it never covers the player box: above the mini player, beside the player column (phone in
-  // landscape), or below the video in "now playing".
-  function hostRect() { return body.classList.contains("has-track") ? host.getBoundingClientRect() : null; }
+  // While the video plays, placed so it never covers it: above the mini player, beside the player column
+  // (phone in landscape), or below the video in "now playing". The album art may be covered.
+  function hostRect() { return body.classList.contains("has-track") && videoOn() ? host.getBoundingClientRect() : null; }
   function overlaps(a, r) { return !!r && a.left < r.right && a.right > r.left && a.top < r.bottom && a.bottom > r.top; }
   function placeFloating(el, gap) {
     const vw = window.innerWidth, vh = window.innerHeight, desk = isDesk(), r = hostRect();
@@ -882,9 +917,11 @@
     el.style.bottom = bottom + "px"; el.style.maxHeight = Math.max(120, Math.floor(maxH)) + "px";
     el.classList.toggle("float", bottom > 0);
   }
-  function openSheet(html, handler) {
+  // form: a small dialog with its own "ยกเลิก" button; menus get a close button
+  function openSheet(html, handler, form) {
     sheetHandler = handler || null;
-    sheet.innerHTML = '<div class="sh-grab" aria-hidden="true"></div>' + html;
+    sheet.innerHTML = '<div class="sh-grab" aria-hidden="true"></div>' +
+      (form ? "" : '<button class="ic-btn sh-x" data-sh="close" aria-label="ปิด">' + ic("close") + '</button>') + html;
     if (!sheetOpen) {
       history.pushState(Object.assign({}, cur() || { app: 1, r: route, d: 0 }, { sh: 1 }), "", location.href);
       sheetOpen = true;
@@ -905,7 +942,8 @@
   scrim.addEventListener("click", () => closeSheet());
   sheet.addEventListener("click", e => {
     const b = e.target.closest("[data-sh]");
-    if (b && sheetHandler) sheetHandler(b.dataset.sh, b);
+    if (b && b.dataset.sh === "close") closeSheet();
+    else if (b && sheetHandler) sheetHandler(b.dataset.sh, b);
   });
   window.addEventListener("resize", () => { if (sheetOpen) placeFloating(sheet, 8); });
 
@@ -955,14 +993,14 @@
   function askName(title, value, done) {
     openSheet('<form class="sh-form" action="#"><h3>' + esc(title) + '</h3><input name="n" maxlength="60" autocomplete="off" placeholder="ชื่อเพลย์ลิสต์" value="' + esc(value) + '" aria-label="ชื่อเพลย์ลิสต์">' +
       '<div class="sh-btns"><button type="button" class="btn" data-sh="cancel">ยกเลิก</button><button type="submit" class="btn pri">บันทึก</button></div></form>',
-      act => { if (act === "cancel") closeSheet(); });
+      act => { if (act === "cancel") closeSheet(); }, true);
     const f = $("form", sheet);
     f.addEventListener("submit", e => { e.preventDefault(); const v = f.n.value.trim(); if (!v) { f.n.focus(); return; } done(v.slice(0, 60)); });
     setTimeout(() => { if (f.isConnected) { f.n.focus(); f.n.select(); } }, 60);
   }
   function confirmSheet(title, text, okLabel, fn) {
     openSheet('<div class="sh-form"><h3>' + esc(title) + '</h3><p>' + esc(text) + '</p><div class="sh-btns"><button class="btn" data-sh="cancel">ยกเลิก</button><button class="btn danger" data-sh="ok">' + esc(okLabel) + '</button></div></div>',
-      act => { if (act === "cancel") closeSheet(); else if (act === "ok") fn(); });
+      act => { if (act === "cancel") closeSheet(); else if (act === "ok") fn(); }, true);
   }
   function playlistMenu(pid) {
     const p = lib.playlists.find(x => x.id === pid);
@@ -988,8 +1026,8 @@
   function toast(msg) {
     toastEl.textContent = msg;
     const vw = window.innerWidth, vh = window.innerHeight, r = hostRect();
-    const dock = r && !npOpen ? $("#dock").getBoundingClientRect() : null;
-    const side = !!dock && isSideDock();              // player dock is a column on the right: centre in the space left of it
+    const dock = body.classList.contains("has-track") && !npOpen ? $("#dock").getBoundingClientRect() : null;
+    const side = !!dock && !!r && isSideDock();       // video: player dock is a column on the right: centre in the space left of it
     const span = side ? dock.left : vw;
     toastEl.style.left = side ? span / 2 + "px" : "";
     toastEl.style.maxWidth = side ? Math.max(120, Math.min(span - 32, 440)) + "px" : "";
@@ -1020,6 +1058,10 @@
       case "closenp": closeNP(); break;
       case "npmore": if (player.current) songMenu(player.current, { qi: player.index }); break;
       case "npartist": openArtist(player.current); break;
+      // "เพลง | วิดีโอ": the "engine" event redraws the switch. Asking again for what is not showing retries it
+      // (a video that failed, an audio stream that did not load)
+      case "vidmode": { const v = el.dataset.v === "1"; if (v !== player.video || v !== videoOn()) { engNote = ""; player.setVideo(v); } break; }
+      case "vidpref": player.setVideo(!player.video); break;
       case "nptab": npTab = el.dataset.nt; renderPanel(); $(".np-side").scrollTop = 0; if (!isDesk()) { const t = $(".np-tabs"); const b = $(".np-body"); if (t.offsetTop < b.scrollTop) b.scrollTop = t.offsetTop; } break;
       case "relretry": relFor = ""; renderRelated(); break;
       case "back": goBack(); break;
@@ -1120,6 +1162,8 @@
       go(r);
     }
   });
+  // the cover in the mini player opens "now playing" (taps on the video stay inside its frame)
+  host.addEventListener("click", () => { if (!npOpen) openNP(); });
   // keyboard: Enter/Space on role=button items, Space toggles play, Escape closes overlays
   document.addEventListener("keydown", e => {
     const tag = (e.target.tagName || "").toLowerCase();
@@ -1146,6 +1190,6 @@
       if (r !== "home" && ROUTES[parse(r).name]) { history.pushState({ app: 1, r, y: 0, d: 1 }, "", urlFor(r)); render(r, 0); }
       else render("home", 0);
     }
-    updateModes(); updateLike();
+    updateModes(); updateLike(); syncEngine();
   })();
 })();

@@ -2,11 +2,19 @@
    ../core.js (window.MeekinMusic) does search, recommendations, the library and playback;
    this file only draws the UI.
 
-   The video host #ph is handed to player.attach() once and is never moved in the DOM.
+   Player rules. The host #ph is handed to player.attach() once and is never moved in the DOM.
    Switching between the mini player and the full "now playing" screen only restyles it
-   (left/top/width/height). While a song is loaded it stays on screen at 200x200 CSS px or
-   larger and above everything else: menus and toasts sit below it in z-order and are
-   placed in the free space beside it. */
+   (left/top/width/height). What it shows follows player.engine (body.eng-audio / eng-video):
+   - "audio" (the default): the song's audio stream. It keeps playing with the screen locked or
+     another app in front, and the lock screen, notification and headset controls drive it.
+     The host shows the album art: a small cover in the mini player, the big square cover in
+     "now playing". It is an ordinary picture: menus and toasts may cover it.
+   - "video" (the listener chose videos, player.setVideo, or the song has no audio stream):
+     the embedded video player. While a song is loaded it stays on screen at 200x200 CSS px
+     or larger and above everything else: menus and toasts sit below it in z-order and are
+     placed in the free space beside it, and playback pauses while it is out of sight.
+   Core hands a playing video to the audio while the page is hidden and back when it is shown,
+   so the engine can change at any time: the layout follows the "engine" event, never a guess. */
 (function () {
   "use strict";
 
@@ -76,7 +84,10 @@
   const LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#2dd4bf"/><g fill="#06302b">' +
     '<rect x="13" y="27" width="7.5" height="22" rx="3.75"/><rect x="23.8" y="15" width="7.5" height="34" rx="3.75"/>' +
     '<rect x="34.6" y="22" width="7.5" height="27" rx="3.75"/><rect x="45.4" y="31" width="7.5" height="18" rx="3.75"/></g></svg>';
-  const BG_NOTE = "เพลงจะหยุดเมื่อล็อกหน้าจอหรือสลับไปแอปอื่น เพราะข้อกำหนดของ YouTube ไม่อนุญาตให้แอปภายนอกเล่นเพลงเบื้องหลัง";
+  const BG_NOTE = "เพลงเล่นต่อได้เมื่อล็อกจอหรือสลับแอป และควบคุมได้จากหน้าล็อกจอ หูฟัง หรือการแจ้งเตือน · ถ้าเลือกดูวิดีโอ ล็อกจอแล้วจะสลับเป็นเสียงอย่างเดียวให้เอง";
+  // the browser refused to start playback until a tap (︎: not an emoji). The play button starts the audio, but
+  // on iOS only a tap on YouTube's player itself starts a video: body.eng-audio / eng-video shows one
+  const HINT = '<span class="h-au">แตะ ▶︎ เพื่อเล่น</span><span class="h-vi">แตะที่วิดีโอเพื่อเริ่มเล่น</span>';
 
   /* ---------------- this app's own small stores (core keeps the shared library) ---------------- */
   function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
@@ -205,6 +216,9 @@
     return '<div class="topbar"><button class="ib tb-back" data-a="back" aria-label="ย้อนกลับ">' + IC.left + '</button><b class="tb-t">' + esc(title) + "</b>" +
       (withPlay ? '<button class="bigplay xs tb-play" data-a="play-page" aria-label="เล่น">' + IC.play + "</button>" : "") + "</div>";
   }
+  // top-level screens (home, search, library) go back out of the app to the meekin Music chooser:
+  // a normal link, so the browser's Back comes back here
+  const outBtn = () => '<a class="ib tb-back hb" href="../" aria-label="ย้อนกลับ">' + IC.left + "</a>";
   function bindTopbar(threshold) {
     const tb = $(".topbar", main); if (!tb) return;
     const th = threshold || 210;
@@ -438,7 +452,7 @@
   PAGES.home = function (page, tok) {
     const chip = page.chip || "all";
     main.innerHTML = '<div class="page home" id="home" data-chip="' + chip + '">' +
-      '<header class="home-head"><h1>' + greeting() + '</h1><div class="hh-btns">' +
+      '<header class="home-head">' + outBtn() + "<h1>" + greeting() + '</h1><div class="hh-btns">' +
       '<button class="ib" data-a="nav" data-to="history" aria-label="ประวัติการฟัง">' + IC.clock + "</button>" +
       '<button class="ib" data-a="nav" data-to="settings" aria-label="การตั้งค่าและข้อมูลแอป">' + IC.gear + "</button></div></header>" +
       '<div class="chips" role="group" aria-label="ตัวกรอง">' + CHIPS.map(c => '<button class="chip' + (c[0] === chip ? " on" : "") + '" data-a="home-chip" data-chip="' + c[0] + '">' + c[1] + "</button>").join("") + "</div>" +
@@ -501,7 +515,9 @@
 
   PAGES.search = function (page, tok) {
     const q0 = page.q || "";
-    main.innerHTML = '<div class="page search"><header class="s-head"><h1>ค้นหา</h1></header>' +
+    // the results of a query are a page of their own: Back returns to the search they came from
+    const back = q0 ? '<button class="ib tb-back hb" data-a="back" aria-label="ย้อนกลับ">' + IC.left + "</button>" : outBtn();
+    main.innerHTML = '<div class="page search"><header class="s-head">' + back + "<h1>ค้นหา</h1></header>" +
       '<div class="sbox-wrap"><form class="sbox" id="sForm" role="search" autocomplete="off">' + IC.search +
       '<input id="sInput" type="search" enterkeyhint="search" placeholder="อยากฟังอะไร" aria-label="ค้นหาเพลง ศิลปิน หรืออัลบั้ม" value="' + esc(q0) + '">' +
       '<button type="button" class="ib" data-s="clear" aria-label="ล้างคำค้นหา"' + (q0 ? "" : " hidden") + ">" + IC.close + "</button></form></div>" +
@@ -599,7 +615,7 @@
   PAGES.library = function (page) {
     const f = page.filter || "";
     const chips = [["pl", "เพลย์ลิสต์"], ["ar", "ศิลปิน"], ["al", "อัลบั้ม"]];
-    main.innerHTML = '<div class="page lib"><header class="lib-head"><button class="avatar" data-a="nav" data-to="settings" aria-label="การตั้งค่าและข้อมูลแอป">m</button>' +
+    main.innerHTML = '<div class="page lib"><header class="lib-head">' + outBtn() + '<button class="avatar" data-a="nav" data-to="settings" aria-label="การตั้งค่าและข้อมูลแอป">m</button>' +
       '<h1>คลังของคุณ</h1><button class="ib" data-a="nav" data-to="history" aria-label="ประวัติการฟัง">' + IC.clock + "</button>" +
       '<button class="ib" data-a="new-pl" aria-label="สร้างเพลย์ลิสต์">' + IC.plus + "</button></header>" +
       '<div class="chips" role="group" aria-label="ตัวกรอง">' + (f ? '<button class="chip x" data-a="lib-filter" data-f="" aria-label="ล้างตัวกรอง">' + IC.close + "</button>" : "") +
@@ -807,8 +823,9 @@
     main.innerHTML = '<div class="page plain">' + topbar("การตั้งค่า") + '<header class="plain-head"><h1>การตั้งค่า</h1></header><div class="plain-in">' +
       '<div class="about-card">' + LOGO + "<div><b>meekin Tunes</b><small>เวอร์ชัน 1 · ส่วนหนึ่งของ meekin Music</small></div></div>" +
       "<h2>การเล่นเพลง</h2>" +
-      '<p class="note">' + IC.lock + "<span>" + esc(BG_NOTE) + "</span></p>" +
-      '<p class="note" style="margin-top:8px">' + IC.tv + "<span>เพลงเล่นผ่านเครื่องเล่นวิดีโอแบบฝังของ YouTube วิดีโอจึงแสดงบนจออยู่ตลอดเวลาที่เล่นเพลง</span></p>" +
+      '<button class="set-row" data-a="video" role="switch" aria-checked="' + player.video + '"' + (player.fallback && isVideo() ? " disabled" : "") + ">" + IC.tv +
+        '<span>ดูมิวสิกวิดีโอ<small>แสดงวิดีโอแทนปกเพลงขณะเล่น</small></span><i class="switch" aria-hidden="true"></i></button>' +
+      '<p class="note" style="margin-top:14px">' + IC.lock + "<span>" + esc(BG_NOTE) + "</span></p>" +
       "<h2>ข้อมูลของคุณ</h2>" +
       "<p>ประวัติการฟัง เพลงที่ถูกใจ ศิลปินที่ติดตาม และเพลย์ลิสต์ เก็บไว้ในเครื่องนี้เท่านั้น และใช้ร่วมกับหน้าตาอีกแบบของ meekin Music</p>" +
       '<button class="set-row" data-a="clear-hist">' + IC.trash + "<span>ล้างประวัติการฟัง</span></button>" +
@@ -822,9 +839,14 @@
   /* ================= playback UI ================= */
   let ctx = { key: "", label: "" };
   let mode = "none";            // "none" | "mini" | "full"
-  let phRect = null;            // where the video host is (target, not mid-animation)
+  let phRect = null;            // where the host is (target, not mid-animation)
   const VV = window.visualViewport;
-  let viewPaused = false;       // paused by guardView because the host was out of sight
+  let viewPaused = false;       // paused by guardView because the video was out of sight
+  let fbShown = false;          // the "no audio stream" / "no video" toast was shown for this song
+  const isVideo = () => player.engine === "video";
+  // the video was chosen but this song's won't play here (not embeddable...), so core plays the audio
+  // (a hidden page plays the audio anyway; core goes back to the video once it is shown)
+  const noVideo = () => !!player.current && player.video && !isVideo() && !document.hidden;
   let seekDrag = false;
   const E = {};                 // cached elements of the dock and the sheet
 
@@ -899,11 +921,14 @@
   }
   function sizeArt() {
     const W = innerWidth, H = innerHeight;
-    const a = W >= 900 && H >= 620 ? Math.min((W - 96 - 48 - 2) / 2, H - 340, 560) : Math.min(W - 48, H - 320, 440);
-    document.documentElement.style.setProperty("--art", Math.max(200, Math.floor(a)) + "px");
+    // 40 px of the height is the song / video switch above the art
+    const a = W >= 900 && H >= 620 ? Math.min((W - 96 - 48 - 2) / 2, H - 380, 560) : Math.min(W - 48, H - 360, 440);
+    // the video may not be smaller than 200x200; the album art may
+    document.documentElement.style.setProperty("--art", Math.max(isVideo() ? 200 : 140, Math.floor(a)) + "px");
   }
   function layoutPlayer() {
     if (mode === "none") { ph.style.visibility = "hidden"; phRect = null; viewPaused = false; return; }
+    const video = isVideo();
     let x, y, w, h;
     if (mode === "full") {
       // offsets ignore the sheet's slide transform, so this is where the slot ends up
@@ -911,18 +936,50 @@
       while (el && el !== npEl) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
       w = a.offsetWidth; h = a.offsetHeight;
     } else {
-      const r = E.dockSlot.getBoundingClientRect();
+      // the 200x200 slot beside the song card, or the small cover of the compact mini player
+      const r = (video ? E.dockSlot : E.dockArt).getBoundingClientRect();
       x = r.left; y = r.top; w = r.width; h = r.height;
     }
-    w = Math.max(200, w); h = Math.max(200, h);
+    if (video) { w = Math.max(200, w); h = Math.max(200, h); }
     phRect = { x, y, w, h };
     const st = ph.style;
     st.visibility = "visible"; st.left = x + "px"; st.top = y + "px"; st.width = w + "px"; st.height = h + "px";
     guardView();
   }
+  // a new engine moves the host to another slot at once (the mini player changes shape under it)
+  function onEngine(e) {
+    const b = document.body, video = e.engine === "video";
+    const changed = !b.classList.contains(video ? "eng-video" : "eng-audio");
+    b.classList.toggle("eng-video", video);
+    b.classList.toggle("eng-audio", !video);
+    if (changed) {
+      sizeArt();
+      ph.classList.add("na"); layoutPlayer(); void ph.offsetWidth; ph.classList.remove("na");
+      if (MD.open) placeModal();
+    }
+    syncVideo();
+    if (e.fallback && player.current && !fbShown) { fbShown = true; toast("เพลงนี้ไม่มีไฟล์เสียง เล่นเป็นวิดีโอแทน · ล็อกจอแล้วจะหยุด", 4500); }
+    else if (noVideo() && !fbShown) { fbShown = true; toast("เพลงนี้ดูวิดีโอไม่ได้ เล่นเป็นเสียงอย่างเดียว"); }
+  }
+  // the song / video switch in "now playing" and in the settings. The pill is disabled while the song
+  // plays only one way; the settings switch while a fallback video plays (turning the video off would
+  // only reload the audio stream that failed)
+  function syncVideo() {
+    const v = player.video, fb = player.fallback && isVideo(), nv = noVideo();
+    if (E.npMode) {
+      E.npMode.disabled = fb || nv;
+      E.npMode.innerHTML = (v && !fb && !nv ? IC.note : IC.tv) + "<span>" + (fb ? "เพลงนี้มีแต่วิดีโอ" : nv ? "เพลงนี้ดูวิดีโอไม่ได้" : v ? "ฟังเพลงอย่างเดียว" : "ดูวิดีโอ") + "</span>";
+    }
+    $$('[data-a="video"][role="switch"]').forEach(b => { b.setAttribute("aria-checked", v); b.disabled = fb; });
+  }
+  function toggleVideo() {
+    const on = player.setVideo(!player.video);   // core answers with an "engine" event (onEngine)
+    toast(on ? "ดูวิดีโอ · ล็อกจอแล้วจะสลับเป็นเสียงอย่างเดียวให้เอง" : "ฟังเพลงอย่างเดียว");
+  }
   /* The on-screen keyboard (iOS, and browsers that ignore interactive-widget) and pinch zoom
-     shrink only the visual viewport, so the page does not move but the video host can end up
-     out of sight. Pause while less than 200x200 of it can be seen; play on once it is back. */
+     shrink only the visual viewport, so the page does not move but the video can end up out of
+     sight. Pause while less than 200x200 of it can be seen; play on once it is back.
+     The album art has no such rule: with the audio engine nothing is paused for being hidden. */
   function hostInView() {
     if (!VV || !phRect) return true;
     const w = Math.min(phRect.x + phRect.w, VV.offsetLeft + VV.width) - Math.max(phRect.x, VV.offsetLeft);
@@ -931,7 +988,7 @@
   }
   function guardView() {
     if (!player.current) { viewPaused = false; return; }
-    if (!hostInView()) {
+    if (isVideo() && !hostInView()) {
       if (player.state === "playing" || player.state === "buffering") { viewPaused = true; player.pause(); }
     } else if (viewPaused) {
       // a pause sent while buffering leaves the state at "buffering", so test for "not playing"
@@ -960,6 +1017,7 @@
     if (!s) return;
     if (mode === "none") setMode("mini");
     document.body.classList.remove("blocked");
+    fbShown = false;            // core says which engine plays it right after this ("engine")
     const h = hue(s.id);
     dock.style.setProperty("--h", h); npEl.style.setProperty("--h", h);
     E.dTitle.textContent = s.title; E.dArtist.textContent = s.artist;
@@ -1071,8 +1129,10 @@
     MD.panel.innerHTML = html; MD.acts = acts || {}; MD.panel.scrollTop = 0;
     placeModal();
     const f = $("input", MD.panel);
-    if (f) setTimeout(() => { f.focus(); f.select(); }, 60); else { const b = $("button", MD.panel); if (b) b.focus({ preventScroll: true }); }
+    // focus the first menu item, not the close button in the menu's header
+    if (f) setTimeout(() => { f.focus(); f.select(); }, 60); else { const b = $(".mi", MD.panel) || $("button", MD.panel); if (b) b.focus({ preventScroll: true }); }
   }
+  const MX = '<button class="ib mx" data-a="modal-close" aria-label="ปิด">' + IC.close + "</button>";
   function closeModal(after) {
     if (!MD.open) { if (after) after(); return; }
     MD.after = after || null;
@@ -1089,10 +1149,10 @@
   });
   MD.panel.addEventListener("submit", e => { e.preventDefault(); if (MD.acts && MD.acts.submit) MD.acts.submit(e.target); });
 
-  // the largest screen area not covered by the video host
+  // the largest screen area not covered by the video (the album art may be covered)
   function freeRect() {
     const W = innerWidth, H = innerHeight, nh = navH();
-    if (mode === "none" || !phRect) return { l: 0, t: 0, r: W, b: H - nh };
+    if (mode === "none" || !phRect || !isVideo()) return { l: 0, t: 0, r: W, b: mode === "full" ? H : H - nh };
     const p = phRect, m = 8;
     const c = [
       { l: 0, t: 0, r: W, b: p.y - m },
@@ -1115,14 +1175,16 @@
     else { p.style.bottom = ""; p.style.top = Math.round(z.t + zh / 2) + "px"; p.style.transform = "translateY(-50%)"; }
   }
   let toastT = 0;
-  function toast(msg) {
+  function toast(msg, ms) {
     const el = $("#toast"), z = freeRect();
+    // above the compact mini player: freeRect leaves it out, as it holds no video to keep clear of
+    const lift = mode === "mini" && !isVideo() ? dock.offsetHeight : 0;
     el.textContent = msg;
     el.style.left = Math.round((z.l + z.r) / 2) + "px";
-    el.style.bottom = Math.round(innerHeight - z.b + 12) + "px";
+    el.style.bottom = Math.round(innerHeight - z.b + 12 + lift) + "px";
     el.style.maxWidth = Math.max(160, z.r - z.l - 32) + "px";
     el.classList.add("on");
-    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2400);
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), ms || 2400);
   }
 
   function songMenu(s, opt) {
@@ -1132,7 +1194,9 @@
       ["like", liked ? IC.heartF : IC.heart, liked ? "เลิกถูกใจ" : "ถูกใจ", liked ? "ac" : ""], ["pl", IC.plAdd, "เพิ่มลงเพลย์ลิสต์"]];
     if (opt.plId) items.push(["rm", IC.minus, "ลบออกจากเพลย์ลิสต์นี้"]);
     items.push(["artist", IC.user, "ไปที่ศิลปิน"], ["radio", IC.radio, "เริ่มวิทยุจากเพลงนี้"]);
-    openModal('<div class="mh">' + songCover(s, "mh-cv") + '<div class="meta"><b>' + esc(s.title) + "</b><small>" + esc(s.artist) + "</small></div></div>" +
+    // "now playing": the same song / video switch as its pill (none while the song plays only one way)
+    if (opt.np && !(player.fallback && isVideo()) && !noVideo()) items.push(player.video ? ["video", IC.note, "ฟังเพลงอย่างเดียว"] : ["video", IC.tv, "ดูวิดีโอ"]);
+    openModal('<div class="mh">' + songCover(s, "mh-cv") + '<div class="meta"><b>' + esc(s.title) + "</b><small>" + esc(s.artist) + "</small></div>" + MX + "</div>" +
       items.map(it => '<button class="mi' + (it[3] ? " " + it[3] : "") + '" data-m="' + it[0] + '">' + it[1] + "<span>" + it[2] + "</span></button>").join(""), {
       next() { if (player.current) player.playNext(s); else { setCtx({ key: "one:" + s.id, label: s.title }); startPlayback(s); } toast("จะเล่นเพลงนี้ถัดไป"); closeModal(); },
       queue() { if (player.current) player.addToQueue(s); else { setCtx({ key: "one:" + s.id, label: s.title }); startPlayback(s); } toast("เพิ่มในคิวแล้ว"); closeModal(); },
@@ -1140,12 +1204,13 @@
       pl() { pickPlaylist(s); },
       rm() { lib.removeFromPlaylist(opt.plId, s.id); toast("ลบออกจากเพลย์ลิสต์แล้ว"); closeModal(() => { if (cur.page.name === "upl") refreshPage(); }); },
       artist() { closeModal(() => go(artistRouteFor(s))); },
-      radio() { closeModal(() => startRadio(s)); }
+      radio() { closeModal(() => startRadio(s)); },
+      video() { closeModal(toggleVideo); }
     });
   }
   function pickPlaylist(s) {
     const pls = lib.playlists.slice();
-    setModal('<div class="mt">เพิ่มลงเพลย์ลิสต์</div><button class="mi" data-m="new"><span class="cv add">' + IC.plus + "</span><span>สร้างเพลย์ลิสต์ใหม่</span></button>" +
+    setModal('<div class="mt mt-x"><span>เพิ่มลงเพลย์ลิสต์</span>' + MX + '</div><button class="mi" data-m="new"><span class="cv add">' + IC.plus + "</span><span>สร้างเพลย์ลิสต์ใหม่</span></button>" +
       pls.map((p, i) => '<button class="mi" data-m="add" data-i="' + i + '">' + plCover(p) + "<span>" + esc(p.name) + "<small>" + p.songs.length + " เพลง" +
         (p.songs.some(z => z.id === s.id) ? " • มีเพลงนี้แล้ว" : "") + "</small></span></button>").join(""), {
       new() {
@@ -1181,7 +1246,7 @@
   }
   function uplMenu() {
     const p = cur.page.name === "upl" ? lib.playlists.find(z => z.id === cur.page.id) : null; if (!p) return;
-    openModal('<div class="mh">' + plCover(p, "mh-cv") + '<div class="meta"><b>' + esc(p.name) + "</b><small>" + p.songs.length + " เพลง</small></div></div>" +
+    openModal('<div class="mh">' + plCover(p, "mh-cv") + '<div class="meta"><b>' + esc(p.name) + "</b><small>" + p.songs.length + " เพลง</small></div>" + MX + "</div>" +
       '<button class="mi" data-m="rename">' + IC.edit + "<span>เปลี่ยนชื่อ</span></button>" +
       '<button class="mi" data-m="del">' + IC.trash + "<span>ลบเพลย์ลิสต์</span></button>", {
       rename() {
@@ -1236,13 +1301,15 @@
       '<div class="sn-sep"></div><button class="sn" data-a="new-pl"><span class="sq">' + IC.plus + "</span>สร้างเพลย์ลิสต์</button>" +
       '<button class="sn" data-a="nav" data-to="liked"><span class="lk">' + IC.heartF + "</span>เพลงที่ถูกใจ</button>" +
       '<div class="sn-pls" id="sidePls"></div><p class="sn-note">' + esc(BG_NOTE) + "</p>";
+    // the audio engine's compact mini player puts the host on .dk-cv; the video's on #dockSlot
     dock.innerHTML =
       '<div class="dk-card" data-a="np-open">' +
-        '<div class="dk-meta"><b id="dTitle"></b><small id="dArtist"></small><small class="hint">แตะที่วิดีโอเพื่อเริ่มเล่น ' + "→</small></div>" +
+        '<div class="dk-meta"><div class="dk-cv" id="dockArt" aria-hidden="true"></div>' +
+          '<div class="dk-tx"><b id="dTitle"></b><small id="dArtist"></small><small class="hint">' + HINT + "</small></div></div>" +
         '<div class="dk-ctl">' +
           '<button class="ib heart" data-a="like-cur" data-heart aria-label="ถูกใจ">' + IC.heart + "</button>" +
           '<button class="ib tog only-d" data-a="shuffle" aria-label="สุ่มเพลง">' + IC.shuffle + "</button>" +
-          '<button class="ib only-d" data-a="prev" aria-label="เพลงก่อนหน้า">' + IC.prev + "</button>" +
+          '<button class="ib dk-prev" data-a="prev" aria-label="เพลงก่อนหน้า">' + IC.prev + "</button>" +
           '<button class="pp" data-a="pp" data-pp aria-label="เล่น">' + IC.play + "</button>" +
           '<button class="ib" data-a="next" aria-label="เพลงถัดไป">' + IC.next + "</button>" +
           '<button class="ib tog only-d" data-a="repeat" aria-label="เล่นซ้ำ: ปิด">' + IC.repeat + "</button>" +
@@ -1257,11 +1324,13 @@
       '<header class="np-head"><button class="ib" data-a="np-close" aria-label="ย่อหน้าจอกำลังเล่น">' + IC.down + "</button>" +
         '<div class="np-from"><small>กำลังเล่นจาก</small><b id="npFrom">meekin Tunes</b></div>' +
         '<button class="ib" data-a="np-menu" aria-label="ตัวเลือกของเพลงนี้">' + IC.more + "</button></header>" +
+      // song or music video (player.setVideo); never drawn over the art area, which may hold the video
+      '<div class="np-mode"><button class="pill" id="npMode" data-a="video">' + IC.tv + "<span>ดูวิดีโอ</span></button></div>" +
       '<div class="np-art-area"><div id="npArt" aria-hidden="true"></div>' +
-        '<div class="np-qinfo"><b id="qiTitle"></b><small id="qiArtist"></small><p class="hint">แตะที่วิดีโอเพื่อเริ่มเล่น</p>' +
+        '<div class="np-qinfo"><b id="qiTitle"></b><small id="qiArtist"></small><p class="hint">' + HINT + "</p>" +
           '<div class="qi-c"><button class="ib" data-a="prev" aria-label="เพลงก่อนหน้า">' + IC.prev + '</button><button class="pp" data-a="pp" data-pp aria-label="เล่น">' + IC.play + "</button>" +
           '<button class="ib" data-a="next" aria-label="เพลงถัดไป">' + IC.next + "</button></div></div></div>" +
-      '<p class="np-hint">แตะที่วิดีโอเพื่อเริ่มเล่น</p>' +
+      '<p class="np-hint">' + HINT + "</p>" +
       '<div class="np-scroll">' +
         '<div class="np-main">' +
           '<div class="np-tr"><div class="np-tt"><h2 id="npTitle"></h2><button id="npArtist" data-a="np-artist"></button></div>' +
@@ -1284,7 +1353,7 @@
             '<h4>กำลังเล่น</h4><div id="qNow"></div><h4 id="qFrom">ถัดไป</h4><div id="qList"></div></section>' +
         "</div>" +
       "</div>";
-    ["dTitle", "dArtist", "dProg", "dCur", "dDur", "npFrom", "npTitle", "npArtist", "npCur", "npDur", "npRel", "qNow", "qList", "qFrom", "qiTitle", "qiArtist", "npArt", "dockSlot"]
+    ["dTitle", "dArtist", "dProg", "dCur", "dDur", "npFrom", "npTitle", "npArtist", "npCur", "npDur", "npRel", "qNow", "qList", "qFrom", "qiTitle", "qiArtist", "npArt", "npMode", "dockSlot", "dockArt"]
       .forEach(id => { E[id] = document.getElementById(id); });
     E.npScroll = $(".np-scroll", npEl);
     E.seeks = [$("#npSeek"), $("#dSeek")];
@@ -1319,7 +1388,8 @@
       case "like-cur": { const s = player.current; if (s) { const on = lib.toggleLike(s); toast(on ? "เพิ่มในเพลงที่ถูกใจแล้ว" : "ลบออกจากเพลงที่ถูกใจแล้ว"); } break; }
       case "np-open": openNP(); break;
       case "np-close": closeNP(); break;
-      case "np-menu": if (player.current) songMenu(player.current); break;
+      case "np-menu": if (player.current) songMenu(player.current, { np: true }); break;
+      case "video": toggleVideo(); break;
       case "np-artist": if (player.current) go(artistRouteFor(player.current)); break;
       case "q-open": openQueue(); break;
       case "q-close": if (cur.layers[cur.layers.length - 1] === "queue") history.back(); else setQueueView(false); break;
@@ -1368,14 +1438,16 @@
   MM.on("time", onTime);
   MM.on("queue", () => { renderQueueSoon(); syncToggles(); });
   MM.on("like", () => { updateHearts(); if (cur.page.name === "liked" || cur.page.name === "library") refreshPage(); });
-  MM.on("blocked", () => { document.body.classList.add("blocked"); });
+  MM.on("engine", onEngine);
+  MM.on("blocked", () => { document.body.classList.add("blocked"); });   // shows HINT: tap play, or the video
   MM.on("error", err => toast((err && err.message ? err.message : "เล่นเพลงนี้ไม่ได้") + (err && err.final ? "" : " — ข้ามไปเพลงถัดไป")));
 
   /* ================= start ================= */
   buildShell();
+  player.attach(ph);           // once; core puts the album art inside, and the iframe when a video first plays
+  onEngine({ engine: player.engine, video: player.video, fallback: false });   // body class, art size, switches
   sizeArt();
-  player.attach(ph);           // once; the iframe is created inside on the first play
-  if ("ResizeObserver" in window) { const ro = new ResizeObserver(relayout); ro.observe(E.npArt); ro.observe(E.dockSlot); }
+  if ("ResizeObserver" in window) { const ro = new ResizeObserver(relayout); ro.observe(E.npArt); ro.observe(E.dockSlot); ro.observe(E.dockArt); }
   const st0 = history.state && history.state.page ? history.state : null;
   const dead = st0 && st0.layers ? st0.layers.length : 0;   // sheets and menus do not survive a reload
   cur = { page: st0 ? st0.page : { name: "home", tab: "home" }, layers: [], idx: st0 ? st0.idx || 0 : 0 };

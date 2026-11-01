@@ -20,16 +20,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=2">
+<link rel="stylesheet" href="app.css?v=4">
 </head>
-<body class="m-none">
+<body class="m-none eng-audio">
   <!-- desktop side navigation (filled by app.js) -->
   <nav id="side" aria-label="เมนูหลัก"></nav>
 
   <!-- pages render here -->
   <main id="main" tabindex="-1"></main>
 
-  <!-- collapsed player: song card + a 200x200 slot the video host sits on -->
+  <!-- collapsed player: a compact mini player whose cover the host sits on (audio), or a song card
+       beside a 200x200 slot for the video (video) -->
   <div id="dock" aria-label="กำลังเล่น"></div>
 
   <!-- mobile bottom navigation -->
@@ -38,15 +39,15 @@
   <!-- full-screen now playing -->
   <section id="np" aria-hidden="true" aria-label="กำลังเล่น"></section>
 
-  <!-- menus and dialogs: always below the video host, placed beside it -->
+  <!-- menus and dialogs: below a video, placed beside it; they may cover the album art -->
   <div id="modal"><div class="mb" data-a="modal-close"></div><div class="mp" role="dialog" aria-modal="true"></div></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <!-- The video host. Attached to the player once; only its CSS position/size ever changes.
-       Nothing is ever drawn above it. -->
+  <!-- The host: the album art while the audio plays, the video when it is shown. Attached to the
+       player once; only its CSS position/size ever changes. Nothing is drawn above a video. -->
   <div id="ph"></div>
 
-  <script src="../core.js?v=5"></script>
-  <script src="app.js?v=3"></script>
+  <script src="../core.js?v=9"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

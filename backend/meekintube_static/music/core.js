@@ -7,22 +7,23 @@
                         new releases, genres, artist pages, albums, song radio (RD mix)
    MeekinMusic.recs     music-only home sections built from the listener's own history
    MeekinMusic.lib      history, liked songs, followed artists, user playlists (localStorage)
-   MeekinMusic.player   queue, shuffle/repeat, endless radio, Media Session, and the
-                        YouTube player in ../tv/player.html driven by postMessage
+   MeekinMusic.player   queue, shuffle/repeat, endless radio, Media Session, and two ways to
+                        play: the song's audio stream in an <audio> element (default; keeps
+                        playing with the screen locked) or the YouTube player in ../tv/player.html
+                        (player.setVideo(true), and the fallback when a song has no audio stream)
    MeekinMusic.util     formatting and helpers
 
-   Rules this file enforces for both apps (YouTube API Services terms):
-   - playback only through the official embedded player, which the UI must keep
-     visible at 200x200 px or larger with nothing drawn over it;
-   - no background playback: when the page is hidden (screen locked, app switched)
-     the player is paused;
-   - songs come from the same public Invidious/Piped instances as meekinTube.
+   Songs, streams and charts come from the same public Invidious/Piped instances as meekinTube.
+   Audio streams play outside YouTube's player (YouTube's API terms allow playback only through it);
+   they are what makes background play possible. While the video player is the one playing, the UI
+   keeps its embed rules (>= 200x200, nothing drawn over it).
 
    Song object: { id, title, artist, artistId, sec, dur, views, thumb, raw }
    Events (player.on): "track" (song), "state" ("playing"|"paused"|"buffering"|"ended"|"idle"),
    "time" ({cur, dur}), "queue" ({queue, index}),
    "error" ({code, message, song, final}; final = playback stopped instead of skipping on),
-   "blocked" (autoplay refused: ask the user to tap the video), "like" (song id),
+   "blocked" (the browser refused to start playback: ask the user to tap play), "like" (song id),
+   "engine" ({engine: "audio"|"video", video, fallback}: what plays the current song),
    "mode" ({shuffle, repeat}), "library" (key: "liked", "playlists"… changed in another tab or app) */
 (function () {
   "use strict";
@@ -535,18 +536,238 @@
   function on(ev, fn) { (listeners[ev] = listeners[ev] || []).push(fn); }
   function emit(ev, data) { (listeners[ev] || []).forEach(fn => { try { fn(data); } catch (e) { console.error(e); } }); }
 
+  /* A song plays one of two ways (P.engine):
+     "audio"  its audio stream (AAC, itag 140) through the Invidious instance's proxy, in an <audio>
+              element of this page. The default: it goes on with the screen locked or the app in the
+              background, and the lock screen, notification and headset controls drive it.
+     "video"  the YouTube embedded player in ../tv/player.html, when the listener wants the music video
+              (player.setVideo) or when no audio stream loads. Mobile browsers pause it when the page is
+              hidden, so hiding the page hands a playing video over to "audio" at the same spot. */
   const P = {
-    frame: null, booted: false, pending: [], host: null,
+    frame: null, booted: false, pending: [], host: null, art: null,
     queue: [], index: -1, radioSeed: null,
     qgen: 0,                         // bumped whenever the whole queue is replaced
     radioLoading: -1,                // qgen of the queue whose radio is being fetched, -1 = none
     playWhenRadio: null,             // gen of a "play next" that is waiting for that fetch
     state: "idle", cur: 0, dur: 0, counted: false, gen: 0,
-    loading: false,                  // a load was sent and the new song has not reported yet
+    loading: false,                  // video: a load was sent and the new song has not reported yet
     errRun: 0,                       // songs in a row that failed to play
     shuffle: false, repeat: "off",   // "off" | "all" | "one"
-    order: null                      // shuffled play order of queue indexes
+    order: null,                     // shuffled play order of queue indexes
+    engine: "audio",                 // what plays the current song: "audio" | "video"
+    video: !!lsGet("mm_video", false),   // the listener chose to watch the videos
+    want: "play",                    // the listener's last play / pause, honoured by a song still loading
+    rung: 0,                         // audio source tried: 0 = the API's stream URL, 1 = /latest_version
+    refetched: false,                // this song's stream broke after playing and a new URL was fetched once
+    aload: 0,                        // bumped by every audio or video load; stale callbacks compare it
+    asrc: "",                        // the stream URL the <audio> element holds for this song
+    sounded: false,                  // the stream of this load has played (the stall watchdog is off)
+    seekTo: 0,                       // a position to jump to once the stream's metadata is in
+    fellBack: false,                 // no audio stream loaded, so this song plays as a video
+    noVideo: false,                  // the video failed for this song, so it must not fall back to it
+    handedOff: false,                // the page was hidden while the video played: back to it when shown
+    vpauseT: 0,                      // when the video was last paused in view (a tap on the video itself)
+    vhold: false,                    // the video was loaded to stay paused and has not reported a pause yet
+    stallT: 0
   };
+
+  /* ---------------- audio streams ---------------- */
+  // The API's stream URLs send every range request to the companion server that made them.
+  // /latest_version picks a companion per request, and a browser stops a media load whose data
+  // switches origin (a seek then stalls), so it is only the second choice.
+  const streams = {};   // id -> { url, t }
+  function freshStream(id) {
+    const c = streams[id]; if (!c) return null;
+    const m = /[?&]expire=(\d+)/.exec(c.url);
+    const left = m ? Number(m[1]) * 1000 - Date.now() : c.t + 20 * 60000 - Date.now();
+    return left > 10 * 60000 ? c.url : null;
+  }
+  function resolveStream(id) {
+    const hit = freshStream(id);
+    if (hit) return Promise.resolve(hit);
+    const key = "stream:" + id;
+    if (inflight[key]) return inflight[key];
+    const p = (async () => {
+      // not tryBases: one video without a stream must not mark the instance down for search
+      for (const base of ordered(INV)) {
+        try {
+          const j = await fetchJSON(base + "/api/v1/videos/" + encodeURIComponent(id) + "?local=true&fields=adaptiveFormats", 9000);
+          const a = (j && j.adaptiveFormats || []).filter(f => f && f.url && /^audio\/mp4/.test(f.type || ""));
+          const f = a.find(x => String(x.itag) === "140") || a.sort((x, y) => (y.bitrate || 0) - (x.bitrate || 0))[0];
+          if (f) { const url = f.url.charAt(0) === "/" ? base + f.url : f.url; streams[id] = { url, t: Date.now() }; return url; }
+        } catch (e) {}
+      }
+      return null;
+    })();
+    inflight[key] = p;
+    p.then(() => { delete inflight[key]; }, () => { delete inflight[key]; });
+    return p;
+  }
+  const latestUrl = id => INV[0] + "/latest_version?id=" + encodeURIComponent(id) + "&itag=140&local=true";
+
+  const A = document.createElement("audio");
+  A.preload = "auto";
+  A.hidden = true;
+  (document.body || document.documentElement).appendChild(A);
+  // iOS lets an <audio> element play without a tap only after it has played inside one: play a
+  // zero-length clip on the first touch, so a song that starts after a fetch or behind the lock screen may play
+  const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+  let unlocked = false;
+  function unlock() {
+    if (unlocked || P.asrc) return;
+    unlocked = true;
+    try { A.src = SILENT; const p = A.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  }
+  ["touchend", "click", "keydown"].forEach(t => document.addEventListener(t, unlock, { capture: true, passive: true }));
+
+  // the element's events count only while it holds this song's stream (not the unlock clip, not an old song)
+  const live = () => P.engine === "audio" && !!P.asrc && A.src === P.asrc;
+  // P.want follows the element when the browser or the system pauses or resumes it (headphones unplugged,
+  // a call): showing the page again or switching to the video must not start a song the listener cannot hear
+  A.addEventListener("playing", () => {
+    if (!live()) return;
+    unlocked = true; P.sounded = true; if (!A.paused) P.want = "play";
+    clearStall(); setState("playing"); prefetchNext();
+  });
+  A.addEventListener("waiting", () => { if (live() && !A.paused) setState("buffering"); });
+  A.addEventListener("pause", () => { if (live() && !A.ended) { P.want = "pause"; setState("paused"); } });
+  A.addEventListener("ended", () => { if (!live()) return; setState("ended"); afterEnd(); });
+  // not while a start position waits for the metadata: a new src first reports the position reset to 0
+  A.addEventListener("timeupdate", () => { if (live() && !P.seekTo) tick(A.currentTime, A.duration); });
+  A.addEventListener("loadedmetadata", () => {
+    if (!live()) return;
+    if (P.seekTo > 0) { try { A.currentTime = P.seekTo; } catch (e) {} }
+    P.seekTo = 0;
+    if (A.duration > 0 && isFinite(A.duration)) { P.dur = A.duration; emit("time", { cur: P.cur, dur: P.dur }); ms.position(); }
+  });
+  // code 1 = aborted (a newer load replaced it), not a failure
+  A.addEventListener("error", () => { if (live() && A.error && A.error.code !== 1) audioFailed(P.aload); });
+
+  function setState(s) {
+    P.state = s;
+    if (s === "playing") P.errRun = 0;
+    emit("state", s);
+    ms.state();
+  }
+  // a time report from either player
+  function tick(cur, dur) {
+    P.cur = cur || 0;
+    if (dur > 0 && isFinite(dur)) P.dur = dur;
+    emit("time", { cur: P.cur, dur: P.dur });
+    ms.position();
+    const s = current();
+    // count a play once 30 s (or half of a short song) has been heard
+    if (s && !P.counted && P.state === "playing" && (P.cur >= 30 || (P.dur && P.cur >= P.dur / 2))) { P.counted = true; lib.played(s); }
+  }
+  function clearStall() { clearTimeout(P.stallT); P.stallT = 0; }
+  function playAudio() {
+    const p = A.play();
+    if (p && p.catch) p.catch(e => {
+      // AbortError: a newer load replaced this one. NotAllowedError: the browser wants a tap first
+      if (!live() || !e || e.name !== "NotAllowedError") return;
+      clearStall(); P.want = "pause"; setState("paused"); emit("blocked", current());
+    });
+    // no sound 15 s after asking a stream that has not played yet: try the next source (a stream that errors
+    // says so sooner). "Not played" rather than "at 0": a load that starts partway seeks before any sound
+    if (P.sounded) return;
+    const tok = P.aload;
+    clearStall();
+    P.stallT = setTimeout(() => { if (tok === P.aload && live() && !A.paused && !P.sounded) audioFailed(tok); }, 15000);
+  }
+  function loadAudio(start) {
+    const s = current(); if (!s) return;
+    const tok = ++P.aload;
+    if (P.engine !== "audio") { P.engine = "audio"; if (P.frame) cmd({ cmd: "stop" }); }
+    P.asrc = ""; P.sounded = false; P.seekTo = start > 0 ? start : 0; clearStall();
+    showEngine();
+    setState(P.want === "play" ? "buffering" : "paused");
+    const go = url => {
+      if (tok !== P.aload) return;
+      if (!url) { audioFailed(tok); return; }
+      A.src = url; P.asrc = A.src;
+      if (P.want !== "play") { setState("paused"); return; }
+      playAudio();
+    };
+    if (P.rung > 0) go(latestUrl(s.id));
+    else {
+      // a stream fetched ahead is set at once: when a song ends behind the lock screen the next one must
+      // start inside the "ended" event, before the browser has a chance to suspend the page
+      const hit = freshStream(s.id);
+      if (hit) go(hit); else resolveStream(s.id).then(go, () => go(null));
+    }
+  }
+  function audioFailed(tok) {
+    if (tok !== P.aload || P.engine !== "audio") return;
+    clearStall();
+    const s = current(); if (!s) return;
+    delete streams[s.id];
+    // a stream that played and then broke (its URL expired during a long pause, its server went away):
+    // a new URL from the API first, once per song, since /latest_version tends to stall on the seek back
+    if (P.rung === 0 && P.sounded && !P.refetched) { P.refetched = true; loadAudio(P.cur); return; }
+    if (P.rung === 0) { P.rung = 1; loadAudio(P.cur); return; }
+    // no audio stream: the video can still play it while the page is in view
+    if (!document.hidden && !P.noVideo) { P.fellBack = true; loadVideo(P.cur); return; }
+    failed("stream");
+  }
+  function loadVideo(start) {
+    const s = current(); if (!s) return;
+    ++P.aload;
+    P.engine = "video"; P.asrc = ""; P.seekTo = 0; P.vpauseT = 0; clearStall();
+    try { A.pause(); A.removeAttribute("src"); A.load(); } catch (e) {}
+    showEngine();
+    ensureFrame();
+    P.loading = true;
+    setState(P.want === "play" ? "buffering" : "paused");
+    cmd({ cmd: "load", id: s.id, start: start > 0 ? start : 0 });
+    P.vhold = P.want !== "play";
+    if (P.vhold) cmd({ cmd: "pause" });
+  }
+  // the frame could not get YouTube's player script and says so only once: the next video gets a new frame
+  function dropFrame() {
+    try { if (P.frame && P.frame.parentNode) P.frame.parentNode.removeChild(P.frame); } catch (e) {}
+    P.frame = null; P.booted = false; P.pending = [];
+  }
+  function prefetchNext() {
+    const i = nextIndex();
+    if (i >= 0 && i !== P.index && P.queue[i]) resolveStream(P.queue[i].id).catch(() => {});
+  }
+  // the album art the host shows in place of the video while the audio plays
+  const ART = ["maxresdefault", "hq720", "mqdefault"];
+  const artUrl = (id, k) => "https://i.ytimg.com/vi/" + id + "/" + ART[k] + ".jpg";
+  function ensureArt() {
+    if (P.art || !P.host) return;
+    if (!document.getElementById("mm-core-css")) {
+      const st = document.createElement("style");
+      st.id = "mm-core-css";
+      st.textContent = ".mm-art{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;background:#000;display:none;border:0}" +
+        "[data-mm-engine=audio]>.mm-art{display:block}[data-mm-engine=audio]>iframe{visibility:hidden}";
+      document.head.appendChild(st);
+    }
+    const im = document.createElement("img");
+    im.className = "mm-art"; im.alt = ""; im.decoding = "async";
+    // 16:9 thumbnails only (the 4:3 ones have letterbox bars that show in a square cover). The big ones
+    // are missing for some videos; a missing one may still load, as YouTube's 120x90 grey placeholder
+    // sent with a 404. mqdefault (320x180) always exists
+    const small = () => {
+      const k = Number(im.dataset.step || 0) + 1;
+      if (im.dataset.id && k < ART.length) { im.dataset.step = String(k); im.src = artUrl(im.dataset.id, k); }
+    };
+    im.addEventListener("error", small);
+    im.addEventListener("load", () => { if (im.naturalWidth && im.naturalWidth <= 120) small(); });
+    P.art = im;
+  }
+  function showEngine() {
+    const s = current();
+    if (P.host) {
+      ensureArt();
+      if (P.art.parentNode !== P.host) P.host.appendChild(P.art);
+      P.host.setAttribute("data-mm-engine", P.engine);
+      if (s && P.art.dataset.id !== s.id) { P.art.dataset.id = s.id; P.art.dataset.step = "0"; P.art.src = artUrl(s.id, 0); }
+    }
+    emit("engine", { engine: P.engine, video: P.video, fallback: P.fellBack });
+  }
+
+  /* ---------------- the video player (../tv/player.html) ---------------- */
   function ensureFrame() {
     if (P.frame || !P.host) return;
     const f = document.createElement("iframe");
@@ -567,53 +788,89 @@
   window.addEventListener("message", e => {
     if (!P.frame || e.source !== P.frame.contentWindow || e.origin !== PLAYER_ORIGIN) return;
     const m = e.data; if (!m || m.meekin !== 1) return;
-    if (m.ev === "boot") { P.booted = true; const q = P.pending; P.pending = []; q.forEach(cmd); }
-    else if (m.ev === "state") {
+    if (m.ev === "boot") { P.booted = true; const q = P.pending; P.pending = []; q.forEach(cmd); return; }
+    // the song moved to the audio player: what the video still reports is stale, and it must stay quiet
+    if (P.engine !== "video") { if (m.ev === "state" && m.s === 1) cmd({ cmd: "stop" }); return; }
+    if (m.ev === "state") {
       // the frame's messages carry no video id: until the new song reports (unstarted / buffering),
       // a time tick still in flight belongs to the song that was playing before
       if (m.s === -1 || m.s === 3) P.loading = false;
-      P.state = STATES[m.s] || "idle";
-      if (P.state === "playing") P.errRun = 0;
-      // hidden page: a load started by a timer, radio or autoplay (player.html asks to play on every
-      // load) must not play in the background, whatever the state was when the page was hidden
-      if (document.hidden && (P.state === "playing" || P.state === "buffering")) cmd({ cmd: "pause" });
-      emit("state", P.state);
-      ms.state();
+      if (m.s === 1 && !P.loading) {
+        // YouTube starts a song it was told to load paused when the pause came before its player was
+        // ready, or right after the load: pause it again
+        if (P.vhold) { P.vhold = false; cmd({ cmd: "pause" }); return; }
+        // a play made on the video itself (it can be tapped) is the listener's: locking the screen hands it over
+        P.want = "play";
+      }
+      if (m.s === 2) P.vhold = false;
+      setState(STATES[m.s] || "idle");
+      // a pause made on the video itself (it can be tapped) is the listener's: hiding the page must not
+      // start the song again. One that comes with the screen locking is the browser's (see visibilitychange)
+      if (P.state === "paused" && !document.hidden) P.vpauseT = Date.now();
+      // fetch the audio ahead, so locking the screen can start it without waiting for the network
+      if (P.state === "playing") resolveStream(current().id).catch(() => {});
       if (P.state === "ended") afterEnd();
     } else if (m.ev === "time") {
       if (P.loading) { if ((m.cur || 0) > 1.5) return; P.loading = false; }   // a new song starts at 0
-      P.cur = m.cur || 0; P.dur = m.dur || P.dur;
-      emit("time", { cur: P.cur, dur: P.dur });
-      ms.position();
-      const s = current();
-      // count a play once 30 s (or half of a short song) has been heard
-      if (s && !P.counted && P.state === "playing" && (P.cur >= 30 || (P.dur && P.cur >= P.dur / 2))) { P.counted = true; lib.played(s); }
+      tick(m.cur, m.dur);
     } else if (m.ev === "error") {
-      const s = current();
-      P.errRun++;
-      // skip unplayable songs like a music app does, but not forever: a page-level failure
-      // (no Referer, player script not loading) hits every song alike, and so does a run of failures
-      const stop = P.errRun > 3 || String(m.code) === "153" || m.code === "api";
-      emit("error", { code: m.code, message: ERR[String(m.code)] || ("เล่นไม่ได้ (" + m.code + ")"), song: s, final: stop });
-      if (stop) return;
-      const gen = P.gen;
-      setTimeout(() => { if (gen === P.gen) skipBroken(); }, 2500);
+      // the video won't play here (not embeddable, player script blocked...): the audio may,
+      // unless the audio is what failed first
+      if (m.code === "api") dropFrame();
+      if (!P.fellBack) { P.noVideo = true; P.rung = 0; loadAudio(P.cur); return; }
+      failed(m.code);
     } else if (m.ev === "blocked") emit("blocked", current());
   });
   const ERR = { "2": "รหัสเพลงไม่ถูกต้อง", "5": "เครื่องเล่นมีปัญหา", "100": "ไม่พบเพลงนี้แล้ว",
     "101": "เจ้าของไม่อนุญาตให้เล่นนอก YouTube", "150": "เจ้าของไม่อนุญาตให้เล่นนอก YouTube",
-    "153": "YouTube ไม่ได้รับ Referer", "api": "โหลดเครื่องเล่นไม่ได้" };
+    "153": "YouTube ไม่ได้รับ Referer", "api": "โหลดเครื่องเล่นไม่ได้", "stream": "โหลดเสียงเพลงนี้ไม่ได้" };
+  // a song that cannot be played either way
+  function failed(code) {
+    const s = current();
+    P.errRun++;
+    // skip unplayable songs like a music app does, but not forever: when the stream server is down
+    // every song fails alike, so a run of failures stops instead of racing through the queue
+    const stop = P.errRun > 3;
+    emit("error", { code, message: ERR[String(code)] || ("เล่นไม่ได้ (" + code + ")"), song: s, final: stop });
+    if (stop) { pauseNow(); setState("paused"); return; }
+    const gen = P.gen;
+    // in view, leave a moment to read the message; behind the lock screen nobody reads it
+    if (document.hidden) skipBroken(); else setTimeout(() => { if (gen === P.gen) skipBroken(); }, 2500);
+  }
 
+  /* ---------------- queue ---------------- */
   function current() { return P.queue[P.index] || null; }
   function startAt(i) {
     if (i < 0 || i >= P.queue.length) return;
-    P.index = i; P.cur = 0; P.dur = P.queue[i].sec || 0; P.counted = false; P.gen++; P.loading = true;
-    ensureFrame();
-    cmd({ cmd: "load", id: P.queue[i].id, start: 0 });
+    P.index = i; P.cur = 0; P.dur = P.queue[i].sec || 0; P.counted = false; P.gen++;
+    P.want = "play"; P.rung = 0; P.refetched = false; P.fellBack = false; P.noVideo = false;
     emit("track", P.queue[i]);
     emit("queue", { queue: P.queue, index: P.index });
     ms.meta(P.queue[i]);
+    // a hidden page cannot play the video: audio now, the video once the page is shown again
+    P.handedOff = P.video && document.hidden;
+    if (P.video && !document.hidden) loadVideo(0); else loadAudio(0);
     maybeExtendRadio();
+  }
+  function pauseNow() {
+    P.want = "pause"; clearStall();
+    if (P.engine === "audio") { try { A.pause(); } catch (e) {} } else cmd({ cmd: "pause" });
+    // the stream URL is still being fetched: no "pause" event will come to end the "buffering"
+    if (P.engine === "audio" && !live() && P.state === "buffering") setState("paused");
+  }
+  function resume() {
+    if (!current()) return;
+    P.want = "play";
+    // a hidden page cannot play the video (play on the lock screen): the audio, the video once shown again
+    if (P.engine === "video" && document.hidden && !P.fellBack) { P.handedOff = true; P.rung = 0; loadAudio(P.cur); return; }
+    if (P.engine === "video") { P.vhold = false; cmd({ cmd: "play" }); return; }
+    // nothing loaded yet, or the stream broke: load it again from where it was, from the API's stream again
+    if (!P.asrc || A.error) { P.rung = 0; loadAudio(P.cur); return; }
+    playAudio();
+  }
+  function seekTo(t) {
+    if (P.engine === "video") { cmd({ cmd: "seek", t }); return; }
+    if (P.asrc && A.readyState > 0) { try { A.currentTime = t; } catch (e) {} } else P.seekTo = t;
   }
   function nextIndex() {
     if (P.repeat === "one") return P.index;
@@ -645,7 +902,7 @@
     if (i >= 0 && i !== P.index) startAt(i); else extendRadio(true);
   }
   function prev() {
-    const restart = () => { cmd({ cmd: "seek", t: 0 }); P.cur = 0; emit("time", { cur: 0, dur: P.dur }); };
+    const restart = () => { seekTo(0); P.cur = 0; emit("time", { cur: 0, dur: P.dur }); ms.position(); };
     if (P.cur > 4) return restart();
     // shuffle: the start is the first song of the play order, which need not be queue index 0
     if (P.shuffle && P.order) { const at = P.order.indexOf(P.index); return at > 0 ? startAt(P.order[at - 1]) : restart(); }
@@ -677,7 +934,7 @@
       const add = (r || []).filter(s => !have[s.id] && !skip[s.id]).slice(0, 15);
       if (!add.length) {
         // nothing to go on with: stop, so the player and the UI agree (a manual "next" may find the song playing)
-        if (want) { cmd({ cmd: "pause" }); emit("state", "ended"); }
+        if (want) { pauseNow(); setState("ended"); }
         return;
       }
       const start = P.queue.length;
@@ -686,6 +943,7 @@
       emit("queue", { queue: P.queue, index: P.index });
       // shuffle: begin at the first new entry of the play order, so none of the new songs is skipped
       if (want) startAt(P.shuffle ? P.order[P.order.length - add.length] : start);
+      else prefetchNext();
     };
     api.radio(seed.id, seed).then(done, () => done(null));
   }
@@ -694,7 +952,14 @@
     P.order = [P.index].concat(rest);
   }
   const player = {
-    attach(host) { P.host = host; if (P.frame && P.frame.parentNode !== host) host.appendChild(P.frame); },
+    // host: where the video (or, while the audio plays, the album art) is drawn
+    attach(host) {
+      P.host = host;
+      if (P.frame && P.frame.parentNode !== host) host.appendChild(P.frame);
+      ensureArt();
+      if (P.art.parentNode !== host) host.appendChild(P.art);
+      host.setAttribute("data-mm-engine", P.engine);
+    },
     // play a song; queue defaults to just that song (radio fills the rest)
     play(s, opts) {
       opts = opts || {};
@@ -708,24 +973,42 @@
     playAt(i) { P.errRun = 0; startAt(i); },
     toggle() {
       if (!current()) return;
-      cmd({ cmd: P.state === "playing" || P.state === "buffering" ? "pause" : "play" });
+      if (P.state === "playing" || P.state === "buffering") pauseNow(); else resume();
     },
-    play_() { cmd({ cmd: "play" }); },
-    pause() { cmd({ cmd: "pause" }); },
+    play_() { resume(); },
+    pause() { pauseNow(); },
     next() { P.errRun = 0; next(false); },
     prev() { P.errRun = 0; prev(); },
-    seek(t) { t = Math.max(0, Math.min(Number(t) || 0, (P.dur || 0) - 1)); P.cur = t; cmd({ cmd: "seek", t }); emit("time", { cur: t, dur: P.dur }); },
+    seek(t) {
+      t = Math.max(0, Math.min(Number(t) || 0, (P.dur || 0) - 1));
+      P.cur = t; seekTo(t);
+      emit("time", { cur: t, dur: P.dur }); ms.position();
+    },
+    // watch the music video (true) or listen to the audio only (false, the default); remembered
+    setVideo(on) {
+      P.video = !!on;
+      lsSet("mm_video", P.video);
+      P.handedOff = false;
+      // a song shown paused (the video tapped to pause it, say) stays paused in the other player
+      if (P.state === "paused") P.want = "pause";
+      if (current() && P.video && P.engine === "audio" && !document.hidden) { P.noVideo = false; loadVideo(P.cur); }
+      else if (current() && !P.video && P.engine === "video") { P.fellBack = false; P.rung = 0; loadAudio(P.cur); }
+      else showEngine();
+      return P.video;
+    },
     playNext(s) {
       if (!current()) { player.play(s); return; }
       P.queue.splice(P.index + 1, 0, lite(s));
       if (P.shuffle && P.order) { P.order = P.order.map(i => (i > P.index ? i + 1 : i)); P.order.splice(P.order.indexOf(P.index) + 1, 0, P.index + 1); }
       emit("queue", { queue: P.queue, index: P.index });
+      prefetchNext();
     },
     addToQueue(s) {
       if (!current()) { player.play(s); return; }
       P.queue.push(lite(s));
       if (P.shuffle && P.order) P.order.push(P.queue.length - 1);
       emit("queue", { queue: P.queue, index: P.index });
+      prefetchNext();
     },
     removeAt(i) {
       if (i === P.index || i < 0 || i >= P.queue.length) return;
@@ -733,29 +1016,36 @@
       if (i < P.index) P.index--;
       if (P.order) P.order = P.order.filter(x => x !== i).map(x => (x > i ? x - 1 : x));
       emit("queue", { queue: P.queue, index: P.index });
+      prefetchNext();
     },
     setShuffle(v) {
       P.shuffle = !!v; P.order = P.shuffle && current() ? (makeOrder(), P.order) : null;
       emit("queue", { queue: P.queue, index: P.index }); emit("mode", { shuffle: P.shuffle, repeat: P.repeat });
+      prefetchNext();
       return P.shuffle;
     },
     cycleRepeat() {
       P.repeat = P.repeat === "off" ? "all" : P.repeat === "all" ? "one" : "off";
       emit("mode", { shuffle: P.shuffle, repeat: P.repeat });
       if (P.repeat === "off" && current()) maybeExtendRadio();   // autoplay resumes near the end of the queue
+      prefetchNext();
       return P.repeat;
     },
     get queue() { return P.queue; }, get index() { return P.index; }, get current() { return current(); },
     get state() { return P.state; }, get time() { return { cur: P.cur, dur: P.dur }; },
     get shuffle() { return P.shuffle; }, get repeat() { return P.repeat; },
+    // "audio" | "video": what plays the current song; video: the listener's choice; fallback: a video
+    // only because this song has no audio stream (it stops when the screen locks)
+    get engine() { return P.engine; }, get video() { return P.video; }, get fallback() { return P.fellBack; },
     upNext() {
       if (P.shuffle && P.order) { const at = P.order.indexOf(P.index); return P.order.slice(at + 1).map(i => P.queue[i]); }
       return P.queue.slice(P.index + 1);
     }
   };
 
-  /* Media Session: lock-screen / notification / headset controls while the app is open.
-     (YouTube's terms forbid background playback, so locking the screen pauses — see below.) */
+  /* Media Session: lock screen, notification, headset and car controls. They drive the <audio>
+     element behind the lock screen as well. No seekbackward / seekforward handlers: iOS would put
+     10-second skip buttons on the lock screen in place of previous / next song. */
   const ms = {
     ok: "mediaSession" in navigator,
     meta(s) {
@@ -765,30 +1055,40 @@
           artwork: [{ src: thumb(s.id, "small"), sizes: "320x180", type: "image/jpeg" }, { src: thumb(s.id), sizes: "480x360", type: "image/jpeg" }] });
       } catch (e) {}
     },
-    state() { if (ms.ok) try { navigator.mediaSession.playbackState = P.state === "playing" ? "playing" : (current() ? "paused" : "none"); } catch (e) {} },
+    state() {
+      if (!ms.ok) return;
+      const on = P.state === "playing" || (P.state === "buffering" && P.want === "play");
+      try { navigator.mediaSession.playbackState = on ? "playing" : (current() ? "paused" : "none"); } catch (e) {}
+    },
     position() {
       if (!ms.ok || !navigator.mediaSession.setPositionState || !(P.dur > 0)) return;
-      try { navigator.mediaSession.setPositionState({ duration: P.dur, position: Math.min(P.cur, P.dur), playbackRate: 1 }); } catch (e) {}
+      try { navigator.mediaSession.setPositionState({ duration: P.dur, position: Math.max(0, Math.min(P.cur, P.dur)), playbackRate: 1 }); } catch (e) {}
     },
     init() {
       if (!ms.ok) return;
       const h = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch (e) {} };
-      // a headset button, media key or lock-screen control can fire while the page is hidden:
-      // whatever starts playback works only while it is visible ("pause" always works)
-      h("play", () => { if (!document.hidden) player.play_(); });
-      h("pause", () => player.pause());
-      h("previoustrack", () => { if (!document.hidden) player.prev(); });
-      h("nexttrack", () => { if (!document.hidden) player.next(); });
+      h("play", () => resume());
+      h("pause", () => pauseNow());
+      h("stop", () => pauseNow());
+      h("previoustrack", () => player.prev());
+      h("nexttrack", () => player.next());
       h("seekto", d => { if (d && d.seekTime != null) player.seek(d.seekTime); });
-      h("seekbackward", d => player.seek(P.cur - ((d && d.seekOffset) || 10)));
-      h("seekforward", d => player.seek(P.cur + ((d && d.seekOffset) || 10)));
     }
   };
   ms.init();
-  // no background playback (YouTube API Services policy III.I.9)
-  // Pause whenever a song is loaded, not only while "playing": a song still buffering would start
-  // behind the lock screen. Songs loaded later while hidden are paused by the "state" handler.
-  document.addEventListener("visibilitychange", () => { if (document.hidden && current()) player.pause(); });
+  document.addEventListener("visibilitychange", () => {
+    if (!current()) return;
+    if (document.hidden) {
+      // mobile browsers pause a video behind the lock screen: carry on with the audio from the same spot,
+      // unless the listener paused the video by tapping it (more than a moment before the page was hidden)
+      const tapped = P.state === "paused" && P.vpauseT > 0 && Date.now() - P.vpauseT > 1500;
+      if (P.engine === "video" && !P.fellBack && P.want === "play" && !tapped) { P.handedOff = true; P.rung = 0; loadAudio(P.cur); }
+    } else if (P.handedOff) {
+      // shown again: back to the video the listener chose
+      P.handedOff = false;
+      if (P.video && P.engine === "audio" && !P.noVideo) loadVideo(P.cur);
+    }
+  });
 
   window.MeekinMusic = {
     api, recs, lib, player, on,

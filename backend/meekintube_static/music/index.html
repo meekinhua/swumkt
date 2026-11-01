@@ -12,7 +12,7 @@
   :root{ color-scheme:dark; }
   *{ box-sizing:border-box; margin:0; }
   body{ min-height:100vh; background:#0b0b12; color:#f4f4f8; font-family:"Noto Sans Thai",system-ui,sans-serif;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 20px; }
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:72px 20px 32px; }
   h1{ font-size:28px; margin-bottom:6px; }
   p.sub{ color:#a3a3b8; margin-bottom:28px; text-align:center; }
   .cards{ display:grid; gap:16px; width:100%; max-width:720px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
@@ -22,16 +22,21 @@
   .ytm{ background:linear-gradient(135deg,#3b0a2a,#16081f); border:1px solid #4a1a3a; }
   .tunes{ background:linear-gradient(135deg,#06331f,#0a1410); border:1px solid #14532d; }
   a.card:active{ transform:scale(.98); }
+  a.back{ position:fixed; top:max(12px, env(safe-area-inset-top)); left:12px; display:flex; align-items:center; gap:4px;
+    padding:8px 12px 8px 8px; border-radius:999px; color:#f4f4f8; text-decoration:none; font-size:15px; background:rgba(255,255,255,.06); }
+  a.back svg{ width:22px; height:22px; }
+  a.back:active{ background:rgba(255,255,255,.14); }
   .note{ margin-top:28px; max-width:720px; color:#6c6c82; font-size:13px; line-height:1.6; text-align:center; }
 </style>
 </head>
 <body>
+  <a class="back" href="../" aria-label="ย้อนกลับไป meekinTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>meekinTube</a>
   <h1>meekin Music</h1>
   <p class="sub">เลือกหน้าตาที่ชอบ ประวัติ เพลงที่ถูกใจ และเพลย์ลิสต์ใช้ร่วมกันทั้งสองแบบ</p>
   <div class="cards">
     <a class="card ytm" href="ytm/"><h2>meekin Music</h2><span>เพลงด่วน มิกซ์สำหรับคุณ วิทยุจากเพลง ดูมิวสิกวิดีโอไปด้วย</span></a>
     <a class="card tunes" href="tunes/"><h2>meekin Tunes</h2><span>เดลี่มิกซ์ หน้าเพลย์ลิสต์สีตามเพลง คลังเพลงของคุณ ค้นหาตามแนวเพลง</span></a>
   </div>
-  <p class="note">เล่นผ่าน YouTube embedded player · เพลงจะหยุดเมื่อปิดจอหรือสลับแอป (ข้อกำหนดของ YouTube ไม่อนุญาตให้แอปภายนอกเล่นเบื้องหลัง)</p>
+  <p class="note">เพลงเล่นต่อได้เมื่อล็อกจอหรือสลับแอป และควบคุมได้จากหน้าล็อกจอ หูฟัง หรือการแจ้งเตือน · เลือกดูมิวสิกวิดีโอได้ในหน้ากำลังเล่น</p>
 </body>
 </html>
