@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Avatar, Chip, Icon, Modal, useToast } from './AlumniUI';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -69,11 +70,11 @@ export const ReviewModal = ({ open, onClose, subject, token, onPosted }) => {
         subject_user_id: subject.user_id,
         rating, tags, comment, anonymous,
       }, { headers: { Authorization: `Bearer ${token}` } });
-      toast.show('รีวิวสำเร็จ +25 XP · ขอบคุณที่ช่วยตระกูลครับ');
+      toast.show('รีวิวสำเร็จ +25 XP · ขอบคุณที่ช่วยสายเทคครับ');
       onPosted?.();
       onClose();
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'รีวิวไม่สำเร็จ');
+      toast.show(apiErrorText(e, 'รีวิวไม่สำเร็จ'));
     } finally { setSubmitting(false); }
   };
 
@@ -158,7 +159,7 @@ export const ReviewsSection = ({ userId, currentUserId, token, profile }) => {
   return (
     <div className="al-card al-card-pad" data-testid="profile-reviews-section">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div className="al-eyebrow">· รีวิวจากตระกูล ·</div>
+        <div className="al-eyebrow">· รีวิวจากสายเทค ·</div>
         {!isOwn && (
           <button className="al-btn al-btn-red al-btn-sm" onClick={() => setShowModal(true)} data-testid="open-review-modal-btn">
             <Icon name="star" size={12} /> รีวิว

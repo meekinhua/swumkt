@@ -11,9 +11,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, Copy, AlertTriangle, Code, X } from 'lucide-react';
+import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { copyToClipboard } from '@/lib/clipboard';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate } from '@/components/AiPolicyNote';
+import AiActionButton from '@/components/AiActionButton';
+import PasteAnswerBox from '@/components/PasteAnswerBox';
+import { useExternalDialog } from '@/hooks/useExternalDialog';
+import { parseAnalysisSections } from '@/lib/aiTextParse';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -21,6 +27,10 @@ const CustomerBehaviorTool = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
   const { t } = useTranslation();
+  // System-LLM policy (admin switch). Blocked => the page still works through
+  // the copy-prompt / paste-answer panel, which needs no server AI.
+  const analysisGate = useAiGate('behavior.ai');
+  const imageGate = useAiGate('behavior.image');
 
   // Step 1: Input
   const [rawData, setRawData] = useState('');
@@ -61,143 +71,42 @@ const CustomerBehaviorTool = () => {
   });
   const [saving, setSaving] = useState(false);
 
-  // Fallback states for when AI fails
-  const [showPromptFallback, setShowPromptFallback] = useState(false);
-  const [generatedPrompt, setGeneratedPrompt] = useState('');
-  const [manualAnalysisInput, setManualAnalysisInput] = useState('');
+  // "Use my own AI": the server builds the prompt (same builder as the system path);
+  // the user pastes the answer back into the box below the button.
+  const ext = useExternalDialog();
 
-  // Function to build prompt for display (matches backend)
-  const buildAnalysisPrompt = () => {
-    const languageName = targetLanguage === 'th' ? 'Thai' : 'English';
-    
-    const systemPrompt = `You are an expert consumer behavior analyst and market researcher.
+  const analysisBody = () => ({
+    raw_data: rawData,
+    research_context: researchContext || null,
+    target_language: targetLanguage,
+  });
 
-Your task is to analyze qualitative research data about customer behavior and provide insights.
-
-Guidelines:
-1. Identify key behavioral patterns:
-   - Purchase behaviors
-   - Usage patterns
-   - Decision-making processes
-   - Motivations and drivers
-   - Barriers and obstacles
-
-2. Analyze customer segments if applicable:
-   - Different behavior groups
-   - Characteristics of each segment
-   - Behavioral differences
-
-3. Identify psychological factors:
-   - Emotional triggers
-   - Cognitive biases
-   - Social influences
-   - Cultural factors
-
-4. Provide actionable insights:
-   - What behaviors to encourage
-   - What barriers to remove
-   - How to influence positive behaviors
-
-5. Output Structure:
-   - Main Analysis (comprehensive text analysis)
-   - Key Findings (3-5 bullet points)
-   - Recommendations (3-5 actionable items)
-
-Respond in this exact format:
-ANALYSIS:
-[Your comprehensive analysis text]
-
-KEY_FINDINGS:
-- [Finding 1]
-- [Finding 2]
-- [Finding 3]
-
-RECOMMENDATIONS:
-- [Recommendation 1]
-- [Recommendation 2]
-- [Recommendation 3]`;
-
-    const userPrompt = `Please analyze the following customer behavior research data:
-
-Research Data:
-${rawData}
-${researchContext ? `\nAdditional Context: ${researchContext}` : ''}
-
-Output Language: ${languageName}
-
-Please provide a comprehensive analysis with key findings and actionable recommendations in ${languageName}.`;
-
-    return `=== Prompt ===
-${systemPrompt}
-
-=== User Input ===
-- Output Language: ${languageName}
-
-=== Research Data ===
-${rawData}
-${researchContext ? `\n=== Additional Context ===\n${researchContext}` : ''}
-
-=== User Message (ส่งไปยัง AI) ===
-${userPrompt}`;
+  const analysisPromptRequest = () => {
+    const data = analysisBody();
+    return { method: 'POST', url: `${API}/api/generate-behavior-analysis/external-prompt`, data };
   };
 
-  // Copy prompt to clipboard (uses fallback util to handle iframe blocks)
-  const handleCopyPrompt = async () => {
-    await copyToClipboard(generatedPrompt, { successMessage: 'คัดลอก Prompt แล้ว!' });
-  };
-
-  // Parse and apply manual analysis input
-  const handleApplyManualAnalysis = () => {
-    if (!manualAnalysisInput.trim()) {
-      toast.error('กรุณาใส่ผลการวิเคราะห์จาก AI');
+  const openExternalPrompt = () => {
+    if (!rawData.trim()) {
+      toast.error('Please enter research data');
       return;
     }
-
-    // Try to parse the structured format
-    let analysis_text = '';
-    let key_findings = [];
-    let recommendations = [];
-
-    const text = manualAnalysisInput;
-
-    if (text.includes('ANALYSIS:')) {
-      const parts = text.split('KEY_FINDINGS:');
-      analysis_text = parts[0].replace('ANALYSIS:', '').trim();
-      
-      if (parts.length > 1) {
-        const findingsPart = parts[1].split('RECOMMENDATIONS:')[0].trim();
-        for (const line of findingsPart.split('\n')) {
-          const trimmed = line.trim();
-          if (trimmed && (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*'))) {
-            key_findings.push(trimmed.replace(/^[-•*]\s*/, '').trim());
-          }
-        }
-        
-        if (parts[1].includes('RECOMMENDATIONS:')) {
-          const recsPart = parts[1].split('RECOMMENDATIONS:')[1].trim();
-          for (const line of recsPart.split('\n')) {
-            const trimmed = line.trim();
-            if (trimmed && (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*'))) {
-              recommendations.push(trimmed.replace(/^[-•*]\s*/, '').trim());
-            }
-          }
-        }
-      }
-    } else {
-      // Fallback: use entire text as analysis
-      analysis_text = text.trim();
-    }
-
-    setAnalysisResult({
-      analysis_text,
-      key_findings,
-      recommendations
-    });
-    setShowPromptFallback(false);
-    setManualAnalysisInput('');
-    toast.success('✨ ใส่ผลการวิเคราะห์สำเร็จ!');
+    ext.open({ title: 'วิเคราะห์พฤติกรรมด้วย AI ของฉันเอง', promptRequest: analysisPromptRequest() });
   };
 
+  // Parse the answer the user pasted from their own AI (ANALYSIS: / KEY_FINDINGS: / RECOMMENDATIONS:)
+  const handleApplyManualAnalysis = (text) => {
+    if (!text.trim()) {
+      toast.error('กรุณาใส่ผลการวิเคราะห์จาก AI');
+      return false;
+    }
+    setAnalysisResult(parseAnalysisSections(text));
+    toast.success('✨ ใส่ผลการวิเคราะห์สำเร็จ!');
+    return true;
+  };
+
+  // Called by <AiActionButton> (system path). A 409 llm_external_only is re-thrown so the
+  // button opens the "use my own AI" dialog; any other error is reported here.
   const handleGenerateAnalysis = async () => {
     if (!rawData.trim()) {
       toast.error('Please enter research data');
@@ -208,26 +117,18 @@ ${userPrompt}`;
       setGeneratingAnalysis(true);
       const response = await axios.post(
         `${API}/api/generate-behavior-analysis`,
-        {
-          raw_data: rawData,
-          research_context: researchContext || null,
-          target_language: targetLanguage
-        },
+        analysisBody(),
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
       setAnalysisResult(response.data);
-      setShowPromptFallback(false);
       toast.success('Analysis generated successfully!');
     } catch (error) {
       console.error('Analysis generation error:', error);
-      // Build and show prompt for manual use
-      const prompt = buildAnalysisPrompt();
-      setGeneratedPrompt(prompt);
-      setShowPromptFallback(true);
-      toast.error('AI Analysis ล้มเหลว - สามารถใช้ Prompt ไปทำเองได้');
+      if (isLlmExternalOnly(error)) throw error;
+      toast.error(`${apiErrorText(error, 'AI Analysis ล้มเหลว')} — ลองใช้ AI ของคุณเองจากเมนูลูกศรข้างปุ่ม`);
     } finally {
       setGeneratingAnalysis(false);
     }
@@ -257,7 +158,7 @@ ${userPrompt}`;
       toast.success('Image generated successfully!');
     } catch (error) {
       console.error('Image generation error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to generate image');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'Failed to generate image'));
     } finally {
       setGeneratingImage(false);
     }
@@ -301,7 +202,7 @@ ${userPrompt}`;
       // navigate('/content');
     } catch (error) {
       console.error('Save content error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to save content');
+      toast.error(apiErrorText(error, 'Failed to save content'));
     } finally {
       setSaving(false);
     }
@@ -412,104 +313,34 @@ ${userPrompt}`;
                 </div>
               </div>
 
-              <Button
-                onClick={handleGenerateAnalysis}
+              <AiActionButton
+                feature="behavior.ai"
+                label="Generate Analysis"
+                icon={Sparkles}
+                onSystem={handleGenerateAnalysis}
+                external={{
+                  title: 'วิเคราะห์พฤติกรรมด้วย AI ของฉันเอง',
+                  promptRequest: analysisPromptRequest(),
+                }}
                 disabled={generatingAnalysis || !rawData.trim()}
                 className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
-              >
-                {generatingAnalysis ? (
-                  <>
-                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
-                    <span className="hidden sm:inline">Analyzing Behavior...</span>
-                    <span className="sm:hidden">Analyzing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                    <span className="hidden sm:inline">Generate Analysis</span>
-                    <span className="sm:hidden">Generate</span>
-                  </>
-                )}
-              </Button>
-
-              {/* Fallback: Show prompt when AI fails */}
-              {showPromptFallback && generatedPrompt && (
-                <div className="mt-4 space-y-4">
-                  {/* Prompt Section */}
-                  <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-600" />
-                      <h4 className="font-bold text-amber-800">
-                        AI Analysis ล้มเหลว - นำ Prompt ไปใช้เองได้
-                      </h4>
-                      <button
-                        onClick={() => setShowPromptFallback(false)}
-                        className="ml-auto text-amber-600 hover:text-amber-800"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <p className="text-sm text-amber-700 mb-3">
-                      📋 คัดลอก Prompt ด้านล่างไปใช้กับ ChatGPT หรือ Claude แล้วนำผลลัพธ์มาใส่ในช่องด้านล่าง
-                    </p>
-                    <div className="relative">
-                      <Textarea
-                        value={generatedPrompt}
-                        readOnly
-                        rows={8}
-                        className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
-                      />
-                      <Button
-                        onClick={handleCopyPrompt}
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Manual Analysis Input */}
-                  <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Code className="w-5 h-5 text-green-600" />
-                      <h4 className="font-bold text-green-800">
-                        ใส่ผลการวิเคราะห์จาก AI
-                      </h4>
-                    </div>
-                    <p className="text-sm text-green-700 mb-3">
-                      นำผลลัพธ์ที่ได้จาก ChatGPT/Claude มาใส่ที่นี่ (ใช้ format ANALYSIS: / KEY_FINDINGS: / RECOMMENDATIONS:)
-                    </p>
-                    <Textarea
-                      value={manualAnalysisInput}
-                      onChange={(e) => setManualAnalysisInput(e.target.value)}
-                      placeholder={`ANALYSIS:
-การวิเคราะห์พฤติกรรมลูกค้าพบว่า...
-
-KEY_FINDINGS:
-- ข้อค้นพบที่ 1
-- ข้อค้นพบที่ 2
-- ข้อค้นพบที่ 3
-
-RECOMMENDATIONS:
-- ข้อแนะนำที่ 1
-- ข้อแนะนำที่ 2
-- ข้อแนะนำที่ 3`}
-                      rows={10}
-                      className="font-mono text-sm border-2 border-green-200 focus:border-green-400 mb-3"
-                    />
-                    <Button
-                      onClick={handleApplyManualAnalysis}
-                      disabled={!manualAnalysisInput.trim()}
-                      className="w-full h-10 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold"
-                    >
-                      ✨ ใช้ผลการวิเคราะห์นี้
-                    </Button>
-                  </div>
-                </div>
-              )}
+                data-testid="behavior-analyze-btn"
+              />
+              <p className="mt-2 text-xs text-gray-700">
+                เมื่อ AI ของระบบปิดอยู่ ปุ่มนี้จะให้พรอมต์ไปวางใน ChatGPT / Claude / Gemini · แล้วนำคำตอบมาวางในกล่องด้านล่าง
+                {analysisGate.hint ? ` · ${analysisGate.hint}` : ''}
+              </p>
+              <PasteAnswerBox
+                className="mt-3"
+                testid="behavior-paste"
+                defaultOpen={analysisGate.blocked}
+                hint="วางคำตอบทั้งก้อนที่ AI ตอบ (ใช้รูปแบบ ANALYSIS: / KEY_FINDINGS: / RECOMMENDATIONS: ตามที่พรอมต์กำหนด)"
+                placeholder={`ANALYSIS:\nการวิเคราะห์พฤติกรรมลูกค้าพบว่า...\n\nKEY_FINDINGS:\n- ข้อค้นพบที่ 1\n\nRECOMMENDATIONS:\n- ข้อแนะนำที่ 1`}
+                rows={8}
+                onShowPrompt={openExternalPrompt}
+                onApply={handleApplyManualAnalysis}
+                applyLabel="✨ ใช้ผลการวิเคราะห์นี้"
+              />
             </div>
           </Card>
 
@@ -526,11 +357,12 @@ RECOMMENDATIONS:
                   {!imageUrl ? (
                     <Button
                       onClick={handleGenerateImage}
-                      disabled={generatingImage}
+                      disabled={generatingImage || imageGate.blocked}
                       variant="outline"
                       size="sm"
                       className="border-2 border-blue-300 text-blue-700 p-2"
-                      title="Generate Illustration"
+                      title={imageGate.blocked ? 'สร้างภาพไม่ได้ — ผู้ดูแลระบบปิด AI สร้างภาพของระบบ (บันทึกผลวิเคราะห์ได้ตามปกติ)' : 'Generate Illustration'}
+                      aria-label={imageGate.blocked ? 'สร้างภาพประกอบ (ปิดใช้งาน)' : 'Generate Illustration'}
                     >
                       {generatingImage ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -549,6 +381,7 @@ RECOMMENDATIONS:
                       size="sm"
                       className="border-2 border-red-300 text-red-700 p-2 hover:bg-red-50"
                       title="Delete Image"
+                      aria-label="ลบภาพ"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -559,6 +392,8 @@ RECOMMENDATIONS:
                     onClick={() => setShowSaveForm(true)}
                     variant="outline"
                     size="sm"
+                    title="บันทึกเป็นเนื้อหา"
+                    aria-label="บันทึกเป็นเนื้อหา"
                     className="border-2 border-green-300 text-green-700 p-2"
                   >
                     <Save className="w-4 h-4" />
@@ -628,6 +463,9 @@ RECOMMENDATIONS:
                     <div 
                       className="rounded-lg overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#00A9CE] transition-all"
                       onClick={() => setShowFullscreenImage(true)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowFullscreenImage(true); } }}
+                      role="button"
+                      tabIndex={0}
                       title="Click to view fullscreen"
                     >
                       <img
@@ -820,6 +658,7 @@ RECOMMENDATIONS:
           </div>
         )}
       </div>
+      {ext.dialog}
     </div>
   );
 };

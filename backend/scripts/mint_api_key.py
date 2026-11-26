@@ -14,6 +14,19 @@ for something smaller:
     python backend/scripts/mint_api_key.py --label "publish bot" \\
         --scope cms.read --scope cms.posts.write
 
+Scopes outside the content set are never implied by `cms.*` and must be named
+(plan 2026-11 — operate the platform from Claude Code):
+
+    platform.settings   GET/PUT /api/platform/llm-policy (system-LLM switch)
+    research.read       read conjoint / brand-equity studies, analyses, exports,
+                        and fetch external-LLM prompts
+    research.ai         POST …/external-import and …/external-pack
+
+    python backend/scripts/mint_api_key.py --label "sitectl · owner" --preset operator
+
+`--preset operator` = cms.* + platform.settings + research.read + research.ai.
+`--scope` may be combined with `--preset` (the union is minted).
+
 Other operations:
 
     python backend/scripts/mint_api_key.py --list
@@ -40,6 +53,13 @@ try:
     from motor.motor_asyncio import AsyncIOMotorClient
 except ImportError:
     sys.exit("needs motor — run this inside the backend environment")
+
+
+PRESETS = {
+    "content": [api_keys.WILDCARD],
+    "operator": [api_keys.WILDCARD, "platform.settings", "research.read", "research.ai"],
+    "research": ["research.read", "research.ai"],
+}
 
 
 def _db():
@@ -117,6 +137,9 @@ async def main() -> int:
     p.add_argument("--scope", action="append", dest="scopes", default=None,
                    help=f"repeatable; default {api_keys.WILDCARD}. "
                         f"valid: {', '.join(sorted(api_keys.SCOPES))}")
+    p.add_argument("--preset", choices=sorted(PRESETS),
+                   help="named scope bundle: " + "; ".join(
+                       f"{k} = {' + '.join(v)}" for k, v in sorted(PRESETS.items())))
     p.add_argument("--expires-at", help="ISO timestamp; omit for no expiry")
     p.add_argument("--list", action="store_true", help="show existing keys")
     p.add_argument("--revoke", metavar="KEY_ID")
@@ -129,7 +152,10 @@ async def main() -> int:
         return await do_revoke(db, a.revoke)
     if not a.label:
         p.error("--label is required when minting")
-    return await do_mint(db, a.label, a.scopes or [api_keys.WILDCARD], a.expires_at)
+    scopes = list(a.scopes or [])
+    if a.preset:
+        scopes += PRESETS[a.preset]
+    return await do_mint(db, a.label, scopes or [api_keys.WILDCARD], a.expires_at)
 
 
 if __name__ == "__main__":

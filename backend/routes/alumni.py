@@ -1,5 +1,5 @@
 """
-Alumni Network Routes — "สายตระกูล MKT SWU"
+Alumni Network Routes — "สายเทค MKT SWU" (formerly "สายตระกูล")
 ================================================
 Phase 1 MVP: Landing, Onboarding, Family Tree, Profile
 - Bloodline system (พี่ take → ปู่ → ทวด → เทียด)
@@ -14,6 +14,13 @@ from datetime import datetime, timezone
 import uuid
 import logging
 
+from lib import alumni_kinship as K
+from lib import alumni_graph as G
+from lib.alumni_service import AlumniService, is_admin, ago_iso
+from lib.alumni_line_routes import register_line_routes, invite_clues
+
+# Module-level router kept for backwards compatibility; get_alumni_routes()
+# builds a FRESH router per call (so tests can build several apps).
 alumni_router = APIRouter(prefix="/alumni", tags=["Alumni"])
 
 
@@ -23,38 +30,24 @@ ALUMNI_ROLES = ["current_student", "alumni", "staff"]
 RELATION_KINDS = ["take", "mentor", "custom"]
 RELATION_STATUS = ["pending", "confirmed", "rejected"]
 
-# Relation labels by distance (upward = ancestors)
-ANCESTOR_LABELS = {
-    1: "พี่ take",
-    2: "ปู่",
-    3: "ทวด",
-    4: "เทียด",
-    5: "เทียดทวด",
-    6: "บรรพบุรุษ",
-}
-DESCENDANT_LABELS = {
-    1: "น้อง take",
-    2: "เหลน",
-    3: "ลื่อ",
-    4: "ลืบ",
-    5: "ลืด",
-}
+# Relation vocabulary — "สายเทค" (2026-11).  The old hard-coded labels
+# (พี่ take / ปู่ / ทวด …) skipped ลุง/ป้า and assumed 3-year gaps; both wrong.
+# Terms now come from lib/alumni_kinship.py (defaults) + Mongo overrides.
+RELATION_STATUS = ["claimed", "vouched", "confirmed", "disputed", "rejected", "removed", "pending"]
 
 
-def ancestor_label(dist: int) -> str:
+def ancestor_label(dist: int, gender: Optional[str] = None, settings: Optional[dict] = None) -> str:
+    """Term for someone `dist` links ABOVE (kept for backwards compatibility)."""
     if dist <= 0:
         return "คุณ"
-    if dist in ANCESTOR_LABELS:
-        return ANCESTOR_LABELS[dist]
-    return f"บรรพบุรุษ {dist} ทอด"
+    return K.term_for(dist, gender, settings)
 
 
-def descendant_label(dist: int) -> str:
+def descendant_label(dist: int, gender: Optional[str] = None, settings: Optional[dict] = None) -> str:
+    """Term for someone `dist` links BELOW (kept for backwards compatibility)."""
     if dist <= 0:
         return "คุณ"
-    if dist in DESCENDANT_LABELS:
-        return DESCENDANT_LABELS[dist]
-    return f"ลูกหลาน {dist} ทอด"
+    return K.term_for(-dist, gender, settings)
 
 
 # ============ MODELS ============
@@ -69,6 +62,9 @@ class AlumniRegisterRequest(BaseModel):
     company: Optional[str] = None
     bio: Optional[str] = None
     avatar_hue: int = 210
+    # Optional, self-declared — only used to pick ลุง vs ป้า etc. ("m" | "f";
+    # anything else / missing → combined form "ลุง/ป้าเทค").
+    kinship_gender: Optional[str] = None
 
 
 class AlumniProfileUpdate(BaseModel):
@@ -81,6 +77,7 @@ class AlumniProfileUpdate(BaseModel):
     bio: Optional[str] = None
     avatar_hue: Optional[int] = None
     privacy_settings: Optional[Dict[str, bool]] = None
+    kinship_gender: Optional[str] = None   # "m" | "f" | "u" (u clears)
 
 
 class MarkRelationRequest(BaseModel):
@@ -96,7 +93,10 @@ class InviteRequest(BaseModel):
     invitee_email: Optional[EmailStr] = None
     invitee_student_id: Optional[str] = None
     invitee_name: Optional[str] = None
-    relation_hint: Optional[str] = None  # "น้อง take" / "พี่ take" etc.
+    relation_hint: Optional[str] = None  # "น้องเทค" / "พี่เทค" etc.
+    ghost_id: Optional[str] = None        # attach the invite to a placeholder member
+    reveal_game: bool = False             # เฉลยสาย: hide the inviter until guessed
+    clue: Optional[str] = Field(None, max_length=140)
 
 
 class PrivacyUpdate(BaseModel):
@@ -120,6 +120,8 @@ XP_EVENTS = {
     "relation_confirmed": 30,
     "invite_sent": 5,
     "invite_accepted": 100,
+    "vouch": 3,
+    "claim_vouched": 10,
     "trivia_correct": 10,
     "streak_milestone_3": 20,
     "streak_milestone_7": 50,
@@ -136,8 +138,31 @@ BADGE_RULES = [
     ("reviewer", "นักรีวิว", "⭐", lambda p, s: s.get("reviews_written", 0) >= 3),
     ("iq_master", "IQ Master", "🧠", lambda p, s: s.get("trivia_streak", 0) >= 7),
     ("streak_7", "ไฟลุก 7 วัน", "🔥", lambda p, s: p.get("streak_days", 0) >= 7),
-    ("streak_30", "ตำนานตระกูล", "🏆", lambda p, s: p.get("streak_days", 0) >= 30),
+    ("streak_30", "ตำนานสายเทค", "🏆", lambda p, s: p.get("streak_days", 0) >= 30),
 ]
+
+
+def _clean_gender(value: Optional[str]) -> Optional[str]:
+    g = K.normalize_gender(value)
+    return None if g == "u" else g
+
+
+# Fields of an inviter's profile that may be shown on the PUBLIC invite
+# pages (preview / reveal need no login). Everything else — student_id, bio,
+# interests, privacy settings, xp, who invited them, email — stays private
+# (PDPA: minimal data to unauthenticated callers). Company only when the
+# member allows it to be shown to juniors.
+PUBLIC_INVITER_FIELDS = ("user_id", "nickname", "name", "gen", "role", "position",
+                         "avatar_url", "avatar_hue", "verified", "kinship_gender")
+
+
+def public_inviter_card(alum: Optional[dict]) -> Optional[dict]:
+    if not alum:
+        return None
+    out = {k: alum.get(k) for k in PUBLIC_INVITER_FIELDS if k in alum}
+    if (alum.get("privacy_settings") or {}).get("show_company_to_juniors", True) and alum.get("company"):
+        out["company"] = alum.get("company")
+    return out
 
 
 def _default_privacy() -> Dict[str, bool]:
@@ -152,6 +177,7 @@ def _default_privacy() -> Dict[str, bool]:
 
 def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
     """Factory function to create alumni routes with DB dependency."""
+    alumni_router = APIRouter(prefix="/alumni", tags=["Alumni"])
 
     # ============ HELPERS ============
 
@@ -226,32 +252,16 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         return doc
 
     async def _compute_user_stats(user_id: str) -> dict:
-        """Compute stats for badge unlock checks."""
+        """Compute stats for badge unlock checks (established links only)."""
         invite_accepted = await db.alumni_invites.count_documents({
             "inviter_id": user_id, "status": "registered",
         })
         confirmed = await db.alumni_relations.count_documents({
             "$or": [{"from_user_id": user_id}, {"to_user_id": user_id}],
-            "status": "confirmed",
+            "status": {"$in": list(G.ESTABLISHED)},
         })
-        # Max ancestor depth via simple BFS
-        max_depth = 0
-        frontier = [(user_id, 0)]
-        visited = {user_id}
-        while frontier:
-            nxt = []
-            for uid, d in frontier:
-                parents = await _confirmed_parents(uid)
-                for rel in parents:
-                    pid = rel["to_user_id"]
-                    if pid in visited:
-                        continue
-                    visited.add(pid)
-                    max_depth = max(max_depth, d + 1)
-                    if d + 1 < 8:
-                        nxt.append((pid, d + 1))
-            frontier = nxt
-
+        ancestors = await svc.bfs(user_id, "up", G.ESTABLISHED, max_depth=8)
+        max_depth = max([a["distance"] for a in ancestors] or [0])
         trivia_stats = await db.alumni_users.find_one({"user_id": user_id}, {"_id": 0, "trivia_streak": 1, "reviews_written": 1}) or {}
         return {
             "invite_accepted": invite_accepted,
@@ -354,93 +364,21 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
                 f"🔥 Streak {streak} วันแล้ว!",
                 f"active ต่อเนื่อง {streak} วัน · รับโบนัสไปเลย")
 
-    async def _confirmed_parents(user_id: str) -> List[dict]:
-        """Get confirmed "พี่ take" parents (outgoing take relations)."""
-        cur = db.alumni_relations.find({
-            "from_user_id": user_id,
-            "kind": "take",
-            "status": "confirmed",
-        }, {"_id": 0})
-        return await cur.to_list(100)
+    # The service owns every trust / graph rule (lib/alumni_service.py).
+    svc = AlumniService(db, lambda *a, **k: _award_xp(*a, **k), lambda *a, **k: _push_notification(*a, **k),
+                        lambda *a, **k: _log_activity(*a, **k))
 
-    async def _confirmed_children(user_id: str) -> List[dict]:
-        """Get users who set this user as their พี่ take."""
-        cur = db.alumni_relations.find({
-            "to_user_id": user_id,
-            "kind": "take",
-            "status": "confirmed",
-        }, {"_id": 0})
-        return await cur.to_list(500)
+    async def _bfs_ancestors(root_user_id: str, max_depth: int = 8, include_ghosts: bool = False) -> List[dict]:
+        """Established ancestors, nearest first.  Ghosts excluded by default so
+        callers that load alumni profiles (mystery match, trivia) keep working."""
+        return await svc.bfs(root_user_id, "up", G.ESTABLISHED, max_depth, include_ghosts)
 
-    async def _bfs_ancestors(root_user_id: str, max_depth: int = 8) -> List[dict]:
-        """BFS upward — build ancestor chain (no duplicates). Returns list sorted by distance."""
-        visited = {root_user_id}
-        result = []
-        # frontier: list of (user_id, distance)
-        frontier = [(root_user_id, 0)]
-        while frontier:
-            nxt = []
-            for uid, dist in frontier:
-                if dist >= max_depth:
-                    continue
-                parents = await _confirmed_parents(uid)
-                for rel in parents:
-                    pid = rel["to_user_id"]
-                    if pid in visited:
-                        continue
-                    visited.add(pid)
-                    result.append({"user_id": pid, "distance": dist + 1})
-                    nxt.append((pid, dist + 1))
-            frontier = nxt
-        return result
+    async def _bfs_descendants(root_user_id: str, max_depth: int = 8, include_ghosts: bool = False) -> List[dict]:
+        return await svc.bfs(root_user_id, "down", G.ESTABLISHED, max_depth, include_ghosts)
 
-    async def _bfs_descendants(root_user_id: str, max_depth: int = 8) -> List[dict]:
-        """BFS downward — build descendant chain."""
-        visited = {root_user_id}
-        result = []
-        frontier = [(root_user_id, 0)]
-        while frontier:
-            nxt = []
-            for uid, dist in frontier:
-                if dist >= max_depth:
-                    continue
-                children = await _confirmed_children(uid)
-                for rel in children:
-                    cid = rel["from_user_id"]
-                    if cid in visited:
-                        continue
-                    visited.add(cid)
-                    result.append({"user_id": cid, "distance": dist + 1})
-                    nxt.append((cid, dist + 1))
-            frontier = nxt
-        return result
-
-    async def _build_tree_node(user_id: str, distance: int, direction: str) -> dict:
-        """Build a display-ready tree node."""
-        alum = await _get_alumni_profile(user_id)
-        user = await _get_user_info(user_id)
-        if not alum and not user:
-            return None
-        alum = alum or {}
-        label = ancestor_label(distance) if direction == "up" else descendant_label(distance)
-        u = user or {}
-        avatar = u.get("avatar_url") or u.get("google_picture") or u.get("profile_image")
-        return {
-            "user_id": user_id,
-            "name": u.get("full_name") or alum.get("nickname") or "",
-            "nickname": alum.get("nickname"),
-            "student_id": alum.get("student_id"),
-            "gen": alum.get("gen"),
-            "role": alum.get("role"),
-            "position": alum.get("position"),
-            "company": alum.get("company"),
-            "avatar_hue": alum.get("avatar_hue", 210),
-            "avatar_url": avatar,
-            "verified": alum.get("verified", False),
-            "distance": distance,
-            "relation": label,
-            "direction": direction,
-        }
+    async def _vocab_for_node(node_id: str) -> dict:
+        path = await svc.primary_path_up(node_id)
+        return await svc.vocab_for([n for n, _ in path])
 
     # ============ PUBLIC STATS ============
 
@@ -461,7 +399,7 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         companies_count = companies_result[0]["count"] if companies_result else 0
 
         # Total confirmed connections
-        connections_count = await db.alumni_relations.count_documents({"status": "confirmed"})
+        connections_count = await db.alumni_relations.count_documents({"status": {"$in": list(G.ESTABLISHED)}})
 
         # Jobs referred (placeholder — phase 2)
         jobs_referred = 0
@@ -515,6 +453,11 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             "company": data.company,
             "bio": data.bio,
             "avatar_hue": data.avatar_hue,
+            "kinship_gender": _clean_gender(data.kinship_gender),
+            "interests": {},
+            "invited_by": None,
+            "invite_id": None,
+            "invite_depth": None,
             "verified": False,
             "xp": 0,
             "streak_days": 0,
@@ -530,7 +473,7 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         await _touch_streak(current_user.id)
         await _log_activity(
             current_user.id, "joined_family",
-            f"{default_nick} (รุ่น {data.gen}) เข้ามาในตระกูล",
+            f"{default_nick} (รุ่น {data.gen}) เข้าร่วมเครือข่ายสายเทคแล้ว",
             meta={"gen": data.gen, "nickname": default_nick},
         )
 
@@ -559,6 +502,8 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             raise HTTPException(status_code=404, detail="Alumni profile not found. Register first.")
 
         update = {k: v for k, v in data.model_dump().items() if v is not None}
+        if "kinship_gender" in update:
+            update["kinship_gender"] = _clean_gender(update["kinship_gender"])
         if "role" in update and update["role"] not in ALUMNI_ROLES:
             raise HTTPException(status_code=400, detail="Invalid role")
         update["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -645,74 +590,110 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
 
     @alumni_router.get("/tree/me")
     async def my_tree(current_user=Depends(get_current_user)):
-        return await _tree_for(current_user.id)
+        return await _tree_for(current_user.id, current_user)
 
     @alumni_router.get("/tree/{user_id}")
     async def user_tree(user_id: str, current_user=Depends(get_current_user)):
-        return await _tree_for(user_id)
+        return await _tree_for(user_id, current_user)
 
-    async def _tree_for(root_user_id: str):
-        root_alum = await _get_alumni_profile(root_user_id)
-        if not root_alum:
+    async def _tree_for(root_user_id: str, viewer):
+        """Tree around a member (or, for members, around a ghost).
+
+        Established links (confirmed + vouched) are walked up/down 8 levels.
+        Open claims (claimed / disputed) that touch the root are added at
+        distance 1 so people see — and can answer — claims about themselves.
+        Node `relation` is the สายเทค term from the root's point of view."""
+        await svc.ensure_indexes()
+        viewer_member = bool(await _get_alumni_profile(viewer.id)) or is_admin(viewer)
+        if G.is_ghost(root_user_id):
+            if not viewer_member:
+                raise HTTPException(status_code=403, detail="เฉพาะสมาชิกที่ลงทะเบียนแล้ว")
+            g = await svc.ghost(root_user_id)
+            if not g or g.get("status") != "active":
+                raise HTTPException(status_code=404, detail="Profile not found")
+        elif not await _get_alumni_profile(root_user_id):
             raise HTTPException(status_code=404, detail="Profile not found")
-        root_node = await _build_tree_node(root_user_id, 0, "self")
-        if root_node:
-            root_node["relation"] = "คุณ"
 
-        ancestors_raw = await _bfs_ancestors(root_user_id)
-        descendants_raw = await _bfs_descendants(root_user_id)
+        ancestors_raw = await svc.bfs(root_user_id, "up", G.ESTABLISHED, 8)
+        descendants_raw = await svc.bfs(root_user_id, "down", G.ESTABLISHED, 8)
+        seen = {root_user_id} | {a["user_id"] for a in ancestors_raw} | {d["user_id"] for d in descendants_raw}
+        for side, bucket in (("up", ancestors_raw), ("down", descendants_raw)):
+            for e in await svc.edges_touching([root_user_id], side, ["claimed", "disputed"]):
+                other = e["to_user_id"] if side == "up" else e["from_user_id"]
+                if other in seen:
+                    continue
+                seen.add(other)
+                bucket.append({"user_id": other, "distance": 1, "relation_id": e["id"],
+                               "link_status": G.normalize_status(e.get("status"))})
+        path = await svc.primary_path_up(root_user_id)
+        vocab = await svc.vocab_for([n for n, _ in path])
+        meta = await svc.nodes_meta(seen, viewer_is_member=viewer_member)
 
-        ancestors = []
-        for a in ancestors_raw:
-            node = await _build_tree_node(a["user_id"], a["distance"], "up")
-            if node:
-                ancestors.append(node)
-        ancestors.sort(key=lambda x: x["distance"])
+        def node(item, direction):
+            m = meta.get(item["user_id"])
+            if not m:
+                return None
+            d = item["distance"]
+            term = K.term_for(d if direction == "up" else -d, m.get("gender"), vocab)
+            st = item.get("link_status") or "confirmed"
+            return {**m, "distance": d, "relation": term, "term": term, "direction": direction,
+                    "relation_id": item.get("relation_id"), "link_status": st,
+                    "verified_link": st in G.ESTABLISHED}
 
-        descendants = []
-        for d in descendants_raw:
-            node = await _build_tree_node(d["user_id"], d["distance"], "down")
-            if node:
-                descendants.append(node)
-        descendants.sort(key=lambda x: x["distance"])
-
+        ancestors = sorted(filter(None, (node(a, "up") for a in ancestors_raw)), key=lambda x: x["distance"])
+        descendants = sorted(filter(None, (node(d, "down") for d in descendants_raw)), key=lambda x: x["distance"])
+        root_meta = meta.get(root_user_id) or {}
+        root_node = {**root_meta, "distance": 0, "relation": "คุณ", "term": "คุณ", "direction": "self"} if root_meta else None
+        max_up = max([a["distance"] for a in ancestors] or [0])
+        max_down = max([d["distance"] for d in descendants] or [0])
         return {
             "root": root_node,
             "ancestors": ancestors,
             "descendants": descendants,
             "total": 1 + len(ancestors) + len(descendants),
             "max_ancestor_gen": min([a.get("gen") for a in ancestors if a.get("gen")] or [None]) if ancestors else None,
+            # Next empty slots for the "ลุงเทคของคุณยังไม่มา" UI (full detail: GET /alumni/chain/gaps).
+            "empty_slots": {
+                "up": {"distance": max_up + 1, "term": K.term_for(max_up + 1, None, vocab)},
+                "down": {"distance": max_down + 1, "term": K.term_for(-(max_down + 1), None, vocab)},
+            },
+            "vocabulary": {"line_name": vocab.get("line_name"), "variant": vocab.get("variant")},
         }
 
     # ============ RELATIONS (Mark / Confirm) ============
 
     @alumni_router.post("/relations")
     async def mark_relation(data: MarkRelationRequest, current_user=Depends(get_current_user)):
-        """Mark someone as พี่ take / mentor / custom — creates PENDING relation.
+        """Mark someone as พี่เทค / mentor / custom — creates a CLAIMED relation.
 
-        Rule: 'take' semantics => from_user (me) is taking to_user as พี่ take
-        (so to_user is the ancestor).
-        """
+        'take' semantics: from_user (me, the น้องเทค) takes to_user as พี่เทค.
+        For ghosts / third-party claims use POST /alumni/relations/claim."""
         if data.kind not in RELATION_KINDS:
             raise HTTPException(status_code=400, detail="Invalid relation kind")
         if data.to_user_id == current_user.id:
             raise HTTPException(status_code=400, detail="Cannot mark yourself")
-
-        # Ensure both have alumni profile
         me_alum = await _get_alumni_profile(current_user.id)
         other_alum = await _get_alumni_profile(data.to_user_id)
         if not me_alum or not other_alum:
             raise HTTPException(status_code=400, detail="Both users must have an alumni profile")
+        if data.kind == "take":
+            await svc.rate_limit("claim", current_user.id)
+            try:
+                relation = await svc.create_edge(current_user.id, data.to_user_id, current_user.id,
+                                                 source="legacy", check_gen=False)
+            except HTTPException as e:
+                if isinstance(e.detail, dict) and e.detail.get("code") == "relation_exists":
+                    raise HTTPException(status_code=400, detail="Relation already exists")
+                raise
+            await svc.mark_rate("claim", current_user.id)
+            await _award_xp(current_user.id, "mark_relation")
+            return relation
 
-        # Check duplicate
         existing = await db.alumni_relations.find_one({
-            "from_user_id": current_user.id,
-            "to_user_id": data.to_user_id,
-            "kind": data.kind,
+            "from_user_id": current_user.id, "to_user_id": data.to_user_id, "kind": data.kind,
         })
         if existing:
             raise HTTPException(status_code=400, detail="Relation already exists")
-
         now = datetime.now(timezone.utc).isoformat()
         relation = {
             "id": str(uuid.uuid4()),
@@ -720,7 +701,7 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             "to_user_id": data.to_user_id,
             "kind": data.kind,
             "status": "pending",
-            "confirmed_by_from": True,  # The marker auto-confirms from their side
+            "confirmed_by_from": True,
             "confirmed_by_to": False,
             "derived": False,
             "primary": True,
@@ -729,98 +710,79 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             "confirmed_at": None,
         }
         await db.alumni_relations.insert_one(relation)
-
-        # Award small XP + notify the target
         await _award_xp(current_user.id, "mark_relation")
-        me_name = (current_user.full_name or "").strip() or (current_user.email.split("@")[0])
-        await _push_notification(
-            data.to_user_id, "mark_request",
-            "🤝 มีคนขอให้คุณเป็นพี่ในสายของเขา",
-            f"{me_name} ขอ mark คุณเป็น \"พี่ take\" · เข้าไปยืนยันได้",
-            {"relation_id": relation["id"], "from_user_id": current_user.id},
-        )
-
         return {k: v for k, v in relation.items() if k != "_id"}
 
     @alumni_router.put("/relations/{relation_id}/confirm")
     async def confirm_relation(
         relation_id: str, data: ConfirmRelationRequest, current_user=Depends(get_current_user)
     ):
-        """Confirm/reject a pending relation. Only the 'to_user' can confirm."""
+        """Answer a claim about yourself (either end of the link may answer).
+        The counterpart's answer always overrides crowd votes.
+        Alias: PUT /alumni/relations/{id}/respond."""
         rel = await db.alumni_relations.find_one({"id": relation_id}, {"_id": 0})
         if not rel:
             raise HTTPException(status_code=404, detail="Relation not found")
-        if rel["to_user_id"] != current_user.id:
-            raise HTTPException(status_code=403, detail="Only the addressee can confirm")
-        if rel["status"] != "pending":
-            raise HTTPException(status_code=400, detail="Relation already processed")
-
-        now = datetime.now(timezone.utc).isoformat()
-        update = {
-            "confirmed_by_to": data.accept,
-            "status": "confirmed" if data.accept else "rejected",
-            "confirmed_at": now if data.accept else None,
-        }
-        await db.alumni_relations.update_one({"id": relation_id}, {"$set": update})
-        updated = await db.alumni_relations.find_one({"id": relation_id}, {"_id": 0})
-
-        if data.accept:
-            # Both parties earn XP when confirmed
-            await _award_xp(rel["from_user_id"], "relation_confirmed")
-            await _award_xp(rel["to_user_id"], "relation_confirmed")
-            # Notify the marker
-            me_name = (current_user.full_name or "").strip() or current_user.email.split("@")[0]
-            await _push_notification(
-                rel["from_user_id"], "relation_confirmed",
-                "✅ ได้รับการยืนยันแล้ว",
-                f"{me_name} ยืนยันเป็นพี่ take ในสายตระกูลของคุณ",
-                {"relation_id": relation_id, "to_user_id": rel["to_user_id"]},
-            )
-            # Log tree_extended activity
-            from_alum = await _get_alumni_profile(rel["from_user_id"])
-            to_alum = await _get_alumni_profile(rel["to_user_id"])
-            from_nick = (from_alum or {}).get("nickname") or "บางคน"
-            to_nick = (to_alum or {}).get("nickname") or "บางคน"
-            await _log_activity(
-                rel["from_user_id"], "tree_extended",
-                f"{from_nick} เพิ่ม {to_nick} เป็นพี่ take ในสาย",
-                target_id=rel["to_user_id"],
-                meta={"relation_id": relation_id},
-            )
-
-        return updated
+        if rel.get("kind", "take") != "take":
+            if rel["to_user_id"] != current_user.id:
+                raise HTTPException(status_code=403, detail="Only the addressee can confirm")
+            update = {"confirmed_by_to": data.accept, "status": "confirmed" if data.accept else "rejected",
+                      "confirmed_at": datetime.now(timezone.utc).isoformat() if data.accept else None}
+            await db.alumni_relations.update_one({"id": relation_id}, {"$set": update})
+            return await db.alumni_relations.find_one({"id": relation_id}, {"_id": 0})
+        return await svc.respond(relation_id, current_user, data.accept)
 
     @alumni_router.get("/relations/pending")
     async def list_pending_relations(current_user=Depends(get_current_user)):
-        """Pending relations awaiting my confirmation (incoming)."""
+        """Claims about me that still need MY answer (either side of the link)."""
         cur = db.alumni_relations.find({
-            "to_user_id": current_user.id,
-            "status": "pending",
+            "$or": [{"to_user_id": current_user.id}, {"from_user_id": current_user.id}],
+            "status": {"$in": ["pending", "claimed", "disputed", "vouched"]},
         }, {"_id": 0})
-        items = await cur.to_list(100)
-        # Enrich with from_user info
+        items = []
+        for r in await cur.to_list(200):
+            mine = "senior" if r["to_user_id"] == current_user.id else "junior"
+            if G.end_ok(r, mine) is not None:
+                continue
+            items.append(r)
+        meta = await svc.nodes_meta([r["from_user_id"] for r in items] + [r["to_user_id"] for r in items]
+                                    + [r.get("created_by") for r in items if r.get("created_by")])
+        vocab = await _vocab_for_node(current_user.id)
         for r in items:
-            from_alum = await _get_alumni_profile(r["from_user_id"])
-            if from_alum:
-                r["from_profile"] = await _enrich_alumni(from_alum)
+            mine = "senior" if r["to_user_id"] == current_user.id else "junior"
+            other = r["from_user_id"] if mine == "senior" else r["to_user_id"]
+            r["status"] = G.normalize_status(r.get("status"))
+            r["my_role"] = mine
+            r["other_profile"] = meta.get(other)
+            r["from_profile"] = meta.get(r["from_user_id"])   # legacy field
+            r["claimed_by"] = {"user_id": r.get("created_by"),
+                               "nickname": (meta.get(r.get("created_by")) or {}).get("nickname")}
+            om = meta.get(other) or {}
+            r["term"] = K.term_for(1 if mine == "junior" else -1, om.get("gender"), vocab)
         return {"pending": items, "total": len(items)}
 
     @alumni_router.get("/relations/mine")
     async def list_my_relations(current_user=Depends(get_current_user)):
-        """All my outgoing + incoming confirmed relations."""
+        """All my outgoing + incoming relations (any status)."""
         cur = db.alumni_relations.find({
             "$or": [
                 {"from_user_id": current_user.id},
                 {"to_user_id": current_user.id},
             ],
         }, {"_id": 0})
-        return {"relations": await cur.to_list(500)}
+        rels = await cur.to_list(500)
+        for r in rels:
+            r["status"] = G.normalize_status(r.get("status"))
+        return {"relations": rels}
 
     @alumni_router.delete("/relations/{relation_id}")
     async def delete_relation(relation_id: str, current_user=Depends(get_current_user)):
         rel = await db.alumni_relations.find_one({"id": relation_id})
         if not rel:
             raise HTTPException(status_code=404, detail="Relation not found")
+        if rel.get("kind", "take") == "take":
+            await svc.delete_edge(relation_id, current_user)
+            return {"message": "Relation deleted"}
         if rel["from_user_id"] != current_user.id and rel["to_user_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Cannot delete others' relations")
         await db.alumni_relations.delete_one({"id": relation_id})
@@ -832,34 +794,76 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         """Build shareable invite URL. Relies on frontend route /alumni/invite/{code}."""
         return f"/alumni/invite/{code}"
 
-    @alumni_router.post("/invites")
-    async def send_invite(data: InviteRequest, current_user=Depends(get_current_user)):
-        """Create an invite with unique short code. Returns shareable URL."""
-        code = uuid.uuid4().hex[:10]
+    async def _create_invite(current_user, me_profile: Optional[dict], ghost_id: Optional[str] = None,
+                             clue: Optional[str] = None, reveal_game: bool = False,
+                             relation_hint: Optional[str] = None, invitee_email: Optional[str] = None,
+                             invitee_student_id: Optional[str] = None, invitee_name: Optional[str] = None) -> dict:
+        """Create an invite (with lineage + reveal-game data).  For a ghost
+        invite no email / phone is taken: the member shares the link."""
+        me_profile = me_profile or {}
+        inviter_term = None
+        if ghost_id:
+            g = await svc.ghost(ghost_id)
+            if not g or g.get("status") != "active":
+                raise HTTPException(status_code=404, detail="ไม่พบสมาชิกรอลงทะเบียนนี้")
+            invitee_name = None  # never copy the ghost's name onto the invite
+            up = {x["user_id"]: x["distance"] for x in await svc.bfs(current_user.id, "up", G.LIVE, 8)}
+            down = {x["user_id"]: x["distance"] for x in await svc.bfs(current_user.id, "down", G.LIVE, 8)}
+            vocab = await _vocab_for_node(current_user.id)
+            gender_me = me_profile.get("kinship_gender")
+            if ghost_id in up:
+                d = up[ghost_id]
+                relation_hint = relation_hint or K.term_for(d, g.get("gender"), vocab)
+                inviter_term = K.term_for(-d, gender_me, vocab)
+            elif ghost_id in down:
+                d = down[ghost_id]
+                relation_hint = relation_hint or K.term_for(-d, g.get("gender"), vocab)
+                inviter_term = K.term_for(d, gender_me, vocab)
+        code = uuid.uuid4().hex[:12]
         now = datetime.now(timezone.utc).isoformat()
         invite = {
             "id": str(uuid.uuid4()),
             "inviter_id": current_user.id,
-            "invitee_email": data.invitee_email,
-            "invitee_student_id": data.invitee_student_id,
-            "invitee_name": data.invitee_name,
+            "invitee_email": invitee_email,
+            "invitee_student_id": invitee_student_id,
+            "invitee_name": invitee_name,
             "code": code,
             "status": "sent",
-            "relation_hint": data.relation_hint or "น้อง take",
+            "relation_hint": relation_hint or "น้องเทค",
             "share_url": _build_invite_url(code),
             "sent_at": now,
             "accepted_at": None,
+            # 2026-11
+            "ghost_id": ghost_id,
+            "reveal_game": bool(reveal_game),
+            "clue": (clue or "").strip() or None,
+            "inviter_term_for_invitee": inviter_term,
+            "guess_attempts": 0,
+            "revealed_at": None,
+            "parent_invite_id": me_profile.get("invite_id"),
+            "inviter_depth": int(me_profile.get("invite_depth") or 0),
         }
         await db.alumni_invites.insert_one(invite)
-
-        # Counter + small XP
-        await db.alumni_users.update_one(
-            {"user_id": current_user.id},
-            {"$inc": {"invite_count": 1}},
-        )
+        await db.alumni_users.update_one({"user_id": current_user.id}, {"$inc": {"invite_count": 1}})
         await _award_xp(current_user.id, "invite_sent")
-
         return {k: v for k, v in invite.items() if k != "_id"}
+
+    @alumni_router.post("/invites")
+    async def send_invite(data: InviteRequest, current_user=Depends(get_current_user)):
+        """Create an invite with unique short code. Returns shareable URL.
+        Optional: ghost_id (attach to a placeholder), reveal_game, clue."""
+        await svc.rate_limit("invite", current_user.id, count_coro=lambda: db.alumni_invites.count_documents(
+            {"inviter_id": current_user.id, "sent_at": {"$gte": ago_iso(24)}}))
+        me = await _get_alumni_profile(current_user.id)
+        if data.ghost_id and not me:
+            raise HTTPException(status_code=403, detail="ต้องลงทะเบียนสมาชิกก่อน")
+        return await _create_invite(
+            current_user, me, ghost_id=data.ghost_id, clue=data.clue, reveal_game=data.reveal_game,
+            relation_hint=data.relation_hint,
+            invitee_email=None if data.ghost_id else data.invitee_email,
+            invitee_student_id=None if data.ghost_id else data.invitee_student_id,
+            invitee_name=data.invitee_name,
+        )
 
     @alumni_router.get("/invites")
     async def list_my_invites(current_user=Depends(get_current_user)):
@@ -869,71 +873,103 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
 
     @alumni_router.get("/invites/preview/{code}")
     async def preview_invite(code: str):
-        """Public — used on /alumni/invite/{code} landing page to show who's inviting."""
+        """Public landing data for /alumni/invite/{code}.
+
+        reveal_game invites: NO inviter identity (id, name, nickname, avatar,
+        company, email) until the guess phase is over — only clues.
+        Legacy invites: inviter card as before (email no longer exposed)."""
         invite = await db.alumni_invites.find_one({"code": code}, {"_id": 0})
         if not invite:
             raise HTTPException(status_code=404, detail="Invite code not found or expired")
         if invite.get("status") == "expired":
             raise HTTPException(status_code=410, detail="Invite expired")
-        # Mark as opened
         if invite.get("status") == "sent":
             await db.alumni_invites.update_one(
                 {"code": code}, {"$set": {"status": "opened", "opened_at": datetime.now(timezone.utc).isoformat()}},
             )
+        out = {
+            "code": code,
+            "relation_hint": invite.get("relation_hint"),
+            "status": "opened" if invite.get("status") == "sent" else invite.get("status"),
+            "reveal_game": bool(invite.get("reveal_game")),
+            "revealed": bool(invite.get("revealed_at")),
+            "for_ghost": bool(invite.get("ghost_id")),
+        }
+        if invite.get("ghost_id"):
+            g = await svc.ghost(invite["ghost_id"])
+            out["ghost_gen"] = (g or {}).get("gen")
+        if invite.get("reveal_game") and not invite.get("revealed_at"):
+            out["inviter"] = None
+            out.update(await invite_clues(svc, invite))
+            return out
         inviter_alum = await _get_alumni_profile(invite["inviter_id"])
         inviter = await _enrich_alumni(inviter_alum) if inviter_alum else None
-        return {
-            "code": code,
-            "inviter": inviter,
-            "relation_hint": invite.get("relation_hint"),
-            "status": invite.get("status"),
-        }
+        out["inviter"] = public_inviter_card(inviter)
+        return out
 
     @alumni_router.post("/invites/accept/{code}")
     async def accept_invite(code: str, current_user=Depends(get_current_user)):
-        """Called after registration — links invite to the new alumni profile and auto-creates pending mark."""
+        """Called after registration.  Records lineage (who brought whom).
+        Ghost invite → returns `ghost_claim` (next step: POST /alumni/ghosts/{id}/claim
+        with this code — the ghost's links move to the new account).
+        Plain invite → auto-creates a claimed link me → inviter (inviter confirms)."""
         invite = await db.alumni_invites.find_one({"code": code}, {"_id": 0})
         if not invite:
             raise HTTPException(status_code=404, detail="Invite not found")
-        if invite.get("status") == "registered":
-            return {"message": "Already accepted", "invite": invite}
-
+        if invite.get("status") == "expired":
+            raise HTTPException(status_code=410, detail="Invite expired")
         inviter_id = invite["inviter_id"]
         if inviter_id == current_user.id:
             raise HTTPException(status_code=400, detail="Cannot accept your own invite")
-
-        # Both must have alumni profiles
         me_alum = await _get_alumni_profile(current_user.id)
         if not me_alum:
             raise HTTPException(status_code=400, detail="Register alumni profile first")
 
-        # Auto-create pending relation (me → inviter as พี่ take) — inviter still confirms
-        now = datetime.now(timezone.utc).isoformat()
-        existing = await db.alumni_relations.find_one({
-            "from_user_id": current_user.id, "to_user_id": inviter_id, "kind": "take",
-        })
-        if not existing:
-            relation = {
-                "id": str(uuid.uuid4()),
-                "from_user_id": current_user.id,
-                "to_user_id": inviter_id,
-                "kind": "take",
-                "status": "pending",
-                "confirmed_by_from": True,
-                "confirmed_by_to": False,
-                "derived": False,
-                "primary": True,
-                "created_by": current_user.id,
-                "created_at": now,
-                "confirmed_at": None,
-            }
-            await db.alumni_relations.insert_one(relation)
+        ghost_claim = None
+        if invite.get("ghost_id"):
+            g = await svc.ghost(invite["ghost_id"])
+            if g and g.get("status") == "active":
+                ghost_claim = {"ghost_id": g["id"], "display_name": g.get("display_name"), "gen": g.get("gen"),
+                               "claim_url": f"/alumni/ghosts/{g['id']}/claim", "invite_code": code}
 
-        # Update invite status + reward inviter
-        await db.alumni_invites.update_one(
-            {"code": code},
+        if invite.get("status") == "registered":
+            if invite.get("accepted_by_user_id") not in (None, current_user.id):
+                raise HTTPException(status_code=409, detail="ลิงก์เชิญนี้ถูกใช้ไปแล้ว")
+            return {"message": "Already accepted", "invite": invite, "ghost_claim": ghost_claim}
+
+        now = datetime.now(timezone.utc).isoformat()
+        # Atomic flip: only the first accept rewards the inviter (no double XP).
+        res = await db.alumni_invites.update_one(
+            {"code": code, "status": {"$ne": "registered"}},
             {"$set": {"status": "registered", "accepted_at": now, "accepted_by_user_id": current_user.id}},
         )
+        if not res.modified_count:
+            return {"message": "Already accepted", "invite": invite, "ghost_claim": ghost_claim}
+
+        # Lineage: first invite wins.
+        if not me_alum.get("invited_by"):
+            inviter_alum = await _get_alumni_profile(inviter_id) or {}
+            depth = int(inviter_alum.get("invite_depth") or invite.get("inviter_depth") or 0) + 1
+            await db.alumni_users.update_one({"user_id": current_user.id, "invited_by": {"$in": [None]}}, {"$set": {
+                "invited_by": inviter_id, "invite_id": invite["id"], "invite_depth": depth}})
+
+        relation_pending = False
+        if not ghost_claim:
+            existing = await db.alumni_relations.find_one({
+                "kind": "take", "status": {"$nin": list(G.DEAD)},
+                "$or": [{"from_user_id": current_user.id, "to_user_id": inviter_id},
+                        {"from_user_id": inviter_id, "to_user_id": current_user.id}],
+            })
+            if not existing:
+                try:
+                    await svc.create_edge(current_user.id, inviter_id, current_user.id, source="invite",
+                                          check_gen=False, notify=False)
+                    relation_pending = True
+                except HTTPException:
+                    relation_pending = False   # e.g. would create a cycle — skip silently
+            else:
+                relation_pending = G.normalize_status(existing.get("status")) != "confirmed"
+
         await _award_xp(inviter_id, "invite_accepted")
         inviter_alum = await _get_alumni_profile(inviter_id)
         inviter_name = (inviter_alum or {}).get("nickname") or "พี่"
@@ -941,16 +977,19 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         await _push_notification(
             inviter_id, "invite_accepted",
             "🎉 มีคนเข้ามาผ่าน invite ของคุณแล้ว!",
-            f"{me_name} สมัครผ่านลิงก์ของคุณ · เข้าไปยืนยันเป็นน้อง take",
+            f"{me_name} สมัครผ่านลิงก์ของคุณ" + ("" if ghost_claim else " · เข้าไปยืนยันเป็นน้องเทค"),
             {"invitee_user_id": current_user.id, "code": code},
         )
         await _push_notification(
             current_user.id, "welcome",
-            f"👋 ยินดีต้อนรับสู่สายของ {inviter_name}",
-            "คุณถูกเพิ่มเข้าสายตระกูลโดยอัตโนมัติ — {inviter_name} ต้องยืนยันก่อน",
+            "👋 ยินดีต้อนรับสู่สายเทค!" if (invite.get("reveal_game") and not invite.get("revealed_at"))
+            else f"👋 ยินดีต้อนรับสู่สายของ {inviter_name}",
+            "ยืนยันว่าชื่อในสายคือคุณ แล้วประวัติจะย้ายมาที่บัญชีคุณ" if ghost_claim
+            else f"คุณถูกเพิ่มเข้าสายเทคโดยอัตโนมัติ — {inviter_name} ต้องยืนยันก่อน",
         )
-
-        return {"message": "Invite accepted", "inviter_id": inviter_id, "relation_pending": True}
+        hide = bool(invite.get("reveal_game") and not invite.get("revealed_at"))
+        return {"message": "Invite accepted", "inviter_id": None if hide else inviter_id,
+                "relation_pending": relation_pending, "ghost_claim": ghost_claim, "reveal_pending": hide}
 
     # ============ ACTIVITY STREAM ============
 
@@ -1246,7 +1285,22 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             result.append(enriched)
         return {"items": result}
 
+    # ============ 2026-11: ghosts, vouching, chain, reveal, boards, meetups, benefits ============
+    helpers_for_line = {
+        "_push_notification": _push_notification,
+        "_award_xp": _award_xp,
+        "_enrich_alumni": _enrich_alumni,
+        "_create_invite": _create_invite,
+    }
+    register_line_routes(alumni_router, svc, db, get_current_user, get_optional_user, helpers_for_line)
+
+    async def _term_for_viewer(viewer_id: str, distance: int, gender: Optional[str] = None) -> str:
+        return K.term_for(distance, gender, await _vocab_for_node(viewer_id))
+
     return alumni_router, {
+        "_svc": svc,
+        "_term_for_viewer": _term_for_viewer,
+        "_create_invite": _create_invite,
         "_get_alumni_profile": _get_alumni_profile,
         "_get_user_info": _get_user_info,
         "_enrich_alumni": _enrich_alumni,

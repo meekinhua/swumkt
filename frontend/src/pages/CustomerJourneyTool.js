@@ -14,7 +14,10 @@ import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import ShareJourneyMapModal from '@/components/ShareJourneyMapModal';
 import mermaid from 'mermaid';
-import { copyToClipboard } from '@/lib/clipboard';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate } from '@/components/AiPolicyNote';
+import AiActionButton from '@/components/AiActionButton';
 
 const CustomerJourneyTool = ({ embedded = false }) => {
   const navigate = useNavigate();
@@ -39,9 +42,7 @@ const CustomerJourneyTool = ({ embedded = false }) => {
   const [inputMode, setInputMode] = useState('ai'); // 'ai' or 'manual'
   const [manualMermaidCode, setManualMermaidCode] = useState('');
   const [manualAnalysis, setManualAnalysis] = useState('');
-  const [showPromptOnError, setShowPromptOnError] = useState(false);
-  const [lastGeneratedPrompt, setLastGeneratedPrompt] = useState('');
-  const [adminPrompt, setAdminPrompt] = useState(''); // Prompt from Admin Config
+  const aiGate = useAiGate('journey.ai');
   const mermaidRef = useRef(null);
   const containerRef = useRef(null);
   const fullscreenRef = useRef(null);
@@ -60,25 +61,6 @@ const CustomerJourneyTool = ({ embedded = false }) => {
       fontFamily: 'Inter, sans-serif'
     });
   }, []);
-
-  // Fetch Admin Prompt on component mount
-  useEffect(() => {
-    const fetchAdminPrompt = async () => {
-      try {
-        const response = await axios.get(`${API}/admin/journey-map-prompt`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data && response.data.journey_map_prompt) {
-          setAdminPrompt(response.data.journey_map_prompt);
-        }
-      } catch (error) {
-        console.log('Could not fetch admin prompt, will use default');
-      }
-    };
-    if (token) {
-      fetchAdminPrompt();
-    }
-  }, [token]);
 
   // Auto-update Additional Context based on journey type and style
   useEffect(() => {
@@ -232,77 +214,22 @@ const CustomerJourneyTool = ({ embedded = false }) => {
     };
   }, []);
 
-  // Function to build the prompt for display (uses Admin Config prompt)
-  const buildPromptForDisplay = () => {
-    const languageName = outputLanguage === 'th' ? 'Thai' : 'English';
-    const typeDesc = journeyType === 'A' ? 'simple and straightforward' : 'detailed and comprehensive';
-    const styleDesc = journeyStyle === 'linear' ? 'linear sequential path' : 'nonlinear with multiple paths and decision points';
-    
-    // Use Admin Prompt or default
-    const systemPrompt = adminPrompt || `You are an expert market researcher and customer experience analyst specializing in creating Customer Journey Maps.
+  const journeyBody = () => ({
+    raw_data: rawData,
+    research_context: researchContext || null,
+    target_language: outputLanguage,
+    journey_type: journeyType,
+    journey_style: journeyStyle
+  });
 
-Your task is to analyze qualitative research data and create a comprehensive Customer Journey Map in Mermaid diagram format.
-
-Guidelines:
-1. Identify key stages in the customer journey (e.g., Awareness, Consideration, Purchase, Post-Purchase, Loyalty)
-2. For each stage, identify:
-   - Touchpoints (where customer interacts with brand)
-   - Customer Actions
-   - Pain Points (frustrations, challenges)
-   - Emotions (feelings at each stage)
-   - Opportunities for improvement
-
-3. Output Format:
-   - First, provide a brief analysis summary (2-3 paragraphs)
-   - Then, generate Mermaid code for a flowchart-style journey map
-   - Use clear node labels and connections
-   - Include pain points and opportunities as annotations
-
-4. Mermaid Syntax Guidelines:
-   - Use graph TD or graph LR for direction
-   - Use meaningful node IDs
-   - Use descriptive labels
-   - Include colors for different types of nodes (stages, touchpoints, pain points)
-
-Example Mermaid structure:
-\`\`\`mermaid
-graph TD
-    A[Awareness Stage] -->|Search Online| B[Website Visit]
-    B -->|Browse Products| C[Product Comparison]
-    C -->|Pain Point: Confusing Navigation| D[Consideration Stage]
-    D -->|Add to Cart| E[Purchase Stage]
-    
-    style A fill:#00A9CE,stroke:#005A73,stroke-width:3px,color:#fff
-    style D fill:#E63946,stroke:#C62E38,stroke-width:2px,color:#fff
-    style E fill:#28a745,stroke:#1e7e34,stroke-width:2px,color:#fff
-\`\`\`
-
-Respond in this exact format:
-ANALYSIS:
-[Your analysis summary]
-
-MERMAID:
-\`\`\`mermaid
-[Your mermaid code]
-\`\`\``;
-
-    // Format: Prompt + User Input Option + User Input Data
-    const fullPrompt = `=== Prompt ===
-${systemPrompt}
-
-=== User Input Option ===
-- Type: ${journeyType} (${typeDesc})
-- Style: ${journeyStyle} (${styleDesc})
-- Output Language: ${languageName}
-
-=== User Input Data ===
-Research Data:
-${rawData}
-${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
-
-    return fullPrompt;
+  // Prompt for the user's own AI — built by the server with the same function as the system path
+  const journeyPromptRequest = () => {
+    const data = journeyBody();
+    return { method: 'POST', url: `${API}/generate-journey-map/external-prompt`, data };
   };
 
+  // Called by <AiActionButton> (system path). A 409 llm_external_only is re-thrown so the
+  // button opens the "use my own AI" dialog; any other error is reported here.
   const handleGenerate = async () => {
     if (!rawData.trim()) {
       toast.error(t('common.error') + ': ' + t('customerJourney.dataHelp'));
@@ -313,28 +240,18 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
     try {
       const response = await axios.post(
         `${API}/generate-journey-map`,
-        {
-          raw_data: rawData,
-          research_context: researchContext || null,
-          target_language: outputLanguage,
-          journey_type: journeyType,
-          journey_style: journeyStyle
-        },
+        journeyBody(),
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
       setResult(response.data);
-      setShowPromptOnError(false);
       toast.success(t('common.success'));
     } catch (error) {
       console.error('Journey map generation error:', error);
-      // Save the prompt for display
-      const generatedPrompt = buildPromptForDisplay();
-      setLastGeneratedPrompt(generatedPrompt);
-      setShowPromptOnError(true);
-      toast.error(error.response?.data?.detail || 'Failed to generate journey map');
+      if (isLlmExternalOnly(error)) throw error;
+      toast.error(`${apiErrorText(error, 'Failed to generate journey map')} — ลองใช้ AI ของคุณเองจากเมนูลูกศรข้างปุ่ม`);
     } finally {
       setLoading(false);
     }
@@ -348,14 +265,19 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
     }
 
     try {
+      // Chat LLMs usually wrap the diagram in ```mermaid fences — strip them.
+      const cleanedCode = manualMermaidCode
+        .trim()
+        .replace(/^```(?:mermaid)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim();
       // Validate mermaid syntax first
-      await mermaid.parse(manualMermaidCode);
+      await mermaid.parse(cleanedCode);
       
       setResult({
-        mermaid_code: manualMermaidCode,
+        mermaid_code: cleanedCode,
         analysis_summary: manualAnalysis || (i18n.language === 'th' ? 'สร้างจาก Manual Input' : 'Created from Manual Input')
       });
-      setShowPromptOnError(false);
       toast.success(i18n.language === 'th' ? 'แสดงผล Mermaid สำเร็จ!' : 'Mermaid rendered successfully!');
     } catch (error) {
       console.error('Mermaid syntax error:', error);
@@ -363,13 +285,6 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
         ? `Mermaid Syntax ไม่ถูกต้อง: ${error.message}` 
         : `Invalid Mermaid Syntax: ${error.message}`);
     }
-  };
-
-  // Copy prompt to clipboard (uses fallback util to handle iframe blocks)
-  const handleCopyPrompt = async () => {
-    await copyToClipboard(lastGeneratedPrompt, {
-      successMessage: i18n.language === 'th' ? 'คัดลอก Prompt แล้ว!' : 'Prompt copied!',
-    });
   };
 
   const handleLogout = () => {
@@ -425,7 +340,7 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
       navigate('/content');
     } catch (error) {
       console.error('Share content error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to share content');
+      toast.error(apiErrorText(error, 'Failed to share content'));
     } finally {
       setSharing(false);
     }
@@ -714,98 +629,28 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
                         />
                       </div>
 
-                      <Button
-                        onClick={handleGenerate}
+                      <AiActionButton
+                        feature="journey.ai"
+                        label={t('customerJourney.generate')}
+                        icon={Sparkles}
+                        onSystem={handleGenerate}
+                        external={{
+                          title: 'สร้างแผนที่เส้นทางลูกค้าด้วย AI ของฉันเอง',
+                          promptRequest: journeyPromptRequest(),
+                          // The server validates the pasted Mermaid and stores it like a system run
+                          // (the quantitative journey module can seed from it), so it needs the raw data too.
+                          importUrl: `${API}/generate-journey-map/external-import`,
+                          importExtra: { raw_data: rawData, research_context: researchContext || null },
+                          onImported: (data) => setResult(data),
+                        }}
                         disabled={loading || !rawData.trim()}
                         className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
-                      >
-                        {loading ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
-                            <span className="hidden sm:inline">{t('customerJourney.generating')}</span>
-                            <span className="sm:hidden">{t('customerJourney.generatingShort')}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                            <span className="hidden sm:inline">{t('customerJourney.generate')}</span>
-                            <span className="sm:hidden">{t('customerJourney.generateShort')}</span>
-                          </>
-                        )}
-                      </Button>
-
-                      {/* Show Prompt on Error */}
-                      {showPromptOnError && lastGeneratedPrompt && (
-                        <div className="mt-4 space-y-4">
-                          {/* Prompt Section */}
-                          <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
-                            <div className="flex items-center gap-2 mb-3">
-                              <AlertTriangle className="w-5 h-5 text-amber-600" />
-                              <h4 className="font-bold text-amber-800">
-                                {i18n.language === 'th' 
-                                  ? 'การสร้างล้มเหลว - นำ Prompt ไปใช้เองได้' 
-                                  : 'Generation Failed - Use Prompt Manually'}
-                              </h4>
-                            </div>
-
-                            <p className="text-sm text-amber-700 mb-3">
-                              {i18n.language === 'th'
-                                ? '📋 คัดลอก Prompt ด้านล่างไปใช้กับ ChatGPT หรือ Claude แล้วนำ Mermaid Code ที่ได้มาใส่ในช่องด้านล่าง'
-                                : '📋 Copy the prompt below and use with ChatGPT or Claude, then paste the Mermaid code in the field below'}
-                            </p>
-                            <div className="relative">
-                              <Textarea
-                                value={lastGeneratedPrompt}
-                                readOnly
-                                rows={12}
-                                className="font-mono text-xs bg-white border-2 border-amber-200 pr-12"
-                              />
-                              <Button
-                                onClick={handleCopyPrompt}
-                                variant="outline"
-                                size="sm"
-                                className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
-                              >
-                                <Copy className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          {/* Mermaid Input from AI Output */}
-                          <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Code className="w-5 h-5 text-green-600" />
-                              <h4 className="font-bold text-green-800">
-                                {i18n.language === 'th' 
-                                  ? 'ใส่ Mermaid Code ที่ได้จาก AI' 
-                                  : 'Paste Mermaid Code from AI'}
-                              </h4>
-                            </div>
-                            <p className="text-sm text-green-700 mb-3">
-                              {i18n.language === 'th'
-                                ? 'นำ Mermaid Code ที่ได้จาก ChatGPT/Claude มาใส่ที่นี่ (ไม่ต้องใส่ ```mermaid)'
-                                : 'Paste Mermaid code from ChatGPT/Claude here (without ```mermaid wrapper)'}
-                            </p>
-                            <Textarea
-                              value={manualMermaidCode}
-                              onChange={(e) => setManualMermaidCode(e.target.value)}
-                              placeholder={i18n.language === 'th' 
-                                ? 'วาง Mermaid Code ที่นี่...\n\nตัวอย่าง:\ngraph TD\n    A[รับรู้] --> B[พิจารณา]\n    B --> C[ซื้อ]'
-                                : 'Paste Mermaid code here...\n\nExample:\ngraph TD\n    A[Awareness] --> B[Consideration]\n    B --> C[Purchase]'}
-                              rows={6}
-                              className="font-mono text-sm border-2 border-green-200 focus:border-green-400 mb-3"
-                            />
-                            <Button
-                              onClick={handleRenderManual}
-                              disabled={!manualMermaidCode.trim()}
-                              className="w-full h-10 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold"
-                            >
-                              <Map className="w-4 h-4 mr-2" />
-                              {i18n.language === 'th' ? 'แสดง Journey Map' : 'Render Journey Map'}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
+                        data-testid="journey-generate-btn"
+                      />
+                      <p className="text-xs text-gray-700">
+                        เมื่อ AI ของระบบปิดอยู่ ปุ่มนี้จะให้พรอมต์ไปวางใน ChatGPT / Claude / Gemini · แล้ววางคำตอบ (Mermaid) กลับมาในขั้นตอนที่ 2 ของหน้าต่างเดียวกัน
+                        {aiGate.hint ? ` · ${aiGate.hint}` : ''}
+                      </p>
                     </div>
                   )}
 

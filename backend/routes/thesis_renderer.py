@@ -8,7 +8,7 @@ Scope (academic-defensible, ready to paste into a chapter):
     every question with mean, std, n, score_100
   · Identity vs Image overlap analysis
   · AI Master Insights (themes, opportunities, risks)
-  · References (APA 7) — Aaker, Keller, Reichheld, DeVellis
+  · References (APA 7) — every work cited in the text
 
 Inputs:
   - study (full doc from `brand_studies`)
@@ -100,13 +100,15 @@ def _data_table(doc: Document, headers: List[str], rows: List[List[Any]]):
 
 
 def _tier_label(score: Optional[float]) -> str:
+    """The canonical tier (brand_equity.brand_health_tier) — this used to be a
+    private copy that classified the UNROUNDED score, so 79.6 printed as
+    "Strong" here while the dashboard (which classifies the value the reader
+    sees, 80) said "Champion"."""
     if score is None:
         return "Insufficient data"
-    if score >= 80:  return "Champion (ผู้นำตลาด)"
-    if score >= 65:  return "Strong (แข็งแกร่ง)"
-    if score >= 50:  return "Healthy (สุขภาพดี)"
-    if score >= 35:  return "At Watch (เฝ้าระวัง)"
-    return "At Risk (เสี่ยง)"
+    from .brand_equity import brand_health_tier
+    t = brand_health_tier(score) or {}
+    return f"{t.get('label')} ({t.get('label_th')})"
 
 
 def _fmt(v: Any, suffix: str = "") -> str:
@@ -183,6 +185,11 @@ def render_thesis_docx(
     brand_name = brand.get("name") or "Brand"
     composite = aggregate.get("composite") or {}
     questions = aggregate.get("questions") or []
+    # Unmeasured dimensions are coerced to 0 in `composite` for old clients;
+    # `_measured` says which are real.
+    measured = set(composite.get("_measured") or [k for k in ("awareness", "quality", "identity", "loyalty")
+                                                   if composite.get(k)])
+    basis = ((aggregate.get("normalization") or {}).get("basis")) or "none"
 
     # ============ COVER ============
     _eyebrow(doc, "BRAND EQUITY · ACADEMIC REPORT")
@@ -209,11 +216,13 @@ def render_thesis_docx(
     overall = composite.get("overall")
     _p(doc, f"BES = {_fmt(overall)} / 100  ·  Tier: {_tier_label(overall)}",
        bold=True, size=14)
+    _p(doc, "BES is a theory-weighted composite index of the measured dimensions "
+            "(Aaker, 1991, 1996), not a latent-variable estimate.", size=9, color=GREY, italic=True)
     summary_rows = [
-        ("Awareness",         _fmt(composite.get("awareness")),  _tier_label(composite.get("awareness"))),
-        ("Perceived Quality", _fmt(composite.get("quality")),    _tier_label(composite.get("quality"))),
-        ("Brand Identity",    _fmt(composite.get("identity")),   _tier_label(composite.get("identity"))),
-        ("Loyalty",           _fmt(composite.get("loyalty")),    _tier_label(composite.get("loyalty"))),
+        (lab, _fmt(composite.get(k)) if k in measured else "Not measured",
+         _tier_label(composite.get(k)) if k in measured else "—")
+        for k, lab in (("awareness", "Awareness"), ("quality", "Perceived Quality"),
+                       ("identity", "Brand Identity"), ("loyalty", "Loyalty"))
     ]
     _data_table(doc, ["Dimension", "Score (0-100)", "Tier"], summary_rows)
 
@@ -222,9 +231,13 @@ def render_thesis_docx(
     _eyebrow(doc, "02 · METHODOLOGY")
     _h(doc, "Conceptual framework", level=1)
     _p(doc,
-       "This study operationalizes Aaker's customer-based brand equity model (Aaker, "
-       "1991, 1996) integrated with Keller's CBBE pyramid (Keller, 1993) and "
-       "Reichheld's Net Promoter Score (Reichheld, 2003). Composite scores per "
+       "This study operationalizes four of Aaker's brand-equity asset categories — "
+       "awareness, perceived quality, brand associations (measured as identity vs "
+       "image through Aaker's brand-as-product/organization/person/symbol "
+       "perspectives) and loyalty (Aaker, 1991, 1996) — informed by Keller's (1993) "
+       "customer-based brand equity conceptualization, with Reichheld's (2003) Net "
+       "Promoter Score as one loyalty indicator. Loyalty is measured attitudinally "
+       "(intentions), not from purchase behaviour. Composite scores per "
        "dimension use kind-aware weighted aggregation: every question on the "
        "instrument is mapped to a signal kind and assigned a theoretically "
        "informed weight; weights renormalize over signals that are present so a "
@@ -233,11 +246,18 @@ def render_thesis_docx(
     _h(doc, "Scoring", level=1)
     _p(doc,
        "Likert items (5- and 7-point) are normalized to 0–100 via "
-       "(mean − 1) / (scale_max − 1) × 100. NPS uses the standard "
+       "(mean − 1) / (scale_max − 1) × 100 (POMP; Cohen et al., 1999). NPS uses the standard "
        "(promoters − detractors)/n × 100 transformed to 0–100 via (NPS+100)/2. "
        "Comparative 7-pt items use (7 − mean)/6 × 100 with focal brand on the "
-       "left. Open-ended items (top-of-mind, recall) are AI-normalized into "
-       "canonical brand buckets and contribute share-of-respondents (0–100).")
+       "left. Open-ended items (top-of-mind, recall) contribute the share of "
+       "respondents mentioning the focal brand (0–100); mentions were counted by "
+       + {"ai": "LLM-assisted coding of each distinct answer (see the AI-use disclosure), "
+                "with any not-yet-coded answer counted by exact brand-name matching.",
+          "manual": "the researcher's manual code frame.",
+          "deterministic": "exact / unambiguous brand-name matching (no LLM); misspellings "
+                           "and nicknames may be missed.",
+          "none": "— (no open-ended brand items)."}.get(basis, basis) + " Reverse-worded items are "
+       "reverse-scored before aggregation.")
 
     # Weight table generated from the live DIMENSION_WEIGHTS rather than
     # hand-copied. The previous literal had already drifted from the code (it
@@ -253,8 +273,8 @@ def render_thesis_docx(
                   for d, wm in _DW.items() for k, w in wm.items()]
         _data_table(doc, ["Dimension", "Signal (kind)", "Weight"], _wrows)
         _p(doc, "Weights renormalise over the signals a given study actually "
-                "collected. Brand Identity additionally includes the AI "
-                "identity–image alignment at 0.10 when that analysis has run.",
+                "collected. The LLM-judged identity–image alignment is reported "
+                "qualitatively and does not enter any score.",
            size=9, color=GREY, italic=True)
     except Exception:
         _p(doc, "Dimension weights could not be read from the scoring module.",
@@ -290,9 +310,17 @@ def render_thesis_docx(
                 "substituted with a value. Criterion: α ≥ .70 "
                 "(Nunnally & Bernstein, 1994).",
            size=9, color=GREY, italic=True)
+        _items = [(lab, it) for k, lab in (("awareness", "Awareness"), ("quality", "Perceived Quality"),
+                                            ("identity", "Brand Identity"), ("loyalty", "Loyalty"))
+                  for it in ((reliability.get(k) or {}).get("items") or [])]
+        if _items:
+            _data_table(doc, ["Dimension", "Item (kind)", "Corrected item-total r", "α if item deleted", "Reverse-scored"],
+                        [[lab, it.get("kind"), _fmt(it.get("corrected_item_total_r")),
+                          _fmt(it.get("alpha_if_deleted")), "yes" if it.get("reverse_scored") else ""]
+                         for lab, it in _items])
         _p(doc, "Construct validity has not been assessed: no exploratory or "
-                "confirmatory factor analysis was performed, and average variance "
-                "extracted and composite reliability are not reported. The Brand "
+                "confirmatory factor analysis was performed; average variance "
+                "extracted, composite reliability and McDonald's ω are not reported. The Brand "
                 "Equity Score is a theory-weighted composite index, not a latent "
                 "variable estimated from a structural model.",
            size=9, color=GREY, italic=True)
@@ -309,10 +337,21 @@ def render_thesis_docx(
          or "n ≥ 30 recommended for thesis-grade inference; n ≥ 10 enables "
             "indicative reporting only."),
     ])
-    _p(doc, "All between-brand, between-segment and between-wave differences in "
-            "this report are descriptive. No significance testing was performed, "
-            "so differences should not be described as statistically significant.",
+    _p(doc, "Between-segment and between-wave differences in this report are "
+            "descriptive. Brand-versus-competitor differences are tested only where a "
+            "paired t-test is shown (Holm, 1979, adjustment); any other difference should not be "
+            "described as statistically significant. Respondents are a convenience "
+            "sample, so results do not generalise to a population.",
        size=9, color=GREY, italic=True)
+    _dq = (aggregate or {}).get("data_quality") or {}
+    if _dq.get("flags"):
+        _fl = _dq["flags"]
+        _kv_table(doc, [
+            ("Speeders (flagged)", _fl.get("speeder", 0)),
+            ("Straight-liners (flagged)", _fl.get("straightliner", 0)),
+            ("Duplicate submissions (flagged)", _fl.get("duplicate", 0)),
+            ("Rated the brand without recognising it", _fl.get("unaware_rater", 0)),
+        ])
 
     # ============ RESULTS ============
     doc.add_page_break()
@@ -324,7 +363,8 @@ def render_thesis_docx(
         ("identity",  "Brand Identity"),
         ("loyalty",   "Loyalty"),
     ]:
-        _h(doc, f"{dim_label} — {_fmt(composite.get(dim_key))} / 100",
+        _h(doc, f"{dim_label} — " + (f"{_fmt(composite.get(dim_key))} / 100" if dim_key in measured
+                                     else "not measured"),
            level=1, color=RED)
         dim_qs = [q for q in questions if q.get("dimension") == dim_key
                   and not q.get("compare_brand")]
@@ -335,15 +375,20 @@ def render_thesis_docx(
         rows = []
         for q in dim_qs:
             s = q.get("stats") or {}
+            ci = s.get("score_100_ci95")
+            score_txt = _fmt(s.get("score_100"))
+            if q.get("coding_status") == "uncoded":
+                score_txt = "ยังไม่ได้เข้ารหัส (not coded)"
             rows.append([
-                _kind_label(q.get("kind")),
+                _kind_label(q.get("kind")) + (" (R)" if q.get("reverse_scored") else ""),
                 q.get("type") or "",
                 s.get("n") or "—",
                 _fmt(s.get("mean")),
                 _fmt(s.get("std")),
-                _fmt(s.get("score_100")),
+                score_txt,
+                f"{ci[0]}–{ci[1]}" if ci else "—",
             ])
-        _data_table(doc, ["Question kind", "Type", "n", "Mean", "Std", "Score (0-100)"], rows)
+        _data_table(doc, ["Question kind", "Type", "n", "Mean", "SD", "Score (0-100)", "95% CI"], rows)
 
         # Comparative subsection (if any compare_brand q's exist for quality)
         if dim_key == "quality":
@@ -365,6 +410,17 @@ def render_thesis_docx(
                 _data_table(doc,
                     ["Competitor", "Axis", "n", "Mean", "Focal favors %", "Comp favors %", "Score (focal)"],
                     comp_rows)
+            paired = [r for r in ((aggregate.get("competitor_comparison") or {}).get("paired") or [])
+                      if r.get("testable")]
+            if paired:
+                _h(doc, "Brand vs competitor — paired t-tests (POMP 0–100, Holm-adjusted)", level=2)
+                _data_table(doc, ["Axis", "Competitor", "n pairs", "Diff (brand − comp)", "95% CI",
+                                  "t(df)", "p (Holm)", "d_z"],
+                            [[r["axis"], r["competitor"], r["n_pairs"], _fmt(r["mean_diff"]),
+                              f"{r['diff_ci95'][0]} to {r['diff_ci95'][1]}", f"t({r['df']}) = {r['t']}",
+                              ("< .001" if (r.get("p_value_holm") or 1) < 0.001
+                               else f"{r.get('p_value_holm'):.3f}".lstrip("0")),
+                              _fmt(r["cohens_dz"])] for r in paired])
 
     # ============ IDENTITY VS IMAGE ============
     ai_cache = study.get("ai_cache") or {}
@@ -383,14 +439,18 @@ def render_thesis_docx(
             )
         else:
             perc_str = str(perceived or "—")
-        align = ii.get("alignment_score")
+        # The prompt asks for `alignment_score_0_100`; this read `alignment_score`
+        # and printed "— / 100" for every real result.
+        align = ii.get("alignment_score_0_100", ii.get("alignment_score"))
         _kv_table(doc, [
             ("Intended traits (brand input)", ", ".join(intended) or "—"),
             ("Perceived traits (AI-extracted from open responses)", perc_str or "—"),
-            ("Alignment score", f"{_fmt(align)} / 100"),
+            ("Aligned / lost / unintended", " · ".join(", ".join(ii.get(k) or []) or "—"
+                                                       for k in ("aligned", "lost", "unintended"))),
+            ("LLM-judged alignment (qualitative, not scored)", f"{_fmt(align)} / 100"),
         ])
-        if ii.get("summary"):
-            _p(doc, ii["summary"], italic=True)
+        if ii.get("narrative") or ii.get("summary"):
+            _p(doc, ii.get("narrative") or ii.get("summary"), italic=True)
 
     # ============ AI MASTER INSIGHTS ============
     insights = ai_cache.get("master_insights") or []
@@ -402,37 +462,64 @@ def render_thesis_docx(
             if isinstance(ins, str):
                 _p(doc, f"{i}. {ins}")
             elif isinstance(ins, dict):
+                # Insights carry headline / evidence / recommendation; this used
+                # to read title / body only, so the evidence and the
+                # recommendation never reached the report.
                 title = ins.get("title") or ins.get("headline") or "Insight"
-                body = ins.get("body") or ins.get("description") or ""
-                _p(doc, f"{i}. {title}", bold=True, size=11)
+                body = ins.get("body") or ins.get("evidence") or ins.get("description") or ""
+                _p(doc, f"{i}. {title}" + (f"  [{ins['priority']}]" if ins.get("priority") else ""),
+                   bold=True, size=11)
                 if body:
                     _p(doc, body, size=10.5, color=GREY)
+                if ins.get("recommendation"):
+                    _p(doc, f"→ {ins['recommendation']}", size=10.5, italic=True)
+
+    # ============ AI-USE DISCLOSURE ============
+    # The scores and tables are computed without any LLM; the identity-image
+    # comparison and the insights above are AI-written. Name the tool.
+    if ii or insights:
+        metas = ai_cache.get("sections_meta") or {}
+        tools = [m.get("model_label") for k, m in metas.items()
+                 if k in ("identity", "insights") and isinstance(m, dict) and m.get("model_label")]
+        tool = ", ".join(dict.fromkeys(tools)) or ai_cache.get("model_label") or "system LLM (Gemini 2.5 Flash)"
+        _p(doc, f"AI-use disclosure: the identity–image comparison and the strategic insights in this "
+                f"report were drafted by an AI language model ({tool}) from the computed tables. All "
+                f"scores, tables and tests were computed without AI. The author must review and take "
+                f"responsibility for this text.", size=9, color=GREY, italic=True)
 
     # ============ REFERENCES ============
+    # Every work cited in the text above, and nothing that is not. The list
+    # used to cite DeVellis (cited nowhere) and omit Nunnally & Bernstein,
+    # Cronbach, Fornell & Larcker and Cohen et al. — all cited in the text.
     doc.add_page_break()
     _eyebrow(doc, "06 · REFERENCES")
     _h(doc, "Cited works (APA 7)", level=1)
-    _p(doc,
-       "Aaker, D. A. (1991). Managing brand equity: Capitalizing on the value of "
-       "a brand name. The Free Press.")
-    _p(doc,
-       "Aaker, D. A. (1996). Building strong brands. The Free Press.")
-    _p(doc,
-       "Keller, K. L. (1993). Conceptualizing, measuring, and managing customer-"
-       "based brand equity. Journal of Marketing, 57(1), 1–22. "
-       "https://doi.org/10.2307/1252054")
-    _p(doc,
-       "Reichheld, F. F. (2003). The one number you need to grow. "
-       "Harvard Business Review, 81(12), 46–54.")
-    _p(doc,
-       "DeVellis, R. F. (2017). Scale development: Theory and applications "
-       "(4th ed.). SAGE Publications.")
+    for ref in REPORT_REFERENCES:
+        _p(doc, ref)
 
     # Output
     buf = io.BytesIO()
     doc.save(buf)
     buf.seek(0)
     return buf
+
+
+REPORT_REFERENCES = [
+    "Aaker, D. A. (1991). Managing brand equity: Capitalizing on the value of a brand name. The Free Press.",
+    "Aaker, D. A. (1996). Building strong brands. The Free Press.",
+    "Cohen, P., Cohen, J., Aiken, L. S., & West, S. G. (1999). The problem of units and the circumstance "
+    "for POMP. Multivariate Behavioral Research, 34(3), 315–346. https://doi.org/10.1207/S15327906MBR3403_2",
+    "Cronbach, L. J. (1951). Coefficient alpha and the internal structure of tests. Psychometrika, 16(3), "
+    "297–334. https://doi.org/10.1007/BF02310555",
+    "Fornell, C., & Larcker, D. F. (1981). Evaluating structural equation models with unobservable variables "
+    "and measurement error. Journal of Marketing Research, 18(1), 39–50. https://doi.org/10.2307/3151312",
+    "Holm, S. (1979). A simple sequentially rejective multiple test procedure. Scandinavian Journal of "
+    "Statistics, 6(2), 65–70.",
+    "Keller, K. L. (1993). Conceptualizing, measuring, and managing customer-based brand equity. Journal of "
+    "Marketing, 57(1), 1–22. https://doi.org/10.2307/1252054",
+    "Nunnally, J. C., & Bernstein, I. H. (1994). Psychometric theory (3rd ed.). McGraw-Hill.",
+    "Reichheld, F. F. (2003). The one number you need to grow. Harvard Business Review, 81(12), 46–54.",
+]
 
 
 def _format_filter(f: Dict[str, Any]) -> str:

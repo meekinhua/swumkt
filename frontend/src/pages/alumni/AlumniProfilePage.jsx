@@ -5,9 +5,61 @@ import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, StatPill, useToast } from './AlumniUI';
 import { ReviewsSection } from './Reviews';
+import { BenefitsHub } from './BenefitsHub';
+import AlumniAdminPanel from './AlumniAdminPanel';
+import { api, errMsg, GENDER_OPTS } from './alumniApi';
 import './alumni-styles.css';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// who the line calls me + ปู่/ย่า vs ตา/ยาย for my own line
+const LineSettings = ({ token, toast, profile, onSaved }) => {
+  const [variant, setVariant] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [gender, setGender] = useState(profile.kinship_gender || 'u');
+  useEffect(() => {
+    api.get(token, '/alumni/kinship/settings')
+      .then(r => setVariant(r.data.my_line_override?.variant === 'maternal' ? 'maternal' : 'default'))
+      .catch(() => setVariant('default'));
+  }, [token]);
+  const saveGender = async (g) => {
+    setGender(g); setBusy(true);
+    try { await api.put(token, '/alumni/me', { kinship_gender: g }); toast('บันทึกคำเรียกแล้ว'); onSaved && onSaved(); }
+    catch (e) { toast(errMsg(e, 'บันทึกไม่สำเร็จ')); }
+    finally { setBusy(false); }
+  };
+  const saveVariant = async (v) => {
+    setBusy(true);
+    try {
+      if (v === 'maternal') await api.put(token, '/alumni/kinship/line-override', { variant: 'maternal' });
+      else await api.del(token, '/alumni/kinship/line-override');
+      setVariant(v); toast('บันทึกแล้ว');
+    } catch (e) { toast(errMsg(e, 'บันทึกไม่สำเร็จ')); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="al-card al-card-pad" data-testid="profile-line-settings">
+      <div className="al-eyebrow" style={{ marginBottom: 10 }}>คำเรียกในสายเทค</div>
+      <div className="al-label">รุ่นน้องควรเรียกคุณว่า</div>
+      <div className="al-seg" role="group" aria-label="คำเรียกของคุณ" style={{ marginBottom: 6 }}>
+        {GENDER_OPTS.map(g => (
+          <button key={g.v} aria-pressed={gender === g.v} disabled={busy} onClick={() => saveGender(g.v)} data-testid={`profile-kgender-${g.v}`}>
+            {g.v === 'm' ? 'ชาย (ลุง/ปู่)' : g.v === 'f' ? 'หญิง (ป้า/ย่า)' : 'ไม่ระบุ'}
+          </button>
+        ))}
+      </div>
+      <div className="al-help" style={{ marginBottom: 14 }} data-testid="profile-kgender-note">
+        ไม่บังคับ ถามไว้เพื่อให้สายเรียกคุณได้ถูก เช่น "ลุงเทค" หรือ "ป้าเทค" ถ้าไม่ระบุ จะเรียกรวมว่า "ลุง/ป้าเทค" (เห็นเฉพาะสมาชิก)
+      </div>
+      <div className="al-label">สายของคุณเรียกรุ่นที่ 3 ว่า</div>
+      <div className="al-seg" role="group" aria-label="คำเรียกรุ่นที่ 3">
+        <button aria-pressed={variant === 'default'} disabled={busy || !variant} onClick={() => saveVariant('default')} data-testid="profile-variant-default">ปู่/ย่าเทค</button>
+        <button aria-pressed={variant === 'maternal'} disabled={busy || !variant} onClick={() => saveVariant('maternal')} data-testid="profile-variant-maternal">ตา/ยายเทค</button>
+      </div>
+      <div className="al-help">มีผลกับคุณและทุกคนที่อยู่ในสายใต้คุณ</div>
+    </div>
+  );
+};
 
 const BADGES_CATALOG = [
   { key: 'tree_builder', emoji: '🌳', name: 'ผู้ก่อร่าง', desc: 'ชวน 5 คน' },
@@ -124,13 +176,19 @@ const AlumniProfilePage = () => {
       <AlumniLayout>
         <div className="al-page al-fade-in" style={{ textAlign: 'center', paddingTop: 80 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>👋</div>
-          <h2 className="al-h-section" style={{ marginBottom: 8 }}>ยังไม่มีโปรไฟล์ในระบบสายตระกูล</h2>
-          <p className="al-muted" style={{ marginBottom: 24 }}>ลงทะเบียนเพื่อสร้างโปรไฟล์และดูสายตระกูลของคุณ</p>
+          <h2 className="al-h-section" style={{ marginBottom: 8 }}>ยังไม่มีโปรไฟล์ในระบบสายเทค</h2>
+          <p className="al-muted" style={{ marginBottom: 24 }}>ลงทะเบียนเพื่อสร้างโปรไฟล์และดูสายเทคของคุณ</p>
           <button className="al-btn al-btn-red al-btn-lg" onClick={() => navigate('/alumni/onboarding')}
             data-testid="profile-goto-onboarding-btn">
             ลงทะเบียนเลย <Icon name="arrow-right" size={16} />
           </button>
         </div>
+        {/* Admins manage alumni settings without needing an alumni profile of their own. */}
+        {user.role === 'admin' && (
+          <div className="al-page" style={{ paddingTop: 24, textAlign: 'left' }}>
+            <AlumniAdminPanel token={token} toast={toast.show} />
+          </div>
+        )}
       </AlumniLayout>
     );
   }
@@ -259,7 +317,7 @@ const AlumniProfilePage = () => {
 
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
-          <StatPill testId="profile-stat-tree" label="สายตระกูล" value={tree?.total || 1} sub={tree?.max_ancestor_gen ? `ยาวถึงรุ่น ${tree.max_ancestor_gen}` : 'เริ่มสาย'} />
+          <StatPill testId="profile-stat-tree" label="สายเทค" value={tree?.total || 1} sub={tree?.max_ancestor_gen ? `ยาวถึงรุ่น ${tree.max_ancestor_gen}` : 'เริ่มสาย'} />
           <StatPill testId="profile-stat-invites" label="คนที่ชวน" value={u.invite_count || 0} sub="จำนวนการเชิญ" tone="var(--al-red)" />
           <StatPill testId="profile-stat-xp" label="XP สะสม" value={(u.xp || 0).toLocaleString()} sub="คะแนนทั้งหมด" tone="var(--al-blue)" />
           <StatPill testId="profile-stat-streak" label="Streak" value={`${u.streak_days || 0} วัน`} sub="Active ต่อเนื่อง" />
@@ -308,6 +366,7 @@ const AlumniProfilePage = () => {
                         <Avatar name={a.name} hue={a.avatar_hue || 200} size="xs" src={a.avatar_url} />
                         <span className="al-small" style={{ fontWeight: 600 }}>{a.nickname || a.name}</span>
                         <span className="al-mono al-tiny al-muted">{a.gen}</span>
+                        {a.term && <span className="al-tiny" style={{ color: 'var(--al-red-ink)' }}>{a.term}</span>}
                       </div>
                       <Icon name="chevron-right" size={12} style={{ color: 'var(--al-mute)' }} />
                     </React.Fragment>
@@ -353,24 +412,31 @@ const AlumniProfilePage = () => {
               </div>
             </div>
 
-            {/* Next goals */}
-            <div className="al-card al-card-pad">
-              <div className="al-eyebrow" style={{ marginBottom: 12 }}>ภารกิจต่อไป</div>
-              {[
-                { name: 'Refer งานให้ 1 คน', reward: '+200 XP · Badge', pct: 0 },
-                { name: `ชวนน้องอีก ${Math.max(0, 10 - (u.invite_count || 0))} คน`, reward: '+Badge นายก๊ก', pct: Math.min(100, ((u.invite_count || 0) / 10) * 100) },
-                { name: 'รีวิวพี่ในสาย อีก 2 คน', reward: '+150 XP', pct: 33 },
-              ].map((q, i) => (
-                <div key={i} style={{ paddingBottom: 12, borderBottom: i < 2 ? '1px solid var(--al-line)' : 'none', marginBottom: i < 2 ? 12 : 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{q.name}</span>
-                    <span className="al-tiny al-muted al-tabular">{Math.round(q.pct)}%</span>
+            {/* Next goals — only things backed by real numbers or real links */}
+            {isOwn && (
+              <div className="al-card al-card-pad" data-testid="profile-missions">
+                <div className="al-eyebrow" style={{ marginBottom: 12 }}>ภารกิจต่อไป</div>
+                {[
+                  { name: `ชวนเพื่อนเข้าสายอีก ${Math.max(0, 5 - (u.invite_count || 0))} คน`, reward: 'Badge ผู้ก่อร่าง (ชวนครบ 5)', pct: Math.min(100, ((u.invite_count || 0) / 5) * 100) },
+                  { name: `ชวนให้ครบ 10 คน`, reward: 'Badge นายก๊ก', pct: Math.min(100, ((u.invite_count || 0) / 10) * 100) },
+                ].map((q, i) => (
+                  <div key={i} style={{ paddingBottom: 12, borderBottom: '1px solid var(--al-line)', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{q.name}</span>
+                      <span className="al-tiny al-muted al-tabular">{Math.round(q.pct)}%</span>
+                    </div>
+                    <div className="al-progress" style={{ marginBottom: 4 }}><div style={{ width: `${q.pct}%` }} /></div>
+                    <div className="al-tiny" style={{ color: 'var(--al-red-ink)' }}>{q.reward}</div>
                   </div>
-                  <div className="al-progress" style={{ marginBottom: 4 }}><div style={{ width: `${q.pct}%` }} /></div>
-                  <div className="al-tiny" style={{ color: 'var(--al-red)' }}>{q.reward}</div>
+                ))}
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <button className="al-btn al-btn-outline al-btn-sm" onClick={() => navigate('/alumni/tree')} data-testid="mission-extend-line">ต่อสายขึ้นไปอีกขั้น</button>
+                  <button className="al-btn al-btn-outline al-btn-sm" onClick={() => navigate('/alumni/tree?tab=confirm')} data-testid="mission-help-confirm">ช่วยยืนยันสายให้เพื่อน (+3 XP ต่อโหวต)</button>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {isOwn && <LineSettings token={token} toast={toast.show} profile={u} onSaved={loadProfile} />}
 
             {/* Privacy */}
             {isOwn && (
@@ -409,6 +475,13 @@ const AlumniProfilePage = () => {
             )}
           </div>
         </div>
+
+        {isOwn && (
+          <div style={{ marginTop: 28, display: 'grid', gap: 24 }}>
+            <BenefitsHub token={token} toast={toast.show} />
+            {user.role === 'admin' && <AlumniAdminPanel token={token} toast={toast.show} />}
+          </div>
+        )}
 
         {toast.node}
       </div>

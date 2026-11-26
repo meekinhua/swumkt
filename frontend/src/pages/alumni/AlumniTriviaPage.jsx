@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, useToast } from './AlumniUI';
 import './alumni-styles.css';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -69,7 +70,7 @@ const AlumniTriviaPage = () => {
       }
       loadLeaderboard();
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'ส่งคำตอบไม่สำเร็จ');
+      toast.show(apiErrorText(e, 'ส่งคำตอบไม่สำเร็จ'));
     }
   };
 
@@ -90,9 +91,9 @@ const AlumniTriviaPage = () => {
           <div className="al-card al-card-pad" style={{ textAlign: 'center', padding: 60 }} data-testid="trivia-empty">
             <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
             <h2 className="al-h-card" style={{ marginBottom: 8 }}>ยังไม่มีคนในสายของคุณมากพอ</h2>
-            <p className="al-muted" style={{ marginBottom: 20 }}>เริ่มต้นด้วยการ Mark พี่ take ของคุณก่อน</p>
+            <p className="al-muted" style={{ marginBottom: 20 }}>เริ่มต้นด้วยการ Mark พี่เทค ของคุณก่อน</p>
             <button className="al-btn al-btn-red" onClick={() => navigate('/alumni/tree')} data-testid="trivia-goto-tree-btn">
-              ไปที่สายตระกูล <Icon name="arrow-right" size={14} />
+              ไปที่สายสายเทค <Icon name="arrow-right" size={14} />
             </button>
           </div>
         )}

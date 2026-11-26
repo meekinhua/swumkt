@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { fmtPct } from './copy-th';
+import { apiErrorText } from '@/lib/apiError';
 
 /**
  * The back-coding queue: what respondents typed under "other", and the act of
@@ -30,7 +31,7 @@ const JourneyBackCoding = ({ studyId, token, categories = [], states = [], onCha
       const r = await axios.get(`${API}/journey/studies/${studyId}/pain-other-texts`, h);
       setQueue(r.data);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'โหลดคิวไม่ได้');
+      setError(apiErrorText(e, 'โหลดคิวไม่ได้'));
     }
   }, [studyId, token]);
 
@@ -57,7 +58,7 @@ const JourneyBackCoding = ({ studyId, token, categories = [], states = [], onCha
       await load();
       if (onChanged) onChanged();
     } catch (e) {
-      setError(e?.response?.data?.detail || 'ลงรหัสไม่สำเร็จ');
+      setError(apiErrorText(e, 'ลงรหัสไม่สำเร็จ'));
     } finally { setBusy(''); }
   };
 

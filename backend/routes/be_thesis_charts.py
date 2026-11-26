@@ -223,11 +223,15 @@ def render_quality_radar(
     if not attrs or len(attrs) < 3:
         return None
     axes = [a["axis_label"] for a in attrs]
-    vals = [round((a.get("mean") or 0) / 7 * 100, 1) for a in attrs]
+    # POMP (x̄−1)/6×100 — the score the dashboard and every table use. This
+    # drew mean/7×100, which puts the floor at 14.3 and disagrees with the
+    # tables printed next to it; reverse-scored items arrive as score_100.
+    vals = [round(a["score_100"], 1) if a.get("score_100") is not None
+            else round(((a.get("mean") or 1) - 1) / 6 * 100, 1) for a in attrs]
     return _radar(axes,
                   [{"name": brand_name, "kind": "brand",
                     "color": BE_GOLD, "values": vals}],
-                  title="Quality attributes — radar (Likert 1-7 normalized to 0-100)")
+                  title="Quality attributes — radar (POMP 0-100)")
 
 
 def render_image_radar(
@@ -599,7 +603,8 @@ def render_loyalty_means(
     fig, ax = plt.subplots(figsize=(7.5, 3))
     ax.set_facecolor(PAPER)
     labels = [it[0] for it in items]
-    vals_pct = [round(it[1] / 7 * 100, 1) for it in items]
+    # POMP, consistent with the dashboard (was mean/7×100).
+    vals_pct = [round((it[1] - 1) / 6 * 100, 1) for it in items]
     colors = [it[2] for it in items]
     y_pos = np.arange(len(items))
     bars = ax.barh(y_pos, vals_pct, color=colors, edgecolor=INK, linewidth=0.4,
@@ -607,7 +612,7 @@ def render_loyalty_means(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(labels, color=INK, fontproperties=_FP_LABEL)
     ax.set_xlim(0, 100)
-    ax.set_xlabel("Score (0-100, จาก Likert 1-7)", color=INK_2, fontproperties=_FP_LABEL)
+    ax.set_xlabel("Score (POMP 0-100, จาก Likert 1-7)", color=INK_2, fontproperties=_FP_LABEL)
     ax.set_title("Loyalty — Repeat Intent & Switching Resistance",
                  color=INK, pad=10, fontproperties=_FP_TITLE)
     for b, v, raw in zip(bars, vals_pct, items):
@@ -615,7 +620,7 @@ def render_loyalty_means(
         if raw[3]: suffix += f" · n={raw[3]}"
         suffix += ")"
         ax.text(v + 1.5, b.get_y() + b.get_height() / 2,
-                f"{v}%{suffix}", va="center", color=INK_2,
+                f"{v}{suffix}", va="center", color=INK_2,
                 fontproperties=_FP_SMALL)
     for lbl in ax.get_xticklabels():
         lbl.set_fontproperties(_FP_SMALL)
@@ -730,10 +735,12 @@ def collect_all_charts(
              if q.get("dimension") == "quality"
              and q.get("type") == "likert_7"
              and (q.get("kind") or "").startswith("attribute_")
+             and q.get("score_eligible") is not False
              and q.get("stats", {}).get("mean") is not None]
     if len(attrs) >= 3:
         attrs_data = [{"axis_label": a.get("axis_label") or a["kind"].replace("attribute_", ""),
-                       "mean": a["stats"]["mean"]} for a in attrs[:8]]
+                       "mean": a["stats"]["mean"],
+                       "score_100": a["stats"].get("score_100")} for a in attrs[:8]]
         b = render_quality_radar(attrs_data, brand_name=target)
         if b: out["quality_radar"] = b
 

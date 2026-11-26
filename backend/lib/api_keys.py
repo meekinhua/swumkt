@@ -49,8 +49,15 @@ SCOPES: Dict[str, str] = {
     "cms.posts.write": "create, edit, publish and trash posts",
     "cms.revisions.restore": "roll a document back to an earlier revision",
     "cms.faculty.write": "edit faculty profiles and their publication lists",
+    # Plan 2026-11 (operate from CLI). NOT covered by the `cms.*` wildcard —
+    # a key minted before these existed must not gain them.
+    "platform.settings": "read and change the system-LLM policy (/api/platform/llm-policy)",
+    "research.read": "read conjoint / brand-equity studies, analyses, exports and external-LLM prompts",
+    "research.ai": "import an external-LLM result / build an external prompt pack for a study",
 }
 WILDCARD = "cms.*"
+# The wildcard stands for the content scopes only.
+WILDCARD_COVERS_PREFIX = "cms."
 
 # Checked before anything else. These stay out of reach of every key, however
 # it is scoped, because they are unrecoverable or are not content at all.
@@ -66,7 +73,11 @@ HARD_DENY: Sequence[re.Pattern] = (
     re.compile(r"^/api/cms/sources(/|$)"),
     # One-off bootstrap from /admin/cms/setup: a bulk insert, run by a person.
     re.compile(r"^/api/cms/faculty/seed/?$"),
+    # Module-level admin maintenance endpoints (bulk relink / cleanup / sync).
+    re.compile(r"^/api/(conjoint|brand-equity)/admin(/|$)"),
 )
+
+_RESEARCH = r"(conjoint|brand-equity)"
 
 # (scope, methods, path pattern). First match wins; no match means refused.
 SCOPE_RULES: Sequence[Tuple[str, Set[str], re.Pattern]] = (
@@ -81,6 +92,31 @@ SCOPE_RULES: Sequence[Tuple[str, Set[str], re.Pattern]] = (
      re.compile(r"^/api/cms/(faculty|papers)(/.*)?$")),
     # Reads last, so a write rule is chosen first for the same path.
     ("cms.read", {"GET", "HEAD"}, re.compile(r"^/api/cms(/.*)?$")),
+    # --- plan 2026-11 ---
+    ("platform.settings", {"GET", "HEAD", "PUT"},
+     re.compile(r"^/api/platform/llm-policy/?$")),
+    # Bring an external-LLM result back / build a thesis prompt pack (writes).
+    ("research.ai", {"POST"},
+     re.compile(r"^/api/" + _RESEARCH + r"/studies/[^/]+/(.+/)?external-(import|pack)/?$")),
+    # Fetching a prompt is a read even when the endpoint takes a POST body.
+    ("research.read", {"GET", "HEAD", "POST"},
+     re.compile(r"^/api/" + _RESEARCH + r"/studies/[^/]+/(.+/)?external-prompt/?$")),
+    ("research.read", {"GET", "HEAD"},
+     re.compile(r"^/api/" + _RESEARCH + r"/studies/[^/]+/(.+/)?external-pack/?$")),
+    # Read-only computations that happen to take a POST body and never call an
+    # LLM: the no-AI thesis document and the market simulator (conjoint).
+    ("research.read", {"POST"},
+     re.compile(r"^/api/conjoint/studies/[^/]+/(export-thesis/no-ai|simulate)/?$")),
+    # Manual code frame (brand equity): writes the study's open-ended coding,
+    # no LLM — same trust level as importing an external-LLM result.
+    ("research.ai", {"POST"},
+     re.compile(r"^/api/brand-equity/studies/[^/]+/coding/import-csv/?$")),
+    ("research.ai", {"DELETE"},
+     re.compile(r"^/api/brand-equity/studies/[^/]+/coding/?$")),
+    # Study lists, study detail, results, analyses, exports, job status.
+    ("research.read", {"GET", "HEAD"}, re.compile(r"^/api/" + _RESEARCH + r"/studies(/.*)?$")),
+    ("research.read", {"GET", "HEAD"},
+     re.compile(r"^/api/brand-equity/(templates|thesis-eligible)/?$")),
 )
 
 
@@ -159,7 +195,9 @@ def required_scope(method: str, path: str) -> Optional[str]:
 
 
 def scope_allows(granted: Sequence[str], needed: str) -> bool:
-    return WILDCARD in granted or needed in granted
+    if needed in granted:
+        return True
+    return WILDCARD in granted and needed.startswith(WILDCARD_COVERS_PREFIX)
 
 
 def build_key_document(label: str, scopes: Sequence[str], created_by: str,
@@ -233,7 +271,7 @@ async def authorize(db, token: str, method: str, path: str) -> Dict[str, Any]:
     needed = required_scope(method, path)
     if needed is None:
         raise KeyRejected(
-            403, f"API keys cannot {method} {path} — content endpoints only")
+            403, f"API keys cannot {method} {path} — not reachable by any key scope")
     if not scope_allows(doc.get("scopes") or [], needed):
         raise KeyRejected(
             403,

@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
-import { BeTopbar, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
+import { BeTopbar, HUB_CRUMB, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
 import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -31,7 +32,10 @@ const BrandEquityListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState('all'); // admin-only: 'all' | 'mine' | <email>
-  const [scores, setScores] = useState({}); // study_id -> {overall, awareness, ...}
+  const [scores, setScores] = useState({}); // study_id -> {overall, awareness, ..., schema_version, method_updated_from}
+  const [scoresSchema, setScoresSchema] = useState(null);
+  const [loadErr, setLoadErr] = useState('');
+  const [scoresErr, setScoresErr] = useState(false);
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -43,11 +47,14 @@ const BrandEquityListPage = () => {
 
   const loadStudies = async () => {
     setLoading(true);
+    setLoadErr('');
     try {
       const r = await axios.get(`${API}/brand-equity/studies`, authH);
       setStudies(r.data.studies || []);
     } catch (e) {
       console.error(e);
+      setLoadErr(e?.response?.data?.detail && typeof e.response.data.detail === 'string'
+        ? e.response.data.detail : 'โหลดรายการ study ไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วลองใหม่');
     }
     setLoading(false);
   };
@@ -58,7 +65,9 @@ const BrandEquityListPage = () => {
     try {
       const r = await axios.get(`${API}/brand-equity/studies/scores`, authH);
       setScores(r.data.scores || {});
-    } catch (e) { /* cards fall back to the "open to see" hint */ }
+      setScoresSchema(r.data.analysis_schema_version ?? null);
+      setScoresErr(false);
+    } catch (e) { setScoresErr(true); /* cards fall back to the "open to see" hint */ }
   };
 
   const loadTrashCount = async () => {
@@ -99,7 +108,7 @@ const BrandEquityListPage = () => {
       loadStudies();
     } catch (e) {
       console.error(e);
-      window.alert('ล้างไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      window.alert('ล้างไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     } finally {
       setCleaningDecoys(false);
     }
@@ -115,7 +124,7 @@ const BrandEquityListPage = () => {
       setStudies(prev => prev.map(s => s.id === id ? { ...s, status } : s));
     } catch (e) {
       console.error(e);
-      alert('เปลี่ยนสถานะไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('เปลี่ยนสถานะไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -128,7 +137,7 @@ const BrandEquityListPage = () => {
       setTrashCount(c => c + 1);
     } catch (e) {
       console.error(e);
-      alert('ย้ายไปถังขยะไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('ย้ายไปถังขยะไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -142,7 +151,7 @@ const BrandEquityListPage = () => {
       loadStudies();
     } catch (e) {
       console.error(e);
-      alert('กู้คืนไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('กู้คืนไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -156,7 +165,7 @@ const BrandEquityListPage = () => {
       setTrashCount(c => Math.max(0, c - 1));
     } catch (e) {
       console.error(e);
-      alert('ลบถาวรไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('ลบถาวรไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -196,9 +205,10 @@ const BrandEquityListPage = () => {
   };
   const filtered = filter === 'all' ? ownerScoped : ownerScoped.filter(s => s.status === filter);
 
+  const methodUpdated = Object.values(scores || {}).filter((x) => x && x.method_updated_from != null);
   return (
     <div className="be-root" data-testid="be-list-page">
-      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}/>
+      <BeTopbar crumbs={[HUB_CRUMB, { label: 'Brand Health Check' }]}/>
       <div className="be-page">
         <div className="be-list-hero">
           <div>
@@ -206,11 +216,19 @@ const BrandEquityListPage = () => {
               <span className="be-dot-sm" style={{ background: '#C8102E' }}/>
               MODULE · BRAND HEALTH CHECK
             </div>
-            <h1 className="be-h1">Brand Equity Studies</h1>
-            <div className="be-muted be-small" style={{ marginTop: 8, maxWidth: 580 }}>
-              Aaker's 4-dimension framework — automated question generation, statistical engine,
-              AI-powered theme extraction & identity-image alignment.
+            <h1 className="be-h1">Brand Health Check <span className="be-muted" style={{ fontSize: "0.55em", fontWeight: 500 }}>· การศึกษา Brand Equity ของฉัน</span></h1>
+            <div className="be-muted be-small" style={{ marginTop: 8, maxWidth: 620, lineHeight: 1.6 }}>
+              วัดสุขภาพแบรนด์ตามกรอบ Aaker 4 มิติ — สร้างแบบสอบถามจากแม่แบบมาตรฐาน คำนวณสถิติให้อัตโนมัติ
+              และใช้ AI ช่วยวิเคราะห์คำตอบปลายเปิดได้ (ไม่บังคับ — ใช้ AI ของคุณเองหรือไม่ใช้ AI เลยก็ได้)
             </div>
+            {/* Shown only when the server says some study's scores came from an older analysis version
+                (scores[id].method_updated_from != null) — not a blanket note. */}
+            {methodUpdated.length > 0 && (
+              <div className="be-tiny be-muted" style={{ marginTop: 6, maxWidth: 620, lineHeight: 1.55 }} data-testid="be-list-method-note">
+                วิธีคำนวณปรับปรุงแล้ว (v{scoresSchema || 2}) — ตัวเลขของ {methodUpdated.length} study อาจต่างจากที่เคยเห็นหรือส่งออกไว้
+                โดยที่แบรนด์ไม่ได้เปลี่ยน (รายละเอียดอยู่ในหน้า dashboard ของแต่ละ study)
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="be-btn" onClick={loadStudies} data-testid="be-list-refresh">
@@ -227,7 +245,8 @@ const BrandEquityListPage = () => {
           <div className="be-list-filters" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
             {/* View toggle: Active vs Trash */}
             <span className={'be-chip ' + (view === 'active' ? 'solid' : '')}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer' }} role="button" tabIndex={0} aria-pressed={view === 'active'}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('active'); } }}
                   onClick={() => setView('active')}
                   data-testid="be-view-active">
               ACTIVE · {studies.length}
@@ -257,7 +276,8 @@ const BrandEquityListPage = () => {
                 ].map(([k, label]) => (
                   <span key={k}
                         className={'be-chip ' + (filter === k ? 'solid' : '')}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer' }} role="button" tabIndex={0} aria-pressed={filter === k}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilter(k); } }}
                         onClick={() => setFilter(k)}
                         data-testid={`be-list-filter-${k}`}>
                     {label}
@@ -325,7 +345,12 @@ const BrandEquityListPage = () => {
           </div>
         )}
 
-        {loading ? <BeLoading text={view === 'trash' ? 'Loading trash…' : 'Loading studies…'}/> :
+        {loadErr && !loading ? (
+          <div className="be-error-state" role="alert" data-testid="be-list-error">
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>{loadErr}</div>
+            <button type="button" className="be-btn" onClick={loadStudies}><Icon name="refresh" size={11}/>ลองอีกครั้ง</button>
+          </div>
+        ) : loading ? <BeLoading text={view === 'trash' ? 'กำลังโหลดถังขยะ…' : 'กำลังโหลดรายการ study…'}/> :
          view === 'trash' ? (
           // ========= TRASH VIEW =========
           trash.length === 0 ? (
@@ -451,6 +476,9 @@ const BrandEquityListPage = () => {
                 <div key={s.id}
                      className="be-study-card"
                      onClick={() => navigate(`/brand-equity/studies/${s.id}`)}
+                     onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); navigate(`/brand-equity/studies/${s.id}`); } }}
+                     role="link" tabIndex={0}
+                     aria-label={`เปิด dashboard ของ ${s.brand?.name || 'study'}`}
                      data-testid={`be-study-card-${s.id}`}>
                   <div className="be-study-top">
                     <div className="be-study-brand">
@@ -543,7 +571,7 @@ const BrandEquityListPage = () => {
                       {score ? (
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                           <span className="big" style={{ color: tierColor(score) }}>{Math.round(score)}</span>
-                          <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>BES</span>
+                          <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>BES · n = {n}</span>
                           {/* Same tier label the dashboard hero shows, so the two
                               surfaces cannot disagree about a brand's health. */}
                           <span data-testid={`be-study-tier-${s.id}`}
@@ -556,7 +584,7 @@ const BrandEquityListPage = () => {
                       ) : (
                         <span style={{ fontSize: 10, color: 'var(--ink-3)' }}
                               data-testid={`be-study-bes-hint-${s.id}`}>
-                          {n >= 10 ? 'กำลังคำนวณ…' : `BES locked · ${Math.max(0, 10 - n)} more`}
+                          {n >= 10 ? (scoresErr ? 'เปิดดูคะแนนใน dashboard' : 'กำลังคำนวณ…') : `n = ${n} · ต้องมีอีก ${Math.max(0, 10 - n)} คนจึงปลดล็อกคะแนน`}
                         </span>
                       )}
                     </div>

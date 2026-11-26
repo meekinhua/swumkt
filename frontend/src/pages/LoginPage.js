@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { LogIn, ArrowLeft, Mail, Lock, Sparkles } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import GoogleLoginButton from '@/components/GoogleLoginButton';
+import { safeRedirect } from '@/lib/safeRedirect';
+import { apiErrorText } from '@/lib/apiError';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -28,10 +30,11 @@ const LoginPage = () => {
     try {
       await login(formData.email, formData.password);
       toast.success(t('common.success'));
-      navigate('/dashboard');
+      // Return to the page that sent the user here (same-origin paths only).
+      navigate(safeRedirect('/dashboard'));
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.response?.data?.detail || t('common.error'));
+      toast.error(apiErrorText(error, t('common.error')));
     } finally {
       setLoading(false);
     }
@@ -137,7 +140,7 @@ const LoginPage = () => {
             </div>
             
             <GoogleLoginButton 
-              redirectUrl={`${window.location.origin}/dashboard`}
+              redirectUrl={safeRedirect('/dashboard')}
               className="mb-4"
             />
           </div>
@@ -145,7 +148,7 @@ const LoginPage = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-700 font-semibold">
               {t('auth.noAccount')}{' '}
-              <Link to="/register" className="text-[#00A9CE] hover:text-[#005A73] font-bold transition-colors" data-testid="goto-register-link">
+              <Link to={`/register${window.location.search.includes('redirect=') ? window.location.search : ''}`} className="text-[#00A9CE] hover:text-[#005A73] font-bold transition-colors" data-testid="goto-register-link">
                 {t('auth.registerButton')}
               </Link>
             </p>

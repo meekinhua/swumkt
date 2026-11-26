@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Icon, DIMENSIONS } from './be-components';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -39,7 +40,7 @@ export const BeWeightEditor = ({ study, token, onClose, onSaved }) => {
       onSaved?.();
       onClose?.();
     } catch (e) {
-      toast.error('บันทึกไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error('บันทึกไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setSaving(false);
   };

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Plus, Edit, Trash2, Save, X, BookOpen, Loader2, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiErrorText } from '@/lib/apiError';
 
 const AdminCourseManagement = ({ token }) => {
   const [courses, setCourses] = useState([]);
@@ -113,7 +114,7 @@ const AdminCourseManagement = ({ token }) => {
       handleCancel();
     } catch (error) {
       console.error('Error saving course:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถบันทึกข้อมูลได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถบันทึกข้อมูลได้'));
     }
   };
 
@@ -131,7 +132,7 @@ const AdminCourseManagement = ({ token }) => {
       await fetchCourses();
     } catch (error) {
       console.error('Error deleting course:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบวิชาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบวิชาได้'));
     }
   };
 
@@ -167,7 +168,7 @@ const AdminCourseManagement = ({ token }) => {
       toast.success('✅ ดาวน์โหลด CSV สำเร็จ!');
     } catch (error) {
       console.error('Export error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถ Export ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถ Export ได้'));
     } finally {
       setExportingCourseId(null);
     }

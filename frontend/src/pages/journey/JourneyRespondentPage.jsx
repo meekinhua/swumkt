@@ -7,6 +7,7 @@ import { BeLoading } from '../brand-equity/be-components';
 import JourneyPathBuilder from './JourneyPathBuilder';
 import { COPY } from './copy-th';
 import { copyToClipboard } from '@/lib/clipboard';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const MAX_STEPS = 12;
@@ -118,7 +119,7 @@ const JourneyRespondentPage = () => {
         const r = await axios.get(`${API}/journey/public/${token}`);
         setStudy(r.data);
       } catch (e) {
-        setError(e?.response?.data?.detail || 'เปิดแบบสอบถามไม่ได้');
+        setError(apiErrorText(e, 'เปิดแบบสอบถามไม่ได้'));
       }
     })();
   }, [token]);
@@ -261,7 +262,7 @@ const JourneyRespondentPage = () => {
       setDoneToken(r.data.respondent_token);
       setScreen('done');
     } catch (e) {
-      setError(e?.response?.data?.detail || 'ส่งคำตอบไม่สำเร็จ');
+      setError(apiErrorText(e, 'ส่งคำตอบไม่สำเร็จ'));
     } finally {
       setSubmitting(false);
     }

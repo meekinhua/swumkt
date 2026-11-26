@@ -21,6 +21,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from lib.ttl_cache import async_ttl_cache, invalidate_prefix
+from lib import llm_policy
+from lib import external_prompts as ext
 from lib.inline_media import externalize, externalize_many, rehydrate
 
 cms_router = APIRouter(prefix="/cms", tags=["CMS"])
@@ -251,10 +253,10 @@ DEFAULT_LANDING: Dict[str, Any] = {
     "tools": [
         {"tag": "BRAND", "t": "Brand Health Check", "s": "วัด Brand Equity ตามกรอบ Aaker — Awareness · Quality · Identity · Loyalty อ่านสุขภาพแบรนด์ก่อนคู่แข่งจะรู้ตัว", "p": "/brand-equity"},
         {"tag": "RESEARCH", "t": "Conjoint Analysis", "s": "Choice-Based Conjoint + D-Optimal — รู้ว่าลูกค้ายอมแลกอะไรเพื่ออะไร ก่อนปล่อยสินค้าจริง", "p": "/market-research/conjoint-analysis"},
-        {"tag": "CX", "t": "Customer Journey", "s": "แผนที่ touchpoint และ pain point — เห็นจุดที่ลูกค้าจะหลุดมือ ก่อนที่ยอดจะตก", "p": "/market-research"},
-        {"tag": "PSYCH", "t": "Customer Perception", "s": "Perceptual Map + Sentiment AI — อ่านภาพแบรนด์ในหัวลูกค้า ก่อนที่ตลาดจะให้คำตอบ", "p": "/market-research"},
-        {"tag": "PSYCH", "t": "Customer Behavior", "s": "EBM Decision-process analytics — เห็นว่าลูกค้าตัดสินใจซื้อยังไง ตั้งแต่ search ถึง post-purchase", "p": "/market-research"},
-        {"tag": "TOOL", "t": "Survey Builder", "s": "ออกแบบแบบสอบถาม AI-assisted — ถามคำถามที่ใช่ ได้ insight ที่จริง", "p": "/market-research"},
+        {"tag": "CX", "t": "Customer Journey", "s": "แผนที่ touchpoint และ pain point — เห็นจุดที่ลูกค้าจะหลุดมือ ก่อนที่ยอดจะตก", "p": "/market-research/customer-journey"},
+        {"tag": "PSYCH", "t": "Customer Perception", "s": "Perceptual Map + Sentiment AI — อ่านภาพแบรนด์ในหัวลูกค้า ก่อนที่ตลาดจะให้คำตอบ", "p": "/market-research/customer-perception"},
+        {"tag": "PSYCH", "t": "Customer Behavior", "s": "EBM Decision-process analytics — เห็นว่าลูกค้าตัดสินใจซื้อยังไง ตั้งแต่ search ถึง post-purchase", "p": "/market-research/customer-behavior"},
+        {"tag": "TOOL", "t": "Survey Builder", "s": "ออกแบบแบบสอบถาม AI-assisted — ถามคำถามที่ใช่ ได้ insight ที่จริง", "p": "/surveys/create"},
         {"tag": "LEARN", "t": "Content Hub", "s": "ฐานความรู้การตลาด — อ่านเทรนด์ก่อนคนอื่น เชื่อมทฤษฎีกับเครื่องมือจริง", "p": "/learn"},
         {"tag": "WORKFLOW", "t": "Kanban Projects", "s": "จัดการทีมวิจัย — board, sprint, และ research log สำหรับ insight ที่ส่งทันเวลา", "p": "/projects"},
     ],
@@ -501,6 +503,8 @@ async def _gemini_text(prompt: str, system: str = "You are a senior marketing re
     except asyncio.TimeoutError:
         logging.error("[CMS] Gemini text timeout")
         return ""
+    except llm_policy.SystemLLMDisabled:
+        raise  # admin switched the system LLM off: surface the 409, never "AI failed (timeout or quota)"
     except Exception as e:
         logging.error(f"[CMS] Gemini text error: {e}")
         return ""
@@ -540,9 +544,138 @@ async def _gemini_image(prompt: str) -> Optional[str]:
     except asyncio.TimeoutError:
         logging.error("[CMS] Gemini image timeout")
         return None
+    except llm_policy.SystemLLMDisabled:
+        raise
     except Exception as e:
         logging.error(f"[CMS] Gemini image error: {e}")
         return None
+
+
+# ---- prompt builders: ONE source for the system-LLM path and the external-prompt path ----
+CMS_TEXT_SYSTEM = "You are a senior marketing research writer."
+CMS_TRANSLATE_SYSTEM = "You are a professional bilingual marketing editor."
+CMS_IMAGE_SYSTEM = "You are an editorial illustrator."
+
+
+def _cms_text_prompt(req, ctx: str) -> str:
+    full = req.base_prompt or ""
+    if req.extra_prompt:
+        full += f"\n\n[คำขอเพิ่มเติม]\n{req.extra_prompt}"
+    if ctx:
+        full += f"\n\n[ข้อมูลอ้างอิง — ใช้ตัวเลขและคำพูดจริง อย่าแต่ง]\n{ctx}"
+    return full
+
+
+_CMS_TYPE_HINTS = {
+    "announcement": "ข่าวประชาสัมพันธ์ของคณะการตลาด มศว — โทนเป็นทางการแต่อบอุ่น 250-400 คำ",
+    "article": "บทความวิจัยตลาดเชิงลึก 600-900 คำ tone วิชาการ-อ่านง่าย",
+    "insight": "Insight Post สั้น 150-250 คำ tone มั่นใจ-เห็นใจตลาด",
+    "case_story": "Case Story เล่าแบบ storytelling 500-800 คำ",
+}
+
+
+def _cms_full_prompt(req, ctx: str) -> str:
+    type_hint = _CMS_TYPE_HINTS.get(req.post_type or "announcement", _CMS_TYPE_HINTS["announcement"])
+    prompt = (
+        "คุณคือนักเขียน/ฝ่ายประชาสัมพันธ์ของสาขาการตลาด มศว (SWU MKT).\n"
+        f"จากรายละเอียดที่ผู้ใช้ให้มา ให้สร้างเนื้อหา {type_hint}\n\n"
+        "ตอบกลับเป็น JSON object อย่างเดียว (ไม่ต้องมี markdown code fence) ตาม schema:\n"
+        "{\n"
+        '  "title": "หัวเรื่องเต็ม (ไทย, ดึงดูด, 30-90 ตัวอักษร)",\n'
+        '  "hero_title_lines": ["บรรทัด1สั้นๆ", "บรรทัด2สั้นๆ"],  // <=2 บรรทัด แต่ละบรรทัด<=24 ตัวอักษร — สำหรับพาดหัว hero หน้าแรก\n'
+        '  "hero_accent_idx": 1,  // 0 หรือ 1 — บรรทัดที่ควรเน้นสีแดง (เลือกบรรทัดที่เป็น keyword หลัก)\n'
+        '  "excerpt": "สรุป 1-2 ประโยค (<=160 ตัวอักษร) สำหรับ social/preview",\n'
+        '  "category": "หมวดหมู่สั้นๆ เช่น กิจกรรมนิสิต, การประกวด, โครงงาน, การอบรม, Brand Strategy",\n'
+        '  "body_md": "เนื้อหาเต็มใน Markdown — มี # heading, paragraph, bullet, etc."\n'
+        "}\n\n"
+        "Tone: เห็นก่อน · อ่านใจก่อน · นำตลาด (avoid 'transparent/เปิดเผย').\n"
+        "ใช้ภาษาไทยเป็นหลัก, ระบุวันเวลา/สถานที่/รายชื่อถ้ามี, ใส่ตัวเลข/สถิติเด่นถ้ามี.\n\n"
+        f"[รายละเอียดจากผู้ใช้]\n{req.description.strip()}\n"
+    )
+    if req.category:
+        prompt += f"\n[หมวดหมู่ที่ผู้ใช้เลือกไว้แล้ว: {req.category}] — ถ้า field 'category' ใน JSON ตรงกันได้ ให้ใช้ค่านี้\n"
+    if req.base_prompt:
+        prompt += f"\n[Style/Structure hint]\n{req.base_prompt[:1500]}\n"
+    if ctx:
+        prompt += f"\n[ข้อมูลอ้างอิง — ใช้ตัวเลข/คำพูดจริง อย่าแต่ง]\n{ctx}\n"
+    prompt += "\nสำคัญ: ตอบ JSON object เดียวเท่านั้น ไม่มีข้อความอื่น ไม่มี ```json fence."
+    return prompt
+
+
+def _cms_parse_full(raw: str, category: Optional[str]) -> Dict[str, Any]:
+    """Parse + sanitise the generate-full JSON answer (ours or the user's own LLM's).
+    Falls back to ``body_md = raw`` with ``parse_warning`` when no JSON object is found."""
+    import json as _json
+    import re as _re
+    cleaned = (raw or "").strip()
+    fence_match = _re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, _re.DOTALL)
+    if fence_match:
+        cleaned = fence_match.group(1)
+    else:
+        first = cleaned.find("{")
+        last = cleaned.rfind("}")
+        if first >= 0 and last > first:
+            cleaned = cleaned[first:last + 1]
+    try:
+        data = _json.loads(cleaned)
+        if not isinstance(data, dict):
+            raise ValueError("not an object")
+    except Exception as e:
+        logging.warning(f"[CMS] generate-full JSON parse failed: {e}; raw start={(raw or '')[:200]}")
+        return {"title": "", "hero_title_lines": [], "hero_accent_idx": 1, "excerpt": "",
+                "category": category or "", "body_md": raw, "parse_warning": True}
+    hero_lines = data.get("hero_title_lines") or []
+    if isinstance(hero_lines, str):
+        hero_lines = [hero_lines]
+    hero_lines = [str(s).strip()[:60] for s in hero_lines if str(s).strip()][:2]
+    accent_idx = data.get("hero_accent_idx", 1)
+    try:
+        accent_idx = int(accent_idx)
+    except Exception:
+        accent_idx = 1
+    if hero_lines:
+        accent_idx = max(0, min(accent_idx, len(hero_lines) - 1))
+    return {
+        "title": str(data.get("title", "")).strip()[:200],
+        "hero_title_lines": hero_lines,
+        "hero_accent_idx": accent_idx,
+        "excerpt": str(data.get("excerpt", "")).strip()[:320],
+        "category": str(data.get("category", category or "")).strip()[:80],
+        "body_md": str(data.get("body_md", "")).strip(),
+    }
+
+
+def _cms_summarize_prompt(req, ctx: str) -> str:
+    prompt = (
+        "สรุปข้อมูล source ต่อไปนี้เป็น bullet 5-7 ข้อ ที่นักการตลาดใช้ตัดสินใจได้ทันที. "
+        "ระบุตัวเลขสำคัญ, key consumer insight, opportunity. Output Markdown."
+    )
+    if req.extra_prompt:
+        prompt += f"\n\n[คำขอเพิ่ม] {req.extra_prompt}"
+    prompt += f"\n\n[Source]\n{ctx}"
+    return prompt
+
+
+def _cms_translate_prompt(req) -> str:
+    target = "Thai" if req.to == "th" else "English"
+    return (
+        f"Translate the following content to {target}. Keep marketing tone, "
+        f"preserve numbers and proper nouns, do not add commentary. Output only the translation.\n\n"
+        f"[Source]\n{req.text}"
+    )
+
+
+def _cms_image_prompt(req) -> str:
+    return f"{req.prompt}. Style: {req.style}. Aspect: {req.aspect}."
+
+
+class CMSExternalImport(BaseModel):
+    """Body of ``/cms/ai/generate-full/external-import``."""
+    content: str
+    description: Optional[str] = ""
+    category: Optional[str] = None
+    part_key: Optional[str] = "main"
+    model_label: Optional[str] = None
 
 
 async def _build_source_context(db, sources: List[SourceRef]) -> str:
@@ -1010,20 +1143,30 @@ def get_cms_routes(db, get_current_user, snapshot_hook=None):
 
     # --------- AI ENDPOINTS ---------
 
+    def _ext_payload(feature, title, filename, system, prompt, fmt, json_example=None, extra=""):
+        return ext.single_part_payload(
+            feature=feature, title=title, system_prompt=system, prompt=prompt, expected_format=fmt,
+            filename=filename, json_example=json_example, instructions_th=ext.GENERIC_STEPS_TH + extra)
+
     @cms_router.post("/ai/generate-text")
     async def ai_generate_text(req: AITextRequest, current_user=Depends(get_current_user)):
         if not _is_admin(current_user):
             raise HTTPException(403, "Admin only")
+        await llm_policy.require_system_llm("cms.ai", current_user)
         ctx = await _build_source_context(db, req.sources or [])
-        full = req.base_prompt or ""
-        if req.extra_prompt:
-            full += f"\n\n[คำขอเพิ่มเติม]\n{req.extra_prompt}"
-        if ctx:
-            full += f"\n\n[ข้อมูลอ้างอิง — ใช้ตัวเลขและคำพูดจริง อย่าแต่ง]\n{ctx}"
-        text = await _gemini_text(full)
+        text = await _gemini_text(_cms_text_prompt(req, ctx))
         if not text:
             raise HTTPException(503, "AI text generation failed (timeout or quota). Try again.")
         return {"text": text, "model": "gemini-2.5-flash"}
+
+    @cms_router.post("/ai/generate-text/external-prompt")
+    async def ai_generate_text_external_prompt(req: AITextRequest, current_user=Depends(get_current_user)):
+        """The prompt generate-text would send, for the user's own LLM. Paste the answer into the editor."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        ctx = await _build_source_context(db, req.sources or [])
+        return _ext_payload("cms.ai", "CMS — ผู้ช่วยเขียน", "cms-generate-text-prompt.md",
+                            CMS_TEXT_SYSTEM, _cms_text_prompt(req, ctx), "markdown")
 
     @cms_router.post("/ai/generate-full")
     async def ai_generate_full(req: AIFullRequest, current_user=Depends(get_current_user)):
@@ -1033,140 +1176,109 @@ def get_cms_routes(db, get_current_user, snapshot_hook=None):
             raise HTTPException(403, "Admin only")
         if not (req.description or "").strip():
             raise HTTPException(400, "กรุณาใส่รายละเอียดเนื้อหาที่อยากให้ AI ช่วยเขียน")
+        await llm_policy.require_system_llm("cms.ai", current_user)
 
         ctx = await _build_source_context(db, req.sources or [])
-        type_hint_map = {
-            "announcement": "ข่าวประชาสัมพันธ์ของคณะการตลาด มศว — โทนเป็นทางการแต่อบอุ่น 250-400 คำ",
-            "article": "บทความวิจัยตลาดเชิงลึก 600-900 คำ tone วิชาการ-อ่านง่าย",
-            "insight": "Insight Post สั้น 150-250 คำ tone มั่นใจ-เห็นใจตลาด",
-            "case_story": "Case Story เล่าแบบ storytelling 500-800 คำ",
-        }
-        type_hint = type_hint_map.get(req.post_type or "announcement", type_hint_map["announcement"])
-
-        prompt = (
-            "คุณคือนักเขียน/ฝ่ายประชาสัมพันธ์ของสาขาการตลาด มศว (SWU MKT).\n"
-            f"จากรายละเอียดที่ผู้ใช้ให้มา ให้สร้างเนื้อหา {type_hint}\n\n"
-            "ตอบกลับเป็น JSON object อย่างเดียว (ไม่ต้องมี markdown code fence) ตาม schema:\n"
-            "{\n"
-            '  "title": "หัวเรื่องเต็ม (ไทย, ดึงดูด, 30-90 ตัวอักษร)",\n'
-            '  "hero_title_lines": ["บรรทัด1สั้นๆ", "บรรทัด2สั้นๆ"],  // <=2 บรรทัด แต่ละบรรทัด<=24 ตัวอักษร — สำหรับพาดหัว hero หน้าแรก\n'
-            '  "hero_accent_idx": 1,  // 0 หรือ 1 — บรรทัดที่ควรเน้นสีแดง (เลือกบรรทัดที่เป็น keyword หลัก)\n'
-            '  "excerpt": "สรุป 1-2 ประโยค (<=160 ตัวอักษร) สำหรับ social/preview",\n'
-            '  "category": "หมวดหมู่สั้นๆ เช่น กิจกรรมนิสิต, การประกวด, โครงงาน, การอบรม, Brand Strategy",\n'
-            '  "body_md": "เนื้อหาเต็มใน Markdown — มี # heading, paragraph, bullet, etc."\n'
-            "}\n\n"
-            "Tone: เห็นก่อน · อ่านใจก่อน · นำตลาด (avoid 'transparent/เปิดเผย').\n"
-            "ใช้ภาษาไทยเป็นหลัก, ระบุวันเวลา/สถานที่/รายชื่อถ้ามี, ใส่ตัวเลข/สถิติเด่นถ้ามี.\n\n"
-            f"[รายละเอียดจากผู้ใช้]\n{req.description.strip()}\n"
-        )
-        if req.category:
-            prompt += f"\n[หมวดหมู่ที่ผู้ใช้เลือกไว้แล้ว: {req.category}] — ถ้า field 'category' ใน JSON ตรงกันได้ ให้ใช้ค่านี้\n"
-        if req.base_prompt:
-            prompt += f"\n[Style/Structure hint]\n{req.base_prompt[:1500]}\n"
-        if ctx:
-            prompt += f"\n[ข้อมูลอ้างอิง — ใช้ตัวเลข/คำพูดจริง อย่าแต่ง]\n{ctx}\n"
-        prompt += "\nสำคัญ: ตอบ JSON object เดียวเท่านั้น ไม่มีข้อความอื่น ไม่มี ```json fence."
-
+        prompt = _cms_full_prompt(req, ctx)
         raw = await _gemini_text(prompt)
         if not raw:
             raise HTTPException(503, "AI generation failed (timeout or quota). Try again.")
+        out = _cms_parse_full(raw, req.category)
+        out["model"] = "gemini-2.5-flash"
+        return out
 
-        # Parse JSON robustly — strip code fences if present
-        import json as _json
-        import re as _re
-        cleaned = raw.strip()
-        # Remove ```json ... ``` fences if Gemini added them anyway
-        fence_match = _re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, _re.DOTALL)
-        if fence_match:
-            cleaned = fence_match.group(1)
-        else:
-            # Find first { ... last } pair
-            first = cleaned.find("{")
-            last = cleaned.rfind("}")
-            if first >= 0 and last > first:
-                cleaned = cleaned[first:last + 1]
+    @cms_router.post("/ai/generate-full/external-prompt")
+    async def ai_generate_full_external_prompt(req: AIFullRequest, current_user=Depends(get_current_user)):
+        """The prompt generate-full would send (JSON answer expected), for the user's own LLM."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        if not (req.description or "").strip():
+            raise HTTPException(400, "กรุณาใส่รายละเอียดเนื้อหาที่อยากให้ AI ช่วยเขียน")
+        ctx = await _build_source_context(db, req.sources or [])
+        return _ext_payload(
+            "cms.ai", "CMS — เขียนเนื้อหาครบชุด (JSON)", "cms-generate-full-prompt.md",
+            CMS_TEXT_SYSTEM, _cms_full_prompt(req, ctx), "json",
+            json_example='{"title":"...","hero_title_lines":["...","..."],"hero_accent_idx":1,"excerpt":"...","category":"...","body_md":"..."}')
+
+    @cms_router.post("/ai/generate-full/external-import")
+    async def ai_generate_full_external_import(body: CMSExternalImport, current_user=Depends(get_current_user)):
+        """Parse the JSON answer of the user's own LLM into exactly what generate-full returns (the UI fills
+        the form from it; nothing is stored here). 422 + Thai message when no JSON object is found."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
         try:
-            data = _json.loads(cleaned)
-        except Exception as e:
-            logging.warning(f"[CMS] generate-full JSON parse failed: {e}; raw start={raw[:200]}")
-            # Fallback — return body only, leave others blank for frontend to handle
-            return {
-                "title": "",
-                "hero_title_lines": [],
-                "hero_accent_idx": 1,
-                "excerpt": "",
-                "category": req.category or "",
-                "body_md": raw,
-                "model": "gemini-2.5-flash",
-                "parse_warning": True,
-            }
-
-        # Sanitise hero lines: keep at most 2 non-empty trimmed strings, each <=60 chars
-        hero_lines = data.get("hero_title_lines") or []
-        if isinstance(hero_lines, str):
-            hero_lines = [hero_lines]
-        hero_lines = [str(s).strip()[:60] for s in hero_lines if str(s).strip()][:2]
-        accent_idx = data.get("hero_accent_idx", 1)
-        try:
-            accent_idx = int(accent_idx)
-        except Exception:
-            accent_idx = 1
-        if hero_lines:
-            accent_idx = max(0, min(accent_idx, len(hero_lines) - 1))
-
-        return {
-            "title": str(data.get("title", "")).strip()[:200],
-            "hero_title_lines": hero_lines,
-            "hero_accent_idx": accent_idx,
-            "excerpt": str(data.get("excerpt", "")).strip()[:320],
-            "category": str(data.get("category", req.category or "")).strip()[:80],
-            "body_md": str(data.get("body_md", "")).strip(),
-            "model": "gemini-2.5-flash",
-        }
+            text = ext.clean_text_import(body.content, min_chars=20)
+        except ext.ExternalImportError as e:
+            raise HTTPException(422, str(e))
+        out = _cms_parse_full(text, body.category)
+        if out.get("parse_warning"):
+            raise HTTPException(422, "อ่านคำตอบไม่ได้ — ต้องเป็น JSON ตามตัวอย่างในพรอมต์ (วางทั้งก้อน)")
+        out.update(ext.external_stamp(body.model_label, current_user))
+        out["model"] = out.get("model_label") or "external"
+        return out
 
     @cms_router.post("/ai/generate-image")
     async def ai_generate_image(req: AIImageRequest, current_user=Depends(get_current_user)):
         if not _is_admin(current_user):
             raise HTTPException(403, "Admin only")
-        prompt = f"{req.prompt}. Style: {req.style}. Aspect: {req.aspect}."
-        url = await _gemini_image(prompt)
+        await llm_policy.require_system_llm("cms.image", current_user)
+        url = await _gemini_image(_cms_image_prompt(req))
         if not url:
             raise HTTPException(503, "AI image generation failed (timeout or quota). Try again.")
         return {"image_data_url": url, "model": "gemini-3.1-flash-image-preview"}
+
+    @cms_router.post("/ai/generate-image/external-prompt")
+    async def ai_generate_image_external_prompt(req: AIImageRequest, current_user=Depends(get_current_user)):
+        """The image prompt generate-image would send. No paste-back for images: copy it into your own image
+        tool and upload the result with the normal upload."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        return ext.single_part_payload(
+            feature="cms.image", title="CMS — พรอมต์สร้างภาพ", system_prompt=CMS_IMAGE_SYSTEM,
+            prompt=_cms_image_prompt(req), expected_format="image-prompt", filename="cms-image-prompt.md",
+            instructions_th="คัดลอกพรอมต์ไปสร้างภาพในเครื่องมือสร้างภาพที่คุณใช้ แล้วอัปโหลดภาพที่ได้เองในหน้านี้")
 
     @cms_router.post("/ai/summarize")
     async def ai_summarize(req: AISummarizeRequest, current_user=Depends(get_current_user)):
         if not _is_admin(current_user):
             raise HTTPException(403, "Admin only")
+        await llm_policy.require_system_llm("cms.ai", current_user)
         ctx = await _build_source_context(db, req.sources)
         if not ctx:
             raise HTTPException(400, "No valid sources to summarise")
-        prompt = (
-            "สรุปข้อมูล source ต่อไปนี้เป็น bullet 5-7 ข้อ ที่นักการตลาดใช้ตัดสินใจได้ทันที. "
-            "ระบุตัวเลขสำคัญ, key consumer insight, opportunity. Output Markdown."
-        )
-        if req.extra_prompt:
-            prompt += f"\n\n[คำขอเพิ่ม] {req.extra_prompt}"
-        prompt += f"\n\n[Source]\n{ctx}"
-        text = await _gemini_text(prompt)
+        text = await _gemini_text(_cms_summarize_prompt(req, ctx))
         if not text:
             raise HTTPException(503, "AI summarize failed")
         return {"text": text}
+
+    @cms_router.post("/ai/summarize/external-prompt")
+    async def ai_summarize_external_prompt(req: AISummarizeRequest, current_user=Depends(get_current_user)):
+        """The prompt summarize would send (source data embedded), for the user's own LLM."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        ctx = await _build_source_context(db, req.sources)
+        if not ctx:
+            raise HTTPException(400, "No valid sources to summarise")
+        return _ext_payload("cms.ai", "CMS — สรุป Source", "cms-summarize-prompt.md",
+                            CMS_TEXT_SYSTEM, _cms_summarize_prompt(req, ctx), "markdown")
 
     @cms_router.post("/ai/translate")
     async def ai_translate(req: AITranslateRequest, current_user=Depends(get_current_user)):
         if not _is_admin(current_user):
             raise HTTPException(403, "Admin only")
-        target = "Thai" if req.to == "th" else "English"
-        prompt = (
-            f"Translate the following content to {target}. Keep marketing tone, "
-            f"preserve numbers and proper nouns, do not add commentary. Output only the translation.\n\n"
-            f"[Source]\n{req.text}"
-        )
-        text = await _gemini_text(prompt, system="You are a professional bilingual marketing editor.")
+        await llm_policy.require_system_llm("translate", current_user)
+        text = await _gemini_text(_cms_translate_prompt(req), system=CMS_TRANSLATE_SYSTEM)
         if not text:
             raise HTTPException(503, "AI translate failed")
         return {"text": text}
+
+    @cms_router.post("/ai/translate/external-prompt")
+    async def ai_translate_external_prompt(req: AITranslateRequest, current_user=Depends(get_current_user)):
+        """The prompt translate would send, for the user's own LLM. Paste the translation into the editor."""
+        if not _is_admin(current_user):
+            raise HTTPException(403, "Admin only")
+        return _ext_payload("translate", "CMS — แปลเนื้อหา", "cms-translate-prompt.md",
+                            CMS_TRANSLATE_SYSTEM, _cms_translate_prompt(req), "markdown")
 
     # --------- LANDING PAGE ---------
 

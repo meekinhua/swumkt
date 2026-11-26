@@ -3,6 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cmsApi, POST_TYPE_LABEL, SOURCE_TYPE_LABEL } from './cmsApi';
 import { youtubeId } from '../../components/SlideMedia';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
+import { useExternalDialog } from '@/hooks/useExternalDialog';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const CmsEditorPage = () => {
   const { id } = useParams();
@@ -26,6 +32,14 @@ const CmsEditorPage = () => {
   const [selectedImagePrompt, setSelectedImagePrompt] = useState(null);
   const [extraPrompt, setExtraPrompt] = useState('');
   const [extraImagePrompt, setExtraImagePrompt] = useState('');
+  const textOff = useAiGate('cms.ai').blocked;
+  const imageOff = useAiGate('cms.image').blocked;
+  const translateOff = useAiGate('translate').blocked;
+  const OFF_TITLE = 'AI ของระบบปิดอยู่ — คลิกเพื่อรับพรอมต์ไปใช้กับ AI ของคุณเอง';
+  const ext = useExternalDialog();
+  const extPrompt = (path, data) => ({
+    method: 'POST', url: `${API}/cms/ai/${path}/external-prompt`, data,
+  });
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [editingImageTemplate, setEditingImageTemplate] = useState(false);
 
@@ -105,14 +119,13 @@ const CmsEditorPage = () => {
 
   const aiGenerateText = async () => {
     if (!post.title) { toast.error('กรอก title ก่อน เพื่อให้ AI เขียนได้'); return; }
+    const base = fillTemplate(selectedTextPrompt?.template || '');
+    const body = { base_prompt: base, extra_prompt: extraPrompt, sources: post.source_refs || [] };
+    const openOwn = () => ext.open({ title: 'เขียนเนื้อหาด้วย AI ของฉันเอง — วางคำตอบลงในช่อง Body (Markdown)', promptRequest: extPrompt('generate-text', body) });
+    if (textOff) { openOwn(); return; }
     setBusy(b => ({ ...b, text: true }));
     try {
-      const base = fillTemplate(selectedTextPrompt?.template || '');
-      const r = await cmsApi.aiText({
-        base_prompt: base,
-        extra_prompt: extraPrompt,
-        sources: post.source_refs || [],
-      });
+      const r = await cmsApi.aiText(body);
       setPost(p => ({
         ...p,
         body_md: r.data.text,
@@ -120,8 +133,34 @@ const CmsEditorPage = () => {
       }));
       toast.success('AI เขียนเรียบร้อย — ตรวจ + แก้ได้ตามต้องการ');
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'AI text gen ล้มเหลว');
+      if (isLlmExternalOnly(e)) openOwn(); else toast.error(apiErrorText(e, 'AI text gen ล้มเหลว'));
     } finally { setBusy(b => ({ ...b, text: false })); }
+  };
+
+  // One-shot AI: from extraPrompt (now the "description"), generate title + body + hero + excerpt + category at once
+  const applyFull = (d) => {
+    const prm = selectedTextPrompt;
+    setPost(p => ({
+      ...p,
+      title: d.title || p.title,
+      body_md: d.body_md || p.body_md,
+      excerpt: d.excerpt || p.excerpt,
+      category: d.category || p.category,
+      hero_title_lines: (d.hero_title_lines && d.hero_title_lines.length)
+        ? d.hero_title_lines
+        : (p.hero_title_lines || []),
+      hero_accent_idx: typeof d.hero_accent_idx === 'number' ? d.hero_accent_idx : (p.hero_accent_idx ?? 1),
+      generation_meta: {
+        base_prompt_id: prm?.id,
+        description: extraPrompt,
+        model: d.model || d.model_label,
+      },
+    }));
+    if (d.parse_warning) {
+      toast.warning('AI ตอบกลับมาเป็นข้อความปกติ (ไม่ใช่ JSON) — body ถูกใส่ใน body_md แล้ว, ส่วน title/hero โปรดกรอกเองหรือกดสร้างใหม่');
+    } else {
+      toast.success('AI สร้าง title + body + พาดหัวสั้น เรียบร้อย — ตรวจสอบและแก้ได้ตามต้องการ');
+    }
   };
 
   // One-shot AI: from extraPrompt (now the "description"), generate title + body + hero + excerpt + category at once
@@ -130,76 +169,76 @@ const CmsEditorPage = () => {
       toast.error('ใส่รายละเอียดเนื้อหาในช่องด้านล่างก่อน เพื่อให้ AI เข้าใจว่าจะเขียนเรื่องอะไร');
       return;
     }
+    const base = fillTemplate(selectedTextPrompt?.template || '');
+    const body = {
+      description: extraPrompt,
+      post_type: post.type,
+      category: post.category || null,
+      base_prompt: base,
+      sources: post.source_refs || [],
+    };
+    // "Use my own AI": server-built prompt + validated JSON import (fills the form exactly like the system path)
+    const openOwn = () => ext.open({
+      title: 'สร้างเนื้อหาทั้งชุดด้วย AI ของฉันเอง',
+      promptRequest: extPrompt('generate-full', body),
+      importUrl: `${API}/cms/ai/generate-full/external-import`,
+      onImported: (d) => applyFull(d || {}),
+    });
+    if (textOff) { openOwn(); return; }
     setBusy(b => ({ ...b, text: true }));
     try {
-      const base = fillTemplate(selectedTextPrompt?.template || '');
-      const r = await cmsApi.aiFull({
-        description: extraPrompt,
-        post_type: post.type,
-        category: post.category || null,
-        base_prompt: base,
-        sources: post.source_refs || [],
-      });
-      const d = r.data || {};
-      setPost(p => ({
-        ...p,
-        title: d.title || p.title,
-        body_md: d.body_md || p.body_md,
-        excerpt: d.excerpt || p.excerpt,
-        category: d.category || p.category,
-        hero_title_lines: (d.hero_title_lines && d.hero_title_lines.length)
-          ? d.hero_title_lines
-          : (p.hero_title_lines || []),
-        hero_accent_idx: typeof d.hero_accent_idx === 'number' ? d.hero_accent_idx : (p.hero_accent_idx ?? 1),
-        generation_meta: {
-          base_prompt_id: selectedTextPrompt?.id,
-          description: extraPrompt,
-          model: d.model,
-        },
-      }));
-      if (d.parse_warning) {
-        toast.warning('AI ตอบกลับมาเป็นข้อความปกติ (ไม่ใช่ JSON) — body ถูกใส่ใน body_md แล้ว, ส่วน title/hero โปรดกรอกเองหรือกดสร้างใหม่');
-      } else {
-        toast.success('AI สร้าง title + body + พาดหัวสั้น เรียบร้อย — ตรวจสอบและแก้ได้ตามต้องการ');
-      }
+      const r = await cmsApi.aiFull(body);
+      applyFull(r.data || {});
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'AI สร้างเนื้อหาล้มเหลว');
+      if (isLlmExternalOnly(e)) openOwn(); else toast.error(apiErrorText(e, 'AI สร้างเนื้อหาล้มเหลว'));
     } finally { setBusy(b => ({ ...b, text: false })); }
   };
 
   const aiGenerateImage = async () => {
     if (!post.title) { toast.error('กรอก title ก่อน'); return; }
+    const base = fillTemplate(selectedImagePrompt?.template || '');
+    const final = extraImagePrompt ? `${base}. ${extraImagePrompt}` : base;
+    // Images: the user gets the prompt for their own image tool, then pastes the picture URL below.
+    const openOwn = () => ext.open({
+      title: 'พรอมต์สร้างภาพปก — ใช้กับเครื่องมือสร้างภาพของคุณ แล้ววาง URL ภาพในช่อง "paste image URL"',
+      promptRequest: extPrompt('generate-image', { prompt: final, aspect: '16:9' }),
+    });
+    if (imageOff) { openOwn(); return; }
     setBusy(b => ({ ...b, image: true }));
     try {
-      const base = fillTemplate(selectedImagePrompt?.template || '');
-      const final = extraImagePrompt ? `${base}. ${extraImagePrompt}` : base;
       const r = await cmsApi.aiImage({ prompt: final, aspect: '16:9' });
       setPost(p => ({ ...p, cover_image: r.data.image_data_url }));
       toast.success('สร้างภาพ cover เสร็จแล้ว');
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'AI image gen ล้มเหลว');
+      if (isLlmExternalOnly(e)) openOwn(); else toast.error(apiErrorText(e, 'AI image gen ล้มเหลว'));
     } finally { setBusy(b => ({ ...b, image: false })); }
   };
 
   const aiSummarize = async () => {
     if ((post.source_refs || []).length === 0) { toast.error('เลือก source ก่อน'); return; }
+    const body = { sources: post.source_refs, extra_prompt: extraPrompt };
+    const openOwn = () => ext.open({ title: 'สรุป Source ด้วย AI ของฉันเอง — วางคำตอบต่อท้ายในช่อง Body (Markdown)', promptRequest: extPrompt('summarize', body) });
+    if (textOff) { openOwn(); return; }
     setBusy(b => ({ ...b, summary: true }));
     try {
-      const r = await cmsApi.aiSummarize({ sources: post.source_refs, extra_prompt: extraPrompt });
+      const r = await cmsApi.aiSummarize(body);
       setPost(p => ({ ...p, body_md: (p.body_md || '') + '\n\n## สรุป Source\n' + r.data.text }));
       toast.success('สรุปเสร็จ — ต่อท้าย body แล้ว');
-    } catch (e) { toast.error(e.response?.data?.detail || 'สรุปล้มเหลว'); }
+    } catch (e) { if (isLlmExternalOnly(e)) openOwn(); else toast.error(apiErrorText(e, 'สรุปล้มเหลว')); }
     finally { setBusy(b => ({ ...b, summary: false })); }
   };
 
   const aiTranslate = async (to) => {
     if (!post.body_md) { toast.error('ไม่มีเนื้อหาให้แปล'); return; }
+    const body = { text: post.body_md, to };
+    const openOwn = () => ext.open({ title: `แปลเป็น ${to.toUpperCase()} ด้วย AI ของฉันเอง — วางคำแปลแทนที่ในช่อง Body (Markdown)`, promptRequest: extPrompt('translate', body) });
+    if (translateOff) { openOwn(); return; }
     setBusy(b => ({ ...b, translate: true }));
     try {
-      const r = await cmsApi.aiTranslate({ text: post.body_md, to });
+      const r = await cmsApi.aiTranslate(body);
       setPost(p => ({ ...p, body_md: r.data.text }));
       toast.success(`แปลเป็น ${to.toUpperCase()} แล้ว`);
-    } catch (e) { toast.error('แปลล้มเหลว'); }
+    } catch (e) { if (isLlmExternalOnly(e)) openOwn(); else toast.error('แปลล้มเหลว'); }
     finally { setBusy(b => ({ ...b, translate: false })); }
   };
 
@@ -220,7 +259,7 @@ const CmsEditorPage = () => {
         await cmsApi.updatePost(id, { ...post, ...(publish ? { status: 'published' } : {}) });
         toast.success(publish ? 'Published!' : 'บันทึกแล้ว');
       }
-    } catch (e) { toast.error(e.response?.data?.detail || 'บันทึกไม่สำเร็จ'); }
+    } catch (e) { toast.error(apiErrorText(e, 'บันทึกไม่สำเร็จ')); }
   };
 
   if (loading) return <div className="p-8 text-neutral-500">Loading...</div>;
@@ -387,7 +426,7 @@ const CmsEditorPage = () => {
           <Card>
             <div className="flex items-center justify-between mb-2">
               <Label>Cover Image</Label>
-              <button onClick={aiGenerateImage} disabled={busy.image} data-testid="cms-ai-image-btn"
+              <button onClick={aiGenerateImage} disabled={busy.image} title={imageOff ? OFF_TITLE : undefined} data-testid="cms-ai-image-btn"
                       className="text-xs font-mono uppercase tracking-wider px-3 py-1.5 bg-blue-600 text-white rounded-full disabled:opacity-50">
                 {busy.image ? '⏳ Generating...' : '✨ AI Generate Image'}
               </button>
@@ -455,9 +494,9 @@ const CmsEditorPage = () => {
             <div className="flex items-center justify-between mb-2">
               <Label>Body (Markdown)</Label>
               <div className="flex gap-1">
-                <button onClick={() => aiTranslate('en')} disabled={busy.translate} data-testid="cms-translate-en"
+                <button onClick={() => aiTranslate('en')} disabled={busy.translate} title={translateOff ? OFF_TITLE : undefined} data-testid="cms-translate-en"
                         className="text-[10px] font-mono uppercase px-2 py-1 border rounded">→ EN</button>
-                <button onClick={() => aiTranslate('th')} disabled={busy.translate} data-testid="cms-translate-th"
+                <button onClick={() => aiTranslate('th')} disabled={busy.translate} title={translateOff ? OFF_TITLE : undefined} data-testid="cms-translate-th"
                         className="text-[10px] font-mono uppercase px-2 py-1 border rounded">→ TH</button>
               </div>
             </div>
@@ -519,7 +558,7 @@ const CmsEditorPage = () => {
                   })}
                   {filteredSources.length === 0 && <div className="p-4 text-center text-neutral-400 text-xs">— ไม่พบ source —</div>}
                 </div>
-                <button onClick={aiSummarize} disabled={busy.summary || (post.source_refs || []).length === 0}
+                <button onClick={aiSummarize} disabled={busy.summary || (post.source_refs || []).length === 0} title={textOff ? OFF_TITLE : undefined}
                         data-testid="cms-ai-summarize-btn"
                         className="mt-2 w-full text-xs font-mono uppercase px-3 py-2 border border-blue-500 text-blue-600 rounded hover:bg-blue-50 disabled:opacity-50">
                   {busy.summary ? '⏳ Summarizing...' : 'Summarize Sources → Body'}
@@ -601,13 +640,14 @@ const CmsEditorPage = () => {
                         className="w-full text-sm border-2 border-blue-300 rounded px-3 py-2 focus:border-blue-600 focus:outline-none"/>
             </div>
 
+            <AiPolicyNote feature="cms.ai" hasExternal alternative="กดปุ่ม AI ด้านล่างเพื่อรับพรอมต์ไปวางใน ChatGPT / Claude / Gemini แล้ววางคำตอบกลับ" className="mt-3" />
             <div className="grid grid-cols-1 gap-2 mt-3">
-              <button onClick={aiGenerateAll} disabled={busy.text}
+              <button onClick={aiGenerateAll} disabled={busy.text} title={textOff ? OFF_TITLE : undefined}
                       data-testid="cms-ai-full-btn"
                       className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-mono uppercase rounded-full disabled:opacity-50 hover:bg-blue-700 font-bold">
                 {busy.text ? '⏳ AI กำลังสร้าง...' : '✨ AI สร้างทั้งหมด (Title + พาดหัวสั้น + Body)'}
               </button>
-              <button onClick={aiGenerateText} disabled={busy.text}
+              <button onClick={aiGenerateText} disabled={busy.text} title={textOff ? OFF_TITLE : undefined}
                       data-testid="cms-ai-text-btn"
                       className="w-full px-4 py-1.5 border border-neutral-400 text-neutral-700 text-xs font-mono uppercase rounded-full disabled:opacity-50 hover:bg-neutral-50">
                 {busy.text ? '⏳ Writing...' : 'หรือสร้างเฉพาะ body (ใช้ title ปัจจุบัน)'}
@@ -620,6 +660,7 @@ const CmsEditorPage = () => {
           </Card>
         </div>
       </div>
+      {ext.dialog}
     </div>
   );
 };

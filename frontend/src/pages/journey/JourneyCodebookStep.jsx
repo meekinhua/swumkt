@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { apiErrorText } from '@/lib/apiError';
 
 /**
  * Wizard step: turn qualitative material into an approved Journey Codebook.
@@ -156,7 +157,7 @@ const JourneyCodebookStep = ({ study, token, onBack, onDone }) => {
       setCanEdit(cb.data.can_edit !== false);
       setRuns(qr.data?.runs || qr.data || []);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'โหลดชุดรหัสไม่ได้');
+      setError(apiErrorText(e, 'โหลดชุดรหัสไม่ได้'));
     }
   }, [studyId, token]);
 
@@ -174,7 +175,7 @@ const JourneyCodebookStep = ({ study, token, onBack, onDone }) => {
       setDraft(r.data.draft);
       setBlockers([]); setWarnings([]);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'สกัดข้อเสนอไม่สำเร็จ');
+      setError(apiErrorText(e, 'สกัดข้อเสนอไม่สำเร็จ'));
     } finally { setBusy(''); }
   };
 
@@ -194,7 +195,7 @@ const JourneyCodebookStep = ({ study, token, onBack, onDone }) => {
       setWarnings(r.data.warnings || []);
       setBudget(r.data.budget || null);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'บันทึกไม่สำเร็จ');
+      setError(apiErrorText(e, 'บันทึกไม่สำเร็จ'));
     } finally { setBusy(''); }
   };
 

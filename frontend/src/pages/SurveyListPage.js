@@ -134,8 +134,8 @@ const SurveyListPage = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="mb-4">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 mb-2">Survey Management</h1>
-            <p className="text-sm sm:text-base text-gray-600 font-medium">Create, manage, and analyze your surveys</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 mb-2">Survey Builder</h1>
+            <p className="text-sm sm:text-base text-gray-700 font-medium">สร้าง แชร์ลิงก์ และดูผลแบบสอบถามของคุณ · Create, manage and analyze your surveys</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button

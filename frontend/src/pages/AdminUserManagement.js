@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '@/App';
+import { apiErrorText } from '@/lib/apiError';
 
 const PAGE_SIZE = 100;
 
@@ -70,7 +71,7 @@ const AdminUserManagement = () => {
       setTotalCount(countR.data?.total ?? next.length);
     } catch (error) {
       console.error('Error loading users:', error);
-      toast.error('โหลดผู้ใช้ไม่สำเร็จ: ' + (error.response?.data?.detail || error.message));
+      toast.error('โหลดผู้ใช้ไม่สำเร็จ: ' + (apiErrorText(error, error.message)));
     } finally {
       setLoadingMore(false);
     }
@@ -88,7 +89,7 @@ const AdminUserManagement = () => {
       await reloadUsersFromServer(false);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('ไม่สามารถโหลดข้อมูลได้: ' + (error.response?.data?.detail || error.message));
+      toast.error('ไม่สามารถโหลดข้อมูลได้: ' + (apiErrorText(error, error.message)));
       setAdmins([]);
       setAllUsers([]);
       setFilteredUsers([]);
@@ -114,7 +115,7 @@ const AdminUserManagement = () => {
       loadData();
     } catch (error) {
       console.error('Error promoting user:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถเลื่อนตำแหน่งได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถเลื่อนตำแหน่งได้'));
     }
   };
 
@@ -134,7 +135,7 @@ const AdminUserManagement = () => {
       loadData();
     } catch (error) {
       console.error('Error demoting user:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลดตำแหน่งได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลดตำแหน่งได้'));
     }
   };
 
@@ -151,7 +152,7 @@ const AdminUserManagement = () => {
       loadData();
     } catch (error) {
       console.error('Error toggling thesis-export permission:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถปรับสิทธิ์ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถปรับสิทธิ์ได้'));
     }
   };
 

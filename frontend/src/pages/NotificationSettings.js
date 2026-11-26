@@ -11,6 +11,7 @@ import axios from 'axios';
 import { API } from '@/App';
 import { pushNotifications } from '@/utils/pushNotifications';
 import IOSInstallPrompt from '@/components/IOSInstallPrompt';
+import { apiErrorText } from '@/lib/apiError';
 
 const NotificationSettings = () => {
   const navigate = useNavigate();
@@ -164,7 +165,7 @@ const NotificationSettings = () => {
       setTimeout(loadNotifications, 1000);
     } catch (error) {
       console.error('Error sending test notification:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถส่งการแจ้งเตือนทดสอบได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถส่งการแจ้งเตือนทดสอบได้'));
     } finally {
       setSending(false);
     }

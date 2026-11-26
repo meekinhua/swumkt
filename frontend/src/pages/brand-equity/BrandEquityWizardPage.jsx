@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import AiActionButton from '@/components/AiActionButton';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
-import { BeTopbar, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
+import { BeTopbar, BE_CRUMBS, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -164,6 +168,19 @@ const BrandEquityWizardPage = () => {
     }));
   };
 
+  const errMsg = (e) => {
+    const d = e?.response?.data?.detail;
+    return typeof d === 'string' ? d : (d && d.message) || e.message;
+  };
+  const extractBody = {
+    brand_name: brand.name || 'Brand',
+    category: brand.category,
+    description: identity.description || '',
+    traits: identity.traits || [],
+    brand_promise: identity.brand_promise,
+    pricing_tier: identity.pricing_tier,
+    visual_assets: identity.visual_assets || [],
+  };
   const runAIExtract = async () => {
     if (!identity.description?.trim() && !(identity.visual_assets || []).length && !identity.traits.length) {
       toast.error('กรอก description หรืออัปโหลดภาพอย่างน้อย 1 รายการก่อน');
@@ -171,19 +188,24 @@ const BrandEquityWizardPage = () => {
     }
     setExtractingIdentity(true);
     try {
-      const r = await axios.post(`${API}/brand-equity/extract-identity`, {
-        brand_name: brand.name || 'Brand',
-        category: brand.category,
-        description: identity.description || '',
-        traits: identity.traits || [],
-        brand_promise: identity.brand_promise,
-        pricing_tier: identity.pricing_tier,
-        visual_assets: identity.visual_assets || [],
-      }, authH);
-      const d = r.data;
-      // Merge derived into local identity (don't blow away user's chosen traits)
-      const mergedTraits = Array.from(new Set([...(identity.traits || []), ...(d.derived_traits || [])])).slice(0, 12);
-      setIdentity(prev => ({
+      const r = await axios.post(`${API}/brand-equity/extract-identity`, extractBody, authH);
+      applyDerived(r.data, { source: 'system' });
+    } catch (e) {
+      setExtractingIdentity(false);
+      // Policy errors go back to <AiActionButton>, which opens the "my own AI" dialog.
+      if (isLlmExternalOnly(e)) throw e;
+      toast.error('AI วิเคราะห์ไม่สำเร็จ: ' + errMsg(e));
+      return;
+    }
+    setExtractingIdentity(false);
+  };
+
+  // Merge a derived-identity object (system OR pasted back from the user's own AI).
+  const applyDerived = (d, { source, model_label } = {}) => {
+    // Merge derived into local identity (don't blow away user's chosen traits)
+    setIdentity(prev => {
+      const mergedTraits = Array.from(new Set([...(prev.traits || []), ...(d.derived_traits || [])])).slice(0, 12);
+      return {
         ...prev,
         traits: mergedTraits,
         derived_traits: d.derived_traits || [],
@@ -191,12 +213,10 @@ const BrandEquityWizardPage = () => {
         visual_keywords: d.visual_keywords || [],
         ai_summary: d.summary || '',
         archetype: d.archetype || prev.archetype,
-      }));
-      toast.success(`AI สร้าง ${(d.derived_traits || []).length} traits + palette + keywords`);
-    } catch (e) {
-      toast.error('AI extract ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
-    }
-    setExtractingIdentity(false);
+        ai_source: { source: d.source || source || 'system', model_label: d.model_label || model_label, at: new Date().toISOString() },
+      };
+    });
+    toast.success(`ได้ ${(d.derived_traits || []).length} traits + palette + keywords${(d.source || source) === 'external' ? ' (จาก AI ของคุณ)' : ''}`);
   };
 
   const toggleSegment = (s) => {
@@ -227,7 +247,7 @@ const BrandEquityWizardPage = () => {
       setStep(3);
       toast.success((study?.id ? 'อัปเดต' : 'สร้าง') + ' · ' + (saved.questions?.length || 0) + ' คำถาม');
     } catch (e) {
-      toast.error((study?.id ? 'อัปเดต' : 'สร้าง') + ' study ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error((study?.id ? 'อัปเดต' : 'สร้าง') + ' study ไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setCreating(false);
   };
@@ -272,7 +292,7 @@ const BrandEquityWizardPage = () => {
       toast.success('บันทึกการแก้ไขเรียบร้อย');
       navigate(`/brand-equity/studies/${study.id}`);
     } catch (e) {
-      toast.error('บันทึกไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error('บันทึกไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setCreating(false);
   };
@@ -294,7 +314,7 @@ const BrandEquityWizardPage = () => {
 
   return (
     <div className="be-root" data-testid="be-wizard-page">
-      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}/>
+      <BeTopbar crumbs={[...BE_CRUMBS, { label: 'ตั้งค่าการศึกษา' }]}/>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '14px 32px',
                     borderBottom: '1px solid var(--rule)', background: 'var(--paper)' }}>
@@ -558,18 +578,41 @@ const BrandEquityWizardPage = () => {
                     <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.55 }}>
                       ให้ AI วิเคราะห์ description + ภาพที่อัปโหลด → คืน traits, palette, keywords, archetype
                     </div>
+                    <div className="be-tiny be-muted" style={{ marginTop: 4, lineHeight: 1.55 }} data-testid="be-wizard-ai-optional-note">
+                      ขั้นตอนนี้ไม่บังคับ — ข้ามได้และสร้าง study ต่อได้ ไม่ว่า AI ของระบบจะเปิดหรือปิด · ถ้าใช้ AI ของคุณเอง (ChatGPT / Claude / Gemini)
+                      ให้แนบรูปที่อัปโหลดไว้ ({(identity.visual_assets || []).length} รูป ตามลำดับที่แสดง) ในแชตเอง
+                    </div>
                   </div>
-                  <button className="be-btn be-btn-red" onClick={runAIExtract}
-                          disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length)}
-                          data-testid="be-wizard-identity-ai-run">
-                    <Icon name="sparkle" size={11}/>{extractingIdentity ? 'กำลังวิเคราะห์…' : 'AI วิเคราะห์'}
-                  </button>
+                  <AiActionButton
+                    feature="be.visual_identity"
+                    label={extractingIdentity ? 'กำลังวิเคราะห์…' : 'AI วิเคราะห์'}
+                    icon={Sparkles}
+                    onSystem={runAIExtract}
+                    disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length && !(identity.traits || []).length)}
+                    variant="plain"
+                    className="be-btn be-btn-red"
+                    external={{
+                      title: 'วิเคราะห์ identity ด้วย AI ของฉันเอง',
+                      promptRequest: { method: 'POST', url: `${API}/brand-equity/extract-identity/external-prompt`, data: extractBody },
+                      importUrl: `${API}/brand-equity/extract-identity/external-import`,
+                      onImported: (d) => applyDerived(d, { source: 'external' }),
+                    }}
+                    data-testid="be-wizard-identity-ai-run"
+                  />
                 </div>
 
                 {/* Show derived results */}
                 {(identity.derived_traits?.length > 0 || identity.visual_palette?.length > 0) && (
                   <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed var(--rule)' }}
                        data-testid="be-wizard-identity-ai-result">
+                    {identity.ai_source && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span className="be-prov be-mono" data-testid="be-wizard-ai-prov">
+                          {identity.ai_source.source === 'external'
+                            ? `นำเข้าจาก ${identity.ai_source.model_label || 'AI ภายนอก'}` : 'วิเคราะห์โดย AI ของระบบ'}
+                        </span>
+                      </div>
+                    )}
                     {identity.ai_summary && (
                       <div className="be-serif" style={{ fontSize: 13.5, fontStyle: 'italic',
                               color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 12 }}>
@@ -678,8 +721,8 @@ const BrandEquityWizardPage = () => {
               </div>
               <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>How AI uses visuals</h4>
               <div className="be-small be-muted" style={{ lineHeight: 1.6 }}>
-                Gemini 2.5 Flash อ่านภาพ + ข้อความ → derive สี, mood, design style, archetype
-                ที่คุณอาจไม่ได้พิมพ์ตรงๆ
+                AI (ของระบบ หรือของคุณเองที่รับภาพได้) อ่านภาพ + ข้อความ → สรุปสี, mood, design style, archetype
+                ที่คุณอาจไม่ได้พิมพ์ตรงๆ — ผลเป็นข้อเสนอ ตรวจและแก้ traits ได้เสมอ
               </div>
             </div>
           </div>
@@ -780,6 +823,7 @@ const BrandEquityWizardPage = () => {
                     </div>
                   </div>
                   <button className="be-btn" onClick={regenerate} disabled={creating}
+                          title="สร้างคำถามจากแม่แบบใหม่ (การแปลคุณลักษณะเป็นอังกฤษจะข้ามถ้า AI ของระบบปิด — ข้อความไทยคงเดิม)"
                           data-testid="be-wizard-regenerate">
                     <Icon name="refresh" size={11}/>{creating ? '…' : 'Regenerate'}
                   </button>
@@ -910,7 +954,7 @@ const BrandEquityWizardPage = () => {
                     onClick={proceedToReview} data-testid="be-wizard-generate">
               <Icon name="sparkle" size={11}/>
               {creating ? 'กำลังประมวลผล…'
-                        : (study?.id ? 'Update & regenerate →' : 'AI สร้างคำถาม →')}
+                        : (study?.id ? 'อัปเดตและสร้างคำถามใหม่ →' : 'สร้างแบบสอบถาม →')}
             </button>
           )}
           {step === 3 && (

@@ -13,6 +13,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, FileText, Upload as UploadIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate } from '@/components/AiPolicyNote';
+import AiActionButton from '@/components/AiActionButton';
+import PasteAnswerBox from '@/components/PasteAnswerBox';
+import { useExternalDialog } from '@/hooks/useExternalDialog';
+import { parseAnalysisSections, parseNumberedQuestions } from '@/lib/aiTextParse';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -20,6 +27,8 @@ const CustomerPerceptionTool = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
   const { t } = useTranslation();
+  const aiGate = useAiGate('perception.ai');
+  const imageGate = useAiGate('perception.image');
 
   // Phase 1 - Tab 1: Question Generator
   const [questionTopic, setQuestionTopic] = useState('');
@@ -64,6 +73,33 @@ const CustomerPerceptionTool = () => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [showFullscreenImage]);
 
+  // ---- "Use my own AI": server-built prompt (same builder as the system path) + paste-back ----
+  const ext = useExternalDialog();
+  const questionsBody = () => ({ topic: questionTopic, perspective: researchPerspective || null, target_language: targetLanguage });
+  const analysisBody = () => ({ interview_data: interviewData, analysis_context: analysisContext || null, target_language: targetLanguage });
+  const promptReq = (path, data) => ({ method: 'POST', url: `${API}/api/perception/${path}/external-prompt`, data });
+  const showQuestionsPrompt = () => {
+    if (!questionTopic.trim()) { toast.error('กรุณาใส่หัวข้อวิจัย'); return; }
+    ext.open({ title: 'สร้างคำถามสัมภาษณ์ด้วย AI ของฉันเอง', promptRequest: promptReq('generate-questions', questionsBody()) });
+  };
+  const showAnalysisPrompt = () => {
+    if (!interviewData.trim()) { toast.error('กรุณาใส่ผลการสัมภาษณ์'); return; }
+    ext.open({ title: 'วิเคราะห์การสัมภาษณ์ด้วย AI ของฉันเอง', promptRequest: promptReq('generate-analysis', analysisBody()) });
+  };
+  const applyPastedQuestions = (text) => {
+    const questions = parseNumberedQuestions(text);
+    if (!questions.length) { toast.error('ไม่พบคำถามในข้อความที่วาง — ควรเป็นรายการคำถามเรียงเป็นบรรทัด'); return false; }
+    setGeneratedQuestions({ questions });
+    toast.success(`ใส่คำถาม ${questions.length} ข้อแล้ว`);
+    return true;
+  };
+  const applyPastedAnalysis = (text) => {
+    if (!text.trim()) { toast.error('กรุณาวางผลวิเคราะห์จาก AI'); return false; }
+    setAnalysisResult(parseAnalysisSections(text));
+    toast.success('ใส่ผลการวิเคราะห์แล้ว');
+    return true;
+  };
+
   const handleGenerateQuestions = async () => {
     if (!questionTopic.trim()) {
       toast.error('กรุณาใส่หัวข้อวิจัย');
@@ -88,7 +124,8 @@ const CustomerPerceptionTool = () => {
       toast.success('สร้างคำถามสำเร็จ!');
     } catch (error) {
       console.error('Question generation error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างคำถามได้');
+      if (isLlmExternalOnly(error)) throw error; // AiActionButton opens the external dialog
+      toast.error(apiErrorText(error, 'ไม่สามารถสร้างคำถามได้'));
     } finally {
       setGeneratingQuestions(false);
     }
@@ -135,7 +172,8 @@ const CustomerPerceptionTool = () => {
       toast.success('วิเคราะห์สำเร็จ!');
     } catch (error) {
       console.error('Analysis generation error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ได้');
+      if (isLlmExternalOnly(error)) throw error; // AiActionButton opens the external dialog
+      toast.error(apiErrorText(error, 'ไม่สามารถวิเคราะห์ได้'));
     } finally {
       setGeneratingAnalysis(false);
     }
@@ -165,7 +203,7 @@ const CustomerPerceptionTool = () => {
       toast.success('สร้างภาพสำเร็จ!');
     } catch (error) {
       console.error('Image generation error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพได้');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'ไม่สามารถสร้างภาพได้'));
     } finally {
       setGeneratingImage(false);
     }
@@ -207,7 +245,7 @@ const CustomerPerceptionTool = () => {
       setShowSaveForm(false);
     } catch (error) {
       console.error('Save content error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถบันทึกได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถบันทึกได้'));
     } finally {
       setSaving(false);
     }
@@ -324,23 +362,25 @@ const CustomerPerceptionTool = () => {
                         </div>
                       </div>
 
-                      <Button
-                        onClick={handleGenerateQuestions}
+                      <AiActionButton
+                        feature="perception.ai"
+                        label="สร้างคำถามสัมภาษณ์"
+                        icon={Sparkles}
+                        onSystem={handleGenerateQuestions}
+                        external={{ title: 'สร้างคำถามสัมภาษณ์ด้วย AI ของฉันเอง', promptRequest: promptReq('generate-questions', questionsBody()) }}
                         disabled={generatingQuestions || !questionTopic.trim()}
                         className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
-                      >
-                        {generatingQuestions ? (
-                          <>
-                            <Loader2 className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
-                            กำลังสร้างคำถาม...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                            สร้างคำถามสัมภาษณ์
-                          </>
-                        )}
-                      </Button>
+                        data-testid="perception-questions-btn"
+                      />
+                      <PasteAnswerBox
+                        testid="perception-questions-paste"
+                        defaultOpen={aiGate.blocked}
+                        hint="วางรายการคำถามที่ AI เขียน (ข้อละบรรทัด) — ระบบจะแสดงเหมือนคำถามที่สร้างโดยระบบ และนำไปสร้างแบบสอบถามต่อได้"
+                        rows={6}
+                        onShowPrompt={showQuestionsPrompt}
+                        onApply={applyPastedQuestions}
+                        applyLabel="ใช้คำถามนี้"
+                      />
                     </div>
                   </Card>
 
@@ -428,23 +468,25 @@ const CustomerPerceptionTool = () => {
                         />
                       </div>
 
-                      <Button
-                        onClick={handleGenerateAnalysis}
+                      <AiActionButton
+                        feature="perception.ai"
+                        label="วิเคราะห์ Perception"
+                        icon={Sparkles}
+                        onSystem={handleGenerateAnalysis}
+                        external={{ title: 'วิเคราะห์การสัมภาษณ์ด้วย AI ของฉันเอง', promptRequest: promptReq('generate-analysis', analysisBody()) }}
                         disabled={generatingAnalysis || !interviewData.trim()}
                         className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
-                      >
-                        {generatingAnalysis ? (
-                          <>
-                            <Loader2 className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
-                            กำลังวิเคราะห์...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                            วิเคราะห์ Perception
-                          </>
-                        )}
-                      </Button>
+                        data-testid="perception-analyze-btn"
+                      />
+                      <PasteAnswerBox
+                        testid="perception-analysis-paste"
+                        defaultOpen={aiGate.blocked}
+                        hint="วางคำตอบทั้งก้อนที่ AI ตอบ (รูปแบบ ANALYSIS: / KEY_FINDINGS: / RECOMMENDATIONS: ตามที่พรอมต์กำหนด)"
+                        rows={8}
+                        onShowPrompt={showAnalysisPrompt}
+                        onApply={applyPastedAnalysis}
+                        applyLabel="ใช้ผลการวิเคราะห์นี้"
+                      />
                     </div>
                   </Card>
 
@@ -460,11 +502,12 @@ const CustomerPerceptionTool = () => {
                           {!imageUrl ? (
                             <Button
                               onClick={handleGenerateImage}
-                              disabled={generatingImage}
+                              disabled={generatingImage || imageGate.blocked}
                               variant="outline"
                               size="sm"
                               className="border-2 border-blue-300 text-blue-700 p-2"
-                              title="สร้างภาพประกอบ"
+                              title={imageGate.blocked ? 'สร้างภาพไม่ได้ — ผู้ดูแลระบบปิด AI สร้างภาพของระบบ' : 'สร้างภาพประกอบ'}
+                              aria-label="สร้างภาพประกอบ"
                             >
                               {generatingImage ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -562,6 +605,9 @@ const CustomerPerceptionTool = () => {
                             <div 
                               className="rounded-lg overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#00A9CE] transition-all"
                               onClick={() => setShowFullscreenImage(true)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowFullscreenImage(true); } }}
+                              role="button"
+                              tabIndex={0}
                               title="คลิกเพื่อดูแบบเต็มจอ"
                             >
                               <img
@@ -756,6 +802,7 @@ const CustomerPerceptionTool = () => {
           </div>
         )}
       </div>
+      {ext.dialog}
     </div>
   );
 };

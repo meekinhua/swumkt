@@ -15,7 +15,7 @@ const CustomerJourneyHub = () => {
 
   return (
     <div className="be-root jy-root">
-      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" />
+      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" crumbs={[{ label: 'เครื่องมือวิจัย', to: '/market-research' }, { label: 'Customer Journey' }]} />
       <div className="be-page">
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           <button className={`be-chip ${tab === 'quant' ? 'solid' : ''}`} aria-pressed={tab === 'quant'} data-testid="journey-tab-quant"

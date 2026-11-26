@@ -7,7 +7,7 @@ import InviteModal from './InviteModal';
 
 const TABS = [
   { id: 'landing', label: 'หน้าแรก', icon: 'home', path: '/alumni' },
-  { id: 'tree', label: 'สายตระกูล', icon: 'tree', path: '/alumni/tree' },
+  { id: 'tree', label: 'สายเทค', icon: 'tree', path: '/alumni/tree' },
   { id: 'discover', label: 'Discover', icon: 'compass', path: '/alumni/discover' },
   { id: 'feed', label: 'ฟีด', icon: 'feed', path: '/alumni/feed' },
   { id: 'jobs', label: 'งาน', icon: 'briefcase', path: '/alumni/jobs' },
@@ -23,7 +23,6 @@ const getActiveId = (path) => {
   if (path.startsWith('/alumni/trivia')) return 'trivia';
   if (path.startsWith('/alumni/profile')) return 'profile';
   if (path.startsWith('/alumni/onboarding')) return 'onboarding';
-  if (path.startsWith('/alumni/invites')) return 'invites';
   return '';
 };
 
@@ -37,7 +36,7 @@ export const AlumniTopNav = ({ onInviteOpen }) => {
     <div className="al-topnav" data-testid="alumni-topnav">
       <button className="al-brand" onClick={() => navigate('/alumni')} data-testid="alumni-brand-btn">
         <div className="al-brand-mark">กต</div>
-        <div className="al-brand-name">สายตระกูล <em>MKT SWU</em></div>
+        <div className="al-brand-name">สายเทค <em>MKT SWU</em></div>
       </button>
       <div className="al-nav-tabs">
         {TABS.map(t => (
@@ -100,7 +99,7 @@ export const AlumniBottomNav = () => {
 // Floating Action Button — only when user is logged in + registered
 export const InviteFAB = ({ onClick }) => (
   <button onClick={onClick} data-testid="alumni-invite-fab"
-    title="ชวนเพื่อนเข้าสายตระกูล"
+    title="ชวนคนเข้าสายเทค" aria-label="ชวนคนเข้าสายเทค"
     style={{
       position: 'fixed', bottom: 86, right: 24, zIndex: 35,
       width: 60, height: 60, borderRadius: '50%',
