@@ -32,6 +32,7 @@ from lib.citation_replacer import CitationReplacer
 from lib.doc_formatter import DocFormatter
 from lib.ttl_cache import async_ttl_cache
 from lib import api_keys
+from lib import llm_policy
 from PIL import Image
 from io import BytesIO
 
@@ -61,18 +62,30 @@ _LLM_GLOBAL_SEM = asyncio.Semaphore(3)
 _LLM_CALL_TIMEOUT = 90.0  # seconds per call
 
 def _install_llm_concurrency_patch() -> None:
+    """Patch emergentintegrations: (a) the policy guard (llm_policy) on every
+    billed entry point, (b) thread offload + global throttle on LlmChat.
+
+    Idempotent. Safe when emergentintegrations is missing (tests / dev) — a
+    fake module injected into sys.modules is patched the same way.
+    """
     try:
         import emergentintegrations.llm.chat as _ec
     except Exception as e:
         logging.error(f"[LLM-PATCH] emergentintegrations not importable: {e}")
-        return
-    if getattr(_ec.LlmChat, "_emrg_patched", False):
-        return  # idempotent — already patched (e.g., on hot-reload)
-    _orig_send = _ec.LlmChat.send_message
-    _orig_send_mm = getattr(_ec.LlmChat, "send_message_multimodal_response", None)
+        _ec = None
+    if _ec is not None and not getattr(_ec.LlmChat, "_emrg_patched", False):
+        _patch_llm_chat(_ec.LlmChat)
+    _install_image_guards()
+
+
+def _patch_llm_chat(LlmChat) -> None:
+    _orig_send = LlmChat.send_message
+    _orig_send_mm = getattr(LlmChat, "send_message_multimodal_response", None)
+    _orig_send_async = getattr(LlmChat, "send_message_async", None)
 
     async def _wrapped_send(self, user_message):
-        """Thread-offloaded send_message with global throttle + 90s timeout."""
+        """Policy guard, then thread-offloaded send_message with global throttle + 90s timeout."""
+        await llm_policy.check_billed_call("chat")
         def _run():
             loop = asyncio.new_event_loop()
             try:
@@ -83,7 +96,8 @@ def _install_llm_concurrency_patch() -> None:
             return await asyncio.wait_for(asyncio.to_thread(_run), timeout=_LLM_CALL_TIMEOUT)
 
     async def _wrapped_send_mm(self, user_message):
-        """Thread-offloaded send_message_multimodal_response (image gen etc.)."""
+        """Policy guard (image kind), then thread-offloaded multimodal send (image gen etc.)."""
+        await llm_policy.check_billed_call("image")
         def _run():
             loop = asyncio.new_event_loop()
             try:
@@ -94,12 +108,54 @@ def _install_llm_concurrency_patch() -> None:
             # Image generation can be slower; allow 2x the normal cap.
             return await asyncio.wait_for(asyncio.to_thread(_run), timeout=_LLM_CALL_TIMEOUT * 2)
 
-    _ec.LlmChat.send_message = _wrapped_send
+    async def _wrapped_send_async(self, *a, **kw):
+        await llm_policy.check_billed_call("chat")
+        return await _orig_send_async(self, *a, **kw)
+
+    LlmChat.send_message = _wrapped_send
     if _orig_send_mm:
-        _ec.LlmChat.send_message_multimodal_response = _wrapped_send_mm
-    _ec.LlmChat._emrg_patched = True
-    logging.info("[LLM-PATCH] Installed asyncio.to_thread + Semaphore(3) "
+        LlmChat.send_message_multimodal_response = _wrapped_send_mm
+    if _orig_send_async and asyncio.iscoroutinefunction(_orig_send_async):
+        LlmChat.send_message_async = _wrapped_send_async
+    LlmChat._emrg_patched = True
+    logging.info("[LLM-PATCH] Installed llm_policy guard + asyncio.to_thread + Semaphore(3) "
                  "wrappers on LlmChat.send_message{,_multimodal_response}")
+
+
+def _guard_callable(fn, kind: str):
+    """Wrap a sync or async callable with the llm_policy guard."""
+    if getattr(fn, "_llm_policy_guarded", False):
+        return fn
+    import functools
+    if asyncio.iscoroutinefunction(fn):
+        @functools.wraps(fn)
+        async def _g(*a, **kw):
+            await llm_policy.check_billed_call(kind)
+            return await fn(*a, **kw)
+    else:
+        @functools.wraps(fn)
+        def _g(*a, **kw):
+            llm_policy.check_billed_call_sync(kind)
+            return fn(*a, **kw)
+    _g._llm_policy_guarded = True
+    return _g
+
+
+def _install_image_guards() -> None:
+    """Guard the image-generation entry points that bypass LlmChat."""
+    try:
+        from emergentintegrations.llm.openai import image_generation as _ig
+        cls = getattr(_ig, "OpenAIImageGeneration", None)
+        if cls is not None and hasattr(cls, "generate_images"):
+            cls.generate_images = _guard_callable(cls.generate_images, "image")
+    except Exception as e:
+        logging.info(f"[LLM-PATCH] OpenAIImageGeneration not available: {e}")
+    try:
+        import emergentintegrations.image as _img
+        if hasattr(_img, "generate_image"):
+            _img.generate_image = _guard_callable(_img.generate_image, "image")
+    except Exception:
+        pass  # optional module (absent in most installs)
 
 _install_llm_concurrency_patch()
 # ============================================================================
@@ -308,6 +364,7 @@ client = AsyncIOMotorClient(
     socketTimeoutMS=30000,    # Timeout for socket operations
 )
 db = client[os.environ['DB_NAME']]
+llm_policy.init(db)
 
 # Create indexes on startup for better performance
 async def create_indexes():
@@ -506,6 +563,16 @@ GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://mnl-results
 # Create the main app
 app = FastAPI(title="SWUMKT API")
 api_router = APIRouter(prefix="/api")
+
+# System-LLM policy: tag each request with the feature its path maps to (the
+# guard's fallback for call sites without an explicit require_system_llm), and
+# turn a guard refusal anywhere into the documented 409 body.
+app.add_middleware(llm_policy.RouteFeatureMiddleware)
+
+
+@app.exception_handler(llm_policy.SystemLLMDisabled)
+async def _system_llm_disabled_handler(request: Request, exc: llm_policy.SystemLLMDisabled):
+    return JSONResponse(status_code=409, content={"detail": exc.detail})
 
 # Session middleware for OAuth (needed for state management)
 from starlette.middleware.sessions import SessionMiddleware
@@ -1180,6 +1247,14 @@ async def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
+    user = await _resolve_current_user(request, credentials)
+    # The LLM policy guard needs the caller (admin_bypass) even at call sites
+    # that do not pass the user explicitly.
+    llm_policy.set_current_user(user)
+    return user
+
+
+async def _resolve_current_user(request: Request, credentials: HTTPAuthorizationCredentials):
     token = credentials.credentials
 
     # An API key travels in the same Authorization header and is recognisable
@@ -1795,6 +1870,13 @@ async def close_survey(
 
 async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
     """Get current user if authenticated, None if not"""
+    user = await _resolve_current_user_optional(credentials)
+    if user is not None:
+        llm_policy.set_current_user(user)
+    return user
+
+
+async def _resolve_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials]):
     if not credentials:
         return None
     
@@ -8143,6 +8225,42 @@ async def update_llm_prompt(
 
 
 # ============ THESIS EXPORT (Word .docx) ============
+
+
+# ============ PLATFORM — system-LLM policy + health ============
+APP_VERSION = os.environ.get("APP_VERSION", "2026.11")
+
+
+@api_router.get("/health")
+async def health():
+    """Liveness probe. No auth, no db round-trip."""
+    return {"status": "ok", "version": APP_VERSION,
+            "time": datetime.now(timezone.utc).isoformat()}
+
+
+@api_router.get("/platform/llm-policy")
+async def get_llm_policy(current_user: User = Depends(get_current_user)):
+    """Effective system-LLM policy for the caller (see memory/LLM_EXTERNAL_CONTRACT.md)."""
+    pol = await llm_policy.get_policy()
+    return llm_policy.public_view(pol, current_user)
+
+
+@api_router.put("/platform/llm-policy")
+async def put_llm_policy(
+    payload: Dict[str, Any] = Body(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Partial update (admin, or API key with scope platform.settings).
+    `features: {key: null}` removes an override."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        pol = await llm_policy.update_policy(
+            payload, updated_by=current_user.email or current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    logging.info(f"[LLM-POLICY] updated by {current_user.email}: {payload}")
+    return llm_policy.public_view(pol, current_user)
 
 
 # ============ PROJECT MANAGEMENT (KANBAN) ============

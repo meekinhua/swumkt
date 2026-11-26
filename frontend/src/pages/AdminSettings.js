@@ -14,6 +14,7 @@ import { ArrowLeft, User, LogOut, Settings, Save, RefreshCw, Shield, Map, BarCha
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import AdminCourseManagement from '@/components/AdminCourseManagement';
+import LlmPolicyCard from '@/components/LlmPolicyCard';
 
 const AdminSettings = () => {
   const navigate = useNavigate();
@@ -692,6 +693,9 @@ const AdminSettings = () => {
               </Button>
             </div>
           </div>
+
+          {/* System LLM switch (admin only) — first thing an admin looks for */}
+          <LlmPolicyCard />
 
           {/* Settings Card with Tabs */}
           <Card className="p-4 sm:p-8 bg-white/98 border-2 border-gray-300 shadow-xl">

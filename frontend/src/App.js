@@ -21,6 +21,7 @@ import BrandEquityRespondentPage from '@/pages/brand-equity/BrandEquityResponden
 import BrandEquityShowcaseIndexPage from '@/pages/brand-equity/BrandEquityShowcaseIndexPage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
+import { installLlmPolicyInterceptor } from '@/lib/llmErrors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ============ LAZY imports — heavy / admin / rarely-used pages ============
@@ -150,6 +151,10 @@ axios.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// One consistent Thai toast for 409 `llm_external_only` (system LLM switched off).
+// The error is still rejected, so callers (AiActionButton etc.) can react.
+installLlmPolicyInterceptor();
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
