@@ -124,7 +124,8 @@ const ConjointInterpretationCard = ({
       if (p.data.status === 'ready') { onInterpretation(p.data); toast.success('AI วิเคราะห์สำเร็จ'); return; }
       if (p.data.status === 'failed') {
         if (p.data.error_code === 'llm_external_only') { showLlmExternalOnlyToast(); throw policyError(); }
-        const msg = p.data.error || 'AI วิเคราะห์ไม่สำเร็จ — ลองใช้ AI ของคุณเองแทน';
+        const msg = p.data.error_code === 'stale_job' ? 'งานค้างจากการรีสตาร์ตเซิร์ฟเวอร์ — กด "ลองใหม่" เพื่อเริ่มใหม่ได้'
+          : (p.data.error || 'AI วิเคราะห์ไม่สำเร็จ — ลองใช้ AI ของคุณเองแทน');
         setError(msg);
         toast.error(msg);
         return;

@@ -191,7 +191,7 @@ export const BeThesisExport = ({ studyId, token, filter, brandName, canExportNon
           } else if (st.status === 'failed') {
             downloadStartedRef.current = true;
             stopPoll();
-            setSysError(st.error_code === 'llm_external_only'
+            setSysError(st.error_code === 'stale_job' ? 'งานค้างจากการรีสตาร์ตเซิร์ฟเวอร์ — กดสร้างอีกครั้งเพื่อเริ่มใหม่ได้' : st.error_code === 'llm_external_only'
               ? `ผู้ดูแลระบบปิดการใช้ AI ของระบบระหว่างทำงาน — ใช้ตัวเลือก 2 แทน${st.error_detail?.hint ? ` (${st.error_detail.hint})` : ''}`
               : (st.error || 'AI สร้างเอกสารไม่สำเร็จ'));
             setSysProgress('failed');

@@ -239,7 +239,12 @@ export const AiResultBanner = ({ ai, onExternal, canExternal = true }) => {
           </ul>
         </details>
       )}
-      {!errors.length && ai.error && <div className="be-small be-muted" style={{ marginBottom: 8 }}>{String(ai.error)}</div>}
+      {ai.error_code === 'stale_job' && (
+        <div className="be-small" style={{ marginBottom: 8 }} data-testid="be-ai-stale-job">
+          งานค้างจากการรีสตาร์ตเซิร์ฟเวอร์ — กด “วิเคราะห์ด้วย AI” เพื่อเริ่มใหม่ได้
+        </div>
+      )}
+      {!errors.length && ai.error && ai.error_code !== 'stale_job' && <div className="be-small be-muted" style={{ marginBottom: 8 }}>{String(ai.error)}</div>}
       <div className="be-small" style={{ lineHeight: 1.6 }}>
         ส่วนที่ทำเสร็จแล้วถูกบันทึกไว้ — คะแนน BES ไม่ได้ขึ้นกับขั้นตอนเหล่านี้
         {canExternal && ' · ทำส่วนที่เหลือต่อได้ด้วย AI ของคุณเอง (หน้าต่างที่เปิดขึ้นจะแสดงเฉพาะชุดงานที่ครอบคลุมหัวข้อข้างต้น)'}

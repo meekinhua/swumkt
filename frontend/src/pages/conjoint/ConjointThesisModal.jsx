@@ -144,6 +144,7 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
           if (p.data.status === 'ready') { ok = true; cacheKey = p.data.cache_key || cacheKey; }
           else if (p.data.status === 'failed') {
             if (p.data.error_code === 'llm_external_only') { showLlmExternalOnlyToast(); setOption('pack'); }
+            else if (p.data.error_code === 'stale_job') toast.error('งานค้างจากการรีสตาร์ตเซิร์ฟเวอร์ — กดสร้างอีกครั้งเพื่อเริ่มใหม่ได้');
             else toast.error(p.data.error || 'AI เขียนไม่สำเร็จ');
             return;
           }
