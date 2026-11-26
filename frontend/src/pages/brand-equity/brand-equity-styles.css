@@ -1400,3 +1400,5 @@
   .be-root .be-disclosure-head { flex-direction: column; gap: 6px; }
   .be-root .be-card { padding-left: 14px; padding-right: 14px; }
 }
+.be-root .be-card ul:not([class]), .be-root [role="alert"] ul { list-style: disc; }
+.be-root .be-card ol:not([class]), .be-root [role="alert"] ol { list-style: decimal; }

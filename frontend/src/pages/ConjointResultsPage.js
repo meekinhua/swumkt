@@ -588,7 +588,9 @@ const ConjointResultsPage = () => {
   const plainSummary = (() => {
     if (!sortedImportance.length || !currentResults?.part_worths) return null;
     const rows = sortedImportance.map((feat) => {
-      const levels = Object.values(currentResults.part_worths?.[feat.id]?.levels || {});
+      // A level the model could not estimate carries utility 0 — that is NOT "as good as
+      // the reference", so it must never be picked as best/worst.
+      const levels = Object.values(currentResults.part_worths?.[feat.id]?.levels || {}).filter((l) => !l.is_excluded);
       if (!levels.length) return null;
       const best = levels.reduce((a, b) => (b.utility > a.utility ? b : a));
       const worst = levels.reduce((a, b) => (b.utility < a.utility ? b : a));
@@ -605,6 +607,11 @@ const ConjointResultsPage = () => {
     const fit = statisticalData?.results?.pseudo_r_squared;
     return { rows, top: rows[0], fit };
   })();
+
+  // Honesty flags surfaced at the top of the page and in the statistics tab.
+  const converged = statisticalData?.results?.converged;
+  const excludedLevels = Object.values(currentResults?.part_worths || {}).flatMap((a) =>
+    Object.values(a.levels || {}).filter((l) => l.is_excluded).map((l) => `${a.name}: ${l.value}`));
 
   // Prepare data for Pie Chart
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
@@ -785,12 +792,35 @@ const ConjointResultsPage = () => {
           </div>
         )}
 
+        {/* Statistical-analysis request state (per-request loading / error) */}
+        {statError && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border-2 border-red-300 bg-red-50 p-3 text-sm text-red-900" role="alert" data-testid="stat-error">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            <span className="flex-1">{statError}</span>
+            <button type="button" className="font-semibold underline" onClick={() => loadStatisticalAnalysis(selectedMethod)}>ลองใหม่</button>
+          </div>
+        )}
+
+        <ConjointTopSummary
+          n={currentResults?.respondent_count ?? results?.respondent_count ?? 0}
+          adequacy={sampleAdequacy}
+          plainSummary={plainSummary}
+          method={selectedMethod}
+          converged={converged}
+          excludedLevels={excludedLevels}
+          dqData={dq.data}
+          canSeeQuality={isOwnerOrAdmin}
+          onGoTab={setActiveTab}
+          isOwnerOrAdmin={isOwnerOrAdmin}
+          onOpenThesis={handleExportThesis}
+        />
+
         {/* Tab Navigation */}
-        <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6 bg-white rounded-lg p-2 shadow-sm">
+        <div className="flex flex-row gap-2 mb-4 sm:mb-6 bg-white rounded-lg p-2 shadow-sm overflow-x-auto" role="tablist" data-testid="conjoint-tabs">
           <button
             onClick={() => setActiveTab('overview')}
             data-testid="tab-overview"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'overview'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -804,7 +834,7 @@ const ConjointResultsPage = () => {
           <button
             onClick={() => setActiveTab('academic')}
             data-testid="tab-academic"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'academic'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -816,9 +846,25 @@ const ConjointResultsPage = () => {
             </div>
           </button>
           <button
+            onClick={() => setActiveTab('market')}
+            data-testid="tab-market"
+            role="tab"
+            aria-selected={activeTab === 'market'}
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+              activeTab === 'market'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>ราคา &amp; จำลองตลาด</span>
+            </div>
+          </button>
+          <button
             onClick={() => setActiveTab('advanced')}
             data-testid="tab-advanced"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'advanced'
                 ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -832,7 +878,7 @@ const ConjointResultsPage = () => {
           <button
             onClick={() => setActiveTab('compare')}
             data-testid="tab-compare-methods"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'compare'
                 ? 'bg-gradient-to-r from-slate-800 to-slate-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -2528,6 +2574,21 @@ const ConjointResultsPage = () => {
             {selectedMethod === 'hierarchical_bayes' && statisticalData?.results?.individual_quantiles && (
               <HBIndividualInsights hbResult={statisticalData.results} study={study}/>
             )}
+          </>
+        )}
+
+        {/* Price & market simulation tab */}
+        {activeTab === 'market' && (
+          <>
+            <ConjointWtpCard studyId={studyId} token={token} study={study} filterQs={buildFilterQs()} />
+            <ConjointSimulatorCard
+              studyId={studyId}
+              token={token}
+              study={study}
+              filterQs={buildFilterQs()}
+              defaultMethod={selectedMethod}
+              respondentCount={results?.respondent_count ?? 0}
+            />
           </>
         )}
 
