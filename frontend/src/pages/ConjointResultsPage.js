@@ -269,7 +269,9 @@ const ConjointResultsPage = () => {
       toast.success('สร้างภาพผลิตภัณฑ์สำเร็จ!');
     } catch (error) {
       console.error('Error generating product image:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพผลิตภัณฑ์ได้');
+      if (error?.response?.status === 409) throw error; // llm_external_only -> AiActionButton opens the prompt dialog
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างภาพผลิตภัณฑ์ได้');
     } finally {
       setLoadingProductImage(false);
     }
@@ -277,7 +279,7 @@ const ConjointResultsPage = () => {
 
   const handleGenerateShelfSimulation = async () => {
     if (!productImage || !productImage.image_url) {
-      toast.error('กรุณาสร้างภาพผลิตภัณฑ์ก่อน');
+      toast.error('กรุณาสร้างหรืออัปโหลดภาพผลิตภัณฑ์ก่อน');
       return;
     }
     
@@ -312,7 +314,9 @@ const ConjointResultsPage = () => {
       toast.success('สร้างภาพจำลองชั้นวางสำเร็จ!');
     } catch (error) {
       console.error('Error generating shelf simulation:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพจำลองได้');
+      if (error?.response?.status === 409) throw error;
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างภาพจำลองได้');
     } finally {
       setLoadingShelfImage(false);
     }
@@ -610,6 +614,7 @@ const ConjointResultsPage = () => {
 
   // Honesty flags surfaced at the top of the page and in the statistics tab.
   const converged = statisticalData?.results?.converged;
+  const hasCI = ['mnl', 'mixed_logit'].includes(statisticalData?.method) && !!statisticalData?.results?.ci_lower;
   const excludedLevels = Object.values(currentResults?.part_worths || {}).flatMap((a) =>
     Object.values(a.levels || {}).filter((l) => l.is_excluded).map((l) => `${a.name}: ${l.value}`));
 
@@ -1017,6 +1022,8 @@ const ConjointResultsPage = () => {
           </Card>
         </div>
 
+        {isOwnerOrAdmin && <ConjointDataQualityCard dq={dq} />}
+
         {/* AI interpretation — system path or "use my own AI" (see ConjointInterpretationCard) */}
         <ConjointInterpretationCard
           studyId={studyId}
@@ -1034,8 +1041,8 @@ const ConjointResultsPage = () => {
 
 
         {/* Product Image Generator - Only show if AI interpretation is available */}
-        {aiInterpretation && (
-          <Card className="p-6 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300">
+        {(aiInterpretation || !imagesSystemOk) && (
+          <Card className="p-6 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300" data-testid="product-image-card">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
@@ -1048,6 +1055,7 @@ const ConjointResultsPage = () => {
             <p className="text-sm text-green-700 mb-4">
               สร้างภาพผลิตภัณฑ์ที่เหมาะสมที่สุดตามผลการวิจัย Conjoint Analysis (คุณสมบัติที่ผู้บริโภคต้องการมากที่สุด)
             </p>
+            <ImagesOptionalNote className="mb-4" />
 
             {!productImage ? (
               <div className="space-y-4">
@@ -1187,23 +1195,34 @@ const ConjointResultsPage = () => {
                   </p>
                 </div>
 
-                <Button
-                  onClick={handleGenerateProductImage}
-                  disabled={loadingProductImage}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
-                >
-                  {loadingProductImage ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      กำลังสร้างภาพ...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      สร้างภาพผลิตภัณฑ์
-                    </>
-                  )}
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center" data-testid="product-image-actions">
+                  <AiActionButton
+                    feature="conjoint.images"
+                    label={loadingProductImage ? 'กำลังสร้างภาพ...' : 'สร้างภาพผลิตภัณฑ์'}
+                    icon={Sparkles}
+                    onSystem={handleGenerateProductImage}
+                    disabled={loadingProductImage}
+                    external={{
+                      title: 'พรอมต์ภาพผลิตภัณฑ์ — สร้างด้วย AI ของคุณเอง',
+                      promptRequest: {
+                        method: 'POST',
+                        url: `${API}/conjoint/studies/${studyId}/generate-product-from-results/external-prompt`,
+                        data: {
+                          additional_prompt: productImagePrompt || undefined,
+                          reference_image_indices: selectedReferenceIndices.length > 0 ? selectedReferenceIndices : undefined,
+                        },
+                      },
+                    }}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold"
+                    data-testid="product-image-ai-btn"
+                  />
+                  <ImageFileButton
+                    label="ใช้ภาพสินค้าที่มีอยู่แล้ว"
+                    size="default"
+                    testId="product-image-upload"
+                    onData={(dataUrl) => { setProductImage({ image_url: dataUrl, prompt_used: null }); toast.success('ใช้ภาพที่อัปโหลด (ไม่ถูกเก็บบนเซิร์ฟเวอร์ — ใช้ต่อกับการจำลองชั้นวางในหน้านี้)'); }}
+                  />
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1259,8 +1278,8 @@ const ConjointResultsPage = () => {
         )}
 
         {/* Shelf Simulation - Only show if product image is generated */}
-        {productImage && (
-          <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300">
+        {(productImage || !imagesSystemOk) && (
+          <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300" data-testid="shelf-card">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
@@ -1365,23 +1384,32 @@ const ConjointResultsPage = () => {
                   </p>
                 </div>
 
-                <Button
-                  onClick={handleGenerateShelfSimulation}
+                <AiActionButton
+                  feature="conjoint.images"
+                  label={loadingShelfImage ? 'กำลังสร้างภาพจำลอง...' : 'สร้างภาพจำลองชั้นวาง'}
+                  icon={Sparkles}
+                  onSystem={handleGenerateShelfSimulation}
                   disabled={loadingShelfImage}
-                  className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold"
-                >
-                  {loadingShelfImage ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      กำลังสร้างภาพจำลอง...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      สร้างภาพจำลองชั้นวาง
-                    </>
-                  )}
-                </Button>
+                  external={{
+                    title: 'พรอมต์ภาพจำลองชั้นวาง — สร้างด้วย AI ของคุณเอง',
+                    promptRequest: {
+                      method: 'POST',
+                      url: `${API}/conjoint/studies/${studyId}/generate-shelf-simulation/external-prompt`,
+                      data: {
+                        environment_type: environmentType,
+                        custom_environment: environmentType === 'custom' ? customEnvironment : undefined,
+                        shelf_style: shelfStyle,
+                        custom_shelf_style: shelfStyle === 'custom' ? customShelfStyle : undefined,
+                        additional_prompt: shelfPrompt || undefined,
+                      },
+                    },
+                  }}
+                  className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold"
+                  data-testid="shelf-ai-btn"
+                />
+                {!productImage && (
+                  <p className="text-xs text-amber-800">ถ้าสร้างภาพจากพรอมต์ด้วย AI ของคุณเอง ให้แนบภาพสินค้าในเครื่องมือภาพของคุณ — ระบบไม่เก็บภาพผลิตภัณฑ์ไว้บนเซิร์ฟเวอร์</p>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -1562,9 +1590,10 @@ const ConjointResultsPage = () => {
                       <ResponsiveContainer width="100%" height={200}>
                         <BarChart
                           data={Object.values(currentResults?.part_worths?.[feature.id]?.levels || {})
+                            .filter(level => !level.is_excluded)
                             .sort((a, b) => b.utility - a.utility)
                             .map(level => ({
-                              name: level.value,
+                              name: level.is_reference ? `${level.value} (อ้างอิง)` : level.value,
                               utility: parseFloat(level.utility.toFixed(2)),
                               count: level.selection_count
                             }))}
@@ -1608,8 +1637,13 @@ const ConjointResultsPage = () => {
                         </BarChart>
                       </ResponsiveContainer>
                       <p className="text-xs text-gray-500 text-center mt-2">
-                        💡 แท่งสูง = ผู้บริโภคให้คะแนนมากกว่า (ชอบมากกว่า)
+                        💡 แท่งสูง = ผู้บริโภคให้คะแนนมากกว่า (ชอบมากกว่า) · “(อ้างอิง)” คือระดับเปรียบเทียบที่กำหนดให้เป็น 0 ไม่ใช่ผลที่ประมาณได้
                       </p>
+                      {Object.values(currentResults?.part_worths?.[feature.id]?.levels || {}).some(l => l.is_excluded) && (
+                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2" data-testid="excluded-levels-note">
+                          ประมาณค่าไม่ได้: {Object.values(currentResults.part_worths[feature.id].levels).filter(l => l.is_excluded).map(l => l.value).join(', ')} — ไม่เคยถูกแสดงให้ผู้ตอบเห็น จึงไม่แสดงในกราฟ
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1673,7 +1707,7 @@ const ConjointResultsPage = () => {
                   </thead>
                   <tbody>
                     {sortedImportance.map((feature, index) => {
-                      const levels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {});
+                      const levels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {}).filter(l => !l.is_excluded);
                       const utilities = levels.map(l => l.utility);
                       const range = utilities.length > 0 ? Math.max(...utilities) - Math.min(...utilities) : 0;
                       
@@ -1799,7 +1833,8 @@ const ConjointResultsPage = () => {
                   <tbody>
                     {sortedImportance.map((feature, attrIdx) => {
                       const levels = currentResults?.part_worths?.[feature.id]?.levels || {};
-                      const sortedLevels = Object.values(levels).sort((a, b) => b.utility - a.utility);
+                      const sortedLevels = Object.values(levels).sort((a, b) =>
+                        (a.is_excluded ? 1 : 0) - (b.is_excluded ? 1 : 0) || b.utility - a.utility);
                       
                       return sortedLevels.map((level, levelIdx) => (
                         <tr key={`${feature.id}-${levelIdx}`} className="hover:bg-purple-50">
@@ -1812,13 +1847,23 @@ const ConjointResultsPage = () => {
                             </td>
                           )}
                           <td className="border-2 border-purple-200 px-4 py-3 text-gray-700">
-                            {levelIdx === 0 && '⭐ '}{level.value}
+                            {levelIdx === 0 && !level.is_excluded && '⭐ '}{level.value}
                           </td>
-                          <td className={`border-2 border-purple-200 px-4 py-3 text-right font-mono font-bold ${
-                            level.utility > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {level.utility > 0 ? '+' : ''}{level.utility.toFixed(3)}
-                          </td>
+                          {level.is_excluded ? (
+                            <td className="border-2 border-purple-200 px-4 py-3 text-right text-xs font-bold text-amber-800" title="ระดับนี้ไม่เคยถูกแสดงให้ผู้ตอบเห็น — ค่า 0 ไม่ใช่ผลการประมาณ" data-testid="level-excluded">
+                              ประมาณค่าไม่ได้
+                            </td>
+                          ) : level.is_reference ? (
+                            <td className="border-2 border-purple-200 px-4 py-3 text-right font-mono text-gray-500" title="ระดับที่ใช้เป็นเกณฑ์เปรียบเทียบ กำหนดให้เป็น 0" data-testid="level-reference">
+                              0 <span className="text-xs">(ระดับอ้างอิง)</span>
+                            </td>
+                          ) : (
+                            <td className={`border-2 border-purple-200 px-4 py-3 text-right font-mono font-bold ${
+                              level.utility > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {level.utility > 0 ? '+' : ''}{level.utility.toFixed(3)}
+                            </td>
+                          )}
                           <td className="border-2 border-purple-200 px-4 py-3 text-right text-gray-600">
                             {level.selection_count}
                           </td>
@@ -2248,6 +2293,17 @@ const ConjointResultsPage = () => {
                     </div>
                   )}
 
+                  {/* ===== CONVERGENCE WARNING ===== */}
+                  {statisticalData.results?.converged === false && (
+                    <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-red-400 bg-red-50 p-4" role="alert" data-testid="not-converged-warning">
+                      <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+                      <div className="text-sm text-red-900">
+                        <p className="font-bold">แบบจำลองนี้ไม่ลู่เข้า (converged = false)</p>
+                        <p className="mt-1">ตัวเลขด้านล่างอาจไม่ใช่ค่าที่ดีที่สุดและไม่ควรนำไปรายงาน — เพิ่มจำนวนผู้ตอบ ลดจำนวนระดับของ attribute หรือใช้วิธีมาตรฐาน (MNL) แทน</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ===== COEFFICIENTS TABLE (adaptive columns) ===== */}
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse" data-testid="statistical-coefficients-table">
@@ -2277,6 +2333,12 @@ const ConjointResultsPage = () => {
                                 p-value
                               </th>
                             </>
+                          )}
+                          {/* 95% Wald CI (MNL / Mixed Logit) */}
+                          {hasCI && (
+                            <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900" data-testid="ci-header">
+                              ช่วงเชื่อมั่น 95%
+                            </th>
                           )}
                           {/* Mixed Logit: show Std Dev column */}
                           {statisticalData.method === 'mixed_logit' && (
@@ -2334,7 +2396,9 @@ const ConjointResultsPage = () => {
                                 <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
                                   isRef ? 'text-gray-400' : utilVal > 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
-                                  {isRef ? '0.0000 (ref)' : (utilVal > 0 ? '+' : '') + utilVal.toFixed(4)}
+                                  {isExcluded ? <span className="text-xs text-amber-800">ประมาณค่าไม่ได้</span>
+                                    : isRef ? <>0 <span className="text-xs">(ระดับอ้างอิง)</span></>
+                                    : (utilVal > 0 ? '+' : '') + utilVal.toFixed(4)}
                                 </td>
 
                                 {/* MNL extra columns */}
@@ -2366,6 +2430,12 @@ const ConjointResultsPage = () => {
                                   </>
                                 )}
 
+                                {hasCI && (
+                                  <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-xs text-gray-600" data-testid="ci-cell">
+                                    {isRef || isExcluded ? '-' : fmtCI(statisticalData.results.ci_lower[colKey], statisticalData.results.ci_upper[colKey], 3)}
+                                  </td>
+                                )}
+
                                 {/* Mixed Logit: Std Dev */}
                                 {statisticalData.method === 'mixed_logit' && (
                                   <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-sm text-gray-600">
@@ -2389,7 +2459,7 @@ const ConjointResultsPage = () => {
                                       ประมาณค่าไม่ได้
                                     </span>
                                   ) : isRef ? (
-                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">Reference</span>
+                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">ระดับอ้างอิง</span>
                                   ) : statisticalData.method === 'mnl' && pVal != null ? (
                                     pVal < 0.05 ? (
                                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Sig.</span>

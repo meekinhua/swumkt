@@ -50,7 +50,6 @@ const ConjointSimulatorCard = ({ studyId, token, study, filterQs, defaultMethod,
     if (ranOnce.current || !attrs.length || (respondentCount || 0) < 30) return;
     ranOnce.current = true;
     run(products);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attrs.length, respondentCount]);
 
   const setName = (i, v) => setProducts((p) => p.map((x, k) => (k === i ? { ...x, name: v } : x)));

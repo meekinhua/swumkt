@@ -80,7 +80,6 @@ const ConjointInterpretationCard = ({
       .then((r) => { if (!cancelled && r.data?.status === 'ready' && r.data.interpretation) onInterpretation(r.data); })
       .catch(() => { /* not cached or not allowed — nothing to show */ });
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [policyLoading, allowed, studyId, method, compareAll, respondentCount]);
 
   // A result from another method / mode must not stay on screen under the wrong heading.
@@ -89,7 +88,6 @@ const ConjointInterpretationCard = ({
     const sd = interpretation.summary_data;
     const resMode = sd?.mode === 'compare_all';
     if (resMode !== !!compareAll || (!resMode && sd?.method && sd.method !== method)) onInterpretation(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method, compareAll]);
 
   const runSystem = useCallback(async () => {
@@ -127,7 +125,6 @@ const ConjointInterpretationCard = ({
       }
     }
     setError('AI ใช้เวลานานเกินไป — ลองใหม่ หรือใช้ AI ของคุณเอง');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studyId, method, compareAll, token, onInterpretation]);
 
   const tooFew = (respondentCount || 0) < 10;
