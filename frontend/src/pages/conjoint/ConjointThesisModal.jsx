@@ -175,12 +175,6 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
           </DialogHeader>
 
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-1 pr-1">
-            {notPermitted && (
-              <div className="flex items-start gap-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="alert" data-testid="thesis-not-permitted">
-                <Lock className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                <span>บัญชีของคุณยังไม่ได้รับสิทธิ์ส่งออกวิทยานิพนธ์ด้วย AI — <b>เอกสารแบบไม่ใช้ AI (บทที่ 3–4) ดาวน์โหลดได้ตามปกติ</b> ส่วนชุด prompt / วางคำตอบจาก AI ของคุณ / AI ของระบบ ต้องขอสิทธิ์จากผู้ดูแลระบบก่อน</span>
-              </div>
-            )}
 
             <section>
               <h3 className="mb-2 text-sm font-semibold text-gray-700">1) วิธีวิเคราะห์ที่จะใส่ในเอกสาร</h3>
@@ -227,11 +221,11 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
                 gives="ดาวน์โหลดไฟล์ที่มีคู่มือ ตารางผลทั้งหมด สมการ ข้อเท็จจริงของการออกแบบ และ prompt ของแต่ละบท นำไปวางใน ChatGPT / Claude / Gemini ของคุณ แล้ววางบทที่ได้กลับมาที่นี่เพื่อรวมเป็นไฟล์ Word (ทำทีละบทได้) — เอกสารที่มีข้อความจาก AI จะมีย่อหน้าระบุการใช้ AI และชื่อเครื่องมือนำหน้า"
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button onClick={runPack} disabled={!!busy || notPermitted || !chapters.length} variant="outline" className="border-emerald-400 text-emerald-800" data-testid="thesis-pack-btn">
+                  <Button onClick={runPack} disabled={!!busy || !chapters.length} variant="outline" className="border-emerald-400 text-emerald-800" data-testid="thesis-pack-btn">
                     {busy === 'pack' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                     ดาวน์โหลดชุด prompt (.md)
                   </Button>
-                  <Button onClick={() => setExtOpen(true)} disabled={!!busy || notPermitted || !chapters.length} className="bg-emerald-600 text-white hover:bg-emerald-700" data-testid="thesis-paste-btn">
+                  <Button onClick={() => setExtOpen(true)} disabled={!!busy || !chapters.length} className="bg-emerald-600 text-white hover:bg-emerald-700" data-testid="thesis-paste-btn">
                     <ClipboardPaste className="mr-2 h-4 w-4" aria-hidden="true" /> วางบทที่ AI เขียนกลับเข้ามา
                   </Button>
                 </div>
@@ -258,6 +252,12 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
                   ? 'AI ของระบบเขียนบทที่เลือกให้ใช้เวลา 1–3 นาที ผลลัพธ์เป็นร่างที่ต้องตรวจทานเอง ไฟล์จะมีย่อหน้าระบุการใช้ AI (AI ของระบบ) นำหน้า'
                   : 'ผู้ดูแลระบบปิดการใช้ AI ของระบบสำหรับฟังก์ชันนี้ — ใช้ตัวเลือกด้านบนแทนได้ทั้งสองแบบ'}
               >
+                {sysOk && notPermitted && (
+                  <div className="mb-2 flex items-start gap-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-xs text-amber-900" role="alert" data-testid="thesis-not-permitted">
+                    <Lock className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                    <span>ให้ AI ของระบบเขียนได้เฉพาะบัญชีที่ผู้ดูแลระบบให้สิทธิ์ “ส่งออกวิทยานิพนธ์” — ตัวเลือกไม่ใช้ AI และชุด prompt สำหรับ AI ของคุณเองใช้ได้ตามปกติ</span>
+                  </div>
+                )}
                 {sysOk ? (
                   <Button onClick={runSystem} disabled={!!busy || notPermitted || !chapters.length} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white sm:w-auto" data-testid="thesis-confirm-export-btn">
                     {busy === 'system' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GraduationCap className="mr-2 h-4 w-4" />}
