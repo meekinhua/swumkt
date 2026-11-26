@@ -246,7 +246,7 @@ const ConjointInterpretationCard = ({
               )}
             </div>
           </div>
-          <div className="whitespace-pre-wrap leading-relaxed text-gray-800" data-testid="ai-interpretation-text">{interpretation.interpretation}</div>
+          <div className="whitespace-pre-wrap break-words leading-relaxed text-gray-800" data-testid="ai-interpretation-text">{interpretation.interpretation}</div>
           <p className="mt-4 border-t pt-3 text-xs text-gray-500">
             ข้อความนี้เขียนโดย AI จากสถิติในหน้านี้ — ตรวจสอบกับตัวเลขก่อนนำไปอ้างอิง และระบุการใช้ AI ในงานวิชาการตามข้อกำหนดของสถาบัน
           </p>
