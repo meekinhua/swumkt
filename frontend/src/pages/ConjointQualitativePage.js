@@ -9,6 +9,9 @@ import { Card } from '@/components/ui/card';
 import { API } from '@/App';
 import axios from 'axios';
 import { toast } from 'sonner';
+import AiActionButton from '@/components/AiActionButton';
+import { Provenance } from '@/pages/conjoint/ConjointInterpretationCard';
+import { useImportBodyExtra } from '@/pages/conjoint/useImportBodyExtra';
 import {
   ArrowLeft,
   ArrowRight,
@@ -41,6 +44,12 @@ const ConjointQualitativePage = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showAddInput, setShowAddInput] = useState(false);
   const [analysisHistory, setAnalysisHistory] = useState([]);
+  const [provenance, setProvenance] = useState(null); // {source, model_label, imported_at} of the latest analysis
+
+  // The shared import dialog posts only {part_key, content, model_label}; add the
+  // inputs so the server saves them with the imported attributes (see useImportBodyExtra).
+  const qualImportUrl = `${API}/conjoint/studies/${studyId}/qualitative-analysis/external-import`;
+  useImportBodyExtra(qualImportUrl, { qualitative_data: qualitativeInputs, target_language: 'th' });
 
   useEffect(() => {
     if (user && token && studyId) {
@@ -107,6 +116,7 @@ const ConjointQualitativePage = () => {
       );
 
       setAnalysisResult(response.data);
+      setProvenance({ source: response.data.source || 'system', model_label: response.data.model_label, imported_at: response.data.imported_at, generated_at: response.data.generated_at });
       
       // Add to history
       setAnalysisHistory([
@@ -124,7 +134,9 @@ const ConjointQualitativePage = () => {
       await loadStudy();
     } catch (error) {
       console.error('Error analyzing:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ข้อมูลได้');
+      if (error?.response?.status === 409) throw error; // llm_external_only -> AiActionButton opens the prompt dialog
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถวิเคราะห์ข้อมูลได้');
     } finally {
       setAnalyzing(false);
     }
@@ -304,29 +316,38 @@ const ConjointQualitativePage = () => {
             <div className="text-center">
               <Sparkles className="w-12 h-12 text-blue-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-blue-900 mb-2">
-                พร้อมวิเคราะห์ด้วย AI
+                พร้อมให้ AI ช่วยสรุปเป็น Attributes และ Levels
               </h3>
-              <p className="text-blue-700 mb-4">
-                LLM จะวิเคราะห์ข้อมูลของคุณและแนะนำ Attributes และ Levels ที่เหมาะสม
+              <p className="text-blue-700 mb-1">
+                AI จะอ่านข้อมูลของคุณและแนะนำ Attributes และ Levels ที่เหมาะสม — ใช้ AI ของระบบ (ถ้าเปิดอยู่) หรือคัดลอกพรอมต์ไปให้ ChatGPT / Claude / Gemini ของคุณแล้ววางคำตอบ (JSON) กลับมา
               </p>
+              <p className="text-xs text-blue-600 mb-4">ขั้นตอนนี้ไม่บังคับ — ข้ามไปกรอก Attributes เองใน Phase 2 ได้เสมอ</p>
               <div className="flex gap-3 justify-center">
-                <Button
-                  onClick={handleAnalyze}
+                <AiActionButton
+                  feature="conjoint.qualitative"
+                  label={analyzing ? 'กำลังวิเคราะห์...' : 'เริ่มวิเคราะห์'}
+                  icon={Sparkles}
+                  onSystem={handleAnalyze}
                   disabled={analyzing}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                >
-                  {analyzing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      กำลังวิเคราะห์...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      เริ่มวิเคราะห์
-                    </>
-                  )}
-                </Button>
+                  data-testid="qual-analyze-btn"
+                  external={{
+                    title: 'วิเคราะห์ข้อมูลเชิงคุณภาพด้วย AI ของฉันเอง',
+                    promptRequest: {
+                      method: 'POST',
+                      url: `${API}/conjoint/studies/${studyId}/qualitative-analysis/external-prompt`,
+                      data: { qualitative_data: qualitativeInputs, target_language: 'th' },
+                    },
+                    importUrl: qualImportUrl,
+                    onImported: async (data) => {
+                      setAnalysisResult(data);
+                      setProvenance({ source: data.source || 'external', model_label: data.model_label, imported_at: data.imported_at });
+                      setAnalysisHistory((h) => [...h, { timestamp: new Date(), result: data, input_count: qualitativeInputs.length }]);
+                      toast.success('นำเข้าผลวิเคราะห์แล้ว — ตรวจสอบ attribute ที่ AI แนะนำก่อนนำไปใช้');
+                      await loadStudy();
+                    },
+                  }}
+                />
                 <Button
                   onClick={handleSkipToDesign}
                   variant="outline"
@@ -383,6 +404,7 @@ const ConjointQualitativePage = () => {
                         {analysisResult.recommendations}
                       </p>
                     )}
+                    {provenance && <div className="mb-2"><Provenance data={provenance} /></div>}
                   </div>
                 </div>
                 

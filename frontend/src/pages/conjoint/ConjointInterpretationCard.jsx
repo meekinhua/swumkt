@@ -70,17 +70,31 @@ const ConjointInterpretationCard = ({
   const allowed = systemAllowed(FEATURE);
 
   // Show an already-written interpretation (system or imported) when the system LLM is off.
-  // POST ai-interpretation is read-only in that case: cached -> "ready", else 409/400.
+  // POST ai-interpretation is read-only in that case: cached -> "ready", else 409/400 —
+  // and a 409 is a console error, so we only peek automatically when we know (remembered
+  // in this browser) that one was shown/imported before; otherwise the user can ask with the
+  // "ดูคำตีความที่บันทึกไว้" link. (A GET "cached only" endpoint would remove this wart.)
+  const memoKey = `swumkt.cj.interp.${studyId}.${method}.${compareAll ? 'all' : 'one'}`;
+  const remember = () => { try { localStorage.setItem(memoKey, '1'); } catch { /* ignore */ } };
+  const remembered = () => { try { return localStorage.getItem(memoKey) === '1'; } catch { return false; } };
+
+  const peekCached = useCallback(async (silent) => {
+    const peek = axios.create(); // own instance: no global 409 toast
+    try {
+      const r = await peek.post(`${API}/conjoint/studies/${studyId}/ai-interpretation`, { method, compare_all: !!compareAll }, { headers });
+      if (r.data?.status === 'ready' && r.data.interpretation) { onInterpretation(r.data); return true; }
+    } catch { /* not cached / not allowed */ }
+    if (!silent) toast.info('ยังไม่มีคำตีความที่บันทึกไว้สำหรับมุมมองนี้ — กดปุ่มด้านบนเพื่อสร้าง');
+    return false;
+  }, [studyId, method, compareAll, token, onInterpretation]);
+
   useEffect(() => {
-    if (policyLoading || allowed || !studyId || (respondentCount || 0) < 10) return undefined;
-    let cancelled = false;
-    onInterpretation(null);
-    const peek = axios.create(); // own instance: no global 409 toast for a silent peek
-    peek.post(`${API}/conjoint/studies/${studyId}/ai-interpretation`, { method, compare_all: !!compareAll }, { headers })
-      .then((r) => { if (!cancelled && r.data?.status === 'ready' && r.data.interpretation) onInterpretation(r.data); })
-      .catch(() => { /* not cached or not allowed — nothing to show */ });
-    return () => { cancelled = true; };
+    if (policyLoading || allowed || !studyId || (respondentCount || 0) < 10) return;
+    if (remembered()) peekCached(true);
   }, [policyLoading, allowed, studyId, method, compareAll, respondentCount]);
+
+  // remember that this view has an interpretation so the next visit shows it straight away
+  useEffect(() => { if (interpretation) remember(); }, [interpretation, memoKey]);
 
   // A result from another method / mode must not stay on screen under the wrong heading.
   useEffect(() => {
@@ -193,6 +207,11 @@ const ConjointInterpretationCard = ({
             )}
           </div>
           {tooFew && <p className="mt-3 text-xs text-gray-500">ต้องมีผู้ตอบอย่างน้อย 10 คนจึงจะตีความได้</p>}
+          {!tooFew && !allowed && (
+            <p className="mt-3 text-xs text-gray-500">
+              เคยนำเข้าคำตีความไว้แล้ว? <button type="button" className="font-semibold underline" onClick={() => peekCached(false)} data-testid="ai-show-saved">ดูคำตีความที่บันทึกไว้</button>
+            </p>
+          )}
           {error && (
             <p className="mt-3 text-sm text-red-600" role="alert" data-testid="ai-error">
               {error} <button type="button" className="underline" onClick={runSystem}>ลองใหม่</button>

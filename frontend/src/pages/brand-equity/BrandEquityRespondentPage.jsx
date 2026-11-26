@@ -15,7 +15,7 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
     const max = q.type === 'likert_5' ? 5 : 7;
     return (
       <>
-        <div className="be-resp-likert" data-testid={`be-resp-q-${q.id}`}>
+        <div className="be-resp-likert" style={{ '--n': max }} role="group" aria-label={`ให้คะแนน 1 ถึง ${max}`} data-testid={`be-resp-q-${q.id}`}>
           {Array.from({ length: max }, (_, i) => i + 1).map(n => (
             <button key={n} className={value === n ? 'sel' : ''} onClick={() => onChange(n)}
                     aria-pressed={value === n} aria-label={`${n} จาก ${max}`}

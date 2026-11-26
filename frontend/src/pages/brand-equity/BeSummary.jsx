@@ -104,7 +104,7 @@ export const BeSummary = ({
             {minCov != null && minCov < 1 && <li style={{ color: 'var(--be-gold)' }}>สัญญาณครบ {Math.round(minCov * 100)}% ของที่ออกแบบไว้ — ถือเป็นตัวเลขเบื้องต้น</li>}
             {dq && (
               <li data-testid="be-summary-dq">
-                ผู้ตอบที่น่าสงสัย <b>{dq.n_flagged_excludable}</b> คน
+                ผู้ตอบที่น่าสงสัย <b>{excludeFlagged ? (quality?.excluded ?? 0) : dq.n_flagged_excludable}</b> คน
                 {excludeFlagged ? <> — <b>ตัดออกแล้ว {quality?.excluded ?? 0} คน</b></> : dq.n_flagged_excludable ? ' — ยังนับรวมอยู่' : ''}
               </li>
             )}

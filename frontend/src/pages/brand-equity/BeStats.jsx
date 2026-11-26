@@ -276,7 +276,9 @@ const DQ_LABEL = {
 export const BeDataQuality = ({ dq, quality, exclude, onToggle, nFiltered, busy }) => {
   if (!dq) return null;
   const excluded = quality?.excluded || 0;
-  const nAfter = dq.n_total - (exclude ? excluded : 0);
+  // With the toggle ON the backend recomputes data_quality on the remaining
+  // respondents, so the flagged count that was removed comes from quality_filter.
+  const flaggedNow = exclude ? excluded : dq.n_flagged_excludable;
   return (
     <div data-testid="be-data-quality">
       <p className="be-small" style={{ lineHeight: 1.65, marginBottom: 10 }}>
@@ -298,12 +300,12 @@ export const BeDataQuality = ({ dq, quality, exclude, onToggle, nFiltered, busy 
         </table>
       </div>
       <div className="be-small" style={{ marginTop: 12, lineHeight: 1.7 }} data-testid="be-dq-summary">
-        ผู้ตอบที่ถูกตัดได้ <b>{dq.n_flagged_excludable}</b> คน
+        ผู้ตอบที่น่าสงสัยและตัดได้ <b>{flaggedNow}</b> คน
         {dq.median_duration_sec ? <> · เวลาตอบมัธยฐาน {Math.round(dq.median_duration_sec)} วินาที</> : null}
         {' '}· ตอนนี้ใช้ผู้ตอบ <b>n = {nFiltered}</b>
-        {exclude ? <> (ตัดออกแล้ว {excluded} คน)</> : null}
+        {exclude ? <> (ตัดออกแล้ว {excluded} คน จาก {nFiltered + excluded})</> : null}
         {!exclude && dq.n_flagged_excludable > 0 ? <> · ถ้าตัด จะเหลือ n ≈ {dq.n_total - dq.n_flagged_excludable}</> : null}
-        {exclude ? <> · ก่อนตัด n = {nAfter + excluded}</> : null}
+        {exclude ? <div className="be-tiny be-muted">ตารางธงด้านบนนับจากผู้ตอบที่เหลือหลังตัดแล้ว — ปิดการตัดเพื่อดูจำนวนธงเดิม</div> : null}
       </div>
       <label className="be-check-row" style={{ marginTop: 10 }}>
         <input type="checkbox" checked={!!exclude} disabled={busy} onChange={(e) => onToggle(e.target.checked)}
@@ -318,7 +320,7 @@ export const BeDataQuality = ({ dq, quality, exclude, onToggle, nFiltered, busy 
 /** Compact toggle shown next to the filter bar — it changes the whole view, so it is not buried. */
 export const BeQualityToggle = ({ dq, quality, exclude, onToggle, busy, nFiltered }) => {
   if (!dq) return null;
-  const flagged = dq.n_flagged_excludable || 0;
+  const flagged = exclude ? (quality?.excluded || 0) : (dq.n_flagged_excludable || 0);
   return (
     <div className="be-quality-toggle" data-testid="be-quality-toggle"
          style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', padding: '10px 14px',
@@ -331,7 +333,7 @@ export const BeQualityToggle = ({ dq, quality, exclude, onToggle, busy, nFiltere
       <span className="be-small be-muted" data-testid="be-dq-inline-summary" style={{ lineHeight: 1.5 }}>
         {flagged === 0
           ? 'ไม่พบผู้ตอบที่ควรตัดออก (ตอบเร็วผิดปกติ / ตอบซ้ำค่าเดียว / คำตอบซ้ำ)'
-          : <>พบ <b>{flagged}</b> คนจาก {dq.n_total} ที่น่าสงสัย
+          : <>พบ <b>{flagged}</b> คนจาก {exclude ? nFiltered + flagged : dq.n_total} ที่น่าสงสัย
               {exclude ? <> · <b>ตัดออกแล้ว {quality?.excluded ?? flagged} คน</b> เหลือ n = {nFiltered}</> : <> · ยังนับรวมอยู่ (n = {nFiltered})</>}</>}
       </span>
     </div>

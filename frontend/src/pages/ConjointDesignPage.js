@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ReferenceImagesSection from '@/components/ReferenceImagesSection';
 import ConjointDemographicsConfig from '@/pages/conjoint/ConjointDemographicsConfig';
+import { ImageAiButton, ImageFileButton, ImagesOptionalNote } from '@/pages/conjoint/ConjointImageAi';
+import { DesignGuidance, PublishChecklistDialog } from '@/pages/conjoint/ConjointDesignGuidance';
 import { API } from '@/App';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -93,6 +95,24 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
     }
   };
 
+  const handleUploadFile = async (dataUrl) => {
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-profile-image`,
+        { choice_set_id: choiceSetId, profile_id: profile.id, image_url: dataUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setImageUrl(dataUrl);
+      toast.success('อัพโหลดรูป Profile สำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      toast.error('ไม่สามารถอัพโหลดรูปได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     try {
@@ -129,8 +149,9 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
       }
     } catch (error) {
       console.error('Error generating profile image:', error);
-      const errorMsg = error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้';
-      toast.error(errorMsg);
+      if (error?.response?.status === 409) throw error; // llm_external_only -> prompt dialog opens
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างรูปได้');
     } finally {
       setGenerating(false);
     }
@@ -219,23 +240,25 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
               className="flex-1 text-xs border-2 border-blue-400 text-blue-700"
             >
               <Upload className="w-3 h-3 mr-1" />
-              Upload
+              วาง URL รูป
             </Button>
-            <Button
-              onClick={handleGenerate}
-              size="sm"
+          </div>
+          <div className="flex flex-col gap-2 mb-2">
+            <ImageFileButton onData={handleUploadFile} busy={uploading} label="เลือกไฟล์ภาพจากเครื่อง" className="w-full text-xs" testId={`profile-upload-${profile.id}`} />
+            <ImageAiButton
+              onSystem={handleGenerate}
               disabled={generating}
-              className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {generating ? (
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  AI
-                </>
-              )}
-            </Button>
+              label={generating ? 'กำลังสร้าง…' : 'สร้างภาพด้วย AI'}
+              className="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white"
+              testId={`profile-ai-${profile.id}`}
+              promptRequest={{
+                method: 'POST',
+                url: `${API}/conjoint/studies/${studyId}/generate-profile-image/external-prompt`,
+                data: { choice_set_id: choiceSetId, profile_id: profile.id,
+                  reference_image_indices: selectedRefs.length ? selectedRefs : undefined,
+                  additional_prompt: additionalPrompt.trim() || undefined },
+              }}
+            />
           </div>
           
           {/* Reference Images Selection */}
@@ -445,6 +468,24 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
     }
   };
 
+  const handleUploadFile = async (dataUrl) => {
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-image`,
+        { attribute_id: attributeId, level_id: level.id, image_url: dataUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setImageUrl(dataUrl);
+      toast.success('อัพโหลดรูปภาพสำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      toast.error('ไม่สามารถอัพโหลดรูปภาพได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     try {
@@ -481,8 +522,9 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
       }
     } catch (error) {
       console.error('Error generating image:', error);
-      const errorMsg = error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้';
-      toast.error(errorMsg);
+      if (error?.response?.status === 409) throw error; // llm_external_only -> prompt dialog opens
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างรูปได้');
     } finally {
       setGenerating(false);
     }
@@ -559,23 +601,25 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
               className="flex-1 text-xs border-2"
             >
               <Upload className="w-3 h-3 mr-1" />
-              Upload
+              วาง URL รูป
             </Button>
-            <Button
-              onClick={handleGenerate}
-              size="sm"
+          </div>
+          <div className="flex flex-col gap-2 mb-2">
+            <ImageFileButton onData={handleUploadFile} busy={uploading} label="เลือกไฟล์ภาพจากเครื่อง" className="w-full text-xs" testId={`level-upload-${level.id}`} />
+            <ImageAiButton
+              onSystem={handleGenerate}
               disabled={generating}
-              className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {generating ? (
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  AI
-                </>
-              )}
-            </Button>
+              label={generating ? 'กำลังสร้าง…' : 'สร้างภาพด้วย AI'}
+              className="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white"
+              testId={`level-ai-${level.id}`}
+              promptRequest={{
+                method: 'POST',
+                url: `${API}/conjoint/studies/${studyId}/generate-single-image/external-prompt`,
+                data: { attribute_id: attributeId, level_id: level.id,
+                  reference_image_indices: selectedRefs.length ? selectedRefs : undefined,
+                  additional_prompt: additionalPrompt.trim() || undefined },
+              }}
+            />
           </div>
           
           {/* Reference Images Selection */}
@@ -717,6 +761,7 @@ const ConjointDesignPage = () => {
   const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const [surveyStarted, setSurveyStarted] = useState(false); // Track if survey is active
   const [startingSurvey, setStartingSurvey] = useState(false);
+  const [showPublishCheck, setShowPublishCheck] = useState(false);
   const [referenceImages, setReferenceImages] = useState([]); // Reference images for AI
   const [designRec, setDesignRec] = useState(null); // Server-side task/sample recommendation
 
@@ -1371,6 +1416,13 @@ const ConjointDesignPage = () => {
               </div>
             </div>
 
+            <DesignGuidance
+              attributes={attributes}
+              alternativesPerSet={alternativesPerSet}
+              tasks={numberOfSets || recommendedSets}
+              sample={designRec?.sample_size}
+            />
+
             <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mb-6">
               <h3 className="font-bold text-blue-900 mb-2">Design Summary:</h3>
               <div className="space-y-1 text-sm text-blue-700">
@@ -1472,9 +1524,10 @@ const ConjointDesignPage = () => {
                     🚀 พร้อมเริ่มเก็บข้อมูลแล้ว? กดปุ่มด้านล่างเพื่อเปิดสำรวจ
                   </p>
                   <Button
-                    onClick={handleStartSurvey}
+                    onClick={() => setShowPublishCheck(true)}
                     disabled={startingSurvey}
                     className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white font-bold"
+                    data-testid="start-survey-btn"
                   >
                     {startingSurvey ? (
                       <>
@@ -1496,6 +1549,18 @@ const ConjointDesignPage = () => {
             )}
           </Card>
         )}
+
+        <PublishChecklistDialog
+          open={showPublishCheck}
+          onOpenChange={setShowPublishCheck}
+          onConfirm={async () => { await handleStartSurvey(); setShowPublishCheck(false); }}
+          attributes={attributes}
+          alternativesPerSet={alternativesPerSet}
+          tasks={numberOfSets || recommendedSets}
+          sample={designRec?.sample_size}
+          previewUrl={`${window.location.origin}/survey/conjoint/${studyId}`}
+          busy={startingSurvey}
+        />
 
         {/* Reference Images Section */}
         {designGenerated && attributes.length > 0 && (
@@ -1521,6 +1586,7 @@ const ConjointDesignPage = () => {
                 (Optional - สามารถข้ามและดำเนินการต่อได้)
               </span>
             </p>
+            <ImagesOptionalNote className="mb-6" />
 
             {/* Image Management for each attribute */}
             <div className="space-y-6 mb-6">

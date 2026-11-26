@@ -595,7 +595,7 @@ const BrandEquityWizardPage = () => {
                     label={extractingIdentity ? 'กำลังวิเคราะห์…' : 'AI วิเคราะห์'}
                     icon={Sparkles}
                     onSystem={runAIExtract}
-                    disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length)}
+                    disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length && !(identity.traits || []).length)}
                     className="be-btn-red"
                     external={{
                       title: 'วิเคราะห์ identity ด้วย AI ของฉันเอง',

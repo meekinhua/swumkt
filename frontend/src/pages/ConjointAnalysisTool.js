@@ -249,6 +249,18 @@ const ConjointAnalysisTool = () => {
     setShowStatusHistoryModal(true);
   };
 
+  // One plain sentence on what to do next with a study, from what the list already knows.
+  const nextStepText = (study) => {
+    const n = study.respondent_count || 0;
+    if (study.status === 'draft') return 'ไปที่ “แก้ไข” เพื่อกำหนด attribute และสร้างแผนการทดลอง แล้วเปิดเก็บข้อมูล';
+    if (study.status === 'active') {
+      if (n < 30) return `กำลังเก็บข้อมูล (${n} คน) — ต้องมีอย่างน้อย 30 คนจึงจะวิเคราะห์ได้ แชร์ลิงก์แบบสอบถามเพิ่ม`;
+      return `มีผู้ตอบ ${n} คน — ดูรายงานได้ และเก็บเพิ่มต่อได้ (ตรวจ “ข้อมูลพอหรือยัง” ในรายงาน)`;
+    }
+    if (study.status === 'completed') return 'ปิดเก็บข้อมูลแล้ว — ดูรายงาน ดาวน์โหลดข้อมูล หรือ Export วิทยานิพนธ์';
+    return 'เก็บเข้าคลังแล้ว — ดูรายงานย้อนหลังได้';
+  };
+
   const handleStudyAction = (study, action) => {
     if (action === 'edit') {
       navigate(`/research/conjoint/${study.id}/design`);
@@ -307,7 +319,7 @@ const ConjointAnalysisTool = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-blue-900 mb-1 text-sm sm:text-base">Phase 1: Qualitative</h3>
-                <p className="text-xs sm:text-sm text-blue-700">ใช้ LLM วิเคราะห์หา Attributes และ Levels</p>
+                <p className="text-xs sm:text-sm text-blue-700">สรุป Attributes และ Levels จากข้อมูลสัมภาษณ์ — ไม่บังคับ ใช้ AI ของคุณเองได้ หรือข้ามไปกรอกเอง</p>
               </div>
             </div>
           </Card>
@@ -319,7 +331,7 @@ const ConjointAnalysisTool = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-purple-900 mb-1 text-sm sm:text-base">Phase 2: Design</h3>
-                <p className="text-xs sm:text-sm text-purple-700">D-Optimal Design + AI Image Generation</p>
+                <p className="text-xs sm:text-sm text-purple-700">ออกแบบชุดคำถามแบบ D-efficient พร้อมคำแนะนำจำนวนคำถามและผู้ตอบ · รูปภาพไม่บังคับ</p>
               </div>
             </div>
           </Card>
@@ -331,7 +343,7 @@ const ConjointAnalysisTool = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-green-900 mb-1 text-sm sm:text-base">Phase 3: Analysis</h3>
-                <p className="text-xs sm:text-sm text-green-700">Part-Worth Utilities + Market Simulation</p>
+                <p className="text-xs sm:text-sm text-green-700">ความสำคัญ-ค่า utility พร้อมช่วงเชื่อมั่น · ราคาที่ยอมจ่าย · จำลองตลาด · ส่งออกข้อมูลไปประมาณซ้ำใน R/Stata</p>
               </div>
             </div>
           </Card>
@@ -484,6 +496,9 @@ const ConjointAnalysisTool = () => {
                           </div>
                         )}
                       </div>
+                      <p className="mt-2 text-xs text-gray-600" data-testid={`conjoint-next-step-${study.id}`}>
+                        <b>ขั้นต่อไป:</b> {nextStepText(study)}
+                      </p>
                     </div>
 
                     {/* Action Menu */}
