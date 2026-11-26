@@ -861,3 +861,71 @@ def reliability_claim_warnings(text: str, reliability: Dict[str, dict]) -> List[
     if claims and not any_meets:
         return ["มีการอ้างว่า Cronbach's α ผ่านเกณฑ์ 0.70 แต่ไม่มีมิติใดที่วัดได้ผ่านเกณฑ์ — ต้องแก้ก่อนส่ง"]
     return []
+
+
+# ---------------------------------------------------------------------------
+# Visual identity (vision step) and attribute translation (be.questions)
+# ---------------------------------------------------------------------------
+_HEX_RE = re.compile(r"^#?[0-9a-fA-F]{6}$")
+
+
+def validate_visual_identity(obj: Any) -> Dict[str, Any]:
+    if isinstance(obj, dict) and isinstance(obj.get("visual_identity"), dict):
+        obj = obj["visual_identity"]
+    if not isinstance(obj, dict):
+        raise ImportValidationError("คำตอบต้องเป็น JSON object ตามตัวอย่าง (derived_traits, visual_palette, …)")
+    errors: List[str] = []
+
+    def strs(field, mx):
+        v = obj.get(field)
+        if v is None:
+            return []
+        if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
+            errors.append(f"{field}: ต้องเป็น list ของข้อความ")
+            return []
+        return [x.strip()[:60] for x in v if x.strip()][:mx]
+
+    traits = strs("derived_traits", 12)
+    if not traits:
+        errors.append("derived_traits: ต้องมีอย่างน้อย 1 ข้อ")
+    palette_raw = strs("visual_palette", 8)
+    palette = []
+    for h in palette_raw:
+        if not _HEX_RE.match(h):
+            errors.append(f"visual_palette: '{h}' ไม่ใช่รหัสสี hex 6 หลัก")
+            continue
+        palette.append("#" + h.lstrip("#").upper())
+    out = {"derived_traits": traits, "visual_palette": palette,
+           "visual_keywords": strs("visual_keywords", 12)}
+    for f in ("design_style", "archetype", "summary"):
+        v = obj.get(f) or ""
+        if not isinstance(v, str):
+            errors.append(f"{f}: ต้องเป็นข้อความ")
+            v = ""
+        out[f] = v.strip()[:800 if f == "summary" else 120]
+    if errors:
+        raise ImportValidationError("ผลวิเคราะห์อัตลักษณ์ภาพมีข้อผิดพลาด จึงยังไม่นำเข้า", errors)
+    return out
+
+
+def parse_translations(text: Any, n_expected: int) -> List[str]:
+    """Accept a JSON list of strings, or one translation per line."""
+    lines: List[str] = []
+    try:
+        val = extract_json(text)
+        if isinstance(val, dict):
+            val = val.get("translations") or val.get("en") or list(val.values())
+        if isinstance(val, list):
+            lines = [str(x).strip() for x in val if str(x).strip()]
+    except ImportValidationError:
+        if not isinstance(text, str):
+            raise
+        lines = [re.sub(r"^\s*(\d+[.)]|[-•*])\s*", "", ln).strip().strip('"')
+                 for ln in text.splitlines() if ln.strip()]
+    if len(lines) != n_expected:
+        raise ImportValidationError(
+            f"จำนวนคำแปลไม่ตรง: ต้องการ {n_expected} บรรทัด ได้ {len(lines)} บรรทัด "
+            "(หนึ่งบรรทัดต่อหนึ่งคุณลักษณะ ตามลำดับเดิม)")
+    if any(len(x) > 120 for x in lines):
+        raise ImportValidationError("คำแปลบางบรรทัดยาวเกิน 120 ตัวอักษร")
+    return lines

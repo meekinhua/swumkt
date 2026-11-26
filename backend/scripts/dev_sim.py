@@ -232,7 +232,7 @@ async def seed_users(server) -> Dict[str, Dict[str, str]]:
     from datetime import datetime, timezone
     out = {}
     for email, pw, role, name in ((ADMIN_EMAIL, ADMIN_PASSWORD, "admin", "Sim Admin"),
-                                  (USER_EMAIL, USER_PASSWORD, "student", "Sim Student")):
+                                  (USER_EMAIL, USER_PASSWORD, "current_student", "Sim Student")):
         existing = await server.db.users.find_one({"email": email})
         if existing:
             out[role] = {"email": email, "password": pw, "id": existing["id"]}
@@ -243,7 +243,7 @@ async def seed_users(server) -> Dict[str, Dict[str, str]]:
             "id": uid, "email": email, "full_name": name, "role": role,
             "user_type": "regular", "auth_method": "email",
             "password": server.hash_password(pw),
-            "can_export_thesis": role == "admin",
+            "can_export_thesis": True,
             "created_at": now, "updated_at": now,
         })
         out[role] = {"email": email, "password": pw, "id": uid}
@@ -293,7 +293,7 @@ async def seed_conjoint(app, admin_token: str, n_resp: int = 60) -> str:
                 answers.append({"choice_set_id": cs["id"],
                                 "selected_profile_id": cs["profiles"][best]["id"]})
             r = await c.post(f"/api/conjoint/survey/{sid}/response", json={
-                "respondent_id": f"sim-{i}", "responses": answers,
+                "study_id": sid, "respondent_id": f"sim-{i}", "responses": answers,
                 "demographics": {"age": rng.choice(["18-24", "25-34", "35-44"]),
                                  "gender": rng.choice(["male", "female"])},
                 "duration_sec": rng.randint(90, 400)})

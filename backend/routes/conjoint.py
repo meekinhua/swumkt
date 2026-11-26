@@ -55,7 +55,12 @@ conjoint_router = APIRouter(tags=["conjoint"])
 #   are humanised before results are cached or returned — one leaked into a
 #   generated thesis coefficient table as a level name. Cached v4 rows still hold
 #   the raw tokens, so they must not be served.
-ANALYSIS_CACHE_VERSION = 5
+# v6 (2026-11): counting method now excludes unusable choice situations (values
+#   move for studies with skipped/stale tasks); logit methods gained `converged`,
+#   95% CIs, `reference_levels`, and per-level `is_reference` / `is_excluded`;
+#   AI-interpretation / thesis caches can now hold externally imported text
+#   (source="external") and must not replay text written from v5 numbers.
+ANALYSIS_CACHE_VERSION = 6
 
 
 _ORPHAN_LABEL_RE = re.compile(r"__ORPHAN_([0-9a-fA-F]{1,12})__")
@@ -222,6 +227,297 @@ class GenerateShelfSimulationRequest(BaseModel):
     custom_shelf_style: Optional[str] = None  # Custom shelf style description if shelf_style is "custom"
     additional_prompt: Optional[str] = None  # User can customize environment
 
+
+# ---- External-LLM workflow (plan §B, 2026-11) ----
+class ExternalImportRequest(BaseModel):
+    part_key: str = "main"
+    content: str = ""
+    model_label: Optional[str] = None
+
+
+class InterpretationExternalImportRequest(ExternalImportRequest):
+    method: Optional[str] = "counting"
+    compare_all: bool = False
+
+
+class QualitativeExternalImportRequest(ExternalImportRequest):
+    qualitative_data: Optional[List[QualitativeInput]] = None
+    target_language: str = "th"
+
+
+class ThesisChapterPart(BaseModel):
+    part_key: str          # "ch3" | "ch4" | "ch5" (or "3"/"4"/"5")
+    content: str
+
+
+class ThesisExternalImportRequest(ThesisExportRequest):
+    part_key: Optional[str] = None          # single-chapter form (uniform convention)
+    content: Optional[str] = None
+    parts: Optional[List[ThesisChapterPart]] = None   # several chapters at once
+    model_label: Optional[str] = None
+
+
+class SimulateProduct(BaseModel):
+    name: str
+    levels: Dict[str, str]  # attribute_id -> level_id
+
+
+class SimulateRequest(BaseModel):
+    method: str = "mnl"
+    rule: str = "logit"     # "logit" (share of preference) | "first_choice"
+    products: List[SimulateProduct]
+
+
+# Feature keys registered in lib/llm_policy (plan §A).
+FEAT_INTERPRETATION = "conjoint.interpretation"
+FEAT_QUALITATIVE = "conjoint.qualitative"
+FEAT_THESIS = "conjoint.thesis"
+FEAT_IMAGES = "conjoint.images"
+
+
+async def _require_system_llm(feature: str, user) -> None:
+    """Gate every system-LLM path. Raises the policy's HTTP 409 (llm_external_only)."""
+    from lib import llm_policy
+    await llm_policy.require_system_llm(feature, user)
+
+
+async def _system_llm_allowed(feature: str, user) -> bool:
+    try:
+        from lib import llm_policy
+        return bool(await llm_policy.is_system_llm_allowed(feature, user))
+    except Exception:
+        return False
+
+
+def _is_policy_error(e: BaseException) -> bool:
+    """True for the policy's refusal, whichever layer raised it — so broad
+    `except Exception` blocks re-raise it instead of turning it into a generic
+    'generation failed' 500."""
+    if isinstance(e, HTTPException) and isinstance(e.detail, dict) \
+            and e.detail.get("code") == "llm_external_only":
+        return True
+    try:
+        from lib import llm_policy
+        return isinstance(e, llm_policy.SystemLLMDisabled)
+    except Exception:
+        return False
+
+
+def _policy_error_message(e: BaseException) -> str:
+    if isinstance(e, HTTPException) and isinstance(e.detail, dict):
+        return str(e.detail.get("message") or e.detail)
+    detail = getattr(e, "detail", None)
+    if isinstance(detail, dict) and detail.get("message"):
+        return str(detail["message"])
+    return getattr(e, "message", None) or str(e) or "ระบบปิดการใช้ AI ของระบบ — กรุณาใช้ AI ของคุณเอง"
+
+
+def _job_error_fields(e: BaseException) -> Dict[str, Any]:
+    if _is_policy_error(e):
+        return {"error": _policy_error_message(e), "error_code": "llm_external_only"}
+    return {"error": str(e)}
+
+
+def _thesis_cache_key(methods: List[str], chapters: List[int], extra_prompt: str = "") -> str:
+    methods_key = "_".join(sorted(methods))
+    chapters_key = "_".join(str(c) for c in sorted(chapters))
+    extra_hash = ""
+    if extra_prompt and extra_prompt.strip():
+        import hashlib
+        extra_hash = hashlib.md5(extra_prompt.strip().encode()).hexdigest()[:8]
+    return f"thesis_{methods_key}_{chapters_key}" + (f"_ep{extra_hash}" if extra_hash else "")
+
+
+def _interpretation_cache_key(method: Optional[str], compare_all: bool) -> str:
+    return f"ai_{method}_{'all' if compare_all else 'single'}"
+
+
+DEFAULT_LEVEL_IMAGE_SETTINGS = {
+    "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
+    "level_image_prompt_with_ref": "Based on the reference images provided, create a product visualization for: {attribute_name} - {level_value}. Match the style, lighting, and composition of the reference images.",
+    "level_image_model": "gpt-image-1",
+}
+DEFAULT_PROFILE_IMAGE_SETTINGS = {
+    "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
+    "profile_image_prompt_with_ref": "Using the reference images as style guide, create a product photo showing: {composition}. Match the visual style and aesthetic.",
+    "profile_image_model": "gpt-image-1",
+}
+
+
+def _level_image_prompt(settings: Dict, attr: Optional[Dict], level: Optional[Dict],
+                        custom_prompt: Optional[str] = None, additional_prompt: Optional[str] = None,
+                        using_refs: bool = False, is_test: bool = False) -> str:
+    """Image prompt for one attribute level — system generator and external-prompt share it."""
+    if custom_prompt:
+        image_prompt = custom_prompt
+    elif is_test:
+        image_prompt = "High quality product image"
+    else:
+        tmpl_default = settings.get("level_image_prompt_template") or DEFAULT_LEVEL_IMAGE_SETTINGS["level_image_prompt_template"]
+        template = settings.get("level_image_prompt_with_ref", tmpl_default) if using_refs else tmpl_default
+        image_prompt = template.format(
+            attribute_name=attr["name"], level_value=level["value"],
+            level_description=level.get("description", "") or "",
+        )
+        if level.get("description") and not using_refs:
+            image_prompt += f" {level['description']}"
+    if additional_prompt:
+        image_prompt = f"{additional_prompt} {image_prompt}"
+    return image_prompt
+
+
+def _profile_composition(attributes: List[Dict], profile: Dict) -> str:
+    bits = []
+    for attr_id, level_id in (profile.get("attribute_levels") or {}).items():
+        attr = next((a for a in attributes if a["id"] == attr_id), None)
+        if attr:
+            level = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
+            if level:
+                bits.append(f"{attr['name']}: {level['value']}")
+    return ", ".join(bits)
+
+
+def _profile_image_prompt(settings: Dict, attributes: List[Dict], profile: Dict,
+                          custom_prompt: Optional[str] = None, additional_prompt: Optional[str] = None,
+                          using_refs: bool = False) -> str:
+    if custom_prompt:
+        image_prompt = custom_prompt
+    else:
+        tmpl_default = settings.get("profile_image_prompt_template") or DEFAULT_PROFILE_IMAGE_SETTINGS["profile_image_prompt_template"]
+        template = settings.get("profile_image_prompt_with_ref", tmpl_default) if using_refs else tmpl_default
+        image_prompt = template.format(composition=_profile_composition(attributes, profile))
+    if additional_prompt:
+        image_prompt = f"{additional_prompt} {image_prompt}"
+    return image_prompt
+
+
+def _bulk_level_image_prompt(attr: Dict, level: Dict) -> str:
+    p = f"Professional product visualization: {attr['name']} - {level['value']}. Clean, minimalist style on white background."
+    if level.get("description"):
+        p += f" {level['description']}"
+    return p
+
+
+def _optimal_product_features(study: Dict, responses: List[Dict]) -> List[str]:
+    """Best level per attribute by the counting method (what the product-image
+    generator has always used)."""
+    part_worths = calculate_part_worths(study, responses)
+    importance_scores = calculate_importance_scores(part_worths, study)
+    feats = []
+    for attr_id, scores in importance_scores.items():
+        if attr_id in part_worths and part_worths[attr_id]["levels"]:
+            best = max(part_worths[attr_id]["levels"].items(), key=lambda x: x[1]["utility"])
+            feats.append(f"{scores['name']}: {best[1]['value']}")
+    return feats
+
+
+PRODUCT_PROMPT_SYSTEM = (
+    "You are an expert product designer and image generation prompt engineer.\n"
+    "    Create detailed, professional prompts for generating product visualization images."
+)
+
+
+def _product_prompt_writer(study: Dict, product_features: List[str], additional_prompt: Optional[str]) -> str:
+    features_text = "\n".join(f"- {f}" for f in product_features)
+    prompt = f"""Based on conjoint analysis results, create an image generation prompt for the optimal product configuration:
+
+    Study: {study.get("title", "Product")}
+    Product Category: {study.get("product_category", "product")}
+
+    Optimal Product Features (from research):
+    {features_text}
+
+    Create a detailed image generation prompt that:
+    1. Describes the product with all key features mentioned
+    2. Specifies professional product photography style
+    3. Includes clean white background for product-focused composition
+    4. Mentions high quality, sharp details, and good lighting
+    5. Keeps the prompt concise but descriptive (2-3 sentences max)
+
+    Return ONLY the image generation prompt, no explanation."""
+    if additional_prompt:
+        prompt += f"\n\nUser's additional requirements (to be placed at the BEGINNING of the final prompt): {additional_prompt}"
+    return prompt
+
+
+def _product_direct_image_prompt(study: Dict, product_features: List[str], additional_prompt: Optional[str]) -> str:
+    """A ready-to-use image prompt with no LLM step (external path)."""
+    p = (f"Professional product photograph of a {study.get('product_category') or 'product'} "
+         f"(\"{study.get('title', 'Product')}\") with these features: {'; '.join(product_features)}. "
+         "Clean white background, product-focused composition, soft studio lighting, high detail, sharp focus.")
+    return f"{additional_prompt.strip()}. {p}" if additional_prompt else p
+
+
+SHELF_PROMPT_SYSTEM = (
+    "You are an expert in retail merchandising and product photography.\n"
+    "    Create realistic prompts for on-shelf product visualization in competitive retail environments."
+)
+
+
+def _shelf_context(study: Dict, request) -> Dict[str, str]:
+    product_category = (study.get("product_category") or "").lower()
+    environment_type = request.environment_type
+    if environment_type == "auto":
+        if any(w in product_category for w in ["cream", "cosmetic", "skincare", "makeup", "beauty"]):
+            environment_type = "cosmetics_store"
+        elif any(w in product_category for w in ["drink", "beverage", "snack", "food", "water"]):
+            environment_type = "convenience_store"
+        elif any(w in product_category for w in ["grocery", "supermarket"]):
+            environment_type = "supermarket"
+        elif any(w in product_category for w in ["fashion", "clothing", "apparel"]):
+            environment_type = "mall"
+        else:
+            environment_type = "supermarket"
+    envs = {
+        "cosmetics_store": "Boots or Watson cosmetics store shelf, bright lighting, organized beauty products display, premium retail environment",
+        "convenience_store": "7-Eleven refrigerator or shelf display, convenience store setting, consumer products in organized rows",
+        "supermarket": "Lotus's or Big C supermarket aisle, retail shelf display, organized product arrangement",
+        "mall": "Shopping mall retail display, premium store environment, attractive product presentation",
+        "custom": request.custom_environment or "retail environment",
+    }
+    shelves = {
+        "eye_level": "at eye level position, centered in frame, prominent placement",
+        "shelf_view": "on retail shelf with other competing products, realistic shelf arrangement",
+        "aisle_view": "in store aisle perspective, showing product context in retail environment",
+        "custom": request.custom_shelf_style or "product display",
+    }
+    environment_desc = envs.get(environment_type, envs["supermarket"])
+    shelf_desc = shelves.get(request.shelf_style, shelves["eye_level"])
+    if environment_type == "custom" or request.shelf_style == "custom":
+        ctx = []
+        if environment_type == "custom":
+            ctx.append(f"Environment: {request.custom_environment}")
+        if request.shelf_style == "custom":
+            ctx.append(f"Display style: {request.custom_shelf_style}")
+        environment_desc = ", ".join(ctx) if ctx else environment_desc
+    return {"environment_type": environment_type, "environment_desc": environment_desc, "shelf_desc": shelf_desc}
+
+
+def _shelf_prompt_writer(study: Dict, ctx: Dict[str, str], additional_prompt: Optional[str]) -> str:
+    base_prompt = f"""Create a photorealistic on-shelf visualization for: {study.get("title", "Product")}
+
+    Environment Setting: {ctx['environment_desc']}
+    Shelf Position: {ctx['shelf_desc']}
+
+    Requirements:
+    1. Show the product {ctx['shelf_desc']}
+    2. Include competing products from the same category (blurred or generic if needed)
+    3. Realistic retail lighting and atmosphere
+    4. Professional product photography quality
+    5. Show authentic {ctx['environment_type'].replace('_', ' ')} environment
+    6. Make the featured product stand out while maintaining realistic context
+
+    Keep the prompt concise (2-3 sentences max). Return ONLY the image generation prompt."""
+    if additional_prompt:
+        base_prompt += f"\n\nAdditional requirements (to be placed at the BEGINNING of the final prompt): {additional_prompt}"
+    return base_prompt
+
+
+def _shelf_direct_image_prompt(study: Dict, ctx: Dict[str, str], additional_prompt: Optional[str]) -> str:
+    p = (f"Using the attached product image as the reference product, create a photorealistic photo of it "
+         f"{ctx['shelf_desc']} in a {ctx['environment_desc']}, with generic competing products from the same "
+         "category around it, realistic retail lighting, the featured product clearly standing out.")
+    return f"{additional_prompt.strip()}. {p}" if additional_prompt else p
 
 
 # ===================== FILTER HELPERS (time + demographic segments) =====================
@@ -871,6 +1167,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             if name in selected_rows.columns:
                 level_counts_all[name] = selected_rows[name].value_counts().to_dict()
 
+        ref_cols = X.attrs.get("reference_cols", {})
         part_worths = {}
         for attr in attributes:
             attr_id = attr["id"]
@@ -886,8 +1183,17 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
                     "value": level_value,
                     "utility": utility,
                     "selection_count": int(counts_for_attr.get(level_value, 0)),
+                    **_logit_level_flags(attr, level, X.columns, ref_cols),
                 }
             part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
+
+        # Convergence and Wald 95% CIs (2026-11). An unconverged L-BFGS run used
+        # to be reported exactly like a converged one.
+        try:
+            converged = bool((getattr(result, "mle_retvals", None) or {}).get("converged", True))
+        except Exception:
+            converged = None
+        ci = result.conf_int(alpha=0.05)
 
         importance_scores = _calc_importance_from_part_worths(part_worths)
 
@@ -925,6 +1231,12 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "std_errors": {name: float(se) for name, se in result.bse.items()},
             "z_values": {name: float(z) for name, z in result.tvalues.items()},
             "p_values": {name: float(p) for name, p in result.pvalues.items()},
+            "ci_lower": {name: float(ci.loc[name].iloc[0]) for name in result.params.index},
+            "ci_upper": {name: float(ci.loc[name].iloc[1]) for name in result.params.index},
+            "ci_level": 0.95,
+            "converged": converged,
+            "reference_levels": _logit_reference_levels(attributes, ref_cols),
+            "coding": "dummy (reference = last declared level that was shown; reference utility = 0)",
             "log_likelihood": float(llf),
             "log_likelihood_null": float(llnull) if llnull is not None else None,
             "pseudo_r_squared": float(pseudo_r2),
@@ -1140,11 +1452,19 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
                 "utility": utility,
                 "std_deviation": level_sd,
                 "selection_count": int(counts_for_attr.get(level["value"], 0)),
+                **_logit_level_flags(attr, level, X.columns, X.attrs.get("reference_cols", {})),
             }
         part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
 
+    _se = fit["std_errors"]
     return {
         "method": "Mixed Logit (Random Parameters)",
+        "ci_lower": {v: float(fit["means"][v] - 1.959964 * _se.get(v, 0.0)) for v in varnames},
+        "ci_upper": {v: float(fit["means"][v] + 1.959964 * _se.get(v, 0.0)) for v in varnames},
+        "ci_level": 0.95,
+        "converged": (bool(getattr(model, "convergence", True))
+                      if getattr(model, "convergence", None) is not None else None),
+        "reference_levels": _logit_reference_levels(attributes, X.attrs.get("reference_cols", {})),
         "part_worths": part_worths,
         "importance_scores": _calc_importance_from_part_worths(part_worths),
         "mean_coefficients": mean_coefficients,
@@ -1306,7 +1626,33 @@ def _dummy_encode_consistent_reference(df, attributes, feature_cols, groups=None
         else:
             full = full.loc[:, full.nunique() > 1]
 
+    # Expose which column each attribute is measured against so callers can
+    # flag the reference level (utility pinned to 0) separately from a level
+    # that could not be estimated (also reported as 0) — 2026-11.
+    full.attrs["reference_cols"] = dict(ref_by_name)
     return full
+
+
+def _logit_level_flags(attr: Dict, level: Dict, X_columns, ref_cols: Dict) -> Dict:
+    """`is_reference` / `is_excluded` for one level of a logit-family result.
+
+    Before 2026-11 only OLS carried these flags; MNL / Mixed Logit / HB reported
+    an unestimable level (never shown, or no within-set variation) as utility 0
+    — indistinguishable from the reference level in tables and in the thesis.
+    """
+    col = f"{attr['name']}_{level['value']}"
+    is_ref = ref_cols.get(attr["name"]) == col
+    return {"is_reference": bool(is_ref), "is_excluded": bool(not is_ref and col not in X_columns)}
+
+
+def _logit_reference_levels(attributes: List[Dict], ref_cols: Dict) -> Dict[str, str]:
+    out = {}
+    for attr in attributes:
+        col = ref_cols.get(attr.get("name"))
+        for lvl in attr.get("levels", []) or []:
+            if col == f"{attr['name']}_{lvl['value']}":
+                out[attr["id"]] = lvl["id"]
+    return out
 
 
 def _individual_posteriors(df, X_values, varnames, pop_means, pop_sds,
@@ -1509,6 +1855,7 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
                 "utility": float(pop_mean_dict.get(col_name, 0.0)),
                 "std_deviation": float(pop_sd_dict.get(col_name, 0.0)),
                 "selection_count": int(counts_for_attr.get(level["value"], 0)),
+                **_logit_level_flags(attr, level, X.columns, X.attrs.get("reference_cols", {})),
             }
         part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
 
@@ -1560,6 +1907,9 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     return {
         "method": "Hierarchical Bayes (Panel Mixed Logit + Individual Posteriors)",
         "part_worths": part_worths,
+        "converged": (bool(getattr(model, "convergence", True))
+                      if getattr(model, "convergence", None) is not None else None),
+        "reference_levels": _logit_reference_levels(attributes, X.attrs.get("reference_cols", {})),
         "importance_scores": importance_individual or importance_population,
         # Kept alongside so the two definitions can be compared. They diverge
         # exactly when respondents disagree on an attribute's DIRECTION.
@@ -1900,6 +2250,13 @@ def calculate_part_worths(study: Dict, responses: List[Dict]) -> Dict[str, Dict[
             if not profile_map:
                 continue
             sel_pid = choice.get("selected_profile_id")
+            # Same admissibility rule as `_build_conjoint_data_rows` (2026-11):
+            # a skipped task, or one whose selected_profile_id no longer matches
+            # any profile, used to add APPEARANCES with no selection, deflating
+            # every rate in that set — and the counting method is the one the
+            # Results page shows first. Now all five methods share one sample.
+            if len(profile_map) < 2 or sel_pid not in profile_map:
+                continue
             for prof in profile_map.values():
                 is_selected = (prof["id"] == sel_pid)
                 for attr_id, level_id in prof.get("attribute_levels", {}).items():
@@ -1988,6 +2345,69 @@ async def get_method_results(study, responses, method):
         return None
 
     return result
+
+QUALITATIVE_JSON_EXAMPLE = """{
+  "attributes": [
+    {
+      "name": "ชื่อคุณลักษณะ",
+      "description": "คำอธิบายสั้น ๆ",
+      "rationale": "เหตุผลที่คุณลักษณะนี้สำคัญ",
+      "levels": [
+        {"value": "ระดับที่ 1", "description": "คำอธิบาย"},
+        {"value": "ระดับที่ 2", "description": "คำอธิบาย"}
+      ]
+    }
+  ],
+  "recommendations": "ข้อเสนอแนะภาพรวมสำหรับการออกแบบการศึกษา"
+}"""
+
+DEFAULT_QUALITATIVE_SYSTEM = "You are an expert marketing researcher."
+
+
+def _qualitative_combined_data(items) -> str:
+    def _get(it, k):
+        return getattr(it, k, None) if not isinstance(it, dict) else it.get(k)
+    return "\n\n".join(
+        f"=== {str(_get(it, 'type') or '').upper()} ===\n{_get(it, 'content') or ''}" for it in (items or [])
+    )
+
+
+def _build_qualitative_prompt(prompt_config: Dict, qualitative_data, target_language: str = "th") -> Dict:
+    """(system_message, prompt, provider, model) for qualitative → attributes.
+
+    Single source for the system-LLM call and the external-prompt endpoint.
+    """
+    model_name = prompt_config.get("model_name") or "claude-sonnet-4-6"
+    # Retired dated aliases still sit in saved prompt configs (provider 404s).
+    if model_name.startswith("claude-sonnet-4-2025"):
+        model_name = "claude-sonnet-4-6"
+    return {
+        "system_message": prompt_config.get("system_message") or DEFAULT_QUALITATIVE_SYSTEM,
+        "prompt": prompt_config["prompt_template"].format(
+            combined_data=_qualitative_combined_data(qualitative_data),
+            target_language=target_language,
+        ),
+        "model_provider": prompt_config.get("model_provider", "anthropic"),
+        "model_name": model_name,
+    }
+
+
+def _qualitative_suggestions(analysis_result: Dict) -> List["ConjointAttribute"]:
+    """LLM JSON → suggested ConjointAttribute list (system and external paths)."""
+    out = []
+    for i, attr_data in enumerate((analysis_result or {}).get("attributes", []) or []):
+        if not isinstance(attr_data, dict):
+            continue
+        levels = [AttributeLevel(value=str(l.get("value", "")), description=l.get("description"))
+                  for l in (attr_data.get("levels") or []) if isinstance(l, dict) and l.get("value") not in (None, "")]
+        out.append(ConjointAttribute(
+            name=str(attr_data.get("name", "")),
+            description=attr_data.get("description"),
+            levels=levels,
+            order=i,
+        ))
+    return out
+
 
 def _build_interpretation_prompt(analysis_summary: dict) -> tuple:
     """Build (system_message, prompt) for conjoint AI interpretation.
@@ -2147,13 +2567,21 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
                     levels = attr_data.get('levels', {})
                     for lvl_id, lvl_data in levels.items():
                         if isinstance(lvl_data, dict):
-                            lines.append(f"  {attr_name}/{lvl_data.get('value','?')}: utility={lvl_data.get('utility',0):.2f}")
+                            tag = (" (ระดับอ้างอิง)" if lvl_data.get('is_reference') else
+                                   " (ประมาณค่าไม่ได้ — ห้ามตีความเป็น 0)" if lvl_data.get('is_excluded') else "")
+                            lines.append(f"  {attr_name}/{lvl_data.get('value','?')}: utility={lvl_data.get('utility',0):.2f}{tag}")
                         else:
                             lines.append(f"  {attr_name}/{lvl_id}: {lvl_data}")
 
         # MNL-specific stats
         if method == 'mnl':
-            for key in ['pseudo_r_squared', 'log_likelihood', 'aic', 'n_observations', 'utility_scale']:
+            # 2026-11: the MNL equations block tells the writer to report the LR
+            # test against the null model, adjusted ρ² and BIC, but only ρ², LL
+            # and AIC were supplied — so complying meant inventing them.
+            for key in ['pseudo_r_squared', 'pseudo_r_squared_adj', 'log_likelihood',
+                        'log_likelihood_null', 'lr_statistic', 'lr_df', 'lr_p_value',
+                        'aic', 'bic', 'n_observations', 'n_choice_situations',
+                        'n_respondents', 'n_parameters', 'converged', 'utility_scale']:
                 val = data.get(key)
                 if val is not None:
                     lines.append(f"{key}: {val}")
@@ -2161,6 +2589,8 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
             std_errs = data.get('std_errors', {})
             z_vals = data.get('z_values', {})
             p_vals = data.get('p_values', {})
+            ci_lo = data.get('ci_lower', {}) or {}
+            ci_hi = data.get('ci_upper', {}) or {}
             if coeffs:
                 lines.append("Coefficients:")
                 for name in list(coeffs.keys()):
@@ -2172,7 +2602,10 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
                     se_f = f"{se:.4f}" if isinstance(se, (int, float)) else str(se)
                     z_f = f"{z:.4f}" if isinstance(z, (int, float)) else str(z)
                     p_f = f"{p:.6f}" if isinstance(p, (int, float)) else str(p)
-                    lines.append(f"  {name}: β={c_f}, SE={se_f}, z={z_f}, p={p_f}")
+                    ci_f = (f", 95% CI=[{ci_lo[name]:.4f}, {ci_hi[name]:.4f}]"
+                            if isinstance(ci_lo.get(name), (int, float)) and isinstance(ci_hi.get(name), (int, float))
+                            else "")
+                    lines.append(f"  {name}: β={c_f}, SE={se_f}, z={z_f}, p={p_f}{ci_f}")
 
         # Linear regression-specific
         if method == 'linear_regression':
@@ -2352,7 +2785,8 @@ def _get_method_equations(method: str) -> str:
 - การเลือกพารามิเตอร์แบบสุ่ม: ระบบทดสอบนัยสำคัญของ σ̂_k แล้วตรึงตัวที่ไม่มีนัยสำคัญ
   ให้เป็นค่าคงที่ (fixed) เพื่อไม่ให้แบบจำลองมีพารามิเตอร์เกินจำเป็น
 - Mixed Logit ผ่อนคลายข้อสมมติ IIA ของ MNL
-- หมายเหตุ: รายงานนี้**ไม่ได้คำนวณ** willingness-to-pay (WTP)""",
+- หมายเหตุ: Mixed Logit ในรายงานนี้**ไม่ได้ใช้คำนวณ** willingness-to-pay (WTP)
+  (หากมีตาราง WTP แสดงว่ามาจาก conditional logit ที่ใส่ราคาเป็นตัวแปรเชิงเส้น ซึ่งรายงานแยกต่างหาก)""",
 
         "hierarchical_bayes": """
 สูตรและสมการทางสถิติ (Hierarchical Bayes — Empirical Bayes ผ่าน SMLE):
@@ -2373,9 +2807,18 @@ def _get_method_equations(method: str) -> str:
     return equations.get(method, equations["counting"])
 
 def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict,
-                         methods: list = None, chapters: list = None, extra_prompt: str = "") -> tuple:
+                         methods: list = None, chapters: list = None, extra_prompt: str = "",
+                         facts_block: str = "", extra_results_text: str = "") -> tuple:
     """Build per-chapter prompts with detailed method-specific equations.
     Returns (system_msg, dict_of_chapter_prompts)
+
+    `facts_block` (2026-11) is the computed design/sample description from
+    `lib.conjoint_thesis.facts_text`. Without it Chapter 3 instructed the writer
+    to describe a "Full-profile, random assignment" design — the platform fields
+    ONE fixed D-efficient version in a fixed order — and Chapter 4 §4.1 asked
+    for respondent demographics the writer was never given. Used by both the
+    system-LLM job and the external-prompt / external-pack endpoints, so the two
+    paths cannot drift.
     """
     if chapters is None:
         chapters = [3, 4, 5]
@@ -2421,6 +2864,11 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
     methods_display = ", ".join(METHOD_NAMES.get(m, m) for m in methods)
     all_equations = "\n".join(_get_method_equations(m) for m in methods)
     summary = _summarize_results_for_thesis(all_method_results)
+    if extra_results_text:
+        summary += "\n" + extra_results_text
+    facts_section = (facts_block.strip() + "\n") if facts_block else (
+        "ข้อเท็จจริงของแผนการทดลอง: ไม่ได้ให้มา — ห้ามระบุจำนวนชุดคำถาม วิธีสร้างแผนการทดลอง "
+        "หรือข้อมูลประชากรของผู้ตอบ ให้เขียนว่า 'ไม่ได้ระบุในรายงานนี้'\n")
 
     # Build per-method result sections for Ch4.
     #
@@ -2484,19 +2932,21 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ชื่อการศึกษา: {study_title} | ผู้ตอบ: {respondent_count} คน
 วิธีวิเคราะห์: {methods_display}
 
+{facts_section}
 {all_equations}
 
 โครงสร้างบทที่ 3:
 ## บทที่ 3 ระเบียบวิธีวิจัย
 ### 3.1 รูปแบบการวิจัย
-- อธิบาย Choice-Based Conjoint (CBC) design
-- Experimental design: Full-profile, random assignment
+- อธิบาย Choice-Based Conjoint (CBC) design ตาม "ข้อเท็จจริงของแผนการทดลอง" ข้างต้นเท่านั้น
+  (จำนวนคุณลักษณะ/ระดับ จำนวนชุดคำถาม จำนวนทางเลือกต่อชุด วิธีสร้างแผนการทดลอง การสุ่มหรือไม่สุ่ม และการไม่มี none option)
+- ห้ามอ้างว่ามีการสุ่มแบบสอบถาม (random assignment) หรือมีหลาย version หากข้อเท็จจริงไม่ได้ระบุ
 
 ### 3.2 ประชากรและกลุ่มตัวอย่าง
-- วิธีการกำหนดขนาดตัวอย่าง (n={respondent_count})
+- วิธีการกำหนดขนาดตัวอย่าง (n={respondent_count}) โดยอ้างเกณฑ์ Johnson & Orme และค่าที่คำนวณให้
 
 ### 3.3 เครื่องมือที่ใช้ในการวิจัย
-- แบบสอบถาม Conjoint Analysis
+- แบบสอบถาม Conjoint Analysis (แสดงตารางคุณลักษณะและระดับ)
 {method_sections_ch3}
 ### 3.{len(methods)+4} สมมติฐานของแบบจำลอง
 - สมมติฐานทางทฤษฎี (Random Utility Theory, IIA, etc.)
@@ -2519,6 +2969,7 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
 วิธีวิเคราะห์: {methods_display}
 
+{facts_section}
 {all_equations}
 
 ผลวิเคราะห์สรุป:
@@ -2527,6 +2978,7 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 โครงสร้างบทที่ 4:
 ## บทที่ 4 ผลการศึกษา
 ### 4.1 ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม
+- ใช้ความถี่และร้อยละจาก "ข้อมูลทั่วไปของผู้ตอบ" ในข้อเท็จจริงข้างต้นเท่านั้น (ถ้าไม่ได้เก็บ ให้ระบุว่าไม่ได้เก็บ)
 {method_sections_ch4}
 {compare_section}
 ### 4.{next_section} สรุปผลบทที่ 4
@@ -2539,6 +2991,7 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
 วิธีวิเคราะห์: {methods_display}
 
+{facts_section}
 ผลวิเคราะห์สรุป:
 {summary}
 
@@ -2547,15 +3000,22 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ### 5.1 สรุปผลการวิจัย (ตอบวัตถุประสงค์, สรุปผลหลัก, อ้างสถิติ)
 ### 5.2 อภิปรายผล (เปรียบเทียบทฤษฎี, งานวิจัยที่เกี่ยวข้อง)
 ### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ: ผลิตภัณฑ์, ราคา, การตลาด, positioning)
-### 5.4 ข้อจำกัดของการวิจัย
+### 5.4 ข้อจำกัดของการวิจัย (รวมข้อจำกัดจากแผนการทดลองตามข้อเท็จจริง เช่น ไม่มีการสุ่มลำดับ ไม่มี none option ไม่มี holdout)
 ### 5.5 ข้อเสนอแนะสำหรับการวิจัยในอนาคต (3-5 ข้อ)
 
 ข้อกำหนด: ภาษาไทยวิชาการ, อ้างค่าสถิติจริง, ทุกหัวข้อ 2-3 ย่อหน้า"""
 
     return system_msg, chapter_prompts
 
-def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str) -> bytes:
-    """Create a .docx file with thesis formatting from AI content, including native Word equations."""
+def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str,
+                        disclosure: Optional[str] = None,
+                        figures: Optional[Dict[str, bytes]] = None) -> bytes:
+    """Create a .docx file with thesis formatting from AI content, including native Word equations.
+
+    2026-11: `disclosure` (AI-use statement, rendered first) and `figures`
+    ({marker: png_bytes}; a line `[[FIGURE:<marker>]]` becomes that picture) so
+    the same renderer serves system-LLM, external-LLM and no-AI documents.
+    """
     from docx import Document
     from docx.shared import Pt, Inches, Cm, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -2644,12 +3104,26 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
         processed_lines.append(raw_lines[i])
         i += 1
 
+    if disclosure:
+        p = doc.add_paragraph()
+        run = p.add_run(disclosure)
+        _set_run_font(run, size=14, italic=True)
+        p.paragraph_format.space_after = Pt(12)
+
     # Parse AI content into sections
     current_table_data = []
     in_table = False
 
     for line in processed_lines:
         stripped = line.strip()
+        fig = re.match(r"^\[\[FIGURE:(.+?)\]\]$", stripped)
+        if fig:
+            png = (figures or {}).get(fig.group(1))
+            if png:
+                p = doc.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.add_run().add_picture(io.BytesIO(png), width=Cm(14))
+            continue
         if not stripped:
             if in_table and current_table_data:
                 _add_table_to_doc(doc, current_table_data)
@@ -2864,6 +3338,49 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         return {"study_id": study_id, "message": "Study created successfully"}
 
+    async def _load_owned_study(study_id: str, current_user, projection=None):
+        study = await db.conjoint_studies.find_one({"id": study_id}, projection or {"_id": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        return study
+
+    async def _load_qualitative_prompt_config() -> Dict:
+        await initialize_default_prompts()
+        prompt_config = await db.llm_prompts.find_one({"id": "conjoint-qualitative-analysis"}, {"_id": 0})
+        if not prompt_config:
+            raise HTTPException(status_code=500, detail="Prompt configuration not found")
+        return prompt_config
+
+    async def _store_qualitative_result(study_id: str, qualitative_data, analysis_result: Dict,
+                                        stamp: Optional[Dict] = None) -> Dict:
+        suggested = _qualitative_suggestions(analysis_result)
+        if not suggested:
+            raise HTTPException(status_code=422, detail={
+                "code": "external_import_invalid",
+                "message": "ไม่พบรายการคุณลักษณะ (attributes) ในผลลัพธ์ — ต้องเป็น JSON ที่มีคีย์ \"attributes\" ตามตัวอย่าง",
+            })
+        llm_analysis = dict(analysis_result)
+        if stamp:
+            llm_analysis.update(stamp)
+        update = {
+            "suggested_attributes": [a.dict() for a in suggested],
+            "llm_analysis": llm_analysis,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if qualitative_data is not None:
+            update["qualitative_data"] = [q.dict() if hasattr(q, "dict") else q for q in qualitative_data]
+        await db.conjoint_studies.update_one({"id": study_id}, {"$set": update})
+        out = {
+            "suggested_attributes": [a.dict() for a in suggested],
+            "recommendations": analysis_result.get("recommendations", ""),
+            "raw_analysis": analysis_result,
+        }
+        if stamp:
+            out.update(stamp)
+        return out
+
     @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-analysis")
     async def analyze_qualitative_data(
         study_id: str,
@@ -2874,110 +3391,86 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
-    
+
         if study["creator_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
-    
-        # Get API key
+
+        # System-LLM path — refused (409 llm_external_only) when the admin
+        # switch forces users to their own LLM. See external-prompt below.
+        await _require_system_llm(FEAT_QUALITATIVE, current_user)
+
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="LLM service not configured")
-    
-        # Combine all qualitative inputs
-        combined_data = "\n\n".join([
-            f"=== {str(item.type).upper()} ===\n{item.content}"
-            for item in request.qualitative_data
-        ])
-    
-        # Get prompt template from database
-        await initialize_default_prompts()
-        prompt_config = await db.llm_prompts.find_one(
-            {"id": "conjoint-qualitative-analysis"},
-            {"_id": 0}
-        )
-    
-        if not prompt_config:
-            raise HTTPException(status_code=500, detail="Prompt configuration not found")
-    
-        # Format the prompt with actual data
-        analysis_prompt = prompt_config["prompt_template"].format(
-            combined_data=combined_data,
-            target_language=request.target_language
-        )
-    
-        # Call LLM with configured model
+
+        prompt_config = await _load_qualitative_prompt_config()
+        built = _build_qualitative_prompt(prompt_config, request.qualitative_data, request.target_language)
+
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-            # Retired dated aliases (e.g. claude-sonnet-4-20250514) still sit in
-            # saved prompt configs and make the provider return 404 not_found.
-            model_name = prompt_config.get("model_name") or "claude-sonnet-4-6"
-            if model_name.startswith("claude-sonnet-4-2025"):
-                model_name = "claude-sonnet-4-6"
+            from lib.conjoint_external import parse_json_object
 
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"conjoint-qual-{study_id}",
-                system_message=prompt_config.get("system_message", "You are an expert marketing researcher.")
-            ).with_model(
-                prompt_config.get("model_provider", "anthropic"),
-                model_name
-            )
-        
-            response_text = await chat.send_message(UserMessage(text=analysis_prompt))
-        
-            # Parse JSON response
-            import json
-            import re
-        
-            # Extract JSON from response (in case there's extra text)
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                analysis_result = json.loads(json_match.group())
-            else:
-                raise Exception("Failed to parse LLM response")
-        
-            # Convert to our attribute format
-            suggested_attributes = []
-            for i, attr_data in enumerate(analysis_result.get("attributes", [])):
-                attr_levels = []
-                for level_data in attr_data.get("levels", []):
-                    attr_levels.append(AttributeLevel(
-                        value=level_data.get("value", ""),
-                        description=level_data.get("description")
-                    ))
-            
-                suggested_attributes.append(ConjointAttribute(
-                    name=attr_data.get("name", ""),
-                    description=attr_data.get("description"),
-                    levels=attr_levels,
-                    order=i
-                ))
-        
-            # Update study
-            await db.conjoint_studies.update_one(
-                {"id": study_id},
-                {
-                    "$set": {
-                        "qualitative_data": [item.dict() for item in request.qualitative_data],
-                        "suggested_attributes": [attr.dict() for attr in suggested_attributes],
-                        "llm_analysis": analysis_result,
-                        "updated_at": datetime.now(timezone.utc)
-                    }
-                }
-            )
-        
-            return {
-                "suggested_attributes": [attr.dict() for attr in suggested_attributes],
-                "recommendations": analysis_result.get("recommendations", ""),
-                "raw_analysis": analysis_result
-            }
-        
+                system_message=built["system_message"],
+            ).with_model(built["model_provider"], built["model_name"])
+
+            response_text = await chat.send_message(UserMessage(text=built["prompt"]))
+            analysis_result = parse_json_object(response_text)
+            return await _store_qualitative_result(study_id, request.qualitative_data, analysis_result)
+
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             import traceback
             logging.error(f"Qualitative analysis error: {e}")
             logging.error(traceback.format_exc())
             raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-analysis/external-prompt")
+    async def qualitative_external_prompt(
+        study_id: str,
+        request: QualitativeAnalysisRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Same prompt the system LLM receives, for the user's own LLM (no policy check)."""
+        from lib.conjoint_external import build_prompt_payload, GENERIC_STEPS_TH, slugify
+        study = await _load_owned_study(study_id, current_user)
+        if not request.qualitative_data or not any((q.content or "").strip() for q in request.qualitative_data):
+            raise HTTPException(status_code=400, detail="กรุณาใส่ข้อมูลเชิงคุณภาพอย่างน้อย 1 รายการ")
+        built = _build_qualitative_prompt(await _load_qualitative_prompt_config(),
+                                          request.qualitative_data, request.target_language)
+        return build_prompt_payload(
+            feature=FEAT_QUALITATIVE,
+            title="วิเคราะห์ข้อมูลเชิงคุณภาพเพื่อเสนอคุณลักษณะและระดับ (Conjoint)",
+            instructions_th=GENERIC_STEPS_TH + "\n\nคำตอบต้องเป็น JSON ตามตัวอย่างเท่านั้น ระบบจะแปลงเป็นรายการคุณลักษณะให้แก้ไขต่อได้",
+            expected_format="json",
+            parts=[{"key": "main", "title": "เสนอคุณลักษณะและระดับ",
+                    "system_prompt": built["system_message"], "prompt": built["prompt"],
+                    "json_example": QUALITATIVE_JSON_EXAMPLE}],
+            filename=f"conjoint-{slugify(study.get('title'))}-qualitative-prompt.md",
+        )
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-analysis/external-import")
+    async def qualitative_external_import(
+        study_id: str,
+        request: QualitativeExternalImportRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Store attributes suggested by the user's own LLM exactly where the system result goes."""
+        from lib.conjoint_external import parse_json_object, external_stamp, ExternalImportError
+        await _load_owned_study(study_id, current_user)
+        try:
+            analysis_result = parse_json_object(request.content)
+        except ExternalImportError as e:
+            raise HTTPException(status_code=422, detail={"code": "external_import_invalid", "message": str(e)})
+        return await _store_qualitative_result(
+            study_id, request.qualitative_data, analysis_result,
+            stamp=external_stamp(request.model_label, current_user),
+        )
 
     @conjoint_router.put("/conjoint/studies/{study_id}/attributes")
     async def update_study_attributes(
@@ -3477,7 +3970,9 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         if not study.get("attributes"):
             raise HTTPException(status_code=400, detail="No attributes defined")
-    
+
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
         # Image generation is optional - if not available, just mark as skipped
         try:
             # Try to import image generation (may not be available)
@@ -3519,12 +4014,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             for attr in study["attributes"]:
                 updated_levels = []
                 for level in attr.get("levels", []):
-                    # Generate image for each level
-                    image_prompt = f"Professional product visualization: {attr['name']} - {level['value']}. Clean, minimalist style on white background."
-                
-                    if level.get("description"):
-                        image_prompt += f" {level['description']}"
-                
+                    image_prompt = _bulk_level_image_prompt(attr, level)
+
                     try:
                         # Attempt to generate image
                         image_url = await generate_image(
@@ -3536,6 +4027,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                         level["image_prompt"] = image_prompt
                         generated_count += 1
                     except Exception as img_error:
+                        if _is_policy_error(img_error):
+                            raise
                         logging.error(f"Failed to generate image for {level['value']}: {img_error}")
                         level["image_url"] = None
                         failed_count += 1
@@ -3566,6 +4059,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             }
         
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Image generation error: {e}")
             # Don't fail the entire request - just mark as skipped
             await db.conjoint_studies.update_one(
@@ -3621,45 +4116,15 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if not attr_found or not level_found:
                 raise HTTPException(status_code=404, detail="Attribute or level not found")
     
-        # Get image generation settings
-        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
-        if not settings:
-            settings = {
-                "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
-                "level_image_prompt_with_ref": "Based on the reference images provided, create a product visualization for: {attribute_name} - {level_value}. Match the style, lighting, and composition of the reference images.",
-                "level_image_model": "gpt-image-1"
-            }
-    
-        # Check if using reference images
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0}) \
+            or dict(DEFAULT_LEVEL_IMAGE_SETTINGS)
         reference_images = study.get("reference_images", [])
-        using_refs = request.reference_image_indices and len(request.reference_image_indices) > 0 and len(reference_images) > 0
-    
-        # Use custom prompt or generate from template
-        if request.prompt:
-            image_prompt = request.prompt
-        elif is_test_generation:
-            # For test generation, use a default prompt
-            image_prompt = "High quality product image"
-        else:
-            # Select appropriate template based on reference usage
-            if using_refs:
-                template = settings.get("level_image_prompt_with_ref", settings["level_image_prompt_template"])
-            else:
-                template = settings["level_image_prompt_template"]
-        
-            # Use template and replace variables
-            image_prompt = template.format(
-                attribute_name=attr_found['name'],
-                level_value=level_found['value'],
-                level_description=level_found.get("description", "")
-            )
-            if level_found.get("description") and not using_refs:
-                image_prompt += f" {level_found['description']}"
-    
-        # Prepend additional prompt if provided (put it at the front)
-        if request.additional_prompt:
-            image_prompt = f"{request.additional_prompt} {image_prompt}"
-    
+        using_refs = bool(request.reference_image_indices and len(reference_images) > 0)
+        image_prompt = _level_image_prompt(settings, attr_found, level_found, request.prompt,
+                                           request.additional_prompt, using_refs, is_test_generation)
+
         # Generate image using configured model
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
@@ -3773,7 +4238,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "is_test": is_test_generation
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Single image generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
@@ -3860,51 +4329,15 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if not profile_found or not choice_set_found:
             raise HTTPException(status_code=404, detail="Profile not found")
     
-        # Get image generation settings
-        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
-        if not settings:
-            settings = {
-                "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
-                "profile_image_prompt_with_ref": "Using the reference images as style guide, create a product photo showing: {composition}. Match the visual style and aesthetic.",
-                "profile_image_model": "gpt-image-1"
-            }
-    
-        # Check if using reference images
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0}) \
+            or dict(DEFAULT_PROFILE_IMAGE_SETTINGS)
         reference_images = study.get("reference_images", [])
-        using_refs = request.reference_image_indices and len(request.reference_image_indices) > 0 and len(reference_images) > 0
-    
-        # Build prompt from profile attributes
-        if request.prompt:
-            image_prompt = request.prompt
-        else:
-            # Get all attribute values for this profile
-            attributes = study.get("attributes", [])
-            profile_description = []
-        
-            for attr_id, level_id in profile_found["attribute_levels"].items():
-                attr = next((a for a in attributes if a["id"] == attr_id), None)
-                if attr:
-                    level = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
-                    if level:
-                        profile_description.append(f"{attr['name']}: {level['value']}")
-        
-            composition = ", ".join(profile_description)
-        
-            # Select appropriate template based on reference usage
-            if using_refs:
-                template = settings.get("profile_image_prompt_with_ref", settings["profile_image_prompt_template"])
-            else:
-                template = settings["profile_image_prompt_template"]
-        
-            # Use template and replace variables
-            image_prompt = template.format(
-                composition=composition
-            )
-    
-        # Prepend additional prompt if provided (put it at the front)
-        if request.additional_prompt:
-            image_prompt = f"{request.additional_prompt} {image_prompt}"
-    
+        using_refs = bool(request.reference_image_indices and len(reference_images) > 0)
+        image_prompt = _profile_image_prompt(settings, study.get("attributes", []), profile_found,
+                                             request.prompt, request.additional_prompt, using_refs)
+
         # Generate image using configured model
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
@@ -4022,7 +4455,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "prompt_used": image_prompt
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Profile image generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
@@ -4956,57 +5393,21 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if len(responses) < 10:
             raise HTTPException(status_code=400, detail="Need at least 10 responses for product generation")
     
-        # Calculate part-worths to get optimal product configuration
-        part_worths = calculate_part_worths(study, responses)
-        importance_scores = calculate_importance_scores(part_worths, study)
-    
-        # Build optimal product description from top utilities
-        product_features = []
-        for attr_id, scores in importance_scores.items():
-            attr_name = scores["name"]
-        
-            # Find level with highest utility
-            if attr_id in part_worths:
-                levels = part_worths[attr_id]["levels"]
-                best_level = max(levels.items(), key=lambda x: x[1]["utility"])
-                level_value = best_level[1]["value"]
-                product_features.append(f"{attr_name}: {level_value}")
-    
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
+        product_features = _optimal_product_features(study, responses)
+
         # Use AI to create image generation prompt
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="AI service not configured")
-    
+
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-            system_message = """You are an expert product designer and image generation prompt engineer.
-    Create detailed, professional prompts for generating product visualization images."""
-        
-            product_category = study.get("product_category", "product")
-            study_title = study.get("title", "Product")
-            features_text = "\n".join([f"- {feat}" for feat in product_features])
-        
-            prompt = f"""Based on conjoint analysis results, create an image generation prompt for the optimal product configuration:
 
-    Study: {study_title}
-    Product Category: {product_category}
+            system_message = PRODUCT_PROMPT_SYSTEM
+            prompt = _product_prompt_writer(study, product_features, request.additional_prompt)
 
-    Optimal Product Features (from research):
-    {features_text}
-
-    Create a detailed image generation prompt that:
-    1. Describes the product with all key features mentioned
-    2. Specifies professional product photography style
-    3. Includes clean white background for product-focused composition
-    4. Mentions high quality, sharp details, and good lighting
-    5. Keeps the prompt concise but descriptive (2-3 sentences max)
-
-    Return ONLY the image generation prompt, no explanation."""
-
-            if request.additional_prompt:
-                prompt += f"\n\nUser's additional requirements (to be placed at the BEGINNING of the final prompt): {request.additional_prompt}"
-        
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"product-gen-{study_id}",
@@ -5090,7 +5491,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "message": "Product image generated successfully based on research insights"
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Product image generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to generate product image: {str(e)}")
 
@@ -5113,84 +5518,20 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
                 raise HTTPException(status_code=403, detail="Not authorized")
     
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="AI service not configured")
-    
+
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
-            from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-        
-            # Determine environment based on product category
-            product_category = study.get("product_category", "").lower()
-            environment_type = request.environment_type
-        
-            # Auto-detect environment if set to "auto"
-            if environment_type == "auto":
-                if any(word in product_category for word in ["cream", "cosmetic", "skincare", "makeup", "beauty"]):
-                    environment_type = "cosmetics_store"
-                elif any(word in product_category for word in ["drink", "beverage", "snack", "food", "water"]):
-                    environment_type = "convenience_store"
-                elif any(word in product_category for word in ["grocery", "supermarket"]):
-                    environment_type = "supermarket"
-                elif any(word in product_category for word in ["fashion", "clothing", "apparel"]):
-                    environment_type = "mall"
-                else:
-                    environment_type = "supermarket"  # Default
-        
-            # Build environment-specific descriptions
-            environment_descriptions = {
-                "cosmetics_store": "Boots or Watson cosmetics store shelf, bright lighting, organized beauty products display, premium retail environment",
-                "convenience_store": "7-Eleven refrigerator or shelf display, convenience store setting, consumer products in organized rows",
-                "supermarket": "Lotus's or Big C supermarket aisle, retail shelf display, organized product arrangement",
-                "mall": "Shopping mall retail display, premium store environment, attractive product presentation",
-                "custom": request.custom_environment or "retail environment"
-            }
-        
-            shelf_style_descriptions = {
-                "eye_level": "at eye level position, centered in frame, prominent placement",
-                "shelf_view": "on retail shelf with other competing products, realistic shelf arrangement",
-                "aisle_view": "in store aisle perspective, showing product context in retail environment",
-                "custom": request.custom_shelf_style or "product display"
-            }
-        
-            environment_desc = environment_descriptions.get(environment_type, environment_descriptions["supermarket"])
-            shelf_desc = shelf_style_descriptions.get(request.shelf_style, shelf_style_descriptions["eye_level"])
-        
-            # If custom, use AI to interpret and enhance the description
-            if environment_type == "custom" or request.shelf_style == "custom":
-                custom_context = []
-                if environment_type == "custom":
-                    custom_context.append(f"Environment: {request.custom_environment}")
-                if request.shelf_style == "custom":
-                    custom_context.append(f"Display style: {request.custom_shelf_style}")
-            
-                environment_desc = ", ".join(custom_context) if custom_context else environment_desc
-        
-            # Use AI to create detailed environment prompt
-            system_message = """You are an expert in retail merchandising and product photography.
-    Create realistic prompts for on-shelf product visualization in competitive retail environments."""
-        
-            study_title = study.get("title", "Product")
-        
-            base_prompt = f"""Create a photorealistic on-shelf visualization for: {study_title}
 
-    Environment Setting: {environment_desc}
-    Shelf Position: {shelf_desc}
+            ctx = _shelf_context(study, request)
+            environment_type = ctx["environment_type"]
+            system_message = SHELF_PROMPT_SYSTEM
+            base_prompt = _shelf_prompt_writer(study, ctx, request.additional_prompt)
 
-    Requirements:
-    1. Show the product {shelf_desc}
-    2. Include competing products from the same category (blurred or generic if needed)
-    3. Realistic retail lighting and atmosphere
-    4. Professional product photography quality
-    5. Show authentic {environment_type.replace('_', ' ')} environment
-    6. Make the featured product stand out while maintaining realistic context
-
-    Keep the prompt concise (2-3 sentences max). Return ONLY the image generation prompt."""
-
-            if request.additional_prompt:
-                base_prompt += f"\n\nAdditional requirements (to be placed at the BEGINNING of the final prompt): {request.additional_prompt}"
-        
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"shelf-sim-{study_id}",
@@ -5248,7 +5589,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "message": "Shelf simulation generated successfully"
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Shelf simulation generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to generate shelf simulation: {str(e)}")
 
@@ -5277,10 +5622,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
             if not study:
                 raise HTTPException(status_code=404, detail="Study not found")
-        
-            # Generate AI interpretation if not provided
+            # 2026-11: any logged-in user could publish ANY study (including a
+            # private one) as site content under their own name.
+            if study.get("creator_id") != current_user.id and current_user.role != UserRole.ADMIN:
+                raise HTTPException(status_code=403, detail="Not authorized")
+
+            # Generate AI interpretation if not provided — only when the system
+            # LLM is allowed for this user; otherwise publish without it (the
+            # user can paste one produced by their own LLM in `ai_interpretation`).
             ai_interpretation = data.ai_interpretation
-            if not ai_interpretation:
+            if not ai_interpretation and not await _system_llm_allowed(FEAT_INTERPRETATION, current_user):
+                logging.info("[SHARE_CONTENT] system LLM not allowed — sharing without AI interpretation")
+            elif not ai_interpretation:
                 logging.info(f"[SHARE_CONTENT] No AI interpretation provided. Generating automatically for study {study_id}...")
                 try:
                     # Get responses for AI analysis
@@ -5590,6 +5943,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "chart_count": len(chart_images)
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error sharing conjoint as content: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")

@@ -25,6 +25,13 @@ from pydantic import BaseModel, Field
 
 from lib.ttl_cache import async_ttl_cache
 from lib.inline_media import externalize
+from lib import be_external as BX
+from lib.be_external import ImportValidationError
+
+try:  # WP1 foundation — the admin switch for the paid system LLM
+    from lib import llm_policy
+except Exception:  # pragma: no cover — never let a missing module take routes down
+    llm_policy = None
 
 brand_equity_router = APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
 
@@ -75,7 +82,17 @@ def brand_health_tier(score: Optional[float]) -> Optional[dict]:
 #   fixed; reverse coding; sample SD; the thesis chapters stopped asserting an
 #   untested Cronbach's alpha and stopped misattributing POMP / brand personality.
 # A thesis cached before this is a different document about different numbers.
-BE_ANALYSIS_SCHEMA_VERSION = 1
+# v2 (2026-11, audit): the AI identity-image "alignment score" no longer enters
+#   the Identity composite (an LLM judgement is not a measurement, an external
+#   import could set it to anything, and on any LLM failure the fallback
+#   {"alignment_score": 0} was scored as a real 0 at 10 % weight); Cronbach's
+#   alpha and the respondent-level significance tests now honour reverse-scored
+#   items and exclude polarity-unconfirmed ones; filtered slices no longer reuse
+#   whole-sample AI brand counts; open-ended coding is recounted per slice.
+BE_ANALYSIS_SCHEMA_VERSION = 2
+
+# Label recorded for results produced by the platform's own LLM.
+SYSTEM_MODEL_LABEL = "system LLM (Gemini 2.5 Flash)"
 
 DIMENSIONS = ["awareness", "quality", "identity", "loyalty"]
 DIM_LABELS = {
@@ -1056,8 +1073,8 @@ def _likert_stats(values: List[int], scale_max: int = 7, reverse: bool = False) 
     # the lowest scale value maps to 0 and the highest to 100. The legacy formula
     # `mean/max*100` left an arbitrary floor at (1/max)*100 (e.g. 20 for a 1-5
     # likert) which inflated all scores ~20pts on the low end and broke
-    # cross-scale comparability. Confirmed correct per Aaker (1996) ch.7,
-    # Keller CBBE measurement, and DeVellis (Scale Development, 2017).
+    # cross-scale comparability. This linear transform is the POMP score of
+    # Cohen, Cohen, Aiken & West (1999) — not a DeVellis (2017) formula.
     score_100 = (mean - 1) / (scale_max - 1) * 100 if scale_max > 1 else 0
     if reverse and scale_max > 1:
         score_100 = 100.0 - score_100
@@ -1102,9 +1119,19 @@ def _nps_stats(values: List[int]) -> dict:
     detractors = sum(1 for v in values if v <= 6)
     passives = n - promoters - detractors
     score = ((promoters - detractors) / n) * 100
+    # 95 % CI for NPS. NPS = p_P - p_D is a difference of two proportions from
+    # the same trinomial sample, so Var = [p_P + p_D - (p_P - p_D)^2] / n.
+    # A bare NPS of +20 from 25 people (CI roughly -15..+55) used to look as
+    # firm as one from 500.
+    pp, pd = promoters / n, detractors / n
+    se = ((pp + pd - (pp - pd) ** 2) / n) ** 0.5 * 100 if n > 1 else None
+    ci = ([round(max(-100.0, score - 1.96 * se), 1), round(min(100.0, score + 1.96 * se), 1)]
+          if se else None)
     return {
         "n": n,
         "score": round(score, 1),
+        "score_ci95": ci,
+        "score_100_ci95": ([round((ci[0] + 100) / 2, 1), round((ci[1] + 100) / 2, 1)] if ci else None),
         "promoters_pct": round(promoters / n * 100, 1),
         "passives_pct": round(passives / n * 100, 1),
         "detractors_pct": round(detractors / n * 100, 1),
@@ -1126,7 +1153,10 @@ def _frequency_stats(values: List[Any]) -> dict:
     total = len(values)
     return {
         "n": total,
-        "counts": [{"label": k, "count": v, "pct": round(v / total * 100, 1) if total else 0}
+        "counts": [{"label": k, "count": v, "pct": round(v / total * 100, 1) if total else 0,
+                    # Wilson 95 % interval — aided recognition of 40 % from 30
+                    # people is 25-58 %, which the bare percentage never said.
+                    "pct_ci95": BX.wilson_ci(v, total) if total else None}
                    for k, v in counter.most_common(20)],
     }
 
@@ -1487,15 +1517,27 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
     by_dim_items: Dict[str, List[str]] = {d: [] for d in DIMENSIONS}
     scale_of: Dict[str, int] = {}
     legacy_of: Dict[str, str] = {}  # legacy question id -> current question id
+    reverse_of: Dict[str, bool] = {}
+    kind_of: Dict[str, str] = {}
     for q in study.get("questions", []) or []:
         if q.get("compare_brand"):
             continue  # competitor items measure a different object
         if q.get("type") not in ("likert_5", "likert_7"):
             continue  # alpha is defined for the multi-item rating scale only
+        if q.get("score_eligible") is False:
+            # Polarity unconfirmed: entering it un-recoded is a guess, and a
+            # wrong guess on one item drags alpha down for the whole scale.
+            continue
         d = q.get("dimension")
         if d in by_dim_items:
             by_dim_items[d].append(q["id"])
             scale_of[q["id"]] = 5 if q["type"] == "likert_5" else 7
+            # Reverse-keyed items must be recoded (max+1-x) BEFORE alpha: a
+            # negatively-worded item entered raw correlates negatively with the
+            # rest and depresses alpha, so the scale was reported as unreliable
+            # because of the coding, not the respondents.
+            reverse_of[q["id"]] = bool(q.get("reverse_scored"))
+            kind_of[q["id"]] = q.get("kind") or q["id"]
             # Responses collected before the instrument was regenerated carry the
             # old question id. `_aggregate_responses` pools those via legacy_ids;
             # without the same pooling here, every respondent from an earlier wave
@@ -1513,7 +1555,8 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
             qid = legacy_of.get(qid, qid)
             val = ans.get("value")
             if qid in scale_of and isinstance(val, (int, float)) and not isinstance(val, bool):
-                row[qid] = float(val)
+                v = float(val)
+                row[qid] = (scale_of[qid] + 1 - v) if reverse_of.get(qid) else v
         if row:
             per_resp.append(row)
 
@@ -1553,6 +1596,28 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
                     rs.append(cov / (dx * dy))
         mean_r = round(sum(rs) / len(rs), 3) if rs else None
 
+        # Item diagnostics a thesis examiner expects next to alpha: corrected
+        # item-total correlation (item vs the sum of the OTHER items) and alpha
+        # if the item were deleted.
+        def _corr(xs, ys):
+            mx_, my_ = sum(xs) / len(xs), sum(ys) / len(ys)
+            num = sum((a_ - mx_) * (b_ - my_) for a_, b_ in zip(xs, ys))
+            da = sum((a_ - mx_) ** 2 for a_ in xs) ** 0.5
+            db = sum((b_ - my_) ** 2 for b_ in ys) ** 0.5
+            return num / (da * db) if da > 0 and db > 0 else None
+
+        items_diag = []
+        for j, qid in enumerate(qids):
+            rest = [sum(row[t] for t in range(k) if t != j) for row in matrix]
+            r_it = _corr(cols[j], rest)
+            a_del = _cronbach_alpha([[row[t] for t in range(k) if t != j] for row in matrix]) if k > 2 else None
+            items_diag.append({
+                "question_id": qid, "kind": kind_of.get(qid),
+                "reverse_scored": bool(reverse_of.get(qid)),
+                "corrected_item_total_r": round(r_it, 3) if r_it is not None else None,
+                "alpha_if_deleted": round(a_del, 3) if a_del is not None else None,
+            })
+
         if a >= 0.90:
             label, interp = "excellent", "ความเที่ยงสูงมาก (อาจมีข้อคำถามซ้ำซ้อนกัน)"
         elif a >= 0.80:
@@ -1572,8 +1637,19 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
             "meets_threshold": bool(a >= 0.70),
             "label": label,
             "interpretation": interp,
+            "items": items_diag,
+            "missing_data_rule": "listwise (เฉพาะผู้ตอบที่ตอบครบทุกข้อในมิตินั้น)",
         }
     return out
+
+
+# Disclosed with every reliability table: what is NOT computed, so neither the
+# dashboard nor a thesis implies it was.
+RELIABILITY_NOT_COMPUTED_TH = (
+    "ไม่ได้คำนวณ McDonald's ω, composite reliability (CR), AVE หรือการวิเคราะห์องค์ประกอบ "
+    "(EFA/CFA) และไม่ได้ทดสอบความตรงเชิงจำแนก (discriminant validity) — "
+    "รายงานเฉพาะ Cronbach's α พร้อม corrected item-total r และ α-if-item-deleted"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -1612,8 +1688,13 @@ def _respondent_dimension_scores(study: dict, responses: List[dict]) -> Dict[str
     dimension score shown on the dashboard.
     """
     meta: Dict[str, tuple] = {}  # qid (incl. legacy ids) -> (dimension, scale type)
+    reverse_ids: set = set()
     for q in study.get("questions") or []:
+        if q.get("score_eligible") is False:
+            continue  # polarity unconfirmed — same exclusion as the composite
         if q.get("type") in _TESTABLE_TYPES and q.get("dimension") and not q.get("compare_brand"):
+            if q.get("reverse_scored"):
+                reverse_ids.update([q["id"]] + list(q.get("legacy_ids") or []))
             # Legacy ids matter: responses collected in an earlier wave carry the
             # question id of that wave. `_aggregate_responses` pools them for the
             # same semantic slot, and so must the test, or wave A comes back with
@@ -1639,6 +1720,11 @@ def _respondent_dimension_scores(study: dict, responses: List[dict]) -> Dict[str
                 s = (7 - v) / 6 * 100
             else:  # nps_0_10
                 s = v / 10 * 100
+            if ans.get("question_id") in reverse_ids:
+                # Agreeing with "too expensive" is LESS quality: without this
+                # flip the significance tests averaged it in as a virtue while
+                # the dashboard scored it reversed.
+                s = 100.0 - s
             buckets.setdefault(dim, []).append(max(0.0, min(100.0, s)))
         for dim, vals in buckets.items():
             out.setdefault(dim, []).append(sum(vals) / len(vals))
@@ -1666,9 +1752,12 @@ def _welch_t_test(a: List[float], b: List[float]) -> Optional[dict]:
     p = float(2 * _st.t.sf(abs(t), df))
     tcrit = float(_st.t.ppf(0.975, df))
     diff = mb - ma
-    # Hedges-corrected Cohen's d on the pooled SD.
+    # Cohen's d on the pooled SD (the comment used to call this
+    # "Hedges-corrected", which it is not); Hedges' g adds the small-sample
+    # correction J = 1 - 3 / (4(na+nb) - 9) and is reported alongside.
     pooled = (((na - 1) * va + (nb - 1) * vb) / (na + nb - 2)) ** 0.5 if na + nb > 2 else 0.0
     d = (diff / pooled) if pooled > 0 else None
+    g = d * (1 - 3 / (4 * (na + nb) - 9)) if d is not None and (na + nb) > 3 else None
     return {
         "mean_a": round(ma, 1), "mean_b": round(mb, 1),
         "sd_a": round(va ** 0.5, 1), "sd_b": round(vb ** 0.5, 1),
@@ -1678,6 +1767,7 @@ def _welch_t_test(a: List[float], b: List[float]) -> Optional[dict]:
         "t": round(t, 3), "df": round(df, 1),
         "p_value": round(p, 6),
         "cohens_d": round(d, 2) if d is not None else None,
+        "hedges_g": round(g, 2) if g is not None else None,
         "effect_label": (
             None if d is None else
             "negligible" if abs(d) < 0.2 else
@@ -1786,10 +1876,349 @@ async def _showcase_scores_for(db, study_id: str, response_count: int,
     return scores
 
 
-def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None) -> dict:
+
+# ---------------------------------------------------------------------------
+# Brand vs competitor — paired tests (2026-11)
+#
+# Every respondent rates the focal brand AND each competitor on the same axis
+# ("{brand} is high-quality" / "{competitor} is high-quality"), so the two
+# ratings are PAIRED. An independent-samples test would ignore that pairing and
+# overstate the noise; the correct test is the paired t-test on the
+# within-person difference, with Cohen's d_z as the effect size. Every axis x
+# competitor pair is one comparison, so p-values are Holm-adjusted across the
+# whole family.
+# ---------------------------------------------------------------------------
+def _qid_values_by_respondent(q: dict, responses: List[dict]) -> List[Optional[float]]:
+    ids = {q["id"]} | set(q.get("legacy_ids") or [])
+    out: List[Optional[float]] = []
+    for r in responses:
+        v = None
+        for a in r.get("answers") or []:
+            if a.get("question_id") in ids:
+                val = a.get("value")
+                if isinstance(val, (int, float)) and not isinstance(val, bool):
+                    v = float(val)
+        out.append(v)
+    return out
+
+
+def _paired_t(diffs: List[float]) -> Optional[dict]:
+    n = len(diffs)
+    if n < 3:
+        return None
+    from scipy import stats as _st
+    m = sum(diffs) / n
+    sd = (sum((d - m) ** 2 for d in diffs) / (n - 1)) ** 0.5
+    if sd == 0:
+        return None
+    se = sd / n ** 0.5
+    t = m / se
+    p = float(2 * _st.t.sf(abs(t), n - 1))
+    crit = float(_st.t.ppf(0.975, n - 1))
+    dz = m / sd
+    return {"n_pairs": n, "mean_diff": round(m, 1), "sd_diff": round(sd, 1),
+            "diff_ci95": [round(m - crit * se, 1), round(m + crit * se, 1)],
+            "t": round(t, 3), "df": n - 1, "p_value": round(p, 6),
+            "cohens_dz": round(dz, 2),
+            "effect_label": ("negligible" if abs(dz) < 0.2 else "small" if abs(dz) < 0.5
+                             else "medium" if abs(dz) < 0.8 else "large")}
+
+
+def _competitor_comparison(study: dict, responses: List[dict]) -> dict:
+    qs = study.get("questions") or []
+    focal_by_axis = {}
+    for q in qs:
+        if (q.get("axis_label") and not q.get("compare_brand")
+                and q.get("type") in ("likert_5", "likert_7")
+                and q.get("score_eligible") is not False):
+            focal_by_axis.setdefault(q["axis_label"], q)
+    focal_name = (study.get("brand") or {}).get("name") or "brand"
+    paired: List[dict] = []
+    for q in qs:
+        comp = q.get("compare_brand")
+        ax = q.get("axis_label")
+        if not comp or not ax or q.get("type") not in ("likert_5", "likert_7"):
+            continue
+        if q.get("score_eligible") is False:
+            continue
+        fq = focal_by_axis.get(ax)
+        if not fq or fq.get("type") != q.get("type"):
+            continue
+        mx = 5 if q["type"] == "likert_5" else 7
+        fv = _qid_values_by_respondent(fq, responses)
+        cv = _qid_values_by_respondent(q, responses)
+
+        def pomp(v, rev):
+            s_ = (v - 1) / (mx - 1) * 100
+            return 100 - s_ if rev else s_
+        diffs = [pomp(a, fq.get("reverse_scored")) - pomp(b, q.get("reverse_scored"))
+                 for a, b in zip(fv, cv) if a is not None and b is not None]
+        res = _paired_t(diffs)
+        row = {"axis": ax, "competitor": comp, "focal_qid": fq["id"], "competitor_qid": q["id"],
+               "scale": "pomp_0_100", "n_pairs": len(diffs)}
+        if res is None:
+            row.update({"testable": False,
+                        "reason": "too_few_pairs" if len(diffs) < 3 else "zero_variance",
+                        "interpretation": "คู่คำตอบน้อยเกินไปหรือไม่มีความแปรผัน จึงทดสอบไม่ได้"})
+        else:
+            row.update({"testable": True, **res})
+        paired.append(row)
+    adj = _holm_adjust([(f"{r['axis']}|{r['competitor']}", r["p_value"]) for r in paired if r.get("testable")])
+    for r in paired:
+        if not r.get("testable"):
+            continue
+        p_adj = adj.get(f"{r['axis']}|{r['competitor']}")
+        r["p_value_holm"] = p_adj
+        r["significant"] = bool(p_adj is not None and p_adj < 0.05)
+        lead = (f"{focal_name} {'สูงกว่า' if r['mean_diff'] > 0 else 'ต่ำกว่า'} {r['competitor']} "
+                f"ด้าน {r['axis']} {abs(r['mean_diff']):.1f} คะแนน")
+        r["interpretation"] = (lead + (" อย่างมีนัยสำคัญ" if r["significant"] else " แต่ยังไม่มีนัยสำคัญ")
+                               + f" (paired t, p {'< .001' if p_adj < 0.001 else '= ' + format(p_adj, '.3f')} หลังปรับ Holm)")
+        if r["n_pairs"] < 30:
+            r["low_n"] = True
+
+    # Direct comparative items (1 = focal much better ... 7 = competitor much
+    # better): one-sample t-test of the mean against the scale midpoint 4.
+    vs_mid: List[dict] = []
+    for q in qs:
+        if q.get("type") != "comparative_7":
+            continue
+        vals = [v for v in _qid_values_by_respondent(q, responses) if v is not None]
+        diffs = [4.0 - v for v in vals]  # >0 favours the focal brand
+        res = _paired_t(diffs)
+        comps_ = (study.get("brand") or {}).get("competitors") or [None]
+        row = {"question_id": q["id"], "competitor": q.get("compare_brand") or comps_[0],
+               "n": len(vals), "test": "one_sample_t_vs_midpoint_4"}
+        if res is None:
+            row.update({"testable": False, "reason": "too_few_or_zero_variance"})
+        else:
+            row.update({"testable": True, "mean": round(sum(vals) / len(vals), 2),
+                        "t": res["t"], "df": res["df"], "p_value": res["p_value"],
+                        "cohens_d": res["cohens_dz"],
+                        "mean_favour_focal_ci95": res["diff_ci95"]})
+        vs_mid.append(row)
+    adj2 = _holm_adjust([(r["question_id"], r["p_value"]) for r in vs_mid if r.get("testable")])
+    for r in vs_mid:
+        if r.get("testable"):
+            r["p_value_holm"] = adj2.get(r["question_id"])
+            r["significant"] = bool(r["p_value_holm"] < 0.05)
+
+    return _json_safe({
+        "paired": paired,
+        "comparative_vs_midpoint": vs_mid,
+        "method": "paired t-test บนผลต่างรายบุคคล (POMP 0-100) ระหว่างแบรนด์หลักกับคู่แข่งในด้านเดียวกัน, "
+                  "effect size = Cohen's d_z, ปรับ Holm-Bonferroni ข้ามทุกคู่เปรียบเทียบ, alpha = .05; "
+                  "ข้อเปรียบเทียบตรง (comparative 7 ระดับ) ทดสอบค่าเฉลี่ยเทียบจุดกึ่งกลาง 4 ด้วย one-sample t",
+        "caveat": "ผู้ตอบมาจากการเลือกแบบสะดวก — นัยสำคัญบอกว่าความต่างไม่น่าเกิดจากความคลาดเคลื่อนของการสุ่ม "
+                  "ในกลุ่มนี้ ไม่ได้รับรองว่าเป็นตัวแทนประชากร",
+    })
+
+
+# ---------------------------------------------------------------------------
+# Data-quality screening (2026-11)
+# Reported, never silently applied: the researcher decides (dashboard
+# `exclude_flagged=true`), and the raw export carries every flag.
+# ---------------------------------------------------------------------------
+DQ_SPEEDER_RATIO = 0.4        # < 40 % of the median completion time
+DQ_STRAIGHTLINE_MIN_ITEMS = 8  # identical answers on >= 8 rating items
+DQ_EXCLUDE_FLAGS = ("speeder", "straightliner", "duplicate")
+
+
+def _data_quality(study: dict, responses: List[dict]) -> dict:
+    qs = study.get("questions") or []
+    rating_ids: Dict[str, str] = {}
+    for q in qs:
+        if q.get("type") in ("likert_5", "likert_7"):
+            for i in [q["id"]] + list(q.get("legacy_ids") or []):
+                rating_ids[i] = q["id"]
+    focal = (study.get("brand") or {}).get("name") or ""
+    aided = next((q for q in qs if q.get("kind") == "aided_recognition"), None)
+    aided_ids = ({aided["id"]} | set(aided.get("legacy_ids") or [])) if aided else set()
+    perception_ids = set()
+    for q in qs:
+        if (q.get("dimension") in ("quality", "loyalty") and not q.get("compare_brand")
+                and q.get("type") in ("likert_5", "likert_7", "nps_0_10")):
+            perception_ids.update([q["id"]] + list(q.get("legacy_ids") or []))
+
+    durs = [float(r.get("duration_sec") or 0) for r in responses if (r.get("duration_sec") or 0) > 0]
+    median_dur = None
+    if len(durs) >= 10:
+        sd_ = sorted(durs)
+        median_dur = sd_[len(sd_) // 2] if len(sd_) % 2 else (sd_[len(sd_) // 2 - 1] + sd_[len(sd_) // 2]) / 2
+
+    flags_by_id: Dict[str, List[str]] = {}
+    seen_vectors: Dict[str, str] = {}
+    ordered = sorted(responses, key=lambda r: str(r.get("submitted_at") or r.get("created_at") or ""))
+    for r in ordered:
+        rid = r.get("id") or ""
+        f: List[str] = []
+        d = float(r.get("duration_sec") or 0)
+        if median_dur and 0 < d < DQ_SPEEDER_RATIO * median_dur:
+            f.append("speeder")
+        vals = [a.get("value") for a in (r.get("answers") or [])
+                if a.get("question_id") in rating_ids and isinstance(a.get("value"), (int, float))]
+        if len(vals) >= DQ_STRAIGHTLINE_MIN_ITEMS and len(set(vals)) == 1:
+            f.append("straightliner")
+        vec = json.dumps(sorted(((a.get("question_id"), json.dumps(a.get("value"), ensure_ascii=False))
+                                 for a in (r.get("answers") or [])), key=str), ensure_ascii=False)
+        if len(r.get("answers") or []) >= 5:
+            key = vec + json.dumps(r.get("demographics") or {}, sort_keys=True, ensure_ascii=False)
+            if key in seen_vectors:
+                f.append("duplicate")
+            else:
+                seen_vectors[key] = rid
+        if aided_ids:
+            aided_val = next((a.get("value") for a in (r.get("answers") or [])
+                              if a.get("question_id") in aided_ids), None)
+            rated = any(a.get("question_id") in perception_ids for a in (r.get("answers") or []))
+            if isinstance(aided_val, list) and focal and focal not in aided_val and rated:
+                f.append("unaware_rater")
+        if f:
+            flags_by_id[rid] = f
+
+    counts = Counter(x for fl in flags_by_id.values() for x in fl)
+    excl = [rid for rid, fl in flags_by_id.items() if any(x in DQ_EXCLUDE_FLAGS for x in fl)]
+    return {
+        "n_total": len(responses),
+        "flags": {k: counts.get(k, 0) for k in ("speeder", "straightliner", "duplicate", "unaware_rater")},
+        "n_flagged_excludable": len(excl),
+        "flags_by_response": flags_by_id if len(flags_by_id) <= 2000 else {},
+        "median_duration_sec": median_dur,
+        "rules": {
+            "speeder": f"ใช้เวลาตอบน้อยกว่า {int(DQ_SPEEDER_RATIO * 100)}% ของค่ามัธยฐาน"
+                       + ("" if median_dur else " (ยังคำนวณไม่ได้ — มีข้อมูลเวลาตอบไม่ถึง 10 คน)"),
+            "straightliner": f"ตอบค่าเดียวกันทุกข้อในข้อมาตรวัด {DQ_STRAIGHTLINE_MIN_ITEMS} ข้อขึ้นไป",
+            "duplicate": "คำตอบและข้อมูลประชากรเหมือนกันทุกข้อกับผู้ตอบที่ส่งก่อนหน้า",
+            "unaware_rater": "ไม่ได้เลือกแบรนด์หลักในคำถามการรู้จักแบรนด์ แต่ให้คะแนนคุณภาพ/ความภักดีของแบรนด์ "
+                             "(แจ้งเพื่อทราบ ไม่ถูกตัดออกอัตโนมัติ)",
+        },
+        "excluded_by_default": False,
+        "note": "ระบบรายงานเท่านั้น ไม่ได้ตัดผู้ตอบออกจากคะแนน — เลือกตัดได้ด้วยตัวกรอง "
+                "\"ตัดผู้ตอบที่น่าสงสัย\" (speeder / straight-liner / ซ้ำ)",
+    }
+
+
+def _exclude_flagged(study: dict, responses: List[dict]) -> List[dict]:
+    dq = _data_quality(study, responses)
+    bad = {rid for rid, fl in (dq.get("flags_by_response") or {}).items()
+           if any(x in DQ_EXCLUDE_FLAGS for x in fl)}
+    return [r for r in responses if (r.get("id") or "") not in bad]
+
+
+def _margin_of_error_pct(n: int) -> Optional[float]:
+    """Worst-case (p = .5) 95 % margin of error for a proportion, in points.
+    Assumes simple random sampling — stated wherever it is shown."""
+    if n <= 0:
+        return None
+    return round(1.96 * (0.25 / n) ** 0.5 * 100, 1)
+
+
+# ---------------------------------------------------------------------------
+# Open-ended coding applied to the slice in hand (2026-11)
+# ---------------------------------------------------------------------------
+def _det_labels_for(value: Any, brand_list: List[str]) -> List[str]:
+    det = _deterministic_brand_counts([value], brand_list)
+    return [c["label"] for c in (det or {}).get("counts") or []]
+
+
+def _legacy_codes_from_variants(qid: str, norm: dict) -> Dict[str, List[str]]:
+    """Old system results stored clusters with `variants`; turn them into
+    answer-id codes so they can be recounted on ANY slice instead of being
+    copied over with whole-sample totals."""
+    codes: Dict[str, List[str]] = {}
+    for c in norm.get("counts") or []:
+        lab = c.get("label")
+        for v in c.get("variants") or []:
+            k = BX.norm_answer(v)
+            if k and lab:
+                codes.setdefault(BX.answer_id(qid, k), [])
+                if lab not in codes[BX.answer_id(qid, k)]:
+                    codes[BX.answer_id(qid, k)].append(lab)
+    return codes
+
+
+_CODING_STATUS_TH = {
+    "coded": "เข้ารหัสครบแล้ว",
+    "partial": "เข้ารหัสบางส่วน (คำตอบใหม่ยังไม่ได้เข้ารหัส — นับด้วยการจับคู่ชื่อแบรนด์อัตโนมัติ)",
+    "deterministic": "นับด้วยการจับคู่ชื่อแบรนด์อัตโนมัติ (ยังไม่ได้เข้ารหัสด้วย AI/ด้วยมือ)",
+    "uncoded": "ยังไม่ได้เข้ารหัส",
+    "not_required": "",
+}
+
+
+def _coded_open_stats(q: dict, values: List[Any], normalized: Dict[str, dict],
+                      open_coding: Dict[str, dict], brand_list: List[str]) -> tuple:
+    """Stats for an open-ended question that needs coding before counting.
+
+    Order of preference: (1) the study's answer-level coding (system LLM,
+    external LLM or a hand-coded spreadsheet) recounted on THIS slice; (2) an
+    old system result, recounted via its `variants` (or used as stored only
+    when it was computed on exactly these answers); (3) deterministic brand
+    matching / raw frequencies. Returns (stats, coding_status).
+
+    Whole-sample AI counts used to be pasted into every filtered slice, so a
+    segment view showed the WHOLE sample's top-of-mind share.
+    """
+    qid = q["id"]
+    is_brand = q.get("ai_processing") in ("extract_brand", "extract_brands")
+
+    def fallback(v):
+        if is_brand:
+            return _det_labels_for(v, brand_list)
+        t = re.sub(r"\s+", " ", str(v if not isinstance(v, list) else ", ".join(map(str, v)))).strip()
+        return [t] if t else []
+
+    nonempty = [v for v in values if BX.norm_answer(v)]
+    extra = {"responses": [v for v in values if v]} if q.get("type") == "open_long" else {}
+    oc = (open_coding or {}).get(qid) or {}
+    codes = oc.get("codes") or {}
+    basis = None
+    res = None
+    sources: List[str] = []
+    if codes:
+        res = BX.counts_from_codes(qid, values, codes, fallback)
+        sources = sorted(oc.get("sources") or [])
+        basis = "manual" if sources == ["manual"] else "ai"
+    elif qid in (normalized or {}):
+        norm = normalized[qid] or {}
+        lcodes = _legacy_codes_from_variants(qid, norm)
+        if lcodes:
+            res = BX.counts_from_codes(qid, values, lcodes, fallback)
+            basis, sources = "ai", ["system"]
+        elif norm.get("counts") and int(norm.get("total") or -1) == len(nonempty):
+            stats = {"n": norm.get("total"), "counts": norm["counts"], "ai_normalized": True,
+                     "normalization_basis": "ai", "coding_source": ["system"],
+                     "coding_coverage": 1.0, "uncoded_n": 0, **extra}
+            return stats, "coded"
+    if res is not None and res["total"]:
+        stats = {"n": res["total"], "counts": res["counts"], "ai_normalized": basis == "ai",
+                 "normalization_basis": basis, "coding_source": sources,
+                 "coding_coverage": round(res["coded"] / res["total"], 3),
+                 "uncoded_n": res["total"] - res["coded"], **extra}
+        return stats, ("coded" if res["coded"] == res["total"] else "partial")
+    if is_brand:
+        det = _deterministic_brand_counts(values, brand_list)
+        if det:
+            for c in det["counts"]:
+                c["pct_ci95"] = BX.wilson_ci(c["count"], det["total"])
+            return ({"n": det["total"], "counts": det["counts"], "ai_normalized": False,
+                     "normalization_basis": "deterministic", **extra}, "deterministic")
+        return ({"n": len(nonempty), "counts": [], **extra},
+                "uncoded" if nonempty else "not_required")
+    st = _frequency_stats(values) if q.get("type") == "open_short" else {"n": len(values)}
+    st.update(extra)
+    st["normalization_basis"] = "none"
+    return st, ("uncoded" if nonempty else "not_required")
+
+
+def _aggregate_responses(study: dict, responses: List[dict], normalized: Optional[Dict[str, dict]] = None,
+                         ai_cache: Optional[dict] = None) -> dict:
     """Compute stats per question.
-    normalized: optional {question_id: {counts: [...], total: N, variants_map: {...}}}
-                — if provided, overrides _frequency_stats counts for that question with AI-canonicalized buckets.
+    normalized: optional legacy {question_id: {counts: [...], total: N}} from an
+                old system AI pass — recounted per slice where possible.
+    ai_cache:   the AI cache for the active filter (themes status); defaults to
+                study["ai_cache"].
+    The study's `open_coding` (answer-level codes) is applied automatically.
     """
     by_q: Dict[str, List] = {}
     for r in responses:
@@ -1802,6 +2231,9 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
     out_questions = []
     dim_aggregates: Dict[str, List[float]] = {d: [] for d in DIMENSIONS}
     normalized = normalized or {}
+    open_coding = study.get("open_coding") or {}
+    themes_cache = ((ai_cache if ai_cache is not None else study.get("ai_cache")) or {}).get(
+        "themes_by_question") or {}
     # Focal brand first, then competitors — used by `_deterministic_brand_counts`
     # so an unaided mention can be attributed without waiting for the LLM.
     _bs = study.get("brand") or {}
@@ -1822,8 +2254,13 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         else:
             values = by_q.get(qid, [])
         stats: Dict[str, Any] = {"n": len(values)}
+        coding_status = "not_required"
 
-        if q["type"] in ("likert_5", "likert_7"):
+        if (q.get("ai_processing") in BX.CODEABLE_PROCESSING
+                and q["type"] in ("open_short", "open_long")):
+            stats, coding_status = _coded_open_stats(
+                q, values, normalized, open_coding, _brand_list_for_matching)
+        elif q["type"] in ("likert_5", "likert_7"):
             scale_max = 5 if q["type"] == "likert_5" else 7
             numeric = [int(v) for v in values if isinstance(v, (int, float)) or (isinstance(v, str) and v.isdigit())]
             stats = _likert_stats(numeric, scale_max, reverse=bool(q.get("reverse_scored")))
@@ -1836,50 +2273,12 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
                 dim_aggregates[q["dimension"]].append(stats["score_100"])
         elif q["type"] in ("mcq_single", "mcq_multi", "trait_grid", "open_short"):
             stats = _frequency_stats(values)
-            # Override with AI-normalized counts for open-ended brand/concept questions
-            if q.get("ai_processing") in ("extract_brand", "extract_brands", "word_cloud") and qid in normalized:
-                norm = normalized[qid]
-                if norm.get("counts"):
-                    stats = {
-                        "n": norm.get("total", stats.get("n", 0)),
-                        "counts": norm["counts"],
-                        "ai_normalized": True,
-                        "normalization_basis": "ai",
-                    }
-            # No AI pass yet → count brand mentions deterministically so the
-            # dimension keeps its signal instead of silently renormalising it away.
-            if (q.get("ai_processing") in ("extract_brand", "extract_brands")
-                    and not stats.get("ai_normalized")):
-                det = _deterministic_brand_counts(values, _brand_list_for_matching)
-                if det:
-                    stats = {
-                        "n": det["total"],
-                        "counts": det["counts"],
-                        "ai_normalized": False,
-                        "normalization_basis": "deterministic",
-                    }
         elif q["type"] == "open_long":
-            # If AI normalized this open_long (e.g., extract_brands), use it; otherwise raw responses
-            if q.get("ai_processing") in ("extract_brand", "extract_brands") and qid in normalized:
-                norm = normalized[qid]
-                stats = {
-                    "n": norm.get("total", len(values)),
-                    "counts": norm.get("counts", []),
-                    "ai_normalized": True,
-                    "normalization_basis": "ai",
-                    "responses": [v for v in values if v][:10],  # keep sample
-                }
-            else:
-                stats = {"n": len(values), "responses": [v for v in values if v]}
-                if q.get("ai_processing") in ("extract_brand", "extract_brands"):
-                    det = _deterministic_brand_counts(values, _brand_list_for_matching)
-                    if det:
-                        stats.update({
-                            "n": det["total"],
-                            "counts": det["counts"],
-                            "ai_normalized": False,
-                            "normalization_basis": "deterministic",
-                        })
+            stats = {"n": len(values), "responses": [v for v in values if v]}
+            if q.get("ai_processing") == "theme_extraction":
+                has_text = any(BX.norm_answer(v) for v in values)
+                coding_status = ("coded" if themes_cache.get(qid) else
+                                 ("uncoded" if has_text else "not_required"))
         elif q["type"] == "comparative_7":
             numeric = [int(v) for v in values if isinstance(v, (int, float)) or (isinstance(v, str) and v.isdigit())]
             stats = _comparative_stats(numeric)
@@ -1890,6 +2289,10 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
             "perspective": q.get("perspective"),
             "axis_label": q.get("axis_label"),
             "compare_brand": q.get("compare_brand"),
+            "reverse_scored": bool(q.get("reverse_scored")),
+            "score_eligible": q.get("score_eligible") is not False,
+            "coding_status": coding_status,
+            "coding_status_th": _CODING_STATUS_TH.get(coding_status, ""),
             "stats": stats,
         })
 
@@ -1899,19 +2302,16 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
     # so studies missing some questions still get a defensible score.
     target_brand = study["brand"]["name"]
 
-    # Identity-Image alignment is computed by the AI pipeline (post-survey) and
-    # stored in study.ai_cache.identity_image.alignment_score (0-100). When
-    # available, it boosts identity composite at 10% weight.
+    # The AI identity-image "alignment score" used to enter the Identity
+    # composite at 10 % weight. Removed (schema v2): it is an LLM's judgement,
+    # not a measurement; it was read under a key the prompt never asked for
+    # (`alignment_score` vs `alignment_score_0_100`), so the only value that
+    # reliably reached the score was the FAILURE fallback {"alignment_score": 0}
+    # — a broken LLM call cost the brand up to 10 points of Identity; it was
+    # read from the whole-sample cache even in filtered slices; and with the
+    # external-LLM import a pasted number would have set a published score.
+    # The alignment stays on the dashboard as a qualitative, labelled opinion.
     identity_alignment = None
-    ai_cache_local = study.get("ai_cache") or {}
-    ii = ai_cache_local.get("identity_image") or {}
-    if isinstance(ii, dict):
-        a = ii.get("alignment_score")
-        if a is None:
-            # Some pipelines emit a 0-1 score under different keys
-            a = ii.get("alignment") or ii.get("match_score")
-        if isinstance(a, (int, float)):
-            identity_alignment = float(a) if a > 1 else float(a) * 100.0
 
     composite: Dict[str, Optional[float]] = {}
     composite_meta: Dict[str, dict] = {}
@@ -2084,7 +2484,20 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         adequacy = {"level": "strong", "n": n_resp, "min_next": None,
                     "message": f"มีผู้ตอบ {n_resp} คน — เพียงพอทั้งภาพรวมและการแยกกลุ่มย่อย"}
 
+    # Worst-case margin of error for a proportion (p = .5, SRS assumption).
+    adequacy["moe_95_pct"] = _margin_of_error_pct(n_resp)
+    adequacy["moe_note"] = ("ค่าความคลาดเคลื่อนสูงสุดของสัดส่วนที่ระดับความเชื่อมั่น 95% "
+                            "(สมมติการสุ่มอย่างง่าย — กลุ่มตัวอย่างแบบสะดวกไม่เข้าเงื่อนไขนี้ ใช้เป็นแนวทางเท่านั้น)")
+
+    coding_needed = [q for q in out_questions if q["coding_status"] != "not_required"]
+    open_coding_summary = {
+        "questions_needing_coding": len(coding_needed),
+        "by_status": dict(Counter(q["coding_status"] for q in coding_needed)),
+        "uncoded_questions": [q["id"] for q in coding_needed if q["coding_status"] == "uncoded"],
+    }
+
     return {
+        "schema_version": BE_ANALYSIS_SCHEMA_VERSION,
         "total_responses": len(responses),
         "questions": out_questions,
         "composite": composite,
@@ -2093,7 +2506,12 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         "association": association,
         "image_radar": image_radar,
         "reliability": reliability,
+        "reliability_not_computed": RELIABILITY_NOT_COMPUTED_TH,
         "sample_adequacy": adequacy,
+        "competitor_comparison": _competitor_comparison(study, responses),
+        "data_quality": {k: v for k, v in _data_quality(study, responses).items()
+                         if k != "flags_by_response"},
+        "open_coding": open_coding_summary,
         # Served so no surface has to re-derive the tier and drift from the rest.
         "brand_health_tier": brand_health_tier(composite.get("overall")),
         "brand_health_tiers": BRAND_HEALTH_TIERS,
@@ -2102,13 +2520,13 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         # (misspellings, transliteration, nicknames), so the UI can offer it as an
         # enhancement without implying the current numbers are provisional.
         "normalization": {
-            "basis": ("ai" if any(
-                (q["stats"].get("normalization_basis") == "ai") for q in out_questions
-            ) else ("deterministic" if any(
-                (q["stats"].get("normalization_basis") == "deterministic") for q in out_questions
-            ) else "none")),
+            "basis": next((b for b in ("ai", "manual", "deterministic") if any(
+                (q["stats"].get("normalization_basis") == b) for q in out_questions
+            )), "none"),
             "ai_questions": sum(1 for q in out_questions
                                 if q["stats"].get("normalization_basis") == "ai"),
+            "manual_questions": sum(1 for q in out_questions
+                                    if q["stats"].get("normalization_basis") == "manual"),
             "deterministic_questions": sum(1 for q in out_questions
                                            if q["stats"].get("normalization_basis") == "deterministic"),
         },
@@ -2122,11 +2540,50 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
 # is automatically wrapped, so call sites here can stay simple.
 
 
-async def _gemini_call(prompt: str, system: str = "You are a brand strategy expert. Respond in Thai unless asked otherwise.") -> str:
-    """Call Gemini via emergentintegrations. Returns text or '' on error.
+def _is_policy_refusal(exc: BaseException) -> bool:
+    """True for the admin switch's refusal in either form (central guard
+    exception, or the 409 HTTPException from require_system_llm)."""
+    if llm_policy is not None and isinstance(exc, llm_policy.SystemLLMDisabled):
+        return True
+    if isinstance(exc, HTTPException) and exc.status_code == 409:
+        d = exc.detail if isinstance(exc.detail, dict) else {}
+        return d.get("code") == "llm_external_only"
+    return False
 
-    Thread-offloading + global semaphore are applied transparently by the
-    library monkey-patch in server.py.
+
+def _policy_detail(exc: BaseException, feature: str) -> dict:
+    if llm_policy is not None and isinstance(exc, llm_policy.SystemLLMDisabled):
+        return exc.detail
+    if isinstance(exc, HTTPException) and isinstance(exc.detail, dict):
+        return exc.detail
+    return {"code": "llm_external_only", "feature": feature, "message": str(exc), "hint": ""}
+
+
+async def _require_system_llm(feature: str, user) -> None:
+    """`llm_policy.require_system_llm` — raises the uniform 409. Kept as one
+    call site so a missing policy module degrades to "allowed" (old behaviour)
+    rather than breaking every Brand Equity route."""
+    if llm_policy is None:
+        return
+    await llm_policy.require_system_llm(feature, user)
+
+
+async def _system_llm_allowed(feature: str, user=None) -> bool:
+    if llm_policy is None:
+        return True
+    try:
+        return await llm_policy.is_system_llm_allowed(feature, user)
+    except Exception:
+        return False
+
+
+async def _gemini_call(prompt: str, system: str = "You are a brand strategy expert. Respond in Thai unless asked otherwise.") -> str:
+    """Call Gemini via emergentintegrations. Returns text or '' on a technical
+    error.
+
+    The admin switch's refusal is NOT a technical error: it is re-raised, so a
+    disabled system LLM surfaces as the llm_external_only message instead of
+    being swallowed into '' and recorded as an empty "done" result.
     """
     api_key = os.environ.get("EMERGENT_LLM_KEY")
     if not api_key:
@@ -2144,30 +2601,42 @@ async def _gemini_call(prompt: str, system: str = "You are a brand strategy expe
         logging.error("[BrandEquity] Gemini call timed out (handled by global patch)")
         return ""
     except Exception as e:
+        if _is_policy_refusal(e):
+            raise
         logging.error(f"[BrandEquity] Gemini error: {e}")
         return ""
 
 
+# ---- be.questions: TH -> EN translation of custom quality attributes -------
+def _translation_prompt(attrs_th: List[str]) -> tuple:
+    """(system, prompt) — shared by the system path and the external prompt."""
+    system = ("You are a precise bilingual TH↔EN brand-marketing translator. "
+              "Output EN translations only — one per line, in the exact order given.")
+    prompt = (
+        "Translate each of the following Thai brand quality attributes into a natural, "
+        "concise English adjective/phrase suitable for a survey statement of the form "
+        "'<Brand> is a brand that is <ATTR>'. Keep order, return ONE per line, "
+        "NO numbering, NO quotes, NO extra commentary.\n\n"
+        + "\n".join(attrs_th)
+    )
+    return system, prompt
+
+
 async def _translate_attrs_to_en(attrs_th: List[str]) -> List[str]:
     """Translate Thai brand-quality attributes to natural English adjectives/phrases.
-    Aligns 1:1 with input order. Falls back to original Thai on error.
+    Aligns 1:1 with input order. Falls back to original Thai on error — and,
+    when the admin has switched the system LLM off, WITHOUT calling it (the
+    attribute is optional decoration; creating a study must never fail on it).
     """
     cleaned = [a.strip() for a in (attrs_th or []) if a and a.strip()]
     if not cleaned:
         return []
+    if not await _system_llm_allowed("be.questions"):
+        return cleaned
     try:
-        prompt = (
-            "Translate each of the following Thai brand quality attributes into a natural, "
-            "concise English adjective/phrase suitable for a survey statement of the form "
-            "'<Brand> is a brand that is <ATTR>'. Keep order, return ONE per line, "
-            "NO numbering, NO quotes, NO extra commentary.\n\n"
-            + "\n".join(cleaned)
-        )
-        out = await _gemini_call(
-            prompt,
-            system="You are a precise bilingual TH↔EN brand-marketing translator. "
-                   "Output EN translations only — one per line, in the exact order given.",
-        )
+        await _require_system_llm("be.questions", None)
+        system, prompt = _translation_prompt(cleaned)
+        out = await _gemini_call(prompt, system=system)
         if not out:
             return cleaned
         lines = [ln.strip(" -•\t").strip() for ln in out.splitlines() if ln.strip()]
@@ -2180,31 +2649,15 @@ async def _translate_attrs_to_en(attrs_th: List[str]) -> List[str]:
         return cleaned
 
 
-async def _ai_extract_visual_identity(brand_name: str, category: str,
-                                       description: str, traits: List[str],
-                                       brand_promise: Optional[str],
-                                       pricing_tier: Optional[str],
-                                       visual_assets: List[dict]) -> dict:
-    """Multimodal Gemini: combine free-form text + uploaded images
-    (logo, palette, design samples) into a structured visual identity.
-
-    Returns:
-      {
-        "derived_traits":   ["Modern", "Artisanal", ...],     # 5-10 trait words
-        "visual_palette":   ["#0E5538", "#7DDDB1", ...],       # hex codes from imagery
-        "visual_keywords":  ["minimalist", "earthy", ...],     # mood/style descriptors
-        "design_style":     "...",                             # short label
-        "archetype":        "...",                             # Aaker-style archetype
-        "summary":          "..."                              # 2-3 sentence brand essence
-      }
-    """
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            return {}
-
-        prompt = f"""คุณคือ senior brand strategist + visual designer
+# ---- be.visual_identity: multimodal identity extraction --------------------
+def _visual_identity_prompt(brand_name: str, category: str, description: str,
+                            traits: List[str], brand_promise: Optional[str],
+                            pricing_tier: Optional[str], visual_assets: List[dict]) -> tuple:
+    """(system, prompt) — shared by the system path and the external prompt."""
+    system = ("You are a senior brand strategist analyzing brand identity from descriptions and "
+              "visual assets. Reply in Thai when appropriate, keep traits as concise English "
+              "title-case words.")
+    prompt = f"""คุณคือ senior brand strategist + visual designer
 วิเคราะห์ identity ของแบรนด์ "{brand_name}" (category: {category}) จากข้อมูลทั้งหมด:
 
 Free-form description from owner:
@@ -2216,14 +2669,13 @@ User-tagged traits: {', '.join(traits) if traits else '(none)'}
 
 แนบมา {len(visual_assets)} ภาพ (logo, color palette, หรือ design samples)
 """
-        if visual_assets:
-            asset_lines = []
-            for i, a in enumerate(visual_assets):
-                asset_lines.append(f"  Image #{i+1}: kind={a.get('kind')}"
-                                   + (f" · note: {a.get('note')}" if a.get('note') else ""))
-            prompt += "Asset descriptions:\n" + "\n".join(asset_lines) + "\n"
-
-        prompt += """
+    if visual_assets:
+        asset_lines = []
+        for i, a in enumerate(visual_assets):
+            asset_lines.append(f"  Image #{i+1}: kind={a.get('kind')}"
+                               + (f" · note: {a.get('note')}" if a.get('note') else ""))
+        prompt += "Asset descriptions:\n" + "\n".join(asset_lines) + "\n"
+    prompt += """
 จงสรุปว่าแบรนด์นี้ตั้งใจสื่อ aspect ใดบ้าง โดยพิจารณาทั้ง text และภาพ (สี · ฟอนต์ · mood · composition · layout)
 
 Return JSON ONLY (no markdown):
@@ -2236,201 +2688,69 @@ Return JSON ONLY (no markdown):
   "summary": "2-3 ประโยคอธิบาย brand essence ที่สื่อจาก text + visuals"
 }
 """
+    return system, prompt
 
+
+async def _ai_extract_visual_identity(brand_name: str, category: str,
+                                       description: str, traits: List[str],
+                                       brand_promise: Optional[str],
+                                       pricing_tier: Optional[str],
+                                       visual_assets: List[dict]) -> dict:
+    """Multimodal Gemini: combine free-form text + uploaded images into a
+    structured visual identity. Returns {} on a technical failure; the admin
+    switch's refusal propagates."""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            return {}
+        system, prompt = _visual_identity_prompt(brand_name, category, description, traits,
+                                                 brand_promise, pricing_tier, visual_assets)
         chat = LlmChat(
             api_key=api_key,
             session_id=f"brand-identity-{uuid.uuid4().hex[:8]}",
-            system_message="You are a senior brand strategist analyzing brand identity from descriptions and visual assets. Reply in Thai when appropriate, keep traits as concise English title-case words.",
+            system_message=system,
         ).with_model("gemini", "gemini-2.5-flash")
 
         # Attach up to 5 images to keep payload reasonable
         file_contents = []
         for a in (visual_assets or [])[:5]:
             b64 = a.get("image_base64") or ""
-            # Strip data URL prefix if present
             if b64.startswith("data:"):
                 b64 = b64.split(",", 1)[-1]
             if b64:
                 file_contents.append(ImageContent(image_base64=b64))
 
         msg = UserMessage(text=prompt, file_contents=file_contents) if file_contents \
-              else UserMessage(text=prompt)
-        # Hard timeout — multimodal can occasionally hang; we'd rather fail fast than
-        # hold the proxy connection past 60s and trigger an unhelpful 502.
-        import asyncio
+            else UserMessage(text=prompt)
+        # Hard timeout — multimodal can occasionally hang.
         try:
             resp = await asyncio.wait_for(chat.send_message(msg), timeout=55.0)
         except asyncio.TimeoutError:
             logging.error("[BrandEquity] visual identity timed out after 55s")
             return {}
         text = resp if isinstance(resp, str) else str(resp)
-
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("```", 2)[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.rsplit("```", 1)[0]
-        return json.loads(cleaned.strip())
+        return BX.validate_visual_identity(BX.extract_json(text))
     except Exception as e:
+        if _is_policy_refusal(e):
+            raise
         logging.exception(f"[BrandEquity] visual identity extract failed: {e}")
         return {}
 
 
-async def _ai_normalize_open(responses: List[str], kind: str, brand_list: List[str], category: str = "") -> dict:
-    """Cluster open-ended brand/concept mentions written in different ways
-    (Thai/English, casing, typos, abbreviations) into canonical buckets.
-
-    kind:
-      - 'brand_single' : each response = one brand (top-of-mind)
-      - 'brand_multi'  : each response may list MULTIPLE brands separated by comma/space
-      - 'concept'      : one-word brand descriptors (Modern == ทันสมัย == modern)
-
-    Returns: {"counts": [{label, count, pct, variants}], "total": N}
-    """
-    if not responses:
-        return {"counts": [], "total": 0}
-    # cap input
-    sample = [r for r in responses if r and str(r).strip()][:200]
-    if not sample:
-        return {"counts": [], "total": 0}
-
-    if kind in ("brand_single", "brand_multi"):
-        guidance = f"""These are brand-name responses about category '{category}'.
-Known brands to anchor canonical labels: {', '.join(brand_list)}.
-Cluster mentions referring to the SAME brand. Handle:
-- Thai/English variants ('Mali' = 'มะลิ' = 'MALI')
-- Casing/typos ('starbuks' = 'Starbucks')
-- Abbreviations ('SB' = 'Starbucks' if context suggests)
-- Multi-brand single responses (split commas, slashes, '/').
-Use the most recognized form (prefer English brand if commonly used) as canonical."""
-    else:  # concept
-        guidance = """These are one-word brand descriptors.
-Cluster synonyms / cross-language equivalents into one canonical concept:
-- 'Modern' = 'modern' = 'ทันสมัย' = 'ทันยุค'
-- 'Cozy'   = 'อบอุ่น' = 'นั่งสบาย' = 'cozy'
-- 'Premium' = 'หรู' = 'แพง' (but 'expensive'/'แพง' is closer to 'Expensive' than 'Premium')
-Use a single English title-case word as canonical when possible."""
-
-    prompt = f"""{guidance}
-
-Responses ({len(sample)}):
-{json.dumps(sample, ensure_ascii=False)}
-
-Return JSON only (no markdown):
-{{
-  "clusters": [
-    {{"canonical": "<label>", "variants": ["v1", "v2", "v3"], "count": <int>}},
-    ...
-  ]
-}}
-Sort by count desc. Maximum 15 clusters. The total `count` across all clusters MAY exceed
-{len(sample)} for brand_multi (multiple brands per response), but never less than the most-frequent variant.
-Return ONLY JSON:"""
-    text = await _gemini_call(prompt)
-    if not text:
-        # Fallback: case-insensitive frequency on raw strings
-        normalized_pairs = [(r.strip().lower(), r.strip()) for r in sample]
-        counter = Counter(p[0] for p in normalized_pairs)
-        total = len(sample)
-        return {
-            "counts": [
-                {"label": k.title(), "count": v,
-                 "pct": round(v / total * 100, 1) if total else 0,
-                 "variants": list(set(orig for low, orig in normalized_pairs if low == k))}
-                for k, v in counter.most_common(15)
-            ],
-            "total": total,
-        }
-    try:
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("```")[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.rsplit("```", 1)[0]
-        parsed = json.loads(cleaned.strip())
-        clusters = parsed.get("clusters", [])
-        # base = number of responses (not sum of counts) — for percentage display
-        total = len(sample)
-        return {
-            "counts": [
-                {"label": c.get("canonical", "?"),
-                 "count": int(c.get("count", 0)),
-                 "pct": round(int(c.get("count", 0)) / total * 100, 1) if total else 0,
-                 "variants": c.get("variants", []) or []}
-                for c in clusters[:15]
-            ],
-            "total": total,
-        }
-    except Exception as e:
-        logging.error(f"[BrandEquity] Parse normalize ({kind}) failed: {e} text={text[:200]}")
-        return {"counts": [], "total": len(sample)}
+# ---- be.ai_analyze: coding · themes · identity-image · insights ------------
+def _study_line(study: dict, n: int) -> str:
+    b = study.get("brand") or {}
+    return (f"บริบท: แบรนด์หลัก \"{b.get('name')}\" · หมวด {b.get('category') or '-'} · "
+            f"คู่แข่ง {', '.join(b.get('competitors') or []) or '-'} · ผู้ตอบในชุดข้อมูลนี้ n = {n}")
 
 
-async def _ai_extract_themes(open_responses: List[str], context: str = "") -> List[dict]:
-    """Cluster open-ended responses into 3-7 themes."""
-    if not open_responses:
-        return []
-    sample = open_responses[:80]
-    prompt = f"""วิเคราะห์ {len(sample)} คำตอบเปิด {context} แล้ว cluster เป็น 3-7 themes
-สำหรับแต่ละ theme: name (สั้น), description (1 ประโยค), count (จำนวนคำตอบที่เกี่ยวข้อง), sample_quotes (เลือก 2 ประโยคจากคำตอบจริง), sentiment (-1 ถึง 1)
-Output JSON array. คำตอบ:
-{json.dumps(sample, ensure_ascii=False)}
-Return ONLY JSON array, no markdown:"""
-    text = await _gemini_call(prompt)
-    if not text:
-        return []
-    try:
-        # Strip markdown code fence if present
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("```")[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.rsplit("```", 1)[0]
-        return json.loads(cleaned.strip())
-    except Exception as e:
-        logging.error(f"[BrandEquity] Parse themes failed: {e}")
-        return []
+def _brand_list(study: dict) -> List[str]:
+    b = study.get("brand") or {}
+    return [b.get("name") or ""] + list(b.get("competitors") or [])
 
 
-async def _ai_identity_image(intended_traits: List[str], open_responses: List[str], brand: str) -> dict:
-    """Compute alignment between intended identity and perceived image."""
-    if not open_responses:
-        return {"alignment_score": 0, "perceived_traits": [], "aligned": [], "lost": [], "unintended": []}
-    prompt = f"""วิเคราะห์ image perception ของแบรนด์ {brand}
-Identity (ที่แบรนด์ตั้งใจให้เป็น): {', '.join(intended_traits)}
-Open responses จากผู้ตอบ:
-{json.dumps(open_responses[:60], ensure_ascii=False)}
-
-Output JSON:
-{{
-  "perceived_traits": [{{"trait": "...", "count": N, "sentiment": float}}, ...up to 12 traits],
-  "aligned": ["trait1", ...],   // intended ∩ perceived
-  "lost": ["trait1", ...],       // intended that respondents DON'T mention
-  "unintended": ["trait1", ...], // perceived but NOT intended
-  "alignment_score_0_100": int,
-  "narrative": "2 ประโยคสรุปช่องว่าง"
-}}
-Return ONLY JSON, no markdown:"""
-    text = await _gemini_call(prompt)
-    if not text:
-        return {"alignment_score": 0, "perceived_traits": [], "aligned": [], "lost": [], "unintended": []}
-    try:
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("```")[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.rsplit("```", 1)[0]
-        return json.loads(cleaned.strip())
-    except Exception as e:
-        logging.error(f"[BrandEquity] Parse identity-image failed: {e}")
-        return {"alignment_score": 0, "perceived_traits": [], "aligned": [], "lost": [], "unintended": []}
-
-
-async def _ai_master_insights(study: dict, agg: dict) -> List[dict]:
+async def _ai_master_insights(study: dict, agg: dict, build_only: bool = False):
     """Generate 5 actionable insights."""
     # The payload used to be `agg["questions"][:20]` serialised whole and then
     # sliced with `[:6000]`. Two consequences, both silent:
@@ -2475,7 +2795,8 @@ async def _ai_master_insights(study: dict, agg: dict) -> List[dict]:
                         for d in DIMENSIONS},
         "key_stats": picked,
     }
-    prompt = f"""คุณคือ senior brand strategist วิเคราะห์ข้อมูล Brand Health ด้านล่าง สร้าง 5 actionable insights แต่ละ insight มี:
+    prompt = f"""### งาน: ข้อเสนอแนะเชิงกลยุทธ์ (master insights)
+คุณคือ senior brand strategist วิเคราะห์ข้อมูล Brand Health ด้านล่าง สร้าง 5 actionable insights แต่ละ insight มี:
 - headline: 1 บรรทัด
 - evidence: เหตุผลโดยอ้างถึง stats (ระบุ qid)
 - recommendation: 1 action ที่ทำได้จริง
@@ -2484,26 +2805,134 @@ async def _ai_master_insights(study: dict, agg: dict) -> List[dict]:
 ข้อกำหนด: ใช้เฉพาะตัวเลขที่ปรากฏด้านล่าง ห้ามเดาหรือคำนวณเพิ่ม ·
 ครอบคลุมทั้ง 4 มิติเท่าที่มีข้อมูล · ถ้ามิติใดไม่อยู่ใน measured_dimensions
 หรือค่า reliability เป็น null ห้ามสรุปหนักแน่นเกี่ยวกับมิตินั้น ·
-ถ้า sample.level เป็น insufficient/provisional ให้ระบุความไม่แน่นอนไว้ใน evidence
+ถ้า sample.level เป็น insufficient/provisional ให้ระบุความไม่แน่นอนไว้ใน evidence ·
+ความต่างระหว่างแบรนด์/กลุ่มเป็นเชิงพรรณนา ห้ามเรียกว่า "มีนัยสำคัญ" ·
+BES เป็นดัชนีถ่วงน้ำหนัก ไม่ใช่ค่าที่วัดโดยตรง
 
 Data:
 {json.dumps(summary, ensure_ascii=False)}
-
-Return JSON array of 5 objects, no markdown:"""
-    text = await _gemini_call(prompt)
+"""
+    if build_only:
+        return prompt
+    part = BX.assemble_part("insights", BX.SECTION_TITLES_TH["insights"],
+                            [("insights", prompt)], _study_line(study, agg.get("total_responses") or 0))
+    text = await _gemini_call(part["prompt"], system=part["system_prompt"])
     if not text:
         return []
     try:
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("```")[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.rsplit("```", 1)[0]
-        return json.loads(cleaned.strip())
-    except Exception as e:
-        logging.error(f"[BrandEquity] Parse insights failed: {e}")
+        return BX.validate_insights(BX.split_sections(BX.extract_json(text), ["insights"])["insights"])
+    except ImportValidationError as e:
+        logging.error(f"[BrandEquity] Parse insights failed: {e.message} {e.errors}")
         return []
+
+
+async def _build_ai_parts(study: dict, responses: List[dict], agg: dict, *,
+                          sections=("coding", "themes", "identity", "insights"),
+                          merge: bool = True) -> Dict[str, Any]:
+    """The ONE builder for every be.ai_analyze prompt.
+
+    Returns {"parts": [...], "coding_units", "theme_units"}. With merge=True
+    (external use) tasks are packed into as few parts as fit the budget;
+    merge=False (system use) gives one part per task chunk. Either way each
+    task's text comes from the same block builder, so system and external
+    prompts cannot drift.
+    """
+    n = len(responses)
+    line = _study_line(study, n)
+    c_units = BX.coding_units(study, responses) if "coding" in sections else []
+    t_units = BX.theme_units(study, responses) if "themes" in sections else []
+    blocks: List[tuple] = []  # (section, text, splittable_group)
+    for chunk in BX.chunk_coding_units(c_units):
+        blocks.append(("coding", BX.coding_block(chunk, _brand_list(study),
+                                                 (study.get("brand") or {}).get("category", ""))))
+    for u in t_units:
+        blocks.append(("themes", BX.themes_block([u])))
+    if "identity" in sections:
+        items = BX.identity_inputs(study, responses)
+        if items:
+            blocks.append(("identity", BX.identity_block(
+                (study.get("brand") or {}).get("name") or "", (study.get("identity") or {}).get("traits") or [],
+                items)))
+    if "insights" in sections and n:
+        blocks.append(("insights", await _ai_master_insights(study, agg, build_only=True)))
+
+    groups: List[List[tuple]] = []
+    if merge:
+        cur: List[tuple] = []
+        size = 0
+        for sec, txt in blocks:
+            # Several theme questions may share a part; coding chunks are
+            # already budget-sized. Never put two blocks of the same coding
+            # chunk family past the budget.
+            if cur and size + len(txt) > BX.PART_CHAR_BUDGET:
+                groups.append(cur)
+                cur, size = [], 0
+            cur.append((sec, txt))
+            size += len(txt)
+        if cur:
+            groups.append(cur)
+    else:
+        groups = [[b] for b in blocks]
+
+    parts = []
+    for i, g in enumerate(groups, 1):
+        # Merge consecutive theme blocks into one themes block so the JSON
+        # carries one "themes" key per part.
+        merged: List[tuple] = []
+        for sec, txt in g:
+            if merged and merged[-1][0] == sec and sec in ("themes", "coding"):
+                merged[-1] = (sec, merged[-1][1] + "\n" + txt)
+            else:
+                merged.append((sec, txt))
+        title = " + ".join(BX.SECTION_TITLES_TH[s] for s in dict.fromkeys(s for s, _ in merged))
+        parts.append(BX.assemble_part(f"p{i}", title, merged, line))
+    return {"parts": parts, "coding_units": c_units, "theme_units": t_units}
+
+
+def _all_coding_units(study: dict, all_responses: List[dict]) -> List[dict]:
+    return BX.coding_units(study, all_responses)
+
+
+def _merge_open_coding(study: dict, codes: Dict[str, Dict[str, List[str]]], units: List[dict],
+                       source: str, model_label: str, by: Optional[str]) -> Dict[str, Any]:
+    """Return the study's new `open_coding` with `codes` merged in. Keys are
+    answer ids (hex), so Mongo field-name rules never bite on answer text."""
+    task_of = {u["qid"]: u["task"] for u in units}
+    oc = json.loads(json.dumps(study.get("open_coding") or {}))
+    now = _now_iso()
+    for qid, cmap in codes.items():
+        entry = oc.setdefault(qid, {"task": task_of.get(qid), "codes": {}, "sources": [],
+                                    "source_of": {}})
+        entry.setdefault("codes", {}).update(cmap)
+        entry.setdefault("source_of", {}).update({aid: source for aid in cmap})
+        srcs = set(entry.get("sources") or [])
+        srcs.add(source)
+        entry["sources"] = sorted(srcs)
+        entry["task"] = entry.get("task") or task_of.get(qid)
+        entry["updated_at"] = now
+        entry["updated_by"] = by
+        labels = dict(entry.get("model_labels") or {})
+        labels[source] = model_label
+        entry["model_labels"] = labels
+    return oc
+
+
+def _coding_status(study: dict, units: List[dict]) -> List[dict]:
+    oc = study.get("open_coding") or {}
+    out = []
+    for u in units:
+        codes = (oc.get(u["qid"]) or {}).get("codes") or {}
+        n_items = len(u["items"])
+        coded_items = sum(1 for it in u["items"] if it["id"] in codes)
+        n_ans = sum(it["n"] for it in u["items"])
+        coded_ans = sum(it["n"] for it in u["items"] if it["id"] in codes)
+        out.append({"question_id": u["qid"], "prompt": u["prompt"], "task": u["task"],
+                    "distinct_answers": n_items, "coded_distinct": coded_items,
+                    "answers": n_ans, "coded_answers": coded_ans,
+                    "coverage": round(coded_ans / n_ans, 3) if n_ans else 0.0,
+                    "sources": (oc.get(u["qid"]) or {}).get("sources") or [],
+                    "model_labels": (oc.get(u["qid"]) or {}).get("model_labels") or {}})
+    return out
 
 
 # ============ ROUTES FACTORY ============
@@ -2621,7 +3050,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             n = await db.brand_responses.count_documents({"study_id": sid})
             weights_sig = json.dumps(s.get("weights") or {}, sort_keys=True)
             cache = s.get("bes_cache") or {}
-            if cache.get("response_count") == n and cache.get("weights_sig") == weights_sig:
+            if (cache.get("response_count") == n and cache.get("weights_sig") == weights_sig
+                    and cache.get("schema_version") == BE_ANALYSIS_SCHEMA_VERSION):
                 out[sid] = cache.get("scores")
                 continue
             if n < 10:
@@ -2644,6 +3074,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             out[sid] = scores
             await db.brand_studies.update_one({"id": sid}, {"$set": {"bes_cache": {
                 "response_count": n, "weights_sig": weights_sig,
+                "schema_version": BE_ANALYSIS_SCHEMA_VERSION,
                 "scores": scores, "computed_at": _now_iso(),
             }}})
         return {"scores": out}
@@ -2692,7 +3123,14 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             new_th = data.brand.custom_quality_attributes or []
             old_th = (study.get("brand") or {}).get("custom_quality_attributes") or []
             old_en = (study.get("brand") or {}).get("custom_quality_attributes_en") or []
-            if new_th != old_th or len(old_en) != len(new_th):
+            supplied_en = [x for x in (data.brand.custom_quality_attributes_en or []) if x and x.strip()]
+            if supplied_en and len(supplied_en) == len([x for x in new_th if x and x.strip()]) \
+                    and supplied_en != old_en:
+                # The owner (or their own LLM, via the external prompt) supplied
+                # the English wording — it used to be silently overwritten by a
+                # fresh system-LLM translation.
+                data.brand.custom_quality_attributes_en = supplied_en
+            elif new_th != old_th or len(old_en) != len(new_th):
                 data.brand.custom_quality_attributes_en = await _translate_attrs_to_en(new_th)
             else:
                 data.brand.custom_quality_attributes_en = old_en
@@ -2751,11 +3189,16 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         if not _owns(current_user, study):
             raise HTTPException(403)
         brand = BrandSetup(**study["brand"])
-        identity = IdentitySetup(**study["identity"])
-        # Ensure custom attrs have EN translation (lazy backfill for old studies)
+        # Ensure custom attrs have EN translation (lazy backfill for old studies).
+        # The questionnaire itself is template-built (no LLM); the translation
+        # is optional and skipped when the admin has the system LLM off.
         if brand.custom_quality_attributes and not brand.custom_quality_attributes_en:
             brand.custom_quality_attributes_en = await _translate_attrs_to_en(brand.custom_quality_attributes)
+        return await _regenerate_and_store(study, brand, current_user)
 
+    async def _regenerate_and_store(study: dict, brand: "BrandSetup", current_user) -> dict:
+        study_id = study["id"]
+        identity = IdentitySetup(**study["identity"])
         old_questions = study.get("questions") or []
         new_questions = _generate_questions_from_template(brand, identity)
         # HYBRID HISTORY MERGE — preserve ids of unchanged questions so prior
@@ -2944,6 +3387,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         Used by the wizard BEFORE study creation. Owner just merges result into draft."""
         if not (payload.description or payload.visual_assets or payload.traits):
             raise HTTPException(400, "Provide description, traits, or at least 1 visual asset")
+        await _require_system_llm("be.visual_identity", current_user)
         derived = await _ai_extract_visual_identity(
             brand_name=payload.brand_name,
             category=payload.category or "",
@@ -2969,6 +3413,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         ident = study.get("identity", {}) or {}
         if not (ident.get("description") or ident.get("visual_assets")):
             raise HTTPException(400, "Provide identity.description or identity.visual_assets first")
+        await _require_system_llm("be.visual_identity", current_user)
         brand = study.get("brand", {}) or {}
         derived = await _ai_extract_visual_identity(
             brand_name=brand.get("name", ""),
@@ -2981,6 +3426,12 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         )
         if not derived:
             raise HTTPException(502, "AI extraction returned no result. Check description/images and try again.")
+        return await _store_visual_identity(study_id, ident, derived,
+                                            source="system", model_label=SYSTEM_MODEL_LABEL,
+                                            user=current_user)
+
+    async def _store_visual_identity(study_id: str, ident: dict, derived: dict, *,
+                                     source: str, model_label: str, user) -> dict:
         # Merge derived back into identity (don't overwrite explicit traits unless empty)
         new_traits = list(dict.fromkeys((ident.get("traits") or []) + (derived.get("derived_traits") or [])))
         update = {
@@ -2990,6 +3441,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "identity.ai_summary": derived.get("summary") or "",
             "identity.archetype": derived.get("archetype") or ident.get("archetype"),
             "identity.traits": new_traits[:12],
+            "identity.ai_source": {"source": source, "model_label": model_label,
+                                   "at": _now_iso(), "by": getattr(user, "email", None)},
             "updated_at": _now_iso(),
         }
         await db.brand_studies.update_one({"id": study_id}, {"$set": update})

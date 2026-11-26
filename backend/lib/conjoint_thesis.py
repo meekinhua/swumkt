@@ -398,10 +398,11 @@ def wtp_table_markdown(wtp: Optional[Dict], table_no: List[int]) -> str:
         else:
             rows.append([l["attribute"], l["level"], fmt_num(l["wtp"], 2), fmt_num(l.get("se_delta"), 2),
                          f"[{fmt_num(l['ci_low'], 2)}, {fmt_num(l['ci_high'], 2)}]"])
+    p_txt = fmt_p(wtp.get("price_p_value"))
+    p_txt = p_txt if p_txt.startswith("<") else f"= {p_txt}"
     out = [f"[ตาราง 4.{table_no[0]}: ความเต็มใจจ่าย (WTP) เทียบกับระดับอ้างอิง — หน่วยเดียวกับ {wtp.get('price_attribute_name')}]",
            md_table(["คุณลักษณะ", "ระดับ", "WTP", "SE (delta)", "95% CI (Krinsky–Robb)"], rows),
-           f"_หมายเหตุ. WTP = −β/β_ราคา; β_ราคา = {fmt_num(wtp.get('price_coefficient'), 4)} "
-           f"(p {fmt_p(wtp.get('price_p_value')) if fmt_p(wtp.get('price_p_value')).startswith('<') else '= ' + fmt_p(wtp.get('price_p_value'))})_"]
+           f"_หมายเหตุ. WTP = −β/β_ราคา; β_ราคา = {fmt_num(wtp.get('price_coefficient'), 4)} (p {p_txt})_"]
     for w in wtp.get("warnings_th", []) or []:
         out.append(f"_{w}_")
     out.append("")
