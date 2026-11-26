@@ -2940,6 +2940,15 @@ def _coding_status(study: dict, units: List[dict]) -> List[dict]:
 def get_brand_equity_routes(db, get_current_user, get_optional_user):
     """Factory — register routes with DB + auth deps."""
 
+    # Roles compared by VALUE: `from server import UserRole` inside a route
+    # makes the route unusable wherever server.py cannot be imported (tests,
+    # CLI), and the enum is a str subclass anyway.
+    _THESIS_ROLES = {"admin", "current_student", "alumni"}
+
+    def _role(u) -> str:
+        r = getattr(u, "role", None) if not isinstance(u, dict) else u.get("role")
+        return str(getattr(r, "value", r) or "")
+
     # ---- ownership helpers ----------------------------------------------
     def _is_admin(u) -> bool:
         return getattr(u, "role", None) == "admin"
@@ -3924,10 +3933,15 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         chapters: List[int], extra_prompt: str,
         from_iso: Optional[str], to_iso: Optional[str],
         segments: Optional[Dict[str, List[str]]],
+        user=None,
     ):
         """Background task: build per-chapter prompts → call Gemini → cache markdown."""
         from .be_thesis_ai import build_be_thesis_prompts, references_section_md
         try:
+            # Re-check in the job's own context (the policy may have been
+            # flipped between the click and the run) — this also carries the
+            # grant for the central guard.
+            await _require_system_llm("be.thesis", user)
             study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
             if not study:
                 await db.brand_thesis_jobs.update_one(
@@ -3959,8 +3973,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 chapters=sorted(chapters), extra_prompt=extra_prompt,
             )
 
-            # Lazy import — server.py owns the Gemini retry helper
-            from server import _call_gemini_with_retry
+            # The helper lives in routes/conjoint.py. It used to be imported
+            # `from server import ...`, a name server.py no longer defines since
+            # the conjoint module was split out — so EVERY Brand Equity AI thesis
+            # job died with ImportError and was recorded as failed.
+            from .conjoint import _call_gemini_with_retry
 
             chapter_outputs: Dict[int, str] = {}
             for ch in sorted(prompts.keys()):
@@ -3976,7 +3993,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                     prompt=prompts[ch],
                     session_id=f"be-thesis-ch{ch}-{study_id}-{job_id}",
                 )
-                chapter_outputs[ch] = content or ""
+                if not (content or "").strip():
+                    # Never record "ready" with an empty chapter.
+                    raise RuntimeError(f"AI ไม่ได้ส่งเนื้อหาบทที่ {ch} กลับมา — กรุณาลองใหม่")
+                chapter_outputs[ch] = content
 
             # Stitch markdown — chapter break = ---
             # (server's `_create_thesis_docx` treats `---` as page-break)
@@ -4000,6 +4020,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                     "chapters": sorted(chapters),
                     "n_filtered": len(filtered),
                     "n_total": len(all_resp),
+                    "filter": {"from": from_iso, "to": to_iso, "segments": segments or {}},
+                    "source": "system",
+                    "model_label": SYSTEM_MODEL_LABEL,
                     "created_at": _now_iso(),
                 }},
                 upsert=True,
@@ -4018,6 +4041,14 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                           "error": "AI ใช้เวลานานเกินไป กรุณาลองใหม่"}},
             )
         except Exception as e:
+            if _is_policy_refusal(e):
+                d = _policy_detail(e, "be.thesis")
+                await db.brand_thesis_jobs.update_one(
+                    {"job_id": job_id},
+                    {"$set": {"status": "failed", "error": d.get("message"),
+                              "error_code": "llm_external_only", "error_detail": d}},
+                )
+                return
             logging.exception(f"[BE-Thesis] job {job_id} failed: {e}")
             await db.brand_thesis_jobs.update_one(
                 {"job_id": job_id},
@@ -4035,9 +4066,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         current_user=Depends(get_current_user),
     ):
         """Kick off a Gemini-powered thesis generation. Returns job_id for polling."""
-        from server import UserRole
-        eligible_roles = {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}
-        if not current_user or current_user.role not in eligible_roles:
+        if not current_user or _role(current_user) not in _THESIS_ROLES:
             raise HTTPException(403, "Thesis export not available for your role.")
 
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
@@ -4086,6 +4115,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             return {"status": "ready", "job_id": cache_key,
                     "cache_key": cache_key, "cached": True}
 
+        # Admin switch: refuse BEFORE a job exists (cached results above stay
+        # readable whatever the switch says).
+        await _require_system_llm("be.thesis", current_user)
+
         job_id = f"be_thesis_{study_id[:8]}_{uuid.uuid4().hex[:8]}"
         await db.brand_thesis_jobs.update_one(
             {"job_id": job_id},
@@ -4105,7 +4138,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             _run_be_thesis_ai_generation,
             study_id, job_id, cache_key,
             chapters, request.extra_prompt or "",
-            from_iso, to_iso, seg_filter,
+            from_iso, to_iso, seg_filter, current_user,
         )
         return {"status": "processing", "job_id": job_id, "cache_key": cache_key}
 
@@ -4115,8 +4148,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         current_user=Depends(get_current_user),
     ):
         """Poll job status. Returns status + progress (chapter_X) + error."""
-        from server import UserRole
-        if current_user.role not in {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}:
+        if _role(current_user) not in _THESIS_ROLES:
             raise HTTPException(403)
 
         # If job_id IS a cache_key (cache hit path), short-circuit to ready
@@ -4135,6 +4167,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "progress": job.get("progress"),
             "cache_key": job.get("cache_key"),
             "error": job.get("error"),
+            "error_code": job.get("error_code"),
+            "error_detail": job.get("error_detail"),
         }
 
     @brand_equity_router.get("/studies/{study_id}/thesis-ai-download")
@@ -4145,8 +4179,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     ):
         """Download the generated DOCX (renders cached markdown via shared docx engine)."""
         from fastapi.responses import Response
-        from server import UserRole
-        if current_user.role not in {UserRole.ADMIN, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}:
+        if _role(current_user) not in _THESIS_ROLES:
             raise HTTPException(403)
 
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
@@ -4162,7 +4195,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         if not cached or not cached.get("ai_content"):
             raise HTTPException(404, "ยังไม่มีเนื้อหาวิทยานิพนธ์ — กรุณาสร้างก่อน")
 
-        ai_md = cached["ai_content"]
+        from .be_thesis_ai import ai_use_disclosure_md
+        # AI-use disclosure (names the tool) — required on every document that
+        # contains AI-written text, whichever LLM wrote it.
+        ai_md = ai_use_disclosure_md(cached.get("model_label") or SYSTEM_MODEL_LABEL,
+                                     cached.get("source") or "system") + "\n\n" + cached["ai_content"]
         respondent_count = cached.get("n_filtered", 0)
         title = study.get("brand", {}).get("name") or "Brand"
         logging.info(f"[BE-Thesis-DL] cache_key={cache_key[:60]} ai_md_len={len(ai_md or '')}")
@@ -4190,7 +4227,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         # Render base DOCX from AI markdown — this is the CRITICAL step.
         # If THIS fails we cannot serve anything, so do NOT swallow that error.
         try:
-            from server import _create_thesis_docx
+            # Lives in routes/conjoint.py; `from server import` no longer works.
+            from .conjoint import _create_thesis_docx
             base_bytes = await asyncio.to_thread(
                 _create_thesis_docx, title, respondent_count, ai_md_clean,
             )
@@ -4208,8 +4246,13 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             all_responses = await db.brand_responses.find(
                 {"study_id": study_id}, {"_id": 0}
             ).to_list(5000)
+            # Same slice as the chapters: the appendix used to be computed on the
+            # WHOLE sample while the chapters cited the filtered numbers.
+            flt = cached.get("filter") or {}
+            sliced = _apply_response_filter(all_responses, from_iso=flt.get("from"),
+                                            to_iso=flt.get("to"), segments=flt.get("segments") or {})
             agg_for_appendix = _aggregate_responses(
-                study, all_responses,
+                study, sliced,
                 normalized=(study.get("ai_cache") or {}).get("normalized_by_question") or {},
             )
             from .be_thesis_appendix import enrich_thesis_docx
