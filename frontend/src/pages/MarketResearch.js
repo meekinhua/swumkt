@@ -517,7 +517,7 @@ const MarketResearch = () => {
 
           <div role="tabpanel" className="mt-6 border border-black/15 bg-white p-5 sm:p-8" data-testid={`mr-role-panel-${role}`}>
             <p className="max-w-3xl text-base leading-relaxed text-[#2B2B2B]">{roleCfg.intro}</p>
-            <ol className="mt-6 grid grid-cols-1 gap-px bg-black/15 sm:grid-cols-2 lg:grid-cols-4">
+            <ol className={`mt-6 grid grid-cols-1 gap-px bg-black/15 sm:grid-cols-2 ${roleCfg.steps.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
               {roleCfg.steps.map((s, i) => (
                 <li key={s.t} className="flex flex-col gap-2 bg-[#F4F0EA] p-5">
                   <span className="font-mono text-xs font-bold text-[#C8102E]">{String(i + 1).padStart(2, '0')}</span>

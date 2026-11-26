@@ -44,7 +44,11 @@ const RegisterPage = () => {
 
       await register(data);
       toast.success(t('common.success'));
-      navigate('/dashboard');
+      {
+        // Return to the page that sent the user here (same-origin paths only).
+        const r = new URLSearchParams(window.location.search).get('redirect');
+        navigate(r && r.startsWith('/') && !r.startsWith('//') && !r.startsWith('/\\') ? r : '/dashboard');
+      }
     } catch (error) {
       console.error('Register error:', error);
       toast.error(error.response?.data?.detail || t('common.error'));

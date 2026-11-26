@@ -159,7 +159,7 @@ const AlumniLandingPage = () => {
 
         <div style={{ background: 'var(--al-ink)', color: 'white', borderRadius: 28, padding: 'clamp(24px, 5vw, 44px)', marginBottom: 48 }} data-testid="landing-privacy">
           <div className="al-eyebrow" style={{ color: 'rgba(255,255,255,0.65)', marginBottom: 10 }}>เรื่องข้อมูลส่วนตัว</div>
-          <h2 style={{ fontSize: 'clamp(22px, 4vw, 30px)', lineHeight: 1.2, margin: '0 0 12px', fontWeight: 700 }}>
+          <h2 style={{ fontSize: 'clamp(22px, 4vw, 30px)', lineHeight: 1.2, margin: '0 0 12px', fontWeight: 700, color: 'white' }}>
             คนที่ยังไม่ลงทะเบียน เราเก็บแค่ชื่อเล่นกับรุ่น
           </h2>
           <p style={{ margin: 0, maxWidth: 640, lineHeight: 1.7, color: 'rgba(255,255,255,.85)' }}>

@@ -4,8 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, Modal, useToast } from './AlumniUI';
 import ActivityStream from './ActivityStream';
-import { api, errMsg, errCode, statusOf, STATUS, shortName } from './alumniApi';
-import { StatusBadge, StatusLegend, useGaps, GapPanel, AddPersonForm, HistoryModal, attachNodeFor, NextUpCard } from './LineKit';
+import { api, errMsg, errCode, statusOf, shortName } from './alumniApi';
+import { StatusBadge, StatusLegend, useGaps, GapPanel, AddPersonForm, HistoryModal, attachNodeFor } from './LineKit';
 import { PendingClaims, GhostClaimApprovals, VouchQueue } from './ConfirmQueue';
 import { Leaderboards, Meetups } from './LineCommunity';
 import './alumni-styles.css';
@@ -560,5 +560,3 @@ const AlumniTreePage = () => {
 };
 
 export default AlumniTreePage;
-// re-exported for pages that want the same hand-off card
-export { NextUpCard };

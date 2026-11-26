@@ -95,7 +95,7 @@ export const BeSummary = ({
 
         <section className="be-card be-summary-card" aria-labelledby="be-sum-2" data-testid="be-summary-solid">
           <h3 id="be-sum-2" className="be-eyebrow"><span className="be-dot-sm" style={{ background: 'var(--be-blue)' }}/>ตัวอย่างเชื่อถือได้แค่ไหน</h3>
-          <ul className="be-small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.75 }}>
+          <ul className="be-small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.75, listStyle: 'disc' }}>
             <li>ผู้ตอบ <b>n = {nFiltered}</b>{nTotal != null && nTotal !== nFiltered ? ` (จาก ${nTotal} คนทั้งหมด${filterActive ? ' · กำลังกรองอยู่' : ''})` : ''}
               {targetN ? ` · เป้า ${targetN} (${fmtPct(nFiltered / targetN * 100)})` : ''}</li>
             {adeq?.moe_95_pct != null && (
@@ -119,7 +119,7 @@ export const BeSummary = ({
           {steps.length === 0 ? (
             <p className="be-small be-muted">ไม่มีสิ่งที่ต้องแก้ด่วน — ดูรายละเอียดรายมิติด้านล่าง</p>
           ) : (
-            <ol className="be-small" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.65 }}>
+            <ol className="be-small" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.65, listStyle: 'decimal' }}>
               {steps.slice(0, 4).map((s) => (
                 <li key={s.k} data-testid={`be-next-${s.k}`} style={{ marginBottom: 6 }}>
                   {s.text}

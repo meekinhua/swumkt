@@ -18,6 +18,7 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
         <div className="be-resp-likert" data-testid={`be-resp-q-${q.id}`}>
           {Array.from({ length: max }, (_, i) => i + 1).map(n => (
             <button key={n} className={value === n ? 'sel' : ''} onClick={() => onChange(n)}
+                    aria-pressed={value === n} aria-label={`${n} จาก ${max}`}
                     data-testid={`be-resp-likert-${q.id}-${n}`}>
               {n}
             </button>
@@ -36,6 +37,7 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
         <div className="be-resp-nps-grid" data-testid={`be-resp-q-${q.id}`}>
           {Array.from({ length: 11 }, (_, i) => i).map(n => (
             <button key={n} className={value === n ? 'sel' : ''} onClick={() => onChange(n)}
+                    aria-pressed={value === n} aria-label={`${n} จาก 10`}
                     data-testid={`be-resp-nps-${q.id}-${n}`}>{n}</button>
           ))}
         </div>
@@ -73,6 +75,8 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
       <div className="be-resp-mcq" data-testid={`be-resp-q-${q.id}`}>
         {opts.map((opt, idx) => (
           <div key={opt} className={'be-resp-mcq-opt ' + (value === opt ? 'sel' : '')}
+               role="radio" aria-checked={value === opt} tabIndex={0}
+               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChange(opt); } }}
                onClick={() => onChange(opt)} data-testid={`be-resp-mcq-${q.id}-${opt}`}>
             <div className="check">{value === opt && <Icon name="check" size={10}/>}</div>
             <span>{optsLocalized[idx] || opt}</span>
@@ -93,6 +97,8 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
           const sel = arr.includes(opt);
           return (
             <div key={opt} className={'be-resp-mcq-opt ' + (sel ? 'sel' : '')}
+                 role="checkbox" aria-checked={sel} tabIndex={0}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChange(sel ? arr.filter(x => x !== opt) : [...arr, opt]); } }}
                  onClick={() => onChange(sel ? arr.filter(x => x !== opt) : [...arr, opt])}
                  data-testid={`be-resp-mcq-${q.id}-${opt}`}>
               <div className="check">{sel && <Icon name="check" size={10}/>}</div>
@@ -117,6 +123,8 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
             const sel = arr.includes(opt);
             return (
               <div key={opt} className={'be-resp-trait ' + (sel ? 'sel' : '')}
+                   role="checkbox" aria-checked={sel} tabIndex={0}
+                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !sel && arr.length < max) { e.preventDefault(); onChange([...arr, opt]); } else if ((e.key === 'Enter' || e.key === ' ') && sel) { e.preventDefault(); onChange(arr.filter(x => x !== opt)); } }}
                    onClick={() => {
                      if (sel) onChange(arr.filter(x => x !== opt));
                      else if (arr.length < max) onChange([...arr, opt]);
@@ -269,6 +277,8 @@ const BrandEquityRespondentPage = () => {
   const tx = (q, base) => (lang === 'en' ? q[base + '_en'] : q[base + '_th']) || q[base];
 
   useEffect(() => { loadStudy(); /* eslint-disable-next-line */ }, [token]);
+  // A new screen should start at the top (it used to keep the previous scroll position on phones).
+  useEffect(() => { try { window.scrollTo({ top: 0 }); } catch { /* ignore */ } }, [section]);
 
   const loadStudy = async () => {
     setLoading(true);
@@ -325,7 +335,8 @@ const BrandEquityRespondentPage = () => {
           <div className="be-card" style={{ marginTop: 60, textAlign: 'center' }}>
             <div className="be-eyebrow" style={{ color: 'var(--be-red)' }}>SURVEY UNAVAILABLE</div>
             <div className="be-h3" style={{ marginTop: 14 }}>{error}</div>
-            <div className="be-muted be-small" style={{ marginTop: 10 }}>กรุณาติดต่อผู้ส่ง link</div>
+            <div className="be-muted be-small" style={{ marginTop: 10 }}>กรุณาติดต่อผู้ส่ง link หรือลองโหลดใหม่</div>
+            <button type="button" className="be-btn" style={{ marginTop: 14 }} onClick={() => { setError(''); loadStudy(); }}>ลองอีกครั้ง</button>
           </div>
         </div>
       </div>
