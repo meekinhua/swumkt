@@ -90,9 +90,9 @@ const AlumniTriviaPage = () => {
           <div className="al-card al-card-pad" style={{ textAlign: 'center', padding: 60 }} data-testid="trivia-empty">
             <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
             <h2 className="al-h-card" style={{ marginBottom: 8 }}>ยังไม่มีคนในสายของคุณมากพอ</h2>
-            <p className="al-muted" style={{ marginBottom: 20 }}>เริ่มต้นด้วยการ Mark พี่ take ของคุณก่อน</p>
+            <p className="al-muted" style={{ marginBottom: 20 }}>เริ่มต้นด้วยการ Mark พี่เทค ของคุณก่อน</p>
             <button className="al-btn al-btn-red" onClick={() => navigate('/alumni/tree')} data-testid="trivia-goto-tree-btn">
-              ไปที่สายตระกูล <Icon name="arrow-right" size={14} />
+              ไปที่สายสายเทค <Icon name="arrow-right" size={14} />
             </button>
           </div>
         )}

@@ -219,7 +219,7 @@ const AlumniFeedPage = () => {
     <AlumniLayout>
       <div className="al-page al-fade-in" style={{ maxWidth: 1100 }} data-testid="alumni-feed-page">
         <div style={{ marginBottom: 22 }}>
-          <div className="al-eyebrow" style={{ marginBottom: 6 }}>· ฟีดของสายตระกูล ·</div>
+          <div className="al-eyebrow" style={{ marginBottom: 6 }}>· ฟีดของสายสายเทค ·</div>
           <h1 className="al-h-section" style={{ fontSize: 32 }}>กิจกรรมของรุ่น 📰</h1>
         </div>
 
@@ -250,7 +250,7 @@ const AlumniFeedPage = () => {
                 cursor: 'pointer', border: 'none', textAlign: 'left', color: 'var(--al-mute)',
               }}>
               <Avatar name={user.full_name || user.email} hue={210} size="md" src={user.avatar_url} />
-              <span style={{ flex: 1, fontSize: 14 }}>มีอะไรอยากบอกตระกูลไหม?</span>
+              <span style={{ flex: 1, fontSize: 14 }}>มีอะไรอยากบอกสายเทคไหม?</span>
               <Chip tone="red" icon="sparkles">+5 XP</Chip>
             </button>
           ) : (
@@ -285,7 +285,7 @@ const AlumniFeedPage = () => {
           <div className="al-card al-card-pad" style={{ textAlign: 'center', padding: 60 }} data-testid="feed-empty">
             <div style={{ fontSize: 40, marginBottom: 12 }}>🌱</div>
             <h3 className="al-h-card" style={{ marginBottom: 6 }}>ยังไม่มีโพสต์</h3>
-            <p className="al-muted al-small">เป็นคนแรกที่โพสต์ให้ตระกูลกัน</p>
+            <p className="al-muted al-small">เป็นคนแรกที่โพสต์ให้สายเทคกัน</p>
           </div>
         )}
         {posts.map(p => (

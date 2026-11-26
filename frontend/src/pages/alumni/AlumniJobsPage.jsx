@@ -49,7 +49,7 @@ const PostJobModal = ({ open, onClose, token, onPosted }) => {
       <div data-testid="post-job-modal">
         <h3 className="al-h-card" style={{ fontSize: 22, marginBottom: 4 }}>ลงประกาศงาน</h3>
         <p className="al-small al-muted" style={{ marginBottom: 18 }}>
-          แชร์ตำแหน่งให้ตระกูล · เพื่อ refer หรือชวนน้องเข้ามา
+          แชร์ตำแหน่งให้สายเทค · เพื่อ refer หรือชวนน้องเข้ามา
         </p>
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
@@ -228,7 +228,7 @@ const AlumniJobsPage = () => {
       <div className="al-page al-fade-in" style={{ maxWidth: 920 }} data-testid="alumni-jobs-page">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 22, gap: 12, flexWrap: 'wrap' }}>
           <div>
-            <div className="al-eyebrow" style={{ marginBottom: 6 }}>· งานในเครือข่ายตระกูล ·</div>
+            <div className="al-eyebrow" style={{ marginBottom: 6 }}>· งานในเครือข่ายสายเทค ·</div>
             <h1 className="al-h-section" style={{ fontSize: 32 }}>Jobs Board 💼</h1>
           </div>
           <button className="al-btn al-btn-red" onClick={() => setPostModal(true)} data-testid="jobs-post-btn">
@@ -256,7 +256,7 @@ const AlumniJobsPage = () => {
           <div className="al-card al-card-pad" style={{ textAlign: 'center', padding: 60 }} data-testid="jobs-empty">
             <div style={{ fontSize: 40, marginBottom: 12 }}>💼</div>
             <h3 className="al-h-card" style={{ marginBottom: 6 }}>ยังไม่มีประกาศงาน</h3>
-            <p className="al-muted al-small">เป็นคนแรกที่ลงประกาศ — ตระกูลของคุณจะได้รับแจ้ง</p>
+            <p className="al-muted al-small">เป็นคนแรกที่ลงประกาศ — สายเทคของคุณจะได้รับแจ้ง</p>
           </div>
         )}
         <div style={{ display: 'grid', gap: 14 }}>
