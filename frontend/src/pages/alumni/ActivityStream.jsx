@@ -29,7 +29,7 @@ const formatTime = (iso) => {
   } catch { return ''; }
 };
 
-const ActivityStream = ({ token, scope = 'tree', limit = 20, compact = false, title = 'ความเคลื่อนไหวของตระกูล', refreshInterval = 60000 }) => {
+const ActivityStream = ({ token, scope = 'tree', limit = 20, compact = false, title = 'ความเคลื่อนไหวของสายเทค', refreshInterval = 60000 }) => {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);

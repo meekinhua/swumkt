@@ -104,8 +104,12 @@ def env():
     try:
         # A fresh router: the module-level APIRouter would otherwise collect
         # duplicate routes if another test module already ran the factory.
+        # Restored afterwards so a later import of the real server registers its
+        # routes on a clean router instead of behind these test-auth routes.
+        original_router = CJ.conjoint_router
         CJ.conjoint_router = CJ.APIRouter(tags=["conjoint"])
         router = CJ.get_conjoint_routes(client_db, get_current_user, get_current_user_optional)
+        CJ.conjoint_router = original_router
     finally:
         if saved is not None:
             sys.modules["server"] = saved

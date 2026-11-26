@@ -661,6 +661,7 @@ const CmsEditorPage = () => {
           </Card>
         </div>
       </div>
+      {ext.dialog}
     </div>
   );
 };

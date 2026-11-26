@@ -287,3 +287,6 @@
   .al-bottom-nav button { font-size: 10px; padding: 8px 2px; }
   .al-topnav .al-brand-name em { display: none; }
 }
+@media (max-width: 560px) {
+  .al-notif-dd { position: fixed !important; top: 58px !important; left: 12px !important; right: 12px !important; width: auto !important; }
+}

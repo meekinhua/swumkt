@@ -141,12 +141,12 @@ export const useToast = () => {
     show,
     node: msg ? (
       <div style={{
-        position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+        position: 'fixed', bottom: 84, left: '50%', maxWidth: 'calc(100vw - 32px)', transform: 'translateX(-50%)',
         background: 'var(--al-ink)', color: 'white', padding: '12px 18px', borderRadius: 12,
         boxShadow: 'var(--al-shadow-lg)', zIndex: 100,
         fontSize: 14, display: 'flex', alignItems: 'center', gap: 10,
         animation: 'al-fade .2s ease-out both',
-      }} data-testid="alumni-toast">
+      }} data-testid="alumni-toast" role="status" aria-live="polite">
         <Icon name="check" size={16} /> {msg}
       </div>
     ) : null,

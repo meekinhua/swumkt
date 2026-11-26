@@ -67,7 +67,8 @@ export const attachNodeFor = (gaps, slot, me) => {
 };
 
 // ---------- share ----------
-export const SharePanel = ({ invite, revealGame, inviterName, onToast, heading }) => {
+export const SharePanel = ({ invite, revealGame, inviterName, onToast, heading, ids = {} }) => {
+  const tid = { url: 'share-url', copy: 'share-copy-btn', line: 'share-line-btn', native: 'share-native-btn', ...ids };
   const url = absUrl(invite.share_url);
   const text = revealGame
     ? `มีคนในสายเทคของคุณชวนมาต่อสาย 🌳 ลองทายดูสิว่าใคร! เปิดดูได้เลย: ${url}`
@@ -90,7 +91,7 @@ export const SharePanel = ({ invite, revealGame, inviterName, onToast, heading }
           <QRCodeSVG value={url} size={104} level="M" />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div className="al-mono" data-testid="share-url" style={{
+          <div className="al-mono" data-testid={tid.url} style={{
             padding: '8px 10px', background: 'var(--al-paper-2)', borderRadius: 10, fontSize: 12, wordBreak: 'break-all', marginBottom: 8,
           }}>{url}</div>
           {revealGame && (
@@ -99,14 +100,14 @@ export const SharePanel = ({ invite, revealGame, inviterName, onToast, heading }
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <a className="al-btn al-btn-red" href={lineShareUrl(text)} target="_blank" rel="noopener noreferrer" data-testid="share-line-btn">
+        <a className="al-btn al-btn-red" href={lineShareUrl(text)} target="_blank" rel="noopener noreferrer" data-testid={tid.line}>
           <Icon name="message" size={14} /> ส่งทาง LINE
         </a>
-        <button className="al-btn al-btn-outline" onClick={copy} data-testid="share-copy-btn">
+        <button className="al-btn al-btn-outline" onClick={copy} data-testid={tid.copy}>
           <Icon name="link" size={14} /> คัดลอกลิงก์
         </button>
         {canNativeShare && (
-          <button className="al-btn al-btn-outline" onClick={nativeShare} data-testid="share-native-btn">
+          <button className="al-btn al-btn-outline" onClick={nativeShare} data-testid={tid.native}>
             <Icon name="share" size={14} /> แชร์...
           </button>
         )}

@@ -25,9 +25,10 @@ import { useLlmPolicy } from '@/hooks/useLlmPolicy';
  * backend/routes/*.py). Time figures are rough planning guidance, labelled so.
  *
  * `aiKeys`  = feature keys (memory/LLM_EXTERNAL_CONTRACT.md) of the tool's AI actions.
- * `aiPath`  = 'external' when every AI action has a copy-prompt/paste-answer path
- *             (so it still works when the admin switches the system LLM off);
- *             'system' when AI actions need the system LLM; undefined = no AI.
+ * `aiPath`  = 'external' when the tool's main AI actions have a copy-prompt / paste-answer path
+ *             (so it still works when the admin switches the system LLM off — see
+ *             memory/LLM_EXTERNAL_CONTRACT.md; `aiNote` names the exceptions, e.g. images);
+ *             'system' when the AI actions need the system LLM; undefined = no AI.
  */
 
 const STATUS = {
@@ -74,7 +75,8 @@ const GROUPS = [
         thesisYes: false,
         needsRespondents: false,
         aiKeys: ['cv.ai', 'cv.image'],
-        aiPath: 'system',
+        aiPath: 'external',
+        aiNote: 'ภาพจำลอง: ถ้า AI ของระบบปิด จะได้พรอมต์ไปใช้กับเครื่องมือสร้างภาพของคุณเอง (ไม่มีการนำภาพกลับเข้าระบบ)',
         status: 'ready',
         path: '/market-research/customer-value',
         cta: 'เปิด Customer Value Lab',
@@ -117,7 +119,8 @@ const GROUPS = [
         thesisYes: false,
         needsRespondents: false,
         aiKeys: ['perception.ai', 'perception.image'],
-        aiPath: 'system',
+        aiPath: 'external',
+        aiNote: 'ภาพประกอบต้องใช้ AI ของระบบ',
         status: 'partial',
         partialNote: 'Phase 1 (เชิงคุณภาพ) ใช้ได้ · Phase 2 (เชิงปริมาณ) ยังไม่เปิด',
         path: '/market-research/customer-perception',
@@ -143,7 +146,8 @@ const GROUPS = [
         thesisYes: false,
         needsRespondents: true,
         aiKeys: ['journey.ai'],
-        aiPath: 'system',
+        aiPath: 'external',
+        aiNote: 'ส่วนเชิงปริมาณไม่ใช้ AI',
         status: 'ready',
         path: '/market-research/customer-journey',
         cta: 'เปิด Customer Journey',
@@ -162,6 +166,7 @@ const GROUPS = [
         needsRespondents: false,
         aiKeys: ['behavior.ai', 'behavior.image'],
         aiPath: 'external',
+        aiNote: 'ภาพประกอบต้องใช้ AI ของระบบ',
         status: 'ready',
         path: '/market-research/customer-behavior',
         cta: 'เปิด Customer Behavior',
@@ -430,9 +435,10 @@ const MarketResearch = () => {
     if (policyLoading || !policy) return null;
     const anySystem = tool.aiKeys.some((k) => systemAllowed(k));
     if (tool.aiPath === 'external') {
+      const note = tool.aiNote ? ` · ${tool.aiNote}` : '';
       return anySystem
-        ? 'ใช้ AI ของระบบ หรือคัดลอกพรอมต์ไปใช้กับ AI ของคุณเอง (ChatGPT / Claude / Gemini) ก็ได้'
-        : 'AI ของระบบปิดอยู่ — ใช้ AI ของคุณเองผ่านพรอมต์ที่ระบบสร้างให้';
+        ? `ใช้ AI ของระบบ หรือคัดลอกพรอมต์ไปใช้กับ AI ของคุณเอง (ChatGPT / Claude / Gemini) ก็ได้${note}`
+        : `AI ของระบบปิดอยู่ — ใช้ AI ของคุณเองผ่านพรอมต์ที่ระบบสร้างให้${note}`;
     }
     return anySystem
       ? `มีส่วนที่ใช้ AI ของระบบ${tool.aiNote ? ` · ${tool.aiNote}` : ''}`

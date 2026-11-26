@@ -7,6 +7,8 @@ import { youtubeId } from '../../components/SlideMedia';
 import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { apiErrorText } from '@/lib/apiError';
 import { useAiGate } from '@/components/AiPolicyNote';
+import { useExternalDialog } from '@/hooks/useExternalDialog';
+import { withBodyKey } from '@/lib/aiTextParse';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -34,6 +36,12 @@ const CmsLandingPage = () => {
   const [genIdx, setGenIdx] = useState(-1);
   const [pickGenLoading, setPickGenLoading] = useState(false);
   const imageOff = useAiGate('cms.image').blocked;
+  const ext = useExternalDialog();
+  // Images: the user gets the prompt for their own image tool, then uploads the picture with the normal upload button.
+  const imagePromptDialog = (prompt, aspect) => ext.open({
+    title: 'พรอมต์สร้างภาพ — ใช้กับเครื่องมือสร้างภาพของคุณ แล้วอัปโหลดภาพด้วยปุ่ม Upload',
+    promptRequest: { method: 'POST', url: withBodyKey(`${API}/cms/ai/generate-image/external-prompt`, { prompt, aspect }), data: { prompt, aspect } },
+  });
   const [articlesPool, setArticlesPool] = useState([]);
   const [brandsPool, setBrandsPool] = useState([]);
   const [cjPool, setCjPool] = useState([]);
@@ -82,15 +90,14 @@ const CmsLandingPage = () => {
   const generateSlideImage = async (idx) => {
     const slide = doc.slides[idx];
     const desc = slide.imageAlt || slide.heroPre?.join(' ') || 'editorial photograph';
+    const prompt = `${desc}. Editorial cover photo for a Thai marketing research platform hero section. Modern Thai+international consumer context. No text on image.`;
+    if (imageOff) { imagePromptDialog(prompt, '4:3'); return; }
     setGenIdx(idx);
     try {
-      const r = await cmsApi.aiImage({
-        prompt: `${desc}. Editorial cover photo for a Thai marketing research platform hero section. Modern Thai+international consumer context. No text on image.`,
-        aspect: '4:3',
-      });
+      const r = await cmsApi.aiImage({ prompt, aspect: '4:3' });
       updateSlide(idx, 'image', r.data.image_data_url);
       toast.success('สร้างภาพ AI เสร็จแล้ว');
-    } catch (e) { if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'สร้างภาพไม่สำเร็จ')); }
+    } catch (e) { if (isLlmExternalOnly(e)) imagePromptDialog(prompt, '4:3'); else toast.error(apiErrorText(e, 'สร้างภาพไม่สำเร็จ')); }
     finally { setGenIdx(-1); }
   };
 
@@ -176,6 +183,7 @@ const CmsLandingPage = () => {
       return '';
     })();
     const prompt = `Editorial magazine cover photo, ${studyName} ${headline}. Minimalist, Thai context, marketing research aesthetic, vibrant editorial colors, no text on image.`;
+    if (imageOff) { imagePromptDialog(prompt, '16:9'); return; }
     setPickGenLoading(true);
     try {
       const r = await cmsApi.aiImage({ prompt, aspect: '16:9' });
@@ -187,7 +195,7 @@ const CmsLandingPage = () => {
       updatePick('image_url', null);
       toast.success('สร้างภาพ AI สำเร็จ');
     } catch (e) {
-      if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'สร้างภาพไม่สำเร็จ'));
+      if (isLlmExternalOnly(e)) imagePromptDialog(prompt, '16:9'); else toast.error(apiErrorText(e, 'สร้างภาพไม่สำเร็จ'));
     } finally { setPickGenLoading(false); }
   };
 
@@ -295,7 +303,7 @@ const CmsLandingPage = () => {
                     <Field label="Image alt (also used as AI prompt seed)"
                            value={s.imageAlt || ''} on={v => updateSlide(i, 'imageAlt', v)}
                            testid={`slide-${i}-imagealt`}/>
-                    <button onClick={() => generateSlideImage(i)} disabled={genIdx === i || imageOff} title={imageOff ? 'AI สร้างภาพของระบบปิดอยู่ — อัปโหลดภาพเองแทน' : undefined}
+                    <button onClick={() => generateSlideImage(i)} disabled={genIdx === i} title={imageOff ? 'AI สร้างภาพของระบบปิดอยู่ — คลิกเพื่อรับพรอมต์ไปใช้กับเครื่องมือสร้างภาพของคุณเอง' : undefined}
                             data-testid={`slide-${i}-ai-image-btn`}
                             className="mt-2 px-4 py-1.5 bg-blue-600 text-white text-xs font-mono uppercase rounded-full disabled:opacity-50">
                       {genIdx === i ? '⏳ Generating...' : '✨ AI Generate Image'}
@@ -430,6 +438,7 @@ const CmsLandingPage = () => {
           </button>
         </div>
       </div>
+      {ext.dialog}
     </div>
   );
 };
@@ -602,7 +611,7 @@ const EditorPickEditor = ({ pick, on, bePool, cjPool, onUpload, onGenerate, gene
                      onChange={e => onUpload(e.target.files?.[0])}
                      data-testid="editor-pick-upload"/>
             </label>
-            <button onClick={onGenerate} disabled={generating || generateOff} title={generateOff ? 'AI สร้างภาพของระบบปิดอยู่ — อัปโหลดภาพเองแทน' : undefined}
+            <button onClick={onGenerate} disabled={generating} title={generateOff ? 'AI สร้างภาพของระบบปิดอยู่ — คลิกเพื่อรับพรอมต์ไปใช้กับเครื่องมือสร้างภาพของคุณเอง' : undefined}
                     data-testid="editor-pick-generate"
                     className="px-3 py-1.5 text-xs font-mono uppercase border border-blue-600 text-blue-600 rounded-full hover:bg-blue-600 hover:text-white disabled:opacity-50">
               {generating ? 'AI กำลังสร้าง…' : '✨ AI Generate'}
