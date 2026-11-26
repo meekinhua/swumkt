@@ -36,7 +36,9 @@ print(bibtex)
 import json
 import logging
 from typing import List, Dict, Optional, Any
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+from lib.llm_policy import SystemLLMDisabled
+# emergentintegrations is imported lazily inside the functions that call the LLM, so this module (and
+# server.py) imports on machines without the package.
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +226,8 @@ Output valid JSON array of reference objects."""
                         len(all_refs), 
                         f"เสร็จสิ้นส่วนที่ {i+1}/{total_chunks} (พบ {len(refs)} รายการ)"
                     )
+            except SystemLLMDisabled:
+                raise  # admin switched the system LLM off: never swallow into a fallback
             except Exception as e:
                 logger.error(f"Error processing chunk {i+1}: {e}")
                 if progress_callback:
@@ -353,6 +357,7 @@ Output valid JSON array of reference objects."""
         """
         try:
             # Create chat instance for this request
+            from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"ref-extract-{id(self)}",
@@ -404,6 +409,8 @@ Output valid JSON array of reference objects."""
                 logger.error(f"Response: {response[:500]}")
                 return []
                 
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"RefExtract Error: {e}")
             raise Exception(f"Failed to extract references: {str(e)}")

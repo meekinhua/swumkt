@@ -2137,6 +2137,29 @@ def _legacy_codes_from_variants(qid: str, norm: dict) -> Dict[str, List[str]]:
     return codes
 
 
+def _normalized_view(agg: dict) -> Dict[str, dict]:
+    """`ai_cache.normalized_by_question` as older clients read it, derived from
+    the answer-level coding (never re-used as an input for another slice)."""
+    out: Dict[str, dict] = {}
+    for q in agg.get("questions") or []:
+        st = q.get("stats") or {}
+        if st.get("normalization_basis") in ("ai", "manual") and st.get("counts") is not None:
+            out[q["id"]] = {"counts": st["counts"], "total": st.get("n"),
+                            "basis": st["normalization_basis"],
+                            "coding_coverage": st.get("coding_coverage"),
+                            "derived_from_open_coding": True}
+    return out
+
+
+def _methods_paragraph(study: dict, agg: dict, n_total: int, n_filtered: int) -> str:
+    try:
+        from .be_thesis_ai import methods_paragraph_th
+        return methods_paragraph_th(study=study, aggregate=agg, n_total=n_total, n_filtered=n_filtered)
+    except Exception:
+        logging.warning("[BE] methods paragraph failed", exc_info=True)
+        return ""
+
+
 _CODING_STATUS_TH = {
     "coded": "เข้ารหัสครบแล้ว",
     "partial": "เข้ารหัสบางส่วน (คำตอบใหม่ยังไม่ได้เข้ารหัส — นับด้วยการจับคู่ชื่อแบรนด์อัตโนมัติ)",
@@ -2179,7 +2202,7 @@ def _coded_open_stats(q: dict, values: List[Any], normalized: Dict[str, dict],
         res = BX.counts_from_codes(qid, values, codes, fallback)
         sources = sorted(oc.get("sources") or [])
         basis = "manual" if sources == ["manual"] else "ai"
-    elif qid in (normalized or {}):
+    elif qid in (normalized or {}) and not (normalized[qid] or {}).get("derived_from_open_coding"):
         norm = normalized[qid] or {}
         lcodes = _legacy_codes_from_variants(qid, norm)
         if lcodes:
@@ -2933,6 +2956,267 @@ def _coding_status(study: dict, units: List[dict]) -> List[dict]:
                     "sources": (oc.get(u["qid"]) or {}).get("sources") or [],
                     "model_labels": (oc.get(u["qid"]) or {}).get("model_labels") or {}})
     return out
+
+
+# ---------------------------------------------------------------------------
+# Raw data export (2026-11) — one row per respondent, SPSS/R/JASP-safe variable
+# names, a codebook with value labels and reverse-coding flags, and the
+# data-quality flags. There was no raw export at all: a thesis student could
+# not re-run a single statistic outside the platform.
+# ---------------------------------------------------------------------------
+def _var_name(qid: str, used: set) -> str:
+    base = re.sub(r"[^A-Za-z0-9]+", "_", qid or "").strip("_") or "Q"
+    if not base[0].isalpha():
+        base = "Q_" + base
+    base = base[:56]
+    name, i = base, 2
+    while name.lower() in used:
+        name = f"{base}_{i}"
+        i += 1
+    used.add(name.lower())
+    return name
+
+
+def _labels_for_value(q: dict, v: Any, open_coding: dict, brand_list: List[str]) -> Optional[List[str]]:
+    k = BX.norm_answer(v)
+    if not k:
+        return None
+    codes = ((open_coding or {}).get(q["id"]) or {}).get("codes") or {}
+    lab = codes.get(BX.answer_id(q["id"], k))
+    if lab is None:
+        lab = codes.get(BX.answer_id(q["id"], k, 12))
+    if lab is not None:
+        return list(lab)
+    if q.get("ai_processing") in ("extract_brand", "extract_brands"):
+        return _det_labels_for(v, brand_list)
+    return None
+
+
+def _build_raw_export(study: dict, responses: List[dict],
+                      all_responses_for_quality: Optional[List[dict]] = None) -> dict:
+    qs = study.get("questions") or []
+    focal = (study.get("brand") or {}).get("name") or ""
+    brand_list = _brand_list(study)
+    open_coding = study.get("open_coding") or {}
+    used: set = set()
+    columns: List[str] = ["respondent_id", "submitted_at", "duration_sec", "channel"]
+    used.update(c.lower() for c in columns)
+    codebook: List[dict] = [
+        {"variable": "respondent_id", "label": "รหัสผู้ตอบ (ระบบ)", "measure": "string"},
+        {"variable": "submitted_at", "label": "เวลาส่งคำตอบ (UTC, ISO-8601)", "measure": "string"},
+        {"variable": "duration_sec", "label": "เวลาที่ใช้ตอบ (วินาที)", "measure": "scale"},
+        {"variable": "channel", "label": "ช่องทางที่ตอบ", "measure": "nominal"},
+    ]
+    demo_fields: List[str] = []
+    for r in responses:
+        for k_ in (r.get("demographics") or {}):
+            if k_ not in demo_fields:
+                demo_fields.append(k_)
+    demo_vars = {}
+    for d in demo_fields:
+        vn = _var_name("demo_" + str(d), used)
+        demo_vars[d] = vn
+        columns.append(vn)
+        codebook.append({"variable": vn, "label": f"ข้อมูลประชากร: {d}", "measure": "nominal"})
+
+    weight_of = {k: w for dm in DIMENSION_WEIGHTS.values() for k, w in dm.items()}
+    plan: List[tuple] = []  # (q, kind, varname(s))
+    for q in qs:
+        vn = _var_name(q["id"], used)
+        t = q.get("type")
+        common = {"question_id": q["id"], "template_id": q.get("template_id"),
+                  "dimension": q.get("dimension"), "kind": q.get("kind"), "type": t,
+                  "label": q.get("prompt_th") or q.get("prompt") or "",
+                  "label_en": q.get("prompt_en") or "",
+                  "compare_brand": q.get("compare_brand") or "",
+                  "reverse_scored": bool(q.get("reverse_scored")),
+                  "score_eligible": q.get("score_eligible") is not False,
+                  "weight_in_dimension": (weight_of.get(q.get("kind")) if not q.get("compare_brand") else None)}
+        if t in ("likert_5", "likert_7", "nps_0_10", "comparative_7"):
+            lo, hi = {"likert_5": (1, 5), "likert_7": (1, 7), "nps_0_10": (0, 10), "comparative_7": (1, 7)}[t]
+            scale = q.get("scale") or []
+            if scale and len(scale) == hi - lo + 1:
+                vl = "; ".join(f"{lo + i}={lab}" for i, lab in enumerate(scale))
+            elif t == "comparative_7":
+                vl = f"1={q.get('scale_left') or 'แบรนด์หลักดีกว่ามาก'}; 4=เท่ากัน; 7={q.get('scale_right') or 'คู่แข่งดีกว่ามาก'}"
+            elif t == "nps_0_10":
+                vl = "0=ไม่แนะนำแน่นอน; 10=แนะนำแน่นอน (0-6 detractor, 7-8 passive, 9-10 promoter)"
+            else:
+                vl = f"{lo}=ไม่เห็นด้วยอย่างยิ่ง; {hi}=เห็นด้วยอย่างยิ่ง"
+            columns.append(vn)
+            codebook.append({"variable": vn, **common, "measure": "scale", "min": lo, "max": hi,
+                             "value_labels": vl,
+                             "notes": "ค่าตามที่ผู้ตอบเลือก (ยังไม่กลับคะแนน)"})
+            plan.append((q, "num", vn))
+            if q.get("reverse_scored") and t in ("likert_5", "likert_7"):
+                vr = _var_name(q["id"] + "_r", used)
+                columns.append(vr)
+                codebook.append({"variable": vr, **common, "measure": "scale", "min": lo, "max": hi,
+                                 "value_labels": vl, "notes": f"กลับคะแนนแล้ว ({hi + 1} − {vn}) — ใช้ตัวนี้ในการรวมคะแนน"})
+                plan.append((q, "num_r", vr))
+        elif t == "mcq_single":
+            opts = list(q.get("options") or [])
+            columns.append(vn)
+            codebook.append({"variable": vn, **common, "measure": "nominal", "min": 1, "max": len(opts),
+                             "value_labels": "; ".join(f"{i + 1}={o}" for i, o in enumerate(opts)),
+                             "notes": "รหัสตัวเลขตามลำดับตัวเลือก"})
+            plan.append((q, "single", vn))
+        elif t in ("mcq_multi", "trait_grid"):
+            opts = list(q.get("options") or [])
+            opts_th = list(q.get("options_th") or [])
+            names = []
+            for i, o in enumerate(opts):
+                dv = _var_name(f"{q['id']}_{i + 1}", used)
+                names.append(dv)
+                columns.append(dv)
+                th = opts_th[i] if i < len(opts_th) and opts_th[i] != o else ""
+                codebook.append({"variable": dv, **common, "label": f"{common['label']} — {o}" + (f" ({th})" if th else ""),
+                                 "measure": "nominal", "min": 0, "max": 1,
+                                 "value_labels": "0=ไม่ได้เลือก; 1=เลือก",
+                                 "notes": "ตัวแปรหุ่น (dummy) ต่อหนึ่งตัวเลือก; ว่าง = ไม่ได้ตอบข้อนี้"})
+            plan.append((q, "multi", names))
+        else:  # open text
+            columns.append(vn)
+            codebook.append({"variable": vn, **common, "measure": "string", "notes": "ข้อความที่ผู้ตอบพิมพ์"})
+            plan.append((q, "text", vn))
+            if q.get("ai_processing") in BX.CODEABLE_PROCESSING:
+                vc = _var_name(q["id"] + "_code", used)
+                columns.append(vc)
+                codebook.append({"variable": vc, **common, "measure": "string",
+                                 "notes": "รหัส/ป้ายที่ใช้นับ (จากการเข้ารหัส AI/ด้วยมือ หรือการจับคู่ชื่อแบรนด์อัตโนมัติ) "
+                                          "หลายป้ายคั่นด้วย ; — ว่าง = ยังไม่ได้เข้ารหัส"})
+                plan.append((q, "code", vc))
+                if q.get("ai_processing") in ("extract_brand", "extract_brands"):
+                    vf = _var_name(q["id"] + "_focal", used)
+                    columns.append(vf)
+                    codebook.append({"variable": vf, **common, "measure": "nominal", "min": 0, "max": 1,
+                                     "value_labels": f"0=ไม่ได้กล่าวถึง {focal}; 1=กล่าวถึง {focal}",
+                                     "notes": "ตัวแปรที่ใช้คำนวณ % การจดจำ (สัดส่วนของ 1 ในผู้ที่ตอบข้อนี้)"})
+                    plan.append((q, "focal", vf))
+
+    dq = _data_quality(study, all_responses_for_quality or responses)
+    flags = dq.get("flags_by_response") or {}
+    dq_cols = ["dq_speeder", "dq_straightliner", "dq_duplicate", "dq_unaware_rater"]
+    for c in dq_cols:
+        columns.append(c)
+    for c, lab in zip(dq_cols, ("ใช้เวลาตอบเร็วผิดปกติ", "ตอบค่าเดียวกันทุกข้อ", "คำตอบซ้ำกับผู้ตอบก่อนหน้า",
+                                "ไม่รู้จักแบรนด์แต่ให้คะแนน")):
+        codebook.append({"variable": c, "label": f"ธงคุณภาพข้อมูล: {lab}", "measure": "nominal",
+                         "min": 0, "max": 1, "value_labels": "0=ไม่ติดธง; 1=ติดธง",
+                         "notes": dq["rules"].get(c.replace("dq_", ""), "")})
+
+    rows: List[dict] = []
+    for r in responses:
+        ans: Dict[str, Any] = {}
+        for a in r.get("answers") or []:
+            ans[a.get("question_id")] = a.get("value")
+        row: Dict[str, Any] = {"respondent_id": r.get("id"), "submitted_at": r.get("submitted_at"),
+                               "duration_sec": r.get("duration_sec"), "channel": r.get("channel")}
+        for d, vn in demo_vars.items():
+            row[vn] = (r.get("demographics") or {}).get(d)
+        for q, kind, vn in plan:
+            v = ans.get(q["id"])
+            if v is None:
+                for lid in q.get("legacy_ids") or []:
+                    if lid in ans:
+                        v = ans[lid]
+                        break
+            if kind == "num":
+                row[vn] = v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+            elif kind == "num_r":
+                hi = 5 if q["type"] == "likert_5" else 7
+                row[vn] = (hi + 1 - v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+            elif kind == "single":
+                opts = list(q.get("options") or [])
+                row[vn] = (opts.index(v) + 1) if v in opts else None
+            elif kind == "multi":
+                opts = list(q.get("options") or [])
+                for i, dv in enumerate(vn):
+                    row[dv] = None if not isinstance(v, list) else (1 if opts[i] in v else 0)
+            elif kind == "text":
+                row[vn] = None if v in (None, "") else (", ".join(map(str, v)) if isinstance(v, list) else str(v))
+            elif kind == "code":
+                labs = _labels_for_value(q, v, open_coding, brand_list)
+                row[vn] = None if labs is None else "; ".join(labs)
+            elif kind == "focal":
+                if BX.norm_answer(v):
+                    labs = _labels_for_value(q, v, open_coding, brand_list) or []
+                    row[vn] = 1 if focal and focal in labs else 0
+                else:
+                    row[vn] = None
+        fl = flags.get(r.get("id") or "", [])
+        for c in dq_cols:
+            row[c] = 1 if c.replace("dq_", "") in fl else 0
+        rows.append(row)
+
+    cb_cols = ["variable", "question_id", "template_id", "label", "label_en", "dimension", "kind", "type",
+               "compare_brand", "measure", "min", "max", "value_labels", "reverse_scored", "score_eligible",
+               "weight_in_dimension", "notes"]
+    return {"columns": columns, "rows": rows, "codebook_columns": cb_cols, "codebook": codebook,
+            "data_quality": dq}
+
+
+def _rows_to_csv(columns: List[str], rows: List[dict]) -> str:
+    import csv as _csv
+    import io as _io
+    buf = _io.StringIO()
+    buf.write("﻿")
+    w = _csv.writer(buf)
+    w.writerow(columns)
+    for r in rows:
+        w.writerow(["" if r.get(c) is None else r.get(c) for c in columns])
+    return buf.getvalue()
+
+
+def _raw_export_xlsx(exp: dict, study: dict, filter_info: dict, n_total: int) -> bytes:
+    import io as _io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "README"
+    b = study.get("brand") or {}
+    readme = [
+        ["Brand Equity — ข้อมูลดิบ (raw data)"],
+        ["แบรนด์", b.get("name")], ["หมวด", b.get("category")],
+        ["คู่แข่ง", ", ".join(b.get("competitors") or [])],
+        ["ส่งออกเมื่อ (UTC)", _now_iso()],
+        ["schema_version", BE_ANALYSIS_SCHEMA_VERSION],
+        ["จำนวนแถว (ผู้ตอบ)", len(exp["rows"])], ["ผู้ตอบทั้งหมดในการศึกษา", n_total],
+        ["ตัวกรอง", json.dumps(filter_info or {}, ensure_ascii=False)],
+        [],
+        ["วิธีอ่าน"],
+        ["1 แถว = ผู้ตอบ 1 คน; ช่องว่าง = ไม่ได้ตอบ/ไม่ได้ถูกถาม (system missing)"],
+        ["ชีต codebook: ชื่อตัวแปร ข้อความคำถาม มิติ ระดับการวัด ช่วงค่า ป้ายค่า (value labels) และการกลับคะแนน"],
+        ["ข้อที่ reverse_scored = TRUE มีตัวแปร _r ที่กลับคะแนนแล้ว ให้ใช้ _r เมื่อรวมคะแนนหรือคำนวณ α"],
+        ["ตัวแปร *_focal = 1 เมื่อคำตอบปลายเปิดกล่าวถึงแบรนด์หลัก ตามกฎเดียวกับที่ระบบใช้คำนวณ % การจดจำ"],
+        ["คะแนน 0-100 ในระบบ = POMP: (x̄ − min)/(max − min) × 100 (Cohen et al., 1999)"],
+        ["ธง dq_* เป็นข้อมูลประกอบ ระบบไม่ได้ตัดผู้ตอบออกเอง (ยกเว้นเลือกตัวกรองตัดผู้ตอบที่น่าสงสัย)"],
+    ]
+    for row in readme:
+        ws.append(row)
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.column_dimensions["A"].width = 34
+    ws.column_dimensions["B"].width = 60
+
+    wd = wb.create_sheet("data")
+    wd.append(exp["columns"])
+    for c in wd[1]:
+        c.font = Font(bold=True)
+    for r in exp["rows"]:
+        wd.append([r.get(c) for c in exp["columns"]])
+    wd.freeze_panes = "B2"
+
+    wc = wb.create_sheet("codebook")
+    wc.append(exp["codebook_columns"])
+    for c in wc[1]:
+        c.font = Font(bold=True)
+    for r in exp["codebook"]:
+        wc.append([r.get(c) for c in exp["codebook_columns"]])
+    wc.freeze_panes = "B2"
+    buf = _io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 
 # ============ ROUTES FACTORY ============
@@ -3825,10 +4109,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     async def thesis_eligible(current_user=Depends(get_current_user)):
         """Returns whether the current user can use the thesis export feature.
         Eligible: ADMIN, or any user with `can_export_thesis=True` whitelist flag."""
-        from server import UserRole
         if not current_user:
             return {"eligible": False, "feature": "thesis_export", "role": None}
-        is_admin = current_user.role == UserRole.ADMIN
+        is_admin = _role(current_user) == "admin"
         is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
         return {
             "eligible": bool(is_admin or is_whitelisted),
@@ -3849,12 +4132,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         Permission: ADMIN, owner of study, or user with `can_export_thesis=True`.
         Honors active filter (from/to/segments) so users can export segment-specific reports."""
         from fastapi.responses import StreamingResponse
-        from server import UserRole
         from .thesis_renderer import render_thesis_docx
 
         if not current_user:
             raise HTTPException(403, "Login required")
-        is_admin = current_user.role == UserRole.ADMIN
+        is_admin = _role(current_user) == "admin"
         is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
 
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
@@ -4295,6 +4577,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         to_iso: Optional[str] = Query(None, alias="to"),
         segments: Optional[str] = Query(None, description="JSON-encoded {field:[values]}"),
         wave: Optional[str] = Query(None, description="latest | all | <wave_number>"),
+        exclude_flagged: bool = Query(False, description="drop speeders / straight-liners / duplicates"),
         current_user=Depends(get_current_user),
     ):
         study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
@@ -4306,6 +4589,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         all_responses = await db.brand_responses.find(
             {"study_id": study_id}, {"_id": 0}
         ).to_list(5000)
+        n_before_quality = len(all_responses)
+        if exclude_flagged:
+            all_responses = _exclude_flagged(study, all_responses)
 
         seg_filter = _parse_segments_param(segments)
 
@@ -4325,7 +4611,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         ai_cache_active = _resolve_ai_cache(study, sig)
         normalized = ai_cache_active.get("normalized_by_question") or \
                      (study.get("ai_cache") or {}).get("normalized_by_question") or {}
-        agg = _aggregate_responses(study, filtered, normalized=normalized)
+        agg = _aggregate_responses(study, filtered, normalized=normalized,
+                                   ai_cache=ai_cache_active)
 
         # Per-wave response counts for the UI selector.
         waves_summary = []
@@ -4357,6 +4644,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             ),
             "waves": waves_summary,
             "migration_meta": study.get("migration_meta") or {},
+            "quality_filter": {"exclude_flagged": bool(exclude_flagged),
+                               "excluded": n_before_quality - len(all_responses)},
+            "methods_paragraph_th": _methods_paragraph(study, agg, len(all_responses), len(filtered)),
         }
 
     @brand_equity_router.post("/studies/{study_id}/compare")
@@ -4455,20 +4745,24 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         from_iso: Optional[str] = None,
         to_iso: Optional[str] = None,
         segments: Optional[Dict[str, List[str]]] = None,
+        user=None,
     ):
-        """Background AI job: normalize → themes → identity-image → master insights.
-        Each phase publishes a `progress` dict (step/total/phase/elapsed_sec/pct) to
-        the same ai_cache the dashboard polls, so the UI can render a live status
-        card without any extra round-trips.
+        """Background AI job (system LLM): coding → themes → identity-image →
+        master insights. Uses EXACTLY the prompts and validators of the
+        external-LLM workflow (`_build_ai_parts` + `lib/be_external`), one call
+        per task chunk, and stores results where an external import would.
 
-        When filter params are provided, results are stored in
-        `ai_cache_by_filter.<sig>` instead of the top-level `ai_cache`."""
+        Each phase publishes `progress`. A step whose answer is empty or fails
+        validation is recorded in `errors`; the run ends "ready" only when every
+        step succeeded, "partial" when some did, "error" when none did — never
+        "ready" with empty content. A policy refusal ends the run with
+        `error_code: llm_external_only`."""
         import time as _t
         started = _t.time()
         sig = _filter_signature(from_iso, to_iso, segments)
         cache_path = "ai_cache" if sig == "all" else f"ai_cache_by_filter.{sig}"
-        TOTAL_STEPS = 4
         try:
+            await _require_system_llm("be.ai_analyze", user)
             study = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
             if not study:
                 return
@@ -4486,92 +4780,105 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
 
             await db.brand_studies.update_one({"id": study_id},
                 {"$set": {f"{cache_path}.status": "running",
+                          f"{cache_path}.errors": [],
                           f"{cache_path}.updated_at": _now_iso()}})
+            errors: List[dict] = []
+            done_steps = 0
+            by = getattr(user, "email", None)
 
-            # ---- Phase 1/4: Normalize open-ended brand/concept responses ----
-            await _set_progress(study_id, cache_path, step=1, total=TOTAL_STEPS,
-                                phase="Normalize · จัดกลุ่มชื่อแบรนด์/คำใกล้เคียง",
-                                started_at=started)
-            normalized_by_q: Dict[str, dict] = {}
-            brand_list = [study["brand"]["name"]] + (study["brand"].get("competitors") or [])
-            category = study["brand"].get("category", "")
-            for q in study["questions"]:
-                ap = q.get("ai_processing")
-                if ap not in ("extract_brand", "extract_brands", "word_cloud"):
+            async def _ask(part: dict, expected: List[str]) -> Optional[dict]:
+                text = await _gemini_call(part["prompt"], system=part["system_prompt"])
+                if not text:
+                    errors.append({"part": part["key"], "sections": expected,
+                                   "message": "AI ไม่ได้ส่งคำตอบกลับมา"})
+                    return None
+                try:
+                    return BX.split_sections(BX.extract_json(text), expected)
+                except ImportValidationError as e:
+                    errors.append({"part": part["key"], "sections": expected,
+                                   "message": e.message, "errors": e.errors})
+                    return None
+
+            # ---- Phase 1: coding (one call per budget-sized chunk) ----
+            built = await _build_ai_parts(study, responses, {}, sections=("coding",), merge=False)
+            c_parts = built["parts"]
+            total_steps = len(c_parts) + 3
+            table = BX.id_table(built["coding_units"])
+            task_by_qid = {u["qid"]: u["task"] for u in built["coding_units"]}
+            for i, part in enumerate(c_parts, 1):
+                await _set_progress(study_id, cache_path, step=i, total=total_steps,
+                                    phase=f"Coding · เข้ารหัสคำตอบปลายเปิด ({i}/{len(c_parts)})",
+                                    started_at=started)
+                secs = await _ask(part, ["coding"])
+                if not secs or "coding" not in secs:
                     continue
-                open_resps: List[str] = []
-                for r in responses:
-                    for a in r.get("answers", []):
-                        if a.get("question_id") == q["id"] and a.get("value"):
-                            open_resps.append(str(a["value"]))
-                if not open_resps:
+                try:
+                    codes = BX.validate_coding(secs["coding"], table, task_by_qid, _brand_list(study))
+                except ImportValidationError as e:
+                    errors.append({"part": part["key"], "sections": ["coding"],
+                                   "message": e.message, "errors": e.errors})
                     continue
-                kind = "brand_single" if ap == "extract_brand" else \
-                       "brand_multi"  if ap == "extract_brands" else "concept"
-                norm = await _ai_normalize_open(open_resps, kind, brand_list, category)
-                if norm.get("counts"):
-                    normalized_by_q[q["id"]] = norm
+                cur = await db.brand_studies.find_one({"id": study_id}, {"_id": 0, "open_coding": 1})
+                oc = _merge_open_coding(cur or {}, codes, built["coding_units"],
+                                        "system", SYSTEM_MODEL_LABEL, by)
+                await db.brand_studies.update_one({"id": study_id}, {"$set": {"open_coding": oc}})
+                study["open_coding"] = oc
+                done_steps += 1
 
-            # Recompute aggregate WITH normalized counts (so master insights see canonical buckets)
-            agg = _aggregate_responses(study, responses, normalized=normalized_by_q)
+            agg = _aggregate_responses(study, responses, normalized={})
+            normalized_by_q = _normalized_view(agg)
 
-            # ---- Phase 2/4: Extract themes per open question ----
-            await _set_progress(study_id, cache_path, step=2, total=TOTAL_STEPS,
-                                phase="Themes · สกัด theme จากคำตอบเปิด",
-                                started_at=started)
+            # ---- Phase 2-4: themes, identity-image, insights ----
+            built2 = await _build_ai_parts(study, responses, agg,
+                                           sections=("themes", "identity", "insights"), merge=False)
+            t_units = {u["qid"]: u for u in built2["theme_units"]}
             themes_by_q: Dict[str, List[dict]] = {}
-            for q in study["questions"]:
-                if q.get("ai_processing") == "theme_extraction" and q["type"] == "open_long":
-                    open_resps: List[str] = []
-                    for r in responses:
-                        for a in r.get("answers", []):
-                            if a.get("question_id") == q["id"] and a.get("value"):
-                                open_resps.append(str(a["value"]))
-                    if open_resps:
-                        themes = await _ai_extract_themes(open_resps, context=q.get("prompt", ""))
-                        themes_by_q[q["id"]] = themes
+            identity_image: dict = {}
+            insights: List[dict] = []
+            phase_names = {"themes": "Themes · สกัด theme จากคำตอบเปิด",
+                           "identity": "Identity ↔ Image · เทียบอัตลักษณ์ vs ภาพลักษณ์",
+                           "insights": "Master Insights · สรุปข้อเสนอแนะเชิงกลยุทธ์"}
+            phase_idx = {"themes": 1, "identity": 2, "insights": 3}
+            for part in built2["parts"]:
+                sec = part["sections"][0]
+                step = len(c_parts) + phase_idx[sec]
+                await _set_progress(study_id, cache_path, step=step, total=total_steps,
+                                    phase=phase_names[sec], started_at=started)
+                secs = await _ask(part, [sec])
+                if not secs or sec not in secs:
+                    continue
+                try:
+                    if sec == "themes":
+                        themes_by_q.update(BX.validate_themes(secs["themes"], t_units))
+                    elif sec == "identity":
+                        identity_image = BX.validate_identity(secs["identity"])
+                    else:
+                        insights = BX.validate_insights(secs["insights"])
+                    done_steps += 1
+                except ImportValidationError as e:
+                    errors.append({"part": part["key"], "sections": [sec],
+                                   "message": e.message, "errors": e.errors})
 
-            # ---- Phase 3/4: Identity vs Image alignment ----
-            await _set_progress(study_id, cache_path, step=3, total=TOTAL_STEPS,
-                                phase="Identity ↔ Image · เทียบอัตลักษณ์ vs ภาพลักษณ์",
-                                started_at=started)
-            personality_q = next((q for q in study["questions"]
-                                  if q.get("ai_processing") == "extract_personality"), None)
-            identity_image = {}
-            if personality_q:
-                p_resps = []
-                for r in responses:
-                    for a in r.get("answers", []):
-                        if a.get("question_id") == personality_q["id"] and a.get("value"):
-                            p_resps.append(str(a["value"]))
-                # Also include "image_one_word"
-                for q in study["questions"]:
-                    if q.get("ai_processing") == "word_cloud":
-                        for r in responses:
-                            for a in r.get("answers", []):
-                                if a.get("question_id") == q["id"] and a.get("value"):
-                                    p_resps.append(str(a["value"]))
-                if p_resps:
-                    identity_image = await _ai_identity_image(
-                        study["identity"]["traits"], p_resps, study["brand"]["name"],
-                    )
-
-            # ---- Phase 4/4: Master Insights ----
-            await _set_progress(study_id, cache_path, step=4, total=TOTAL_STEPS,
-                                phase="Master Insights · สรุปข้อเสนอแนะเชิงกลยุทธ์",
-                                started_at=started)
-            insights = await _ai_master_insights(study, agg)
-
+            total_tasks = len(c_parts) + len(built2["parts"])
+            status = ("ready" if not errors else ("partial" if done_steps else "error"))
+            prov = {"source": "system", "model_label": SYSTEM_MODEL_LABEL, "at": _now_iso()}
             cache_payload = {
-                "status": "ready",
+                "status": status,
                 "normalized_by_question": normalized_by_q,
                 "themes_by_question": themes_by_q,
                 "identity_image": identity_image,
                 "master_insights": insights,
+                "errors": errors,
+                "source": "system",
+                "model_label": SYSTEM_MODEL_LABEL,
+                "sections_meta": {k: prov for k, ok in (
+                    ("coding", bool(c_parts)), ("themes", bool(themes_by_q)),
+                    ("identity", bool(identity_image)), ("insights", bool(insights))) if ok},
                 "updated_at": _now_iso(),
                 "progress": {
-                    "step": TOTAL_STEPS, "total": TOTAL_STEPS,
-                    "phase": "เสร็จสมบูรณ์",
+                    "step": total_steps, "total": total_steps,
+                    "phase": "เสร็จสมบูรณ์" if status == "ready" else
+                             f"เสร็จบางส่วน ({done_steps}/{total_tasks} ขั้นตอน)",
                     "elapsed_sec": round(_t.time() - started, 1),
                     "pct": 100.0,
                 },
@@ -4579,15 +4886,26 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                     "from": from_iso, "to": to_iso, "segments": segments or {},
                     "n": len(responses),
                 },
+                "schema_version": BE_ANALYSIS_SCHEMA_VERSION,
             }
+            if status == "error":
+                cache_payload["error"] = (errors[0]["message"] if errors else "AI analysis failed")
             await db.brand_studies.update_one({"id": study_id}, {
                 "$set": {
                     cache_path: cache_payload,
                     "updated_at": _now_iso(),
                 },
             })
-            logging.info(f"[BrandEquity] AI analysis done for {study_id} (sig={sig}, n={len(responses)})")
+            logging.info(f"[BrandEquity] AI analysis {status} for {study_id} (sig={sig}, n={len(responses)})")
         except Exception as e:
+            if _is_policy_refusal(e):
+                d = _policy_detail(e, "be.ai_analyze")
+                await db.brand_studies.update_one({"id": study_id},
+                    {"$set": {f"{cache_path}.status": "error",
+                              f"{cache_path}.error": d.get("message"),
+                              f"{cache_path}.error_code": "llm_external_only",
+                              f"{cache_path}.error_detail": d}})
+                return
             logging.exception(f"[BrandEquity] AI analysis failed: {e}")
             await db.brand_studies.update_one({"id": study_id},
                 {"$set": {f"{cache_path}.status": "error", f"{cache_path}.error": str(e)}})
@@ -4884,11 +5202,15 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             return {"status": cur_status, "signature": sig,
                     "message": "AI analysis already in progress for this filter"}
 
+        # Admin switch: refuse BEFORE anything is queued. Results already in
+        # the cache stay readable (ai-status / dashboard) whatever it says.
+        await _require_system_llm("be.ai_analyze", current_user)
+
         cache_path = "ai_cache" if sig == "all" else f"ai_cache_by_filter.{sig}"
         await db.brand_studies.update_one({"id": study_id},
             {"$set": {f"{cache_path}.status": "queued",
                       f"{cache_path}.updated_at": _now_iso()}})
-        bg.add_task(_run_ai_analysis, study_id, eff_from, eff_to, seg_filter)
+        bg.add_task(_run_ai_analysis, study_id, eff_from, eff_to, seg_filter, current_user)
         return {"status": "queued", "signature": sig, "wave": wave or "all"}
 
     @brand_equity_router.get("/studies/{study_id}/ai-status")
@@ -4918,5 +5240,489 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         if not cache:
             return {"status": "idle", "signature": sig, "wave": wave or "all"}
         return {**cache, "signature": sig, "wave": wave or "all"}
+
+    # ========================================================================
+    # EXTERNAL-LLM WORKFLOW (plan 2026-11 §B) — always available, whatever the
+    # admin switch says. Prompts come from the same builders as the system
+    # path; imports go through the same validators and land in the same place.
+    # ========================================================================
+    from fastapi.responses import Response as _Resp
+
+    class ExternalImportBody(BaseModel):
+        part_key: Optional[str] = None
+        content: str = ""
+        model_label: Optional[str] = None
+
+    class ThesisExternalImportBody(BaseModel):
+        part_key: Optional[str] = None          # "ch3"
+        content: Optional[str] = None
+        chapters: Optional[Dict[str, str]] = None  # {"3": "<markdown>", ...}
+        model_label: Optional[str] = None
+        extra_prompt: str = ""
+
+    def _model_label(v: Optional[str]) -> str:
+        v = (v or "").strip()
+        return v[:80] if v else "AI ภายนอก (ไม่ระบุชื่อ)"
+
+    def _invalid(e: ImportValidationError):
+        raise HTTPException(422, e.to_detail())
+
+    async def _slice(study: dict, from_iso, to_iso, segments, wave):
+        all_resp = await db.brand_responses.find({"study_id": study["id"]}, {"_id": 0}).to_list(5000)
+        seg = _parse_segments_param(segments)
+        wf, wt, _ = _wave_bounds(study.get("wave_history") or [], wave)
+        ef, et = from_iso or wf, to_iso or wt
+        flt = _apply_response_filter(all_resp, from_iso=ef, to_iso=et, segments=seg)
+        sig = _filter_signature(ef, et, seg)
+        return all_resp, flt, sig, {"from": ef, "to": et, "segments": seg}
+
+    _EXT_HOWTO_TH = (
+        "วิธีใช้ AI ของคุณเอง (ChatGPT / Claude / Gemini ฯลฯ):\n"
+        "1. เปิดแชตใหม่ คัดลอก 'System prompt' ไปวางเป็นข้อความแรก (หรือวางรวมกับพรอมต์ก็ได้)\n"
+        "2. คัดลอกพรอมต์ของชุดงานที่ 1 ไปวาง แล้วส่ง\n"
+        "3. คัดลอกคำตอบทั้งหมดของ AI (JSON) กลับมาวางในช่อง 'วางผลลัพธ์' ของชุดงานนั้น แล้วกดนำเข้า\n"
+        "4. ทำซ้ำทีละชุดงาน — ระบบตรวจรูปแบบให้ทุกครั้ง ถ้าผิดจะบอกตำแหน่งที่ผิดโดยไม่บันทึกส่วนใดเลย\n"
+        "หมายเหตุ: คะแนน BES ไม่ขึ้นกับขั้นตอนนี้ — การเข้ารหัสช่วยให้นับชื่อแบรนด์ที่สะกดต่างกันได้แม่นขึ้น "
+        "และ insights/themes เป็นการตีความเชิงคุณภาพ ถ้านำเข้าการเข้ารหัสแล้วต้องการให้ insights "
+        "อ้างตัวเลขใหม่ ให้กด 'สร้างพรอมต์ใหม่' ก่อนทำชุดงานสุดท้าย"
+    )
+
+    @brand_equity_router.api_route("/studies/{study_id}/ai-analyze/external-prompt", methods=["GET", "POST"])
+    async def ai_analyze_external_prompt(
+        study_id: str,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        wave: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
+        study = await _get_owned_study(study_id, current_user)
+        _all, flt, sig, f = await _slice(study, from_iso, to_iso, segments, wave)
+        if not flt:
+            raise HTTPException(400, "ยังไม่มีคำตอบในชุดข้อมูลนี้ — ยังสร้างพรอมต์ไม่ได้")
+        active = _resolve_ai_cache(study, sig)
+        agg = _aggregate_responses(study, flt, normalized=active.get("normalized_by_question") or {},
+                                   ai_cache=active)
+        built = await _build_ai_parts(study, flt, agg, merge=True)
+        if not built["parts"]:
+            raise HTTPException(400, "ไม่มีข้อมูลที่ต้องให้ AI วิเคราะห์ในชุดข้อมูลนี้")
+        slug = re.sub(r"[^A-Za-z0-9]+", "-", (study.get("brand") or {}).get("name") or "brand").strip("-") or "brand"
+        return {
+            "feature": "be.ai_analyze",
+            "title": f"วิเคราะห์ Brand Equity ด้วย AI ของคุณเอง — {(study.get('brand') or {}).get('name')}",
+            "instructions_th": _EXT_HOWTO_TH,
+            "expected_format": "json",
+            "parts": built["parts"],
+            "filename": f"brand-equity-{slug}-{sig}-ai-prompt.md",
+            "signature": sig,
+            "filter": f,
+            "n_responses": len(flt),
+            "coding": {"questions": len(built["coding_units"]),
+                       "distinct_answers": sum(len(u["items"]) for u in built["coding_units"]),
+                       "answers": sum(it["n"] for u in built["coding_units"] for it in u["items"])},
+            "themes": [{"question_id": u["qid"], "sampled": u["sampled"], "sent": len(u["items"]),
+                        "total_answers": u["total_n"]} for u in built["theme_units"]],
+        }
+
+    @brand_equity_router.post("/studies/{study_id}/ai-analyze/external-import")
+    async def ai_analyze_external_import(
+        study_id: str,
+        body: ExternalImportBody,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        wave: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
+        study = await _get_owned_study(study_id, current_user)
+        all_resp, flt, sig, f = await _slice(study, from_iso, to_iso, segments, wave)
+        cache_path = "ai_cache" if sig == "all" else f"ai_cache_by_filter.{sig}"
+        label = _model_label(body.model_label)
+        by = getattr(current_user, "email", None)
+        try:
+            obj = BX.extract_json(body.content)
+            # Which sections does this part promise? Recompute the parts on the
+            # current data; if the key is still recognised, a missing section
+            # is an error (truncated / partial answer), not a silent skip.
+            active = _resolve_ai_cache(study, sig)
+            agg = _aggregate_responses(study, flt, normalized=active.get("normalized_by_question") or {},
+                                       ai_cache=active)
+            built = await _build_ai_parts(study, flt, agg, merge=True)
+            key = body.part_key or (obj.get("part") if isinstance(obj, dict) else None)
+            part = next((p for p in built["parts"] if p["key"] == key), None)
+            expected = part["sections"] if part else None
+            secs = BX.split_sections(obj, expected)
+            if part:
+                missing = [s_ for s_ in part["sections"] if s_ not in secs]
+                if missing:
+                    raise ImportValidationError(
+                        "คำตอบไม่ครบ: ชุดงาน " + key + " ต้องมีส่วน " + ", ".join(missing) +
+                        " แต่ไม่พบในข้อความที่วาง — อาจคัดลอกมาไม่ครบ จึงยังไม่นำเข้าส่วนใดเลย")
+            # Validate EVERYTHING first; apply only when all sections pass.
+            validated: Dict[str, Any] = {}
+            if "coding" in secs:
+                units_all = _all_coding_units(study, all_resp)
+                validated["coding"] = BX.validate_coding(
+                    secs["coding"], BX.id_table(units_all),
+                    {u["qid"]: u["task"] for u in units_all}, _brand_list(study))
+            if "themes" in secs:
+                validated["themes"] = BX.validate_themes(
+                    secs["themes"], {u["qid"]: u for u in built["theme_units"]})
+            if "identity" in secs:
+                validated["identity"] = BX.validate_identity(secs["identity"])
+            if "insights" in secs:
+                validated["insights"] = BX.validate_insights(secs["insights"])
+        except ImportValidationError as e:
+            _invalid(e)
+
+        now = _now_iso()
+        prov = {"source": "external", "model_label": label, "at": now, "by": by}
+        upd: Dict[str, Any] = {}
+        if "coding" in validated:
+            units_all = _all_coding_units(study, all_resp)
+            oc = _merge_open_coding(study, validated["coding"], units_all, "external", label, by)
+            upd["open_coding"] = oc
+            study["open_coding"] = oc
+            agg2 = _aggregate_responses(study, flt, normalized={})
+            upd[f"{cache_path}.normalized_by_question"] = _normalized_view(agg2)
+        if "themes" in validated:
+            for qid, rows in validated["themes"].items():
+                upd[f"{cache_path}.themes_by_question.{qid}"] = rows
+        if "identity" in validated:
+            upd[f"{cache_path}.identity_image"] = validated["identity"]
+        if "insights" in validated:
+            upd[f"{cache_path}.master_insights"] = validated["insights"]
+        for sec in validated:
+            upd[f"{cache_path}.sections_meta.{sec}"] = prov
+        cur_status = _resolve_ai_cache(study, sig).get("status")
+        if cur_status not in ("queued", "running"):
+            upd[f"{cache_path}.status"] = "ready"
+        upd[f"{cache_path}.source"] = "external"
+        upd[f"{cache_path}.model_label"] = label
+        upd[f"{cache_path}.imported_at"] = now
+        upd[f"{cache_path}.imported_by"] = by
+        upd[f"{cache_path}.updated_at"] = now
+        upd[f"{cache_path}.filter"] = {**f, "n": len(flt)}
+        upd[f"{cache_path}.schema_version"] = BE_ANALYSIS_SCHEMA_VERSION
+        upd["updated_at"] = now
+        await db.brand_studies.update_one({"id": study_id}, {"$set": upd})
+        fresh = await db.brand_studies.find_one({"id": study_id}, {"_id": 0})
+        cache = _resolve_ai_cache(fresh, sig)
+        warnings = []
+        if "coding" in validated:
+            st = _coding_status(fresh, _all_coding_units(fresh, all_resp))
+            for row in st:
+                if 0 < row["coverage"] < 1:
+                    warnings.append(f"คำถาม {row['question_id']}: เข้ารหัสแล้ว {round(row['coverage'] * 100)}% "
+                                    "ของคำตอบ — ส่วนที่เหลือยังนับด้วยการจับคู่อัตโนมัติ (นำเข้าชุดงานที่เหลือให้ครบ)")
+        return {**cache, "signature": sig, "wave": wave or "all",
+                "imported_sections": list(validated.keys()), "part_key": body.part_key or None,
+                "warnings": warnings}
+
+    # ---- Manual / spreadsheet coding (no LLM) --------------------------------
+    @brand_equity_router.get("/studies/{study_id}/coding")
+    async def coding_status(study_id: str, current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        all_resp = await db.brand_responses.find({"study_id": study_id}, {"_id": 0}).to_list(5000)
+        rows = _coding_status(study, _all_coding_units(study, all_resp))
+        return {"questions": rows,
+                "distinct_answers": sum(r["distinct_answers"] for r in rows),
+                "coded_distinct": sum(r["coded_distinct"] for r in rows),
+                "how_to_th": "ดาวน์โหลดไฟล์ code frame → ลงรหัสในคอลัมน์ code (แบรนด์หลายชื่อคั่นด้วย ; "
+                             "ไม่ใช่แบรนด์ใส่ -) → อัปโหลดกลับ ระบบนับใหม่ทุกตัวกรองให้อัตโนมัติ"}
+
+    @brand_equity_router.get("/studies/{study_id}/coding/codeframe.csv")
+    async def coding_codeframe(study_id: str, current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        all_resp = await db.brand_responses.find({"study_id": study_id}, {"_id": 0}).to_list(5000)
+        units = _all_coding_units(study, all_resp)
+        existing = {q: (v or {}).get("codes") or {} for q, v in (study.get("open_coding") or {}).items()}
+        csv_text = BX.codeframe_csv(units, existing)
+        return _Resp(content=csv_text.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                     headers={"Content-Disposition": f'attachment; filename="codeframe-{study_id[:8]}.csv"'})
+
+    @brand_equity_router.post("/studies/{study_id}/coding/import-csv")
+    async def coding_import_csv(study_id: str, body: ExternalImportBody,
+                                current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        all_resp = await db.brand_responses.find({"study_id": study_id}, {"_id": 0}).to_list(5000)
+        units = _all_coding_units(study, all_resp)
+        try:
+            codes = BX.parse_codeframe_csv(body.content, BX.id_table(units),
+                                           {u["qid"]: u["task"] for u in units}, _brand_list(study))
+        except ImportValidationError as e:
+            _invalid(e)
+        label = (body.model_label or "").strip()[:80] or "เข้ารหัสด้วยมือ (code frame)"
+        oc = _merge_open_coding(study, codes, units, "manual", label, getattr(current_user, "email", None))
+        await db.brand_studies.update_one({"id": study_id}, {"$set": {"open_coding": oc, "updated_at": _now_iso()}})
+        study["open_coding"] = oc
+        rows = _coding_status(study, units)
+        return {"imported": sum(len(v) for v in codes.values()), "questions": rows}
+
+    @brand_equity_router.delete("/studies/{study_id}/coding")
+    async def coding_reset(study_id: str, question_id: Optional[str] = Query(None),
+                           current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        oc = dict(study.get("open_coding") or {})
+        if question_id:
+            oc.pop(question_id, None)
+        else:
+            oc = {}
+        await db.brand_studies.update_one({"id": study_id}, {"$set": {"open_coding": oc, "updated_at": _now_iso()}})
+        return {"open_coding_questions": sorted(oc.keys())}
+
+    # ---- Visual identity (vision) — prompt only; images are attached by the user
+    def _vi_payload(system: str, prompt: str, assets: List[dict], title: str, fname: str) -> dict:
+        lines = [f"- ภาพที่ {i + 1}: {a.get('kind') or 'design'}" + (f" ({a.get('note')})" if a.get("note") else "")
+                 for i, a in enumerate(assets or [])]
+        return {
+            "feature": "be.visual_identity",
+            "title": title,
+            "instructions_th": (
+                "1. เปิด AI ที่รับรูปภาพได้ (ChatGPT, Claude, Gemini)\n"
+                "2. แนบภาพของแบรนด์ตามลำดับนี้ด้วยตัวเอง:\n" + ("\n".join(lines) if lines else "- (ไม่มีภาพ — ใช้ข้อความอย่างเดียว)") +
+                "\n3. วางพรอมต์ แล้วส่ง\n4. คัดลอกคำตอบ (JSON) กลับมาวาง แล้วกดนำเข้า"),
+            "expected_format": "json",
+            "parts": [{"key": "main", "title": "วิเคราะห์อัตลักษณ์ภาพของแบรนด์",
+                       "system_prompt": system, "prompt": prompt,
+                       "json_example": json.dumps({"derived_traits": ["Modern"], "visual_palette": ["#0E5538"],
+                                                   "visual_keywords": ["minimalist"], "design_style": "...",
+                                                   "archetype": "...", "summary": "..."},
+                                                  ensure_ascii=False, indent=2)}],
+            "images": [{"index": i + 1, "kind": a.get("kind"), "note": a.get("note"),
+                        "mime_type": a.get("mime_type")} for i, a in enumerate(assets or [])],
+            "filename": fname,
+        }
+
+    @brand_equity_router.api_route("/studies/{study_id}/extract-visual-identity/external-prompt",
+                                   methods=["GET", "POST"])
+    async def visual_identity_external_prompt(study_id: str, current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        ident = study.get("identity") or {}
+        if not (ident.get("description") or ident.get("visual_assets")):
+            raise HTTPException(400, "Provide identity.description or identity.visual_assets first")
+        b = study.get("brand") or {}
+        system, prompt = _visual_identity_prompt(b.get("name", ""), b.get("category", ""),
+                                                 ident.get("description") or "", ident.get("traits") or [],
+                                                 ident.get("brand_promise"), ident.get("pricing_tier"),
+                                                 ident.get("visual_assets") or [])
+        return _vi_payload(system, prompt, ident.get("visual_assets") or [],
+                           f"วิเคราะห์อัตลักษณ์ภาพ — {b.get('name')}", f"brand-visual-identity-{study_id[:8]}.md")
+
+    @brand_equity_router.post("/studies/{study_id}/extract-visual-identity/external-import")
+    async def visual_identity_external_import(study_id: str, body: ExternalImportBody,
+                                              current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        try:
+            derived = BX.validate_visual_identity(BX.extract_json(body.content))
+        except ImportValidationError as e:
+            _invalid(e)
+        return await _store_visual_identity(study_id, study.get("identity") or {}, derived,
+                                            source="external", model_label=_model_label(body.model_label),
+                                            user=current_user)
+
+    @brand_equity_router.post("/extract-identity/external-prompt")
+    async def extract_identity_external_prompt(payload: IdentityExtractRequest,
+                                               current_user=Depends(get_current_user)):
+        assets = [a.model_dump() for a in payload.visual_assets]
+        system, prompt = _visual_identity_prompt(payload.brand_name, payload.category or "",
+                                                 payload.description or "", payload.traits,
+                                                 payload.brand_promise, payload.pricing_tier, assets)
+        return _vi_payload(system, prompt, assets, f"วิเคราะห์อัตลักษณ์ภาพ — {payload.brand_name}",
+                           "brand-visual-identity.md")
+
+    @brand_equity_router.post("/extract-identity/external-import")
+    async def extract_identity_external_import(body: ExternalImportBody,
+                                               current_user=Depends(get_current_user)):
+        try:
+            derived = BX.validate_visual_identity(BX.extract_json(body.content))
+        except ImportValidationError as e:
+            _invalid(e)
+        return {**derived, "source": "external", "model_label": _model_label(body.model_label)}
+
+    # ---- be.questions: EN wording of custom attributes ---------------------
+    @brand_equity_router.api_route("/studies/{study_id}/regenerate-questions/external-prompt",
+                                   methods=["GET", "POST"])
+    async def translate_external_prompt(study_id: str, current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        attrs = [a.strip() for a in ((study.get("brand") or {}).get("custom_quality_attributes") or []) if a and a.strip()]
+        if not attrs:
+            raise HTTPException(400, "การศึกษานี้ไม่มีคุณลักษณะคุณภาพที่กำหนดเอง จึงไม่ต้องแปล")
+        system, prompt = _translation_prompt(attrs)
+        return {"feature": "be.questions", "title": "แปลคุณลักษณะคุณภาพเป็นภาษาอังกฤษ",
+                "instructions_th": "คัดลอกพรอมต์ไปให้ AI แปล แล้ววางคำแปล (หนึ่งบรรทัดต่อหนึ่งคุณลักษณะ ตามลำดับเดิม) "
+                                   "กลับมา ระบบจะสร้างคำถามฉบับภาษาอังกฤษใหม่ให้ (ไม่กระทบคำตอบที่เก็บแล้ว)",
+                "expected_format": "text",
+                "parts": [{"key": "main", "title": "แปลคุณลักษณะ", "system_prompt": system, "prompt": prompt,
+                           "json_example": json.dumps(["is reasonably priced", "has friendly staff"][:len(attrs)],
+                                                      ensure_ascii=False)}],
+                "filename": f"brand-attributes-translate-{study_id[:8]}.md"}
+
+    @brand_equity_router.post("/studies/{study_id}/regenerate-questions/external-import")
+    async def translate_external_import(study_id: str, body: ExternalImportBody,
+                                        current_user=Depends(get_current_user)):
+        study = await _get_owned_study(study_id, current_user)
+        attrs = [a.strip() for a in ((study.get("brand") or {}).get("custom_quality_attributes") or []) if a and a.strip()]
+        if not attrs:
+            raise HTTPException(400, "การศึกษานี้ไม่มีคุณลักษณะคุณภาพที่กำหนดเอง")
+        try:
+            en = BX.parse_translations(body.content, len(attrs))
+        except ImportValidationError as e:
+            _invalid(e)
+        brand = BrandSetup(**study["brand"])
+        brand.custom_quality_attributes_en = en
+        out = await _regenerate_and_store(study, brand, current_user)
+        return {**out, "custom_quality_attributes_en": en, "source": "external",
+                "model_label": _model_label(body.model_label)}
+
+    # ---- Thesis: external pack + import --------------------------------------
+    async def _thesis_context(study_id: str, current_user, from_iso, to_iso, segments):
+        if not current_user or _role(current_user) not in _THESIS_ROLES:
+            raise HTTPException(403, "Thesis export not available for your role.")
+        study = await _get_owned_study(study_id, current_user)
+        all_resp, flt, sig, f = await _slice(study, from_iso, to_iso, segments, None)
+        active = _resolve_ai_cache(study, sig)
+        agg = _aggregate_responses(study, flt, normalized=active.get("normalized_by_question") or {},
+                                   ai_cache=active)
+        study_for_ai = {**study, "ai_cache": active or study.get("ai_cache") or {}}
+        return study, study_for_ai, all_resp, flt, sig, f, agg
+
+    def _parse_chapters(ch: Optional[str]) -> List[int]:
+        try:
+            out = sorted({int(x) for x in re.split(r"[,\s]+", ch or "3,4,5") if x.strip()})
+        except ValueError:
+            raise HTTPException(400, "chapters ต้องเป็นตัวเลข 1-5 คั่นด้วยจุลภาค")
+        out = [c for c in out if 1 <= c <= 5]
+        if not out:
+            raise HTTPException(400, "เลือกบทที่ต้องการอย่างน้อย 1 บท")
+        return out
+
+    @brand_equity_router.get("/studies/{study_id}/thesis-ai/external-pack")
+    async def thesis_external_pack(
+        study_id: str,
+        chapters: Optional[str] = Query("3,4,5"),
+        extra_prompt: str = Query(""),
+        format: str = Query("md", description="md (download) | json (ExternalAiDialog parts)"),
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
+        from .be_thesis_ai import build_external_pack
+        chs = _parse_chapters(chapters)
+        study, study_for_ai, all_resp, flt, sig, f, agg = await _thesis_context(
+            study_id, current_user, from_iso, to_iso, segments)
+        if any(c >= 3 for c in chs) and len(flt) < 10:
+            raise HTTPException(400, f"ต้องมีอย่างน้อย 10 responses สำหรับบทที่ 3/4/5 — ปัจจุบัน {len(flt)}")
+        pack = build_external_pack(study=study_for_ai, aggregate=agg, n_total=len(all_resp),
+                                   n_filtered=len(flt), chapters=chs, extra_prompt=extra_prompt,
+                                   filter_info=f)
+        slug = re.sub(r"[^A-Za-z0-9]+", "-", (study.get("brand") or {}).get("name") or "brand").strip("-") or "brand"
+        fname = f"brand-equity-thesis-pack-{slug}.md"
+        if format == "json":
+            return {"feature": "be.thesis", "title": pack["title"], "instructions_th": pack["instructions_th"],
+                    "expected_format": "markdown", "parts": pack["parts"], "filename": fname,
+                    "signature": sig, "markdown": pack["markdown"]}
+        return _Resp(content=pack["markdown"].encode("utf-8"), media_type="text/markdown; charset=utf-8",
+                     headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+    @brand_equity_router.post("/studies/{study_id}/thesis-ai/external-import")
+    async def thesis_external_import(
+        study_id: str,
+        body: ThesisExternalImportBody,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        current_user=Depends(get_current_user),
+    ):
+        from .be_thesis_ai import references_section_md
+        study, _sfa, all_resp, flt, sig, f, agg = await _thesis_context(
+            study_id, current_user, from_iso, to_iso, segments)
+        incoming: Dict[int, str] = {}
+        try:
+            if body.chapters:
+                for k, v in body.chapters.items():
+                    incoming[int(str(k).lower().replace("ch", ""))] = v
+            if body.content is not None:
+                m = re.fullmatch(r"(?:ch)?([1-5])", (body.part_key or "").strip().lower())
+                if not m:
+                    raise ImportValidationError("part_key ต้องเป็น ch1 … ch5")
+                incoming[int(m.group(1))] = body.content
+            if not incoming:
+                raise ImportValidationError("ไม่พบเนื้อหาบทที่จะนำเข้า")
+            bad = [c for c in incoming if not 1 <= c <= 5]
+            if bad:
+                raise ImportValidationError(f"เลขบทไม่ถูกต้อง: {bad}")
+            cleaned: Dict[int, str] = {}
+            warnings: List[str] = []
+            for ch, txt in sorted(incoming.items()):
+                md, w = BX.clean_chapter(ch, txt)
+                warnings += w
+                if ch in (3, 4, 5):
+                    warnings += BX.reliability_claim_warnings(md, agg.get("reliability") or {})
+                cleaned[ch] = md
+        except (ImportValidationError, ValueError) as e:
+            if isinstance(e, ImportValidationError):
+                _invalid(e)
+            raise HTTPException(422, {"code": "external_import_invalid", "message": "เลขบทไม่ถูกต้อง", "errors": []})
+        if any(c >= 3 for c in cleaned) and len(flt) < 10:
+            raise HTTPException(400, f"ต้องมีอย่างน้อย 10 responses สำหรับบทที่ 3/4/5 — ปัจจุบัน {len(flt)}")
+
+        cache_key = f"be_thesis_ext_{study_id}_{sig}"
+        prev = await db.brand_thesis_cache.find_one(
+            {"cache_key": cache_key, "study_id": study_id,
+             "schema_version": BE_ANALYSIS_SCHEMA_VERSION}, {"_id": 0}) or {}
+        stored = {int(k): v for k, v in (prev.get("chapter_texts") or {}).items()}
+        stored.update(cleaned)
+        label = _model_label(body.model_label)
+        ai_md = "\n\n---\n\n".join(stored[c] for c in sorted(stored)) + "\n\n---\n\n" + references_section_md()
+        await db.brand_thesis_cache.update_one(
+            {"cache_key": cache_key, "study_id": study_id},
+            {"$set": {"study_id": study_id, "cache_key": cache_key,
+                      "schema_version": BE_ANALYSIS_SCHEMA_VERSION,
+                      "ai_content": ai_md,
+                      "chapter_texts": {str(k): v for k, v in stored.items()},
+                      "chapters": sorted(stored),
+                      "n_filtered": len(flt), "n_total": len(all_resp),
+                      "filter": f, "source": "external", "model_label": label,
+                      "imported_by": getattr(current_user, "email", None),
+                      "created_at": _now_iso()}},
+            upsert=True,
+        )
+        return {"status": "ready", "cache_key": cache_key, "chapters_imported": sorted(cleaned),
+                "chapters_stored": sorted(stored), "warnings": warnings, "model_label": label,
+                "download_path": f"/brand-equity/studies/{study_id}/thesis-ai-download?cache_key={cache_key}"}
+
+    # ---- Raw data export (SPSS / R / JASP) ----------------------------------
+    @brand_equity_router.get("/studies/{study_id}/export/raw")
+    async def export_raw(
+        study_id: str,
+        format: str = Query("xlsx", description="xlsx | csv | codebook_csv"),
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        wave: Optional[str] = Query(None),
+        exclude_flagged: bool = Query(False),
+        current_user=Depends(get_current_user),
+    ):
+        study = await _get_owned_study(study_id, current_user)
+        all_resp, flt, sig, f = await _slice(study, from_iso, to_iso, segments, wave)
+        if exclude_flagged:
+            flt = _exclude_flagged(study, flt)
+        exp = _build_raw_export(study, flt, all_responses_for_quality=all_resp)
+        slug = re.sub(r"[^A-Za-z0-9]+", "-", (study.get("brand") or {}).get("name") or "brand").strip("-") or "brand"
+        if format == "csv":
+            return _Resp(content=_rows_to_csv(exp["columns"], exp["rows"]).encode("utf-8"),
+                         media_type="text/csv; charset=utf-8",
+                         headers={"Content-Disposition": f'attachment; filename="be-{slug}-data.csv"'})
+        if format == "codebook_csv":
+            return _Resp(content=_rows_to_csv(exp["codebook_columns"], exp["codebook"]).encode("utf-8"),
+                         media_type="text/csv; charset=utf-8",
+                         headers={"Content-Disposition": f'attachment; filename="be-{slug}-codebook.csv"'})
+        data = await asyncio.to_thread(_raw_export_xlsx, exp, study, f, len(all_resp))
+        return _Resp(content=data,
+                     media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     headers={"Content-Disposition": f'attachment; filename="be-{slug}-raw.xlsx"'})
+
 
     return brand_equity_router

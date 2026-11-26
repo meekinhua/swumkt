@@ -40,7 +40,9 @@ import json
 import logging
 import asyncio
 from typing import Optional, Dict, List, Tuple
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from lib.llm_policy import SystemLLMDisabled
+# emergentintegrations is imported lazily inside the functions that call the LLM, so this module (and
+# server.py) imports on machines without the package.
 
 logger = logging.getLogger(__name__)
 
@@ -379,6 +381,7 @@ Return JSON:
 {{"formatted_text": "...", "new_citations": [...]}}"""
 
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"c{chunk_info['chunk_number']}",
@@ -411,6 +414,8 @@ Return JSON:
                 "new_citations": [],
                 "changes_summary": "Timeout - skipped"
             }
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"Chunk {chunk_info['chunk_number']} ERROR: {e}")
             # Fallback: return original
@@ -479,6 +484,7 @@ OUTPUT FORMAT:
 Return ONLY valid JSON, nothing else."""
 
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"extract-refs-{id(self)}",
@@ -505,6 +511,8 @@ Return ONLY valid JSON, nothing else."""
             
             return references
             
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"Error extracting references: {e}")
             return []
@@ -589,6 +597,7 @@ Return the FULL document text with citations replaced.
 DO NOT return JSON, just return the formatted text."""
 
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"replace-cites-{id(self)}",
@@ -603,6 +612,8 @@ DO NOT return JSON, just return the formatted text."""
             
             return response.strip()
             
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"Error replacing citations: {e}")
             return document_text  # Return original if fails
@@ -652,6 +663,7 @@ OUTPUT: Return a JSON object with:
 }}"""
 
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"master-refs-{id(self)}",
@@ -672,6 +684,8 @@ OUTPUT: Return a JSON object with:
             logger.info(f"Extracted {data.get('total_references', 0)} master references")
             return data
             
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"Error extracting master references: {e}")
             # Return empty master list if extraction fails
@@ -713,6 +727,7 @@ OUTPUT: Return a JSON object with:
         try:
             # Create chat instance
             session_suffix = f"-chunk{chunk_info['chunk_number']}" if chunk_info else ""
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"doc-format-{id(self)}{session_suffix}",
@@ -743,6 +758,8 @@ OUTPUT: Return a JSON object with:
                     "changes_summary": f"Formatting failed: {str(e)}"
                 }
         
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"DocFormatter Error: {e}")
             raise Exception(f"Failed to reformat document: {str(e)}")
@@ -895,6 +912,7 @@ INSTRUCTIONS:
 OUTPUT: Plain text reference list, one entry per line or properly formatted."""
         
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"ref-list-{id(self)}"
@@ -903,6 +921,8 @@ OUTPUT: Plain text reference list, one entry per line or properly formatted."""
             response = await chat.send_message(UserMessage(text=prompt))
             return response.strip() if response else ""
         
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"Error generating reference list: {e}")
             return f"Error: {str(e)}"

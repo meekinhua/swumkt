@@ -149,7 +149,7 @@ const LlmPolicyCard = () => {
                     : 'ปิดอยู่: ระบบจะไม่เรียก LLM เลย จึงไม่มีค่าใช้จ่าย LLM — ผู้ใช้ต้องคัดลอกพรอมต์ไปใช้ใน ChatGPT / Claude / Gemini ของตนเอง แล้ววางผลลัพธ์กลับมา (ใช้ได้ทุกฟังก์ชันเสมอ)'}
                 </p>
               </div>
-              <Switch id="llm-master" checked={on} disabled={saving} onCheckedChange={(v) => save({ system_llm_enabled: v }, v ? 'เปิด AI ของระบบแล้ว' : 'ปิด AI ของระบบแล้ว')} data-testid="llm-master-switch" aria-label="อนุญาต AI ของระบบ" />
+              <Switch id="llm-master" checked={on} disabled={saving} onCheckedChange={(v) => save({ system_llm_enabled: v }, v ? 'เปิด AI ของระบบแล้ว' : 'ปิด AI ของระบบแล้ว')} className="data-[state=unchecked]:bg-gray-400 data-[state=checked]:bg-[#C8102E]" data-testid="llm-master-switch" aria-label="อนุญาต AI ของระบบ" />
             </div>
           </div>
 
@@ -191,7 +191,7 @@ const LlmPolicyCard = () => {
               <Label htmlFor="llm-bypass" className="text-sm font-bold flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> ผู้ดูแลระบบใช้ AI ของระบบได้เสมอ</Label>
               <p className="text-xs text-gray-600 mt-1">แม้ปิดสำหรับผู้ใช้ทั่วไป แอดมินยังทดสอบด้วย AI ของระบบได้ (ยังมีค่าใช้จ่ายเมื่อแอดมินใช้)</p>
             </div>
-            <Switch id="llm-bypass" checked={p.admin_bypass === true} disabled={saving} onCheckedChange={(v) => save({ admin_bypass: v })} data-testid="llm-bypass-switch" aria-label="แอดมินข้ามข้อจำกัด" />
+            <Switch id="llm-bypass" checked={p.admin_bypass === true} disabled={saving} onCheckedChange={(v) => save({ admin_bypass: v })} className="data-[state=unchecked]:bg-gray-400 data-[state=checked]:bg-[#0A0A0A]" data-testid="llm-bypass-switch" aria-label="แอดมินข้ามข้อจำกัด" />
           </div>
 
           {/* Hint */}

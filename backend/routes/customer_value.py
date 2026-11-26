@@ -34,6 +34,9 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+from lib import llm_policy
+from lib import external_prompts as ext
+
 cv_router = APIRouter(prefix="/cv", tags=["customer-value"])
 
 # Economical Gemini text model. gemini-2.5-flash-lite is not enabled on the
@@ -211,6 +214,185 @@ STRATEGY_NOTES = {
 }
 
 
+# ============ PROMPT BUILDERS (shared by the system-LLM and external-prompt paths) ============
+# Pure functions: the system endpoints and their `…/external-prompt` companions call the SAME
+# builder, so what the user's own LLM receives can never drift from what the system would send.
+def _cv_suggest_prompts(s: Dict[str, Any], brand: Dict[str, Any], req) -> tuple:
+    """(system, prompt, is_cost) for ai-suggest."""
+    is_cost = req.category in ("money", "inconvenience", "risk")
+    existing = []
+    if is_cost:
+        existing = [f["label"] for f in (brand.get("costs", {}).get(req.category, []) or [])]
+    else:
+        existing = [f["label"] for f in (brand.get("benefits", {}).get(req.category, []) or [])]
+
+    rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
+    if is_cost:
+        goal = ("ระบุ 'ต้นทุน / สิ่งที่ลูกค้าต้องเสียหรือเจ็บปวด' ในหมวดนี้ "
+                "(ยิ่งมีปัจจัยเหล่านี้มาก Customer Value ยิ่งลดลง)")
+        framing = (
+            "สำคัญมาก: เนื่องจากเป็นหมวด COST ปัจจัยทุกตัวต้องเขียนใน 'มุมลบ' "
+            "คือ ปัญหา/อุปสรรค/สิ่งที่ลูกค้าต้องเสียหรือไม่พอใจ "
+            "เช่น 'ที่จอดรถไม่เพียงพอ', 'รอคิวนาน', 'ขั้นตอนสั่งซื้อยุ่งยาก', 'กลัวได้ของไม่ตรงปก'. "
+            "ห้ามเขียนเป็นทางแก้หรือมุมบวกเด็ดขาด (อย่าเขียน 'ที่จอดรถเพียงพอ' หรือ 'ระบบจองคิวสะดวก').\n"
+        )
+        rationale_hint = "rationale: เหตุผลสั้นๆ ว่าทำไมสิ่งนี้เป็นต้นทุนที่ทำให้ลูกค้าลังเล / คุณค่าลดลง"
+    else:
+        goal = "เพิ่มประโยชน์/คุณค่าที่ลูกค้าจะได้รับในหมวดนี้ (Benefit สูงขึ้น → Customer Value สูงขึ้น)"
+        framing = (
+            "ปัจจัยทุกตัวต้องเขียนใน 'มุมบวก' คือ ประโยชน์/จุดเด่นที่ลูกค้าได้รับ "
+            "เช่น 'รสชาติอร่อยเข้มข้น', 'บริการรวดเร็ว'.\n"
+        )
+        rationale_hint = "rationale: เหตุผลสั้นๆ ว่าช่วยเพิ่มคุณค่าให้ลูกค้าอย่างไร"
+
+    system = (
+        "คุณเป็นที่ปรึกษาการตลาดที่ยึดหลัก Kotler (บริหาร Customer Value + Engagement) "
+        "และ Drucker (ทำให้สินค้าขายได้ด้วยตัวเอง). "
+        "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
+    )
+    guide = CATEGORY_GUIDE.get(req.category, {})
+    strat = STRATEGY_NOTES.get(req.category, "")
+    prompt = (
+        f"ธุรกิจ: {rng['label']} | แบรนด์: {brand['name']}\n"
+        f"หมวดที่ต้องการคำแนะนำ: {CATEGORY_LABELS[req.category]}\n"
+        f"นิยามของหมวดนี้: {guide.get('def', '')}\n"
+        f"สิ่งที่อยู่ในหมวดนี้: {guide.get('include', '')}\n"
+        f"สิ่งที่ 'ไม่ใช่' หมวดนี้ (ห้ามเสนอ เพราะอยู่หมวดอื่น): {guide.get('exclude', '')}\n"
+        + (f"ข้อสังเกตเชิงกลยุทธ์: {strat}\n" if strat else "")
+        + f"เป้าหมาย: {goal}\n"
+        f"{framing}"
+        f"ปัจจัยที่มีอยู่แล้ว (อย่าซ้ำ): {existing or 'ยังไม่มี'}\n\n"
+        "เสนอ 4-5 ปัจจัยใหม่ที่ 'ตรงกับนิยามหมวดนี้เท่านั้น' โดยแต่ละปัจจัยให้:\n"
+        "- label: ชื่อปัจจัยสั้นๆ ภาษาไทย (เป็นรูปธรรม จับต้องได้ และตรงตามมุม+นิยามที่กำหนด)\n"
+        "- weight: ความสำคัญ/ความรุนแรง 1-3 (3=มากที่สุด)\n"
+        f"- {rationale_hint}\n"
+        "- principle: หนึ่งใน ['kotler-value','kotler-engagement','drucker-selfsell']\n\n"
+        "ก่อนตอบ ให้ตรวจสอบทุกปัจจัยว่าตรงนิยามหมวดนี้จริง ถ้าเข้าหมวดอื่นให้ตัดทิ้ง\n"
+        'รูปแบบ JSON: {"suggestions":[{"label":"...","weight":2,"rationale":"...","principle":"kotler-value"}]}'
+    )
+    return system, prompt, is_cost
+
+
+def _cv_analysis_prompts(s: Dict[str, Any]) -> tuple:
+    """(system, prompt) for ai-analysis."""
+    rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
+    lines = []
+    for b in s.get("brands", []):
+        sc = score_brand(b, rng)
+        tag = "(เรา)" if b.get("is_ours") else "(คู่แข่ง)"
+        lines.append(
+            f"- {b['name']} {tag}: Benefit={sc['benefit_total']}, Cost={sc['cost_total']}, "
+            f"Net Value={sc['net_value']} | breakdown={sc['breakdown']}"
+        )
+    system = (
+        "คุณเป็นที่ปรึกษากลยุทธ์การตลาดระดับสูง ยึดหลัก Customer Value = Benefit − Price, "
+        "Kotler (value + engagement) และ Drucker (make selling unnecessary). ตอบเป็น Markdown ภาษาไทย."
+    )
+    prompt = (
+        f"ธุรกิจ: {rng['label']}\nผลการประเมิน Customer Value ของแต่ละแบรนด์:\n"
+        + "\n".join(lines)
+        + "\n\nเขียนบทวิเคราะห์เชิงกลยุทธ์ กระชับ มีหัวข้อ:\n"
+        "1. ใครชนะด้านคุณค่า และเพราะอะไร (อ้างตัวเลข)\n"
+        "2. ช่องว่างของแบรนด์เรา — ควรเพิ่ม Benefit หมวดใด / ลด Cost หมวดใด\n"
+        "3. กลยุทธ์ทำให้ 'ขายได้ด้วยตัวเอง' (Drucker) + สร้าง engagement (Kotler)\n"
+        "4. คำแนะนำที่ลงมือทำได้ทันที 3 ข้อ"
+    )
+    return system, prompt
+
+
+def _cv_needs_prompts(s: Dict[str, Any], req) -> tuple:
+    """(system, prompt) for ai-needs."""
+    rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
+    ours = next((b for b in s.get("brands", []) if b.get("is_ours")), (s.get("brands") or [{}])[0])
+    system = (
+        "คุณเป็นที่ปรึกษาการตลาด สอนเรื่อง Need vs Want vs Demand. "
+        "Need=ความต้องการดิบจากธรรมชาติ, Want=Need ที่ถูกหล่อหลอมด้วยวัฒนธรรมจนเจาะจงเป็นสินค้า, "
+        "Demand=Want ที่มี Buying Power (กำลังซื้อ/สิทธิ์จริง) รองรับเท่านั้น. "
+        "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
+    )
+    prompt = (
+        f"ธุรกิจ: {rng['label']} | แบรนด์: {ours.get('name','ของเรา')}\n"
+        f"Need ที่ผู้ใช้ระบุ: {req.need or '(ยังไม่ระบุ)'}\n"
+        f"Want ที่ผู้ใช้ระบุ: {req.want or '(ยังไม่ระบุ)'}\n"
+        f"Buying Power ที่ผู้ใช้ระบุ: {req.buying_power or '(ยังไม่ระบุ)'}\n\n"
+        "ช่วยวิเคราะห์และเติมเต็มให้ ตอบ JSON ดังนี้:\n"
+        '{"need":"ความต้องการดิบที่แท้จริง","want":"Want ที่เจาะจงตามวัฒนธรรมกลุ่มเป้าหมาย",'
+        '"buying_power":"ประเมินกำลังซื้อ/สิทธิ์ของกลุ่มเป้าหมาย",'
+        '"is_real_demand":true,"demand_verdict":"สรุปสั้นๆว่านับเป็น Demand จริงไหม เพราะอะไร",'
+        '"tips":["คำแนะนำสั้นๆ 2-3 ข้อ ในการเปลี่ยน Want ให้เป็น Demand"]}'
+    )
+    return system, prompt
+
+
+def _cv_step_prompts(s: Dict[str, Any], req) -> tuple:
+    """(system, prompt) for ai-step."""
+    rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
+    ours = next((b for b in s.get("brands", []) if b.get("is_ours")), (s.get("brands") or [{}])[0])
+    needs = s.get("needs", {}) or {}
+    system = (
+        "คุณเป็นที่ปรึกษาการตลาดที่ยึดกระบวนการตลาด 5 ขั้นของ Kotler. "
+        "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
+    )
+    prompt = (
+        f"ธุรกิจ: {rng['label']} | แบรนด์: {ours.get('name','ของเรา')}\n"
+        f"บริบท Need/Want: {needs.get('need','-')} / {needs.get('want','-')}\n"
+        f"ขั้นตอนที่ต้องการคำแนะนำ: {_STEP_LABELS[req.step]}\n\n"
+        "ให้คำแนะนำที่ลงมือทำได้จริงเฉพาะขั้นตอนนี้ ตอบ JSON:\n"
+        '{"summary":"อธิบายเป้าหมายของขั้นตอนนี้ใน 1-2 ประโยค",'
+        '"checklist":["สิ่งที่ต้องทำเป็นข้อๆ 4-5 ข้อ เฉพาะเจาะจงกับธุรกิจนี้"]}'
+    )
+    return system, prompt
+
+
+def _cv_image_prompt(s: Dict[str, Any], brand: Dict[str, Any], req) -> str:
+    """Image prompt for generate-image."""
+    rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
+    # Build a vivid prompt from the chosen value proposition (checked benefits).
+    benefits = brand.get("benefits", {}) or {}
+    chosen = []
+    for cat in ("functional", "economic", "love_belonging", "esteem_status"):
+        chosen += [f["label"] for f in (benefits.get(cat) or []) if f.get("checked")]
+    value_props = ", ".join(chosen[:8]) if chosen else "high quality, appealing"
+
+    prompt = (
+        f"A professional, photorealistic product/service marketing photo for a "
+        f"{rng['label']} business named '{brand['name']}'. "
+        f"The offering should visually communicate these value propositions: {value_props}. "
+        f"Clean studio or real-world setting, premium commercial photography, soft lighting, "
+        f"high detail, no text overlays. {req.extra_prompt or ''}"
+    ).strip()
+
+    return prompt
+
+
+_STEP_LABELS = {
+    "research": "ขั้นที่ 1 — เข้าใจตลาดและความต้องการ (Market Research: Need & Want)",
+    "stp": "ขั้นที่ 2 — วางกลยุทธ์ STP (Segmentation, Targeting, Positioning)",
+    "fourps": "ขั้นที่ 3 — สร้างโปรแกรมคุณค่า 4Ps (Product, Price, Place, Promotion)",
+    "engagement": "ขั้นที่ 4 — สร้างความสัมพันธ์และความรักแบรนด์ (Engagement)",
+    "returns": "ขั้นที่ 5 — เก็บเกี่ยวผลตอบแทนเชิงคุณค่า (Capture Value / Return / ROI)",
+}
+
+
+class CVExternalImport(BaseModel):
+    """Body of the …/external-import endpoints: what the user's own LLM answered."""
+    content: str
+    part_key: Optional[str] = "main"
+    model_label: Optional[str] = None
+
+
+class CVSuggestImport(CVAISuggestRequest):
+    content: str
+    part_key: Optional[str] = "main"
+    model_label: Optional[str] = None
+
+
+class CVStepImport(CVStepRequest):
+    content: str
+    part_key: Optional[str] = "main"
+    model_label: Optional[str] = None
+
+
 # ============================ FACTORY ============================
 def get_customer_value_routes(db, get_current_user, get_current_user_optional):
     import server as _server
@@ -340,72 +522,40 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
         await db.cv_studies.update_one({"id": study_id}, {"$set": {"deleted_at": None}})
         return {"ok": True}
 
+    # ------------------------------------------------------ AI helpers
+    def _get_study_or_404(s, current_user):
+        if not s or not _owns(s, current_user):
+            raise HTTPException(status_code=404, detail="Study not found")
+        return s
+
+    def _brand_or_404(s, brand_id):
+        brand = next((b for b in s.get("brands", []) if b["id"] == brand_id), None)
+        if not brand:
+            raise HTTPException(status_code=404, detail="Brand not found")
+        return brand
+
+    def _check_category(category):
+        if category not in CATEGORY_LABELS:
+            raise HTTPException(status_code=400, detail="Invalid category")
+
+    def _external_payload(feature_title, filename, system, prompt, expected_format, json_example=None, extra_steps=""):
+        return ext.single_part_payload(
+            feature="cv.ai", title=feature_title, system_prompt=system, prompt=prompt,
+            expected_format=expected_format, filename=filename, json_example=json_example,
+            instructions_th=ext.GENERIC_STEPS_TH + extra_steps)
+
     # ------------------------------------------------------ AI SUGGESTIONS
     @cv_router.post("/studies/{study_id}/ai-suggest")
     async def ai_suggest(study_id: str, req: CVAISuggestRequest, current_user: User = Depends(get_current_user)):
-        s = await db.cv_studies.find_one({"id": study_id}, {"_id": 0})
-        if not s or not _owns(s, current_user):
-            raise HTTPException(status_code=404, detail="Study not found")
-        brand = next((b for b in s.get("brands", []) if b["id"] == req.brand_id), None)
-        if not brand:
-            raise HTTPException(status_code=404, detail="Brand not found")
-        if req.category not in CATEGORY_LABELS:
-            raise HTTPException(status_code=400, detail="Invalid category")
-
-        is_cost = req.category in ("money", "inconvenience", "risk")
-        existing = []
-        if is_cost:
-            existing = [f["label"] for f in (brand.get("costs", {}).get(req.category, []) or [])]
-        else:
-            existing = [f["label"] for f in (brand.get("benefits", {}).get(req.category, []) or [])]
-
-        rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
-        if is_cost:
-            goal = ("ระบุ 'ต้นทุน / สิ่งที่ลูกค้าต้องเสียหรือเจ็บปวด' ในหมวดนี้ "
-                    "(ยิ่งมีปัจจัยเหล่านี้มาก Customer Value ยิ่งลดลง)")
-            framing = (
-                "สำคัญมาก: เนื่องจากเป็นหมวด COST ปัจจัยทุกตัวต้องเขียนใน 'มุมลบ' "
-                "คือ ปัญหา/อุปสรรค/สิ่งที่ลูกค้าต้องเสียหรือไม่พอใจ "
-                "เช่น 'ที่จอดรถไม่เพียงพอ', 'รอคิวนาน', 'ขั้นตอนสั่งซื้อยุ่งยาก', 'กลัวได้ของไม่ตรงปก'. "
-                "ห้ามเขียนเป็นทางแก้หรือมุมบวกเด็ดขาด (อย่าเขียน 'ที่จอดรถเพียงพอ' หรือ 'ระบบจองคิวสะดวก').\n"
-            )
-            rationale_hint = "rationale: เหตุผลสั้นๆ ว่าทำไมสิ่งนี้เป็นต้นทุนที่ทำให้ลูกค้าลังเล / คุณค่าลดลง"
-        else:
-            goal = "เพิ่มประโยชน์/คุณค่าที่ลูกค้าจะได้รับในหมวดนี้ (Benefit สูงขึ้น → Customer Value สูงขึ้น)"
-            framing = (
-                "ปัจจัยทุกตัวต้องเขียนใน 'มุมบวก' คือ ประโยชน์/จุดเด่นที่ลูกค้าได้รับ "
-                "เช่น 'รสชาติอร่อยเข้มข้น', 'บริการรวดเร็ว'.\n"
-            )
-            rationale_hint = "rationale: เหตุผลสั้นๆ ว่าช่วยเพิ่มคุณค่าให้ลูกค้าอย่างไร"
-
-        system = (
-            "คุณเป็นที่ปรึกษาการตลาดที่ยึดหลัก Kotler (บริหาร Customer Value + Engagement) "
-            "และ Drucker (ทำให้สินค้าขายได้ด้วยตัวเอง). "
-            "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
-        )
-        guide = CATEGORY_GUIDE.get(req.category, {})
-        strat = STRATEGY_NOTES.get(req.category, "")
-        prompt = (
-            f"ธุรกิจ: {rng['label']} | แบรนด์: {brand['name']}\n"
-            f"หมวดที่ต้องการคำแนะนำ: {CATEGORY_LABELS[req.category]}\n"
-            f"นิยามของหมวดนี้: {guide.get('def', '')}\n"
-            f"สิ่งที่อยู่ในหมวดนี้: {guide.get('include', '')}\n"
-            f"สิ่งที่ 'ไม่ใช่' หมวดนี้ (ห้ามเสนอ เพราะอยู่หมวดอื่น): {guide.get('exclude', '')}\n"
-            + (f"ข้อสังเกตเชิงกลยุทธ์: {strat}\n" if strat else "")
-            + f"เป้าหมาย: {goal}\n"
-            f"{framing}"
-            f"ปัจจัยที่มีอยู่แล้ว (อย่าซ้ำ): {existing or 'ยังไม่มี'}\n\n"
-            "เสนอ 4-5 ปัจจัยใหม่ที่ 'ตรงกับนิยามหมวดนี้เท่านั้น' โดยแต่ละปัจจัยให้:\n"
-            "- label: ชื่อปัจจัยสั้นๆ ภาษาไทย (เป็นรูปธรรม จับต้องได้ และตรงตามมุม+นิยามที่กำหนด)\n"
-            "- weight: ความสำคัญ/ความรุนแรง 1-3 (3=มากที่สุด)\n"
-            f"- {rationale_hint}\n"
-            "- principle: หนึ่งใน ['kotler-value','kotler-engagement','drucker-selfsell']\n\n"
-            "ก่อนตอบ ให้ตรวจสอบทุกปัจจัยว่าตรงนิยามหมวดนี้จริง ถ้าเข้าหมวดอื่นให้ตัดทิ้ง\n"
-            'รูปแบบ JSON: {"suggestions":[{"label":"...","weight":2,"rationale":"...","principle":"kotler-value"}]}'
-        )
+        # Policy gate before any work (409 llm_external_only when the admin switch is off)
+        await llm_policy.require_system_llm("cv.ai", current_user)
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        brand = _brand_or_404(s, req.brand_id)
+        _check_category(req.category)
+        system, prompt, is_cost = _cv_suggest_prompts(s, brand, req)
         try:
             raw = await _gemini_text(system, prompt, f"cv-suggest-{study_id}-{req.category}")
-        except HTTPException:
+        except (HTTPException, llm_policy.SystemLLMDisabled):
             raise
         except Exception as e:
             logging.error(f"CV ai-suggest error: {e}")
@@ -414,37 +564,43 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
         suggestions = _parse_suggestions(raw)
         return {"category": req.category, "is_cost": is_cost, "suggestions": suggestions}
 
+    @cv_router.post("/studies/{study_id}/ai-suggest/external-prompt")
+    async def ai_suggest_external_prompt(study_id: str, req: CVAISuggestRequest,
+                                         current_user: User = Depends(get_current_user)):
+        """The prompt ai-suggest would send, for the user's own LLM (always available)."""
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        brand = _brand_or_404(s, req.brand_id)
+        _check_category(req.category)
+        system, prompt, _ = _cv_suggest_prompts(s, brand, req)
+        return _external_payload(
+            "Customer Value — ข้อเสนอปัจจัยใหม่", f"cv-{study_id}-suggest-{req.category}-prompt.md",
+            system, prompt, "json",
+            json_example='{"suggestions":[{"label":"...","weight":2,"rationale":"...","principle":"kotler-value"}]}')
+
+    @cv_router.post("/studies/{study_id}/ai-suggest/external-import")
+    async def ai_suggest_external_import(study_id: str, body: CVSuggestImport,
+                                         current_user: User = Depends(get_current_user)):
+        """Parse the JSON answer of the user's own LLM into the same `suggestions` list ai-suggest returns.
+        Nothing is stored (the UI adds the chosen suggestions itself). 422 + Thai message if unusable."""
+        req = body
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        _brand_or_404(s, req.brand_id)
+        _check_category(req.category)
+        suggestions = _parse_suggestions(body.content or "")
+        if not suggestions:
+            raise HTTPException(status_code=422, detail="อ่านคำตอบไม่ได้ — ต้องเป็น JSON ตามตัวอย่างในพรอมต์ (มีคีย์ suggestions)")
+        return {"category": req.category, "is_cost": req.category in ("money", "inconvenience", "risk"),
+                "suggestions": suggestions, **ext.external_stamp(body.model_label, current_user)}
+
     # ------------------------------------------------------ AI ANALYSIS
     @cv_router.post("/studies/{study_id}/ai-analysis")
     async def ai_analysis(study_id: str, current_user: User = Depends(get_current_user)):
-        s = await db.cv_studies.find_one({"id": study_id}, {"_id": 0})
-        if not s or not _owns(s, current_user):
-            raise HTTPException(status_code=404, detail="Study not found")
-        rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
-        lines = []
-        for b in s.get("brands", []):
-            sc = score_brand(b, rng)
-            tag = "(เรา)" if b.get("is_ours") else "(คู่แข่ง)"
-            lines.append(
-                f"- {b['name']} {tag}: Benefit={sc['benefit_total']}, Cost={sc['cost_total']}, "
-                f"Net Value={sc['net_value']} | breakdown={sc['breakdown']}"
-            )
-        system = (
-            "คุณเป็นที่ปรึกษากลยุทธ์การตลาดระดับสูง ยึดหลัก Customer Value = Benefit − Price, "
-            "Kotler (value + engagement) และ Drucker (make selling unnecessary). ตอบเป็น Markdown ภาษาไทย."
-        )
-        prompt = (
-            f"ธุรกิจ: {rng['label']}\nผลการประเมิน Customer Value ของแต่ละแบรนด์:\n"
-            + "\n".join(lines)
-            + "\n\nเขียนบทวิเคราะห์เชิงกลยุทธ์ กระชับ มีหัวข้อ:\n"
-            "1. ใครชนะด้านคุณค่า และเพราะอะไร (อ้างตัวเลข)\n"
-            "2. ช่องว่างของแบรนด์เรา — ควรเพิ่ม Benefit หมวดใด / ลด Cost หมวดใด\n"
-            "3. กลยุทธ์ทำให้ 'ขายได้ด้วยตัวเอง' (Drucker) + สร้าง engagement (Kotler)\n"
-            "4. คำแนะนำที่ลงมือทำได้ทันที 3 ข้อ"
-        )
+        await llm_policy.require_system_llm("cv.ai", current_user)
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        system, prompt = _cv_analysis_prompts(s)
         try:
             md = await _gemini_text(system, prompt, f"cv-analysis-{study_id}")
-        except HTTPException:
+        except (HTTPException, llm_policy.SystemLLMDisabled):
             raise
         except Exception as e:
             logging.error(f"CV ai-analysis error: {e}")
@@ -454,34 +610,40 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
             {"$set": {"ai_analysis": md, "ai_analysis_at": datetime.now(timezone.utc).isoformat()}})
         return {"analysis": md}
 
+    @cv_router.api_route("/studies/{study_id}/ai-analysis/external-prompt", methods=["GET", "POST"])
+    async def ai_analysis_external_prompt(study_id: str, current_user: User = Depends(get_current_user)):
+        """The prompt ai-analysis would send (scores already embedded), for the user's own LLM."""
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        system, prompt = _cv_analysis_prompts(s)
+        return _external_payload("Customer Value — บทวิเคราะห์เชิงกลยุทธ์", f"cv-{study_id}-analysis-prompt.md",
+                                 system, prompt, "markdown")
+
+    @cv_router.post("/studies/{study_id}/ai-analysis/external-import")
+    async def ai_analysis_external_import(study_id: str, body: CVExternalImport,
+                                          current_user: User = Depends(get_current_user)):
+        """Store the Markdown analysis written by the user's own LLM where ai-analysis stores its
+        result (`ai_analysis`) and return the same `{analysis}` body (+ source/model_label)."""
+        _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        try:
+            md = ext.clean_text_import(body.content, min_chars=40)
+        except ext.ExternalImportError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        stamp = ext.external_stamp(body.model_label, current_user)
+        await db.cv_studies.update_one(
+            {"id": study_id},
+            {"$set": {"ai_analysis": md, "ai_analysis_at": stamp["imported_at"],
+                      "ai_analysis_source": stamp}})
+        return {"analysis": md, **stamp}
+
     # ------------------------------------------------------ AI: NEED → WANT → DEMAND
     @cv_router.post("/studies/{study_id}/ai-needs")
     async def ai_needs(study_id: str, req: CVNeedsRequest, current_user: User = Depends(get_current_user)):
-        s = await db.cv_studies.find_one({"id": study_id}, {"_id": 0})
-        if not s or not _owns(s, current_user):
-            raise HTTPException(status_code=404, detail="Study not found")
-        rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
-        ours = next((b for b in s.get("brands", []) if b.get("is_ours")), (s.get("brands") or [{}])[0])
-        system = (
-            "คุณเป็นที่ปรึกษาการตลาด สอนเรื่อง Need vs Want vs Demand. "
-            "Need=ความต้องการดิบจากธรรมชาติ, Want=Need ที่ถูกหล่อหลอมด้วยวัฒนธรรมจนเจาะจงเป็นสินค้า, "
-            "Demand=Want ที่มี Buying Power (กำลังซื้อ/สิทธิ์จริง) รองรับเท่านั้น. "
-            "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
-        )
-        prompt = (
-            f"ธุรกิจ: {rng['label']} | แบรนด์: {ours.get('name','ของเรา')}\n"
-            f"Need ที่ผู้ใช้ระบุ: {req.need or '(ยังไม่ระบุ)'}\n"
-            f"Want ที่ผู้ใช้ระบุ: {req.want or '(ยังไม่ระบุ)'}\n"
-            f"Buying Power ที่ผู้ใช้ระบุ: {req.buying_power or '(ยังไม่ระบุ)'}\n\n"
-            "ช่วยวิเคราะห์และเติมเต็มให้ ตอบ JSON ดังนี้:\n"
-            '{"need":"ความต้องการดิบที่แท้จริง","want":"Want ที่เจาะจงตามวัฒนธรรมกลุ่มเป้าหมาย",'
-            '"buying_power":"ประเมินกำลังซื้อ/สิทธิ์ของกลุ่มเป้าหมาย",'
-            '"is_real_demand":true,"demand_verdict":"สรุปสั้นๆว่านับเป็น Demand จริงไหม เพราะอะไร",'
-            '"tips":["คำแนะนำสั้นๆ 2-3 ข้อ ในการเปลี่ยน Want ให้เป็น Demand"]}'
-        )
+        await llm_policy.require_system_llm("cv.ai", current_user)
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        system, prompt = _cv_needs_prompts(s, req)
         try:
             raw = await _gemini_text(system, prompt, f"cv-needs-{study_id}")
-        except HTTPException:
+        except (HTTPException, llm_policy.SystemLLMDisabled):
             raise
         except Exception as e:
             logging.error(f"CV ai-needs error: {e}")
@@ -489,40 +651,36 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
         data = _parse_json_obj(raw)
         return {"result": data}
 
-    # ------------------------------------------------------ AI: 5-STEP PROCESS
-    _STEP_LABELS = {
-        "research": "ขั้นที่ 1 — เข้าใจตลาดและความต้องการ (Market Research: Need & Want)",
-        "stp": "ขั้นที่ 2 — วางกลยุทธ์ STP (Segmentation, Targeting, Positioning)",
-        "fourps": "ขั้นที่ 3 — สร้างโปรแกรมคุณค่า 4Ps (Product, Price, Place, Promotion)",
-        "engagement": "ขั้นที่ 4 — สร้างความสัมพันธ์และความรักแบรนด์ (Engagement)",
-        "returns": "ขั้นที่ 5 — เก็บเกี่ยวผลตอบแทนเชิงคุณค่า (Capture Value / Return / ROI)",
-    }
+    @cv_router.post("/studies/{study_id}/ai-needs/external-prompt")
+    async def ai_needs_external_prompt(study_id: str, req: CVNeedsRequest,
+                                       current_user: User = Depends(get_current_user)):
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        system, prompt = _cv_needs_prompts(s, req)
+        return _external_payload("Customer Value — Need → Want → Demand", f"cv-{study_id}-needs-prompt.md",
+                                 system, prompt, "json",
+                                 json_example='{"need":"...","want":"...","buying_power":"...","is_real_demand":true,"demand_verdict":"...","tips":["..."]}')
 
+    @cv_router.post("/studies/{study_id}/ai-needs/external-import")
+    async def ai_needs_external_import(study_id: str, body: CVExternalImport,
+                                       current_user: User = Depends(get_current_user)):
+        """Parse the user's own LLM's JSON into the same `{result}` ai-needs returns (nothing stored)."""
+        _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        data = _parse_json_obj(body.content or "")
+        if not data or not any(k in data for k in ("need", "want", "buying_power", "demand_verdict")):
+            raise HTTPException(status_code=422, detail="อ่านคำตอบไม่ได้ — ต้องเป็น JSON ตามตัวอย่างในพรอมต์")
+        return {"result": data, **ext.external_stamp(body.model_label, current_user)}
+
+    # ------------------------------------------------------ AI: 5-STEP PROCESS
     @cv_router.post("/studies/{study_id}/ai-step")
     async def ai_step(study_id: str, req: CVStepRequest, current_user: User = Depends(get_current_user)):
-        s = await db.cv_studies.find_one({"id": study_id}, {"_id": 0})
-        if not s or not _owns(s, current_user):
-            raise HTTPException(status_code=404, detail="Study not found")
+        await llm_policy.require_system_llm("cv.ai", current_user)
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
         if req.step not in _STEP_LABELS:
             raise HTTPException(status_code=400, detail="Invalid step")
-        rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
-        ours = next((b for b in s.get("brands", []) if b.get("is_ours")), (s.get("brands") or [{}])[0])
-        needs = s.get("needs", {}) or {}
-        system = (
-            "คุณเป็นที่ปรึกษาการตลาดที่ยึดกระบวนการตลาด 5 ขั้นของ Kotler. "
-            "ตอบเป็นภาษาไทย และตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON."
-        )
-        prompt = (
-            f"ธุรกิจ: {rng['label']} | แบรนด์: {ours.get('name','ของเรา')}\n"
-            f"บริบท Need/Want: {needs.get('need','-')} / {needs.get('want','-')}\n"
-            f"ขั้นตอนที่ต้องการคำแนะนำ: {_STEP_LABELS[req.step]}\n\n"
-            "ให้คำแนะนำที่ลงมือทำได้จริงเฉพาะขั้นตอนนี้ ตอบ JSON:\n"
-            '{"summary":"อธิบายเป้าหมายของขั้นตอนนี้ใน 1-2 ประโยค",'
-            '"checklist":["สิ่งที่ต้องทำเป็นข้อๆ 4-5 ข้อ เฉพาะเจาะจงกับธุรกิจนี้"]}'
-        )
+        system, prompt = _cv_step_prompts(s, req)
         try:
             raw = await _gemini_text(system, prompt, f"cv-step-{study_id}-{req.step}")
-        except HTTPException:
+        except (HTTPException, llm_policy.SystemLLMDisabled):
             raise
         except Exception as e:
             logging.error(f"CV ai-step error: {e}")
@@ -530,36 +688,41 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
         data = _parse_json_obj(raw)
         return {"step": req.step, "result": data}
 
+    @cv_router.post("/studies/{study_id}/ai-step/external-prompt")
+    async def ai_step_external_prompt(study_id: str, req: CVStepRequest,
+                                      current_user: User = Depends(get_current_user)):
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        if req.step not in _STEP_LABELS:
+            raise HTTPException(status_code=400, detail="Invalid step")
+        system, prompt = _cv_step_prompts(s, req)
+        return _external_payload("Customer Value — กระบวนการตลาด 5 ขั้น", f"cv-{study_id}-step-{req.step}-prompt.md",
+                                 system, prompt, "json",
+                                 json_example='{"summary":"...","checklist":["..."]}')
+
+    @cv_router.post("/studies/{study_id}/ai-step/external-import")
+    async def ai_step_external_import(study_id: str, body: CVStepImport,
+                                      current_user: User = Depends(get_current_user)):
+        """Parse the user's own LLM's JSON into the same `{step, result}` ai-step returns (nothing stored)."""
+        req = body
+        _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        if req.step not in _STEP_LABELS:
+            raise HTTPException(status_code=400, detail="Invalid step")
+        data = _parse_json_obj(body.content or "")
+        if not data or not (data.get("summary") or data.get("checklist")):
+            raise HTTPException(status_code=422, detail="อ่านคำตอบไม่ได้ — ต้องเป็น JSON ตามตัวอย่างในพรอมต์ (summary, checklist)")
+        return {"step": req.step, "result": data, **ext.external_stamp(body.model_label, current_user)}
 
     # ------------------------------------------------------ IMAGE SIMULATION
     @cv_router.post("/studies/{study_id}/generate-image")
     async def generate_image(study_id: str, req: CVImageRequest, current_user: User = Depends(get_current_user)):
-        s = await db.cv_studies.find_one({"id": study_id}, {"_id": 0})
-        if not s or not _owns(s, current_user):
-            raise HTTPException(status_code=404, detail="Study not found")
-        brand = next((b for b in s.get("brands", []) if b["id"] == req.brand_id), None)
-        if not brand:
-            raise HTTPException(status_code=404, detail="Brand not found")
-
-        rng = INDUSTRY_RANGES.get(s.get("industry"), INDUSTRY_RANGES["generic"])
-        # Build a vivid prompt from the chosen value proposition (checked benefits).
-        benefits = brand.get("benefits", {}) or {}
-        chosen = []
-        for cat in ("functional", "economic", "love_belonging", "esteem_status"):
-            chosen += [f["label"] for f in (benefits.get(cat) or []) if f.get("checked")]
-        value_props = ", ".join(chosen[:8]) if chosen else "high quality, appealing"
-
+        await llm_policy.require_system_llm("cv.image", current_user)
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        brand = _brand_or_404(s, req.brand_id)
         api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
             raise HTTPException(status_code=500, detail="AI service not configured")
 
-        prompt = (
-            f"A professional, photorealistic product/service marketing photo for a "
-            f"{rng['label']} business named '{brand['name']}'. "
-            f"The offering should visually communicate these value propositions: {value_props}. "
-            f"Clean studio or real-world setting, premium commercial photography, soft lighting, "
-            f"high detail, no text overlays. {req.extra_prompt or ''}"
-        ).strip()
+        prompt = _cv_image_prompt(s, brand, req)
 
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -573,7 +736,7 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
             if not images:
                 raise HTTPException(status_code=502, detail="No image generated")
             image_base64 = images[0]["data"]
-        except HTTPException:
+        except (HTTPException, llm_policy.SystemLLMDisabled):
             raise
         except Exception as e:
             logging.error(f"CV image gen error: {e}")
@@ -600,6 +763,20 @@ def get_customer_value_routes(db, get_current_user, get_current_user_optional):
         await db.cv_studies.update_one(
             {"id": study_id}, {"$set": {"brands": brands, "updated_at": datetime.now(timezone.utc).isoformat()}})
         return {"image_url": stable_url, "prompt_used": prompt}
+
+    @cv_router.post("/studies/{study_id}/generate-image/external-prompt")
+    async def generate_image_external_prompt(study_id: str, req: CVImageRequest,
+                                             current_user: User = Depends(get_current_user)):
+        """The image prompt generate-image would send. Images have no paste-back: copy it into your own
+        image tool and upload the result through the normal image upload."""
+        s = _get_study_or_404(await db.cv_studies.find_one({"id": study_id}, {"_id": 0}), current_user)
+        brand = _brand_or_404(s, req.brand_id)
+        payload = ext.single_part_payload(
+            feature="cv.image", title="Customer Value — ภาพจำลองสินค้า/บริการ",
+            system_prompt="You are an AI product photographer.", prompt=_cv_image_prompt(s, brand, req),
+            expected_format="image-prompt", filename=f"cv-{study_id}-image-prompt.md",
+            instructions_th="คัดลอกพรอมต์ไปสร้างภาพในเครื่องมือสร้างภาพที่คุณใช้ (เช่น ChatGPT, Gemini, Midjourney) แล้วอัปโหลดภาพที่ได้เองในหน้านี้")
+        return payload
 
     return cv_router
 
