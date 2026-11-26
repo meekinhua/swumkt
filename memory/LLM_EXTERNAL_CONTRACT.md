@@ -191,7 +191,205 @@ curl -s -XPOST localhost:18090/api/auth/login -H 'content-type: application/json
 
 ## Conjoint
 
-_(WP2 fills this section.)_
+_Owner: WP2. Code: `backend/routes/conjoint.py`, `backend/lib/conjoint_{external,thesis,export,quality,wtp,simulator}.py`.
+Tests: `backend/tests/test_conjoint_2026_11_external.py` (routes, TestClient + mongomock),
+`backend/tests/test_conjoint_2026_11_audit.py` (pure). Audit: `memory/CONJOINT_AUDIT_2026_11.md`._
+
+All paths are under `/api`. "owner" = study creator or admin. "viewer" = owner/admin, or
+anyone (even anonymous) when the study has `is_public_result: true` — same rule as the
+existing Results-page endpoints.
+
+### Feature keys and system endpoints
+
+| feature | system endpoint(s) — `409 llm_external_only` when not allowed | external alternative |
+|---|---|---|
+| `conjoint.interpretation` | `POST /conjoint/studies/{id}/ai-interpretation` (a cached interpretation, system **or external**, is still returned with `status:"ready"` when off; the check runs before a job is created) | `…/ai-interpretation/external-prompt` + `…/ai-interpretation/external-import` |
+| `conjoint.qualitative` | `POST /conjoint/studies/{id}/qualitative-analysis` | `…/qualitative-analysis/external-prompt` + `…/external-import` |
+| `conjoint.thesis` | `POST /conjoint/studies/{id}/export-thesis` (a cached doc → `status:"ready"` when off) | `…/export-thesis/external-prompt`, `…/export-thesis/external-pack`, `…/export-thesis/external-import`, and **`…/export-thesis/no-ai`** (no LLM at all) |
+| `conjoint.images` | `POST …/generate-images`, `…/generate-single-image`, `…/generate-profile-image`, `…/generate-product-from-results`, `…/generate-shelf-simulation` | `…/<same>/external-prompt` (prompt only) + existing upload endpoints |
+
+`POST …/share-content` no longer calls the system LLM when it is not allowed; it publishes
+without the AI section (send your own text in `ai_interpretation`). It now requires owner (403 otherwise).
+
+Background jobs: when a job fails because of the policy (switch turned off after the job was
+queued), the status endpoints return
+`{"status":"failed","error":"<Thai policy message>","error_code":"llm_external_only"}` — show the
+same toast as a synchronous 409. Applies to
+`GET /conjoint/studies/{id}/ai-interpretation-status/{job_id}` and
+`GET /conjoint/studies/{id}/export-thesis-status/{job_id}` (the latter now also returns `cache_key`).
+
+Uniform error bodies for imports: `422 {"detail":{"code":"external_import_invalid","message":"<Thai>"}}`.
+
+### 1. AI interpretation
+
+**`POST /conjoint/studies/{id}/ai-interpretation/external-prompt`** — viewer. Parallels the
+existing `generate-prompt` call in `ConjointResultsPage.js` (which still works, same builder).
+Request = same body as `ai-interpretation`: `{"method":"mnl","compare_all":false}`.
+
+```json
+{"feature":"conjoint.interpretation","title":"ตีความผล Conjoint ด้วย AI ของคุณเอง (mnl)",
+ "instructions_th":"1. กดปุ่ม \"คัดลอก\" …","expected_format":"markdown",
+ "parts":[{"key":"main","title":"การตีความผลการวิเคราะห์","system_prompt":"คุณเป็นผู้เชี่ยวชาญ…","prompt":"วิเคราะห์และตีความผลการวิจัย…"}],
+ "filename":"conjoint-<title>-interpretation-prompt.md","method":"mnl","compare_all":false}
+```
+Needs ≥ 10 responses (400 otherwise, same as the system path).
+
+**`POST /conjoint/studies/{id}/ai-interpretation/external-import`** — owner (logged in).
+Request `{"method":"mnl","compare_all":false,"part_key":"main","content":"<pasted markdown>","model_label":"ChatGPT-5"}`.
+Stored in the SAME `analysis_cache` row the system job writes (`method = ai_<method>_<all|single>`,
+same `respondent_count` + `schema_version` guard → invalidated exactly like a system row when a
+new respondent arrives). Response = the shape `ai-interpretation` returns when cached:
+```json
+{"status":"ready","interpretation":"## สรุปผล …","summary_data":{…},"cached":false,
+ "source":"external","model_label":"ChatGPT-5","imported_at":"2026-11-26T…"}
+```
+`ai-interpretation` and `ai-interpretation-status` responses now also carry
+`source` (`"system"|"external"`), `model_label`, `imported_at` — show "เขียนโดย <model_label>" when external.
+Note: the interpretation cache is NOT keyed by the Results-page filters (it never was) — it
+always describes all respondents; say so in the UI when a filter is active.
+
+### 2. Qualitative → attributes (JSON)
+
+**`POST /conjoint/studies/{id}/qualitative-analysis/external-prompt`** — owner. Request = the
+`qualitative-analysis` body `{"qualitative_data":[{"type":"interview","content":"…"}],"target_language":"th"}`.
+Response as above with `"expected_format":"json"` and `parts[0].json_example` (the JSON shape to paste back).
+
+**`POST /conjoint/studies/{id}/qualitative-analysis/external-import`** — owner. Request
+`{"content":"<pasted, fences/prose OK>","model_label":"Claude","qualitative_data":[…same as above, optional…],"target_language":"th"}`.
+Response = what `qualitative-analysis` returns:
+`{"suggested_attributes":[{id,name,description,levels:[{id,value,description}],order}],"recommendations":"…","raw_analysis":{…},"source":"external","model_label":"Claude","imported_at":"…","imported_by":"<user id>"}`.
+Writes `suggested_attributes`, `llm_analysis` (+ stamp), and `qualitative_data` if sent — the
+same fields the system path writes. `ConjointQualitativePage.js` can feed the response to the
+same handler it uses for the system result.
+
+### 3. Thesis
+
+All thesis paths keep the existing rule **admin OR (owner AND `can_export_thesis`)** (403 otherwise).
+Request body everywhere = the existing `ThesisExportRequest`: `{"methods":["mnl"],"chapters":[3,4,5],"extra_prompt":""}`.
+`cache_key` = `thesis_<sorted methods>_<sorted chapters>[_ep<hash>]` (unchanged).
+
+**`POST …/export-thesis/external-prompt`** → prompt payload with one part per chapter
+(`key: "ch3"|"ch4"|"ch5"`), all sharing the same `system_prompt`; plus `"cache_key"`.
+
+**`POST …/export-thesis/external-pack`** → **file download** `text/markdown; charset=utf-8`
+(`Content-Disposition: attachment; filename*=UTF-8''conjoint-<title>-thesis-pack.md`). Contains:
+Thai step-by-step guide, study description, design facts (attributes/levels, tasks, alternatives,
+algorithm, no randomisation, no none-option, Johnson–Orme check), demographics table, every
+computed APA-style table per method (+ WTP when computable), the method equations, the system
+prompt, and one prompt per chapter. Frontend: `axios.post(url, body, {responseType:'blob'})` → save.
+
+**`POST …/export-thesis/external-import`** — request = ThesisExportRequest fields plus either
+`{"part_key":"ch3","content":"…","model_label":"Gemini 2.5 Pro"}` (one chapter) or
+`{"parts":[{"part_key":"ch3","content":"…"},{"part_key":"ch4","content":"…"}],"model_label":"…"}`.
+Chapters accumulate across calls (same `cache_key`). Response:
+```json
+{"status":"partial","job_id":"thesis_mnl_3_4","cache_key":"thesis_mnl_3_4","chapters_present":[3],
+ "chapters_missing":[4],"download_url":"/api/conjoint/studies/<id>/export-thesis-download?cache_key=thesis_mnl_3_4",
+ "source":"external","model_label":"Gemini 2.5 Pro","imported_at":"…","imported_by":"…"}
+```
+`status:"ready"` when every requested chapter is present. Then download with the existing
+`GET …/export-thesis-download?cache_key=<cache_key>` (as `ConjointResultsPage.js` already does).
+Each chapter must be ≥ 100 characters.
+
+**`GET …/export-thesis-download`** (existing) — now prepends an AI-use disclosure paragraph naming
+the tool (`model_label` for imported text, "AI ของระบบ (Gemini 2.5 Flash)" for system text). Never needs the LLM.
+
+**`POST …/export-thesis/no-ai`** — NEW, **no LLM, works whatever the switch says** → `.docx` download
+(`application/vnd.openxmlformats-officedocument.wordprocessingml.document`). Chapter 3 (methods
+paragraph generated from the fielded design, design table, sample-size rule, data-quality note,
+equations of each selected method) and Chapter 4 (demographics table, APA tables per method:
+importance, coefficients with SE/z/p/95% CI, fit statistics; WTP table when price is numeric;
+importance bar chart). `chapters` is intersected with {3,4}; chapter 5 is never generated without AI.
+Suggested UI: a third option in the thesis modal "ดาวน์โหลดตารางและบทที่ 3–4 (ไม่ใช้ AI)".
+
+`POST …/export-thesis` now returns `{"status":"ready","job_id":<cache_key>,"cache_key":…,"cached":true,"source":…,"model_label":…}`
+for a cached doc and `{"status":"processing","job_id":…,"cache_key":…}` otherwise.
+
+### 4. Images (prompt only — the result is uploaded to the existing slot)
+
+All return the prompt payload with `"expected_format":"image"` and an `upload` hint:
+
+| endpoint | auth | request | `parts[].key` | upload slot (existing endpoint) |
+|---|---|---|---|---|
+| `POST …/generate-single-image/external-prompt` | owner | same as `generate-single-image` (`attribute_id, level_id, prompt?, reference_image_indices?, additional_prompt?`) | `<attr_id>:<level_id>` | `POST …/upload-image` `{attribute_id, level_id, image_url:"data:image/…;base64,…"}` → stored in `attributes[].levels[].image_url` (same field the generator writes) |
+| `POST …/generate-images/external-prompt` | owner | none | one per level | same as above |
+| `POST …/generate-profile-image/external-prompt` | owner | same as `generate-profile-image` | `<choice_set_id>:<profile_id>` | `POST …/upload-profile-image` `{choice_set_id, profile_id, image_url}` → `profile_image_url` (same field) |
+| `POST …/generate-product-from-results/external-prompt` | viewer | same as `generate-product-from-results` | `image_prompt` (ready to use), `prompt_writer` (system+meta prompt the system uses) | none — the product image is never stored server-side; use the file locally / pass it as `product_image_url` to shelf simulation. Response also has `optimal_features`. |
+| `POST …/generate-shelf-simulation/external-prompt` | viewer | `{environment_type, custom_environment?, shelf_style, custom_shelf_style?, additional_prompt?}` (`product_image_url` optional) | `image_prompt`, `prompt_writer` | none (attach the product image in the user's image tool). Response has `environment_type` (resolved "auto"). |
+
+Example (`upload` is `null` for product/shelf):
+```json
+{"feature":"conjoint.images","title":"ภาพสำหรับ Brand: A","instructions_th":"1. คัดลอกพรอมต์ภาพ …","expected_format":"image",
+ "parts":[{"key":"brand:b0","title":"Brand — A","system_prompt":"","prompt":"Professional product visualization: Brand - A. …"}],
+ "filename":"conjoint-<title>-level-image-prompt.md",
+ "upload":{"method":"POST","url":"/api/conjoint/studies/<id>/upload-image","body":{"attribute_id":"brand","level_id":"b0","image_url":"<data:image/...;base64,...>"}}}
+```
+
+### 5. New analysis fields (statistical-analysis results, cache v6)
+
+`GET /conjoint/studies/{id}/statistical-analysis?method=…` results now also contain:
+- MNL: `ci_lower`, `ci_upper` ({coef_name: value}, Wald 95 %), `ci_level: 0.95`, `converged` (bool),
+  `reference_levels` ({attr_id: level_id}), `coding` (text).
+- Mixed Logit: `ci_lower`, `ci_upper`, `ci_level`, `converged`, `reference_levels`.
+- HB: `converged`, `reference_levels`.
+- MNL / Mixed Logit / HB `part_worths[attr].levels[level]` now carry `is_reference` and
+  `is_excluded` (as OLS already did). Render `is_excluded` as "ประมาณค่าไม่ได้", not 0;
+  `is_reference` as "0 (อ้างอิง)". Show a red warning when `converged === false`.
+`ANALYSIS_CACHE_VERSION` 5 → 6: first view of every study recomputes once.
+
+### 6. New practitioner / academic endpoints (no LLM)
+
+**`GET /conjoint/studies/{id}/export-long?format=xlsx|csv`** — owner. File download. xlsx sheets:
+`README` (Thai: layout, coding, R/Stata/Python commands), `data_long` (one row per alternative:
+`respondent_id, respondent_index, response_id, submitted_at, duration_sec, situation_id, task,
+choice_set_id, alt, profile_id, chosen, usable, <Attr>, <Attr>__code …, demo_<field> …,
+flag_speeder, flag_straightliner, flag_duplicate, flags`), `codebook`, `design`, `data_quality`.
+Re-estimating a conditional logit on `usable==1` grouped by `situation_id` reproduces the
+platform's MNL coefficients (pinned by a test). **Replace** the CSV button in
+`ConjointResultsPage.js` `handleExportCSV` (currently a JSON blob in one cell) with this download;
+keep the old `export-responses` endpoint (unchanged) for anything else that uses it.
+
+**`GET /conjoint/studies/{id}/data-quality`** — owner. Report only (nothing is excluded from analysis):
+```json
+{"n_responses":60,"n_tasks_in_design":8,"median_duration_sec":178.0,
+ "thresholds":{"speeder_seconds":71.2,"speeder_ratio_of_median":0.4,"straightline_min_tasks":6,"possible_duplicate_window_sec":600},
+ "counts":{"speeder":2,"straightliner":0,"duplicate_id":0,"duplicate_email":0,"possible_duplicate":0,"incomplete":0,"no_usable_task":0},
+ "n_flagged":2,"share_flagged":0.0333,
+ "flagged":[{"respondent_index":4,"respondent_id":"r4","response_id":"…","duration_sec":40,"tasks_answered":8,"tasks_usable":8,"flags":["speeder"]}],
+ "notes_th":["…"]}
+```
+Suggested: a card next to the sample-adequacy card.
+
+**`GET /conjoint/studies/{id}/wtp?price_attribute_id=&from=&to=&segments=`** — viewer.
+`status`: `"ok" | "warning"` (linearity rejected) `| "refused"` (price β ≥ 0 or p ≥ .05; `reason_th`)
+`| "not_applicable"` (no numeric price attribute; `reason_th`) `| "insufficient_data"` (< 30).
+Price attribute auto-detected by name (ราคา/price/cost/บาท) with all-numeric levels (e.g. "฿59", "1,290 บาท"),
+or pass `price_attribute_id`.
+```json
+{"status":"ok","price_attribute_id":"price","price_attribute_name":"ราคา","price_levels":[100,150,200],
+ "price_coefficient":-0.0207,"price_se":0.0006,"price_p_value":1e-228,
+ "linearity_test":{"tested":true,"lr_statistic":0.24,"df":1,"p_value":0.62,"rejected":false},
+ "ci_method":"Krinsky–Robb, 10000 draws, 95% percentile interval",
+ "levels":[{"attribute_id":"brand","attribute":"Brand","level_id":"b0","level":"A","is_reference":false,
+            "beta":0.69,"wtp":33.5,"se_delta":2.6,"ci_low":28.5,"ci_high":38.7,"ci_excludes_zero":true,"extrapolated":false},
+           {"attribute_id":"brand","attribute":"Brand","level_id":"b2","level":"C","is_reference":true,"wtp":0.0,"note_th":"ระดับอ้างอิง (WTP = 0)"}],
+ "warnings_th":["…"],"respondent_count":300}
+```
+WTP is in the price attribute's currency units, relative to each attribute's reference level.
+
+**`POST /conjoint/studies/{id}/simulate?from=&to=&segments=`** — viewer. Request
+`{"method":"mnl"|"mixed_logit"|"hierarchical_bayes","rule":"logit"|"first_choice","products":[{"name":"A","levels":{"<attr_id>":"<level_id>",…}},…]}`
+(every attribute must be set; ≥ 2 products). Uses the cached analysis for the same filter.
+Response `{"method","rule","heterogeneity_simulated","n_draws","products":[{"name","levels":{attrName:levelValue},"utility","share"}],"caveats_th":[…],"respondent_count"}`.
+400 with a Thai `detail` for counting/OLS, for `first_choice` with MNL, or incomplete products.
+Show the caveats (no none-option → share of preference, not market share; IIA for MNL).
+
+### API-key scopes (for WP1 / sitectl)
+
+Already covered by the current rules: `…/external-prompt` → `research.read`; `…/external-import`,
+`…/external-pack` (POST) → `research.ai`; `GET export-long|data-quality|wtp` → `research.read`.
+**Not covered** (request to WP1): `POST /api/conjoint/studies/{id}/export-thesis/no-ai` and
+`POST /api/conjoint/studies/{id}/simulate` — both read-only, no LLM → suggest `research.read`.
 
 ## Brand Equity
 

@@ -5734,6 +5734,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                     
                         # Call AI
                         from emergentintegrations.llm.chat import LlmChat, UserMessage
+                        await _require_system_llm(FEAT_INTERPRETATION, current_user)  # grant for the guard
                         chat = LlmChat()
                         logging.info(f"[SHARE_CONTENT] Calling AI with prompt length: {len(prompt)} characters")
                         ai_interpretation = await chat.send_message_async(UserMessage(prompt))

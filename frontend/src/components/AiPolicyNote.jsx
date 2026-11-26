@@ -4,7 +4,7 @@
  *
  *   const gate = useAiGate('survey.ai');
  *   <Button disabled={gate.blocked} title={gate.blockedReason}>…</Button>
- *   <AiPolicyNote feature="survey.ai" alternative="สร้างเองใน Survey Builder หรือเริ่มจากเทมเพลต" />
+ *   <AiPolicyNote feature="docs.journal_finder" alternative="ใช้แท็บ Browse Database" />   // add hasExternal when the page offers the copy-prompt path
  *
  * `blocked` is true only once the policy is known and the system LLM is not
  * allowed for this user, so buttons never flash disabled while loading.
@@ -29,7 +29,7 @@ export const useAiGate = (feature) => {
   };
 };
 
-export const AiPolicyNote = ({ feature, alternative, className = '' }) => {
+export const AiPolicyNote = ({ feature, alternative, hasExternal = false, className = '' }) => {
   const gate = useAiGate(feature);
   if (!gate.blocked) return null;
   return (
@@ -40,7 +40,10 @@ export const AiPolicyNote = ({ feature, alternative, className = '' }) => {
     >
       <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
       <p>
-        <strong>AI ของระบบปิดใช้งานอยู่</strong> — ฟังก์ชันนี้ยังไม่มีทางใช้ AI ส่วนตัวภายในหน้านี้
+        <strong>AI ของระบบปิดใช้งานอยู่</strong>
+        {hasExternal
+          ? ' — ใช้ AI ของคุณเองผ่านพรอมต์ที่ระบบสร้างให้ได้'
+          : ' — ฟังก์ชันนี้ยังไม่มีทางใช้ AI ของคุณเองภายในหน้านี้'}
         {alternative ? <> · {alternative}</> : null}
         {gate.hint ? <> · {gate.hint}</> : null}
       </p>

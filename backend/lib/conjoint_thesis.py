@@ -462,7 +462,7 @@ def no_ai_thesis_markdown(*, facts: Dict, demo: Dict, methods: List[str], all_re
                        f"ผู้ตอบที่เลือกตำแหน่งเดิมทุกข้อ (straight-liner) {c.get('straightliner', 0)} ราย และรายการที่อาจส่งซ้ำ "
                        f"{c.get('duplicate_id', 0) + c.get('duplicate_email', 0) + c.get('possible_duplicate', 0)} รายการ "
                        "ผลการวิเคราะห์ในรายงานนี้ใช้ข้อมูลทั้งหมดโดยไม่ได้ตัดรายการดังกล่าวออก"), ""]
-        sec = 3
+        sec = 2
         for m in methods:
             sec += 1
             parts += [f"### 3.{sec} วิธีการวิเคราะห์ข้อมูล — {METHOD_NAMES.get(m, m)}", ""]

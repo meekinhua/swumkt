@@ -11,7 +11,8 @@ import { X, Sparkles, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { apiErrorText } from '@/lib/apiError';
-import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
+import AiActionButton from '@/components/AiActionButton';
+import { withBodyKey } from '@/lib/aiTextParse';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -19,7 +20,6 @@ const AISurveyGeneratorModal = ({ onClose }) => {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [generating, setGenerating] = useState(false);
-  const aiGate = useAiGate('survey.ai');
 
   // Esc closes the dialog (keyboard users)
   useEffect(() => {
@@ -53,8 +53,10 @@ const AISurveyGeneratorModal = ({ onClose }) => {
       onClose();
     } catch (error) {
       console.error('Failed to generate survey:', error);
-      // 409 llm_external_only: the global interceptor already showed the single Thai toast.
-      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'Failed to generate survey with AI'));
+      // 409 llm_external_only: re-throw so <AiActionButton> opens the "use my own AI" dialog
+      // (the global interceptor already showed the single Thai toast).
+      if (isLlmExternalOnly(error)) throw error;
+      toast.error(apiErrorText(error, 'Failed to generate survey with AI'));
     } finally {
       setGenerating(false);
     }
@@ -83,10 +85,11 @@ const AISurveyGeneratorModal = ({ onClose }) => {
         {/* Form */}
         <div className="space-y-6">
           <div>
-            <Label className="text-gray-700 font-semibold mb-2 block">
+            <Label htmlFor="ai-survey-desc" className="text-gray-700 font-semibold mb-2 block">
               What do you want to survey? *
             </Label>
             <Textarea
+              id="ai-survey-desc"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Example: I want to understand customer satisfaction with my coffee shop, including product quality, service speed, ambiance, and pricing..."
@@ -100,8 +103,9 @@ const AISurveyGeneratorModal = ({ onClose }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-gray-700 font-semibold mb-2 block">Survey Type</Label>
+              <Label htmlFor="ai-survey-type" className="text-gray-700 font-semibold mb-2 block">Survey Type</Label>
               <select
+                id="ai-survey-type"
                 value={formData.survey_type}
                 onChange={(e) => setFormData(prev => ({ ...prev, survey_type: e.target.value }))}
                 className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none"
@@ -115,8 +119,9 @@ const AISurveyGeneratorModal = ({ onClose }) => {
             </div>
 
             <div>
-              <Label className="text-gray-700 font-semibold mb-2 block">Number of Questions</Label>
+              <Label htmlFor="ai-survey-n" className="text-gray-700 font-semibold mb-2 block">Number of Questions</Label>
               <Input
+                id="ai-survey-n"
                 type="number"
                 min="5"
                 max="20"
@@ -128,8 +133,9 @@ const AISurveyGeneratorModal = ({ onClose }) => {
           </div>
 
           <div>
-            <Label className="text-gray-700 font-semibold mb-2 block">Language</Label>
+            <Label htmlFor="ai-survey-lang" className="text-gray-700 font-semibold mb-2 block">Language</Label>
             <select
+              id="ai-survey-lang"
               value={formData.target_language}
               onChange={(e) => setFormData(prev => ({ ...prev, target_language: e.target.value }))}
               className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none"
@@ -155,7 +161,9 @@ const AISurveyGeneratorModal = ({ onClose }) => {
             </div>
           </div>
 
-          <AiPolicyNote feature="survey.ai" alternative="สร้างแบบสอบถามเองใน Survey Builder หรือเริ่มจากเทมเพลต (Use Template)" />
+          <p className="text-sm text-gray-700">
+            ถ้า AI ของระบบปิดอยู่ ปุ่ม Generate จะให้พรอมต์ไปวางใน ChatGPT / Claude / Gemini แล้วนำคำตอบมาวางกลับ — ระบบสร้างแบบสอบถามให้เหมือนกัน
+          </p>
 
           {/* Actions */}
           <div className="flex gap-3">
@@ -167,24 +175,31 @@ const AISurveyGeneratorModal = ({ onClose }) => {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleGenerate}
-              disabled={generating || aiGate.blocked}
-              title={aiGate.blockedReason}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
-            >
-              {generating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate with AI
-                </>
-              )}
-            </Button>
+            <div className="flex-1 flex">
+              <AiActionButton
+                feature="survey.ai"
+                label="Generate with AI"
+                icon={Sparkles}
+                onSystem={handleGenerate}
+                external={{
+                  title: 'สร้างแบบสอบถามด้วย AI ของฉันเอง',
+                  promptRequest: {
+                    method: 'POST',
+                    url: withBodyKey(`${API}/api/surveys/ai-generate/external-prompt`, formData),
+                    data: formData,
+                  },
+                  importUrl: `${API}/api/surveys/ai-generate/external-import`,
+                  onImported: (survey) => {
+                    toast.success('สร้างแบบสอบถามจากคำตอบ AI สำเร็จ');
+                    navigate(`/surveys/${survey.id}/edit`);
+                    onClose();
+                  },
+                }}
+                disabled={generating || !formData.description.trim()}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
+                data-testid="ai-survey-generate-btn"
+              />
+            </div>
           </div>
         </div>
       </Card>

@@ -136,8 +136,9 @@ export const useToast = () => {
     const t = setTimeout(() => setMsg(null), 2600);
     return () => clearTimeout(t);
   }, [msg]);
+  const show = React.useCallback((m) => setMsg(m), []);
   return {
-    show: (m) => setMsg(m),
+    show,
     node: msg ? (
       <div style={{
         position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
