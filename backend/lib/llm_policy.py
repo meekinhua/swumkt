@@ -468,6 +468,10 @@ ROUTE_FEATURES: Tuple[Tuple[re.Pattern, str], ...] = tuple((re.compile(p), f) fo
 
 
 def feature_for_path(path: str) -> Optional[str]:
+    # Co-hosted sub-apps (lib/subapps.py) never get the platform's paid LLM.
+    from lib.subapps import is_subapp_path
+    if is_subapp_path(path or ""):
+        return NO_LLM
     for rx in NO_LLM_ROUTES:
         if rx.search(path or ""):
             return NO_LLM

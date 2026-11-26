@@ -27,3 +27,6 @@ Details: `memory/PLAN_2026_11_EXTERNAL_LLM.md`, `memory/LLM_EXTERNAL_CONTRACT.md
 
 ## Local run without Mongo/LLM
 `pip install -r backend/requirements-dev.txt` then `python backend/scripts/dev_sim.py` (see docstring).
+
+## Co-hosted sub-apps
+SwuDorm (separate project) is reserved at `/api/swudorm/` and auto-mounts from `backend/swudorm_app/asgi.py` or `backend/swudorm_static/`. Rules and guarantees: `SUBAPPS.md`, registry `backend/lib/subapps.py`.

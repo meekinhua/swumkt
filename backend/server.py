@@ -8449,6 +8449,14 @@ if _MEEK_DIR.exists():
     app.mount("/api/meekintube", _StaticFiles(directory=str(_MEEK_DIR), html=True), name="meekintube")
 
 
+# ============ Co-hosted sub-apps registry (lib/subapps.py, SUBAPPS.md) ============
+# SwuDorm (and any future sub-app) is mounted from its own folder without
+# editing this file; the main platform must never define a route under a
+# reserved sub-app prefix.
+from lib import subapps as _subapps
+_subapps.assert_no_route_collisions(getattr(r, "path", "") for r in api_router.routes)
+_subapps.mount_auto_subapps(app, ROOT_DIR)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

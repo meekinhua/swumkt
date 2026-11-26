@@ -1,8 +1,17 @@
 /* eslint-disable no-restricted-globals */
 
 // Service Worker version - bump this to force cache refresh
-const CACHE_VERSION = 'v3';
-const CACHE_NAME = `swumkt-cache-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v4';
+const CACHE_PREFIX = 'swumkt-cache-';
+const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
+
+// Co-hosted sub-apps live on this same origin under their own URL prefix and
+// may run their own service worker and caches. Keep this list in sync with
+// SUBAPPS in backend/lib/subapps.py (a backend test checks it). This worker
+// must never intercept their requests or delete their caches.
+const SUBAPP_PREFIXES = ['/api/yolo', '/api/meekintube', '/api/swudorm'];
+const isSubappPath = (pathname) =>
+  SUBAPP_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
 // Only cache truly static assets (logo)
 const urlsToCache = [
@@ -25,13 +34,15 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate event - clean up ALL old caches and take control
+// Activate event - clean up this app's old caches and take control
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          // Only this app's own caches: the Cache Storage is shared by every
+          // app on the origin, and deleting "all others" wiped the sub-apps'.
+          if (cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME) {
             console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
@@ -47,6 +58,12 @@ self.addEventListener('activate', (event) => {
 // Fetch event - strategy depends on request type
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // 0) Another app's territory, or another origin → do not touch (the browser
+  //    handles it, or that sub-app's own narrower-scoped worker does).
+  if (url.origin === self.location.origin && isSubappPath(url.pathname)) {
+    return;
+  }
 
   // 1) API calls → network-only, never cache
   if (url.pathname.startsWith('/api')) {
