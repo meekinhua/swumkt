@@ -178,7 +178,7 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
             {notPermitted && (
               <div className="flex items-start gap-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="alert" data-testid="thesis-not-permitted">
                 <Lock className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                <span>บัญชีของคุณยังไม่ได้รับสิทธิ์ Export วิทยานิพนธ์ — การ Export ทุกแบบในหน้านี้ถูกจำกัดสำหรับ admin และเจ้าของ study ที่ได้รับสิทธิ์ ติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์ (ปุ่มจะลองส่งคำขอ และแสดงข้อความจากระบบ)</span>
+                <span>บัญชีของคุณยังไม่ได้รับสิทธิ์ส่งออกวิทยานิพนธ์ด้วย AI — <b>เอกสารแบบไม่ใช้ AI (บทที่ 3–4) ดาวน์โหลดได้ตามปกติ</b> ส่วนชุด prompt / วางคำตอบจาก AI ของคุณ / AI ของระบบ ต้องขอสิทธิ์จากผู้ดูแลระบบก่อน</span>
               </div>
             )}
 
@@ -214,7 +214,7 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
                 title="เอกสารผลวิเคราะห์ ไม่ใช้ AI"
                 gives="ไฟล์ Word บทที่ 3–4 ที่ระบบเขียนจากแบบสอบถามจริง: ย่อหน้าระเบียบวิธี ตารางสไตล์ APA (ค่าสัมประสิทธิ์ ช่วงเชื่อมั่น 95% ความสำคัญ ความเหมาะสมของแบบจำลอง) และกราฟ — ไม่มีบทที่ 5 และไม่มีข้อความที่ AI เขียน ใช้ได้เสมอแม้ AI ของระบบปิด"
               >
-                <Button onClick={runNoAi} disabled={!!busy || notPermitted || !noAiChapters.length} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto" data-testid="thesis-noai-btn">
+                <Button onClick={runNoAi} disabled={!!busy || !noAiChapters.length} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto" data-testid="thesis-noai-btn">
                   {busy === 'noai' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                   ดาวน์โหลด Word ({chapterLabel(noAiChapters)})
                 </Button>

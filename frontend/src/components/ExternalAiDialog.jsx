@@ -261,7 +261,14 @@ const ExternalAiDialog = ({
   // Close automatically once every part has been imported.
   const closedRef = useRef(false);
   useEffect(() => {
-    if (!open) { closedRef.current = false; return; }
+    if (!open) {
+      // Forget the finished session NOW: otherwise, on the next opening, the first render still
+      // sees every part 'done' and this effect would close the dialog straight away.
+      closedRef.current = false;
+      setStatus({});
+      setData(null);
+      return;
+    }
     if (allDone && hasImport && !closedRef.current) {
       closedRef.current = true;
       toast.success('นำเข้าผลลัพธ์จาก AI แล้ว');

@@ -506,12 +506,21 @@ def test_thesis_paths_keep_the_whitelist_rule(seeded):
         assert client.post(f"/api/conjoint/studies/{study['id']}{path}", json={"methods": ["mnl"]},
                            headers=H("stranger")).status_code == 403
     asyncio.run(db.conjoint_studies.update_one({"id": study["id"]}, {"$set": {"creator_id": "owner_nowl"}}))
-    # Owner decision 2026-11-26: the no-AI document is free, so any owner gets it;
-    # the AI-related thesis paths still need the whitelist.
-    assert client.post(f"/api/conjoint/studies/{study['id']}/export-thesis/no-ai", json={"methods": ["mnl"]},
-                       headers=H("owner_nowl")).status_code == 200
-    assert client.post(f"/api/conjoint/studies/{study['id']}/export-thesis/external-pack", json={"methods": ["mnl"]},
-                       headers=H("owner_nowl")).status_code == 403
+    # Owner decisions 2026-11-26: paths that cost the platform nothing are open to
+    # any owner; only the system-LLM thesis job still needs the whitelist.
+    for path in ("/export-thesis/no-ai", "/export-thesis/external-pack", "/export-thesis/external-prompt"):
+        assert client.post(f"/api/conjoint/studies/{study['id']}{path}", json={"methods": ["mnl"]},
+                           headers=H("owner_nowl")).status_code == 200, path
+    import os as _os
+    _os.environ["SYSTEM_LLM_DEFAULT"] = "on"
+    try:
+        from lib import llm_policy as _lp
+        _lp.invalidate_cache()
+        assert client.post(f"/api/conjoint/studies/{study['id']}/export-thesis", json={"methods": ["mnl"]},
+                           headers=H("owner_nowl")).status_code == 403
+    finally:
+        _os.environ.pop("SYSTEM_LLM_DEFAULT", None)
+        _lp.invalidate_cache()
     assert client.post(f"/api/conjoint/studies/{study['id']}/export-thesis/no-ai", json={"methods": ["mnl"]},
                        headers=H("admin")).status_code == 200
 

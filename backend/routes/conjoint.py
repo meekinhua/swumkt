@@ -6334,9 +6334,10 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         is_owner = study["creator_id"] == current_user.id
         is_admin = current_user.role == UserRole.ADMIN
         is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
-        # Rule: (owner AND whitelisted) OR admin for every AI-related thesis path.
-        # The no-AI document costs nothing, so any owner may export it
-        # (owner decision 2026-11-26).
+        # Rule: (owner AND whitelisted) OR admin for the SYSTEM-LLM thesis job only.
+        # Paths that cost the platform nothing - the no-AI document and the
+        # external prompt / pack / import - are open to any owner; callers pass
+        # no_ai=True for those (owner decisions 2026-11-26).
         if is_admin or (is_owner and (is_whitelisted or no_ai)):
             return study
         if is_owner:
@@ -6597,7 +6598,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     ):
         """One prompt per chapter — identical to what the system job sends."""
         from lib.conjoint_external import build_prompt_payload, GENERIC_STEPS_TH, slugify
-        study = await _thesis_access(study_id, current_user)
+        study = await _thesis_access(study_id, current_user, no_ai=True)
         methods = _clean_methods(request.methods)
         inputs = await _thesis_inputs(study_id, methods, request.chapters, (request.extra_prompt or "").strip())
         titles = {3: "บทที่ 3 ระเบียบวิธีวิจัย", 4: "บทที่ 4 ผลการศึกษา", 5: "บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ"}
@@ -6625,7 +6626,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         from urllib.parse import quote
         from lib import conjoint_thesis as T
         from lib.conjoint_external import slugify, utcnow_iso
-        study = await _thesis_access(study_id, current_user)
+        study = await _thesis_access(study_id, current_user, no_ai=True)
         methods = _clean_methods(request.methods)
         inputs = await _thesis_inputs(study_id, methods, request.chapters, (request.extra_prompt or "").strip())
         md = T.external_pack_markdown(
@@ -6652,7 +6653,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         cache key the system job uses, then rendered by the existing .docx renderer
         via export-thesis-download (with an AI-use disclosure naming the tool)."""
         from lib.conjoint_external import clean_markdown_import, external_stamp, ExternalImportError
-        study = await _thesis_access(study_id, current_user)
+        study = await _thesis_access(study_id, current_user, no_ai=True)
         methods = _clean_methods(request.methods)
         cache_key = _thesis_cache_key(methods, request.chapters, request.extra_prompt or "")
 

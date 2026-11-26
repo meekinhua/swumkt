@@ -328,7 +328,7 @@ same handler it uses for the system result.
 
 ### 3. Thesis
 
-All thesis paths keep the existing rule **admin OR (owner AND `can_export_thesis`)** (403 otherwise).
+Thesis access (owner decisions 2026-11-26): the **system-LLM job** (`POST export-thesis`) keeps the rule **admin OR (owner AND `can_export_thesis`)**. The paths that cost the platform nothing — `export-thesis/no-ai`, `external-prompt`, `external-pack`, `external-import` — are open to **any study owner** (and admin). 403 otherwise.
 Request body everywhere = the existing `ThesisExportRequest`: `{"methods":["mnl"],"chapters":[3,4,5],"extra_prompt":""}`.
 `cache_key` = `thesis_<sorted methods>_<sorted chapters>[_ep<hash>]` (unchanged).
 

@@ -188,7 +188,7 @@ const ConjointInterpretationCard = ({
               feature={FEATURE}
               label={compareAll ? 'ตีความและเปรียบเทียบทุกวิธี' : 'ตีความผลด้วย AI'}
               icon={Sparkles}
-              onSystem={runSystem}
+              onSystem={token ? runSystem : undefined}
               external={external}
               disabled={tooFew}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
@@ -201,6 +201,12 @@ const ConjointInterpretationCard = ({
             )}
           </div>
           {tooFew && <p className="mt-3 text-xs text-gray-500">ต้องมีผู้ตอบอย่างน้อย 10 คนจึงจะตีความได้</p>}
+          {!token && allowed && !tooFew && (
+            <p className="mt-3 text-xs text-gray-600" data-testid="ai-login-for-system">
+              <a className="font-semibold underline" href={`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`}>เข้าสู่ระบบเพื่อให้ AI ของระบบตีความ</a>
+              {' '}— หรือคัดลอกพรอมต์ไปใช้กับ AI ของคุณเองได้เลย
+            </p>
+          )}
           {error && (
             <p className="mt-3 text-sm text-red-600" role="alert" data-testid="ai-error">
               {error} <button type="button" className="underline" onClick={runSystem}>ลองใหม่</button>
@@ -224,7 +230,7 @@ const ConjointInterpretationCard = ({
                 label={allowed ? 'ตีความใหม่' : 'ตีความใหม่ด้วย AI ของฉัน'}
                 variant="outline"
                 size="sm"
-                onSystem={runSystem}
+                onSystem={token ? runSystem : undefined}
                 external={external}
                 data-testid="ai-reinterpret-btn"
               />
