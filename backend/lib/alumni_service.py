@@ -75,8 +75,19 @@ def is_admin(user) -> bool:
     return str(role) == "admin"
 
 
+_OPTOUT_SALT_WARNED = False
+
+
 def optout_hash(display_name: str, gen: Any) -> str:
-    salt = os.environ.get("ALUMNI_OPTOUT_SALT", "swumkt-alumni-optout-v1")
+    salt = os.environ.get("ALUMNI_OPTOUT_SALT")
+    if not salt:
+        global _OPTOUT_SALT_WARNED
+        if not _OPTOUT_SALT_WARNED:
+            _OPTOUT_SALT_WARNED = True
+            logging.getLogger(__name__).warning(
+                "ALUMNI_OPTOUT_SALT is not set - using the built-in default, which is public "
+                "in the source. Set a random value in the backend environment.")
+        salt = "swumkt-alumni-optout-v1"
     raw = f"{salt}|{G.normalize_name(display_name)}|{gen}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 

@@ -506,7 +506,11 @@ def test_thesis_paths_keep_the_whitelist_rule(seeded):
         assert client.post(f"/api/conjoint/studies/{study['id']}{path}", json={"methods": ["mnl"]},
                            headers=H("stranger")).status_code == 403
     asyncio.run(db.conjoint_studies.update_one({"id": study["id"]}, {"$set": {"creator_id": "owner_nowl"}}))
+    # Owner decision 2026-11-26: the no-AI document is free, so any owner gets it;
+    # the AI-related thesis paths still need the whitelist.
     assert client.post(f"/api/conjoint/studies/{study['id']}/export-thesis/no-ai", json={"methods": ["mnl"]},
+                       headers=H("owner_nowl")).status_code == 200
+    assert client.post(f"/api/conjoint/studies/{study['id']}/export-thesis/external-pack", json={"methods": ["mnl"]},
                        headers=H("owner_nowl")).status_code == 403
     assert client.post(f"/api/conjoint/studies/{study['id']}/export-thesis/no-ai", json={"methods": ["mnl"]},
                        headers=H("admin")).status_code == 200
@@ -860,3 +864,18 @@ def test_share_content_escapes_html_and_uses_a_real_llm_helper(seeded):
     doc = asyncio.run(db.contents.find_one({"id": r.json()["content_id"]}))
     assert "<script>" not in doc["content"] and "<img" not in doc["content"]
     assert "&lt;script&gt;" in doc["content"] and "**ok**" in doc["content"]
+
+
+def test_anonymous_cannot_start_a_billed_interpretation_even_when_llm_is_on(seeded, monkeypatch):
+    """Owner decision 2026-11-26: a visitor of a public study must log in before
+    the system LLM is asked to write a NEW interpretation."""
+    client, db, seed = seeded
+    study, _ = seed()
+    asyncio.run(db.conjoint_studies.update_one(
+        {"id": study["id"]}, {"$set": {"is_public_result": True}}))
+    monkeypatch.setenv("SYSTEM_LLM_DEFAULT", "on")
+    from lib import llm_policy
+    llm_policy.invalidate_cache()
+    r = client.post(f"/api/conjoint/studies/{study['id']}/ai-interpretation", json={"method": "mnl"})
+    assert r.status_code == 401, r.text
+    assert asyncio.run(db.ai_interp_jobs.count_documents({})) == 0

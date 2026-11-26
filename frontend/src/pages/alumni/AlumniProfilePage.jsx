@@ -183,6 +183,12 @@ const AlumniProfilePage = () => {
             ลงทะเบียนเลย <Icon name="arrow-right" size={16} />
           </button>
         </div>
+        {/* Admins manage alumni settings without needing an alumni profile of their own. */}
+        {user.role === 'admin' && (
+          <div className="al-page" style={{ paddingTop: 24, textAlign: 'left' }}>
+            <AlumniAdminPanel token={token} toast={toast.show} />
+          </div>
+        )}
       </AlumniLayout>
     );
   }

@@ -6115,6 +6115,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if resp_count < 10:
             raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
 
+        # A NEW system-LLM interpretation costs money: never let an anonymous
+        # visitor of a public study start one (owner decision 2026-11-26).
+        # Cached results above and the external-prompt path stay public.
+        if current_user is None:
+            raise HTTPException(status_code=401, detail="กรุณาเข้าสู่ระบบก่อนสั่งให้ AI ของระบบตีความผล")
         await _require_system_llm(FEAT_INTERPRETATION, current_user)
 
         job_id = f"ai_interp_{study_id}_{uuid.uuid4().hex[:8]}"
@@ -6322,15 +6327,17 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     # ======================================================================
     # THESIS EXPORT — system LLM, external pack/import, and no-AI document
     # ======================================================================
-    async def _thesis_access(study_id: str, current_user):
+    async def _thesis_access(study_id: str, current_user, no_ai: bool = False):
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
         is_owner = study["creator_id"] == current_user.id
         is_admin = current_user.role == UserRole.ADMIN
         is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
-        # Rule: (owner AND whitelisted) OR admin — unchanged, applied to every thesis path.
-        if is_admin or (is_owner and is_whitelisted):
+        # Rule: (owner AND whitelisted) OR admin for every AI-related thesis path.
+        # The no-AI document costs nothing, so any owner may export it
+        # (owner decision 2026-11-26).
+        if is_admin or (is_owner and (is_whitelisted or no_ai)):
             return study
         if is_owner:
             raise HTTPException(status_code=403, detail="คุณเป็นเจ้าของ study แต่ยังไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin")
@@ -6713,7 +6720,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         """Thesis Chapter 3 (methods, from the actual design) and Chapter 4 (APA-style
         tables + importance figure) generated from code alone — no LLM, no cost."""
         from lib import conjoint_thesis as T
-        study = await _thesis_access(study_id, current_user)
+        study = await _thesis_access(study_id, current_user, no_ai=True)
         methods = _clean_methods(request.methods)
         chapters = [c for c in request.chapters if c in (3, 4)] or [3, 4]
         inputs = await _thesis_inputs(study_id, methods, chapters, "")
