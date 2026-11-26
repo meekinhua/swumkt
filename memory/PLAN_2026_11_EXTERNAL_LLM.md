@@ -167,3 +167,58 @@ Extend `backend/scripts/sitectl.py` (+ `.claude/skills/site-edit/SKILL.md`):
 | WP7 Brand Equity frontend | sonnet (after WP3+WP4) | `frontend/src/pages/brand-equity/*` |
 | WP8 Platform structure | sonnet (after WP4) | `frontend/src/pages/MarketResearch.js`, `Dashboard.js`, nav/topbar components, other tools' pages (graceful `llm_external_only`), dead files, `README.md`, `frontend/.env.example` |
 | WP9 Verification | opus | review everything, run tests/build, browser smoke with `dev_sim.py`, fix |
+
+---
+
+# ADDENDUM — Alumni "สายเทค" re-engagement (owner request, 2026-11-26)
+
+Existing: `backend/routes/alumni.py`, `alumni_phase2.py`, `frontend/src/pages/alumni/*`,
+spec `memory/alumni-spec/SPEC.md`, paused list `memory/PAUSED_WORK.md`.
+
+Owner decisions:
+- SWU calls the code-line system **สายเทค** (พี่เทค, not พี่รหัส). Exact ladder is not
+  officially documented → use the researched ladder as DEFAULT, keep it editable.
+- There is **no official roster** of who is whose พี่เทค. Pairs are made informally.
+  The tree must be **crowd-built and crowd-confirmed** by users.
+
+Default vocabulary (distance in the line, gendered; stored in settings, editable without deploy):
+
+| distance | up | down |
+|---|---|---|
+| 1 | พี่เทค | น้องเทค |
+| 2 | ลุงเทค / ป้าเทค | หลานเทค |
+| 3 | ปู่เทค / ย่าเทค (alt per line: ตาเทค / ยายเทค) | เหลนเทค |
+| 4 | ทวดเทค | โหลนเทค |
+| 5 | เทียดเทค (unverified for SWU) | "รุ่นที่ 5" fallback |
+| 6+ | "ทวดเทค รุ่นที่ n" fallback | fallback |
+
+Unknown gender → combined form ("ลุง/ป้าเทค"). The old spec's "ปู่ = พี่ของพี่ take" and
+"3 years apart" are wrong; one step = one cohort year by default but the link, not the
+year, defines the relation.
+
+Design:
+1. **Placeholder (ghost) members** — a user can add "พี่เทคของฉันคือ <ชื่อเล่น/ชื่อ>, รุ่น/รหัสขึ้นต้น"
+   for someone not registered. Minimal data only (PDPA): display name + cohort, visible to
+   logged-in members only, removable by admin or by the person.
+2. **Crowd confirmation** — relation states: `claimed` → `confirmed` when the counterpart
+   accepts, OR `vouched` when ≥2 distinct registered members who are connected to either end
+   (same line or same cohort) vouch. Conflicting claims → `disputed`, surfaced for votes;
+   counterpart's own answer always wins. Vouching earns small XP; rate-limited; audit trail.
+3. **Claim on arrival** — invite links are attached to a ghost node; accepting the invite
+   offers "นี่คือคุณใช่ไหม" and merges the ghost into the real account with its relations.
+4. **Gap-driven invite chain upward** — the tree shows the next empty slot above
+   ("ลุงเทคของคุณยังไม่มา") with a share-to-LINE invite; the nearest registered relative is
+   nudged to bring the next one. Chain depth and "who brought whom" are tracked (K-factor).
+5. **เฉลยสาย** — invitee sees clues and guesses who invited them before the reveal; the whole
+   line is notified when the line grows a new level.
+6. **Line & cohort races** — leaderboard of longest / most complete lines; cohort completion
+   meter ("รุ่น 64 มาแล้ว 43%").
+7. **เลี้ยงสาย** — a line can schedule a meetup (date, place, RSVP).
+8. **Department value** — a benefits hub for alumni: research tools for real work, faculty
+   articles/publications, jobs/referrals, mentoring sign-up, guest-speaker/judge sign-up.
+9. No system-LLM dependency anywhere in alumni.
+
+| WP | Model | Owns |
+|---|---|---|
+| WP10 Alumni backend | opus | `backend/routes/alumni.py`, `alumni_phase2.py`, new `backend/lib/alumni_*.py`, `backend/tests/test_alumni_2026_11*.py`, `memory/ALUMNI_CONTRACT_2026_11.md` |
+| WP11 Alumni frontend | sonnet (after WP10) | `frontend/src/pages/alumni/*` |
