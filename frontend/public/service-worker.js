@@ -9,7 +9,7 @@ const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 // may run their own service worker and caches. Keep this list in sync with
 // SUBAPPS in backend/lib/subapps.py (a backend test checks it). This worker
 // must never intercept their requests or delete their caches.
-const SUBAPP_PREFIXES = ['/api/yolo', '/api/meekintube', '/api/swudorm'];
+const SUBAPP_PREFIXES = ['/api/yolo', '/api/meekintube'];
 const isSubappPath = (pathname) =>
   SUBAPP_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 

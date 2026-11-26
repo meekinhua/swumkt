@@ -237,8 +237,6 @@ function App() {
               <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/meekintube" element={<ExternalRedirect to="/api/meekintube/" />} />
-            {/* Co-hosted sub-app (separate project). Prefix reserved in backend/lib/subapps.py. */}
-            <Route path="/swudorm/*" element={<ExternalRedirect to="/api/swudorm/" />} />
             <Route path="/learn" element={<LearnIndexPage />} />
             <Route path="/learn/:slug" element={<CmsArticleView />} />
             <Route path="/about/swu-marketing" element={<AboutSwuMarketing />} />

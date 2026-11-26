@@ -8450,7 +8450,7 @@ if _MEEK_DIR.exists():
 
 
 # ============ Co-hosted sub-apps registry (lib/subapps.py, SUBAPPS.md) ============
-# SwuDorm (and any future sub-app) is mounted from its own folder without
+# A future sub-app registered there is mounted from its own folder without
 # editing this file; the main platform must never define a route under a
 # reserved sub-app prefix.
 from lib import subapps as _subapps

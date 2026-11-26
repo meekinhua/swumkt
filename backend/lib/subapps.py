@@ -44,7 +44,11 @@ class SubApp:
 SUBAPPS: Dict[str, SubApp] = {a.name: a for a in (
     SubApp("yolo", "YOLO Detect", "/api/yolo", None, "yolo_", "YOLO_", "yolo"),
     SubApp("meekintube", "meekinTube", "/api/meekintube", "/meekintube", "meekintube_", "MEEKIN_", "meekintube"),
-    SubApp("swudorm", "SwuDorm", "/api/swudorm", "/swudorm", "swudorm_", "SWUDORM_", "swudorm", auto_mount=True),
+    # A new co-hosted project (e.g. the dormitory app, name not final) is added
+    # with ONE line here once its name is decided, for example:
+    #   SubApp("dorm", "Dorm", "/api/dorm", "/dorm", "dorm_", "DORM_", "dorm", auto_mount=True),
+    # then add its prefix to SUBAPP_PREFIXES in frontend/public/service-worker.js
+    # and (if it has a short link) a redirect route in frontend/src/App.js.
 )}
 SUBAPP_NAMES = tuple(SUBAPPS)
 

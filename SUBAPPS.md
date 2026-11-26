@@ -1,4 +1,4 @@
-# Co-hosted sub-apps (SwuDorm, meekinTube, YOLO) — how not to collide
+# Co-hosted sub-apps (meekinTube, YOLO, future projects) — how not to collide
 
 Several independent projects are deployed on the **same host and the same backend process**
 as the SWUMKT platform. Each lives under its own URL prefix. The registry is
@@ -8,49 +8,52 @@ as the SWUMKT platform. Each lives under its own URL prefix. The registry is
 |---|---|---|---|---|---|
 | YOLO Detect | `/api/yolo/` | – | `yolo_` | `YOLO_` | `yolo` |
 | meekinTube | `/api/meekintube/` | `/meekintube` | `meekintube_` | `MEEKIN_` | `meekintube` |
-| **SwuDorm** | `/api/swudorm/` | `/swudorm` | `swudorm_` | `SWUDORM_` | `swudorm` |
+
+**Nothing is reserved yet for the dormitory project** (working name SwuDorm; the name is not final and it is
+not being deployed yet). When its name is decided, register it as described under "Adding another sub-app";
+the examples below use `<name>` / `<NAME>` for it.
 
 Only `/api/*` reaches this backend through the ingress, which is why every prefix starts with `/api/`.
 
-## Shipping SwuDorm — no edits to main-platform files
+## Shipping a new sub-app — no edits to main-platform feature files
 
-Put the app in **its own folder** and it is mounted automatically at `/api/swudorm/`:
+Put the app in **its own folder** and once registered it is mounted automatically at `/api/<name>/`:
 
-- `backend/swudorm_app/asgi.py` exposing `app` (FastAPI/Starlette, or Flask wrapped with `a2wsgi`), **or**
-- `backend/swudorm_static/index.html` for a static PWA.
+- `backend/<name>_app/asgi.py` exposing `app` (FastAPI/Starlette, or Flask wrapped with `a2wsgi`), **or**
+- `backend/<name>_static/index.html` for a static PWA.
 
 Do not edit `backend/server.py`, `frontend/src/App.js` or anything under `backend/routes`, `backend/lib`,
 `frontend/src` — that is what causes merge conflicts between the two projects. If the mount fails the
-main platform still starts and logs `[SUBAPP] swudorm failed to mount`.
+main platform still starts and logs `[SUBAPP] <name> failed to mount`.
 
 ## Rules for a sub-app
 
 1. **URLs.** Everything under your prefix. Use **relative** asset and API paths (`./app.js`, `api/rooms`),
    or read the base from `location.pathname`; never assume the app is at `/`.
-2. **Python modules.** The package is loaded as `subapp_swudorm`. Use relative imports (`from .models import …`).
+2. **Python modules.** The package is loaded as `subapp_<name>`. Use relative imports (`from .models import …`).
    Never `import server`, `import routes`, `import lib` — those names belong to the main backend.
-3. **Database.** Either your own database (`SWUDORM_DB_NAME`, same `MONGO_URL`) or collections named
-   `swudorm_*` in the shared one. Never read or write a collection without your prefix — `users`,
+3. **Database.** Either your own database (`<NAME>_DB_NAME`, same `MONGO_URL`) or collections named
+   `<name>_*` in the shared one. Never read or write a collection without your prefix — `users`,
    `surveys`, `alumni_*`, `brand_*`, `conjoint_*`, `cms_*`, `platform_settings` … are the main platform's.
 4. **Auth.** Sub-apps do not share the platform login by default. Do not read the browser's `token`
    key and do not mint JWTs with the platform's `JWT_SECRET`. If single sign-on is wanted, ask for a
    verify endpoint instead of reading the secret.
 5. **Browser storage** is shared by the whole origin. Prefix every `localStorage` / `sessionStorage` /
-   IndexedDB / Cache Storage name with `swudorm` (e.g. `swudorm:token`, cache `swudorm-cache-v1`).
+   IndexedDB / Cache Storage name with your name (e.g. `<name>:token`, cache `<name>-cache-v1`).
    Keys the main platform already uses: `token`, `pending_invite_code`, `be_lang`, `perception_questions`,
    caches `swumkt-cache-*`.
-6. **Service worker.** Register with scope `/api/swudorm/` only. When cleaning old caches, delete only
+6. **Service worker.** Register with scope `/api/<name>/` only. When cleaning old caches, delete only
    names starting with your own prefix — never `caches.keys()` → delete all.
-7. **Environment variables** start with `SWUDORM_`. Do not reuse `JWT_SECRET`, `EMERGENT_LLM_KEY`,
+7. **Environment variables** start with `<NAME>_`. Do not reuse `JWT_SECRET`, `EMERGENT_LLM_KEY`,
    `DB_NAME`, `CORS_ORIGINS`, `ALUMNI_OPTOUT_SALT`.
 8. **No platform LLM.** Calls to the platform's paid LLM from a request under a sub-app prefix are
-   refused unconditionally. Bring your own key under `SWUDORM_…` and call your provider directly.
-9. **Object storage / uploads.** Keys under `swudorm/…`.
+   refused unconditionally. Bring your own key under `<NAME>_…` and call your provider directly.
+9. **Object storage / uploads.** Keys under `<name>/…`.
 10. **Dependencies.** One Python environment is shared: add to `backend/requirements.txt` without
     changing existing pins; if a pin must change, coordinate first.
 11. **Process hygiene.** No module-level work that can fail or block start-up, no background threads
     started at import, no `logging.basicConfig`, no `os.chdir`, no `sys.path` edits.
-12. **Git.** Work on your own branch; touch only `backend/swudorm_*`, `backend/tests/test_swudorm_*`
+12. **Git.** Work on your own branch; touch only `backend/<name>_*`, `backend/tests/test_<name>_*`
     and a `requirements.txt` append.
 
 ## What the main platform guarantees (enforced by `backend/tests/test_subapps_isolation.py`)
@@ -62,5 +65,10 @@ main platform still starts and logs `[SUBAPP] swudorm failed to mount`.
 
 ## Adding another sub-app
 
-Add one `SubApp(...)` line in `backend/lib/subapps.py`, the prefix in
-`frontend/public/service-worker.js` (`SUBAPP_PREFIXES`), and a row in the table above.
+Three small edits, done once by the main-platform owner when the name is final:
+
+1. one `SubApp(...)` line in `backend/lib/subapps.py` (a commented example is there);
+2. the prefix in `SUBAPP_PREFIXES` in `frontend/public/service-worker.js`;
+3. optionally a short-link redirect route in `frontend/src/App.js`, and a row in the table above.
+
+`backend/tests/test_subapps_isolation.py` fails if 1 and 2 disagree.

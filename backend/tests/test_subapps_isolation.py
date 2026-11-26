@@ -14,11 +14,19 @@ from lib import subapps  # noqa: E402
 from lib import llm_policy  # noqa: E402
 
 
-def test_swudorm_is_reserved_with_its_own_namespaces():
-    a = subapps.SUBAPPS["swudorm"]
-    assert a.mount == "/api/swudorm" and a.spa_alias == "/swudorm"
-    assert (a.db_prefix, a.env_prefix, a.storage_prefix) == ("swudorm_", "SWUDORM_", "swudorm")
-    assert a.auto_mount
+@pytest.fixture
+def dorm(monkeypatch):
+    """A not-yet-named future sub-app, registered only for the test (the real
+    name is undecided, so nothing is reserved in production)."""
+    a = subapps.SubApp("swudorm", "SwuDorm", "/api/swudorm", "/swudorm", "swudorm_", "SWUDORM_", "swudorm", auto_mount=True)
+    monkeypatch.setitem(subapps.SUBAPPS, "swudorm", a)
+    sys.modules.pop("subapp_swudorm", None)
+    return a
+
+
+def test_no_unreleased_subapp_is_reserved_in_production():
+    assert sorted(subapps.SUBAPPS) == ["meekintube", "yolo"]
+    assert not any(a.auto_mount for a in subapps.SUBAPPS.values())
 
 
 def test_namespaces_do_not_overlap_between_subapps():
@@ -30,7 +38,7 @@ def test_namespaces_do_not_overlap_between_subapps():
             assert not any(y != x and y.startswith(x) for y in vals), (field, x)
 
 
-def test_path_matching_is_exact_on_the_segment():
+def test_path_matching_is_exact_on_the_segment(dorm):
     assert subapps.is_subapp_path("/api/swudorm")
     assert subapps.is_subapp_path("/api/swudorm/rooms/1")
     assert not subapps.is_subapp_path("/api/swudormitory")
@@ -39,7 +47,7 @@ def test_path_matching_is_exact_on_the_segment():
     assert subapps.owner_of_collection("surveys") is None
 
 
-def test_route_collision_check():
+def test_route_collision_check(dorm):
     subapps.assert_no_route_collisions(["/api/surveys", "/api/health"])
     with pytest.raises(RuntimeError):
         subapps.assert_no_route_collisions(["/api/swudorm/anything"])
@@ -68,7 +76,7 @@ def test_main_collections_do_not_use_a_subapp_prefix():
     assert sorted(n for n in names if subapps.owner_of_collection(n)) == []
 
 
-def test_platform_llm_is_never_available_under_a_subapp_prefix():
+def test_platform_llm_is_never_available_under_a_subapp_prefix(dorm):
     for a in subapps.SUBAPPS.values():
         assert llm_policy.feature_for_path(a.mount + "/api/ask") == llm_policy.NO_LLM
     assert llm_policy.feature_for_path("/api/translate") != llm_policy.NO_LLM
@@ -108,14 +116,14 @@ def _client(tmp_path, files):
     return TestClient(app), mounted
 
 
-def test_static_subapp_is_mounted_from_its_own_folder(tmp_path):
+def test_static_subapp_is_mounted_from_its_own_folder(tmp_path, dorm):
     client, mounted = _client(tmp_path, {"swudorm_static/index.html": "<h1>dorm</h1>"})
     assert mounted == ["swudorm"]
     assert "dorm" in client.get("/api/swudorm/").text
     assert client.get("/api/health").json() == {"status": "ok"}
 
 
-def test_asgi_subapp_is_loaded_under_its_own_module_name(tmp_path):
+def test_asgi_subapp_is_loaded_under_its_own_module_name(tmp_path, dorm):
     sys.modules.pop("subapp_swudorm", None)
     client, mounted = _client(tmp_path, {
         "swudorm_app/__init__.py": "",
@@ -129,7 +137,7 @@ def test_asgi_subapp_is_loaded_under_its_own_module_name(tmp_path):
     assert "subapp_swudorm" in sys.modules and "asgi" not in sys.modules
 
 
-def test_a_broken_subapp_does_not_stop_the_platform(tmp_path):
+def test_a_broken_subapp_does_not_stop_the_platform(tmp_path, dorm):
     sys.modules.pop("subapp_swudorm", None)
     client, mounted = _client(tmp_path, {"swudorm_app/asgi.py": "raise RuntimeError('boom')\n"})
     assert mounted == []
@@ -137,6 +145,6 @@ def test_a_broken_subapp_does_not_stop_the_platform(tmp_path):
     assert client.get("/api/swudorm/").status_code == 404
 
 
-def test_nothing_is_mounted_when_the_folders_are_absent(tmp_path):
+def test_nothing_is_mounted_when_the_folders_are_absent(tmp_path, dorm):
     client, mounted = _client(tmp_path, {})
     assert mounted == []
