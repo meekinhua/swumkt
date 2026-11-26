@@ -195,4 +195,258 @@ _(WP2 fills this section.)_
 
 ## Brand Equity
 
-_(WP3 fills this section.)_
+_Owner: WP3. Code: `backend/routes/brand_equity.py`, `backend/lib/be_external.py`,
+`backend/routes/be_thesis_ai.py`, `thesis_renderer.py`. Tests:
+`backend/tests/test_brand_equity_2026_11.py`. Audit: `memory/BRAND_EQUITY_AUDIT_2026_11.md`._
+
+All paths below are under `/api/brand-equity`. Auth = the study owner (or admin), same as
+the existing study routes. Every endpoint that takes a filter accepts the dashboard's query
+params `from`, `to`, `segments` (URL-encoded JSON `{field:[values]}`) and `wave`
+(`latest|all|<n>`) — pass exactly what the dashboard passes to `/dashboard`, so the result
+lands in the same `ai_cache` / `ai_cache_by_filter.<signature>` slot the dashboard reads.
+
+### Feature keys (llm_policy) and system endpoints
+
+| feature | system endpoint(s) — now `409 llm_external_only` when not allowed | external alternative |
+|---|---|---|
+| `be.ai_analyze` | `POST /studies/{id}/ai-analyze` (checked **before** anything is queued) | `…/ai-analyze/external-prompt` + `…/external-import`; manual code frame |
+| `be.thesis` | `POST /studies/{id}/thesis-ai-start` (a cached thesis is still returned as `ready` when off) | `…/thesis-ai/external-pack` + `…/thesis-ai/external-import` |
+| `be.visual_identity` | `POST /studies/{id}/extract-visual-identity`, `POST /extract-identity` (wizard) | `…/extract-visual-identity/external-prompt|import`, `/extract-identity/external-prompt|import` |
+| `be.questions` | no endpoint refuses: the only LLM use is the optional TH→EN translation of custom quality attributes in `POST /studies`, `PUT /studies/{id}`, `POST /studies/{id}/regenerate-questions`; when off it is silently skipped (Thai text kept) | `…/regenerate-questions/external-prompt|import`; or send `brand.custom_quality_attributes_en` in `PUT /studies/{id}` (now respected instead of overwritten) |
+
+Always available whatever the switch says: `GET /studies/{id}/ai-status`, `GET /dashboard`
+(cached AI results stay readable), `POST /studies/{id}/thesis-export` (non-AI DOCX).
+
+Background jobs (system path) now record failure honestly:
+- `ai-status` `status` ∈ `idle|queued|running|ready|partial|error|no_data`. **New:** `partial`
+  (some steps failed) and the fields `errors: [{part, sections, message, errors?}]`,
+  `error_code: "llm_external_only"` + `error_detail` (the 409 body's `detail`) when the policy
+  refused mid-job. Never `ready` with empty content.
+- `thesis-ai-status/{job_id}` adds `error_code` / `error_detail` the same way; an empty chapter
+  fails the job (it used to be cached as an empty chapter).
+
+### 1. AI analysis — external prompt (parallels "Run AI analysis" → `POST /studies/{id}/ai-analyze`)
+
+`GET` (or `POST`, no body) `/studies/{id}/ai-analyze/external-prompt?from&to&segments&wave`
+
+```json
+{"feature": "be.ai_analyze",
+ "title": "วิเคราะห์ Brand Equity ด้วย AI ของคุณเอง — Kaffe",
+ "instructions_th": "วิธีใช้ AI ของคุณเอง …",
+ "expected_format": "json",
+ "parts": [{"key": "p1",
+            "title": "จัดกลุ่ม/เข้ารหัสคำตอบปลายเปิด + สกัดประเด็น (themes) … + ข้อเสนอแนะเชิงกลยุทธ์ (master insights)",
+            "sections": ["coding", "themes", "identity", "insights"],
+            "system_prompt": "คุณเป็นนักวิจัยการตลาด…",
+            "prompt": "## ชุดงาน p1: … (data embedded)",
+            "json_example": "{\n  \"part\": \"p1\",\n  \"coding\": {…}, …}"}],
+ "filename": "brand-equity-Kaffe-all-ai-prompt.md",
+ "signature": "all",
+ "filter": {"from": null, "to": null, "segments": {}},
+ "n_responses": 60,
+ "coding": {"questions": 6, "distinct_answers": 24, "answers": 360},
+ "themes": [{"question_id": "PQ-6--self", "sampled": false, "sent": 4, "total_answers": 60}]}
+```
+
+- A small study is ONE part (`p1`, all four sections). A large one is several parts: each
+  coding part carries ≤ 200 distinct answers; themes / identity / insights follow in the last
+  part(s). `sections` tells the UI what each part produces. Parts are independent: import them
+  in any order, one paste per part. Show `part.title` and `sections` on each step.
+- 400 `"ยังไม่มีคำตอบในชุดข้อมูลนี้ …"` when the filtered slice is empty.
+- Theme questions with too many distinct answers are sent as a deterministic sample;
+  `themes[].sampled = true` → show "ส่งตัวอย่าง {sent} จาก {total_answers} คำตอบ".
+
+### 2. AI analysis — external import
+
+`POST /studies/{id}/ai-analyze/external-import?from&to&segments&wave`
+
+```json
+{"part_key": "p1", "content": "<everything the user pasted>", "model_label": "ChatGPT-5"}
+```
+
+`part_key` optional (the pasted JSON's `"part"` is used if present). `model_label` optional
+(stored as `"AI ภายนอก (ไม่ระบุชื่อ)"` when blank). Code fences / prose around the JSON are fine.
+
+200 → the same object `GET /ai-status` returns for that filter, plus import info:
+
+```json
+{"status": "ready", "source": "external", "model_label": "ChatGPT-5",
+ "imported_at": "…", "imported_by": "owner@…",
+ "normalized_by_question": {"AW-1--self": {"counts": […], "total": 60, "basis": "ai", "coding_coverage": 1.0, "derived_from_open_coding": true}},
+ "themes_by_question": {"PQ-6--self": [{"name": "ราคา", "description": "…", "sentiment": -0.3,
+                                        "count": 15, "pct": 25.0, "sample_quotes": ["…"],
+                                        "answer_ids": ["a1b2c3d4"], "base_n": 60, "sampled": false, "total_n": 60}]},
+ "identity_image": {"perceived_traits": [{"trait": "Modern", "count": 30, "sentiment": 0.5}],
+                    "aligned": ["Modern"], "lost": ["Premium"], "unintended": ["Expensive"],
+                    "alignment_score_0_100": 55, "narrative": "…", "alignment_is_llm_judgement": true},
+ "master_insights": [{"headline": "…", "evidence": "…", "recommendation": "…", "priority": "high"}],
+ "sections_meta": {"coding": {"source": "external", "model_label": "ChatGPT-5", "at": "…", "by": "…"}, "…": {}},
+ "filter": {"from": null, "to": null, "segments": {}, "n": 60}, "schema_version": 2,
+ "signature": "all", "wave": "all",
+ "imported_sections": ["coding", "themes", "identity", "insights"], "part_key": "p1",
+ "warnings": ["คำถาม AW-2--self: เข้ารหัสแล้ว 60% ของคำตอบ — …"]}
+```
+
+422 (nothing is saved — a part is applied all-or-nothing):
+
+```json
+{"detail": {"code": "external_import_invalid",
+            "message": "ส่วน coding มีข้อผิดพลาด จึงยังไม่นำเข้าส่วนใดเลย",
+            "errors": ["พบ id ที่ไม่มีในการศึกษานี้ 1 รายการ เช่น a00000000 — …"]}}
+```
+
+Show `message` + the `errors` list. Other messages: unreadable JSON (with line/column),
+"คำตอบไม่ครบ: ชุดงาน p2 ต้องมีส่วน insights …" (a promised section is missing — truncated paste).
+After a successful import re-fetch `/dashboard` (counts change only via coding).
+
+Same `ai_cache` fields as the system path; the system path now also writes `source`,
+`model_label`, `sections_meta`, `errors`, `schema_version`.
+
+### 3. Open-ended coding without an LLM (code frame) — new UI block, no existing parallel
+
+- `GET /studies/{id}/coding` →
+  ```json
+  {"questions": [{"question_id": "AW-1--self", "prompt": "เมื่อพูดถึง กาแฟ แบรนด์แรกที่นึกถึงคืออะไร?",
+                  "task": "brand_single", "distinct_answers": 7, "coded_distinct": 7,
+                  "answers": 60, "coded_answers": 60, "coverage": 1.0,
+                  "sources": ["external"], "model_labels": {"external": "ChatGPT-5"}}],
+   "distinct_answers": 24, "coded_distinct": 24, "how_to_th": "ดาวน์โหลดไฟล์ code frame → …"}
+  ```
+  `task` ∈ `brand_single|brand_multi|concept`; `sources` ⊂ `system|external|manual`.
+- `GET /studies/{id}/coding/codeframe.csv` → UTF-8 CSV (BOM) download, columns
+  `answer_id,question_id,question_type,frequency,answer_text,code` (existing codes pre-filled).
+  User fills `code` (one label; several brands `A; B`; `-` = no brand; blank = leave uncoded).
+- `POST /studies/{id}/coding/import-csv` body `{"content": "<csv text>", "model_label": "optional coder name"}`
+  (read the file with FileReader as text) → `{"imported": 24, "questions": [same rows as GET /coding]}`;
+  422 same shape as §2.
+- `DELETE /studies/{id}/coding?question_id=AW-1--self` (omit `question_id` = clear all) →
+  `{"open_coding_questions": [...]}`.
+
+Codes are per distinct answer text, so they apply to every filter/segment/wave automatically.
+
+### 4. Dashboard / aggregate — new fields (all additive; `aggregate` of `GET /studies/{id}/dashboard` and `GET /showcase/{token}`)
+
+Query: `exclude_flagged=true` drops speeders / straight-liners / duplicates before analysis;
+response adds `quality_filter: {"exclude_flagged": bool, "excluded": n}` and
+`methods_paragraph_th` (ready-to-adapt Thai methods paragraph built from this study's facts).
+
+`aggregate` adds:
+- `schema_version: 2`.
+- `questions[]`: `reverse_scored`, `score_eligible`, `coding_status`
+  (`coded|partial|deterministic|uncoded|not_required`), `coding_status_th`
+  (**render this text instead of an empty chart/zero when `uncoded`** — e.g. "ยังไม่ได้เข้ารหัส").
+- `questions[].stats` (frequency / brand rows): `counts[].pct_ci95: [lo, hi]` (Wilson 95%);
+  coded open questions: `normalization_basis` ∈ `ai|manual|deterministic|none`, `coding_source`,
+  `coding_coverage`, `uncoded_n`; unaided-recall question: `total_unaided_pct`,
+  `total_unaided_ci95`, `total_unaided_base` (share naming the focal brand unprompted in
+  top-of-mind OR later — **this is what scores now**; show it as "Unaided recall (รวม)").
+- NPS stats: `score_ci95: [lo, hi]` (NPS units, −100..100) and `score_100_ci95`.
+- `reliability[dim]`: adds `items: [{question_id, kind, reverse_scored, corrected_item_total_r,
+  alpha_if_deleted}]`, `missing_data_rule`; top-level `reliability_not_computed` (Thai sentence
+  to print under the reliability card).
+- `sample_adequacy`: adds `moe_95_pct` (± points, worst case) and `moe_note`.
+- `bes_sensitivity`: `{"dimensions_used": 4, "dimensions_missing": [], "equal_weights": 46.5,
+  "range_one_weight_halved_or_doubled": [43.9, 50.2], "tier_stable": false, "note": "…"}` —
+  show the range next to BES; when `tier_stable` is false show the note.
+- `competitor_comparison`:
+  ```json
+  {"paired": [{"axis": "Trustworthy", "competitor": "Amazon", "n_pairs": 60, "testable": true,
+               "mean_diff": 6.4, "diff_ci95": [2.1, 10.7], "t": 2.97, "df": 59, "p_value": 0.0043,
+               "p_value_holm": 0.03, "significant": true, "cohens_dz": 0.38, "effect_label": "small",
+               "reverse_scored": false, "low_n": true, "interpretation": "Kaffe สูงกว่า Amazon …"}],
+   "comparative_vs_midpoint": [{"question_id": "PQ-5--self", "competitor": "Amazon", "n": 60,
+               "testable": true, "mean": 3.2, "t": -4.1, "df": 59, "p_value": 0.0001,
+               "p_value_holm": 0.0001, "significant": true, "cohens_d": -0.53,
+               "mean_favour_focal_ci95": [0.4, 1.2]}],
+   "method": "paired t-test …", "caveat": "…"}
+  ```
+  (`testable:false` rows carry `reason` + `interpretation`.) Use it on the radar / competitor cards.
+- `data_quality`: `{"n_total": 60, "flags": {"speeder": 0, "straightliner": 1, "duplicate": 0,
+  "unaware_rater": 3}, "n_flagged_excludable": 1, "median_duration_sec": 298.0,
+  "rules": {"speeder": "…", …}, "excluded_by_default": false, "note": "…"}` — card + the
+  `exclude_flagged` toggle.
+- `open_coding`: `{"questions_needing_coding": 7, "by_status": {"coded": 6, "uncoded": 1},
+  "uncoded_questions": ["LY-4--self"]}`.
+- `normalization`: adds `manual_questions`; `basis` may be `"manual"`.
+- **Removed from scoring:** the LLM identity–image alignment no longer feeds Identity
+  (`composite_meta.identity.present_kinds` never contains `ai_identity_alignment`).
+  `identity_image.alignment_score_0_100` is still returned — label it "ความเห็นของ AI (ไม่ใช่คะแนน)".
+  The methodology page (`BeMethodology.jsx`) must stop saying alignment is 10 % of Identity, and
+  should say unaided recall = TOM ∪ later mentions.
+
+### 5. Raw data export — new button (no existing parallel)
+
+`GET /studies/{id}/export/raw?format=xlsx|csv|codebook_csv&from&to&segments&wave&exclude_flagged`
+- `xlsx` (default): sheets `README`, `data` (one row per respondent; SPSS/R-safe variable
+  names; `_r` reverse-scored copies; `*_1…*_k` 0/1 dummies for multi-select; `*_code` and
+  `*_focal` for open brand questions; `dq_*` flags), `codebook` (variable, question text TH/EN,
+  dimension, kind, type, measure, min, max, value_labels, reverse_scored, score_eligible,
+  weight_in_dimension, notes).
+- `csv` = the `data` sheet; `codebook_csv` = the codebook. Download with the auth header (blob).
+
+### 6. Thesis — external pack (parallels `POST /studies/{id}/thesis-ai-start`)
+
+`GET /studies/{id}/thesis-ai/external-pack?chapters=3,4,5&extra_prompt=&format=md|json&from&to&segments`
+(role admin / current_student / alumni + owner, like thesis-ai-start; chapters 3-5 need ≥ 10
+responses → 400).
+- `format=md` (default): `text/markdown` download `brand-equity-thesis-pack-<brand>.md` —
+  how-to, all measured tables (scores, item stats with CIs, reliability incl. item-total r,
+  paired competitor tests, method facts), generated methods paragraph, required disclosures,
+  the system prompt, one prompt per chapter, the allowed reference list.
+- `format=json` (for `ExternalAiDialog`):
+  ```json
+  {"feature": "be.thesis", "title": "…", "instructions_th": "…", "expected_format": "markdown",
+   "parts": [{"key": "ch3", "title": "บทที่ 3", "system_prompt": "…", "prompt": "…"}],
+   "filename": "brand-equity-thesis-pack-Kaffe.md", "signature": "all", "markdown": "<whole pack>"}
+  ```
+
+### 7. Thesis — external import (then download through the existing renderer)
+
+`POST /studies/{id}/thesis-ai/external-import?from&to&segments`
+
+```json
+{"part_key": "ch3", "content": "<pasted markdown>", "model_label": "Claude"}
+```
+or several at once: `{"chapters": {"3": "…", "4": "…"}, "model_label": "Claude"}`.
+
+200:
+```json
+{"status": "ready", "cache_key": "be_thesis_ext_<study_id>_all",
+ "chapters_imported": [3], "chapters_stored": [3, 4], "warnings": ["บทที่ 3: พบข้อความเว้นว่าง/placeholder …"],
+ "model_label": "Claude",
+ "download_path": "/brand-equity/studies/<id>/thesis-ai-download?cache_key=be_thesis_ext_<id>_all"}
+```
+Chapters accumulate per filter (import ch3 now, ch4 later). Download with the existing
+`GET /studies/{id}/thesis-ai-download?cache_key=…` (same call the system flow uses); the DOCX
+starts with an AI-use disclosure naming `model_label`. 422 (`external_import_invalid`) for an
+empty/too-short chapter or a bad `part_key`. Show `warnings` (placeholders, an α ≥ .70 claim the
+data does not support) before the download button.
+
+### 8. Visual identity (vision) — prompt only, user attaches the images
+
+- `GET|POST /studies/{id}/extract-visual-identity/external-prompt` → uniform shape with one part
+  `main`, `expected_format: "json"`, plus `images: [{index, kind, note, mime_type}]` (tell the user
+  which images to attach, in order; the frontend already holds them in `study.identity.visual_assets`).
+- `POST /studies/{id}/extract-visual-identity/external-import` `{content, model_label}` → same
+  response as `POST /studies/{id}/extract-visual-identity`: `{"identity": {…}, "derived": {…}}`;
+  `identity.ai_source = {source, model_label, at, by}`.
+- Wizard (before the study exists): `POST /extract-identity/external-prompt` with the same body as
+  `POST /extract-identity`; `POST /extract-identity/external-import` `{content, model_label}` →
+  the derived object (same as `/extract-identity`) + `source`, `model_label`.
+
+### 9. Attribute translation (be.questions)
+
+- `GET|POST /studies/{id}/regenerate-questions/external-prompt` → one part, `expected_format: "text"`
+  (400 when the study has no custom quality attributes).
+- `POST /studies/{id}/regenerate-questions/external-import` `{content, model_label}` (one line per
+  attribute, or a JSON array) → same response as `POST /studies/{id}/regenerate-questions` plus
+  `custom_quality_attributes_en`.
+
+### Notes for WP1 / CLI
+
+- API-key scopes: `POST /studies/{id}/coding/import-csv` and `DELETE /studies/{id}/coding` are
+  not matched by the current `research.ai` rule (it only matches `external-(import|pack)`); suggest
+  `("research.ai", {"POST","DELETE"}, r"^/api/brand-equity/studies/[^/]+/coding(/import-csv)?/?$")`.
+- `ROUTE_FEATURES`: `/api/brand-equity/extract-identity` currently falls through to
+  `be.ai_analyze`; the route itself calls `require_system_llm("be.visual_identity")`, but the
+  path map should list it under `be.visual_identity` for consistency.

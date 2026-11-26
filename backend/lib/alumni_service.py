@@ -148,6 +148,8 @@ class AlumniService:
 
     async def require_member(self, user) -> dict:
         p = await self.profile(user.id)
+        if not p and is_admin(user):
+            return {}   # admins moderate without an alumni profile
         if not p:
             raise HTTPException(status_code=403, detail={
                 "code": "alumni_member_required",
@@ -837,7 +839,7 @@ class AlumniService:
         g = await self.db.alumni_ghosts.find_one_and_update(
             {"id": gid, "status": "active"},
             {"$set": {"status": "merging", "merging_into": into, "merging_at": now_iso()}},
-            projection={"_id": 0}, return_document=ReturnDocument.AFTER)
+            projection={"_id": 0}, return_document=ReturnDocument.BEFORE)  # BEFORE: portable (mongomock re-filters AFTER)
         if not g:
             g = await self.ghost(gid)
             if not g:

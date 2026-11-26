@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Sparkles, Loader2, FileText, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -78,7 +80,7 @@ const AcademicFormatEditor = () => {
       }
     } catch (error) {
       console.error('Fetch guidelines error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถดึง Author Guidelines ได้');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'ไม่สามารถดึง Author Guidelines ได้'));
     } finally {
       setFetchingGuidelines(false);
     }
@@ -118,6 +120,9 @@ const AcademicFormatEditor = () => {
       return;
     }
 
+    // Hoisted so the catch/finally below can always stop the fake-progress timers.
+    let progressInterval = null;
+    const messageTimeouts = [];
     try {
       setFormatting(true);
       setResult(null);
@@ -135,7 +140,7 @@ const AcademicFormatEditor = () => {
 
       // Smart progress simulation
       let currentProgress = 0;
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
           currentProgress = prev;
           if (prev < 20) return prev + Math.random() * 3;
@@ -162,7 +167,6 @@ const AcademicFormatEditor = () => {
         { time: 95000, message: 'เกือบเสร็จแล้ว กรุณารอสักครู่...' }
       ];
 
-      const messageTimeouts = [];
       messageSteps.forEach(step => {
         const timeout = setTimeout(() => {
           setAnalysisMessage(step.message);
@@ -208,8 +212,10 @@ const AcademicFormatEditor = () => {
 
     } catch (error) {
       console.error('AI Reformat error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถแปลง Citation Style ได้');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'ไม่สามารถแปลง Citation Style ได้'));
     } finally {
+      if (progressInterval) clearInterval(progressInterval);
+      messageTimeouts.forEach(timeout => clearTimeout(timeout));
       setTimeout(() => {
         setAnalyzingFile(false);
         setAnalysisProgress(0);

@@ -13,6 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, FileText, Upload as UploadIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -20,6 +23,8 @@ const CustomerPerceptionTool = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
   const { t } = useTranslation();
+  const aiGate = useAiGate('perception.ai');
+  const imageGate = useAiGate('perception.image');
 
   // Phase 1 - Tab 1: Question Generator
   const [questionTopic, setQuestionTopic] = useState('');
@@ -88,7 +93,7 @@ const CustomerPerceptionTool = () => {
       toast.success('สร้างคำถามสำเร็จ!');
     } catch (error) {
       console.error('Question generation error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างคำถามได้');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'ไม่สามารถสร้างคำถามได้'));
     } finally {
       setGeneratingQuestions(false);
     }
@@ -135,7 +140,7 @@ const CustomerPerceptionTool = () => {
       toast.success('วิเคราะห์สำเร็จ!');
     } catch (error) {
       console.error('Analysis generation error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ได้');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'ไม่สามารถวิเคราะห์ได้'));
     } finally {
       setGeneratingAnalysis(false);
     }
@@ -165,7 +170,7 @@ const CustomerPerceptionTool = () => {
       toast.success('สร้างภาพสำเร็จ!');
     } catch (error) {
       console.error('Image generation error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพได้');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'ไม่สามารถสร้างภาพได้'));
     } finally {
       setGeneratingImage(false);
     }
@@ -207,7 +212,7 @@ const CustomerPerceptionTool = () => {
       setShowSaveForm(false);
     } catch (error) {
       console.error('Save content error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถบันทึกได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถบันทึกได้'));
     } finally {
       setSaving(false);
     }
@@ -326,7 +331,8 @@ const CustomerPerceptionTool = () => {
 
                       <Button
                         onClick={handleGenerateQuestions}
-                        disabled={generatingQuestions || !questionTopic.trim()}
+                        disabled={generatingQuestions || !questionTopic.trim() || aiGate.blocked}
+                        title={aiGate.blockedReason}
                         className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
                       >
                         {generatingQuestions ? (
@@ -341,6 +347,7 @@ const CustomerPerceptionTool = () => {
                           </>
                         )}
                       </Button>
+                      <AiPolicyNote feature="perception.ai" alternative="เขียนคำถามเองได้ที่ Survey Builder" />
                     </div>
                   </Card>
 
@@ -430,7 +437,8 @@ const CustomerPerceptionTool = () => {
 
                       <Button
                         onClick={handleGenerateAnalysis}
-                        disabled={generatingAnalysis || !interviewData.trim()}
+                        disabled={generatingAnalysis || !interviewData.trim() || aiGate.blocked}
+                        title={aiGate.blockedReason}
                         className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
                       >
                         {generatingAnalysis ? (
@@ -445,6 +453,7 @@ const CustomerPerceptionTool = () => {
                           </>
                         )}
                       </Button>
+                      <AiPolicyNote feature="perception.ai" alternative="วิเคราะห์เองหรือใช้ AI ของคุณเองนอกระบบ แล้วบันทึกผลเป็นเนื้อหาได้ที่ Customer Behavior" />
                     </div>
                   </Card>
 
@@ -460,11 +469,12 @@ const CustomerPerceptionTool = () => {
                           {!imageUrl ? (
                             <Button
                               onClick={handleGenerateImage}
-                              disabled={generatingImage}
+                              disabled={generatingImage || imageGate.blocked}
                               variant="outline"
                               size="sm"
                               className="border-2 border-blue-300 text-blue-700 p-2"
-                              title="สร้างภาพประกอบ"
+                              title={imageGate.blocked ? 'สร้างภาพไม่ได้ — ผู้ดูแลระบบปิด AI สร้างภาพของระบบ' : 'สร้างภาพประกอบ'}
+                              aria-label="สร้างภาพประกอบ"
                             >
                               {generatingImage ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -562,6 +572,9 @@ const CustomerPerceptionTool = () => {
                             <div 
                               className="rounded-lg overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#00A9CE] transition-all"
                               onClick={() => setShowFullscreenImage(true)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowFullscreenImage(true); } }}
+                              role="button"
+                              tabIndex={0}
                               title="คลิกเพื่อดูแบบเต็มจอ"
                             >
                               <img

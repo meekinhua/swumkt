@@ -117,11 +117,13 @@ export default function CustomerValueListPage() {
               const indLabel = (INDUSTRIES.find((i) => i.id === s.industry) || {}).label || s.industry;
               return (
                 <div key={s.id} className="cv-card cv-study-card" data-testid={`cv-study-${s.id}`}
+                  role="link" tabIndex={0} aria-label={`เปิดการศึกษา ${s.title}`}
+                  onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); nav(`/market-research/customer-value/${s.id}`); } }}
                   onClick={() => nav(`/market-research/customer-value/${s.id}`)}>
                   <div className="bar" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span className="cv-chip">{indLabel}</span>
-                    <button className="cv-x" title="ลบ" data-testid={`cv-del-${s.id}`} onClick={(e) => remove(e, s.id)}>
+                    <button className="cv-x" title="ลบ" aria-label={`ลบ ${s.title}`} data-testid={`cv-del-${s.id}`} onClick={(e) => remove(e, s.id)}>
                       <i className="fa-solid fa-trash" />
                     </button>
                   </div>

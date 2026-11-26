@@ -14,6 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock, Copy, AlertTriangle, Code, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate } from '@/components/AiPolicyNote';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -21,6 +24,10 @@ const CustomerBehaviorTool = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
   const { t } = useTranslation();
+  // System-LLM policy (admin switch). Blocked => the page still works through
+  // the copy-prompt / paste-answer panel, which needs no server AI.
+  const analysisGate = useAiGate('behavior.ai');
+  const imageGate = useAiGate('behavior.image');
 
   // Step 1: Input
   const [rawData, setRawData] = useState('');
@@ -63,6 +70,8 @@ const CustomerBehaviorTool = () => {
 
   // Fallback states for when AI fails
   const [showPromptFallback, setShowPromptFallback] = useState(false);
+  // why the panel is open: 'failed' (server error) | 'external' (system AI switched off)
+  const [fallbackReason, setFallbackReason] = useState('failed');
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [manualAnalysisInput, setManualAnalysisInput] = useState('');
 
@@ -198,9 +207,21 @@ ${userPrompt}`;
     toast.success('✨ ใส่ผลการวิเคราะห์สำเร็จ!');
   };
 
+  const openPromptPanel = (reason) => {
+    setGeneratedPrompt(buildAnalysisPrompt());
+    setFallbackReason(reason);
+    setShowPromptFallback(true);
+  };
+
   const handleGenerateAnalysis = async () => {
     if (!rawData.trim()) {
       toast.error('Please enter research data');
+      return;
+    }
+
+    // System AI is switched off for this feature: go straight to "use my own AI".
+    if (analysisGate.blocked) {
+      openPromptPanel('external');
       return;
     }
 
@@ -223,11 +244,13 @@ ${userPrompt}`;
       toast.success('Analysis generated successfully!');
     } catch (error) {
       console.error('Analysis generation error:', error);
-      // Build and show prompt for manual use
-      const prompt = buildAnalysisPrompt();
-      setGeneratedPrompt(prompt);
-      setShowPromptFallback(true);
-      toast.error('AI Analysis ล้มเหลว - สามารถใช้ Prompt ไปทำเองได้');
+      if (isLlmExternalOnly(error)) {
+        // The global interceptor already showed the single Thai toast.
+        openPromptPanel('external');
+      } else {
+        openPromptPanel('failed');
+        toast.error('AI Analysis ล้มเหลว - สามารถใช้ Prompt ไปทำเองได้');
+      }
     } finally {
       setGeneratingAnalysis(false);
     }
@@ -257,7 +280,7 @@ ${userPrompt}`;
       toast.success('Image generated successfully!');
     } catch (error) {
       console.error('Image generation error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to generate image');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'Failed to generate image'));
     } finally {
       setGeneratingImage(false);
     }
@@ -301,7 +324,7 @@ ${userPrompt}`;
       // navigate('/content');
     } catch (error) {
       console.error('Save content error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to save content');
+      toast.error(apiErrorText(error, 'Failed to save content'));
     } finally {
       setSaving(false);
     }
@@ -423,6 +446,11 @@ ${userPrompt}`;
                     <span className="hidden sm:inline">Analyzing Behavior...</span>
                     <span className="sm:hidden">Analyzing...</span>
                   </>
+                ) : analysisGate.blocked ? (
+                  <>
+                    <Copy className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                    <span>สร้างพรอมต์ไปใช้กับ AI ของคุณเอง</span>
+                  </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
@@ -431,6 +459,12 @@ ${userPrompt}`;
                   </>
                 )}
               </Button>
+              {analysisGate.blocked && (
+                <p className="mt-2 text-sm text-amber-800" data-testid="behavior-ai-off-note">
+                  AI ของระบบปิดใช้งานอยู่ — ระบบจะสร้างพรอมต์ให้คัดลอกไปวางใน ChatGPT / Claude / Gemini แล้วนำคำตอบมาวางกลับในช่องด้านล่าง
+                  {analysisGate.hint ? ` · ${analysisGate.hint}` : ''}
+                </p>
+              )}
 
               {/* Fallback: Show prompt when AI fails */}
               {showPromptFallback && generatedPrompt && (
@@ -440,10 +474,14 @@ ${userPrompt}`;
                     <div className="flex items-center gap-2 mb-3">
                       <AlertTriangle className="w-5 h-5 text-amber-600" />
                       <h4 className="font-bold text-amber-800">
-                        AI Analysis ล้มเหลว - นำ Prompt ไปใช้เองได้
+                        {fallbackReason === 'external'
+                          ? 'ใช้ AI ของคุณเอง - คัดลอกพรอมต์ไปวางใน ChatGPT / Claude / Gemini'
+                          : 'AI Analysis ล้มเหลว - นำ Prompt ไปใช้เองได้'}
                       </h4>
                       <button
+                        type="button"
                         onClick={() => setShowPromptFallback(false)}
+                        aria-label="ปิดแผงพรอมต์"
                         className="ml-auto text-amber-600 hover:text-amber-800"
                       >
                         <X className="w-4 h-4" />
@@ -464,6 +502,7 @@ ${userPrompt}`;
                         onClick={handleCopyPrompt}
                         variant="outline"
                         size="sm"
+                        aria-label="คัดลอกพรอมต์"
                         className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
                       >
                         <Copy className="w-4 h-4" />
@@ -526,11 +565,12 @@ RECOMMENDATIONS:
                   {!imageUrl ? (
                     <Button
                       onClick={handleGenerateImage}
-                      disabled={generatingImage}
+                      disabled={generatingImage || imageGate.blocked}
                       variant="outline"
                       size="sm"
                       className="border-2 border-blue-300 text-blue-700 p-2"
-                      title="Generate Illustration"
+                      title={imageGate.blocked ? 'สร้างภาพไม่ได้ — ผู้ดูแลระบบปิด AI สร้างภาพของระบบ (บันทึกผลวิเคราะห์ได้ตามปกติ)' : 'Generate Illustration'}
+                      aria-label={imageGate.blocked ? 'สร้างภาพประกอบ (ปิดใช้งาน)' : 'Generate Illustration'}
                     >
                       {generatingImage ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -549,6 +589,7 @@ RECOMMENDATIONS:
                       size="sm"
                       className="border-2 border-red-300 text-red-700 p-2 hover:bg-red-50"
                       title="Delete Image"
+                      aria-label="ลบภาพ"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -559,6 +600,8 @@ RECOMMENDATIONS:
                     onClick={() => setShowSaveForm(true)}
                     variant="outline"
                     size="sm"
+                    title="บันทึกเป็นเนื้อหา"
+                    aria-label="บันทึกเป็นเนื้อหา"
                     className="border-2 border-green-300 text-green-700 p-2"
                   >
                     <Save className="w-4 h-4" />
@@ -628,6 +671,9 @@ RECOMMENDATIONS:
                     <div 
                       className="rounded-lg overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#00A9CE] transition-all"
                       onClick={() => setShowFullscreenImage(true)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowFullscreenImage(true); } }}
+                      role="button"
+                      tabIndex={0}
                       title="Click to view fullscreen"
                     >
                       <img

@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cmsApi, POST_TYPE_LABEL, SOURCE_TYPE_LABEL } from './cmsApi';
 import { youtubeId } from '../../components/SlideMedia';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
 
 const CmsEditorPage = () => {
   const { id } = useParams();
@@ -26,6 +29,10 @@ const CmsEditorPage = () => {
   const [selectedImagePrompt, setSelectedImagePrompt] = useState(null);
   const [extraPrompt, setExtraPrompt] = useState('');
   const [extraImagePrompt, setExtraImagePrompt] = useState('');
+  const textOff = useAiGate('cms.ai').blocked;
+  const imageOff = useAiGate('cms.image').blocked;
+  const translateOff = useAiGate('translate').blocked;
+  const OFF_TITLE = 'AI ของระบบปิดอยู่ (ตั้งค่าที่ ผู้ดูแล → Settings) — เขียนเองหรือวางผลจาก AI ของคุณลงในช่อง Body ได้';
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [editingImageTemplate, setEditingImageTemplate] = useState(false);
 
@@ -120,7 +127,7 @@ const CmsEditorPage = () => {
       }));
       toast.success('AI เขียนเรียบร้อย — ตรวจ + แก้ได้ตามต้องการ');
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'AI text gen ล้มเหลว');
+      if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'AI text gen ล้มเหลว'));
     } finally { setBusy(b => ({ ...b, text: false })); }
   };
 
@@ -163,7 +170,7 @@ const CmsEditorPage = () => {
         toast.success('AI สร้าง title + body + พาดหัวสั้น เรียบร้อย — ตรวจสอบและแก้ได้ตามต้องการ');
       }
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'AI สร้างเนื้อหาล้มเหลว');
+      if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'AI สร้างเนื้อหาล้มเหลว'));
     } finally { setBusy(b => ({ ...b, text: false })); }
   };
 
@@ -177,7 +184,7 @@ const CmsEditorPage = () => {
       setPost(p => ({ ...p, cover_image: r.data.image_data_url }));
       toast.success('สร้างภาพ cover เสร็จแล้ว');
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'AI image gen ล้มเหลว');
+      if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'AI image gen ล้มเหลว'));
     } finally { setBusy(b => ({ ...b, image: false })); }
   };
 
@@ -188,7 +195,7 @@ const CmsEditorPage = () => {
       const r = await cmsApi.aiSummarize({ sources: post.source_refs, extra_prompt: extraPrompt });
       setPost(p => ({ ...p, body_md: (p.body_md || '') + '\n\n## สรุป Source\n' + r.data.text }));
       toast.success('สรุปเสร็จ — ต่อท้าย body แล้ว');
-    } catch (e) { toast.error(e.response?.data?.detail || 'สรุปล้มเหลว'); }
+    } catch (e) { if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'สรุปล้มเหลว')); }
     finally { setBusy(b => ({ ...b, summary: false })); }
   };
 
@@ -199,7 +206,7 @@ const CmsEditorPage = () => {
       const r = await cmsApi.aiTranslate({ text: post.body_md, to });
       setPost(p => ({ ...p, body_md: r.data.text }));
       toast.success(`แปลเป็น ${to.toUpperCase()} แล้ว`);
-    } catch (e) { toast.error('แปลล้มเหลว'); }
+    } catch (e) { if (!isLlmExternalOnly(e)) toast.error('แปลล้มเหลว'); }
     finally { setBusy(b => ({ ...b, translate: false })); }
   };
 
@@ -387,7 +394,7 @@ const CmsEditorPage = () => {
           <Card>
             <div className="flex items-center justify-between mb-2">
               <Label>Cover Image</Label>
-              <button onClick={aiGenerateImage} disabled={busy.image} data-testid="cms-ai-image-btn"
+              <button onClick={aiGenerateImage} disabled={busy.image || imageOff} title={imageOff ? 'AI สร้างภาพของระบบปิดอยู่ — วาง URL ภาพเองด้านล่างแทน' : undefined} data-testid="cms-ai-image-btn"
                       className="text-xs font-mono uppercase tracking-wider px-3 py-1.5 bg-blue-600 text-white rounded-full disabled:opacity-50">
                 {busy.image ? '⏳ Generating...' : '✨ AI Generate Image'}
               </button>
@@ -455,9 +462,9 @@ const CmsEditorPage = () => {
             <div className="flex items-center justify-between mb-2">
               <Label>Body (Markdown)</Label>
               <div className="flex gap-1">
-                <button onClick={() => aiTranslate('en')} disabled={busy.translate} data-testid="cms-translate-en"
+                <button onClick={() => aiTranslate('en')} disabled={busy.translate || translateOff} title={translateOff ? OFF_TITLE : undefined} data-testid="cms-translate-en"
                         className="text-[10px] font-mono uppercase px-2 py-1 border rounded">→ EN</button>
-                <button onClick={() => aiTranslate('th')} disabled={busy.translate} data-testid="cms-translate-th"
+                <button onClick={() => aiTranslate('th')} disabled={busy.translate || translateOff} title={translateOff ? OFF_TITLE : undefined} data-testid="cms-translate-th"
                         className="text-[10px] font-mono uppercase px-2 py-1 border rounded">→ TH</button>
               </div>
             </div>
@@ -519,7 +526,7 @@ const CmsEditorPage = () => {
                   })}
                   {filteredSources.length === 0 && <div className="p-4 text-center text-neutral-400 text-xs">— ไม่พบ source —</div>}
                 </div>
-                <button onClick={aiSummarize} disabled={busy.summary || (post.source_refs || []).length === 0}
+                <button onClick={aiSummarize} disabled={busy.summary || textOff || (post.source_refs || []).length === 0} title={textOff ? OFF_TITLE : undefined}
                         data-testid="cms-ai-summarize-btn"
                         className="mt-2 w-full text-xs font-mono uppercase px-3 py-2 border border-blue-500 text-blue-600 rounded hover:bg-blue-50 disabled:opacity-50">
                   {busy.summary ? '⏳ Summarizing...' : 'Summarize Sources → Body'}
@@ -601,13 +608,14 @@ const CmsEditorPage = () => {
                         className="w-full text-sm border-2 border-blue-300 rounded px-3 py-2 focus:border-blue-600 focus:outline-none"/>
             </div>
 
+            <AiPolicyNote feature="cms.ai" alternative="เขียนเองหรือวางผลจาก AI ของคุณลงในช่อง Body (Markdown) ได้" className="mt-3" />
             <div className="grid grid-cols-1 gap-2 mt-3">
-              <button onClick={aiGenerateAll} disabled={busy.text}
+              <button onClick={aiGenerateAll} disabled={busy.text || textOff} title={textOff ? OFF_TITLE : undefined}
                       data-testid="cms-ai-full-btn"
                       className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-mono uppercase rounded-full disabled:opacity-50 hover:bg-blue-700 font-bold">
                 {busy.text ? '⏳ AI กำลังสร้าง...' : '✨ AI สร้างทั้งหมด (Title + พาดหัวสั้น + Body)'}
               </button>
-              <button onClick={aiGenerateText} disabled={busy.text}
+              <button onClick={aiGenerateText} disabled={busy.text || textOff} title={textOff ? OFF_TITLE : undefined}
                       data-testid="cms-ai-text-btn"
                       className="w-full px-4 py-1.5 border border-neutral-400 text-neutral-700 text-xs font-mono uppercase rounded-full disabled:opacity-50 hover:bg-neutral-50">
                 {busy.text ? '⏳ Writing...' : 'หรือสร้างเฉพาะ body (ใช้ title ปัจจุบัน)'}

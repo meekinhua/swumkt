@@ -25,7 +25,6 @@ import csv
 import hashlib
 import io
 import json
-import random
 import re
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -39,6 +38,7 @@ CODING_TEXT_MAX = 300             # chars of one answer shown for coding
 THEME_TEXT_MAX = 500              # chars of one answer shown for theme extraction
 THEME_MAX_ITEMS = 250             # distinct answers per theme question before sampling
 IDENTITY_MAX_ITEMS = 200          # distinct answers sent to the identity-image step
+IDENTITY_CHAR_BUDGET = 9000       # ... and their total characters (most frequent first)
 
 CODEABLE_PROCESSING = ("extract_brand", "extract_brands", "word_cloud")
 TASK_OF_PROCESSING = {"extract_brand": "brand_single", "extract_brands": "brand_multi",
@@ -256,8 +256,14 @@ def identity_inputs(study: dict, responses: List[dict]) -> List[dict]:
     for q in study.get("questions") or []:
         if q.get("ai_processing") in ("extract_personality", "word_cloud"):
             values += _question_values(q, responses)
-    items = _distinct_items("identity", values, 200)
-    return items[:IDENTITY_MAX_ITEMS]
+    items = _distinct_items("identity", values, 160)
+    out, size = [], 0
+    for it in items[:IDENTITY_MAX_ITEMS]:   # most frequent first
+        if size + len(it["text"]) + 8 > IDENTITY_CHAR_BUDGET:
+            break
+        out.append(it)
+        size += len(it["text"]) + 8
+    return out
 
 
 def id_table(units: List[dict]) -> Dict[str, Tuple[str, str, str]]:

@@ -213,7 +213,7 @@ def merge_settings(base: Optional[Dict[str, Any]], *overrides: Optional[Dict[str
                         rungs.pop(str(d), None)
                     else:
                         merged = dict(rungs.get(str(d)) or {})
-                        merged.update(forms)
+                        merged.update(_same(forms) if isinstance(forms, str) else forms)
                         rungs[str(d)] = merged
             elif key == "variants":
                 vs = out.setdefault("variants", {})
@@ -226,7 +226,7 @@ def merge_settings(base: Optional[Dict[str, Any]], *overrides: Optional[Dict[str
                                 side_d.pop(str(d), None)
                             else:
                                 m = dict(side_d.get(str(d)) or {})
-                                m.update(forms)
+                                m.update(_same(forms) if isinstance(forms, str) else forms)
                                 side_d[str(d)] = m
             else:
                 out[key] = copy.deepcopy(val)

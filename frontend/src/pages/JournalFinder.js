@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
@@ -10,14 +10,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Sparkles, Loader2, Search, BookOpen, TrendingUp, Award, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
 const JournalFinder = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
+  const aiGate = useAiGate('docs.journal_finder');
 
   const [activeTab, setActiveTab] = useState('ai'); // 'ai' or 'browse'
+  // If the system AI is switched off, open on the database tab (needs no AI).
+  useEffect(() => { if (aiGate.blocked) setActiveTab('browse'); }, [aiGate.blocked]);
   
   const [formData, setFormData] = useState({
     topic: '',
@@ -59,7 +65,8 @@ const JournalFinder = () => {
       toast.success('ค้นหาวารสารสำเร็จ!');
     } catch (error) {
       console.error('Journal search error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถค้นหาวารสารได้');
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'ไม่สามารถค้นหาวารสารได้'));
+      else setActiveTab('browse'); // AI is switched off: the browse tab needs no AI
     } finally {
       setSearching(false);
     }
@@ -88,7 +95,7 @@ const JournalFinder = () => {
       toast.success(`พบ ${response.data.journals.length} วารสาร`);
     } catch (error) {
       console.error('Journal browse error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถค้นหาวารสารได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถค้นหาวารสารได้'));
     } finally {
       setSearching(false);
     }
@@ -142,6 +149,7 @@ const JournalFinder = () => {
         <div className="mb-6 flex gap-2 border-b-2 border-gray-200">
           <button
             onClick={() => {setActiveTab('ai'); setResults(null);}}
+            aria-pressed={activeTab === 'ai'}
             className={`px-6 py-3 font-bold transition-all ${
               activeTab === 'ai'
                 ? 'border-b-4 border-purple-600 text-purple-600'
@@ -153,6 +161,7 @@ const JournalFinder = () => {
           </button>
           <button
             onClick={() => {setActiveTab('browse'); setResults(null);}}
+            aria-pressed={activeTab === 'browse'}
             className={`px-6 py-3 font-bold transition-all ${
               activeTab === 'browse'
                 ? 'border-b-4 border-purple-600 text-purple-600'
@@ -222,7 +231,8 @@ const JournalFinder = () => {
               {/* Search Button */}
               <Button
                 onClick={handleSearch}
-                disabled={searching || !formData.topic.trim() || !formData.abstract.trim()}
+                disabled={searching || !formData.topic.trim() || !formData.abstract.trim() || aiGate.blocked}
+                title={aiGate.blockedReason}
                 className="w-full h-14 bg-gradient-to-r from-[#6B46C1] via-[#7C3AED] to-[#9333EA] hover:from-[#5B35A1] hover:to-[#7C3AED] text-white font-bold shadow-xl text-lg"
               >
                 {searching ? (
@@ -237,6 +247,7 @@ const JournalFinder = () => {
                   </>
                 )}
               </Button>
+              <AiPolicyNote feature="docs.journal_finder" alternative={'ใช้แท็บ "Browse Database" เพื่อค้นจากฐานข้อมูลวารสารโดยไม่ใช้ AI'} />
             </div>
             ) : (
               <div className="space-y-6">

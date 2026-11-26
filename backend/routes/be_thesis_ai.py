@@ -98,6 +98,9 @@ def _summarize_be_for_ai(
                     f"{c.get('label')}={_f(c.get('pct'))}%" for c in counts[:5]
                 )
                 row += f" | top: {top}"
+            if s.get("total_unaided_pct") is not None:
+                row += (f" | total unaided recall of focal brand (TOM or later mention) = "
+                        f"{s['total_unaided_pct']}% of {s.get('total_unaided_base')}")
             if q.get("coding_status") == "uncoded":
                 row += " | open-ended answers NOT coded (do not report frequencies/themes for this item)"
             lines.append(row)
@@ -471,6 +474,7 @@ def build_be_thesis_prompts(
 - แบบสอบถามที่ออกแบบตาม Aaker (1996) และ Yoo & Donthu (2001)
 - ประกอบด้วย 4 ส่วน:
   1. Awareness: Top-of-mind, Spontaneous Recall, Aided Recognition, Familiarity
+     (Spontaneous/unaided recall = สัดส่วนผู้ตอบที่เอ่ยชื่อแบรนด์โดยไม่มีตัวช่วย ไม่ว่าจะเป็นชื่อแรกหรือชื่อถัดไป)
   2. Perceived Quality: Overall, Reliability, Value, Comparative
   3. Identity vs Image: Trait grid (3-5 traits), Brand Promise, Aaker's 4 Perspectives
   4. Loyalty: NPS, Repeat Intent, Switching Resistance

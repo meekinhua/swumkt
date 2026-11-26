@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
@@ -9,6 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { X, Sparkles, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -16,6 +19,14 @@ const AISurveyGeneratorModal = ({ onClose }) => {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [generating, setGenerating] = useState(false);
+  const aiGate = useAiGate('survey.ai');
+
+  // Esc closes the dialog (keyboard users)
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && !generating) onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose, generating]);
   const [formData, setFormData] = useState({
     description: '',
     survey_type: 'custom',
@@ -42,15 +53,17 @@ const AISurveyGeneratorModal = ({ onClose }) => {
       onClose();
     } catch (error) {
       console.error('Failed to generate survey:', error);
-      toast.error(error.response?.data?.detail || 'Failed to generate survey with AI');
+      // 409 llm_external_only: the global interceptor already showed the single Thai toast.
+      if (!isLlmExternalOnly(error)) toast.error(apiErrorText(error, 'Failed to generate survey with AI'));
     } finally {
       setGenerating(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl bg-white p-8">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+         role="dialog" aria-modal="true" aria-labelledby="ai-survey-title">
+      <Card className="w-full max-w-2xl bg-white p-4 sm:p-8 max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -58,11 +71,11 @@ const AISurveyGeneratorModal = ({ onClose }) => {
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-gray-900">AI Survey Generator</h2>
+              <h2 id="ai-survey-title" className="text-2xl font-black text-gray-900">AI Survey Generator</h2>
               <p className="text-sm text-gray-600">Describe your survey and let AI create it for you</p>
             </div>
           </div>
-          <Button variant="ghost" onClick={onClose} className="p-2">
+          <Button variant="ghost" onClick={onClose} className="p-2" aria-label="ปิด">
             <X className="w-6 h-6" />
           </Button>
         </div>
@@ -142,6 +155,8 @@ const AISurveyGeneratorModal = ({ onClose }) => {
             </div>
           </div>
 
+          <AiPolicyNote feature="survey.ai" alternative="สร้างแบบสอบถามเองใน Survey Builder หรือเริ่มจากเทมเพลต (Use Template)" />
+
           {/* Actions */}
           <div className="flex gap-3">
             <Button
@@ -154,7 +169,8 @@ const AISurveyGeneratorModal = ({ onClose }) => {
             </Button>
             <Button
               onClick={handleGenerate}
-              disabled={generating}
+              disabled={generating || aiGate.blocked}
+              title={aiGate.blockedReason}
               className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
             >
               {generating ? (

@@ -4,6 +4,9 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { cmsApi } from './cmsApi';
 import { youtubeId } from '../../components/SlideMedia';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate } from '@/components/AiPolicyNote';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -30,6 +33,7 @@ const CmsLandingPage = () => {
   const [saving, setSaving] = useState(false);
   const [genIdx, setGenIdx] = useState(-1);
   const [pickGenLoading, setPickGenLoading] = useState(false);
+  const imageOff = useAiGate('cms.image').blocked;
   const [articlesPool, setArticlesPool] = useState([]);
   const [brandsPool, setBrandsPool] = useState([]);
   const [cjPool, setCjPool] = useState([]);
@@ -86,7 +90,7 @@ const CmsLandingPage = () => {
       });
       updateSlide(idx, 'image', r.data.image_data_url);
       toast.success('สร้างภาพ AI เสร็จแล้ว');
-    } catch (e) { toast.error(e.response?.data?.detail || 'สร้างภาพไม่สำเร็จ'); }
+    } catch (e) { if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'สร้างภาพไม่สำเร็จ')); }
     finally { setGenIdx(-1); }
   };
 
@@ -183,7 +187,7 @@ const CmsLandingPage = () => {
       updatePick('image_url', null);
       toast.success('สร้างภาพ AI สำเร็จ');
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'สร้างภาพไม่สำเร็จ');
+      if (!isLlmExternalOnly(e)) toast.error(apiErrorText(e, 'สร้างภาพไม่สำเร็จ'));
     } finally { setPickGenLoading(false); }
   };
 
@@ -291,7 +295,7 @@ const CmsLandingPage = () => {
                     <Field label="Image alt (also used as AI prompt seed)"
                            value={s.imageAlt || ''} on={v => updateSlide(i, 'imageAlt', v)}
                            testid={`slide-${i}-imagealt`}/>
-                    <button onClick={() => generateSlideImage(i)} disabled={genIdx === i}
+                    <button onClick={() => generateSlideImage(i)} disabled={genIdx === i || imageOff} title={imageOff ? 'AI สร้างภาพของระบบปิดอยู่ — อัปโหลดภาพเองแทน' : undefined}
                             data-testid={`slide-${i}-ai-image-btn`}
                             className="mt-2 px-4 py-1.5 bg-blue-600 text-white text-xs font-mono uppercase rounded-full disabled:opacity-50">
                       {genIdx === i ? '⏳ Generating...' : '✨ AI Generate Image'}
@@ -410,6 +414,7 @@ const CmsLandingPage = () => {
             onUpload={uploadPickImage}
             onGenerate={generatePickImage}
             generating={pickGenLoading}
+            generateOff={imageOff}
           />
         </Card>
 
@@ -525,7 +530,7 @@ const FeaturedPicker = ({ label, config, on, pool, getId, getTitle, getSubtitle,
   );
 };
 
-const EditorPickEditor = ({ pick, on, bePool, cjPool, onUpload, onGenerate, generating }) => {
+const EditorPickEditor = ({ pick, on, bePool, cjPool, onUpload, onGenerate, generating, generateOff }) => {
   const method = pick.study_method;
   const pool = method === 'brand_equity' ? bePool : (method === 'conjoint' ? cjPool : []);
   const previewSrc = pick.image_base64
@@ -597,7 +602,7 @@ const EditorPickEditor = ({ pick, on, bePool, cjPool, onUpload, onGenerate, gene
                      onChange={e => onUpload(e.target.files?.[0])}
                      data-testid="editor-pick-upload"/>
             </label>
-            <button onClick={onGenerate} disabled={generating}
+            <button onClick={onGenerate} disabled={generating || generateOff} title={generateOff ? 'AI สร้างภาพของระบบปิดอยู่ — อัปโหลดภาพเองแทน' : undefined}
                     data-testid="editor-pick-generate"
                     className="px-3 py-1.5 text-xs font-mono uppercase border border-blue-600 text-blue-600 rounded-full hover:bg-blue-600 hover:text-white disabled:opacity-50">
               {generating ? 'AI กำลังสร้าง…' : '✨ AI Generate'}

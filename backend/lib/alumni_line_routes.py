@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import re
 import uuid
-from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
 from fastapi import Body, Depends, HTTPException, Query
@@ -808,9 +807,11 @@ def register_line_routes(router, svc: AlumniService, db, get_current_user, get_o
         upd = await db.alumni_invites.find_one_and_update(
             {"code": code, "revealed_at": None, "$or": [{"guess_attempts": {"$lt": MAX_GUESSES}},
                                                        {"guess_attempts": {"$exists": False}}]},
-            {"$inc": {"guess_attempts": 1}}, projection={"_id": 0}, return_document=True)
+            {"$inc": {"guess_attempts": 1}}, projection={"_id": 0}, return_document=False)
         if not upd:
             return {"correct": False, "revealed": True, "guesses_left": 0}
+        # BEFORE-document (portable across MongoDB and mongomock): apply the +1 here.
+        upd["guess_attempts"] = int(upd.get("guess_attempts") or 0) + 1
         prof = await svc.profile(inv["inviter_id"]) or {}
         u = await db.users.find_one({"id": inv["inviter_id"]}, {"_id": 0, "full_name": 1}) or {}
         score = G.best_name_match(data.guess, [prof.get("nickname"), u.get("full_name")])

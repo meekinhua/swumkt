@@ -7,14 +7,78 @@ import { API } from '@/App';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, User, FileText, TrendingUp, Users as UsersIcon, Settings, Plus, Trash2 } from 'lucide-react';
+import { FileText, TrendingUp, Users as UsersIcon, Settings, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
+import { apiErrorText } from '@/lib/apiError';
+
+// ---- "My recent studies": one cheap GET per tool, merged client-side -------------
+// Each list endpoint is already scoped to the caller (admins get everyone's), so no
+// new backend API is needed. A failing endpoint is simply left out of the list.
+const STUDY_SOURCES = [
+  { type: 'Conjoint', url: 'conjoint/studies', pick: (d) => d.studies,
+    map: (s) => ({ title: s.title, n: s.respondent_count, path: `/research/conjoint/${s.id}/results` }) },
+  { type: 'Brand Equity', url: 'brand-equity/studies', pick: (d) => d.studies,
+    map: (s) => ({ title: s.brand?.name || s.title, n: s.response_count, path: `/brand-equity/studies/${s.id}` }) },
+  { type: 'Customer Journey', url: 'journey/studies', pick: (d) => d.studies,
+    map: (s) => ({ title: s.title, n: s.response_count,
+      path: `/market-research/customer-journey/quant/${s.id}${s.status === 'draft' ? '/wizard' : ''}` }) },
+  { type: 'Customer Value', url: 'cv/studies', pick: (d) => d.studies,
+    map: (s) => ({ title: s.title, n: null, path: `/market-research/customer-value/${s.id}` }) },
+  { type: 'Survey', url: 'surveys?limit=50', pick: (d) => (Array.isArray(d) ? d : []),
+    map: (s) => ({ title: s.title, n: null,
+      path: s.status === 'draft' ? `/surveys/${s.id}/edit` : `/surveys/${s.id}/responses` }) },
+];
+
+const STATUS_TH = {
+  draft: 'แบบร่าง', active: 'เปิดใช้งาน', collecting: 'กำลังเก็บข้อมูล', analyzing: 'กำลังวิเคราะห์',
+  completed: 'เสร็จสิ้น', closed: 'ปิดแล้ว', published: 'เผยแพร่แล้ว', archived: 'เก็บถาวร',
+};
+
+const isMine = (s, user) => {
+  const ids = [s.creator_id, s.owner_id, s.created_by].filter(Boolean);
+  if (ids.length) return ids.includes(user?.id);
+  if (s.owner_email) return String(s.owner_email).toLowerCase() === String(user?.email || '').toLowerCase();
+  return true; // endpoint already scoped it to the caller
+};
+
+const useRecentStudies = (token, user) => useQuery({
+  queryKey: ['dashboard', 'recent-studies', user?.id || user?.email || 'anon'],
+  enabled: !!token && !!user,
+  staleTime: 60_000,
+  queryFn: async () => {
+    const h = { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 };
+    const results = await Promise.allSettled(STUDY_SOURCES.map((src) => axios.get(`${API}/${src.url}`, h)));
+    const rows = [];
+    results.forEach((r, i) => {
+      if (r.status !== 'fulfilled') return;
+      const src = STUDY_SOURCES[i];
+      (src.pick(r.value.data || {}) || []).filter((s) => isMine(s, user)).forEach((s) => {
+        const m = src.map(s);
+        rows.push({
+          key: `${src.type}-${s.id}`, type: src.type, status: s.status, ...m,
+          at: s.updated_at || s.created_at || '',
+        });
+      });
+    });
+    rows.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    return { rows, failed: results.filter((r) => r.status === 'rejected').length };
+  },
+});
+
+const fmtDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user, logout, token } = useAuth();
+  const { user, token } = useAuth();
+  const recent = useRecentStudies(token, user);
   const [myContents, setMyContents] = useState([]);
   const [stats, setStats] = useState({ totalViews: 0, totalContent: 0 });
   const [loading, setLoading] = useState(true);
@@ -122,7 +186,7 @@ const Dashboard = () => {
       fetchMyContents(); // Reload list
     } catch (error) {
       console.error('Error deleting content:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบเนื้อหาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบเนื้อหาได้'));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -195,6 +259,55 @@ const Dashboard = () => {
             </div>
           </Card>
         </div>
+
+        {/* My recent studies — Conjoint / Brand Equity / Journey / Customer Value / Surveys */}
+        <Card className="p-4 sm:p-6 bg-white/98 border-2 border-gray-300 shadow-lg mb-6 sm:mb-8" data-testid="recent-studies">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <h2 className="text-xl sm:text-2xl font-black text-gray-900">
+              งานวิจัยล่าสุด{user?.role === 'admin' ? ' (ทั้งระบบ)' : 'ของฉัน'}
+            </h2>
+            <Link to="/market-research"
+                  className="inline-flex items-center gap-1 min-h-[44px] text-sm font-bold text-[#005A73] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005A73]"
+                  data-testid="recent-studies-new">
+              <Plus className="w-4 h-4" aria-hidden="true" /> เริ่มการศึกษาใหม่
+            </Link>
+          </div>
+          {recent.isLoading ? (
+            <p className="text-sm text-gray-700 py-4" role="status">กำลังโหลดงานวิจัย…</p>
+          ) : (recent.data?.rows || []).length === 0 ? (
+            <div className="py-4 text-sm text-gray-800" data-testid="recent-studies-empty">
+              <p className="mb-2">ยังไม่มีการศึกษาหรือแบบสอบถามที่คุณสร้าง</p>
+              <Link to="/market-research" className="inline-flex items-center gap-1 font-bold text-[#005A73] underline underline-offset-4">
+                ดูเครื่องมือวิจัยและวิธีเริ่มต้น <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-200" data-testid="recent-studies-list">
+              {recent.data.rows.slice(0, 6).map((r) => (
+                <li key={r.key}>
+                  <Link to={r.path}
+                        className="flex items-center justify-between gap-3 py-3 px-1 min-h-[44px] hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#005A73]">
+                    <span className="min-w-0">
+                      <span className="block font-bold text-gray-900 truncate">{r.title || '(ไม่มีชื่อ)'}</span>
+                      <span className="block text-xs text-gray-700 mt-0.5">
+                        {r.type}
+                        {r.status ? ` · ${STATUS_TH[r.status] || r.status}` : ''}
+                        {typeof r.n === 'number' ? ` · ผู้ตอบ ${r.n} คน` : ''}
+                        {fmtDate(r.at) ? ` · แก้ไข ${fmtDate(r.at)}` : ''}
+                      </span>
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-gray-600 flex-shrink-0" aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {recent.data?.failed > 0 && (
+            <p className="mt-3 text-xs text-amber-900" role="note">
+              โหลดข้อมูลของบางเครื่องมือไม่สำเร็จ ({recent.data.failed} จาก {STUDY_SOURCES.length}) — รายการอาจไม่ครบ
+            </p>
+          )}
+        </Card>
 
         {/* Submitted Assignments Summary */}
         {!loadingAssignments && submittedAssignments.length > 0 && (
@@ -402,19 +515,30 @@ const Dashboard = () => {
                 </Button>
               </Card>
 
-              <Card className="p-4 sm:p-6 bg-white/95 border-2 border-gray-300 opacity-70">
-                <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-                  <div className="p-2 sm:p-3 rounded-xl bg-gray-200 text-gray-500">
-                    <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8" />
+              <Card
+                className="p-4 sm:p-6 bg-white/98 border-2 border-[#00A9CE]/20 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
+                data-testid="alumni-card"
+              >
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-[#005A73] to-[#00A9CE] text-white">
+                      <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8" />
+                    </div>
+                    <h3 className="text-base sm:text-xl font-bold text-gray-900">{t('features.alumniZone.title')}</h3>
                   </div>
-                  <h3 className="text-base sm:text-xl font-bold text-gray-700">{t('features.alumniZone.title')}</h3>
+                  <span className="badge-success text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full hidden sm:inline">
+                    พร้อมใช้งาน
+                  </span>
                 </div>
-                <p className="text-gray-600 mb-3 sm:mb-4 font-medium text-sm">
+                <p className="text-gray-700 mb-3 sm:mb-4 font-medium text-sm">
                   {t('features.alumniZone.description')}
                 </p>
-                <span className="badge-warning text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
-                  {t('features.inDevelopment')}
-                </span>
+                <Button
+                  onClick={() => navigate('/alumni')}
+                  className="w-full bg-gradient-to-r from-[#005A73] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold text-sm"
+                >
+                  เข้าสู่ Alumni Zone
+                </Button>
               </Card>
 
               <Card className="p-4 sm:p-6 bg-white/95 border-2 border-gray-300 opacity-70">

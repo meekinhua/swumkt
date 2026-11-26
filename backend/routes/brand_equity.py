@@ -88,7 +88,11 @@ def brand_health_tier(score: Optional[float]) -> Optional[dict]:
 #   {"alignment_score": 0} was scored as a real 0 at 10 % weight); Cronbach's
 #   alpha and the respondent-level significance tests now honour reverse-scored
 #   items and exclude polarity-unconfirmed ones; filtered slices no longer reuse
-#   whole-sample AI brand counts; open-ended coding is recounted per slice.
+#   whole-sample AI brand counts; open-ended coding is recounted per slice;
+#   unaided recall is the share naming the brand unprompted in EITHER the
+#   top-of-mind or the "other brands" question (AW-2 alone penalised the
+#   brand everyone names first); NPS / proportion CIs, paired competitor
+#   tests, data-quality flags and BES weight sensitivity are new fields.
 BE_ANALYSIS_SCHEMA_VERSION = 2
 
 # Label recorded for results produced by the platform's own LLM.
@@ -1286,6 +1290,8 @@ def _question_signal_100(
         # a direction that always raised the score. `_aggregate_responses` now
         # supplies deterministic counts when the AI pass has not run, so a signal
         # always exists; `normalization_basis` records which one produced it.
+        if kind == "unaided_recall" and s.get("total_unaided_pct") is not None:
+            return float(s["total_unaided_pct"])
         if not counts or not n:
             return None
         for c in counts:
@@ -1477,17 +1483,13 @@ def _cronbach_alpha(matrix: List[List[float]]) -> Optional[float]:
     n = len(matrix)
     if k < 2 or n < 3:
         return None
-
-    def _var(xs):
-        m = sum(xs) / len(xs)
-        return sum((x - m) ** 2 for x in xs) / (len(xs) - 1)
-
-    item_vars = [_var([row[j] for row in matrix]) for j in range(k)]
-    totals = [sum(row) for row in matrix]
-    var_total = _var(totals)
+    import numpy as np
+    X = np.asarray(matrix, dtype=float)
+    item_vars = X.var(axis=0, ddof=1)
+    var_total = float(X.sum(axis=1).var(ddof=1))
     if var_total <= 0:
         return None
-    return (k / (k - 1)) * (1 - sum(item_vars) / var_total)
+    return float((k / (k - 1)) * (1 - float(item_vars.sum()) / var_total))
 
 
 def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict]:
@@ -1583,34 +1585,26 @@ def _dimension_reliability(study: dict, responses: List[dict]) -> Dict[str, dict
             continue
         # Mean inter-item correlation — diagnoses WHY alpha is low (Clark & Watson
         # 1995 recommend .15-.50 for a broad construct).
-        cols = [[row[j] for row in matrix] for j in range(k)]
+        import numpy as np
+        X = np.asarray(matrix, dtype=float)
+        sd = X.std(axis=0, ddof=1)
         rs = []
         for x in range(k):
             for y in range(x + 1, k):
-                xs, ys = cols[x], cols[y]
-                mx, my = sum(xs) / n, sum(ys) / n
-                cov = sum((xs[t] - mx) * (ys[t] - my) for t in range(n))
-                dx = sum((v - mx) ** 2 for v in xs) ** 0.5
-                dy = sum((v - my) ** 2 for v in ys) ** 0.5
-                if dx > 0 and dy > 0:
-                    rs.append(cov / (dx * dy))
+                if sd[x] > 0 and sd[y] > 0:
+                    rs.append(float(np.corrcoef(X[:, x], X[:, y])[0, 1]))
         mean_r = round(sum(rs) / len(rs), 3) if rs else None
 
         # Item diagnostics a thesis examiner expects next to alpha: corrected
         # item-total correlation (item vs the sum of the OTHER items) and alpha
         # if the item were deleted.
-        def _corr(xs, ys):
-            mx_, my_ = sum(xs) / len(xs), sum(ys) / len(ys)
-            num = sum((a_ - mx_) * (b_ - my_) for a_, b_ in zip(xs, ys))
-            da = sum((a_ - mx_) ** 2 for a_ in xs) ** 0.5
-            db = sum((b_ - my_) ** 2 for b_ in ys) ** 0.5
-            return num / (da * db) if da > 0 and db > 0 else None
-
+        total = X.sum(axis=1)
         items_diag = []
         for j, qid in enumerate(qids):
-            rest = [sum(row[t] for t in range(k) if t != j) for row in matrix]
-            r_it = _corr(cols[j], rest)
-            a_del = _cronbach_alpha([[row[t] for t in range(k) if t != j] for row in matrix]) if k > 2 else None
+            rest = total - X[:, j]
+            r_it = (float(np.corrcoef(X[:, j], rest)[0, 1])
+                    if sd[j] > 0 and rest.std(ddof=1) > 0 else None)
+            a_del = _cronbach_alpha(np.delete(X, j, axis=1).tolist()) if k > 2 else None
             items_diag.append({
                 "question_id": qid, "kind": kind_of.get(qid),
                 "reverse_scored": bool(reverse_of.get(qid)),
@@ -1888,16 +1882,21 @@ async def _showcase_scores_for(db, study_id: str, response_count: int,
 # competitor pair is one comparison, so p-values are Holm-adjusted across the
 # whole family.
 # ---------------------------------------------------------------------------
-def _qid_values_by_respondent(q: dict, responses: List[dict]) -> List[Optional[float]]:
-    ids = {q["id"]} | set(q.get("legacy_ids") or [])
+def _answer_maps(responses: List[dict]) -> List[Dict[str, Any]]:
+    return [{a.get("question_id"): a.get("value") for a in (r.get("answers") or [])} for r in responses]
+
+
+def _qid_values_by_respondent(q: dict, responses: List[dict],
+                              maps: Optional[List[Dict[str, Any]]] = None) -> List[Optional[float]]:
+    ids = [q["id"]] + list(q.get("legacy_ids") or [])
     out: List[Optional[float]] = []
-    for r in responses:
+    for m in (maps if maps is not None else _answer_maps(responses)):
         v = None
-        for a in r.get("answers") or []:
-            if a.get("question_id") in ids:
-                val = a.get("value")
-                if isinstance(val, (int, float)) and not isinstance(val, bool):
-                    v = float(val)
+        for i in ids:
+            val = m.get(i)
+            if isinstance(val, (int, float)) and not isinstance(val, bool):
+                v = float(val)
+                break
         out.append(v)
     return out
 
@@ -1933,6 +1932,7 @@ def _competitor_comparison(study: dict, responses: List[dict]) -> dict:
                 and q.get("score_eligible") is not False):
             focal_by_axis.setdefault(q["axis_label"], q)
     focal_name = (study.get("brand") or {}).get("name") or "brand"
+    maps = _answer_maps(responses)   # one pass; a per-question scan was O(Q·n·A)
     paired: List[dict] = []
     for q in qs:
         comp = q.get("compare_brand")
@@ -1945,8 +1945,8 @@ def _competitor_comparison(study: dict, responses: List[dict]) -> dict:
         if not fq or fq.get("type") != q.get("type"):
             continue
         mx = 5 if q["type"] == "likert_5" else 7
-        fv = _qid_values_by_respondent(fq, responses)
-        cv = _qid_values_by_respondent(q, responses)
+        fv = _qid_values_by_respondent(fq, responses, maps)
+        cv = _qid_values_by_respondent(q, responses, maps)
 
         def pomp(v, rev):
             s_ = (v - 1) / (mx - 1) * 100
@@ -1955,7 +1955,8 @@ def _competitor_comparison(study: dict, responses: List[dict]) -> dict:
                  for a, b in zip(fv, cv) if a is not None and b is not None]
         res = _paired_t(diffs)
         row = {"axis": ax, "competitor": comp, "focal_qid": fq["id"], "competitor_qid": q["id"],
-               "scale": "pomp_0_100", "n_pairs": len(diffs)}
+               "scale": "pomp_0_100", "n_pairs": len(diffs),
+               "reverse_scored": bool(fq.get("reverse_scored"))}
         if res is None:
             row.update({"testable": False,
                         "reason": "too_few_pairs" if len(diffs) < 3 else "zero_variance",
@@ -1973,7 +1974,8 @@ def _competitor_comparison(study: dict, responses: List[dict]) -> dict:
         lead = (f"{focal_name} {'สูงกว่า' if r['mean_diff'] > 0 else 'ต่ำกว่า'} {r['competitor']} "
                 f"ด้าน {r['axis']} {abs(r['mean_diff']):.1f} คะแนน")
         r["interpretation"] = (lead + (" อย่างมีนัยสำคัญ" if r["significant"] else " แต่ยังไม่มีนัยสำคัญ")
-                               + f" (paired t, p {'< .001' if p_adj < 0.001 else '= ' + format(p_adj, '.3f')} หลังปรับ Holm)")
+                               + f" (paired t, p {'< .001' if p_adj < 0.001 else '= ' + format(p_adj, '.3f')} หลังปรับ Holm)"
+                               + (" — ข้อนี้กลับคะแนนแล้ว: คะแนนสูง = ดี" if r.get("reverse_scored") else ""))
         if r["n_pairs"] < 30:
             r["low_n"] = True
 
@@ -1983,7 +1985,7 @@ def _competitor_comparison(study: dict, responses: List[dict]) -> dict:
     for q in qs:
         if q.get("type") != "comparative_7":
             continue
-        vals = [v for v in _qid_values_by_respondent(q, responses) if v is not None]
+        vals = [v for v in _qid_values_by_respondent(q, responses, maps) if v is not None]
         diffs = [4.0 - v for v in vals]  # >0 favours the focal brand
         res = _paired_t(diffs)
         comps_ = (study.get("brand") or {}).get("competitors") or [None]
@@ -2059,10 +2061,11 @@ def _data_quality(study: dict, responses: List[dict]) -> dict:
                 if a.get("question_id") in rating_ids and isinstance(a.get("value"), (int, float))]
         if len(vals) >= DQ_STRAIGHTLINE_MIN_ITEMS and len(set(vals)) == 1:
             f.append("straightliner")
-        vec = json.dumps(sorted(((a.get("question_id"), json.dumps(a.get("value"), ensure_ascii=False))
-                                 for a in (r.get("answers") or [])), key=str), ensure_ascii=False)
         if len(r.get("answers") or []) >= 5:
-            key = vec + json.dumps(r.get("demographics") or {}, sort_keys=True, ensure_ascii=False)
+            vec = tuple(sorted((str(a.get("question_id")),
+                                tuple(map(str, a.get("value"))) if isinstance(a.get("value"), list)
+                                else str(a.get("value"))) for a in (r.get("answers") or [])))
+            key = (vec, tuple(sorted((str(k_), str(v_)) for k_, v_ in (r.get("demographics") or {}).items())))
             if key in seen_vectors:
                 f.append("duplicate")
             else:
@@ -2103,6 +2106,39 @@ def _exclude_flagged(study: dict, responses: List[dict]) -> List[dict]:
     bad = {rid for rid, fl in (dq.get("flags_by_response") or {}).items()
            if any(x in DQ_EXCLUDE_FLAGS for x in fl)}
     return [r for r in responses if (r.get("id") or "") not in bad]
+
+
+def _bes_sensitivity(composite: dict, weights: dict) -> dict:
+    """How much the headline BES depends on the (theory-chosen) dimension
+    weights: BES under equal weights, and the range when any one measured
+    dimension's weight is halved or doubled. A BES that moves across a tier
+    boundary under such changes should not be read to the decimal."""
+    dims = [d for d in DIMENSIONS if composite.get(d) is not None]
+    if not dims:
+        return {"dimensions_used": 0}
+
+    def bes(wmap):
+        tw = sum(float(wmap.get(d, 25)) for d in dims)
+        return round(sum(float(composite[d]) * float(wmap.get(d, 25)) for d in dims) / tw, 1) if tw else None
+    base = {d: float((weights or {}).get(d, 25)) for d in DIMENSIONS}
+    scen = []
+    for d in dims:
+        for f in (0.5, 2.0):
+            w = dict(base)
+            w[d] = base[d] * f
+            scen.append(bes(w))
+    scen = [x for x in scen if x is not None]
+    lo, hi = (min(scen), max(scen)) if scen else (None, None)
+    tiers = {(brand_health_tier(x) or {}).get("label") for x in scen + [composite.get("overall")] if x is not None}
+    return {
+        "dimensions_used": len(dims),
+        "dimensions_missing": [d for d in DIMENSIONS if d not in dims],
+        "equal_weights": bes({d: 25 for d in DIMENSIONS}),
+        "range_one_weight_halved_or_doubled": [lo, hi],
+        "tier_stable": len(tiers) <= 1,
+        "note": ("BES คำนวณจาก " + str(len(dims)) + " จาก 4 มิติ (น้ำหนักกระจายใหม่ตามมิติที่วัดได้)"
+                 + ("" if len(tiers) <= 1 else " — ระดับ (tier) เปลี่ยนได้เมื่อปรับน้ำหนัก ควรอ่านเป็นช่วง")),
+    }
 
 
 def _margin_of_error_pct(n: int) -> Optional[float]:
@@ -2319,6 +2355,38 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
             "stats": stats,
         })
 
+    # ============ Total unaided recall (TOM ∪ other unaided mentions) ============
+    # AW-2 asks for brands "besides the one above", so a respondent whose
+    # top-of-mind WAS the focal brand has no reason to name it again. Scoring
+    # AW-2 on its own therefore PENALISED the strongest brands: a brand that is
+    # everyone's top-of-mind scored ~0 on "unaided recall" (weight .25). Unaided
+    # recall in Aaker's pyramid is the share who name the brand unprompted at
+    # all — first or later — so it is computed over both questions.
+    _tom_q = next((q for q in questions if q.get("kind") == "unaided_top_of_mind"
+                   and not q.get("compare_brand")), None)
+    _rec_q = next((q for q in questions if q.get("kind") == "unaided_recall"
+                   and not q.get("compare_brand")), None)
+    _focal = (_bs.get("name") or "").strip()
+    if _tom_q and _rec_q and _focal:
+        _ids_t = {_tom_q["id"]} | set(_tom_q.get("legacy_ids") or [])
+        _ids_r = {_rec_q["id"]} | set(_rec_q.get("legacy_ids") or [])
+        _base = _hits = 0
+        for r in responses:
+            vt = next((a.get("value") for a in r.get("answers") or [] if a.get("question_id") in _ids_t), None)
+            vr = next((a.get("value") for a in r.get("answers") or [] if a.get("question_id") in _ids_r), None)
+            if not (BX.norm_answer(vt) or BX.norm_answer(vr)):
+                continue
+            _base += 1
+            labs = (_labels_for_value(_tom_q, vt, open_coding, _brand_list_for_matching) or []) + \
+                   (_labels_for_value(_rec_q, vr, open_coding, _brand_list_for_matching) or [])
+            if any(l_.strip().lower() == _focal.lower() for l_ in labs):
+                _hits += 1
+        for oq in out_questions:
+            if oq["id"] == _rec_q["id"] and _base:
+                oq["stats"]["total_unaided_pct"] = round(_hits / _base * 100, 1)
+                oq["stats"]["total_unaided_ci95"] = BX.wilson_ci(_hits, _base)
+                oq["stats"]["total_unaided_base"] = _base
+
     # ============ Aaker-aligned dimension composites ============
     # Each dimension uses kind-aware weighted scoring (see DIMENSION_WEIGHTS).
     # `_compute_dim_composite` renormalizes weights over signals that are present,
@@ -2360,6 +2428,7 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         weighted_total += float(score) * w
         weight_sum += w
     composite["overall"] = round(weighted_total / weight_sum, 1) if weight_sum > 0 else None
+    bes_sensitivity = _bes_sensitivity(composite, weights)
 
     # Which dimensions actually produced a score. Kept explicitly because the
     # next block coerces `None` to 0 for backward compatibility, and a 0 that
@@ -2531,6 +2600,7 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
         "reliability": reliability,
         "reliability_not_computed": RELIABILITY_NOT_COMPUTED_TH,
         "sample_adequacy": adequacy,
+        "bes_sensitivity": bes_sensitivity,
         "competitor_comparison": _competitor_comparison(study, responses),
         "data_quality": {k: v for k, v in _data_quality(study, responses).items()
                          if k != "flags_by_response"},
@@ -2884,10 +2954,12 @@ async def _build_ai_parts(study: dict, responses: List[dict], agg: dict, *,
         cur: List[tuple] = []
         size = 0
         for sec, txt in blocks:
-            # Several theme questions may share a part; coding chunks are
-            # already budget-sized. Never put two blocks of the same coding
-            # chunk family past the budget.
-            if cur and size + len(txt) > BX.PART_CHAR_BUDGET:
+            # Several theme questions / the identity and insights steps may
+            # share a part. Two coding chunks never do: each is already capped
+            # at CODING_ITEMS_PER_PART answers so the JSON reply stays short
+            # enough for a chat LLM to finish without truncation.
+            two_codings = sec == "coding" and any(s_ == "coding" for s_, _ in cur)
+            if cur and (two_codings or size + len(txt) > BX.PART_CHAR_BUDGET):
                 groups.append(cur)
                 cur, size = [], 0
             cur.append((sec, txt))
@@ -2903,7 +2975,7 @@ async def _build_ai_parts(study: dict, responses: List[dict], agg: dict, *,
         # carries one "themes" key per part.
         merged: List[tuple] = []
         for sec, txt in g:
-            if merged and merged[-1][0] == sec and sec in ("themes", "coding"):
+            if merged and merged[-1][0] == sec and sec == "themes":
                 merged[-1] = (sec, merged[-1][1] + "\n" + txt)
             else:
                 merged.append((sec, txt))
@@ -3805,6 +3877,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 if isinstance(val, bool) or not isinstance(val, (int, float)):
                     ok = False
                 elif not (lo <= float(val) <= hi):
+                    ok = False
+                elif float(val) != int(val):
+                    # 4.5 on a 7-point item was accepted here, then truncated
+                    # to 4 by the aggregator but kept as 4.5 by the alpha /
+                    # significance code — two different datasets.
                     ok = False
             elif qtype in ("mcq_single",):
                 opts = q.get("options") or []

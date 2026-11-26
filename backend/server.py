@@ -6167,6 +6167,8 @@ Please verify Impact Factor, Quartile, and Scopus indexing from **SCImago Journa
             disclaimer=disclaimer
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Journal Finder error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to find journals: {str(e)}")
@@ -6296,8 +6298,6 @@ async def browse_journals(
             disclaimer=disclaimer
         )
         
-    except (HTTPException, llm_policy.SystemLLMDisabled):
-        raise
     except Exception as e:
         logging.error(f"Journal Browse error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to browse journals: {str(e)}")

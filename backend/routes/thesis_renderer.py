@@ -242,7 +242,7 @@ def render_thesis_docx(
     _h(doc, "Scoring", level=1)
     _p(doc,
        "Likert items (5- and 7-point) are normalized to 0–100 via "
-       "(mean − 1) / (scale_max − 1) × 100. NPS uses the standard "
+       "(mean − 1) / (scale_max − 1) × 100 (POMP; Cohen et al., 1999). NPS uses the standard "
        "(promoters − detractors)/n × 100 transformed to 0–100 via (NPS+100)/2. "
        "Comparative 7-pt items use (7 − mean)/6 × 100 with focal brand on the "
        "left. Open-ended items (top-of-mind, recall) contribute the share of "
@@ -335,7 +335,7 @@ def render_thesis_docx(
     ])
     _p(doc, "Between-segment and between-wave differences in this report are "
             "descriptive. Brand-versus-competitor differences are tested only where a "
-            "paired t-test is shown (Holm-adjusted); any other difference should not be "
+            "paired t-test is shown (Holm, 1979, adjustment); any other difference should not be "
             "described as statistically significant. Respondents are a convenience "
             "sample, so results do not generalise to a population.",
        size=9, color=GREY, italic=True)

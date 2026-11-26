@@ -15,6 +15,9 @@ import Navigation from '@/components/Navigation';
 import ShareJourneyMapModal from '@/components/ShareJourneyMapModal';
 import mermaid from 'mermaid';
 import { copyToClipboard } from '@/lib/clipboard';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate } from '@/components/AiPolicyNote';
 
 const CustomerJourneyTool = ({ embedded = false }) => {
   const navigate = useNavigate();
@@ -40,6 +43,9 @@ const CustomerJourneyTool = ({ embedded = false }) => {
   const [manualMermaidCode, setManualMermaidCode] = useState('');
   const [manualAnalysis, setManualAnalysis] = useState('');
   const [showPromptOnError, setShowPromptOnError] = useState(false);
+  const aiGate = useAiGate('journey.ai');
+  // why the prompt panel is open: 'failed' (server error) | 'external' (system AI switched off)
+  const [promptReason, setPromptReason] = useState('failed');
   const [lastGeneratedPrompt, setLastGeneratedPrompt] = useState('');
   const [adminPrompt, setAdminPrompt] = useState(''); // Prompt from Admin Config
   const mermaidRef = useRef(null);
@@ -309,6 +315,14 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
       return;
     }
 
+    // System AI switched off for this feature: go straight to "use my own AI".
+    if (aiGate.blocked) {
+      setLastGeneratedPrompt(buildPromptForDisplay());
+      setPromptReason('external');
+      setShowPromptOnError(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await axios.post(
@@ -334,7 +348,13 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
       const generatedPrompt = buildPromptForDisplay();
       setLastGeneratedPrompt(generatedPrompt);
       setShowPromptOnError(true);
-      toast.error(error.response?.data?.detail || 'Failed to generate journey map');
+      if (isLlmExternalOnly(error)) {
+        // Global interceptor already showed the single Thai toast.
+        setPromptReason('external');
+      } else {
+        setPromptReason('failed');
+        toast.error(apiErrorText(error, 'Failed to generate journey map'));
+      }
     } finally {
       setLoading(false);
     }
@@ -348,11 +368,17 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
     }
 
     try {
+      // Chat LLMs usually wrap the diagram in ```mermaid fences — strip them.
+      const cleanedCode = manualMermaidCode
+        .trim()
+        .replace(/^```(?:mermaid)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim();
       // Validate mermaid syntax first
-      await mermaid.parse(manualMermaidCode);
+      await mermaid.parse(cleanedCode);
       
       setResult({
-        mermaid_code: manualMermaidCode,
+        mermaid_code: cleanedCode,
         analysis_summary: manualAnalysis || (i18n.language === 'th' ? 'สร้างจาก Manual Input' : 'Created from Manual Input')
       });
       setShowPromptOnError(false);
@@ -425,7 +451,7 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
       navigate('/content');
     } catch (error) {
       console.error('Share content error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to share content');
+      toast.error(apiErrorText(error, 'Failed to share content'));
     } finally {
       setSharing(false);
     }
@@ -725,6 +751,11 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
                             <span className="hidden sm:inline">{t('customerJourney.generating')}</span>
                             <span className="sm:hidden">{t('customerJourney.generatingShort')}</span>
                           </>
+                        ) : aiGate.blocked ? (
+                          <>
+                            <Copy className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                            <span>สร้างพรอมต์ไปใช้กับ AI ของคุณเอง</span>
+                          </>
                         ) : (
                           <>
                             <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />
@@ -733,6 +764,12 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
                           </>
                         )}
                       </Button>
+                      {aiGate.blocked && (
+                        <p className="text-sm text-amber-800" data-testid="journey-ai-off-note">
+                          AI ของระบบปิดใช้งานอยู่ — กดปุ่มด้านบนเพื่อรับพรอมต์ไปใช้กับ ChatGPT / Claude / Gemini แล้ววาง Mermaid Code กลับมา
+                          {aiGate.hint ? ` · ${aiGate.hint}` : ''}
+                        </p>
+                      )}
 
                       {/* Show Prompt on Error */}
                       {showPromptOnError && lastGeneratedPrompt && (
@@ -742,9 +779,13 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
                             <div className="flex items-center gap-2 mb-3">
                               <AlertTriangle className="w-5 h-5 text-amber-600" />
                               <h4 className="font-bold text-amber-800">
-                                {i18n.language === 'th' 
-                                  ? 'การสร้างล้มเหลว - นำ Prompt ไปใช้เองได้' 
-                                  : 'Generation Failed - Use Prompt Manually'}
+                                {promptReason === 'external'
+                                  ? (i18n.language === 'th'
+                                    ? 'ใช้ AI ของคุณเอง - คัดลอกพรอมต์ไปวางใน ChatGPT / Claude / Gemini'
+                                    : 'Use your own AI - copy the prompt into ChatGPT / Claude / Gemini')
+                                  : (i18n.language === 'th'
+                                    ? 'การสร้างล้มเหลว - นำ Prompt ไปใช้เองได้'
+                                    : 'Generation Failed - Use Prompt Manually')}
                               </h4>
                             </div>
 
@@ -764,6 +805,7 @@ ${researchContext ? `\nAdditional Context: ${researchContext}` : ''}`;
                                 onClick={handleCopyPrompt}
                                 variant="outline"
                                 size="sm"
+                                aria-label="คัดลอกพรอมต์"
                                 className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
                               >
                                 <Copy className="w-4 h-4" />
