@@ -59,7 +59,7 @@ export default function CustomerValueListPage() {
 
   return (
     <div className="cv-page" data-testid="cv-list-page">
-      <BeTopbar active="tools" subtitle="CUSTOMER VALUE LAB" />
+      <BeTopbar active="tools" subtitle="CUSTOMER VALUE LAB" crumbs={[{ label: 'เครื่องมือวิจัย', to: '/market-research' }, { label: 'Customer Value Lab' }]} />
       <div className="cv-wrap">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
           <div>

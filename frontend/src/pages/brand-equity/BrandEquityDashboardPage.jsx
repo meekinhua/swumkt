@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { copyToClipboard } from '@/lib/clipboard';
 import './brand-equity-styles.css';
 import {
-  BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
+  BeTopbar, BE_CRUMBS, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
   IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
   BrandLogo, SWU_LOGO_URL, AIProgressCard, BeWaveSelector, MigrationOrphanBanner
 } from './be-components';
@@ -394,10 +394,7 @@ const BrandEquityDashboardPage = () => {
           </a>
         </div>
       ) : (
-        <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
-                  right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/brand-equity')}>
-                           <Icon name="chevronL" size={10}/>Studies
-                         </button>}/>
+        <BeTopbar crumbs={[...BE_CRUMBS, { label: study?.brand?.name || study?.title || 'ผลการศึกษา' }]}/>
       )}
 
       <div className="be-page">

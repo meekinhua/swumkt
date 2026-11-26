@@ -7,7 +7,7 @@ import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
-import { BeTopbar, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
+import { BeTopbar, BE_CRUMBS, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
 import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -314,7 +314,7 @@ const BrandEquityWizardPage = () => {
 
   return (
     <div className="be-root" data-testid="be-wizard-page">
-      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}/>
+      <BeTopbar crumbs={[...BE_CRUMBS, { label: 'ตั้งค่าการศึกษา' }]}/>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '14px 32px',
                     borderBottom: '1px solid var(--rule)', background: 'var(--paper)' }}>

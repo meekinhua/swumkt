@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
-import { BeTopbar, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
+import { BeTopbar, HUB_CRUMB, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
 import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 import { apiErrorText } from '@/lib/apiError';
 
@@ -208,7 +208,7 @@ const BrandEquityListPage = () => {
   const methodUpdated = Object.values(scores || {}).filter((x) => x && x.method_updated_from != null);
   return (
     <div className="be-root" data-testid="be-list-page">
-      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}/>
+      <BeTopbar crumbs={[HUB_CRUMB, { label: 'Brand Health Check' }]}/>
       <div className="be-page">
         <div className="be-list-hero">
           <div>

@@ -1,6 +1,7 @@
 /* Brand Equity — Shared Components
    Editorial / Swiss-grid analytics aesthetic.
    All components are scoped via .be-root parent. */
+import { Link } from 'react-router-dom';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import UnifiedTopbar from '@/components/UnifiedTopbar';
 import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
@@ -703,16 +704,50 @@ export const StatusPill = ({ status }) => {
 export const SWU_LOGO_URL = 'https://customer-assets.emergentagent.com/job_swu-market/artifacts/ntstn8tz_SWUMKT%20Logo%20Concept%20-%20Edited.png';
 
 /**
- * BeTopbar — legacy wrapper. Renders UnifiedTopbar so every page using BeTopbar
- * automatically gets the new unified navigation.
+ * BeTopbar — renders UnifiedTopbar, plus an optional breadcrumb strip under it so
+ * every tool page has a direct way back to its list and to the research hub
+ * (browser "back" is not enough when a page was opened from a shared link).
  *
- * Legacy props kept for backward compatibility:
- * - user, onLogo, right — IGNORED (UnifiedTopbar reads auth via context; logo always links home)
- * - subtitle, active, publicMode — passed through
+ * Props:
+ * - subtitle, active, publicMode — passed through to UnifiedTopbar
+ * - crumbs?: [{ label, to? }] — breadcrumb trail; the last item is the current page
+ *   (no `to`). Not rendered in publicMode.
+ * - right?: node — legacy slot, rendered at the right end of the strip.
+ * - user, onLogo — ignored (UnifiedTopbar reads auth via context; logo links home).
+ *
+ * Shared trails: use BE_CRUMBS / CONJOINT_CRUMBS and append the current page.
  */
-export const BeTopbar = ({ subtitle = 'BRAND HEALTH CHECK', active = 'brand_equity', publicMode = false }) => (
-  <UnifiedTopbar subtitle={subtitle} active={active} publicMode={publicMode}/>
-);
+export const HUB_CRUMB = { label: 'เครื่องมือวิจัย', to: '/market-research' };
+export const BE_CRUMBS = [HUB_CRUMB, { label: 'Brand Health Check', to: '/brand-equity' }];
+export const CONJOINT_CRUMBS = [HUB_CRUMB, { label: 'Conjoint Analysis', to: '/market-research/conjoint-analysis' }];
+
+export const BeTopbar = ({ subtitle = 'BRAND HEALTH CHECK', active = 'brand_equity', publicMode = false, crumbs, right }) => {
+  const trail = !publicMode && Array.isArray(crumbs) ? crumbs.filter(Boolean) : [];
+  const showStrip = trail.length > 0 || (!publicMode && right);
+  return (
+    <>
+      <UnifiedTopbar subtitle={subtitle} active={active} publicMode={publicMode}/>
+      {showStrip && (
+        <div className="be-crumbbar" data-testid="be-crumbbar">
+          <nav aria-label="เส้นทางนำทาง" className="be-crumbs">
+            {trail.map((c, i) => {
+              const last = i === trail.length - 1;
+              return (
+                <span key={`${c.label}-${i}`} className="be-crumb-item">
+                  {c.to && !last
+                    ? <Link to={c.to} className="be-crumb-link" data-testid={`be-crumb-${i}`}>{c.label}</Link>
+                    : <span className="be-crumb-current" aria-current={last ? 'page' : undefined}>{c.label}</span>}
+                  {!last && <span className="be-crumb-sep" aria-hidden="true">›</span>}
+                </span>
+              );
+            })}
+          </nav>
+          {right && <div className="be-crumb-right">{right}</div>}
+        </div>
+      )}
+    </>
+  );
+};
 
 // ============ Loading ============
 export const BeLoading = ({ text = 'Loading…' }) => (

@@ -95,7 +95,7 @@ const JourneyDashboardPage = () => {
 
   return (
     <div className="be-root jy-root">
-      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" />
+      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" crumbs={[{ label: 'เครื่องมือวิจัย', to: '/market-research' }, { label: 'Customer Journey', to: '/market-research/customer-journey' }, { label: 'ผลการศึกษา' }]} />
       <div className="be-page" data-testid="journey-dashboard">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
                       gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>

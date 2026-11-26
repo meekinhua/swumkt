@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import { BeTopbar, Icon, HUB_CRUMB } from '@/pages/brand-equity/be-components';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -282,9 +282,7 @@ const ConjointAnalysisTool = () => {
     <div className="be-root">
       <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
                 subtitle="CONJOINT ANALYSIS" active="conjoint"
-                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/dashboard')}>
-                         <Icon name="chevronL" size={10}/>Dashboard
-                       </button>}/>
+                crumbs={[HUB_CRUMB, { label: 'Conjoint Analysis' }]}/>
 
       <div className="be-conjoint-page">
         {/* Header */}

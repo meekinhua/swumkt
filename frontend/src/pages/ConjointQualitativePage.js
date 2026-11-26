@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
-import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import { BeTopbar, Icon, CONJOINT_CRUMBS } from '@/pages/brand-equity/be-components';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -183,9 +183,7 @@ const ConjointQualitativePage = () => {
     <div className="be-root">
       <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
                 subtitle="CONJOINT ANALYSIS" active="conjoint"
-                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/market-research/conjoint-analysis')}>
-                         <Icon name="chevronL" size={10}/>Studies
-                       </button>}/>
+                crumbs={[...CONJOINT_CRUMBS, { label: study?.title || study?.name || 'ข้อมูลเชิงคุณภาพ' }]}/>
 
       <div className="be-conjoint-page" style={{ maxWidth: 1200 }}>
         {/* Header */}

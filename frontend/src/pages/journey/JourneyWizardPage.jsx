@@ -216,7 +216,7 @@ const JourneyWizardPage = () => {
 
   return (
     <div className="be-root jy-root">
-      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" />
+      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" crumbs={[{ label: 'เครื่องมือวิจัย', to: '/market-research' }, { label: 'Customer Journey', to: '/market-research/customer-journey' }, { label: 'ตั้งค่าการศึกษา' }]} />
       <div className="be-page be-page-narrow" data-testid="journey-wizard">
         <div className="be-section-num">QUANTITATIVE CJM · {study ? 'แก้ไข' : 'สร้างใหม่'}</div>
         <h1 className="be-h2" style={{ marginBottom: 18 }}>ออกแบบการศึกษาเส้นทางลูกค้า</h1>

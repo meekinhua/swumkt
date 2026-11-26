@@ -327,7 +327,7 @@ export default function CustomerValueStudioPage() {
 
   return (
     <div className="cv-page" data-testid="cv-studio-page">
-      <BeTopbar active="tools" subtitle="CUSTOMER VALUE LAB" />
+      <BeTopbar active="tools" subtitle="CUSTOMER VALUE LAB" crumbs={[{ label: 'เครื่องมือวิจัย', to: '/market-research' }, { label: 'Customer Value Lab', to: '/market-research/customer-value' }, { label: study?.title || study?.name || 'การศึกษา' }]} />
       <div className="cv-wrap">
         <button className="cv-btn ghost sm" onClick={() => nav('/market-research/customer-value')} style={{ marginBottom: 12 }}>
           <i className="fa-solid fa-arrow-left" /> กลับ

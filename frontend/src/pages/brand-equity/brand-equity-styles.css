@@ -1410,3 +1410,16 @@
   .be-root .be-resp-comparative { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
   .be-root .be-resp-comparative button { min-width: 0; min-height: 48px; padding: 0; }
 }
+
+/* ---- Breadcrumb strip under the topbar (BeTopbar crumbs) ---- */
+.be-crumbbar { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  max-width:1280px; margin:0 auto; padding:10px 16px 0; box-sizing:border-box; width:100%; }
+.be-crumbs { display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; font-size:13px; line-height:1.5; min-width:0; }
+.be-crumb-item { display:inline-flex; align-items:center; gap:6px; min-width:0; }
+.be-crumb-link, .be-root .be-crumb-link { color:#1d4ed8; text-decoration:underline; text-underline-offset:3px; padding:6px 2px; border-radius:4px; }
+.be-crumb-link:hover { text-decoration:underline; }
+.be-crumb-link:focus-visible { outline:2px solid #1d4ed8; outline-offset:2px; }
+.be-crumb-current { color:#374151; font-weight:600; padding:6px 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60vw; }
+.be-crumb-sep { color:#9ca3af; }
+.be-crumb-right { flex-shrink:0; }
+@media print { .be-crumbbar { display:none; } }
