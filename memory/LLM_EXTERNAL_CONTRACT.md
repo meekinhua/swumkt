@@ -450,3 +450,117 @@ data does not support) before the download button.
 - `ROUTE_FEATURES`: `/api/brand-equity/extract-identity` currently falls through to
   `be.ai_analyze`; the route itself calls `require_system_llm("be.visual_identity")`, but the
   path map should list it under `be.visual_identity` for consistency.
+
+## Other tools
+
+_Owner: WP5. Code: `backend/server.py` (survey / translate / journey / behaviour / perception / document
+endpoints), `backend/routes/customer_value.py`, `backend/routes/cms.py`, `backend/lib/external_prompts.py`
+(shared pure prompt builders + helpers), `backend/lib/{doc_formatter,citation_replacer,citation_style_formatter,ref_extract}.py`.
+Tests: `backend/tests/test_llm_call_sites_2026_11.py`._
+
+Rule for every endpoint below: `require_system_llm(<key>)` runs **before** any work / DB read / write
+(so a refusal writes nothing), outside the endpoint's broad `try`, and the broad `except` re-raises
+`HTTPException` / `SystemLLMDisabled` — a refusal is always the 409 `llm_external_only` body of
+§Policy, never a 500 / "Translation failed" / "AI failed (timeout or quota)" / empty result. The
+`…/external-prompt` endpoints need no policy check (a user may prefer their own LLM even when the
+system LLM is on) and build the prompt with **the same function** as the system path.
+
+### Gated endpoints (path → feature key) — 24 (+ 2 degrade-gracefully)
+
+| endpoint | key | notes |
+|---|---|---|
+| `POST /api/translate` | `translate` | anonymous allowed; now takes `get_current_user_optional` so an admin keeps `admin_bypass` |
+| `POST /api/surveys/ai-generate` | `survey.ai` | |
+| `POST /api/content/{id}/ai-rearrange` | `content.ai` | also fixed: 404/403 were turned into 500 |
+| `POST /api/generate-journey-map` | `journey.ai` | |
+| `POST /api/generate-behavior-analysis` | `behavior.ai` | |
+| `POST /api/generate-behavior-image` | `behavior.image` | |
+| `POST /api/perception/generate-questions` | `perception.ai` | |
+| `POST /api/perception/generate-analysis` | `perception.ai` | |
+| `POST /api/perception/generate-illustration` | `perception.image` | |
+| `POST /api/journal-finder` | `docs.journal_finder` | |
+| `POST /api/format-editor/fetch-guidelines` | `docs.format` | |
+| `POST /api/format-editor/reformat-with-ai` | `docs.format` | |
+| `POST /api/format-editor/replace-citations` | `docs.citation` | |
+| `POST /api/admin/test-image-generation` | `content.image` | admin check first, then policy |
+| `POST /api/cv/studies/{id}/ai-suggest` | `cv.ai` | |
+| `POST /api/cv/studies/{id}/ai-analysis` | `cv.ai` | |
+| `POST /api/cv/studies/{id}/ai-needs` | `cv.ai` | |
+| `POST /api/cv/studies/{id}/ai-step` | `cv.ai` | |
+| `POST /api/cv/studies/{id}/generate-image` | `cv.image` | |
+| `POST /api/cms/ai/generate-text` | `cms.ai` | admin only (as before) |
+| `POST /api/cms/ai/generate-full` | `cms.ai` | 400 on empty description comes first |
+| `POST /api/cms/ai/summarize` | `cms.ai` | |
+| `POST /api/cms/ai/translate` | `translate` | |
+| `POST /api/cms/ai/generate-image` | `cms.image` | |
+
+Gate cleanly / degrade gracefully (these are mostly free features, so they do NOT 409):
+- `POST /api/format-editor/analyze-file` (anonymous): structure analysis always works; the AI reference
+  extraction (`bib_content`) runs only when `docs.ref_extract` is allowed, otherwise `bib_content: null`.
+- `POST /api/format-editor/format`: with `journal_name`, the AI citation-style detection runs only when
+  `docs.format` is allowed (else the chosen `format_style` is used); AI `.bib` extraction only when
+  `docs.ref_extract` is allowed.
+- `journey*.py` (quantitative journey module): has no LLM call. The only `journey.ai` endpoint is the legacy
+  `POST /api/generate-journey-map` above.
+- Not offered externally (multi-call, file based): `docs.format`, `docs.citation`, `docs.ref_extract`,
+  `docs.journal_finder` — just gated. The four `lib/*` document modules now import `emergentintegrations`
+  lazily inside the functions that call the LLM and re-raise `SystemLLMDisabled` instead of returning a fallback.
+
+### External-prompt / import endpoints
+
+All return the uniform shape of plan §B (`feature, title, instructions_th, expected_format, parts[{key,title,
+system_prompt, prompt, json_example?}], filename`); every part has `key: "main"`. `expected_format` is
+`markdown` (free text the user pastes into an editable field), `json` (see `json_example`), `yaml` (survey
+SDL) or `image-prompt` (copy it into an image tool and upload the picture with the normal upload — no paste-back).
+Import bodies are `{"content": "<pasted>", "part_key": "main", "model_label": "ChatGPT 5"}`; failures are
+**422** with a Thai `detail` string; successes carry `source: "external"`, `model_label`, `imported_at`, `imported_by`.
+
+**Stored server-side → `external-import` exists (response = what the system endpoint returns):**
+
+| prompt | import | stores in |
+|---|---|---|
+| `POST /api/surveys/ai-generate/external-prompt` (same body as ai-generate) | `POST /api/surveys/ai-generate/external-import` → `Survey` | `db.surveys` (+ `source`, `model_label`) after the same SDL parser + validator |
+| `POST /api/generate-journey-map/external-prompt` (same body) | `POST /api/generate-journey-map/external-import` `{content, raw_data, research_context?, model_label?}` → `{mermaid_code, analysis_summary, qualitative_run_id}` | `db.qualitative_runs` (what the quantitative journey `seed` reads) |
+| `GET\|POST /api/cv/studies/{id}/ai-analysis/external-prompt` | `POST /api/cv/studies/{id}/ai-analysis/external-import` → `{analysis, source, model_label, imported_at}` | `cv_studies.ai_analysis` (+ `ai_analysis_source`) |
+
+**Parse-only imports (nothing stored; the UI fills its form from the validated result, same JSON as the system endpoint):**
+
+| prompt | import → response |
+|---|---|
+| `POST /api/cv/studies/{id}/ai-suggest/external-prompt` `{brand_id, category}` | `POST …/ai-suggest/external-import` `{brand_id, category, content}` → `{category, is_cost, suggestions[]}` |
+| `POST /api/cv/studies/{id}/ai-needs/external-prompt` `{need, want, buying_power}` | `POST …/ai-needs/external-import` `{content}` → `{result}` |
+| `POST /api/cv/studies/{id}/ai-step/external-prompt` `{step}` | `POST …/ai-step/external-import` `{step, content}` → `{step, result}` |
+| `POST /api/cms/ai/generate-full/external-prompt` (same body) | `POST /api/cms/ai/generate-full/external-import` `{content, category?, model_label?}` → exactly what `generate-full` returns (`title, hero_title_lines, hero_accent_idx, excerpt, category, body_md`) |
+
+**Prompt only — the user pastes the answer into the existing editable field (no import endpoint):**
+`POST /api/translate/external-prompt` (anonymous, same body as `/translate`),
+`POST /api/generate-behavior-analysis/external-prompt`, `POST /api/perception/generate-questions/external-prompt`,
+`POST /api/perception/generate-analysis/external-prompt`, `POST /api/cms/ai/generate-text/external-prompt`,
+`POST /api/cms/ai/summarize/external-prompt`, `POST /api/cms/ai/translate/external-prompt`.
+Images (`image-prompt`): `POST /api/cv/studies/{id}/generate-image/external-prompt {brand_id, extra_prompt?}`,
+`POST /api/cms/ai/generate-image/external-prompt {prompt, style?, aspect?}`. (Behaviour / perception
+illustration: not added — gated only.)
+
+Example — `POST /api/translate/external-prompt {"text":"สวัสดีครับ","target_language":"en"}` (no auth):
+
+```json
+{"feature": "translate", "title": "แปลข้อความ", "instructions_th": "1. กดปุ่ม \"คัดลอก\" …",
+ "expected_format": "markdown",
+ "parts": [{"key": "main", "title": "แปลข้อความ",
+            "system_prompt": "You are a professional translator. Translate the given text to English. Only return …",
+            "prompt": "Translate this text to English:\n\nสวัสดีครับ"}],
+ "filename": "translate-prompt.md"}
+```
+
+Example — survey: `POST /api/surveys/ai-generate/external-import`
+`{"content": "```yaml\nsurvey: \"…\"\ntype: perception\nsections: [...]\n```", "model_label": "ChatGPT 5"}` → the created
+`Survey` (200) or `422 {"detail": "อ่านรูปแบบแบบสอบถามที่ AI สร้างไม่ได้ — …"}`.
+
+Example — customer value: `POST /api/cv/studies/{id}/ai-suggest/external-prompt {"brand_id":"…","category":"money"}`
+→ `expected_format: "json"`, `parts[0].json_example = '{"suggestions":[{"label":"…","weight":2,"rationale":"…","principle":"kotler-value"}]}'`;
+then `POST …/ai-suggest/external-import {"brand_id":"…","category":"money","content":"```json {…} ```"}` →
+`{"category":"money","is_cost":true,"suggestions":[{"label":"…","weight":2,…}],"source":"external","model_label":null,…}`.
+
+Frontend notes: API-key scopes `research.*` do not cover these (they are web-UI features); the CLI only
+drives conjoint / brand-equity. `GET /api/platform/llm-policy` → `features[key]` decides whether to show the
+system button, the external dialog, or both, using the keys in the first table.

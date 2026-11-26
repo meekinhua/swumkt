@@ -883,3 +883,15 @@ def test_bes_weight_sensitivity_is_reported():
     sens = agg["bes_sensitivity"]
     lo, hi = sens["range_one_weight_halved_or_doubled"]
     assert lo <= agg["composite"]["overall"] <= hi and sens["dimensions_used"] == 4
+
+
+def test_regenerate_questions_endpoint_still_works_with_the_switch_off(api):
+    api.policy(False)
+    r = api.client.post(f"/api/brand-equity/studies/{api.sid}/regenerate-questions")
+    assert r.status_code == 200 and r.json()["questions"]
+
+
+def test_dashboard_exclude_flagged_and_methods_paragraph(api):
+    d = api.client.get(f"/api/brand-equity/studies/{api.sid}/dashboard", params={"exclude_flagged": "true"}).json()
+    assert d["quality_filter"]["exclude_flagged"] is True
+    assert "Cronbach" in d["methods_paragraph_th"] and "POMP" in d["methods_paragraph_th"]

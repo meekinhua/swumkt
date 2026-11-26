@@ -317,12 +317,36 @@
   width: fit-content;
 }
 
+/* --------- Skip link + keyboard focus --------- */
+.utb-skip {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 60;
+  background: var(--utb-ink);
+  color: #fff;
+  padding: 10px 16px;
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 120ms ease;
+}
+.utb-skip:focus { top: 8px; }
+.utb-root a:focus-visible,
+.utb-root button:focus-visible {
+  outline: 2px solid var(--utb-ink);
+  outline-offset: 2px;
+}
+
 /* --------- Hamburger (mobile only) --------- */
 .utb-hamburger {
   display: none;
   flex-direction: column;
   gap: 5px;
   padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--utb-line);
   border-radius: 8px;
@@ -343,6 +367,11 @@
   background: var(--utb-bg);
   padding: 16px 24px 24px;
   animation: utb-dd-in 160ms ease;
+  /* A long menu (tools + admin) must scroll inside the drawer, not run off-screen */
+  max-height: calc(100vh - 64px);
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .utb-mobile-section {
   padding: 12px 0;
@@ -363,6 +392,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
+  min-height: 44px;
   font-size: 15px;
   color: var(--utb-ink);
   text-decoration: none;

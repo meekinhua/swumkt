@@ -1,6 +1,6 @@
 ---
 name: site-edit
-description: Change content on the live swumkt.org deployment — homepage hero, section headings, button labels, articles and announcements — without rebuilding or redeploying. Use whenever the user asks to reword, replace, publish, unpublish, pin or undo anything that appears on the site, in Thai or English ("แก้หัวข้อหน้าแรก", "เปลี่ยนข้อความ", "เผยแพร่บทความ", "ย้อนกลับ", "change the heading", "publish that post"). Also use when they ask what on the site can be changed without a deploy.
+description: Operate the live swumkt.org deployment from the command line for the owner — (1) change site content without a deploy (homepage hero, headings, button labels, articles, announcements, faculty profiles, publications; publish, unpublish, pin, undo), (2) switch the platform's paid built-in AI on/off or per feature, and (3) read Conjoint / Brand Equity study results and move AI prompts and answers in and out so the work is done in the user's own LLM. Use whenever the user says things like "แก้หัวข้อหน้าแรก", "เปลี่ยนข้อความ", "เผยแพร่บทความ", "ย้อนกลับ", "ปิด AI ของระบบ", "เปิด AI ของระบบ", "ปิด/เปิดการใช้ AI", "AI ตัวไหนเปิดอยู่", "ดูผล conjoint", "ดูผล brand equity", "ดึง prompt ไปทำ thesis", "เอาคำตอบจาก ChatGPT ใส่กลับเข้าระบบ", "is the site up", "turn the system LLM off", "show me the study results", "export the thesis prompt", "change the heading", "publish that post". Also use when they ask what on the site can be changed without a deploy.
 ---
 
 # Editing the live site
@@ -13,11 +13,11 @@ python backend/scripts/sitectl.py --help
 ```
 
 Target: `--api` or `SWUMKT_API` (default `https://swumkt.org`). The local sim is
-`http://localhost:18090`.
+`http://localhost:18090` (`python backend/scripts/dev_sim.py` — fake LLM, in-memory data; admin@swu.ac.th / admin1234 for `sitectl login`).
 
 **Credential.** Use a scoped API key, not a login. Set `SWUMKT_API_KEY`, or run
 `sitectl use-key` once to store it in `~/.swumkt/credentials.json`. A key does
-not expire, carries only the `cms.*` scopes, and can be revoked; a cached login
+not expire, carries only the scopes it was minted with (`cms.*` by default; see "Operating the platform" below for the AI switch and research scopes), and can be revoked; a cached login
 token carries the owner's full admin rights and dies after 72 hours.
 
 `sitectl whoami` says which credential is in use and what it can reach. If
@@ -130,9 +130,109 @@ Restoring is itself snapshotted, so it can be undone too. When the user says
 "ย้อนกลับ" or "เอาอันเก่าคืน", run `undo list` and show them the entries with
 times and labels rather than guessing which one they mean.
 
+## Operating the platform (health, system AI switch, research studies)
+
+Same script, same safety conventions: every write prints a before/after diff first,
+`--dry-run` sends nothing, a change that costs money or overwrites a stored result asks
+for `--yes`, writes are read back, `--json` prints raw JSON on read commands, and a
+credential is never printed.
+
+### One-time setup: a scoped key for the owner's Claude Code session
+
+Someone with server access mints it (the key is shown once; it is **not** in the repo):
+
+```bash
+# everything this skill does: content (cms.*) + AI switch + research read/import
+python backend/scripts/mint_api_key.py --label "sitectl · owner" --preset operator
+# or only the research commands (no content editing, no AI switch):
+python backend/scripts/mint_api_key.py --label "sitectl · research" --preset research
+```
+
+Then on the machine that runs Claude Code: `export SWUMKT_API_KEY=swk_…` (and `SWUMKT_API=https://swumkt.org`
+if not the default), or `python backend/scripts/sitectl.py use-key` once to store it in
+`~/.swumkt/credentials.json`. `sitectl whoami` shows what the credential reaches. Never paste the key into
+a reply, a file in the repo, or a commit.
+
+| command | scope the key needs |
+|---|---|
+| `health` | none (public) |
+| `llm status` · `llm on/off/set/bypass/hint` | `platform.settings` |
+| `research list` · `research show` · `research prompt` | `research.read` |
+| `research import` | `research.ai` |
+| `landing`/`text`/`post`/`faculty`/`paper`/`undo` | `cms.*` (the original content scopes) |
+
+`--preset operator` = `cms.*` + `platform.settings` + `research.read` + `research.ai`;
+`--preset research` = `research.read` + `research.ai`. A key acts as an admin within its scopes, so
+`research.read` can read every user's studies — hand it out accordingly. If a command answers
+`refused: API key '…' lacks the '…' scope`, say which scope is missing and ask; do not look for a way around it.
+
+### Is the site up?
+
+```bash
+python backend/scripts/sitectl.py health          # exit 0 only when /api/health says ok
+```
+
+### Switch the platform's built-in (paid) AI
+
+The owner does not want to pay for the system LLM by default. With it OFF, every AI feature returns
+`409 llm_external_only` and the UI tells users to use their own ChatGPT/Claude/Gemini (copy the prompt,
+paste the answer back). Policy = master switch, then per-group / per-feature overrides, plus an optional admin bypass.
+
+```bash
+python backend/scripts/sitectl.py llm status                  # master, overrides, effective per group
+python backend/scripts/sitectl.py llm off                     # users bring their own LLM (no confirmation)
+python backend/scripts/sitectl.py --dry-run llm on            # preview
+python backend/scripts/sitectl.py llm on                      # asks: this spends money
+python backend/scripts/sitectl.py llm set images off          # group: research thesis images content documents
+python backend/scripts/sitectl.py llm set translate on        # or one feature key, e.g. cv.ai, be.thesis
+python backend/scripts/sitectl.py llm set translate default   # drop the override
+python backend/scripts/sitectl.py llm bypass on|off           # admins may use it even when off (asks: spends money)
+python backend/scripts/sitectl.py llm hint "ใช้ ChatGPT/Claude ของคุณเอง แล้ววางผลลัพธ์กลับมา"
+```
+
+- **Turning anything ON is the risky direction** (`llm on`, `llm set … on`, `llm set … default` that re-enables
+  something, `llm bypass on`): the tool shows the diff and refuses without confirmation. Never pass `--yes` for the
+  user — ask first ("ยืนยันเปิด AI ของระบบ ซึ่งจะมีค่าใช้จ่าย?"), then re-run with `--yes` after they agree.
+  Turning things OFF and editing the hint need no confirmation.
+- Unknown keys are rejected with the list of valid groups/features. Report the read-back line (`✓ written and
+  read back`) — the server caches the policy for up to 15 s per worker, so another worker may lag briefly.
+- Prompts for the user's own LLM keep working whatever the switch says.
+
+### Conjoint / Brand Equity studies: read results, take prompts out, bring answers in
+
+```bash
+python backend/scripts/sitectl.py research list [--tool conjoint|brand-equity] [--json]
+python backend/scripts/sitectl.py research show conjoint <study-id>            # status, n, importance, best levels
+python backend/scripts/sitectl.py research show brand-equity <study-id>        # status, n, BES composite, alpha, sample
+python backend/scripts/sitectl.py research prompt conjoint <study-id> interpretation -o prompt.md
+python backend/scripts/sitectl.py research prompt conjoint <study-id> thesis -o thesis-prompts.md   # ch3/ch4/ch5
+python backend/scripts/sitectl.py research prompt brand-equity <study-id> analyze|thesis|visual-identity|questions -o p.md
+python backend/scripts/sitectl.py research import brand-equity <study-id> analyze --file answer.json --part p1 --model-label "ChatGPT-5"
+python backend/scripts/sitectl.py research import conjoint <study-id> thesis --file ch3.md --part ch3 --model-label "Claude"
+```
+
+Features: conjoint `interpretation`, `thesis`; brand-equity `analyze`, `thesis`, `visual-identity`, `questions`.
+`research prompt` writes ONE Markdown file: instructions, then per part the system prompt and prompt (data already
+embedded, identical to what the system LLM would get) — it prints part keys and the matching `import` command. Extra
+request fields: `--body '{"method":"mnl"}'` (JSON or `@file`), `--query wave=2` (repeatable).
+
+Workflow for "ดึง prompt ไปทำ thesis": `research list` → `research show` (confirm n and that the numbers look
+right) → `research prompt … thesis -o file.md` → give the user the file / paste each part into their own LLM →
+save each chapter to a file → `research import … thesis --file ch3.md --part ch3 --model-label "<AI used>"`
+(one import per chapter; the exported thesis carries an AI-use disclosure naming that label).
+
+- `research import` replaces the AI result stored for that study part, so it asks for `--yes`; `--dry-run` shows
+  size and first line without sending. A 422 prints the server's Thai reason (e.g. truncated JSON, a placeholder
+  left in a chapter) — show it to the user rather than retrying blindly.
+- Be honest about what the numbers are: only report what `research show` printed. Do not invent statistics, and
+  tell the user an AI-written chapter must be checked against the study's tables before submission.
+- Customer Value, CMS writing helpers, translate, survey generation etc. have the same external-prompt idea but are
+  web-UI features (not scoped to API keys); use the site for those.
+
 ## What this tool will not do
 
-`purge`, `landing reset`, and anything under `/admin/*` are refused twice over:
+`purge`, `landing reset`, and anything under `/admin/*` (that includes `/api/admin/settings` provider keys and
+user/role management) are refused twice over:
 the client will not send them, and the server refuses them for any API key
 whatever its scopes (`HARD_DENY` in `backend/lib/api_keys.py`). They are
 unrecoverable, or they are not content. If the user genuinely wants one, say it
