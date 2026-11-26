@@ -2,8 +2,9 @@
  * PasteAnswerBox — "have an answer from your own AI? paste it here".
  *
  * A collapsible box for the tool pages where the external-LLM flow is
- * prompt-only (the server gives a prompt but has no import endpoint, or the
- * import needs extra fields the shared dialog cannot send).
+ * prompt-only (the server gives a prompt but has no import endpoint, so the page
+ * parses the pasted answer itself — behaviour / perception tools). When an import
+ * endpoint exists, use <ExternalAiDialog> with `importUrl` (+ `importExtra`) instead.
  *
  * Props
  *   onApply(text, modelLabel) -> boolean | Promise<boolean>   return false to keep the text
