@@ -6,6 +6,7 @@ import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, useToast } from './AlumniUI';
 import ActivityStream from './ActivityStream';
 import './alumni-styles.css';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -173,7 +174,7 @@ const AlumniFeedPage = () => {
       load();
       toast.show('โพสต์สำเร็จ +5 XP');
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'โพสต์ไม่สำเร็จ');
+      toast.show(apiErrorText(e, 'โพสต์ไม่สำเร็จ'));
     }
   };
 

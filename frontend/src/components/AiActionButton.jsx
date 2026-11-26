@@ -10,10 +10,12 @@
  *                success/error handling. If it rejects with 409 llm_external_only the
  *                button opens the external dialog instead and refetches the policy.
  *                Any other rejection is only console.error'd (handle it inside onSystem).
- *   external     { promptRequest, importUrl?, onImported?, title? } — passed to
- *                <ExternalAiDialog>. Omit `importUrl` for prompt-only cases.
+ *   external     { promptRequest, importUrl?, importExtra?, onlyParts?, onImported?, title? }
+ *                — passed to <ExternalAiDialog>. Omit `importUrl` for prompt-only cases.
  *   disabled     disables everything
- *   variant, size, className   passed to <Button> (className applies to the main button)
+ *   variant, size, className   passed to <Button> (className applies to the main button).
+ *                variant="plain" renders native <button>s carrying ONLY `className`
+ *                (no shadcn classes), so page styles such as "be-btn be-btn-red" win.
  *   data-testid  on the main button (the menu trigger gets `${id}-menu`, items
  *                `${id}-system` / `${id}-external`)
  *
@@ -55,6 +57,15 @@ const renderIcon = (icon) => {
   return <Icon className="h-4 w-4" aria-hidden="true" />;
 };
 
+/** shadcn <Button>, or a bare <button> with only the caller's classes for variant="plain". */
+const Btn = React.forwardRef(({ variant, size, className = '', plainExtra = '', ...rest }, ref) => {
+  if (variant === 'plain') {
+    return <button ref={ref} type="button" className={`${className} ${plainExtra}`.trim()} {...rest} />;
+  }
+  return <Button ref={ref} variant={variant} size={size} className={className} {...rest} />;
+});
+Btn.displayName = 'AiActionButtonBtn';
+
 const AiActionButton = ({
   feature, label, icon, onSystem, external, disabled = false,
   variant, size, className = '', 'data-testid': testId,
@@ -91,6 +102,8 @@ const AiActionButton = ({
       title={external.title}
       promptRequest={external.promptRequest}
       importUrl={external.importUrl}
+      importExtra={external.importExtra}
+      onlyParts={external.onlyParts}
       onImported={external.onImported}
     />
   ) : null;
@@ -101,9 +114,9 @@ const AiActionButton = ({
   // Policy not yet known — don't flash the wrong mode.
   if (loading) {
     return (
-      <Button {...base} className={className} data-testid={testId}>
+      <Btn {...base} className={className} data-testid={testId}>
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {label}
-      </Button>
+      </Btn>
     );
   }
 
@@ -111,11 +124,11 @@ const AiActionButton = ({
   if (!canSystem && canExternal) {
     return (
       <>
-        <Button {...base} className={className} onClick={() => setOpen(true)} data-testid={testId} title="ใช้ AI ของคุณเอง — คัดลอกพรอมต์ไปวางใน ChatGPT / Claude / Gemini">
+        <Btn {...base} className={className} onClick={() => setOpen(true)} data-testid={testId} title="ใช้ AI ของคุณเอง — คัดลอกพรอมต์ไปวางใน ChatGPT / Claude / Gemini">
           {renderIcon(icon)}
           <span>{label}</span>
           <span className="ml-1 rounded-sm bg-black/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none" data-testid={`${id}-hint`}>ใช้ AI ของคุณเอง</span>
-        </Button>
+        </Btn>
         {dialog}
       </>
     );
@@ -124,11 +137,11 @@ const AiActionButton = ({
   // System only
   if (!canExternal) {
     return (
-      <Button {...base} disabled={base.disabled || running || !canSystem} className={className} onClick={runSystem} data-testid={testId}
+      <Btn {...base} disabled={base.disabled || running || !canSystem} className={className} onClick={runSystem} data-testid={testId}
         title={!canSystem ? 'AI ของระบบถูกปิดใช้งาน' : undefined}>
         {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : renderIcon(icon)}
         <span>{label}</span>
-      </Button>
+      </Btn>
     );
   }
 
@@ -136,19 +149,22 @@ const AiActionButton = ({
   return (
     <>
       <div className="inline-flex items-stretch">
-        <Button {...base} disabled={base.disabled || running} className={`rounded-r-none ${className}`} onClick={runSystem} data-testid={testId}>
+        <Btn {...base} disabled={base.disabled || running} className={variant === 'plain' ? className : `rounded-r-none ${className}`}
+          style={variant === 'plain' ? { borderTopRightRadius: 0, borderBottomRightRadius: 0 } : undefined}
+          onClick={runSystem} data-testid={testId}>
           {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : renderIcon(icon)}
           <span>{label}</span>
-        </Button>
+        </Btn>
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
-            <Button
+            <Btn
               variant={variant} size={size === 'sm' ? 'sm' : 'default'} disabled={base.disabled || running}
-              className="rounded-l-none border-l border-white/30 px-2"
+              className={variant === 'plain' ? className : 'rounded-l-none border-l border-white/30 px-2'}
+              style={variant === 'plain' ? { borderTopLeftRadius: 0, borderBottomLeftRadius: 0, marginLeft: -1, paddingLeft: 8, paddingRight: 8 } : undefined}
               aria-label="ตัวเลือกการใช้ AI" data-testid={`${id}-menu`}
             >
               <ChevronDown className="h-4 w-4" aria-hidden="true" />
-            </Button>
+            </Btn>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={runSystem} data-testid={`${id}-system`}>

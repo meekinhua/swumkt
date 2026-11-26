@@ -13,6 +13,7 @@ import { ArrowLeft, Eye, Edit, Users, MessageCircle, Send, Languages, Paperclip,
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import MermaidViewer from '@/components/MermaidViewer';
+import DOMPurify from 'dompurify';
 
 // Image Lightbox Component
 const ImageLightbox = ({ images, currentIndex, onClose, onNext, onPrev }) => {
@@ -434,7 +435,9 @@ const ContentDetail = () => {
                 lineHeight: '1.8',
                 fontSize: '1.125rem'
               }}
-              dangerouslySetInnerHTML={{ __html: content.content }}
+              // content.content can carry user-supplied text (e.g. an AI interpretation the
+              // study owner pasted in and shared) — never inject it unsanitised.
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.content || '', { USE_PROFILES: { html: true } }) }}
             />
           </div>
 

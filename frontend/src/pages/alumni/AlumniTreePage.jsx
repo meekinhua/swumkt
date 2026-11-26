@@ -87,7 +87,7 @@ const GapSlot = ({ slot, down, onClick }) => (
 );
 
 // ---------- person detail ----------
-const PersonPanel = ({ person, isMe, onClose, token, canEdit, toast, onChanged, onInviteGhost, onHistory, ownTree }) => {
+const PersonPanel = ({ person, me, isMe, onClose, token, canEdit, toast, onChanged, onInviteGhost, onHistory, ownTree }) => {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const st = statusOf(person.link_status);
@@ -118,6 +118,12 @@ const PersonPanel = ({ person, isMe, onClose, token, canEdit, toast, onChanged, 
     if (!window.confirm(`ลบ "${person.name}" ออกจากสายใช่ไหม?`)) return;
     run(() => api.post(token, `/alumni/ghosts/${person.user_id}/remove`, {}), 'ลบแล้ว');
   };
+  // PDPA: the person a placeholder stands for can remove it (and block re-adding) without registering a claim.
+  const removeMyName = () => {
+    if (!window.confirm(`"${person.name}" คือคุณ และต้องการลบชื่อนี้ออกจากสายใช่ไหม? (ระบบจะไม่ให้เพิ่มชื่อและรุ่นนี้ซ้ำอีก)`)) return;
+    run(() => api.post(token, `/alumni/ghosts/${person.user_id}/remove`, { self_identify: true, do_not_readd: true }), 'ลบชื่อของคุณออกแล้ว');
+  };
+  const createdByMe = !!me && person.created_by === me.id;
 
   return (
     <div className="al-card al-card-pad al-fade-in" role="dialog" aria-label="รายละเอียดคนในสาย" style={{ position: 'relative' }} data-testid="tree-side-panel">
@@ -166,8 +172,16 @@ const PersonPanel = ({ person, isMe, onClose, token, canEdit, toast, onChanged, 
         {canEdit && notConfirmed && ownTree && (
           <button className="al-btn al-btn-ghost al-btn-sm" disabled={busy} onClick={removeLink} data-testid="person-panel-remove-link">ลบความสัมพันธ์นี้</button>
         )}
-        {person.is_ghost && ownTree && (
+        {person.is_ghost && ownTree && (createdByMe || me?.role === 'admin') && (
           <button className="al-btn al-btn-ghost al-btn-sm" disabled={busy} onClick={removeGhost} data-testid="person-panel-remove-ghost">ลบชื่อนี้ออก</button>
+        )}
+        {person.is_ghost && !createdByMe && (
+          <button className="al-btn al-btn-ghost al-btn-sm" disabled={busy} onClick={removeMyName} data-testid="person-panel-remove-self">
+            นี่คือชื่อฉัน — ลบชื่อนี้ออก
+          </button>
+        )}
+        {person.is_ghost && (
+          <button type="button" className="al-tiny al-muted" onClick={() => navigate('/privacy')} style={{ textDecoration: 'underline', background: 'none', border: 0, cursor: 'pointer' }}>ข้อมูลส่วนบุคคลและการขอลบ</button>
         )}
       </div>
     </div>
@@ -490,7 +504,7 @@ const AlumniTreePage = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {selected ? (
-                  <PersonPanel person={selected} isMe={!!selected.isMe} onClose={() => setSelected(null)} token={token}
+                  <PersonPanel person={selected} me={user} isMe={!!selected.isMe} onClose={() => setSelected(null)} token={token}
                     canEdit ownTree={ownTree} toast={toast.show} onChanged={refreshAll}
                     onInviteGhost={(p) => setGapSlot(ghostSlotFor(p))} onHistory={setHistory} />
                 ) : (

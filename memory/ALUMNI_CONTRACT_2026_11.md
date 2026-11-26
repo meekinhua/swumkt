@@ -150,7 +150,7 @@ an invite, and also `kinship_gender` and `interests`.
 | `GET /alumni/relations/mine` | `status` normalised (`pending` becomes `claimed`) |
 | `DELETE /alumni/relations/{id}` | also allowed for the claimant (unless confirmed) and for admins. Also removes the link's votes |
 | `POST /alumni/invites` | new optional `ghost_id`, `reveal_game` (default **false**, so the current invite screen keeps working), `clue` (≤140). Default `relation_hint` is now `"น้องเทค"`. Limit: 30 invites a day (429) |
-| `GET /alumni/invites/preview/{code}` | **public**. Adds `reveal_game`, `revealed`, `for_ghost` and `ghost_gen`. For a reveal-game invite that is not yet revealed, `inviter` is **null** and you get `clues`, `guesses_left` and `attempts` instead. The inviter's `email` and `student_id` are no longer exposed |
+| `GET /alumni/invites/preview/{code}` | **public**. Adds `reveal_game`, `revealed`, `for_ghost` and `ghost_gen`. For a reveal-game invite that is not yet revealed, `inviter` is **null** and you get `clues`, `guesses_left` and `attempts` instead. `inviter` is a **public card** (WP9a whitelist, also used by `POST …/reveal`): `user_id, nickname, name, gen, role, position, avatar_url, avatar_hue, verified, kinship_gender`, plus `company` when the member's `show_company_to_juniors` allows it. No email, student_id, bio, interests, xp, privacy settings or lineage fields (they used to leak minus email/student_id) |
 | `POST /alumni/invites/accept/{code}` | records lineage. For a ghost invite it returns `ghost_claim:{ghost_id, display_name, gen, claim_url, invite_code}` and creates **no** automatic link (the ghost's links move over when the person claims it). Adds `reveal_pending`; `inviter_id` is null while the game is unrevealed. The inviter gets XP only once, even under races |
 | `GET /alumni/discover/mystery-match` | reasons use the new terms. Ghosts are never returned |
 | `GET /alumni/stats` | `connections` counts confirmed and vouched links |
@@ -365,3 +365,17 @@ Default cards, used until the admin saves a list:
 
 Current UI strings to replace: "พี่ take" becomes "พี่เทค", and "สายตระกูล" should
 become "สายเทค" where it refers to the code line.
+
+
+## WP9a integration notes (2026-11-26)
+
+- Activity text for a new member: "<nick> (รุ่น N) เข้าร่วมเครือข่ายสายเทคแล้ว" (was "เข้ามาในตระกูล");
+  badge `streak_30` is now named "ตำนานสายเทค". `tests/test_alumni.py` (live-server suite) asserts the
+  สายเทค ladder via `lib/alumni_kinship.term_for` instead of the old "พี่ take / ปู่ / ทวด" labels.
+- Notifications carry no link; `NotificationBell.jsx` routes by `kind`. Kinds the backend emits but the bell
+  does not route yet: `post_reaction`, `post_comment`, `job_interest`, `review_received` (alumni_phase2) —
+  frontend item. Backend-emitted frontend paths (benefit cards `/market-research`, `/publications`,
+  `/people`, `/alumni/jobs`; invite URL `/alumni/invite/{code}`) all exist in `App.js`.
+  `ghost_claim.claim_url` is an **API** path (`/alumni/ghosts/{id}/claim`, POST), not a page.
+- Opt-out hash: set `ALUMNI_OPTOUT_SALT` in production (the default salt is in the source; names + cohort
+  are low-entropy, so the stored hashes are only as private as the salt).

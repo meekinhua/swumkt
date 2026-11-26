@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { apiErrorText } from './cjFormat';
+import { apiErrorTextAsync } from '@/lib/apiError';
 
 export const useConjointFetch = (url, { token, enabled = true } = {}) => {
   const [data, setData] = useState(null);
@@ -24,7 +24,7 @@ export const useConjointFetch = (url, { token, enabled = true } = {}) => {
       const r = await axios.get(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, timeout: 120000 });
       if (id === seq.current) setData(r.data);
     } catch (e) {
-      const msg = await apiErrorText(e, 'โหลดข้อมูลไม่สำเร็จ');
+      const msg = await apiErrorTextAsync(e, 'โหลดข้อมูลไม่สำเร็จ');
       if (id === seq.current) { setError(msg); setData(null); }
     } finally {
       if (id === seq.current) setLoading(false);

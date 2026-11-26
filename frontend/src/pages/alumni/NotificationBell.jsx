@@ -50,14 +50,20 @@ const NotificationBell = ({ token }) => {
   const handleClickItem = (n) => {
     if (!n.read) handleMarkRead(n.id);
     // Route by kind
-    if (n.kind === 'ghost_claim') {
+    // Claims to answer (incl. "confirm the person who joined via your invite") live in the
+    // tree's "ยืนยัน" tab; there is no separate invites page.
+    if (['ghost_claim', 'mark_request', 'invite_accepted'].includes(n.kind)) {
       navigate('/alumni/tree?tab=confirm');
     } else if (n.kind === 'meetup') {
       navigate('/alumni/tree?tab=meetup');
-    } else if (['mark_request', 'relation_confirmed', 'line_new_level', 'ghost_claim_approved', 'ghost_claim_rejected',
-      'chain_nudge', 'invite_accepted', 'welcome'].includes(n.kind)) {
+    } else if (['relation_confirmed', 'line_new_level', 'ghost_claim_approved', 'ghost_claim_rejected',
+      'chain_nudge', 'welcome'].includes(n.kind)) {
       navigate('/alumni/tree');
-    } else if (n.kind === 'badge' || n.kind === 'level_up' || n.kind === 'streak') {
+    } else if (n.kind === 'post_reaction' || n.kind === 'post_comment') {
+      navigate('/alumni/feed');
+    } else if (n.kind === 'job_interest') {
+      navigate('/alumni/jobs');
+    } else if (n.kind === 'badge' || n.kind === 'level_up' || n.kind === 'streak' || n.kind === 'review_received') {
       navigate('/alumni/profile');
     }
     setOpen(false);

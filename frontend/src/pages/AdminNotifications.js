@@ -9,6 +9,7 @@ import { ArrowLeft, Send, Users, Bell, BarChart2, UserCheck } from 'lucide-react
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '@/App';
+import { apiErrorText } from '@/lib/apiError';
 
 const AdminNotifications = () => {
   const navigate = useNavigate();
@@ -137,7 +138,7 @@ const AdminNotifications = () => {
       loadData();
     } catch (error) {
       console.error('Error sending notification:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถส่งการแจ้งเตือนได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถส่งการแจ้งเตือนได้'));
     } finally {
       setSending(false);
     }
@@ -154,7 +155,7 @@ const AdminNotifications = () => {
       toast.success('ส่งการแจ้งเตือนทดสอบถึงตัวคุณเองแล้ว! 🔔');
     } catch (error) {
       console.error('Error sending test:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถส่งการแจ้งเตือนทดสอบได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถส่งการแจ้งเตือนทดสอบได้'));
     } finally {
       setSending(false);
     }

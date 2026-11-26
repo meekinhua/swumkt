@@ -19,7 +19,7 @@ import { useAiGate } from '@/components/AiPolicyNote';
 import AiActionButton from '@/components/AiActionButton';
 import PasteAnswerBox from '@/components/PasteAnswerBox';
 import { useExternalDialog } from '@/hooks/useExternalDialog';
-import { parseAnalysisSections, parseNumberedQuestions, withBodyKey } from '@/lib/aiTextParse';
+import { parseAnalysisSections, parseNumberedQuestions } from '@/lib/aiTextParse';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -77,7 +77,7 @@ const CustomerPerceptionTool = () => {
   const ext = useExternalDialog();
   const questionsBody = () => ({ topic: questionTopic, perspective: researchPerspective || null, target_language: targetLanguage });
   const analysisBody = () => ({ interview_data: interviewData, analysis_context: analysisContext || null, target_language: targetLanguage });
-  const promptReq = (path, data) => ({ method: 'POST', url: withBodyKey(`${API}/api/perception/${path}/external-prompt`, data), data });
+  const promptReq = (path, data) => ({ method: 'POST', url: `${API}/api/perception/${path}/external-prompt`, data });
   const showQuestionsPrompt = () => {
     if (!questionTopic.trim()) { toast.error('กรุณาใส่หัวข้อวิจัย'); return; }
     ext.open({ title: 'สร้างคำถามสัมภาษณ์ด้วย AI ของฉันเอง', promptRequest: promptReq('generate-questions', questionsBody()) });

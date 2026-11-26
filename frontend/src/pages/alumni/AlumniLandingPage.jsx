@@ -164,6 +164,7 @@ const AlumniLandingPage = () => {
           </h2>
           <p style={{ margin: 0, maxWidth: 640, lineHeight: 1.7, color: 'rgba(255,255,255,.85)' }}>
             เห็นเฉพาะสมาชิกที่ลงทะเบียนแล้ว ไม่เก็บอีเมลหรือเบอร์โทรของคนที่ถูกเพิ่มชื่อ และเจ้าตัวลบชื่อตัวเองออกได้ทุกเมื่อ (จะขอไม่ให้ใครเพิ่มซ้ำอีกก็ได้)
+            {' '}<a href="/privacy" style={{ color: 'white', textDecoration: 'underline' }} data-testid="landing-privacy-link">อ่านรายละเอียด</a>
           </p>
         </div>
 

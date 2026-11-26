@@ -9,6 +9,7 @@ The `server` module is replaced by a small stub while the router factory runs
 initialize_default_prompts from it).
 """
 import asyncio
+import json
 import io
 import os
 import sys
@@ -649,3 +650,213 @@ def test_share_content_requires_ownership(seeded):
             "statistical_method": "mnl", "importance_scores": {}, "part_worths": {}}
     r = client.post(f"/api/conjoint/studies/{study['id']}/share-content", json=body, headers=H("stranger"))
     assert r.status_code == 403
+
+
+# ===========================================================================
+# WP9a integration (2026-11-26)
+# ===========================================================================
+def test_get_ai_interpretation_is_read_only_and_never_409(seeded):
+    client, db, seed = seeded
+    study, _ = seed()
+    sid = study["id"]
+    set_policy(db, system_llm_enabled=False)
+    # No cache → 200 {"cached": false}, no job created, no LLM.
+    r = client.get(f"/api/conjoint/studies/{sid}/ai-interpretation", params={"method": "mnl"}, headers=H("owner"))
+    assert r.status_code == 200 and r.json() == {"cached": False}
+    assert asyncio.run(db.ai_interp_jobs.count_documents({})) == 0
+    # Strangers are refused exactly like the POST.
+    assert client.get(f"/api/conjoint/studies/{sid}/ai-interpretation",
+                      params={"method": "mnl"}, headers=H("stranger")).status_code == 403
+    text = "## สรุปผล\n" + "ราคาสำคัญที่สุด ผู้บริโภคชอบราคาต่ำ " * 5
+    client.post(f"/api/conjoint/studies/{sid}/ai-interpretation/external-import",
+                json={"method": "mnl", "content": text, "model_label": "Claude"}, headers=H("owner"))
+    post = client.post(f"/api/conjoint/studies/{sid}/ai-interpretation", json={"method": "mnl"},
+                       headers=H("owner")).json()
+    get = client.get(f"/api/conjoint/studies/{sid}/ai-interpretation", params={"method": "mnl"},
+                     headers=H("owner")).json()
+    assert get == post and get["cached"] is True and get["source"] == "external"
+    assert get["sample_scope"] == "all" and get["filter_mismatch"] is False
+    assert get["sample_respondent_count"] == study["respondent_count"]
+    # A Results-page filter does not change the text — the response says so.
+    seg = client.get(f"/api/conjoint/studies/{sid}/ai-interpretation",
+                     params={"method": "mnl", "segments": json.dumps({"gender": ["F"]})},
+                     headers=H("owner")).json()
+    assert seg["filter_mismatch"] is True and seg["interpretation"] == get["interpretation"]
+    # Other variant → miss, still no 409.
+    assert client.get(f"/api/conjoint/studies/{sid}/ai-interpretation",
+                      params={"method": "mnl", "compare_all": "true"}, headers=H("owner")).json() == {"cached": False}
+
+
+def test_interpretation_status_is_bound_to_the_study_and_viewer(seeded):
+    """Reproduced: a caller's own READY job id + someone else's study id returned that
+    study's cached interpretation (lookup by path study_id + job cache_key)."""
+    client, db, seed = seeded
+    victim, _ = seed()
+    vid = victim["id"]
+    asyncio.run(db.analysis_cache.insert_one({
+        "study_id": vid, "method": "ai_mnl_single", "schema_version": CJ.ANALYSIS_CACHE_VERSION,
+        "respondent_count": victim["respondent_count"],
+        "results": {"interpretation": "SECRET of the victim study", "summary_data": {}}}))
+    asyncio.run(db.ai_interp_jobs.insert_one({"job_id": "mine", "study_id": "my-own-study",
+                                              "cache_key": "ai_mnl_single", "status": "ready"}))
+    r = client.get(f"/api/conjoint/studies/{vid}/ai-interpretation-status/mine", headers=H("stranger"))
+    assert r.status_code == 403
+    r = client.get(f"/api/conjoint/studies/{vid}/ai-interpretation-status/mine", headers=H("owner"))
+    assert r.json() == {"status": "not_found"}           # job belongs to another study
+    asyncio.run(db.thesis_jobs.insert_one({"job_id": "tj", "study_id": vid, "status": "ready",
+                                           "cache_key": "thesis_mnl_3"}))
+    assert client.get(f"/api/conjoint/studies/{vid}/export-thesis-status/tj",
+                      headers=H("stranger")).status_code == 403
+    assert client.get(f"/api/conjoint/studies/{vid}/export-thesis-status/tj",
+                      headers=H("owner")).json()["status"] == "ready"
+
+
+def test_stale_jobs_are_reported_failed_not_processing_forever(seeded):
+    client, db, seed = seeded
+    study, _ = seed()
+    sid = study["id"]
+    old = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    asyncio.run(db.ai_interp_jobs.insert_one({"job_id": "j1", "study_id": sid, "cache_key": "ai_mnl_single",
+                                              "status": "processing", "created_at": old}))
+    r = client.get(f"/api/conjoint/studies/{sid}/ai-interpretation-status/j1", headers=H("owner")).json()
+    assert r["status"] == "failed" and r["error_code"] == "stale_job"
+    asyncio.run(db.ai_interp_jobs.insert_one({"job_id": "j2", "study_id": sid, "cache_key": "ai_mnl_single",
+                                              "status": "processing",
+                                              "created_at": datetime.now(timezone.utc).isoformat()}))
+    assert client.get(f"/api/conjoint/studies/{sid}/ai-interpretation-status/j2",
+                      headers=H("owner")).json()["status"] == "processing"
+
+
+def _randomise(study, responses, upto=None, seed=3):
+    """What ConjointSurveyPage.js now stores: per-respondent shuffled order."""
+    rng = np.random.default_rng(seed)
+    cs_ids = [c["id"] for c in study["choice_sets"]]
+    cmap = {c["id"]: c for c in study["choice_sets"]}
+    for i, r in enumerate(responses):
+        if upto is not None and i >= upto:
+            break
+        order = list(rng.permutation(len(cs_ids)))
+        for item in r["responses"]:
+            ids = [p["id"] for p in cmap[item["choice_set_id"]]["profiles"]]
+            item["display_task_index"] = order.index(cs_ids.index(item["choice_set_id"])) + 1
+            item["display_profile_ids"] = [ids[k] for k in rng.permutation(len(ids))]
+    return responses
+
+
+def test_randomisation_facts_are_data_driven():
+    from lib import conjoint_thesis as T
+    from lib import conjoint_quality as Q
+    study, responses = build_study(n_resp=20)
+    f = T.design_facts(study, responses)
+    assert f["randomization"]["status"] == "not_randomised"
+    assert "ไม่ได้สุ่ม" in f["randomization_th"]
+    _randomise(study, responses, upto=8)
+    f = T.design_facts(study, responses)
+    assert f["randomization"]["status"] == "mixed"
+    assert f["randomization"]["n_with_display_order"] == 8
+    assert "8 จาก 20" in f["randomization_th"] and "ทั้งสองส่วน" in f["randomization_th"]
+    _randomise(study, responses)
+    f = T.design_facts(study, responses)
+    assert f["randomization"]["status"] == "randomised"
+    assert f["randomization"]["order_varies"] and f["randomization"]["positions_vary"]
+    assert "สุ่ม" in f["randomization_th"] and "ไม่ได้สุ่ม" not in f["randomization_th"]
+    # The text reaches the prompt facts and the methods paragraph (pack + no-AI doc use both).
+    assert f["randomization_th"] in T.facts_text(f, {})
+    assert f["randomization_th"] in T.methods_paragraph_th(f, ["mnl"])
+    # Junk display data (stored verbatim from a public endpoint) is ignored, not trusted.
+    item = dict(responses[0]["responses"][0], display_profile_ids=["x", "y", "z"], display_task_index="1")
+    cs = next(c for c in study["choice_sets"] if c["id"] == item["choice_set_id"])
+    assert Q.displayed_profile_ids(cs, item) is None and Q.displayed_task_index(item) is None
+
+
+def test_straightlining_uses_displayed_position_when_recorded():
+    from lib import conjoint_quality as Q
+    study, responses = build_study(n_resp=12)
+    cmap = {c["id"]: c for c in study["choice_sets"]}
+    # Respondent 0 always clicks the FIRST alternative on screen, while the screen order is shuffled:
+    # by design position this looks varied; by displayed position it is a straight-liner.
+    rng = np.random.default_rng(1)
+    r0 = responses[0]
+    for item in r0["responses"]:
+        ids = [p["id"] for p in cmap[item["choice_set_id"]]["profiles"]]
+        shown = [ids[k] for k in rng.permutation(len(ids))]
+        item["display_profile_ids"] = shown
+        item["selected_profile_id"] = shown[0]
+    rep = Q.data_quality_report(study, responses)
+    assert "straightliner" in Q.flags_by_index(rep).get(0, [])
+    # Respondent 1 always picks DESIGN position 0, but the screen was shuffled → not a straight-liner.
+    r1 = responses[1]
+    for item in r1["responses"]:
+        ids = [p["id"] for p in cmap[item["choice_set_id"]]["profiles"]]
+        item["selected_profile_id"] = ids[0]
+        item["display_profile_ids"] = [ids[1], ids[2], ids[0]] if len(r1["responses"]) % 2 else [ids[2], ids[0], ids[1]]
+    for k, item in enumerate(r1["responses"]):
+        ids = [p["id"] for p in cmap[item["choice_set_id"]]["profiles"]]
+        item["display_profile_ids"] = [ids[1], ids[2], ids[0]] if k % 2 else [ids[2], ids[0], ids[1]]
+    rep = Q.data_quality_report(study, responses)
+    assert "straightliner" not in Q.flags_by_index(rep).get(1, [])
+    # Without display fields the design position is used (old behaviour).
+    study2, resp2 = build_study(n_resp=12)
+    for item in resp2[2]["responses"]:
+        item["selected_profile_id"] = {c["id"]: c for c in study2["choice_sets"]}[item["choice_set_id"]]["profiles"][0]["id"]
+    assert "straightliner" in Q.flags_by_index(Q.data_quality_report(study2, resp2)).get(2, [])
+
+
+def test_export_long_carries_displayed_positions_when_present():
+    from lib import conjoint_export as EXP
+    study, responses = build_study(n_resp=10)
+    header, rows = EXP.build_long_table(study, responses)
+    assert "display_task" not in header                       # nothing recorded → no columns
+    _randomise(study, responses, upto=5)
+    header, rows = EXP.build_long_table(study, responses)
+    it, ia = header.index("display_task"), header.index("display_alt")
+    ip, ir, ics = header.index("profile_id"), header.index("respondent_index"), header.index("choice_set_id")
+    for row in rows:
+        resp = responses[row[ir] - 1]
+        item = next(x for x in resp["responses"] if x["choice_set_id"] == row[ics])
+        if "display_profile_ids" in item:
+            assert row[ia] == item["display_profile_ids"].index(row[ip]) + 1
+            assert row[it] == item["display_task_index"]
+        else:
+            assert row[ia] == "" and row[it] == ""
+    cb = EXP.build_codebook(study, True)
+    names = [r[0] for r in cb]
+    assert "display_task" in names and "display_alt" in names
+    alt_note = next(r for r in cb if r[0] == "alt")[2]
+    assert "design" in alt_note                                 # alt is no longer called "on-screen"
+    xlsx = EXP.export_xlsx(study, responses)
+    from openpyxl import load_workbook
+    wb = load_workbook(io.BytesIO(xlsx))
+    assert "display_alt" in [c.value for c in wb["data_long"][1]]
+    assert "display_alt" in [r[0].value for r in wb["codebook"].iter_rows()]
+
+
+def test_simulator_refuses_unestimable_level():
+    from lib import conjoint_simulator as SIM
+    study, _ = build_study(n_resp=1)
+    result = {"coefficients": {"Brand_A": 0.6, "ราคา_฿100": 2.0, "Quality_Good": 1.0},
+              "reference_levels": {"brand": "b2", "price": "p2", "qual": "q1"}}
+    ok = [{"name": "X", "levels": {"brand": "b0", "price": "p0", "qual": "q0"}},
+          {"name": "Y", "levels": {"brand": "b2", "price": "p2", "qual": "q1"}}]
+    assert SIM.simulate_shares(study, "mnl", result, ok)["products"][0]["share"] > 0.5
+    bad = [ok[0], {"name": "Z", "levels": {"brand": "b1", "price": "p2", "qual": "q1"}}]   # Brand_B missing
+    with pytest.raises(SIM.SimulationError):
+        SIM.simulate_shares(study, "mnl", result, bad)
+
+
+def test_share_content_escapes_html_and_uses_a_real_llm_helper(seeded):
+    import inspect
+    src = inspect.getsource(CJ.get_conjoint_routes)
+    code = "\n".join(l.split("#")[0] for l in src.splitlines())   # ignore comments
+    assert "LlmChat()" not in code and "send_message_async" not in code
+    client, db, seed = seeded
+    study, _ = seed()
+    body = {"title": "t", "research_type": "quantitative", "study_id": study["id"], "respondent_count": 60,
+            "statistical_method": "mnl", "importance_scores": {"brand": {"name": "Brand", "importance": 50.0}},
+            "part_worths": {}, "ai_interpretation": "<script>alert(1)</script> **ok**",
+            "additional_notes": "<img src=x onerror=alert(2)>"}
+    r = client.post(f"/api/conjoint/studies/{study['id']}/share-content", json=body, headers=H("owner"))
+    assert r.status_code == 200, r.text
+    doc = asyncio.run(db.contents.find_one({"id": r.json()["content_id"]}))
+    assert "<script>" not in doc["content"] and "<img" not in doc["content"]
+    assert "&lt;script&gt;" in doc["content"] and "**ok**" in doc["content"]

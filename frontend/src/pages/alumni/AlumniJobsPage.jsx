@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, Modal, useToast } from './AlumniUI';
 import './alumni-styles.css';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -40,7 +41,7 @@ const PostJobModal = ({ open, onClose, token, onPosted }) => {
       onPosted();
       onClose();
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'ลงประกาศไม่สำเร็จ');
+      toast.show(apiErrorText(e, 'ลงประกาศไม่สำเร็จ'));
     } finally { setSubmitting(false); }
   };
 
@@ -208,7 +209,7 @@ const AlumniJobsPage = () => {
       toast.show('แสดงความสนใจแล้ว · ผู้ลงประกาศจะได้รับแจ้งเตือน');
       load();
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'ไม่สำเร็จ');
+      toast.show(apiErrorText(e, 'ไม่สำเร็จ'));
     }
   };
 

@@ -78,6 +78,7 @@ export const Footer = () => (
             <li><Link to="/register">Register</Link></li>
             <li><Link to="/dashboard">Dashboard · งานของฉัน</Link></li>
             <li><Link to="/people">Contact · ติดต่อคณาจารย์</Link></li>
+            <li><Link to="/privacy" data-testid="footer-privacy-link">Privacy · ข้อมูลส่วนบุคคล</Link></li>
           </ul>
         </div>
       </div>

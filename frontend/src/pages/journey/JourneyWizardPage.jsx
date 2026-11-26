@@ -8,6 +8,7 @@ import { BeTopbar, BeLoading, Stepper } from '../brand-equity/be-components';
 import JourneyCodebookStep from './JourneyCodebookStep';
 import { COPY, fmtCI } from './copy-th';
 import { copyToClipboard } from '@/lib/clipboard';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const STEPS = ['พื้นฐาน', 'ขั้นตอนของลูกค้า', 'ลงรหัสปัญหา', 'งบเวลา + สิ่งที่ได้', 'เปิดเก็บข้อมูล'];
@@ -113,7 +114,7 @@ const JourneyWizardPage = () => {
       setStudy(r.data);
       await refreshBudget(study.id);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'บันทึกช่องทางไม่สำเร็จ');
+      setError(apiErrorText(e, 'บันทึกช่องทางไม่สำเร็จ'));
     }
   };
 
@@ -161,7 +162,7 @@ const JourneyWizardPage = () => {
       }
       setStep(1);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'บันทึกไม่สำเร็จ');
+      setError(apiErrorText(e, 'บันทึกไม่สำเร็จ'));
     }
     setSaving(false);
   };
@@ -177,7 +178,7 @@ const JourneyWizardPage = () => {
       // qualitative material, so the step cannot be something you skip past
       setStep(2);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'บันทึกขั้นตอนไม่สำเร็จ');
+      setError(apiErrorText(e, 'บันทึกขั้นตอนไม่สำเร็จ'));
     }
     setSaving(false);
   };
@@ -189,7 +190,7 @@ const JourneyWizardPage = () => {
         runId ? { qualitative_run_id: runId } : { raw_text: seedText }, authH);
       hydrate(r.data.study);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'ดึงขั้นตอนจากผลวิเคราะห์ไม่สำเร็จ');
+      setError(apiErrorText(e, 'ดึงขั้นตอนจากผลวิเคราะห์ไม่สำเร็จ'));
     }
     setSaving(false);
   };
@@ -201,7 +202,7 @@ const JourneyWizardPage = () => {
       setStudy((s) => ({ ...s, status: 'collecting', structure_hash: r.data.structure_hash }));
       setStep(4);
     } catch (e) {
-      setError(e?.response?.data?.detail || 'เปิดเก็บข้อมูลไม่สำเร็จ');
+      setError(apiErrorText(e, 'เปิดเก็บข้อมูลไม่สำเร็จ'));
     }
     setSaving(false);
   };

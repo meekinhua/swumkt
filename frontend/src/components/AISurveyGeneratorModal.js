@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { apiErrorText } from '@/lib/apiError';
 import AiActionButton from '@/components/AiActionButton';
-import { withBodyKey } from '@/lib/aiTextParse';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -185,7 +184,7 @@ const AISurveyGeneratorModal = ({ onClose }) => {
                   title: 'สร้างแบบสอบถามด้วย AI ของฉันเอง',
                   promptRequest: {
                     method: 'POST',
-                    url: withBodyKey(`${API}/api/surveys/ai-generate/external-prompt`, formData),
+                    url: `${API}/api/surveys/ai-generate/external-prompt`,
                     data: formData,
                   },
                   importUrl: `${API}/api/surveys/ai-generate/external-import`,

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Image as ImageIcon, Save, Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { apiErrorText } from '@/lib/apiError';
@@ -19,7 +19,7 @@ import { useAiGate } from '@/components/AiPolicyNote';
 import AiActionButton from '@/components/AiActionButton';
 import PasteAnswerBox from '@/components/PasteAnswerBox';
 import { useExternalDialog } from '@/hooks/useExternalDialog';
-import { parseAnalysisSections, withBodyKey } from '@/lib/aiTextParse';
+import { parseAnalysisSections } from '@/lib/aiTextParse';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://mnl-results-hub.preview.emergentagent.com';
 
@@ -83,7 +83,7 @@ const CustomerBehaviorTool = () => {
 
   const analysisPromptRequest = () => {
     const data = analysisBody();
-    return { method: 'POST', url: withBodyKey(`${API}/api/generate-behavior-analysis/external-prompt`, data), data };
+    return { method: 'POST', url: `${API}/api/generate-behavior-analysis/external-prompt`, data };
   };
 
   const openExternalPrompt = () => {

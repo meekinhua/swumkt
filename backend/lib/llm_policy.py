@@ -60,12 +60,14 @@ FEATURES: Dict[str, str] = {
     "journey.ai": "research",
     "behavior.ai": "research",
     "perception.ai": "research",
+    # A vision *analysis* (images in, text out) — billed as a chat call, and an
+    # admin who switches off "images" means image generation (WP9a decision).
+    "be.visual_identity": "research",
     # thesis
     "conjoint.thesis": "thesis",
     "be.thesis": "thesis",
     # images
     "conjoint.images": "images",
-    "be.visual_identity": "images",
     "cv.image": "images",
     "cms.image": "images",
     "content.image": "images",
@@ -98,7 +100,7 @@ FEATURE_LABELS_TH: Dict[str, str] = {
     "conjoint.thesis": "Conjoint — ส่งออกวิทยานิพนธ์ (AI เขียนบท)",
     "be.thesis": "Brand Equity — ส่งออกวิทยานิพนธ์ (AI เขียนบท)",
     "conjoint.images": "Conjoint — สร้างภาพโปรไฟล์",
-    "be.visual_identity": "Brand Equity — สร้างภาพอัตลักษณ์แบรนด์",
+    "be.visual_identity": "Brand Equity — วิเคราะห์อัตลักษณ์แบรนด์จากภาพ/คำบรรยาย (vision)",
     "cv.image": "Customer Value — สร้างภาพ",
     "cms.image": "CMS — สร้างภาพ",
     "content.image": "คลังเนื้อหา — สร้างภาพ",
@@ -307,6 +309,24 @@ def is_admin(user: Any) -> bool:
     return str(role or "").lower() == "admin"
 
 
+def is_api_key_principal(user: Any) -> bool:
+    """The principal server.py builds for a scoped API key (`_principal_for_key`).
+
+    Such a principal carries role ADMIN (so CMS handlers accept it), but it is
+    a tool, not a person: it never gets ``admin_bypass`` and never triggers a
+    billed LLM/image call, whatever the policy says (decision WP9a, 2026-11 —
+    research keys must not cause spend; every research feature has an
+    external-LLM path a key can use instead).
+    """
+    if user is None:
+        return False
+    if isinstance(user, dict):
+        method, uid = user.get("auth_method"), user.get("id")
+    else:
+        method, uid = getattr(user, "auth_method", None), getattr(user, "id", None)
+    return method == "api_key" or str(uid or "").startswith("apikey:")
+
+
 def _user_label(user: Any) -> Optional[str]:
     if user is None:
         return None
@@ -317,7 +337,9 @@ def _user_label(user: Any) -> Optional[str]:
 
 def effective(policy: Dict[str, Any], feature: Optional[str], user: Any = None) -> bool:
     """Pure decision: feature override > group override > master switch;
-    admin_bypass + admin user -> True."""
+    admin_bypass + admin user -> True. An API-key principal -> always False."""
+    if is_api_key_principal(user):
+        return False
     if policy.get("admin_bypass") and is_admin(user):
         return True
     feats = policy.get("features") or {}
@@ -383,6 +405,25 @@ def current_route_feature() -> Optional[str]:
 # Request path -> feature fallback for call sites that have no
 # require_system_llm yet. First match wins. Paths are matched against the
 # full URL path (with the /api prefix). Keep specific patterns first.
+# Paths that never make a billed call: the external-LLM workflow (prompt /
+# import / pack), and the no-LLM computations and exports. They map to the
+# NO_LLM sentinel, which the guard refuses unconditionally (even with a grant
+# or admin_bypass): if one of these handlers ever reached an LLM it would be a
+# bug, and it must not be billed. The sentinel is not a registry key, so it
+# never shows in the admin UI and the middleware never refuses a *request* —
+# only a billed call made while serving it.
+NO_LLM = "__no_llm__"
+NO_LLM_ROUTES: Tuple[re.Pattern, ...] = tuple(re.compile(p) for p in (
+    r"/external-(prompt|import|pack)/?$",
+    r"^/api/conjoint/studies/[^/]+/(export-thesis/no-ai|export-long|export-responses|wtp|simulate"
+    r"|data-quality|export-thesis-download|export-thesis-status/[^/]+|ai-interpretation-status/[^/]+"
+    r"|statistical-analysis|results|design-recommendation|generate-prompt)/?$",
+    r"^/api/brand-equity/studies/[^/]+/(coding(/.*)?|export/raw|thesis-export|thesis-ai-download"
+    r"|thesis-ai-status/[^/]+|ai-status|dashboard|segment-significance|score-history|compare)/?$",
+    r"^/api/brand-equity/(public|showcase)(/|$)",
+    r"^/api/conjoint/(survey|showcase)(/|$)",
+))
+
 ROUTE_FEATURES: Tuple[Tuple[re.Pattern, str], ...] = tuple((re.compile(p), f) for p, f in (
     # --- conjoint (routes/conjoint.py) ---
     (r"^/api/conjoint/studies/[^/]+/(generate-images|generate-single-image|generate-profile-image"
@@ -392,7 +433,8 @@ ROUTE_FEATURES: Tuple[Tuple[re.Pattern, str], ...] = tuple((re.compile(p), f) fo
     (r"^/api/conjoint/studies/[^/]+/qualitative", "conjoint.qualitative"),
     (r"^/api/conjoint/", "conjoint.interpretation"),
     # --- brand equity (routes/brand_equity.py) ---
-    (r"^/api/brand-equity/(studies/[^/]+/)?(extract-visual-identity|visual-identity|logo)", "be.visual_identity"),
+    (r"^/api/brand-equity/(studies/[^/]+/)?(extract-visual-identity|extract-identity|visual-identity|logo)",
+     "be.visual_identity"),
     (r"^/api/brand-equity/studies/[^/]+/thesis", "be.thesis"),
     (r"^/api/brand-equity/thesis", "be.thesis"),
     (r"^/api/brand-equity/studies/[^/]+/(regenerate-questions|questions)", "be.questions"),
@@ -426,6 +468,9 @@ ROUTE_FEATURES: Tuple[Tuple[re.Pattern, str], ...] = tuple((re.compile(p), f) fo
 
 
 def feature_for_path(path: str) -> Optional[str]:
+    for rx in NO_LLM_ROUTES:
+        if rx.search(path or ""):
+            return NO_LLM
     for rx, feat in ROUTE_FEATURES:
         if rx.search(path or ""):
             return feat
@@ -458,7 +503,15 @@ class RouteFeatureMiddleware:
 # ---------------------------------------------------------------------------
 # Central guard decision (used by the server.py monkey-patches)
 # ---------------------------------------------------------------------------
+def _refuse_no_llm_route(kind: str) -> None:
+    if _route_feature.get() == NO_LLM:
+        logger.error("[llm_policy] blocked billed %s call on a no-LLM route (bug: this "
+                     "endpoint must not call an LLM)", kind)
+        raise SystemLLMDisabled(None)
+
+
 def _decide(pol: Dict[str, Any], kind: str) -> None:
+    _refuse_no_llm_route(kind)
     if _grants.get():
         return
     user = _current_user.get()
@@ -480,6 +533,7 @@ async def check_billed_call(kind: str = "chat") -> None:
     (3) no route feature: image calls -> effective(group "images"),
         chat calls -> master switch. admin_bypass applies in (2)/(3).
     """
+    _refuse_no_llm_route(kind)
     if _grants.get():
         return
     _decide(await get_policy(), kind)
@@ -488,6 +542,7 @@ async def check_billed_call(kind: str = "chat") -> None:
 def check_billed_call_sync(kind: str = "chat") -> None:
     """Same decision for a *sync* entry point (cannot await the db): uses the
     cached policy, or the default policy if nothing is cached."""
+    _refuse_no_llm_route(kind)
     if _grants.get():
         return
     pol = _cache[1] if _cache is not None else _normalize(None)
@@ -496,9 +551,13 @@ def check_billed_call_sync(kind: str = "chat") -> None:
 
 def public_view(policy: Dict[str, Any], user: Any = None) -> Dict[str, Any]:
     """Body of GET /api/platform/llm-policy."""
+    # An API key is refused every billed call (see is_api_key_principal);
+    # for display it gets the policy as an ordinary user sees it, so
+    # `sitectl llm status` reports what the site does, not "all off".
+    view_user = None if is_api_key_principal(user) else user
     out = {
         "system_llm_enabled": bool(policy.get("system_llm_enabled")),
-        "features": effective_map(policy, user),
+        "features": effective_map(policy, view_user),
         "external_hint": policy.get("external_hint") or "",
         "registry": registry(),
     }

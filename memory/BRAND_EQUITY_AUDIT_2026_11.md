@@ -162,8 +162,7 @@ Cohen et al. 1999, Cronbach 1951, Fornell & Larcker 1981.
    JASP/R. An `omega_total` via a 1-factor ML fit is a reasonable later addition.
 6. **No test of BES change between waves** (dimensions are tested; BES is an index) —
    disclosed in the caveat. A respondent-level bootstrap of BES would be the honest option.
-7. `be.visual_identity` is in the policy's `images` group although it is a vision *analysis*
-   (text output); admins may expect it under `research` (WP1 decision).
+7. ~~`be.visual_identity` is in the policy's `images` group~~ — moved to `research` by WP9a.
 8. Old `ai_cache` narratives (insights, identity text) written before v2 are still shown;
    they are inputs/opinions, not scores, but were written against v1 numbers.
 

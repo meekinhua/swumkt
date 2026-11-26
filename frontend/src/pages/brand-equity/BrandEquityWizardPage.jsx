@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
 import { BeTopbar, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -180,14 +181,6 @@ const BrandEquityWizardPage = () => {
     pricing_tier: identity.pricing_tier,
     visual_assets: identity.visual_assets || [],
   };
-  // The dialog caches the prompt per URL; the body changes as the user types, so
-  // a content stamp in the query string makes it rebuild when the inputs change.
-  const extractStamp = (() => {
-    const str = JSON.stringify([extractBody.brand_name, extractBody.category, extractBody.description, extractBody.traits, extractBody.brand_promise, extractBody.pricing_tier, (extractBody.visual_assets || []).length]);
-    let h = 0; for (let i = 0; i < str.length; i += 1) h = (h * 31 + str.charCodeAt(i)) | 0;
-    return h >>> 0;
-  })();
-
   const runAIExtract = async () => {
     if (!identity.description?.trim() && !(identity.visual_assets || []).length && !identity.traits.length) {
       toast.error('กรอก description หรืออัปโหลดภาพอย่างน้อย 1 รายการก่อน');
@@ -254,7 +247,7 @@ const BrandEquityWizardPage = () => {
       setStep(3);
       toast.success((study?.id ? 'อัปเดต' : 'สร้าง') + ' · ' + (saved.questions?.length || 0) + ' คำถาม');
     } catch (e) {
-      toast.error((study?.id ? 'อัปเดต' : 'สร้าง') + ' study ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error((study?.id ? 'อัปเดต' : 'สร้าง') + ' study ไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setCreating(false);
   };
@@ -299,7 +292,7 @@ const BrandEquityWizardPage = () => {
       toast.success('บันทึกการแก้ไขเรียบร้อย');
       navigate(`/brand-equity/studies/${study.id}`);
     } catch (e) {
-      toast.error('บันทึกไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error('บันทึกไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setCreating(false);
   };
@@ -596,10 +589,11 @@ const BrandEquityWizardPage = () => {
                     icon={Sparkles}
                     onSystem={runAIExtract}
                     disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length && !(identity.traits || []).length)}
-                    className="be-btn-red"
+                    variant="plain"
+                    className="be-btn be-btn-red"
                     external={{
                       title: 'วิเคราะห์ identity ด้วย AI ของฉันเอง',
-                      promptRequest: { method: 'POST', url: `${API}/brand-equity/extract-identity/external-prompt?v=${extractStamp}`, data: extractBody },
+                      promptRequest: { method: 'POST', url: `${API}/brand-equity/extract-identity/external-prompt`, data: extractBody },
                       importUrl: `${API}/brand-equity/extract-identity/external-import`,
                       onImported: (d) => applyDerived(d, { source: 'external' }),
                     }}

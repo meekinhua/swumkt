@@ -4,7 +4,7 @@
  *
  *   const ext = useExternalDialog();
  *   ...
- *   ext.open({ title, promptRequest: {method:'POST', url, data}, importUrl?, onImported? });
+ *   ext.open({ title, promptRequest: {method:'POST', url, data}, importUrl?, importExtra?, onlyParts?, onImported? });
  *   ...
  *   {ext.dialog}
  *
@@ -34,6 +34,8 @@ export const useExternalDialog = () => {
       title={st.title}
       promptRequest={st.promptRequest}
       importUrl={st.importUrl}
+      importExtra={st.importExtra}
+      onlyParts={st.onlyParts}
       onImported={st.onImported}
     />
   );

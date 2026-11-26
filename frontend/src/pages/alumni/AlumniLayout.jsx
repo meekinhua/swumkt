@@ -23,7 +23,6 @@ const getActiveId = (path) => {
   if (path.startsWith('/alumni/trivia')) return 'trivia';
   if (path.startsWith('/alumni/profile')) return 'profile';
   if (path.startsWith('/alumni/onboarding')) return 'onboarding';
-  if (path.startsWith('/alumni/invites')) return 'invites';
   return '';
 };
 

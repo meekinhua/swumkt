@@ -77,6 +77,16 @@ def simulate_shares(study: Dict, method: str, result: Dict, products: List[Dict]
             col = f"{a['name']}_{lvl['value']}"
             if col in col_idx:
                 X[j, col_idx[col]] = 1.0
+            else:
+                # Not a coefficient: either the reference level (utility 0 by
+                # construction) or a level the model could not estimate
+                # (e.g. added after fielding) — the latter is NOT 0 and must
+                # not be simulated as if it were the reference (WP9a).
+                ref = (result.get("reference_levels") or {}).get(aid)
+                if ref is not None and lid != ref:
+                    raise SimulationError(
+                        f"ระดับ '{lvl['value']}' ของ {a.get('name')} ประมาณค่าไม่ได้ในแบบจำลองนี้ "
+                        "(ไม่มีข้อมูลการเลือกพอ เช่น เพิ่มภายหลังการเก็บข้อมูล) — เลือกระดับอื่นแทน")
             desc[a["name"]] = lvl["value"]
         missing = [attrs[a]["name"] for a in attrs if a not in (prod.get("levels") or {})]
         if missing:

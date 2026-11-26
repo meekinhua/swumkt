@@ -11,7 +11,6 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import AiActionButton from '@/components/AiActionButton';
 import { Provenance } from '@/pages/conjoint/ConjointInterpretationCard';
-import { useImportBodyExtra } from '@/pages/conjoint/useImportBodyExtra';
 import {
   ArrowLeft,
   ArrowRight,
@@ -46,10 +45,8 @@ const ConjointQualitativePage = () => {
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [provenance, setProvenance] = useState(null); // {source, model_label, imported_at} of the latest analysis
 
-  // The shared import dialog posts only {part_key, content, model_label}; add the
-  // inputs so the server saves them with the imported attributes (see useImportBodyExtra).
+  // The inputs travel with the import (importExtra) so the server saves them with the imported attributes.
   const qualImportUrl = `${API}/conjoint/studies/${studyId}/qualitative-analysis/external-import`;
-  useImportBodyExtra(qualImportUrl, { qualitative_data: qualitativeInputs, target_language: 'th' });
 
   useEffect(() => {
     if (user && token && studyId) {
@@ -339,6 +336,7 @@ const ConjointQualitativePage = () => {
                       data: { qualitative_data: qualitativeInputs, target_language: 'th' },
                     },
                     importUrl: qualImportUrl,
+                    importExtra: { qualitative_data: qualitativeInputs, target_language: 'th' },
                     onImported: async (data) => {
                       setAnalysisResult(data);
                       setProvenance({ source: data.source || 'external', model_label: data.model_label, imported_at: data.imported_at });

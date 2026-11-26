@@ -10,7 +10,8 @@ import { Download, Loader2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { API } from '@/App';
-import { saveBlob, apiErrorText } from './cjFormat';
+import { saveBlob } from './cjFormat';
+import { apiErrorTextAsync } from '@/lib/apiError';
 
 const ConjointExportMenu = ({ studyId, token, className = '' }) => {
   const [busy, setBusy] = useState('');
@@ -23,7 +24,7 @@ const ConjointExportMenu = ({ studyId, token, className = '' }) => {
       saveBlob(r.data, `conjoint_${studyId.slice(0, 8)}_long.${format}`);
       toast.success(format === 'xlsx' ? 'ดาวน์โหลด Excel แล้ว — มีชีต README และ codebook' : 'ดาวน์โหลด CSV แล้ว');
     } catch (e) {
-      toast.error(await apiErrorText(e, 'ดาวน์โหลดข้อมูลไม่สำเร็จ'));
+      toast.error(await apiErrorTextAsync(e, 'ดาวน์โหลดข้อมูลไม่สำเร็จ'));
     } finally { setBusy(''); }
   };
   return (

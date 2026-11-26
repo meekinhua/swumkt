@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import AlumniLayout from './AlumniLayout';
 import { Avatar, Chip, Icon, useToast } from './AlumniUI';
 import './alumni-styles.css';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -69,7 +70,7 @@ const AlumniTriviaPage = () => {
       }
       loadLeaderboard();
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'ส่งคำตอบไม่สำเร็จ');
+      toast.show(apiErrorText(e, 'ส่งคำตอบไม่สำเร็จ'));
     }
   };
 

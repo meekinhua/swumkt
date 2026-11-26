@@ -31,6 +31,7 @@ import {
   Image as ImageIcon,
   X
 } from 'lucide-react';
+import { apiErrorText } from '@/lib/apiError';
 
 // Component for managing profile image (composite image)
 const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attributes, token, onImageUpdated, referenceImages = [] }) => {
@@ -395,11 +396,15 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
   const [additionalPrompt, setAdditionalPrompt] = useState(''); // Additional prompt text
   const [promptSettings, setPromptSettings] = useState(null);
   
-  // Load prompt settings
+  // Load the admin-edited prompt templates (admin-only endpoint; everyone else uses the default
+  // text below — the server builds the real prompt for the external dialog anyway).
+  const { user: authUser } = useAuth();
+  const isAdminUser = authUser?.role === 'admin';
   useEffect(() => {
+    if (!isAdminUser || !token) return;
     const loadSettings = async () => {
       try {
-        const response = await axios.get(`${API}/api/admin/conjoint-image-settings`, {
+        const response = await axios.get(`${API}/admin/conjoint-image-settings`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setPromptSettings(response.data);
@@ -408,7 +413,7 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
       }
     };
     loadSettings();
-  }, [token]);
+  }, [token, isAdminUser]);
   
   // Generate prompt for this level - changes based on reference selection
   const generatePrompt = () => {
@@ -774,7 +779,8 @@ const ConjointDesignPage = () => {
   // Task count and respondents needed come from the backend so the number shown
   // before launch is the same rule the Results page's adequacy card checks.
   useEffect(() => {
-    if (!token || !studyId || attributes.length === 0) return;
+    // The endpoint reads the SAVED attributes (400 "No attributes defined" before the first save).
+    if (!token || !studyId || !(study?.attributes || []).length) return;
     let cancelled = false;
     const params = { alternatives_per_set: alternativesPerSet };
     if (numberOfSets) params.number_of_sets = numberOfSets;
@@ -786,7 +792,7 @@ const ConjointDesignPage = () => {
       .then((res) => { if (!cancelled) setDesignRec(res.data); })
       .catch(() => { if (!cancelled) setDesignRec(null); });
     return () => { cancelled = true; };
-  }, [token, studyId, alternativesPerSet, numberOfSets, attributes.length, study?.updated_at]);
+  }, [token, studyId, alternativesPerSet, numberOfSets, attributes.length, study?.updated_at, (study?.attributes || []).length]);
 
   const loadStudy = async () => {
     try {
@@ -881,7 +887,7 @@ const ConjointDesignPage = () => {
       await loadStudy();
     } catch (error) {
       console.error('Error starting survey:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถเริ่มสำรวจได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถเริ่มสำรวจได้'));
     } finally {
       setStartingSurvey(false);
     }
@@ -911,7 +917,7 @@ const ConjointDesignPage = () => {
       await loadStudy();
     } catch (error) {
       console.error('Error generating design:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้าง design ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถสร้าง design ได้'));
     } finally {
       setGenerating(false);
     }

@@ -19,3 +19,17 @@ export const apiErrorText = (error, fallback = 'เกิดข้อผิด�
 };
 
 export default apiErrorText;
+
+/**
+ * Same, for requests made with `responseType: 'blob'` (file downloads): the error
+ * body then arrives as a Blob holding the JSON. Async because reading a Blob is.
+ */
+export const apiErrorTextAsync = async (error, fallback) => {
+  const data = error && error.response && error.response.data;
+  if (data && typeof Blob !== 'undefined' && data instanceof Blob) {
+    let parsed = null;
+    try { parsed = JSON.parse(await data.text()); } catch { parsed = null; }
+    return apiErrorText({ response: { data: parsed } }, fallback || (error && error.message));
+  }
+  return apiErrorText(error, fallback || (error && error.message));
+};

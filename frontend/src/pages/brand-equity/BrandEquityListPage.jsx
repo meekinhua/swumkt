@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
 import { BeTopbar, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
 import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -31,7 +32,8 @@ const BrandEquityListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState('all'); // admin-only: 'all' | 'mine' | <email>
-  const [scores, setScores] = useState({}); // study_id -> {overall, awareness, ...}
+  const [scores, setScores] = useState({}); // study_id -> {overall, awareness, ..., schema_version, method_updated_from}
+  const [scoresSchema, setScoresSchema] = useState(null);
   const [loadErr, setLoadErr] = useState('');
   const [scoresErr, setScoresErr] = useState(false);
 
@@ -63,6 +65,7 @@ const BrandEquityListPage = () => {
     try {
       const r = await axios.get(`${API}/brand-equity/studies/scores`, authH);
       setScores(r.data.scores || {});
+      setScoresSchema(r.data.analysis_schema_version ?? null);
       setScoresErr(false);
     } catch (e) { setScoresErr(true); /* cards fall back to the "open to see" hint */ }
   };
@@ -105,7 +108,7 @@ const BrandEquityListPage = () => {
       loadStudies();
     } catch (e) {
       console.error(e);
-      window.alert('ล้างไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      window.alert('ล้างไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     } finally {
       setCleaningDecoys(false);
     }
@@ -121,7 +124,7 @@ const BrandEquityListPage = () => {
       setStudies(prev => prev.map(s => s.id === id ? { ...s, status } : s));
     } catch (e) {
       console.error(e);
-      alert('เปลี่ยนสถานะไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('เปลี่ยนสถานะไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -134,7 +137,7 @@ const BrandEquityListPage = () => {
       setTrashCount(c => c + 1);
     } catch (e) {
       console.error(e);
-      alert('ย้ายไปถังขยะไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('ย้ายไปถังขยะไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -148,7 +151,7 @@ const BrandEquityListPage = () => {
       loadStudies();
     } catch (e) {
       console.error(e);
-      alert('กู้คืนไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('กู้คืนไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -162,7 +165,7 @@ const BrandEquityListPage = () => {
       setTrashCount(c => Math.max(0, c - 1));
     } catch (e) {
       console.error(e);
-      alert('ลบถาวรไม่สำเร็จ — ' + (e.response?.data?.detail || 'ลองใหม่อีกครั้ง'));
+      alert('ลบถาวรไม่สำเร็จ — ' + (apiErrorText(e, 'ลองใหม่อีกครั้ง')));
     }
   };
 
@@ -202,6 +205,7 @@ const BrandEquityListPage = () => {
   };
   const filtered = filter === 'all' ? ownerScoped : ownerScoped.filter(s => s.status === filter);
 
+  const methodUpdated = Object.values(scores || {}).filter((x) => x && x.method_updated_from != null);
   return (
     <div className="be-root" data-testid="be-list-page">
       <BeTopbar user={user} onLogo={() => navigate('/dashboard')}/>
@@ -212,15 +216,19 @@ const BrandEquityListPage = () => {
               <span className="be-dot-sm" style={{ background: '#C8102E' }}/>
               MODULE · BRAND HEALTH CHECK
             </div>
-            <h1 className="be-h1">Brand Equity Studies</h1>
+            <h1 className="be-h1">Brand Health Check <span className="be-muted" style={{ fontSize: "0.55em", fontWeight: 500 }}>· การศึกษา Brand Equity ของฉัน</span></h1>
             <div className="be-muted be-small" style={{ marginTop: 8, maxWidth: 620, lineHeight: 1.6 }}>
               วัดสุขภาพแบรนด์ตามกรอบ Aaker 4 มิติ — สร้างแบบสอบถามจากแม่แบบมาตรฐาน คำนวณสถิติให้อัตโนมัติ
               และใช้ AI ช่วยวิเคราะห์คำตอบปลายเปิดได้ (ไม่บังคับ — ใช้ AI ของคุณเองหรือไม่ใช้ AI เลยก็ได้)
             </div>
-            <div className="be-tiny be-muted" style={{ marginTop: 6, maxWidth: 620, lineHeight: 1.55 }} data-testid="be-list-method-note">
-              คะแนนที่แสดงคำนวณด้วยวิธี v2 (พ.ย. 2026) ทั้งหมด — อาจต่างจากตัวเลขที่เคยเห็นหรือส่งออกไว้
-              โดยที่แบรนด์ไม่ได้เปลี่ยน (รายละเอียดอยู่ในหน้า dashboard ของแต่ละ study)
-            </div>
+            {/* Shown only when the server says some study's scores came from an older analysis version
+                (scores[id].method_updated_from != null) — not a blanket note. */}
+            {methodUpdated.length > 0 && (
+              <div className="be-tiny be-muted" style={{ marginTop: 6, maxWidth: 620, lineHeight: 1.55 }} data-testid="be-list-method-note">
+                วิธีคำนวณปรับปรุงแล้ว (v{scoresSchema || 2}) — ตัวเลขของ {methodUpdated.length} study อาจต่างจากที่เคยเห็นหรือส่งออกไว้
+                โดยที่แบรนด์ไม่ได้เปลี่ยน (รายละเอียดอยู่ในหน้า dashboard ของแต่ละ study)
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="be-btn" onClick={loadStudies} data-testid="be-list-refresh">

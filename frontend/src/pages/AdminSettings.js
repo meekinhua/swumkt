@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import AdminCourseManagement from '@/components/AdminCourseManagement';
 import LlmPolicyCard from '@/components/LlmPolicyCard';
+import { apiErrorText } from '@/lib/apiError';
 
 const AdminSettings = () => {
   const navigate = useNavigate();
@@ -388,7 +389,7 @@ const AdminSettings = () => {
       fetchAllSettings();
     } catch (error) {
       console.error('Error saving rearrange settings:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถบันทึกการตั้งค่าได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถบันทึกการตั้งค่าได้'));
     } finally {
       setSavingRearrange(false);
     }
@@ -522,7 +523,7 @@ const AdminSettings = () => {
       toast.success(`Image generated with ${response.data.model_used}!`);
     } catch (error) {
       console.error('Error generating test image:', error);
-      toast.error(error.response?.data?.detail || 'Failed to generate image');
+      toast.error(apiErrorText(error, 'Failed to generate image'));
     } finally {
       setGeneratingTest(false);
     }
@@ -611,7 +612,7 @@ const AdminSettings = () => {
       
     } catch (error) {
       console.error('Error running migration:', error);
-      const errorMsg = error.response?.data?.detail || error.message || 'Migration failed';
+      const errorMsg = apiErrorText(error, error.message || 'Migration failed');
       toast.error(`Migration error: ${errorMsg}`);
       
       // Show partial result if any

@@ -158,7 +158,7 @@ export const AddPersonForm = ({ token, term, attach, defaultGen, onCreated, onCa
     }
   };
 
-  const useCandidate = async (c) => {
+  const pickCandidate = async (c) => {
     setBusy(true); setErr(null);
     try {
       const body = attach.as === 'senior'
@@ -180,7 +180,7 @@ export const AddPersonForm = ({ token, term, attach, defaultGen, onCreated, onCa
         <p className="al-small al-muted" style={{ marginTop: 0 }}>มีคนเพิ่มชื่อคล้ายกันไว้แล้วในรุ่นนี้ ถ้าใช่ เลือกเลยจะได้ไม่ซ้ำ</p>
         <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
           {candidates.map(c => (
-            <button key={c.user_id} className="al-card" onClick={() => useCandidate(c)} disabled={busy}
+            <button key={c.user_id} className="al-card" onClick={() => pickCandidate(c)} disabled={busy}
               data-testid={`similar-pick-${c.user_id}`}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, textAlign: 'left', width: '100%' }}>
               <Avatar name={c.name} hue={c.avatar_hue || 200} size="sm" />
@@ -237,7 +237,7 @@ export const AddPersonForm = ({ token, term, attach, defaultGen, onCreated, onCa
         </fieldset>
         <div className="al-small" style={{ background: 'var(--al-blue-soft)', color: 'var(--al-blue-ink)', borderRadius: 10, padding: '8px 12px' }}
           data-testid="add-person-pdpa">
-          <Icon name="user" size={12} /> {PDPA_LINE}
+          <Icon name="user" size={12} /> {PDPA_LINE} · <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: 'inherit' }} data-testid="pdpa-privacy-link">อ่านนโยบายข้อมูลส่วนบุคคล</a>
         </div>
         {err && <div role="alert" className="al-small" style={{ color: 'var(--al-red-ink)' }} data-testid="add-person-error">{err}</div>}
         <div style={{ display: 'flex', gap: 8 }}>
@@ -334,7 +334,7 @@ export const GapPanel = ({ slot, me, attachNode, token, userName, onClose, onCha
                 <Icon name="bell" size={16} /> ไม่รู้ ให้ {nudgeTarget.nickname} ช่วยตามหา
               </button>
             )}
-            <div className="al-tiny al-muted" style={{ lineHeight: 1.5 }}>{PDPA_LINE}</div>
+            <div className="al-tiny al-muted" style={{ lineHeight: 1.5 }}>{PDPA_LINE} · <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: 'inherit' }} data-testid="pdpa-privacy-link">อ่านนโยบายข้อมูลส่วนบุคคล</a></div>
             {err && <div role="alert" className="al-small" style={{ color: 'var(--al-red-ink)' }}>{err}</div>}
           </div>
         )}

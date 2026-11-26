@@ -1,11 +1,10 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import '@/App.css';
 
 // ============ EAGER imports — small / critical for first paint ============
 import HomePage from '@/pages/HomePage';
-import LandingPage from '@/pages/LandingPage';
 import LearnIndexPage from '@/pages/learn/LearnIndexPage';
 import CmsArticleView from '@/pages/learn/CmsArticleView';
 import AboutSwuMarketing from '@/pages/AboutSwuMarketing';
@@ -78,6 +77,7 @@ const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'));
 
 // Alumni (paused module — perfect for lazy)
 const AlumniLandingPage = lazy(() => import('@/pages/alumni/AlumniLandingPage'));
+const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
 const AlumniOnboardingPage = lazy(() => import('@/pages/alumni/AlumniOnboardingPage'));
 const AlumniTreePage = lazy(() => import('@/pages/alumni/AlumniTreePage'));
 const AlumniProfilePage = lazy(() => import('@/pages/alumni/AlumniProfilePage'));
@@ -214,6 +214,13 @@ const RouteFallback = () => (
   </div>
 );
 
+// In-app redirect that keeps route params and the query string.
+const ParamRedirect = ({ to }) => {
+  const params = useParams();
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to(params)}${search}${hash}`} replace />;
+};
+
 // External redirect helper — sends the browser to a non-SPA backend path.
 const ExternalRedirect = ({ to }) => {
   useEffect(() => { window.location.replace(to); }, [to]);
@@ -230,13 +237,13 @@ function App() {
               <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/meekintube" element={<ExternalRedirect to="/api/meekintube/" />} />
-            <Route path="/legacy-home" element={<LandingPage />} />
             <Route path="/learn" element={<LearnIndexPage />} />
             <Route path="/learn/:slug" element={<CmsArticleView />} />
             <Route path="/about/swu-marketing" element={<AboutSwuMarketing />} />
             <Route path="/people" element={<PeopleIndexPage />} />
             <Route path="/people/:slug" element={<PeopleProfilePage />} />
             <Route path="/publications" element={<PublicationsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/content" element={<ContentBrowse />} />
@@ -334,26 +341,18 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/research/conjoint/:studyId/results"
-              element={
-                <ProtectedRoute>
-                  <ConjointResultsPage />
-                </ProtectedRoute>
-              }
-            />
+            {/* Canonical Conjoint results URL. Not wrapped in ProtectedRoute: a study with
+                is_public_result is viewable anonymously (the page sends a 401 to /login itself).
+                The two older URLs (share links already sent out use /conjoint/results/:id)
+                redirect here, keeping the query string. */}
+            <Route path="/research/conjoint/:studyId/results" element={<ConjointResultsPage />} />
             <Route
               path="/market-research/conjoint-analysis/:studyId/results"
-              element={
-                <ProtectedRoute>
-                  <ConjointResultsPage />
-                </ProtectedRoute>
-              }
+              element={<ParamRedirect to={(p) => `/research/conjoint/${p.studyId}/results`} />}
             />
-            {/* Public Conjoint Results - No authentication required */}
             <Route
               path="/conjoint/results/:studyId"
-              element={<ConjointResultsPage />}
+              element={<ParamRedirect to={(p) => `/research/conjoint/${p.studyId}/results`} />}
             />
 
             <Route

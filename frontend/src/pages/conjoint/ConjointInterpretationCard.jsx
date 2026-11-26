@@ -6,8 +6,8 @@
  * - External path (always): prompt + paste-back through <ExternalAiDialog> using the
  *   SAME method / compare_all as the current view, so the pasted answer shows in place.
  * - Provenance is always shown: "เขียนโดย AI ของระบบ" vs "นำเข้าจาก <model> เมื่อ ...".
- * - When the system LLM is off, a cached interpretation (system or imported) is fetched
- *   on load with a private axios instance (no global 409 toast).
+ * - A saved interpretation (system or imported) is loaded on open with the read-only
+ *   GET ai-interpretation (never bills, never 409).
  *
  * The interpretation cache on the server is NOT keyed by the Results-page filters;
  * it always describes all respondents — the card says so when a filter is active.
@@ -22,8 +22,8 @@ import AiActionButton from '@/components/AiActionButton';
 import { useLlmPolicy } from '@/hooks/useLlmPolicy';
 import { showLlmExternalOnlyToast } from '@/lib/llmErrors';
 import { API } from '@/App';
-import { useImportBodyExtra } from './useImportBodyExtra';
-import { fmtDateTime, methodName, apiErrorText } from './cjFormat';
+import { fmtDateTime, methodName } from './cjFormat';
+import { apiErrorTextAsync } from '@/lib/apiError';
 
 const FEATURE = 'conjoint.interpretation';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -57,7 +57,7 @@ const ConjointInterpretationCard = ({
   studyId, token, method, compareAll, onCompareAllChange, respondentCount,
   filterActive, isOwnerOrAdmin, interpretation, onInterpretation, onOpenThesis,
 }) => {
-  const { loading: policyLoading, systemAllowed } = useLlmPolicy();
+  const { systemAllowed } = useLlmPolicy();
   const [error, setError] = useState('');
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
@@ -65,36 +65,28 @@ const ConjointInterpretationCard = ({
   const body = { method, compare_all: !!compareAll };
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const importUrl = isOwnerOrAdmin ? `${API}/conjoint/studies/${studyId}/ai-interpretation/external-import` : undefined;
-  useImportBodyExtra(importUrl, body);
 
   const allowed = systemAllowed(FEATURE);
 
-  // Show an already-written interpretation (system or imported) when the system LLM is off.
-  // POST ai-interpretation is read-only in that case: cached -> "ready", else 409/400 —
-  // and a 409 is a console error, so we only peek automatically when we know (remembered
-  // in this browser) that one was shown/imported before; otherwise the user can ask with the
-  // "ดูคำตีความที่บันทึกไว้" link. (A GET "cached only" endpoint would remove this wart.)
-  const memoKey = `swumkt.cj.interp.${studyId}.${method}.${compareAll ? 'all' : 'one'}`;
-  const remember = () => { try { localStorage.setItem(memoKey, '1'); } catch { /* ignore */ } };
-  const remembered = () => { try { return localStorage.getItem(memoKey) === '1'; } catch { return false; } };
-
-  const peekCached = useCallback(async (silent) => {
-    const peek = axios.create(); // own instance: no global 409 toast
+  // Load a saved interpretation (system or imported) for this method / mode on open.
+  // GET is the read-only twin of the POST: cached -> the same body, else {cached:false};
+  // it never bills, never 409s and never starts a job, so it is safe whatever the policy says.
+  const loadSaved = useCallback(async (silent) => {
     try {
-      const r = await peek.post(`${API}/conjoint/studies/${studyId}/ai-interpretation`, { method, compare_all: !!compareAll }, { headers });
+      const r = await axios.get(`${API}/conjoint/studies/${studyId}/ai-interpretation`, {
+        headers, params: { method, compare_all: !!compareAll },
+      });
+      if (!mounted.current) return false;
       if (r.data?.status === 'ready' && r.data.interpretation) { onInterpretation(r.data); return true; }
-    } catch { /* not cached / not allowed */ }
+    } catch { /* no saved interpretation / not allowed to view */ }
     if (!silent) toast.info('ยังไม่มีคำตีความที่บันทึกไว้สำหรับมุมมองนี้ — กดปุ่มด้านบนเพื่อสร้าง');
     return false;
-  }, [studyId, method, compareAll, token, onInterpretation]);
+  }, [studyId, method, compareAll, token, onInterpretation]); // eslint-disable-line
 
   useEffect(() => {
-    if (policyLoading || allowed || !studyId || (respondentCount || 0) < 10) return;
-    if (remembered()) peekCached(true);
-  }, [policyLoading, allowed, studyId, method, compareAll, respondentCount]);
-
-  // remember that this view has an interpretation so the next visit shows it straight away
-  useEffect(() => { if (interpretation) remember(); }, [interpretation, memoKey]);
+    if (!studyId || (respondentCount || 0) < 10) return;
+    loadSaved(true);
+  }, [studyId, method, compareAll, respondentCount]); // eslint-disable-line
 
   // A result from another method / mode must not stay on screen under the wrong heading.
   useEffect(() => {
@@ -111,7 +103,7 @@ const ConjointInterpretationCard = ({
       r = await axios.post(`${API}/conjoint/studies/${studyId}/ai-interpretation`, body, { headers });
     } catch (e) {
       if (e?.response?.status === 409) throw e; // llm_external_only -> AiActionButton opens the dialog
-      const msg = await apiErrorText(e, 'AI วิเคราะห์ไม่สำเร็จ');
+      const msg = await apiErrorTextAsync(e, 'AI วิเคราะห์ไม่สำเร็จ');
       setError(msg);
       toast.error(msg);
       return;
@@ -146,7 +138,8 @@ const ConjointInterpretationCard = ({
     title: 'ตีความผลด้วย AI ของฉันเอง',
     promptRequest: { method: 'POST', url: `${API}/conjoint/studies/${studyId}/ai-interpretation/external-prompt`, data: body },
     importUrl,
-    onImported: (data) => { onInterpretation(data); toast.success('นำเข้าคำตีความแล้ว'); },
+    importExtra: body,
+    onImported: (data) => { onInterpretation(data); },
   };
 
   return (
@@ -207,11 +200,6 @@ const ConjointInterpretationCard = ({
             )}
           </div>
           {tooFew && <p className="mt-3 text-xs text-gray-500">ต้องมีผู้ตอบอย่างน้อย 10 คนจึงจะตีความได้</p>}
-          {!tooFew && !allowed && (
-            <p className="mt-3 text-xs text-gray-500">
-              เคยนำเข้าคำตีความไว้แล้ว? <button type="button" className="font-semibold underline" onClick={() => peekCached(false)} data-testid="ai-show-saved">ดูคำตีความที่บันทึกไว้</button>
-            </p>
-          )}
           {error && (
             <p className="mt-3 text-sm text-red-600" role="alert" data-testid="ai-error">
               {error} <button type="button" className="underline" onClick={runSystem}>ลองใหม่</button>
@@ -246,6 +234,12 @@ const ConjointInterpretationCard = ({
               )}
             </div>
           </div>
+          {(filterActive || interpretation.filter_mismatch) && interpretation.sample_note_th && (
+            <p className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900" data-testid="ai-sample-note">
+              {interpretation.sample_note_th}
+              {interpretation.sample_respondent_count ? ` (n = ${interpretation.sample_respondent_count})` : ''}
+            </p>
+          )}
           <div className="whitespace-pre-wrap break-words leading-relaxed text-gray-800" data-testid="ai-interpretation-text">{interpretation.interpretation}</div>
           <p className="mt-4 border-t pt-3 text-xs text-gray-500">
             ข้อความนี้เขียนโดย AI จากสถิติในหน้านี้ — ตรวจสอบกับตัวเลขก่อนนำไปอ้างอิง และระบุการใช้ AI ในงานวิชาการตามข้อกำหนดของสถาบัน

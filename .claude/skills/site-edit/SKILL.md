@@ -163,7 +163,13 @@ a reply, a file in the repo, or a commit.
 
 `--preset operator` = `cms.*` + `platform.settings` + `research.read` + `research.ai`;
 `--preset research` = `research.read` + `research.ai`. A key acts as an admin within its scopes, so
-`research.read` can read every user's studies — hand it out accordingly. If a command answers
+**`research.read` reads every user's studies, including respondents' answers and demographics**
+(`GET …/responses`, `export-long`, `export/raw`) — hand it out accordingly, and never paste respondent-level
+data into a chat LLM; the prompt packs already contain only aggregates. `research.read` cannot write
+anything (it also covers the read-only conjoint `POST …/export-thesis/no-ai` and `POST …/simulate`);
+`research.ai` is what imports results and the brand-equity code frame (`coding/import-csv`,
+`DELETE …/coding`). **A key never spends platform AI money**: it is refused every system-LLM call
+whatever the policy says (no admin bypass) — the research commands use the external-LLM path only. If a command answers
 `refused: API key '…' lacks the '…' scope`, say which scope is missing and ask; do not look for a way around it.
 
 ### Is the site up?

@@ -38,6 +38,7 @@ import {
   RotateCcw,
   XCircle
 } from 'lucide-react';
+import { apiErrorText } from '@/lib/apiError';
 
 const ConjointAnalysisTool = () => {
   const navigate = useNavigate();
@@ -102,7 +103,7 @@ const ConjointAnalysisTool = () => {
       loadTrashedStudies();
     } catch (error) {
       console.error('Error restoring study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถกู้คืนได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถกู้คืนได้'));
     } finally {
       setRestoringId(null);
     }
@@ -121,7 +122,7 @@ const ConjointAnalysisTool = () => {
       loadTrashedStudies();
     } catch (error) {
       console.error('Error purging study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบถาวรได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบถาวรได้'));
     } finally {
       setPurgingId(null);
     }
@@ -180,7 +181,7 @@ const ConjointAnalysisTool = () => {
       loadStudies(); // Reload list
     } catch (error) {
       console.error('Error deleting study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบการศึกษาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบการศึกษาได้'));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -200,7 +201,7 @@ const ConjointAnalysisTool = () => {
       loadStudies();
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถอัปเดตสถานะได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถอัปเดตสถานะได้'));
     }
   };
 

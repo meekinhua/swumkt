@@ -244,6 +244,7 @@ export const BeMethodology = ({
         <button type="button"
                 className="be-appendix-toggle"
                 data-testid="be-methodology-toggle"
+                aria-expanded={methodOpen}
                 onClick={() => setMethodOpen(!methodOpen)}>
           <div className="be-appendix-toggle-text">
             <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--be-red)' }}>

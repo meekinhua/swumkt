@@ -103,6 +103,16 @@ SCOPE_RULES: Sequence[Tuple[str, Set[str], re.Pattern]] = (
      re.compile(r"^/api/" + _RESEARCH + r"/studies/[^/]+/(.+/)?external-prompt/?$")),
     ("research.read", {"GET", "HEAD"},
      re.compile(r"^/api/" + _RESEARCH + r"/studies/[^/]+/(.+/)?external-pack/?$")),
+    # Read-only computations that happen to take a POST body and never call an
+    # LLM: the no-AI thesis document and the market simulator (conjoint).
+    ("research.read", {"POST"},
+     re.compile(r"^/api/conjoint/studies/[^/]+/(export-thesis/no-ai|simulate)/?$")),
+    # Manual code frame (brand equity): writes the study's open-ended coding,
+    # no LLM — same trust level as importing an external-LLM result.
+    ("research.ai", {"POST"},
+     re.compile(r"^/api/brand-equity/studies/[^/]+/coding/import-csv/?$")),
+    ("research.ai", {"DELETE"},
+     re.compile(r"^/api/brand-equity/studies/[^/]+/coding/?$")),
     # Study lists, study detail, results, analyses, exports, job status.
     ("research.read", {"GET", "HEAD"}, re.compile(r"^/api/" + _RESEARCH + r"/studies(/.*)?$")),
     ("research.read", {"GET", "HEAD"},

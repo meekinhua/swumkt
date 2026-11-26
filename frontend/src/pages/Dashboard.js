@@ -20,7 +20,7 @@ import { apiErrorText } from '@/lib/apiError';
 const STUDY_SOURCES = [
   { type: 'Conjoint', url: 'conjoint/studies', pick: (d) => d.studies,
     map: (s) => ({ title: s.title, n: s.respondent_count, path: `/research/conjoint/${s.id}/results` }) },
-  { type: 'Brand Equity', url: 'brand-equity/studies', pick: (d) => d.studies,
+  { type: 'Brand Health Check', url: 'brand-equity/studies', pick: (d) => d.studies,
     map: (s) => ({ title: s.brand?.name || s.title, n: s.response_count, path: `/brand-equity/studies/${s.id}` }) },
   { type: 'Customer Journey', url: 'journey/studies', pick: (d) => d.studies,
     map: (s) => ({ title: s.title, n: s.response_count,

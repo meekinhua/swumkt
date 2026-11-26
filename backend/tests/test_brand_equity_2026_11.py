@@ -11,6 +11,7 @@ import os
 import random
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -567,8 +568,18 @@ def api():
         llm_policy.set_current_user(holder["user"])
         return holder["user"]
 
+    # The module-level router keeps every route ever registered on it; when
+    # another suite imported server.py first (test_llm_policy /
+    # test_llm_call_sites), its routes — bound to server.get_current_user —
+    # would shadow ours. Register on a fresh router (as the conjoint suite does).
+    original_router = BE.brand_equity_router
+    BE.brand_equity_router = BE.APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
+    try:
+        routes = BE.get_brand_equity_routes(db, cur, cur)
+    finally:
+        BE.brand_equity_router = original_router
     app = FastAPI()
-    app.include_router(BE.get_brand_equity_routes(db, cur, cur), prefix="/api")
+    app.include_router(routes, prefix="/api")
     client = TestClient(app)
 
     async def set_policy(on: bool):
@@ -895,3 +906,121 @@ def test_dashboard_exclude_flagged_and_methods_paragraph(api):
     d = api.client.get(f"/api/brand-equity/studies/{api.sid}/dashboard", params={"exclude_flagged": "true"}).json()
     assert d["quality_filter"]["exclude_flagged"] is True
     assert "Cronbach" in d["methods_paragraph_th"] and "POMP" in d["methods_paragraph_th"]
+
+
+# ===========================================================================
+# WP9a integration (2026-11-26)
+# ===========================================================================
+def test_failed_system_job_keeps_imported_results_and_their_provenance(api, monkeypatch):
+    """Reproduced: after a FAILED system ai-analyze, sections_meta.coding said
+    "system" and imported themes/insights were wiped — the UI said "coded by
+    system AI" over manual/external coding."""
+    c, sid = api.client, api.sid
+    seg = json.dumps({"seg": ["B"]})
+    pr = c.get(f"/api/brand-equity/studies/{sid}/ai-analyze/external-prompt", params={"segments": seg}).json()
+    for part in pr["parts"]:
+        r = c.post(f"/api/brand-equity/studies/{sid}/ai-analyze/external-import", params={"segments": seg},
+                   json={"part_key": part["key"], "content": fake_llm_answer(part), "model_label": "Claude (ext)"})
+        assert r.status_code == 200, r.text
+    before = c.get(f"/api/brand-equity/studies/{sid}/ai-status", params={"segments": seg}).json()
+    assert before["sections_meta"]["coding"]["source"] == "external" and before["master_insights"]
+
+    api.policy(True)
+
+    async def garbage(prompt, system=""):
+        return "ขอโทษครับ ผมทำไม่ได้"
+    monkeypatch.setattr(BE, "_gemini_call", garbage)
+    assert c.post(f"/api/brand-equity/studies/{sid}/ai-analyze", params={"segments": seg}).status_code == 200
+    st = c.get(f"/api/brand-equity/studies/{sid}/ai-status", params={"segments": seg}).json()
+    assert st["status"] == "error" and st["errors"]
+    assert all(m["source"] == "external" for m in st["sections_meta"].values()), st["sections_meta"]
+    assert st["master_insights"] == before["master_insights"]
+    assert st["themes_by_question"] == before["themes_by_question"]
+    assert st["identity_image"] == before["identity_image"]
+    assert st["source"] == "external"
+    api.policy(False)
+
+
+def test_dev_sim_smart_fake_drives_the_system_job_to_ready(api, monkeypatch):
+    """dev_sim's fake LLM answers the real prompts schema-validly (A9)."""
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+    import dev_sim
+    api.policy(True)
+
+    async def smart(prompt, system=""):
+        return dev_sim.smart_reply(system, prompt) or ""
+    monkeypatch.setattr(BE, "_gemini_call", smart)
+    seg = json.dumps({"seg": ["A", "B", "C"]})
+    assert api.client.post(f"/api/brand-equity/studies/{api.sid}/ai-analyze", params={"segments": seg}).status_code == 200
+    st = api.client.get(f"/api/brand-equity/studies/{api.sid}/ai-status", params={"segments": seg}).json()
+    assert st["status"] == "ready", st.get("errors")
+    assert st["sections_meta"]["coding"]["source"] == "system" and st["master_insights"]
+    # The translation and visual-identity prompts get valid answers too.
+    sysm, pr = BE._translation_prompt(["แพงเกินไป", "อร่อย"])
+    assert BX.parse_translations(dev_sim.smart_reply(sysm, pr), 2) == ["sim-1", "sim-2"]
+    sysv, prv = BE._visual_identity_prompt("Kaffe", "กาแฟ", "", ["Modern"], None, None, [])
+    assert BX.validate_visual_identity(BX.extract_json(dev_sim.smart_reply(sysv, prv)))["derived_traits"]
+    api.policy(False)
+
+
+def test_exclude_flagged_response_is_unambiguous(api):
+    c, sid = api.client, api.sid
+    # Add an obvious straight-liner + duplicate so something is excluded.
+    q = [x for x in api.study["questions"] if x["type"] in ("likert_5", "likert_7")]
+    ans = [{"question_id": x["id"], "value": 4} for x in q]
+    for _ in range(2):
+        rr = c.post(f"/api/brand-equity/public/{api.study['share_token']}/respond",
+                    json={"answers": ans, "demographics": {"seg": "A"}, "duration_sec": 200})
+        assert rr.status_code == 200, rr.text
+    full = c.get(f"/api/brand-equity/studies/{sid}/dashboard").json()
+    ex = c.get(f"/api/brand-equity/studies/{sid}/dashboard", params={"exclude_flagged": "true"}).json()
+    qf = ex["quality_filter"]
+    assert qf["exclude_flagged"] is True and qf["excluded"] >= 2
+    assert qf["aggregate_data_quality_scope"] == "remaining_after_exclusion" and qf["note_th"]
+    assert qf["n_before_exclusion"] == full["responses_total"]
+    fs = qf["full_sample_data_quality"]
+    assert fs["n_flagged_excludable"] == qf["excluded"]
+    assert fs["flags"] == full["aggregate"]["data_quality"]["flags"]
+    assert ex["aggregate"]["data_quality"]["n_flagged_excludable"] < fs["n_flagged_excludable"]
+    assert full["quality_filter"]["aggregate_data_quality_scope"] == "all_responses_in_view"
+
+
+def test_scores_expose_schema_version_and_method_update(api):
+    c, sid = api.client, api.sid
+    asyncio.run(api.db.brand_studies.update_one({"id": sid}, {"$set": {"bes_cache": {
+        "response_count": -1, "weights_sig": "{}", "schema_version": 1, "scores": {"overall": 50}}}}))
+    lst = c.get("/api/brand-equity/studies").json()
+    assert lst["analysis_schema_version"] == BE.BE_ANALYSIS_SCHEMA_VERSION
+    sc = c.get("/api/brand-equity/studies/scores").json()
+    assert sc["analysis_schema_version"] == BE.BE_ANALYSIS_SCHEMA_VERSION
+    row = sc["scores"][sid]
+    assert row["schema_version"] == BE.BE_ANALYSIS_SCHEMA_VERSION and row["method_updated_from"] == 1
+    # Served from the refreshed cache next time, still remembering the update.
+    assert c.get("/api/brand-equity/studies/scores").json()["scores"][sid]["method_updated_from"] == 1
+
+
+def test_stale_running_job_is_reported_and_restartable(api):
+    c, sid = api.client, api.sid
+    seg = json.dumps({"seg": ["Z"]})
+    sig = BE._filter_signature(None, None, {"seg": ["Z"]})
+    old = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    asyncio.run(api.db.brand_studies.update_one({"id": sid}, {"$set": {
+        f"ai_cache_by_filter.{sig}": {"status": "running", "updated_at": old}}}))
+    st = c.get(f"/api/brand-equity/studies/{sid}/ai-status", params={"segments": seg}).json()
+    assert st["status"] == "error" and st["error_code"] == "stale_job"
+    api.policy(False)
+    # Not "already in progress" any more: the policy check is reached (409 with the LLM off).
+    r = c.post(f"/api/brand-equity/studies/{sid}/ai-analyze", params={"segments": seg})
+    assert r.status_code == 409
+
+
+def test_thesis_status_requires_ownership(api):
+    stranger = SimpleNamespace(id="u2", email="other@example.com", role="current_student")
+    saved = api.holder["user"]
+    api.holder["user"] = stranger
+    try:
+        r = api.client.get(f"/api/brand-equity/studies/{api.sid}/thesis-ai-status/whatever")
+        assert r.status_code == 403
+    finally:
+        api.holder["user"] = saved

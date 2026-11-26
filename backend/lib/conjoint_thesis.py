@@ -86,6 +86,33 @@ def md_table(header: List[str], rows: List[List[Any]]) -> str:
 # --------------------------------------------------------------------------
 # facts
 # --------------------------------------------------------------------------
+def randomization_text_th(rnd: Dict[str, Any]) -> str:
+    """Honest description of task-order / position randomisation, from the data.
+
+    The survey page randomises per respondent since 2026-11 and records what was
+    shown; responses collected before that saw the design order. Never claim
+    more than the recorded data shows.
+    """
+    status = (rnd or {}).get("status")
+    n = (rnd or {}).get("n_responses", 0)
+    k = (rnd or {}).get("n_with_display_order", 0)
+    what = []
+    if (rnd or {}).get("order_varies"):
+        what.append("ลำดับของชุดคำถาม")
+    if (rnd or {}).get("positions_vary"):
+        what.append("ตำแหน่งของทางเลือกในแต่ละชุด")
+    what_txt = " และ".join(what) if what else "ลำดับของชุดคำถามและตำแหน่งของทางเลือก"
+    if status == "randomised":
+        return (f"ผู้ตอบทุกคนเห็นชุดคำถามชุดเดียวกัน (1 version) แต่ระบบสุ่ม{what_txt}แยกตามผู้ตอบแต่ละคน "
+                "และบันทึกลำดับที่แสดงจริงไว้ในข้อมูล (ไม่มี blocking หลาย version)")
+    if status == "mixed":
+        return (f"ผู้ตอบ {k} จาก {n} คนได้รับการสุ่ม{what_txt}แยกตามผู้ตอบแต่ละคน (บันทึกลำดับที่แสดงจริงไว้) "
+                f"ส่วนอีก {n - k} คนซึ่งตอบก่อนที่ระบบจะเพิ่มการสุ่ม เห็นชุดคำถามในลำดับเดียวกันและตำแหน่งทางเลือกเหมือนกัน "
+                "ตามแผนการทดลอง — ต้องรายงานทั้งสองส่วนตามจริง (1 version, ไม่มี blocking)")
+    return ("ผู้ตอบทุกคนเห็นชุดคำถามชุดเดียวกัน (1 version) ในลำดับเดียวกัน และตำแหน่งของทางเลือกเหมือนกัน "
+            "— ระบบไม่ได้สุ่มลำดับชุดคำถามหรือสุ่มตำแหน่งทางเลือก")
+
+
 def design_facts(study: Dict, responses: List[Dict]) -> Dict[str, Any]:
     from routes.conjoint import recommend_sample_size, calculate_optimal_choice_sets
 
@@ -127,6 +154,9 @@ def design_facts(study: Dict, responses: List[Dict]) -> Dict[str, Any]:
             "sets_with_overlap": overl,
         })
 
+    from lib.conjoint_quality import randomization_summary
+    rnd = randomization_summary(study, responses)
+
     n = len(responses)
     c_max = max(levels) if levels else 1
     jo_score = (n * len(cs) * alts / c_max) if c_max else 0
@@ -150,10 +180,8 @@ def design_facts(study: Dict, responses: List[Dict]) -> Dict[str, Any]:
             "ไม่มีทางเลือกซ้ำภายในชุดเดียวกัน (Huber & Zwerina, 1996)"
         ),
         "versions": 1,
-        "randomization_th": (
-            "ผู้ตอบทุกคนเห็นชุดคำถามชุดเดียวกัน (1 version) ในลำดับเดียวกัน และตำแหน่งของทางเลือกเหมือนกัน "
-            "— ระบบไม่ได้สุ่มลำดับชุดคำถามหรือสุ่มตำแหน่งทางเลือก"
-        ),
+        "randomization": rnd,
+        "randomization_th": randomization_text_th(rnd),
         "none_option": False,
         "holdout_tasks": 0,
         "coding_th": "Dummy coding โดยระดับอ้างอิง (reference level) คือระดับสุดท้ายที่ประกาศไว้และถูกแสดงจริง (utility = 0)",

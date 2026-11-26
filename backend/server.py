@@ -569,6 +569,9 @@ api_router = APIRouter(prefix="/api")
 # guard's fallback for call sites without an explicit require_system_llm), and
 # turn a guard refusal anywhere into the documented 409 body.
 app.add_middleware(llm_policy.RouteFeatureMiddleware)
+# Cap pasted AI answers / code-frame CSVs (2 MB) — see lib/body_limit.py.
+from lib.body_limit import BodySizeLimitMiddleware
+app.add_middleware(BodySizeLimitMiddleware)
 
 
 @app.exception_handler(llm_policy.SystemLLMDisabled)
@@ -1869,8 +1872,30 @@ async def close_survey(
     
     return {"message": "Survey closed successfully"}
 
-async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
-    """Get current user if authenticated, None if not"""
+async def get_current_user_optional(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+):
+    """Get current user if authenticated, None if not.
+
+    A scoped API key goes through the same scope gate as in get_current_user
+    (WP9a): before, a key on an optional-auth route was silently treated as
+    anonymous, so `research.read` could not reach e.g. the conjoint
+    interpretation prompt / WTP / simulator of a private study, and a key with
+    no scope for a route still got the anonymous view of it. A key that is
+    presented but not allowed is refused (401/403), never downgraded.
+    """
+    if credentials and api_keys.looks_like_api_key(credentials.credentials):
+        try:
+            key_doc = await api_keys.authorize(
+                db, credentials.credentials, request.method, request.url.path)
+        except api_keys.KeyRejected as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
+        await api_keys.touch(db, key_doc["id"])
+        request.state.api_key_scopes = key_doc.get("scopes") or []
+        user = _principal_for_key(key_doc)
+        llm_policy.set_current_user(user)
+        return user
     user = await _resolve_current_user_optional(credentials)
     if user is not None:
         llm_policy.set_current_user(user)

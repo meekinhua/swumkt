@@ -841,9 +841,8 @@ def register_line_routes(router, svc: AlumniService, db, get_current_user, get_o
                 "revealed_at": now_iso(), "guessed_correctly": False, "gave_up": True}})
             inv = await db.alumni_invites.find_one({"code": code}, {"_id": 0})
         prof = await svc.profile(inv["inviter_id"])
-        inviter = await H["_enrich_alumni"](dict(prof)) if prof else None
-        if inviter:
-            inviter.pop("email", None)
+        from routes.alumni import public_inviter_card   # public endpoint: whitelist only
+        inviter = public_inviter_card(await H["_enrich_alumni"](dict(prof)) if prof else None)
         path = await svc.primary_path_up(inv["inviter_id"], statuses=G.ESTABLISHED)
         meta = await svc.nodes_meta([n for n, _ in path], viewer_is_member=False)
         line = [{"user_id": n, "nickname": (meta.get(n) or {}).get("nickname"), "gen": (meta.get(n) or {}).get("gen"),

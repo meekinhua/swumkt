@@ -8,7 +8,6 @@ import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { apiErrorText } from '@/lib/apiError';
 import { useAiGate } from '@/components/AiPolicyNote';
 import { useExternalDialog } from '@/hooks/useExternalDialog';
-import { withBodyKey } from '@/lib/aiTextParse';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -40,7 +39,7 @@ const CmsLandingPage = () => {
   // Images: the user gets the prompt for their own image tool, then uploads the picture with the normal upload button.
   const imagePromptDialog = (prompt, aspect) => ext.open({
     title: 'พรอมต์สร้างภาพ — ใช้กับเครื่องมือสร้างภาพของคุณ แล้วอัปโหลดภาพด้วยปุ่ม Upload',
-    promptRequest: { method: 'POST', url: withBodyKey(`${API}/cms/ai/generate-image/external-prompt`, { prompt, aspect }), data: { prompt, aspect } },
+    promptRequest: { method: 'POST', url: `${API}/cms/ai/generate-image/external-prompt`, data: { prompt, aspect } },
   });
   const [articlesPool, setArticlesPool] = useState([]);
   const [brandsPool, setBrandsPool] = useState([]);
@@ -74,7 +73,7 @@ const CmsLandingPage = () => {
     try {
       await axios.put(`${API}/cms/landing`, doc, auth());
       toast.success('บันทึก + เผยแพร่หน้าแรกเรียบร้อย');
-    } catch (e) { toast.error(e.response?.data?.detail || 'บันทึกไม่สำเร็จ'); }
+    } catch (e) { toast.error(apiErrorText(e, 'บันทึกไม่สำเร็จ')); }
     finally { setSaving(false); }
   };
 

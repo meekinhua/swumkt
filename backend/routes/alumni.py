@@ -1,5 +1,5 @@
 """
-Alumni Network Routes — "สายตระกูล MKT SWU"
+Alumni Network Routes — "สายเทค MKT SWU" (formerly "สายตระกูล")
 ================================================
 Phase 1 MVP: Landing, Onboarding, Family Tree, Profile
 - Bloodline system (พี่ take → ปู่ → ทวด → เทียด)
@@ -138,13 +138,31 @@ BADGE_RULES = [
     ("reviewer", "นักรีวิว", "⭐", lambda p, s: s.get("reviews_written", 0) >= 3),
     ("iq_master", "IQ Master", "🧠", lambda p, s: s.get("trivia_streak", 0) >= 7),
     ("streak_7", "ไฟลุก 7 วัน", "🔥", lambda p, s: p.get("streak_days", 0) >= 7),
-    ("streak_30", "ตำนานตระกูล", "🏆", lambda p, s: p.get("streak_days", 0) >= 30),
+    ("streak_30", "ตำนานสายเทค", "🏆", lambda p, s: p.get("streak_days", 0) >= 30),
 ]
 
 
 def _clean_gender(value: Optional[str]) -> Optional[str]:
     g = K.normalize_gender(value)
     return None if g == "u" else g
+
+
+# Fields of an inviter's profile that may be shown on the PUBLIC invite
+# pages (preview / reveal need no login). Everything else — student_id, bio,
+# interests, privacy settings, xp, who invited them, email — stays private
+# (PDPA: minimal data to unauthenticated callers). Company only when the
+# member allows it to be shown to juniors.
+PUBLIC_INVITER_FIELDS = ("user_id", "nickname", "name", "gen", "role", "position",
+                         "avatar_url", "avatar_hue", "verified", "kinship_gender")
+
+
+def public_inviter_card(alum: Optional[dict]) -> Optional[dict]:
+    if not alum:
+        return None
+    out = {k: alum.get(k) for k in PUBLIC_INVITER_FIELDS if k in alum}
+    if (alum.get("privacy_settings") or {}).get("show_company_to_juniors", True) and alum.get("company"):
+        out["company"] = alum.get("company")
+    return out
 
 
 def _default_privacy() -> Dict[str, bool]:
@@ -455,7 +473,7 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
         await _touch_streak(current_user.id)
         await _log_activity(
             current_user.id, "joined_family",
-            f"{default_nick} (รุ่น {data.gen}) เข้ามาในตระกูล",
+            f"{default_nick} (รุ่น {data.gen}) เข้าร่วมเครือข่ายสายเทคแล้ว",
             meta={"gen": data.gen, "nickname": default_nick},
         )
 
@@ -886,10 +904,7 @@ def get_alumni_routes(db, get_current_user, get_optional_user, UserRole):
             return out
         inviter_alum = await _get_alumni_profile(invite["inviter_id"])
         inviter = await _enrich_alumni(inviter_alum) if inviter_alum else None
-        if inviter:
-            inviter.pop("email", None)
-            inviter.pop("student_id", None)
-        out["inviter"] = inviter
+        out["inviter"] = public_inviter_card(inviter)
         return out
 
     @alumni_router.post("/invites/accept/{code}")

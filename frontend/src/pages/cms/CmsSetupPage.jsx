@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cmsApi } from './cmsApi';
+import { apiErrorText } from '@/lib/apiError';
 
 // Two jobs that used to need a terminal on the server: loading the faculty
 // seed, and minting the first API key. The key is shown here and nowhere else,
@@ -58,7 +59,7 @@ const CmsSetupPage = () => {
       toast.success(dryRun ? 'ตรวจแล้ว — ยังไม่ได้เขียนอะไร' : 'นำเข้าข้อมูลแล้ว');
       if (!dryRun) setTimeout(loadCounts, 1200);
     } catch (e) {
-      toast.error(e?.response?.data?.detail || 'ไม่สำเร็จ — ต้องเข้าสู่ระบบเป็นผู้ดูแล');
+      toast.error(apiErrorText(e, 'ไม่สำเร็จ — ต้องเข้าสู่ระบบเป็นผู้ดูแล'));
     } finally { setBusy(''); }
   };
 
@@ -70,7 +71,7 @@ const CmsSetupPage = () => {
       setMinted(r.data);
       loadKeys();
     } catch (e) {
-      toast.error(e?.response?.data?.detail || 'ออกคีย์ไม่สำเร็จ');
+      toast.error(apiErrorText(e, 'ออกคีย์ไม่สำเร็จ'));
     } finally { setBusy(''); }
   };
 

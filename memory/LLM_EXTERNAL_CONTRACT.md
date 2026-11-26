@@ -48,14 +48,18 @@ served the PUT. With several workers, the others see the change within 15 s.
 
 | group | feature keys |
 |---|---|
-| `research` | `conjoint.interpretation`, `conjoint.qualitative`, `be.ai_analyze`, `be.questions`, `cv.ai`, `journey.ai`, `behavior.ai`*, `perception.ai`* |
+| `research` | `conjoint.interpretation`, `conjoint.qualitative`, `be.ai_analyze`, `be.questions`, `cv.ai`, `journey.ai`, `behavior.ai`*, `perception.ai`*, `be.visual_identity`† |
 | `thesis` | `conjoint.thesis`, `be.thesis` |
-| `images` | `conjoint.images`, `be.visual_identity`, `cv.image`, `cms.image`, `content.image`, `behavior.image`*, `perception.image`* |
+| `images` | `conjoint.images`, `cv.image`, `cms.image`, `content.image`, `behavior.image`*, `perception.image`* |
 | `content` | `cms.ai`, `survey.ai`, `content.ai`, `translate` |
 | `documents` | `docs.format`, `docs.citation`, `docs.ref_extract`, `docs.journal_finder`* |
 
 `*` = added by WP1 (server.py endpoints `/api/generate-behavior-*`, `/api/perception/*`,
 `/api/journal-finder` that the plan's table did not cover).
+`†` = moved from `images` to `research` by WP9a: it is a vision *analysis* (images in, text out,
+billed as a chat call); an admin who switches off "images" means image generation. Label:
+"Brand Equity — วิเคราะห์อัตลักษณ์แบรนด์จากภาพ/คำบรรยาย (vision)". The admin UI builds from the
+registry API, so nothing else changes.
 
 ### Semantics (final)
 
@@ -82,6 +86,19 @@ Refusal → `SystemLLMDisabled`; the global exception handler returns the 409
 body below if it propagates. Many legacy call sites catch exceptions broadly and
 return 500 / empty text instead — the call is still NOT billed (WP5 fixes those
 UX paths by adding `require_system_llm` up front).
+
+**No-LLM routes (WP9a).** Every `…/external-prompt|import|pack` path and the no-LLM computations
+(`conjoint …/export-thesis/no-ai|export-long|export-responses|wtp|simulate|data-quality|results|statistical-analysis|…`,
+`brand-equity …/coding*|export/raw|thesis-export|dashboard|ai-status|…`, public survey/showcase paths) map to the
+sentinel `llm_policy.NO_LLM` in the path map. The middleware never refuses a *request*; the guard refuses
+any billed call made while serving such a path, **unconditionally** (even with a grant or admin_bypass) and
+logs it as a bug. The sentinel is not a registry key and never appears in the UI.
+
+**API keys never spend (WP9a).** The principal of a scoped API key (`auth_method: "api_key"`, id
+`apikey:…`) has role ADMIN for the CMS handlers, but `effective()` is always **false** for it: no
+`admin_bypass`, no billed call, whatever the policy says (a key that reaches a system-LLM endpoint gets the
+409). `GET /api/platform/llm-policy` with a key shows `features` as an ordinary user sees them (so
+`sitectl llm status` reports what the site does).
 
 Consequences worth knowing:
 - Unannotated endpoint, master ON, group override OFF for its feature → refused
@@ -158,7 +175,13 @@ shape as GET (admin view). `updated_by` = caller email, `updated_at` = now.
 |---|---|
 | `platform.settings` | GET/HEAD/PUT `/api/platform/llm-policy` |
 | `research.read` | GET/HEAD `/api/{conjoint,brand-equity}/studies(/…)`, GET `/api/brand-equity/{templates,thesis-eligible}`, GET/POST `…/studies/{id}/…/external-prompt`, GET `…/studies/{id}/…/external-pack` |
-| `research.ai` | POST `/api/{conjoint,brand-equity}/studies/{id}/…/external-import` and `…/external-pack` |
+| `research.read` (+WP9a) | POST `/api/conjoint/studies/{id}/export-thesis/no-ai` and `…/simulate` (read-only, no LLM) |
+| `research.ai` | POST `/api/{conjoint,brand-equity}/studies/{id}/…/external-import` and `…/external-pack`; POST `/api/brand-equity/studies/{id}/coding/import-csv`, DELETE `…/coding` (WP9a) |
+
+Optional-auth routes (WP9a): a key on a route that takes `get_current_user_optional` (conjoint
+interpretation prompt, WTP, simulator, …) now goes through the same scope gate and acts as the key
+principal; before, it was silently treated as anonymous (so private studies answered 401). A key that is
+presented but not allowed is refused (401/403), never downgraded to anonymous.
 
 `cms.*` does NOT cover these (wildcard = `cms.` scopes only), so no existing key
 gained access. `/api/admin/*`, `/api/{conjoint,brand-equity}/admin/*`, `/api/auth/*`,
@@ -166,6 +189,23 @@ gained access. `/api/admin/*`, `/api/{conjoint,brand-equity}/admin/*`, `/api/aut
 within its scopes (existing convention), so a `research.read` key reads every
 user's studies. Mint: `python backend/scripts/mint_api_key.py --label "sitectl · owner" --preset operator`
 (`operator` = cms.* + platform.settings + research.read + research.ai; `research` = research.read + research.ai).
+
+### Request-size cap (WP9a)
+
+`POST|PUT|PATCH` on `…/external-import`, `…/external-prompt`, `…/external-pack` and
+`/api/brand-equity/studies/{id}/coding/import-csv`: body > **2 MB** → **413**
+`{"detail": {"code": "payload_too_large", "message": "<Thai>"}}` (`lib/body_limit.py`). Show `message`.
+
+### Imported text is stored verbatim — render it as text (sanitisation assumption, WP9a)
+
+Imported AI answers (interpretation markdown, thesis chapters, BE themes / identity narrative /
+insights, CV analysis, journey text) are validated for *structure* only; their text is **not**
+HTML-sanitised server-side. The frontend must render them as text or with `react-markdown` **without**
+`rehype-raw` (as it does today) — never `dangerouslySetInnerHTML`. Known raw-HTML sink: `ContentDetail.js`
+renders `db.contents.content` with `dangerouslySetInnerHTML`; conjoint `share-content` now HTML-escapes the
+body it writes there (it carries user text and a pasted interpretation). Content created through
+`POST /api/content` is NOT escaped (pre-existing — any logged-in author can publish raw HTML; frontend
+owner's decision to add DOMPurify there). DOCX exports insert text as runs (no markup interpretation).
 
 ### Local simulation (no Mongo, no LLM): `backend/scripts/dev_sim.py`
 
@@ -183,7 +223,12 @@ curl -s -XPOST localhost:18090/api/auth/login -H 'content-type: application/json
   study `demo-sim-chathai-001` (from `scripts/seed_simulated_brand_study.py`, 183
   responses + drafts, 2 waves).
 - Fake LLM: every call that passes the guard logs `[FAKE-LLM] …` and returns canned
-  Thai text / a 1×1 PNG; refused calls log `[llm_policy] blocked billed …`.
+  Thai text / a 1×1 PNG; refused calls log `[llm_policy] blocked billed …`. Since WP9a the fake is
+  "smart" when run as `dev_sim.py`: brand-equity ai-analyze parts, visual identity, attribute
+  translation, conjoint qualitative and survey generation get a schema-valid canned JSON/YAML answer,
+  so the system path can be watched *succeeding* (`--llm-policy on`). Tests that pass their own
+  `reply=` keep the old fixed reply.
+- Dev-only packages: `pip install -r backend/requirements-dev.txt` (mongomock-motor).
 - Frontend on the same origin: `cd frontend && REACT_APP_BACKEND_URL=http://localhost:18090 CI=true yarn build`,
   then run dev_sim (it serves `frontend/build` at `/` with SPA fallback when present).
   The URL is baked in at build time; a build made for another host will call that host.
@@ -246,7 +291,26 @@ new respondent arrives). Response = the shape `ai-interpretation` returns when c
 `ai-interpretation` and `ai-interpretation-status` responses now also carry
 `source` (`"system"|"external"`), `model_label`, `imported_at` — show "เขียนโดย <model_label>" when external.
 Note: the interpretation cache is NOT keyed by the Results-page filters (it never was) — it
-always describes all respondents; say so in the UI when a filter is active.
+always describes all respondents. Since WP9a every interpretation response (`POST/GET ai-interpretation`,
+`ai-interpretation-status` when ready, `external-import`) carries:
+`"sample_scope": "all"`, `"sample_note_th": "เขียนจากผู้ตอบทั้งหมด (ไม่ใช้ตัวกรอง…)"`,
+`"sample_respondent_count": <n the text was written from>`, `"filter_mismatch": <bool>` (true when the
+caller passed `from`/`to`/`segments` to the GET). Show `sample_note_th` next to the text when a filter is
+active (or when `filter_mismatch`).
+
+**`GET /conjoint/studies/{id}/ai-interpretation?method=mnl&compare_all=false[&from=&to=&segments=]`** — NEW
+(WP9a), viewer (same rule as the POST). Read-only twin of the POST: when a valid cache exists (same key,
+`respondent_count` and `schema_version` guards) it returns exactly what the POST returns
+(`{"status":"ready","interpretation":…,"cached":true,"source",…}` + the sample fields above); otherwise
+**`200 {"cached": false}`**. Never calls an LLM, never 409, never creates a job. Use it on page load instead
+of POSTing (a POST with the LLM off and no cache is a 409).
+
+`GET …/ai-interpretation-status/{job_id}` now requires the viewer rule for `{id}` and a job that belongs to
+that study (`{"status":"not_found"}` otherwise) — a caller's own job id used to unlock another study's
+cached interpretation. `GET …/export-thesis-status/{job_id}` likewise requires owner/admin and the job's study.
+Both report a job whose worker died (server restart) as
+`{"status":"failed","error_code":"stale_job","error":"<Thai>"}` (interpretation after 15 min, thesis after
+45 min) instead of `processing` forever.
 
 ### 2. Qualitative → attributes (JSON)
 
@@ -274,7 +338,7 @@ Request body everywhere = the existing `ThesisExportRequest`: `{"methods":["mnl"
 **`POST …/export-thesis/external-pack`** → **file download** `text/markdown; charset=utf-8`
 (`Content-Disposition: attachment; filename*=UTF-8''conjoint-<title>-thesis-pack.md`). Contains:
 Thai step-by-step guide, study description, design facts (attributes/levels, tasks, alternatives,
-algorithm, no randomisation, no none-option, Johnson–Orme check), demographics table, every
+algorithm, randomisation as recorded in the data — see below, no none-option, Johnson–Orme check), demographics table, every
 computed APA-style table per method (+ WTP when computable), the method equations, the system
 prompt, and one prompt per chapter. Frontend: `axios.post(url, body, {responseType:'blob'})` → save.
 
@@ -301,6 +365,16 @@ equations of each selected method) and Chapter 4 (demographics table, APA tables
 importance, coefficients with SE/z/p/95% CI, fit statistics; WTP table when price is numeric;
 importance bar chart). `chapters` is intersected with {3,4}; chapter 5 is never generated without AI.
 Suggested UI: a third option in the thesis modal "ดาวน์โหลดตารางและบทที่ 3–4 (ไม่ใช้ AI)".
+
+**Randomisation facts (WP9a).** The survey page shuffles task order and alternative positions per
+respondent and stores `display_task_index` (1-based) and `display_profile_ids` on each response item. The
+design facts (`lib/conjoint_thesis.design_facts`) now carry `randomization: {status:
+"randomised"|"not_randomised"|"mixed"|"no_responses", n_responses, n_with_display_order,
+n_without_display_order, order_varies, positions_vary}` and a matching honest `randomization_th`
+sentence used by the Chapter-3 prompt (system and external), the pack, and the no-AI document ("mixed" =
+older responses without the fields saw the design order — both parts are stated). Straight-lining in
+`data-quality` uses the **displayed** position when recorded (validated: must be a permutation of the
+set's profile ids), else the design position. Estimation never uses position.
 
 `POST …/export-thesis` now returns `{"status":"ready","job_id":<cache_key>,"cache_key":…,"cached":true,"source":…,"model_label":…}`
 for a cached doc and `{"status":"processing","job_id":…,"cache_key":…}` otherwise.
@@ -342,8 +416,10 @@ Example (`upload` is `null` for product/shelf):
 **`GET /conjoint/studies/{id}/export-long?format=xlsx|csv`** — owner. File download. xlsx sheets:
 `README` (Thai: layout, coding, R/Stata/Python commands), `data_long` (one row per alternative:
 `respondent_id, respondent_index, response_id, submitted_at, duration_sec, situation_id, task,
-choice_set_id, alt, profile_id, chosen, usable, <Attr>, <Attr>__code …, demo_<field> …,
-flag_speeder, flag_straightliner, flag_duplicate, flags`), `codebook`, `design`, `data_quality`.
+choice_set_id, alt, profile_id, chosen, usable, [display_task, display_alt,] <Attr>, <Attr>__code …,
+demo_<field> …, flag_speeder, flag_straightliner, flag_duplicate, flags`; `task`/`alt` are DESIGN
+positions; `display_task`/`display_alt` (WP9a) are present when any response recorded what was shown —
+blank for older responses — and are documented in the codebook), `codebook`, `design`, `data_quality`.
 Re-estimating a conditional logit on `usable==1` grouped by `situation_id` reproduces the
 platform's MNL coefficients (pinned by a test). **Replace** the CSV button in
 `ConjointResultsPage.js` `handleExportCSV` (currently a JSON blob in one cell) with this download;
@@ -383,13 +459,18 @@ WTP is in the price attribute's currency units, relative to each attribute's ref
 Response `{"method","rule","heterogeneity_simulated","n_draws","products":[{"name","levels":{attrName:levelValue},"utility","share"}],"caveats_th":[…],"respondent_count"}`.
 400 with a Thai `detail` for counting/OLS, for `first_choice` with MNL, or incomplete products.
 Show the caveats (no none-option → share of preference, not market share; IIA for MNL).
+400 (WP9a) when a product uses a level the model could not estimate (it used to be simulated as if it
+were the reference level, utility 0).
+
+`POST …/share-content` (WP9a): the automatic interpretation now actually runs when the system LLM is
+allowed (it called `LlmChat()` without arguments and a non-existent `send_message_async`, so it always
+failed silently); the stored content body is HTML-escaped.
 
 ### API-key scopes (for WP1 / sitectl)
 
 Already covered by the current rules: `…/external-prompt` → `research.read`; `…/external-import`,
 `…/external-pack` (POST) → `research.ai`; `GET export-long|data-quality|wtp` → `research.read`.
-**Not covered** (request to WP1): `POST /api/conjoint/studies/{id}/export-thesis/no-ai` and
-`POST /api/conjoint/studies/{id}/simulate` — both read-only, no LLM → suggest `research.read`.
+`POST …/export-thesis/no-ai` and `POST …/simulate` → `research.read` (added by WP9a).
 
 ## Brand Equity
 
@@ -525,8 +606,18 @@ Codes are per distinct answer text, so they apply to every filter/segment/wave a
 ### 4. Dashboard / aggregate — new fields (all additive; `aggregate` of `GET /studies/{id}/dashboard` and `GET /showcase/{token}`)
 
 Query: `exclude_flagged=true` drops speeders / straight-liners / duplicates before analysis;
-response adds `quality_filter: {"exclude_flagged": bool, "excluded": n}` and
+response adds `quality_filter` and
 `methods_paragraph_th` (ready-to-adapt Thai methods paragraph built from this study's facts).
+`quality_filter` (WP9a, unambiguous):
+```json
+{"exclude_flagged": true, "excluded": 4, "excluded_flags": ["speeder","straightliner","duplicate"],
+ "n_before_exclusion": 64, "aggregate_data_quality_scope": "remaining_after_exclusion",
+ "full_sample_data_quality": {"n_total": 64, "flags": {"speeder": 2, "straightliner": 1, "duplicate": 1, "unaware_rater": 3}, "n_flagged_excludable": 4, "…": "…"},
+ "note_th": "ตัดผู้ตอบที่น่าสงสัยออกแล้ว — …"}
+```
+With the filter on, `aggregate.data_quality` describes the REMAINING respondents (so it shows ~0 flags):
+render the data-quality card from `quality_filter.full_sample_data_quality` and say how many were excluded.
+Flags are always judged against the whole study (dashboard and `export/raw` now agree).
 
 `aggregate` adds:
 - `schema_version: 2`.
@@ -571,6 +662,18 @@ response adds `quality_filter: {"exclude_flagged": bool, "excluded": n}` and
   `identity_image.alignment_score_0_100` is still returned — label it "ความเห็นของ AI (ไม่ใช่คะแนน)".
   The methodology page (`BeMethodology.jsx`) must stop saying alignment is 10 % of Identity, and
   should say unaided recall = TOM ∪ later mentions.
+
+**List page (WP9a):** `GET /studies` and `GET /studies/scores` add top-level
+`"analysis_schema_version": 2`; each `scores[<id>]` adds `schema_version` and `method_updated_from`
+(the analysis version of the scores this study showed before, e.g. `1`, or `null`). Show the
+"วิธีคำนวณปรับปรุงแล้ว — ตัวเลขอาจเปลี่ยน" note when `method_updated_from` is not null.
+
+**System ai-analyze failures (WP9a):** a step that fails no longer overwrites what the slot held: themes /
+identity / insights from an earlier (e.g. external) import are kept, and `sections_meta.<section>` is
+stamped `system` only for steps that succeeded in this run (it used to say "coded by system AI" after a
+failed run). `ai-status` reports a queued/running job with no progress for 15 min as
+`{"status":"error","error_code":"stale_job","error":"<Thai>"}`, and `POST ai-analyze` then starts a new one.
+`GET /studies/{id}/thesis-ai-status/{job_id}` now requires ownership of the study.
 
 ### 5. Raw data export — new button (no existing parallel)
 
@@ -642,12 +745,8 @@ data does not support) before the download button.
 
 ### Notes for WP1 / CLI
 
-- API-key scopes: `POST /studies/{id}/coding/import-csv` and `DELETE /studies/{id}/coding` are
-  not matched by the current `research.ai` rule (it only matches `external-(import|pack)`); suggest
-  `("research.ai", {"POST","DELETE"}, r"^/api/brand-equity/studies/[^/]+/coding(/import-csv)?/?$")`.
-- `ROUTE_FEATURES`: `/api/brand-equity/extract-identity` currently falls through to
-  `be.ai_analyze`; the route itself calls `require_system_llm("be.visual_identity")`, but the
-  path map should list it under `be.visual_identity` for consistency.
+- API-key scopes: `POST /studies/{id}/coding/import-csv` and `DELETE /studies/{id}/coding` → `research.ai` (done, WP9a).
+- `ROUTE_FEATURES`: `/api/brand-equity/extract-identity` → `be.visual_identity` (done, WP9a).
 
 ## Other tools
 

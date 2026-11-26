@@ -3,6 +3,7 @@ import { Button } from '../components/ui/button';
 import { Upload, X, Image as ImageIcon, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -86,7 +87,7 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
     } catch (error) {
       console.error('Upload error:', error);
       console.error('Error response:', error.response?.data);
-      toast.error(error.response?.data?.detail || error.message || 'ไม่สามารถอัปโหลดรูปได้');
+      toast.error(apiErrorText(error, error.message || 'ไม่สามารถอัปโหลดรูปได้'));
     } finally {
       setUploading(false);
     }
@@ -156,7 +157,7 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
       }
     } catch (error) {
       console.error('Test generation error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถสร้างรูปได้'));
     } finally {
       setGeneratingTest(false);
     }

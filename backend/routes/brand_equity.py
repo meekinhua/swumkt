@@ -2026,7 +2026,7 @@ DQ_STRAIGHTLINE_MIN_ITEMS = 8  # identical answers on >= 8 rating items
 DQ_EXCLUDE_FLAGS = ("speeder", "straightliner", "duplicate")
 
 
-def _data_quality(study: dict, responses: List[dict]) -> dict:
+def _data_quality(study: dict, responses: List[dict], cap_flags: bool = True) -> dict:
     qs = study.get("questions") or []
     rating_ids: Dict[str, str] = {}
     for q in qs:
@@ -2085,7 +2085,7 @@ def _data_quality(study: dict, responses: List[dict]) -> dict:
         "n_total": len(responses),
         "flags": {k: counts.get(k, 0) for k in ("speeder", "straightliner", "duplicate", "unaware_rater")},
         "n_flagged_excludable": len(excl),
-        "flags_by_response": flags_by_id if len(flags_by_id) <= 2000 else {},
+        "flags_by_response": flags_by_id if (len(flags_by_id) <= 2000 or not cap_flags) else {},
         "median_duration_sec": median_dur,
         "rules": {
             "speeder": f"ใช้เวลาตอบน้อยกว่า {int(DQ_SPEEDER_RATIO * 100)}% ของค่ามัธยฐาน"
@@ -2101,11 +2101,41 @@ def _data_quality(study: dict, responses: List[dict]) -> dict:
     }
 
 
-def _exclude_flagged(study: dict, responses: List[dict]) -> List[dict]:
-    dq = _data_quality(study, responses)
+def _exclude_flagged(study: dict, responses: List[dict],
+                     reference: Optional[List[dict]] = None) -> List[dict]:
+    """Drop speeders / straight-liners / duplicates from ``responses``.
+
+    Flags are computed on ``reference`` (default: ``responses``) so the
+    dashboard and the raw export can both judge against the WHOLE study (the
+    speeder cut-off is relative to the median time, which a slice changes).
+    The flag map is never capped here (the summary caps it at 2000 for payload
+    size; capping it here silently excluded nobody on a large, noisy study).
+    """
+    dq = _data_quality(study, reference if reference is not None else responses, cap_flags=False)
     bad = {rid for rid, fl in (dq.get("flags_by_response") or {}).items()
            if any(x in DQ_EXCLUDE_FLAGS for x in fl)}
     return [r for r in responses if (r.get("id") or "") not in bad]
+
+
+def _quality_filter_summary(study: dict, all_responses: List[dict], exclude_flagged: bool,
+                            n_excluded: int) -> dict:
+    """`quality_filter` block of the dashboard: unambiguous about what was
+    excluded. With `exclude_flagged=true`, `aggregate.data_quality` describes
+    the REMAINING respondents (so it reports few or no flags); the full-sample
+    screen that decided the exclusion is here."""
+    full = {k: v for k, v in _data_quality(study, all_responses).items() if k != "flags_by_response"}
+    return {
+        "exclude_flagged": bool(exclude_flagged),
+        "excluded": n_excluded,
+        "excluded_flags": list(DQ_EXCLUDE_FLAGS),
+        "n_before_exclusion": len(all_responses),
+        "full_sample_data_quality": full,
+        "aggregate_data_quality_scope": ("remaining_after_exclusion" if exclude_flagged
+                                         else "all_responses_in_view"),
+        "note_th": ("ตัดผู้ตอบที่น่าสงสัยออกแล้ว — สรุปคุณภาพข้อมูลในผลวิเคราะห์ (aggregate.data_quality) "
+                    "คำนวณจากผู้ตอบที่เหลือ ส่วนผลการตรวจทั้งชุดก่อนตัดอยู่ใน full_sample_data_quality"
+                    if exclude_flagged else ""),
+    }
 
 
 def _bes_sensitivity(composite: dict, weights: dict) -> dict:
@@ -3291,10 +3321,40 @@ def _raw_export_xlsx(exp: dict, study: dict, filter_info: dict, n_total: int) ->
     return buf.getvalue()
 
 
+# A queued/running system ai-analyze job whose progress has not moved for this
+# long has lost its worker (process restart / crash: BackgroundTasks are not
+# durable). Without this the slot stayed "running" forever and every new
+# ai-analyze answered "already in progress" (WP9a).
+AI_JOB_STALE_SECONDS = 15 * 60
+AI_JOB_STALE_MESSAGE_TH = ("งานวิเคราะห์ AI ก่อนหน้าหยุดค้าง (เซิร์ฟเวอร์รีสตาร์ตระหว่างทำงาน) "
+                           "— กดเริ่มวิเคราะห์ใหม่ได้")
+
+
+def _ai_job_stale(cache: dict, now: Optional[datetime] = None) -> bool:
+    ts = (cache or {}).get("updated_at")
+    if not ts:
+        return True
+    try:
+        when = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    now = now or datetime.now(timezone.utc)
+    return (now - when).total_seconds() > AI_JOB_STALE_SECONDS
+
+
 # ============ ROUTES FACTORY ============
 
 def get_brand_equity_routes(db, get_current_user, get_optional_user):
-    """Factory — register routes with DB + auth deps."""
+    """Factory — register routes with DB + auth deps.
+
+    Each call registers on a FRESH router (WP9a) — see get_conjoint_routes:
+    a second call in the same process used to be shadowed by the first's
+    routes (bound to the first db / auth dependency).
+    """
+    global brand_equity_router
+    brand_equity_router = APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
 
     # Roles compared by VALUE: `from server import UserRole` inside a route
     # makes the route unusable wherever server.py cannot be imported (tests,
@@ -3391,7 +3451,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         # Attach response counts
         for s in items:
             s["response_count"] = await db.brand_responses.count_documents({"study_id": s["id"]})
-        return {"studies": items, "total": len(items)}
+        # The list page shows a "method updated" note from data: compare
+        # `analysis_schema_version` with each study's `bes_cache.schema_version`
+        # / `scores[id].method_updated_from` (GET /studies/scores).
+        return {"studies": items, "total": len(items),
+                "analysis_schema_version": BE_ANALYSIS_SCHEMA_VERSION}
 
     @brand_equity_router.get("/studies/scores")
     async def list_study_scores(current_user=Depends(get_current_user)):
@@ -3417,10 +3481,20 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             cache = s.get("bes_cache") or {}
             if (cache.get("response_count") == n and cache.get("weights_sig") == weights_sig
                     and cache.get("schema_version") == BE_ANALYSIS_SCHEMA_VERSION):
-                out[sid] = cache.get("scores")
+                out[sid] = dict(cache.get("scores") or {},
+                                schema_version=BE_ANALYSIS_SCHEMA_VERSION,
+                                method_updated_from=cache.get("method_updated_from"))
                 continue
+            # Scores the user saw under an older analysis version: remember
+            # which, so the list can say "method updated — numbers changed".
+            if cache.get("scores") and cache.get("schema_version", 1) != BE_ANALYSIS_SCHEMA_VERSION:
+                updated_from = cache.get("schema_version", 1)
+            else:
+                updated_from = cache.get("method_updated_from")
             if n < 10:
-                out[sid] = {"overall": None, "response_count": n, "locked": True}
+                out[sid] = {"overall": None, "response_count": n, "locked": True,
+                            "schema_version": BE_ANALYSIS_SCHEMA_VERSION,
+                            "method_updated_from": updated_from}
                 continue
             responses = await db.brand_responses.find({"study_id": sid}, {"_id": 0}).to_list(5000)
             normalized = (s.get("ai_cache") or {}).get("normalized_by_question") or {}
@@ -3436,13 +3510,15 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 "response_count": n,
                 "locked": False,
             }
-            out[sid] = scores
+            out[sid] = dict(scores, schema_version=BE_ANALYSIS_SCHEMA_VERSION,
+                            method_updated_from=updated_from)
             await db.brand_studies.update_one({"id": sid}, {"$set": {"bes_cache": {
                 "response_count": n, "weights_sig": weights_sig,
                 "schema_version": BE_ANALYSIS_SCHEMA_VERSION,
+                "method_updated_from": updated_from,
                 "scores": scores, "computed_at": _now_iso(),
             }}})
-        return {"scores": out}
+        return {"scores": out, "analysis_schema_version": BE_ANALYSIS_SCHEMA_VERSION}
 
     @brand_equity_router.get("/studies/trash")
     async def list_trashed_studies(current_user=Depends(get_current_user)):
@@ -3464,7 +3540,11 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         items = await cur.to_list(500)
         for s in items:
             s["response_count"] = await db.brand_responses.count_documents({"study_id": s["id"]})
-        return {"studies": items, "total": len(items)}
+        # The list page shows a "method updated" note from data: compare
+        # `analysis_schema_version` with each study's `bes_cache.schema_version`
+        # / `scores[id].method_updated_from` (GET /studies/scores).
+        return {"studies": items, "total": len(items),
+                "analysis_schema_version": BE_ANALYSIS_SCHEMA_VERSION}
 
     @brand_equity_router.get("/studies/{study_id}")
     async def get_study(study_id: str, current_user=Depends(get_current_user)):
@@ -4509,6 +4589,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         """Poll job status. Returns status + progress (chapter_X) + error."""
         if _role(current_user) not in _THESIS_ROLES:
             raise HTTPException(403)
+        await _get_owned_study(study_id, current_user)   # WP9a: was role-only
 
         # If job_id IS a cache_key (cache hit path), short-circuit to ready
         if job_id.startswith("be_thesis_") and "_" in job_id and job_id.count("_") >= 4:
@@ -4519,7 +4600,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             if cached:
                 return {"status": "ready", "cache_key": job_id, "cached": True}
         job = await db.brand_thesis_jobs.find_one({"job_id": job_id}, {"_id": 0})
-        if not job:
+        if not job or job.get("study_id") not in (None, study_id):
             return {"status": "not_found"}
         return {
             "status": job.get("status", "unknown"),
@@ -4667,6 +4748,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             {"study_id": study_id}, {"_id": 0}
         ).to_list(5000)
         n_before_quality = len(all_responses)
+        responses_before_quality = all_responses
         if exclude_flagged:
             all_responses = _exclude_flagged(study, all_responses)
 
@@ -4721,8 +4803,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             ),
             "waves": waves_summary,
             "migration_meta": study.get("migration_meta") or {},
-            "quality_filter": {"exclude_flagged": bool(exclude_flagged),
-                               "excluded": n_before_quality - len(all_responses)},
+            "quality_filter": _quality_filter_summary(
+                study, responses_before_quality, exclude_flagged, n_before_quality - len(all_responses)),
             "methods_paragraph_th": _methods_paragraph(study, agg, len(all_responses), len(filtered)),
         }
 
@@ -4855,12 +4937,19 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                               f"{cache_path}.updated_at": _now_iso()}})
                 return
 
+            # What this slot held before the run (e.g. an external import): a
+            # step that fails now must not erase it, and its provenance must
+            # not be relabelled "system" (WP9a: a failed job used to stamp
+            # sections_meta.coding = system and wipe imported themes/insights).
+            prev = (study.get("ai_cache") if sig == "all"
+                    else (study.get("ai_cache_by_filter") or {}).get(sig)) or {}
             await db.brand_studies.update_one({"id": study_id},
                 {"$set": {f"{cache_path}.status": "running",
                           f"{cache_path}.errors": [],
                           f"{cache_path}.updated_at": _now_iso()}})
             errors: List[dict] = []
             done_steps = 0
+            coding_ok = 0
             by = getattr(user, "email", None)
 
             async def _ask(part: dict, expected: List[str]) -> Optional[dict]:
@@ -4901,6 +4990,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 await db.brand_studies.update_one({"id": study_id}, {"$set": {"open_coding": oc}})
                 study["open_coding"] = oc
                 done_steps += 1
+                coding_ok += 1
 
             agg = _aggregate_responses(study, responses, normalized={})
             normalized_by_q = _normalized_view(agg)
@@ -4912,6 +5002,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             themes_by_q: Dict[str, List[dict]] = {}
             identity_image: dict = {}
             insights: List[dict] = []
+            ok_sections = set()
             phase_names = {"themes": "Themes · สกัด theme จากคำตอบเปิด",
                            "identity": "Identity ↔ Image · เทียบอัตลักษณ์ vs ภาพลักษณ์",
                            "insights": "Master Insights · สรุปข้อเสนอแนะเชิงกลยุทธ์"}
@@ -4932,6 +5023,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                     else:
                         insights = BX.validate_insights(secs["insights"])
                     done_steps += 1
+                    ok_sections.add(sec)
                 except ImportValidationError as e:
                     errors.append({"part": part["key"], "sections": [sec],
                                    "message": e.message, "errors": e.errors})
@@ -4939,6 +5031,20 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             total_tasks = len(c_parts) + len(built2["parts"])
             status = ("ready" if not errors else ("partial" if done_steps else "error"))
             prov = {"source": "system", "model_label": SYSTEM_MODEL_LABEL, "at": _now_iso()}
+            if coding_ok:
+                ok_sections.add("coding")
+            # Provenance only for steps that SUCCEEDED in this run; anything
+            # else keeps what the slot had (content and its label).
+            sections_meta = dict(prev.get("sections_meta") or {})
+            for sec in ok_sections:
+                sections_meta[sec] = prov
+            if "themes" not in ok_sections:
+                themes_by_q = prev.get("themes_by_question") or {}
+            if "identity" not in ok_sections:
+                identity_image = prev.get("identity_image") or {}
+            if "insights" not in ok_sections:
+                insights = prev.get("master_insights") or []
+            any_ok = bool(ok_sections)
             cache_payload = {
                 "status": status,
                 "normalized_by_question": normalized_by_q,
@@ -4946,11 +5052,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 "identity_image": identity_image,
                 "master_insights": insights,
                 "errors": errors,
-                "source": "system",
-                "model_label": SYSTEM_MODEL_LABEL,
-                "sections_meta": {k: prov for k, ok in (
-                    ("coding", bool(c_parts)), ("themes", bool(themes_by_q)),
-                    ("identity", bool(identity_image)), ("insights", bool(insights))) if ok},
+                "source": "system" if any_ok else prev.get("source"),
+                "model_label": SYSTEM_MODEL_LABEL if any_ok else prev.get("model_label"),
+                "sections_meta": sections_meta,
                 "updated_at": _now_iso(),
                 "progress": {
                     "step": total_steps, "total": total_steps,
@@ -5275,7 +5379,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         # FOR THIS FILTER SIGNATURE. Different filters / waves can run in parallel.
         cache_for_sig = _resolve_ai_cache(study, sig)
         cur_status = cache_for_sig.get("status")
-        if cur_status in ("queued", "running"):
+        if cur_status in ("queued", "running") and not _ai_job_stale(cache_for_sig):
             return {"status": cur_status, "signature": sig,
                     "message": "AI analysis already in progress for this filter"}
 
@@ -5316,6 +5420,10 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         cache = _resolve_ai_cache(study, sig)
         if not cache:
             return {"status": "idle", "signature": sig, "wave": wave or "all"}
+        if cache.get("status") in ("queued", "running") and _ai_job_stale(cache):
+            # The worker died (restart/crash) without recording an outcome.
+            return {**cache, "status": "error", "error_code": "stale_job",
+                    "error": AI_JOB_STALE_MESSAGE_TH, "signature": sig, "wave": wave or "all"}
         return {**cache, "signature": sig, "wave": wave or "all"}
 
     # ========================================================================
@@ -5785,7 +5893,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         study = await _get_owned_study(study_id, current_user)
         all_resp, flt, sig, f = await _slice(study, from_iso, to_iso, segments, wave)
         if exclude_flagged:
-            flt = _exclude_flagged(study, flt)
+            # Same rule as the dashboard: flags judged against the whole study.
+            flt = _exclude_flagged(study, flt, reference=all_resp)
         exp = _build_raw_export(study, flt, all_responses_for_quality=all_resp)
         slug = re.sub(r"[^A-Za-z0-9]+", "-", (study.get("brand") or {}).get("name") or "brand").strip("-") or "brand"
         if format == "csv":

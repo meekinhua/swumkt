@@ -4,6 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import './brand-equity-styles.css';
 import { Icon, BeLoading, SWU_LOGO_URL } from './be-components';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -286,7 +287,7 @@ const BrandEquityRespondentPage = () => {
       const r = await axios.get(`${API}/brand-equity/public/${token}`);
       setStudy(r.data);
     } catch (e) {
-      setError(e.response?.data?.detail || 'Survey ไม่พร้อมรับคำตอบ');
+      setError(apiErrorText(e, 'Survey ไม่พร้อมรับคำตอบ'));
     }
     setLoading(false);
   };
@@ -602,7 +603,7 @@ const BrandEquityRespondentPage = () => {
         localStorage.removeItem(DRAFT_ID_KEY);
       } catch { /* ignore */ }
     } catch (e) {
-      toast.error('ส่งไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error('ส่งไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setSubmitting(false);
   }

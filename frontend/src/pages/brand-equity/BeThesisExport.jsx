@@ -169,8 +169,15 @@ export const BeThesisExport = ({ studyId, token, filter, brandName, canExportNon
         return;
       }
       setSysProgress('queued');
+      const pollStarted = Date.now();
       pollRef.current = setInterval(async () => {
         if (downloadStartedRef.current) { stopPoll(); return; }
+        if (Date.now() - pollStarted > 20 * 60 * 1000) { // never poll forever (e.g. job lost on a restart)
+          stopPoll();
+          setSysError('AI ใช้เวลานานเกินไป — ลองใหม่ หรือใช้ตัวเลือก 1 / 2');
+          setSysProgress('failed');
+          return;
+        }
         try {
           const s = await axios.get(`${API}/brand-equity/studies/${studyId}/thesis-ai-status/${jobId}`,
             { headers: authHeaders(token) });

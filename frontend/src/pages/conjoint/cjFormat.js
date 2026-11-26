@@ -100,19 +100,7 @@ export const saveBlob = (blob, filename) => {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 };
 
-/** Pull a human message out of an axios error (string / {message} / validation list). */
-export const apiErrorText = async (err, fallback = 'เกิดข้อผิดพลาด') => {
-  let data = err?.response?.data;
-  // blob responses carry the JSON error as a Blob
-  if (data && typeof Blob !== 'undefined' && data instanceof Blob) {
-    try { data = JSON.parse(await data.text()); } catch { data = null; }
-  }
-  const d = data?.detail;
-  if (typeof d === 'string') return d;
-  if (d && typeof d === 'object' && !Array.isArray(d) && d.message) return d.message;
-  if (Array.isArray(d) && d[0]?.msg) return d.map((x) => x.msg).join('; ');
-  return err?.message || fallback;
-};
+// Error text: use apiErrorText / apiErrorTextAsync (blob downloads) from '@/lib/apiError'.
 
 /** Read a File as a data: URL (for image upload to the existing upload endpoints). */
 export const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {

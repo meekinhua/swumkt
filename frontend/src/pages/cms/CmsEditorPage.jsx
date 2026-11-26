@@ -7,7 +7,6 @@ import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { apiErrorText } from '@/lib/apiError';
 import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
 import { useExternalDialog } from '@/hooks/useExternalDialog';
-import { withBodyKey } from '@/lib/aiTextParse';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -39,7 +38,7 @@ const CmsEditorPage = () => {
   const OFF_TITLE = 'AI ของระบบปิดอยู่ — คลิกเพื่อรับพรอมต์ไปใช้กับ AI ของคุณเอง';
   const ext = useExternalDialog();
   const extPrompt = (path, data) => ({
-    method: 'POST', url: withBodyKey(`${API}/cms/ai/${path}/external-prompt`, data), data,
+    method: 'POST', url: `${API}/cms/ai/${path}/external-prompt`, data,
   });
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [editingImageTemplate, setEditingImageTemplate] = useState(false);
@@ -260,7 +259,7 @@ const CmsEditorPage = () => {
         await cmsApi.updatePost(id, { ...post, ...(publish ? { status: 'published' } : {}) });
         toast.success(publish ? 'Published!' : 'บันทึกแล้ว');
       }
-    } catch (e) { toast.error(e.response?.data?.detail || 'บันทึกไม่สำเร็จ'); }
+    } catch (e) { toast.error(apiErrorText(e, 'บันทึกไม่สำเร็จ')); }
   };
 
   if (loading) return <div className="p-8 text-neutral-500">Loading...</div>;

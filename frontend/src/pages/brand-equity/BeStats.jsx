@@ -273,7 +273,11 @@ const DQ_LABEL = {
   duplicate: 'คำตอบซ้ำกับผู้ตอบก่อนหน้า', unaware_rater: 'ให้คะแนนแบรนด์ที่ตัวเองไม่ได้ติ๊กว่ารู้จัก',
 };
 
-export const BeDataQuality = ({ dq, quality, exclude, onToggle, nFiltered, busy }) => {
+export const BeDataQuality = ({ dq: dqIn, quality, exclude, onToggle, nFiltered, busy }) => {
+  // With the toggle ON, aggregate.data_quality describes the REMAINING respondents; the server
+  // also sends the whole-sample report in quality_filter.full_sample_data_quality — show that.
+  const full = exclude ? quality?.full_sample_data_quality : null;
+  const dq = full || dqIn;
   if (!dq) return null;
   const excluded = quality?.excluded || 0;
   // With the toggle ON the backend recomputes data_quality on the remaining
@@ -305,7 +309,8 @@ export const BeDataQuality = ({ dq, quality, exclude, onToggle, nFiltered, busy 
         {' '}· ตอนนี้ใช้ผู้ตอบ <b>n = {nFiltered}</b>
         {exclude ? <> (ตัดออกแล้ว {excluded} คน จาก {nFiltered + excluded})</> : null}
         {!exclude && dq.n_flagged_excludable > 0 ? <> · ถ้าตัด จะเหลือ n ≈ {dq.n_total - dq.n_flagged_excludable}</> : null}
-        {exclude ? <div className="be-tiny be-muted">ตารางธงด้านบนนับจากผู้ตอบที่เหลือหลังตัดแล้ว — ปิดการตัดเพื่อดูจำนวนธงเดิม</div> : null}
+        {exclude ? <div className="be-tiny be-muted">{full ? 'ตารางธงด้านบนนับจากผู้ตอบทั้งหมดก่อนตัด' : 'ตารางธงด้านบนนับจากผู้ตอบที่เหลือหลังตัดแล้ว — ปิดการตัดเพื่อดูจำนวนธงเดิม'}</div> : null}
+        {exclude && quality?.note_th ? <div className="be-tiny be-muted">{quality.note_th}</div> : null}
       </div>
       <label className="be-check-row" style={{ marginTop: 10 }}>
         <input type="checkbox" checked={!!exclude} disabled={busy} onChange={(e) => onToggle(e.target.checked)}

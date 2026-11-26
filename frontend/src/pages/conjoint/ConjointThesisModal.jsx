@@ -10,11 +10,11 @@
  * Access rule (server): admin OR (study owner AND user.can_export_thesis). The client
  * only hints; any 403 message from the server is shown as is.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
-  GraduationCap, FileText, PackageOpen, Cpu, Download, Loader2, Lock, AlertTriangle, CheckCircle2, ClipboardPaste,
+  GraduationCap, FileText, PackageOpen, Cpu, Download, Loader2, Lock, CheckCircle2, ClipboardPaste,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,8 +23,8 @@ import ExternalAiDialog from '@/components/ExternalAiDialog';
 import { useLlmPolicy } from '@/hooks/useLlmPolicy';
 import { showLlmExternalOnlyToast } from '@/lib/llmErrors';
 import { API } from '@/App';
-import { useImportBodyExtra } from './useImportBodyExtra';
-import { saveBlob, apiErrorText } from './cjFormat';
+import { saveBlob } from './cjFormat';
+import { apiErrorTextAsync } from '@/lib/apiError';
 
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -77,10 +77,11 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
   const [imported, setImported] = useState(null); // last external-import response
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const base = `${API}/conjoint/studies/${studyId}`;
   const reqBody = useMemo(() => ({ methods, chapters, extra_prompt: extra || '' }), [methods, chapters, extra]);
   const importUrl = `${base}/export-thesis/external-import`;
-  useImportBodyExtra(open ? importUrl : undefined, reqBody);
 
   const isAdmin = user?.role === 'admin';
   const notPermitted = !!user && !isAdmin && user.can_export_thesis === false;
@@ -91,7 +92,7 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
   const resetImport = () => setImported(null);
 
   const fail = async (e, fallback) => {
-    const msg = await apiErrorText(e, fallback);
+    const msg = await apiErrorTextAsync(e, fallback);
     toast.error(msg);
     return msg;
   };
@@ -137,6 +138,7 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
         let ok = false;
         for (let i = 0; i < 60 && !ok; i += 1) {
           await sleep(3000);
+          if (!mounted.current) return; // page left: stop polling, do not download
           let p;
           try { p = await axios.get(`${base}/export-thesis-status/${r.data.job_id}`, { headers }); } catch { continue; }
           if (p.data.status === 'ready') { ok = true; cacheKey = p.data.cache_key || cacheKey; }
@@ -278,10 +280,6 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
               </section>
             )}
 
-            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900" data-testid="thesis-randomisation-note">
-              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-              <span>ก่อนยื่นงาน: ตรวจข้อความเรื่อง “การสุ่ม” ในบทที่ 3 ให้ตรงกับความเป็นจริง — แบบสอบถามรุ่นปัจจุบันสุ่มลำดับชุดคำถามและตำแหน่งทางเลือกแยกตามผู้ตอบ (ผู้ตอบที่ส่งคำตอบก่อนอัปเดตเห็นลำดับตายตัว) และไม่มีตัวเลือก “ไม่เลือก” หรือชุดคำถามทดสอบ (holdout)</span>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -292,6 +290,7 @@ const ConjointThesisModal = ({ open, onOpenChange, studyId, token, user }) => {
         title="เขียนบทวิทยานิพนธ์ด้วย AI ของฉันเอง"
         promptRequest={{ method: 'POST', url: `${base}/export-thesis/external-prompt`, data: reqBody }}
         importUrl={importUrl}
+        importExtra={reqBody}
         onImported={(data) => setImported(data)}
       />
     </>

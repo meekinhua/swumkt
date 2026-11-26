@@ -18,6 +18,7 @@ import re
 import base64
 import uuid
 import logging
+import json
 import asyncio
 from enum import Enum
 from datetime import datetime, timezone
@@ -326,6 +327,24 @@ def _thesis_cache_key(methods: List[str], chapters: List[int], extra_prompt: str
         import hashlib
         extra_hash = hashlib.md5(extra_prompt.strip().encode()).hexdigest()[:8]
     return f"thesis_{methods_key}_{chapters_key}" + (f"_ep{extra_hash}" if extra_hash else "")
+
+
+JOB_STALE_MESSAGE_TH = ("งานนี้หยุดค้าง (เซิร์ฟเวอร์รีสตาร์ตระหว่างทำงาน) — กรุณาสั่งใหม่อีกครั้ง")
+
+
+def _job_stale(job: Dict, max_age_sec: float) -> bool:
+    """A 'processing' background job older than max_age_sec has lost its worker
+    (BackgroundTasks die with the process); report it instead of polling forever."""
+    if (job or {}).get("status") not in ("processing", "queued", "running"):
+        return False
+    ts = job.get("updated_at") or job.get("created_at")
+    try:
+        when = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return False
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - when).total_seconds() > max_age_sec
 
 
 def _interpretation_cache_key(method: Optional[str], compare_all: bool) -> str:
@@ -3031,7 +3050,7 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ### 5.1 สรุปผลการวิจัย (ตอบวัตถุประสงค์, สรุปผลหลัก, อ้างสถิติ)
 ### 5.2 อภิปรายผล (เปรียบเทียบทฤษฎี, งานวิจัยที่เกี่ยวข้อง)
 ### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ: ผลิตภัณฑ์, ราคา, การตลาด, positioning)
-### 5.4 ข้อจำกัดของการวิจัย (รวมข้อจำกัดจากแผนการทดลองตามข้อเท็จจริง เช่น ไม่มีการสุ่มลำดับ ไม่มี none option ไม่มี holdout)
+### 5.4 ข้อจำกัดของการวิจัย (รวมข้อจำกัดจากแผนการทดลองตามข้อเท็จจริงในบล็อกข้อเท็จจริง เช่น การสุ่ม/ไม่สุ่มลำดับและตำแหน่ง (ตามที่ระบุ) ไม่มี none option ไม่มี holdout)
 ### 5.5 ข้อเสนอแนะสำหรับการวิจัยในอนาคต (3-5 ข้อ)
 
 ข้อกำหนด: ภาษาไทยวิชาการ, อ้างค่าสถิติจริง, ทุกหัวข้อ 2-3 ย่อหน้า"""
@@ -3313,7 +3332,15 @@ def _add_table_to_doc(doc, table_data):
 
 
 def get_conjoint_routes(db, get_current_user, get_current_user_optional):
-    """Factory — register conjoint routes with DB + auth deps."""
+    """Factory — register conjoint routes with DB + auth deps.
+
+    Each call registers on a FRESH router (WP9a): the module-level router used
+    to keep the routes of every earlier call, so a second app built in the same
+    process (tests importing server.py twice, a reload) served the FIRST call's
+    routes — bound to that call's db and auth — in front of its own.
+    """
+    global conjoint_router
+    conjoint_router = APIRouter(tags=["conjoint"])
     # Late imports: server is fully initialized by the time this factory is
     # called (end of server.py). Keeps shared symbols single-sourced.
     import server as _server
@@ -5732,12 +5759,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
 
     ใช้ภาษาไทยที่เข้าใจง่าย ชัดเจน และเป็นมืออาชีพ"""
                     
-                        # Call AI
-                        from emergentintegrations.llm.chat import LlmChat, UserMessage
+                        # Call AI. This used `LlmChat()` (no api_key/session/system
+                        # message → TypeError) and `send_message_async`, which the
+                        # library does not offer — the broad except below swallowed
+                        # it, so auto-interpretation never worked (WP9a). Same
+                        # helper as every other conjoint text call.
                         await _require_system_llm(FEAT_INTERPRETATION, current_user)  # grant for the guard
-                        chat = LlmChat()
                         logging.info(f"[SHARE_CONTENT] Calling AI with prompt length: {len(prompt)} characters")
-                        ai_interpretation = await chat.send_message_async(UserMessage(prompt))
+                        ai_interpretation = await _call_gemini_with_retry(
+                            system_msg="คุณเป็นนักวิเคราะห์การวิจัยตลาด ตอบเป็นภาษาไทย",
+                            prompt=prompt,
+                            session_id=f"conjoint-share-{study_id}-{uuid.uuid4().hex[:8]}",
+                        )
                         logging.info(f"[SHARE_CONTENT] AI interpretation generated successfully. Length: {len(ai_interpretation)} characters")
                     else:
                         logging.warning(f"[SHARE_CONTENT] Insufficient responses ({len(responses)}/30 required) - skipping AI analysis")
@@ -5932,6 +5965,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             results_link = f"{frontend_base_url}/conjoint/results/{study_id}"
             content_body += f"\n## 🔗 ดูผลการวิจัยแบบเต็ม\n\n[คลิกที่นี่เพื่อดูผลการวิจัยแบบโต้ตอบ]({results_link})\n"
         
+            # db.contents is rendered as raw HTML by ContentDetail.js
+            # (dangerouslySetInnerHTML) and published to everyone; the body
+            # carries user-supplied text (title, notes, a pasted AI
+            # interpretation) — escape it so no markup/script survives (WP9a).
+            import html as _html
+            content_body = _html.escape(content_body, quote=False)
+
             # Create content document
             content_dict = {
                 "id": str(uuid.uuid4()),
@@ -5996,7 +6036,16 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 raise HTTPException(status_code=403, detail="Not authorized")
         return study
 
-    def _interp_response(results: Dict, cached: bool) -> Dict:
+    # The interpretation (system or external) is always written from ALL
+    # respondents (`_prepare_analysis_summary` ignores the Results-page
+    # filters), while the numbers on that page respect from/to/segments. Rather
+    # than key the cache per filter (each filter would need its own paid or
+    # pasted interpretation), every response states which sample it describes
+    # so the UI can label it when a filter is active.
+    INTERP_SAMPLE_TH = "เขียนจากผู้ตอบทั้งหมด (ไม่ใช้ตัวกรองช่วงวันที่/กลุ่มย่อยของหน้าผลลัพธ์)"
+
+    def _interp_response(results: Dict, cached: bool, filter_active: bool = False) -> Dict:
+        summary = results.get("summary_data") or {}
         return {
             "status": "ready",
             "interpretation": results.get("interpretation", ""),
@@ -6005,7 +6054,24 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             "source": results.get("source", "system"),
             "model_label": results.get("model_label"),
             "imported_at": results.get("imported_at"),
+            "sample_scope": "all",
+            "sample_note_th": INTERP_SAMPLE_TH,
+            "sample_respondent_count": summary.get("respondent_count") if isinstance(summary, dict) else None,
+            # True when the caller passed a Results-page filter: the text does
+            # NOT describe the filtered numbers on screen.
+            "filter_mismatch": bool(filter_active),
         }
+
+    def _filter_active(date_from: Optional[str], date_to: Optional[str], segments: Optional[str]) -> bool:
+        if date_from or date_to:
+            return True
+        if segments:
+            try:
+                seg = json.loads(segments)
+            except (ValueError, TypeError):
+                return True
+            return bool(seg) and any(bool(v) for v in (seg.values() if isinstance(seg, dict) else [seg]))
+        return False
 
     async def _interp_prompt_parts(study_id: str, current_user, method: Optional[str], compare_all: bool):
         """ONE builder for the system job, generate-prompt and external-prompt/import."""
@@ -6070,6 +6136,33 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         )
         return {"status": "processing", "job_id": job_id}
 
+    @conjoint_router.get("/conjoint/studies/{study_id}/ai-interpretation")
+    async def get_cached_ai_interpretation(
+        study_id: str,
+        method: Optional[str] = "counting",
+        compare_all: bool = False,
+        date_from: Optional[str] = Query(None, alias="from"),
+        date_to: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = None,
+        current_user: Optional[User] = Depends(get_current_user_optional)
+    ):
+        """Read-only twin of POST ai-interpretation: the cached interpretation
+        exactly as the POST returns it when a valid cache exists, else
+        ``{"cached": false}``. Never calls an LLM, never 409, never starts a job.
+        Same viewer rule and the same cache guards (respondent_count +
+        schema_version) as the POST."""
+        study = await _study_for_viewer(study_id, current_user)
+        cached = await db.analysis_cache.find_one(
+            {"study_id": study_id, "method": _interpretation_cache_key(method, compare_all),
+             "respondent_count": study.get("respondent_count", 0),
+             "schema_version": ANALYSIS_CACHE_VERSION},
+            {"_id": 0}
+        )
+        if cached and cached.get("results"):
+            return _interp_response(cached["results"], cached=True,
+                                    filter_active=_filter_active(date_from, date_to, segments))
+        return {"cached": False}
+
     @conjoint_router.get("/conjoint/studies/{study_id}/ai-interpretation-status/{job_id}")
     async def get_ai_interpretation_status(
         study_id: str,
@@ -6077,7 +6170,12 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         current_user: Optional[User] = Depends(get_current_user_optional)
     ):
         """Poll AI interpretation job status. Returns result when ready."""
-        job = await db.ai_interp_jobs.find_one({"job_id": job_id}, {"_id": 0})
+        # The job must belong to THIS study and the caller must be allowed to
+        # view it: the result is read by (path study_id, job cache_key), so a
+        # caller's own ready job id used to unlock any other study's cached
+        # interpretation (WP9a).
+        await _study_for_viewer(study_id, current_user)
+        job = await db.ai_interp_jobs.find_one({"job_id": job_id, "study_id": study_id}, {"_id": 0})
         if not job:
             return {"status": "not_found"}
 
@@ -6090,6 +6188,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 return _interp_response(cached["results"], cached=False)
             return {"status": "ready", "interpretation": "", "summary_data": None}
 
+        if _job_stale(job, 15 * 60):
+            return {"status": "failed", "error": JOB_STALE_MESSAGE_TH, "error_code": "stale_job"}
         return {"status": job.get("status", "unknown"), "error": job.get("error"),
                 "error_code": job.get("error_code")}
 
@@ -6408,9 +6508,17 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         current_user: User = Depends(get_current_user)
     ):
         """Poll thesis generation status."""
-        job = await db.thesis_jobs.find_one({"job_id": job_id}, {"_id": 0})
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "creator_id": 1})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study.get("creator_id") != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        job = await db.thesis_jobs.find_one({"job_id": job_id, "study_id": study_id}, {"_id": 0})
         if not job:
             return {"status": "not_found"}
+        if _job_stale(job, 45 * 60):
+            return {"status": "failed", "error": JOB_STALE_MESSAGE_TH, "error_code": "stale_job",
+                    "cache_key": job.get("cache_key")}
         return {"status": job.get("status", "unknown"), "error": job.get("error"),
                 "error_code": job.get("error_code"), "cache_key": job.get("cache_key")}
 

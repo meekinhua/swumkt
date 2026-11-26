@@ -18,9 +18,6 @@ import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { apiErrorText } from '@/lib/apiError';
 import { useAiGate } from '@/components/AiPolicyNote';
 import AiActionButton from '@/components/AiActionButton';
-import PasteAnswerBox from '@/components/PasteAnswerBox';
-import { useExternalDialog } from '@/hooks/useExternalDialog';
-import { withBodyKey } from '@/lib/aiTextParse';
 
 const CustomerJourneyTool = ({ embedded = false }) => {
   const navigate = useNavigate();
@@ -46,7 +43,6 @@ const CustomerJourneyTool = ({ embedded = false }) => {
   const [manualMermaidCode, setManualMermaidCode] = useState('');
   const [manualAnalysis, setManualAnalysis] = useState('');
   const aiGate = useAiGate('journey.ai');
-  const ext = useExternalDialog(); // "use my own AI" prompt dialog (server builds the prompt)
   const mermaidRef = useRef(null);
   const containerRef = useRef(null);
   const fullscreenRef = useRef(null);
@@ -229,37 +225,7 @@ const CustomerJourneyTool = ({ embedded = false }) => {
   // Prompt for the user's own AI — built by the server with the same function as the system path
   const journeyPromptRequest = () => {
     const data = journeyBody();
-    return { method: 'POST', url: withBodyKey(`${API}/generate-journey-map/external-prompt`, data), data };
-  };
-
-  const showJourneyPrompt = () => {
-    if (!rawData.trim()) {
-      toast.error(t('common.error') + ': ' + t('customerJourney.dataHelp'));
-      return;
-    }
-    ext.open({ title: 'สร้างแผนที่เส้นทางลูกค้าด้วย AI ของฉันเอง', promptRequest: journeyPromptRequest() });
-  };
-
-  // Answer pasted from the user's own AI -> server validates it and stores it exactly like a system run
-  // (so the quantitative journey module can still seed from it).
-  const handleImportJourney = async (content) => {
-    if (!rawData.trim()) {
-      toast.error(t('common.error') + ': ' + t('customerJourney.dataHelp'));
-      return false;
-    }
-    try {
-      const response = await axios.post(
-        `${API}/generate-journey-map/external-import`,
-        { content, raw_data: rawData, research_context: researchContext || null },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setResult(response.data);
-      toast.success(t('common.success'));
-      return true;
-    } catch (error) {
-      toast.error(apiErrorText(error, 'อ่านผลลัพธ์จาก AI ไม่สำเร็จ'));
-      return false;
-    }
+    return { method: 'POST', url: `${API}/generate-journey-map/external-prompt`, data };
   };
 
   // Called by <AiActionButton> (system path). A 409 llm_external_only is re-thrown so the
@@ -312,7 +278,6 @@ const CustomerJourneyTool = ({ embedded = false }) => {
         mermaid_code: cleanedCode,
         analysis_summary: manualAnalysis || (i18n.language === 'th' ? 'สร้างจาก Manual Input' : 'Created from Manual Input')
       });
-      setShowPromptOnError(false);
       toast.success(i18n.language === 'th' ? 'แสดงผล Mermaid สำเร็จ!' : 'Mermaid rendered successfully!');
     } catch (error) {
       console.error('Mermaid syntax error:', error);
@@ -669,24 +634,23 @@ const CustomerJourneyTool = ({ embedded = false }) => {
                         label={t('customerJourney.generate')}
                         icon={Sparkles}
                         onSystem={handleGenerate}
-                        external={{ title: 'สร้างแผนที่เส้นทางลูกค้าด้วย AI ของฉันเอง', promptRequest: journeyPromptRequest() }}
+                        external={{
+                          title: 'สร้างแผนที่เส้นทางลูกค้าด้วย AI ของฉันเอง',
+                          promptRequest: journeyPromptRequest(),
+                          // The server validates the pasted Mermaid and stores it like a system run
+                          // (the quantitative journey module can seed from it), so it needs the raw data too.
+                          importUrl: `${API}/generate-journey-map/external-import`,
+                          importExtra: { raw_data: rawData, research_context: researchContext || null },
+                          onImported: (data) => setResult(data),
+                        }}
                         disabled={loading || !rawData.trim()}
                         className="w-full h-12 md:h-14 bg-gradient-to-r from-[#005A73] via-[#007B9A] to-[#00A9CE] hover:from-[#004A5F] hover:to-[#008FB5] text-white font-bold shadow-xl text-base md:text-lg"
                         data-testid="journey-generate-btn"
                       />
                       <p className="text-xs text-gray-700">
-                        เมื่อ AI ของระบบปิดอยู่ ปุ่มนี้จะให้พรอมต์ไปวางใน ChatGPT / Claude / Gemini · แล้ววางคำตอบ (Mermaid) กลับมาในกล่องด้านล่าง
+                        เมื่อ AI ของระบบปิดอยู่ ปุ่มนี้จะให้พรอมต์ไปวางใน ChatGPT / Claude / Gemini · แล้ววางคำตอบ (Mermaid) กลับมาในขั้นตอนที่ 2 ของหน้าต่างเดียวกัน
                         {aiGate.hint ? ` · ${aiGate.hint}` : ''}
                       </p>
-                      <PasteAnswerBox
-                        testid="journey-paste"
-                        defaultOpen={aiGate.blocked}
-                        hint="วางคำตอบทั้งก้อนที่ AI ตอบ (โค้ด Mermaid พร้อมสรุป) — ระบบตรวจรูปแบบและบันทึกให้เหมือนที่ AI ของระบบสร้าง"
-                        rows={8}
-                        onShowPrompt={showJourneyPrompt}
-                        onApply={handleImportJourney}
-                        applyLabel="แสดง Journey Map จากคำตอบนี้"
-                      />
                     </div>
                   )}
 
@@ -955,7 +919,6 @@ const CustomerJourneyTool = ({ embedded = false }) => {
           loading={sharing}
         />
       </div>
-      {ext.dialog}
     </>
   );
 };

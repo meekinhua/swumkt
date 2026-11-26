@@ -46,15 +46,3 @@ export const parseNumberedQuestions = (raw) => stripFences(raw)
   .map((l) => l.replace(/^\s*(?:\d+\s*[.)]|[-•*])\s*/, '').replace(/^\*\*(.*)\*\*$/, '$1').trim())
   .filter(Boolean)
   .slice(0, 12);
-
-/**
- * ExternalAiDialog re-uses its prompt request while the URL is unchanged, so a
- * POST whose BODY changes between openings would show a stale prompt. Appending a
- * hash of the body to the URL (ignored by the server) makes each body a new request.
- */
-export const withBodyKey = (url, data) => {
-  const s = JSON.stringify(data || {});
-  let h = 0;
-  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return `${url}${url.includes('?') ? '&' : '?'}k=${(h >>> 0).toString(36)}`;
-};

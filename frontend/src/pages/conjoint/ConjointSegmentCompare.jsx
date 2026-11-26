@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid
 } from 'recharts';
 import { Loader2, AlertCircle, GitCompare } from 'lucide-react';
+import { apiErrorText } from '@/lib/apiError';
 
 /**
  * Wave A vs Wave B segment comparison panel.
@@ -74,7 +75,7 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
         if (r.data?.status === 'success') setResultA({ ...r.data.results, _n: r.data.respondent_count });
         else setErrorA(r.data?.message || 'ข้อมูลไม่พอ');
       }})
-      .catch(e => { if (!cancelled) setErrorA(e.response?.data?.detail || e.message); })
+      .catch(e => { if (!cancelled) setErrorA(apiErrorText(e, e.message)); })
       .finally(() => { if (!cancelled) setLoadingA(false); });
 
     axios.get(url(filterB), { headers })
@@ -82,7 +83,7 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
         if (r.data?.status === 'success') setResultB({ ...r.data.results, _n: r.data.respondent_count });
         else setErrorB(r.data?.message || 'ข้อมูลไม่พอ');
       }})
-      .catch(e => { if (!cancelled) setErrorB(e.response?.data?.detail || e.message); })
+      .catch(e => { if (!cancelled) setErrorB(apiErrorText(e, e.message)); })
       .finally(() => { if (!cancelled) setLoadingB(false); });
 
     return () => { cancelled = true; };

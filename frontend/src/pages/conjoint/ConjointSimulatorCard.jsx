@@ -9,7 +9,8 @@ import { Layers, Plus, Trash2, Loader2, Play, AlertTriangle } from 'lucide-react
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { API } from '@/App';
-import { apiErrorText, fmtShare, fmtNum, METHOD_INFO } from './cjFormat';
+import { fmtShare, fmtNum, METHOD_INFO } from './cjFormat';
+import { apiErrorTextAsync } from '@/lib/apiError';
 
 const SIM_METHODS = ['mnl', 'mixed_logit', 'hierarchical_bayes'];
 
@@ -41,7 +42,7 @@ const ConjointSimulatorCard = ({ studyId, token, study, filterQs, defaultMethod,
       setResult(r.data);
     } catch (e) {
       setResult(null);
-      setError(await apiErrorText(e, 'จำลองไม่สำเร็จ'));
+      setError(await apiErrorTextAsync(e, 'จำลองไม่สำเร็จ'));
     } finally { setLoading(false); }
   }, [studyId, filterQs, method, effRule, token, products]);
 
@@ -141,8 +142,11 @@ const ConjointSimulatorCard = ({ studyId, token, study, filterQs, defaultMethod,
       <div className="mt-4 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" data-testid="sim-caveats">
         <p className="mb-1 flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" aria-hidden="true" />อ่านตัวเลขนี้อย่างระวัง</p>
         <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed">
+          {/* The server's caveats (no none-option, IIA for MNL) replace the generic ones once a result exists. */}
+          {!(result?.caveats_th || []).length && (<>
           <li><b>นี่คือ “ส่วนแบ่งความชอบ” ไม่ใช่ส่วนแบ่งตลาด</b> — แบบสอบถามไม่มีตัวเลือก “ไม่ซื้อ” จึงไม่รู้ว่ามีคนไม่เลือกสินค้าใดเลยกี่คน และไม่รวมการรู้จักแบรนด์ ช่องทางขาย หรือราคาของคู่แข่งจริง</li>
           <li><b>ข้อจำกัด IIA (วิธีมาตรฐาน MNL)</b> — ถ้าเพิ่มสินค้าที่หน้าตาเกือบเหมือนของเดิมเข้ามา โมเดลจะดึงส่วนแบ่งจากทุกสินค้าในสัดส่วนเท่าเดิม ทั้งที่ในความจริงสินค้าที่คล้ายกันมักแย่งลูกค้ากันเองมากกว่า จึงควรทดสอบกับสินค้าที่ต่างกันพอสมควร หรือใช้ Mixed Logit ซึ่งลดข้อจำกัดนี้</li>
+          </>)}
           {(result?.caveats_th || []).map((c, i) => <li key={i}>{c}</li>)}
         </ul>
       </div>

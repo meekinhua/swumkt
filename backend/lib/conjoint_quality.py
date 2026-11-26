@@ -7,7 +7,10 @@ tells the researcher which respondents look suspicious so they can decide
 * speeder      — total duration below ``speeder_ratio`` × the median duration
                  (Sawtooth's default screen is in the same range, 30–50 %),
                  and only when a duration was actually recorded (> 0 s)
-* straight-liner — chose the SAME on-screen position in every answered task,
+* straight-liner — chose the SAME on-screen position in every answered task
+                 (the position actually DISPLAYED when the response records it —
+                 the survey shuffles alternatives per respondent since 2026-11 —
+                 else the position in the design),
                  with at least ``min_tasks_straightline`` tasks (with 3
                  alternatives and 8 tasks a random respondent does this with
                  probability 3·(1/3)^8 ≈ 0.05 %, so it is a strong signal)
@@ -24,13 +27,91 @@ tells the researcher which respondents look suspicious so they can decide
 from __future__ import annotations
 
 from statistics import median
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 def _usable(cs: Dict, choice: Dict) -> bool:
     profiles = cs.get("profiles", []) or []
     sel = choice.get("selected_profile_id")
     return len(profiles) >= 2 and sum(1 for p in profiles if p.get("id") == sel) == 1
+
+
+def displayed_profile_ids(cs: Dict, choice: Dict) -> Optional[List[str]]:
+    """The on-screen order of the alternatives as recorded by the survey page
+    (`display_profile_ids`), or None when absent or not a permutation of the
+    design's profile ids (the item is stored verbatim from a public endpoint,
+    so it is validated here, never trusted)."""
+    ids = choice.get("display_profile_ids")
+    if not isinstance(ids, list) or not ids or not all(isinstance(x, str) for x in ids):
+        return None
+    design = [p.get("id") for p in cs.get("profiles", []) or []]
+    if len(ids) != len(design) or len(set(ids)) != len(ids) or set(ids) != set(design):
+        return None
+    return ids
+
+
+def displayed_task_index(choice: Dict) -> Optional[int]:
+    """1-based position of the task as shown to this respondent, or None."""
+    v = choice.get("display_task_index")
+    if isinstance(v, bool) or not isinstance(v, int) or v < 1:
+        return None
+    return v
+
+
+def selected_position(cs: Dict, choice: Dict) -> Optional[int]:
+    """0-based position of the chosen alternative: displayed if recorded, else design."""
+    sel = choice.get("selected_profile_id")
+    shown = displayed_profile_ids(cs, choice)
+    order = shown if shown is not None else [p.get("id") for p in cs.get("profiles", []) or []]
+    try:
+        return order.index(sel)
+    except ValueError:
+        return None
+
+
+def randomization_summary(study: Dict, responses: List[Dict]) -> Dict[str, Any]:
+    """Was task order / alternative position randomised for these respondents?
+
+    A response counts as randomised when at least one of its items carries a
+    valid recorded display order (the survey page writes it on every item since
+    the 2026-11 change; older responses have none). ``status``:
+    ``randomised`` (all), ``not_randomised`` (none), ``mixed``, ``no_responses``.
+    ``order_varies`` / ``positions_vary`` say whether the recorded orders really
+    differ from the design order (evidence, not an assumption).
+    """
+    cs_map = {cs["id"]: cs for cs in study.get("choice_sets", []) or []}
+    design_task_order = {cid: i + 1 for i, cid in enumerate(cs_map)}
+    n_with = 0
+    order_varies = positions_vary = False
+    for r in responses:
+        has = False
+        for ch in r.get("responses", []) or []:
+            cs = cs_map.get(ch.get("choice_set_id"))
+            if not cs:
+                continue
+            shown = displayed_profile_ids(cs, ch)
+            t = displayed_task_index(ch)
+            if shown is not None:
+                has = True
+                if shown != [p.get("id") for p in cs.get("profiles", []) or []]:
+                    positions_vary = True
+            if t is not None:
+                has = True
+                if t != design_task_order.get(ch.get("choice_set_id")):
+                    order_varies = True
+        n_with += 1 if has else 0
+    n = len(responses)
+    if n == 0:
+        status = "no_responses"
+    elif n_with == n:
+        status = "randomised"
+    elif n_with == 0:
+        status = "not_randomised"
+    else:
+        status = "mixed"
+    return {"status": status, "n_responses": n, "n_with_display_order": n_with,
+            "n_without_display_order": n - n_with,
+            "order_varies": order_varies, "positions_vary": positions_vary}
 
 
 def _epoch(v) -> Any:
@@ -66,8 +147,9 @@ def data_quality_report(study: Dict, responses: List[Dict], *,
             answered += 1
             if _usable(cs, ch):
                 usable += 1
-                pos = next(i for i, p in enumerate(cs["profiles"]) if p.get("id") == ch.get("selected_profile_id"))
-                positions.append(pos)
+                pos = selected_position(cs, ch)
+                if pos is not None:
+                    positions.append(pos)
         dur = r.get("duration_sec")
         try:
             dur = int(dur) if dur is not None else 0

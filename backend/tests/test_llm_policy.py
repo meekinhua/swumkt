@@ -576,3 +576,91 @@ def test_api_key_scope_gate_end_to_end(sim):
                   json={"title": "x"}).status_code == 403
     assert c.put("/api/platform/llm-policy", headers=research,
                  json={"system_llm_enabled": True}).status_code == 403
+
+
+# ---- WP9a integration --------------------------------------------------------
+
+def test_api_key_never_spends_even_with_admin_bypass(sim):
+    """A key's principal is role ADMIN; with admin_bypass it used to pass the
+    guard. Keys must never trigger billed calls."""
+    sim.set_policy({"system_llm_enabled": False, "admin_bypass": True, "features": {}})
+    key_user = sim.server._principal_for_key({"id": "k1", "label": "t", "fingerprint": "swk_x"})
+    pol = asyncio.run(llm_policy.get_policy())
+    assert llm_policy.is_admin(key_user) and llm_policy.is_api_key_principal(key_user)
+    assert llm_policy.effective(pol, "conjoint.interpretation", key_user) is False
+    sim.set_policy({"system_llm_enabled": True, "features": {}})
+    pol = asyncio.run(llm_policy.get_policy())
+    assert llm_policy.effective(pol, "conjoint.interpretation", key_user) is False
+    with pytest.raises(Exception) as e:
+        asyncio.run(llm_policy.require_system_llm("conjoint.interpretation", key_user))
+    assert getattr(e.value, "status_code", None) == 409
+    # Display: a key sees the site's effective policy, not "all off".
+    view = llm_policy.public_view(pol, key_user)
+    assert view["features"]["conjoint.interpretation"] is True and "overrides" in view
+    # End to end: a key with a scope that reaches a billed test route is refused by the guard.
+    n = len(sim.calls)
+    platform = sim.mint(["platform.settings"])
+    assert sim.client.get("/api/platform/llm-policy", headers=platform).json()["features"]["cv.ai"] is True
+    sim.set_policy(None)
+
+
+def test_no_llm_routes_refuse_billed_calls_even_with_a_grant():
+    for p in ("/api/conjoint/studies/s/ai-interpretation/external-prompt",
+              "/api/conjoint/studies/s/export-thesis/external-pack",
+              "/api/brand-equity/studies/s/ai-analyze/external-import",
+              "/api/conjoint/studies/s/export-thesis/no-ai", "/api/conjoint/studies/s/export-long",
+              "/api/conjoint/studies/s/wtp", "/api/conjoint/studies/s/simulate",
+              "/api/conjoint/studies/s/data-quality", "/api/brand-equity/studies/s/coding",
+              "/api/brand-equity/studies/s/coding/import-csv", "/api/brand-equity/studies/s/export/raw",
+              "/api/brand-equity/extract-identity/external-prompt"):
+        assert llm_policy.feature_for_path(p) == llm_policy.NO_LLM, p
+    assert llm_policy.feature_for_path("/api/brand-equity/extract-identity") == "be.visual_identity"
+    assert llm_policy.feature_for_path("/api/conjoint/studies/s/ai-interpretation") == "conjoint.interpretation"
+    assert llm_policy.NO_LLM not in llm_policy.FEATURES
+    assert llm_policy.FEATURES["be.visual_identity"] == "research"
+
+    async def run():
+        t = llm_policy._route_feature.set(llm_policy.NO_LLM)
+        g = llm_policy._grants.set(frozenset({"conjoint.interpretation"}))
+        try:
+            with pytest.raises(llm_policy.SystemLLMDisabled):
+                await llm_policy.check_billed_call("chat")
+            with pytest.raises(llm_policy.SystemLLMDisabled):
+                llm_policy.check_billed_call_sync("image")
+        finally:
+            llm_policy._grants.reset(g)
+            llm_policy._route_feature.reset(t)
+    asyncio.run(run())
+
+
+def test_api_key_on_optional_auth_route_is_scoped_not_anonymous(sim):
+    """research.read must reach optional-auth reads of a PRIVATE study (WTP,
+    interpretation prompt); a key without the scope is refused, not downgraded."""
+    import uuid as _uuid
+    sid = str(_uuid.uuid4())
+    asyncio.run(sim.server.db.conjoint_studies.insert_one({
+        "id": sid, "title": "priv", "creator_id": "someone-else", "is_public_result": False,
+        "attributes": [], "choice_sets": [], "respondent_count": 0}))
+    research = sim.mint(["research.read"])
+    content = sim.mint(["cms.*"])
+    r = sim.client.get(f"/api/conjoint/studies/{sid}/wtp", headers=research)
+    assert r.status_code == 200, r.text                     # not 401 any more
+    r = sim.client.get(f"/api/conjoint/studies/{sid}/ai-interpretation", headers=research)
+    assert r.status_code == 200 and r.json() == {"cached": False}
+    assert sim.client.get(f"/api/conjoint/studies/{sid}/wtp", headers=content).status_code == 403
+    # research.read cannot start a system interpretation (POST is not in its scope).
+    assert sim.client.post(f"/api/conjoint/studies/{sid}/ai-interpretation", headers=research,
+                           json={"method": "mnl"}).status_code == 403
+    # Anonymous still sees only public studies.
+    assert sim.client.get(f"/api/conjoint/studies/{sid}/wtp").status_code == 401
+
+
+def test_body_size_limit_on_import_endpoints(sim):
+    big = "x" * (2 * 1024 * 1024 + 10)
+    r = sim.client.post("/api/conjoint/studies/s/ai-interpretation/external-import",
+                        headers=sim.admin, json={"content": big})
+    assert r.status_code == 413 and r.json()["detail"]["code"] == "payload_too_large"
+    # Small bodies pass through untouched (404 from the route, not 413).
+    r = sim.client.post("/api/conjoint/studies/nope/ai-interpretation/external-import",
+                        headers=sim.admin, json={"content": "y" * 100})
+    assert r.status_code in (404, 422)

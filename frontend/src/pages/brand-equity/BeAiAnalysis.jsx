@@ -36,6 +36,7 @@ export const useBeAiAnalysis = ({ studyId, token, filter, reload, enabled = true
   const [progress, setProgress] = useState(null);
   const [extOpen, setExtOpen] = useState(false);
   const [importInfo, setImportInfo] = useState(null);
+  const [onlyParts, setOnlyParts] = useState(null); // sections to finish after a partial job
   const pollRef = useRef(null);
   const qsRef = useRef('');
   const reloadRef = useRef(reload);
@@ -53,7 +54,12 @@ export const useBeAiAnalysis = ({ studyId, token, filter, reload, enabled = true
     stopPolling();
     setRunning(true);
     const runQs = qsRef.current;
+    const started = Date.now();
     pollRef.current = setInterval(async () => {
+      if (Date.now() - started > 30 * 60 * 1000) { // a lost job must not poll forever
+        stopPolling(); setRunning(false); setProgress(null);
+        return;
+      }
       try {
         const r = await axios.get(`${API}/brand-equity/studies/${studyId}/ai-status${runQs}`,
           { headers: authHeaders(token) });
@@ -100,7 +106,8 @@ export const useBeAiAnalysis = ({ studyId, token, filter, reload, enabled = true
   }, [studyId, token, qs, filter, startPolling]);
 
   const externalProps = useMemo(() => ({
-    title: 'วิเคราะห์ผลด้วย AI ของฉันเอง',
+    title: onlyParts ? 'ทำส่วนที่เหลือด้วย AI ของฉันเอง' : 'วิเคราะห์ผลด้วย AI ของฉันเอง',
+    onlyParts: onlyParts || undefined,
     promptRequest: { method: 'GET', url: `${API}/brand-equity/studies/${studyId}/ai-analyze/external-prompt${qs}` },
     importUrl: `${API}/brand-equity/studies/${studyId}/ai-analyze/external-import${qs}`,
     onImported: async (data) => {
@@ -110,10 +117,13 @@ export const useBeAiAnalysis = ({ studyId, token, filter, reload, enabled = true
       });
       await reloadRef.current?.();
     },
-  }), [studyId, qs]);
+  }), [studyId, qs, onlyParts]);
 
   return {
-    running, progress, extOpen, setExtOpen, openExternal: () => setExtOpen(true),
+    running, progress, extOpen,
+    setExtOpen: (v) => { setExtOpen(v); if (!v) setOnlyParts(null); },
+    // openExternal(['themes','insights']) shows only the prompt parts covering those sections.
+    openExternal: (sections) => { setOnlyParts(Array.isArray(sections) && sections.length ? sections : null); setExtOpen(true); },
     runSystem, externalProps, importInfo, clearImportInfo: () => setImportInfo(null),
     resumeIfRunning,
   };
@@ -232,10 +242,10 @@ export const AiResultBanner = ({ ai, onExternal, canExternal = true }) => {
       {!errors.length && ai.error && <div className="be-small be-muted" style={{ marginBottom: 8 }}>{String(ai.error)}</div>}
       <div className="be-small" style={{ lineHeight: 1.6 }}>
         ส่วนที่ทำเสร็จแล้วถูกบันทึกไว้ — คะแนน BES ไม่ได้ขึ้นกับขั้นตอนเหล่านี้
-        {canExternal && ' · ทำส่วนที่เหลือต่อได้ด้วย AI ของคุณเอง (ในหน้าต่างที่เปิดขึ้น ให้ทำเฉพาะชุดงานที่ครอบคลุมหัวข้อข้างต้น)'}
+        {canExternal && ' · ทำส่วนที่เหลือต่อได้ด้วย AI ของคุณเอง (หน้าต่างที่เปิดขึ้นจะแสดงเฉพาะชุดงานที่ครอบคลุมหัวข้อข้างต้น)'}
       </div>
       {canExternal && (
-        <button type="button" className="be-btn" style={{ marginTop: 10 }} onClick={onExternal}
+        <button type="button" className="be-btn" style={{ marginTop: 10 }} onClick={() => onExternal(missing)}
                 data-testid="be-ai-finish-external">
           ทำส่วนที่เหลือด้วย AI ของฉัน →
         </button>
@@ -249,8 +259,8 @@ export const AiResultBanner = ({ ai, onExternal, canExternal = true }) => {
 // ---------------------------------------------------------------------------
 export const BeAiAnalysisPanel = ({ ai, aiCache, filter, nFiltered, ready, readOnlyReason }) => {
   const { hint, systemAllowed } = useLlmPolicy();
-  const hasResult = aiCache && aiCache.status && aiCache.status !== 'idle'
-    && (aiCache.master_insights?.length || aiCache.identity_image || Object.keys(aiCache.themes_by_question || {}).length);
+  const hasResult = !!(aiCache && aiCache.status && aiCache.status !== 'idle'
+    && (aiCache.master_insights?.length || aiCache.identity_image || Object.keys(aiCache.themes_by_question || {}).length));
   const sysOk = systemAllowed('be.ai_analyze');
   const sliceNote = isFilterActive(filter)
     ? 'เฉพาะชุดข้อมูลที่กรองอยู่ตอนนี้' : 'ผู้ตอบทั้งหมด';

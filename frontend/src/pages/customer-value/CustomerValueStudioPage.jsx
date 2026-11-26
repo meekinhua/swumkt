@@ -7,10 +7,7 @@ import { BeTopbar } from '@/pages/brand-equity/be-components';
 import { API } from '@/App';
 import { isLlmExternalOnly } from '@/lib/llmErrors';
 import { useAiGate, AiPolicyNote } from '@/components/AiPolicyNote';
-import PasteAnswerBox from '@/components/PasteAnswerBox';
 import { useExternalDialog } from '@/hooks/useExternalDialog';
-import { apiErrorText } from '@/lib/apiError';
-import { withBodyKey } from '@/lib/aiTextParse';
 import {
   BENEFIT_CATS, COST_CATS, PRINCIPLE_TAGS, industryRange, scoreBrand,
   defaultFactorPool, newFactor, INDUSTRIES, PERCEPTION_PROFILES, perceptionSeries,
@@ -28,7 +25,7 @@ const WeightPicker = ({ value, onChange }) => (
 );
 
 // ---------- one category (benefit or cost) ----------
-function CategoryBox({ cat, isCost, factors, onChange, onAiSuggest, aiState, aiOff, onShowPrompt, onPaste }) {
+function CategoryBox({ cat, isCost, factors, onChange, onAiSuggest, aiState, aiOff }) {
   const [draft, setDraft] = useState('');
   const list = factors || [];
   const setF = (idx, patch) => onChange(list.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
@@ -69,11 +66,6 @@ function CategoryBox({ cat, isCost, factors, onChange, onAiSuggest, aiState, aiO
           onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add(draft)} />
         <button className="cv-btn ghost sm" onClick={() => add(draft)}>เพิ่ม</button>
       </div>
-      {aiOff && (
-        <PasteAnswerBox testid={`cv-paste-${cat.id}`} className="mt-2" title="วางคำตอบจาก AI ของคุณ"
-          hint="กดปุ่ม AI เพื่อรับพรอมต์ → ให้ AI ตอบเป็น JSON → วางคำตอบทั้งก้อนที่นี่"
-          rows={5} onShowPrompt={() => onShowPrompt(cat.id)} onApply={(text) => onPaste(cat.id, text)} applyLabel="ใช้คำแนะนำนี้" />
-      )}
       {aiState && aiState.suggestions && (
         <div className="cv-ai-box" data-testid={`cv-aibox-${cat.id}`}>
           <div className="cv-eyebrow" style={{ color: '#1b75bc', marginBottom: 6 }}>
@@ -218,11 +210,16 @@ export default function CustomerValueStudioPage() {
 
   // ---- AI actions: system path, or "use my own AI" (server-built prompt + paste-back import) ----
   const cvUrl = (path) => `${API}/cv/studies/${studyId}/${path}`;
-  const promptReq = (path, data) => ({ method: 'POST', url: withBodyKey(cvUrl(`${path}/external-prompt`), data), data });
-  const importErr = (e) => toast.error(apiErrorText(e, 'อ่านคำตอบจาก AI ไม่สำเร็จ'));
+  const promptReq = (path, data) => ({ method: 'POST', url: cvUrl(`${path}/external-prompt`), data });
 
   const showSuggestPrompt = (bid, catId) => {
-    ext.open({ title: 'ขอคำแนะนำปัจจัยด้วย AI ของฉันเอง', promptRequest: promptReq('ai-suggest', { brand_id: bid, category: catId }) });
+    ext.open({
+      title: 'ขอคำแนะนำปัจจัยด้วย AI ของฉันเอง',
+      promptRequest: promptReq('ai-suggest', { brand_id: bid, category: catId }),
+      importUrl: cvUrl('ai-suggest/external-import'),
+      importExtra: { brand_id: bid, category: catId },
+      onImported: (d) => applySuggestions(`${bid}_${catId}`, d),
+    });
   };
   const applySuggestions = (key, data) => {
     setAi((p) => ({ ...p, [key]: { suggestions: data.suggestions || [] } }));
@@ -240,14 +237,6 @@ export default function CustomerValueStudioPage() {
       if (isLlmExternalOnly(e)) showSuggestPrompt(bid, catId); else toast.error('AI แนะนำไม่สำเร็จ');
     }
   };
-  const pasteSuggest = async (bid, catId, content) => {
-    try {
-      const r = await axios.post(cvUrl('ai-suggest/external-import'), { brand_id: bid, category: catId, content }, auth);
-      applySuggestions(`${bid}_${catId}`, r.data);
-      return true;
-    } catch (e) { importErr(e); return false; }
-  };
-
   const showAnalysisPrompt = () => ext.open({
     title: 'วิเคราะห์กลยุทธ์คุณค่าด้วย AI ของฉันเอง',
     importUrl: cvUrl('ai-analysis/external-import'),
@@ -303,6 +292,9 @@ export default function CustomerValueStudioPage() {
   const showStepPrompt = (stepId) => ext.open({
     title: 'ขอคำแนะนำขั้นตอนด้วย AI ของฉันเอง',
     promptRequest: promptReq('ai-step', { step: stepId }),
+    importUrl: cvUrl('ai-step/external-import'),
+    importExtra: { step: stepId },
+    onImported: (d) => setStepAi((p) => ({ ...p, [stepId]: d.result || {} })),
   });
   const doAiStep = async (stepId) => {
     if (aiOff) { showStepPrompt(stepId); return; }
@@ -315,14 +307,6 @@ export default function CustomerValueStudioPage() {
       if (isLlmExternalOnly(e)) showStepPrompt(stepId); else toast.error('AI แนะนำไม่สำเร็จ');
     }
   };
-  const pasteStep = async (stepId, content) => {
-    try {
-      const r = await axios.post(cvUrl('ai-step/external-import'), { step: stepId, content }, auth);
-      setStepAi((p) => ({ ...p, [stepId]: r.data.result || {} }));
-      return true;
-    } catch (e) { importErr(e); return false; }
-  };
-
   if (!study) return <div className="cv-page"><BeTopbar active="tools" subtitle="CUSTOMER VALUE LAB" /><div className="cv-empty">กำลังโหลด…</div></div>;
 
   const rng = industryRange(study.industry);
@@ -509,7 +493,7 @@ export default function CustomerValueStudioPage() {
                         factors={(brand.benefits || {})[c.id]}
                         onChange={(f) => setCategoryFactors(brand.id, 'benefits', c.id, f)}
                         onAiSuggest={() => doAiSuggest(brand.id, c.id)} aiState={ai[`${brand.id}_${c.id}`]} aiOff={aiOff}
-                        onShowPrompt={(cid) => showSuggestPrompt(brand.id, cid)} onPaste={(cid, text) => pasteSuggest(brand.id, cid, text)} />
+                        />
                     ))}
                     <div className="cv-subhd"><i className="fa-solid fa-brain" /> Psychological (จิตวิทยา · Maslow)</div>
                     {BENEFIT_CATS.filter((c) => c.group === 'psych').map((c) => (
@@ -517,7 +501,7 @@ export default function CustomerValueStudioPage() {
                         factors={(brand.benefits || {})[c.id]}
                         onChange={(f) => setCategoryFactors(brand.id, 'benefits', c.id, f)}
                         onAiSuggest={() => doAiSuggest(brand.id, c.id)} aiState={ai[`${brand.id}_${c.id}`]} aiOff={aiOff}
-                        onShowPrompt={(cid) => showSuggestPrompt(brand.id, cid)} onPaste={(cid, text) => pasteSuggest(brand.id, cid, text)} />
+                        />
                     ))}
 
                     <div className="cv-sect-title" style={{ color: '#c8102e', margin: '16px 0 8px' }}>
@@ -534,7 +518,7 @@ export default function CustomerValueStudioPage() {
                         factors={(brand.costs || {})[c.id]}
                         onChange={(f) => setCategoryFactors(brand.id, 'costs', c.id, f)}
                         onAiSuggest={() => doAiSuggest(brand.id, c.id)} aiState={ai[`${brand.id}_${c.id}`]} aiOff={aiOff}
-                        onShowPrompt={(cid) => showSuggestPrompt(brand.id, cid)} onPaste={(cid, text) => pasteSuggest(brand.id, cid, text)} />
+                        />
                     ))}
                   </div>
                 </div>
@@ -601,11 +585,6 @@ export default function CustomerValueStudioPage() {
                   <textarea className="cv-textarea" rows={2} placeholder="บันทึกแผน/ไอเดียของขั้นนี้…" style={{ marginTop: 10 }}
                     value={data.notes || ''}
                     onChange={(e) => updateStudy({ process: { ...study.process, [st.id]: { ...data, notes: e.target.value } } })} />
-                  {aiOff && (
-                    <PasteAnswerBox testid={`cv-step-paste-${st.id}`} className="mt-2" title="วางคำตอบจาก AI ของคุณ"
-                      hint="กดปุ่ม AI เพื่อรับพรอมต์ → ให้ AI ตอบเป็น JSON → วางคำตอบทั้งก้อนที่นี่"
-                      rows={5} onShowPrompt={() => showStepPrompt(st.id)} onApply={(text) => pasteStep(st.id, text)} applyLabel="ใช้คำแนะนำนี้" />
-                  )}
                   {aiR && aiR.checklist && (
                     <div className="cv-ai-box" style={{ marginTop: 10 }} data-testid={`cv-step-result-${st.id}`}>
                       <div style={{ fontSize: 13, marginBottom: 6 }}>{aiR.summary}</div>

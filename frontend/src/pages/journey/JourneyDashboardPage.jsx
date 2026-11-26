@@ -11,6 +11,7 @@ import { ProvenanceBanner, ProvenanceLine, QualitativeAuditCard,
          SaturationCard, ReliabilityCard } from './JourneyProvenance';
 import JourneyBackCoding from './JourneyBackCoding';
 import { copyToClipboard } from '@/lib/clipboard';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -66,7 +67,7 @@ const JourneyDashboardPage = () => {
         setData(a.data);
           setCodebook(cb.data?.active || null);
       } catch (e) {
-        setError(e?.response?.data?.detail || 'โหลดผลวิเคราะห์ไม่ได้');
+        setError(apiErrorText(e, 'โหลดผลวิเคราะห์ไม่ได้'));
       }
       setLoading(false);
     })();

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Avatar, Chip, Icon, Modal, useToast } from './AlumniUI';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -73,7 +74,7 @@ export const ReviewModal = ({ open, onClose, subject, token, onPosted }) => {
       onPosted?.();
       onClose();
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'รีวิวไม่สำเร็จ');
+      toast.show(apiErrorText(e, 'รีวิวไม่สำเร็จ'));
     } finally { setSubmitting(false); }
   };
 

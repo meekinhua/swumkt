@@ -136,7 +136,8 @@ Results card and the new thesis facts.
 
 ## Recommendations (not implemented)
 
-1. **Randomise task order and alternative positions per respondent** in `ConjointSurveyPage.js`
+1. **(Done 2026-11 by the frontend; WP9a made the facts/quality/export data-driven — see the contract.)**
+   **Randomise task order and alternative positions per respondent** in `ConjointSurveyPage.js`
    (or field 2–4 design versions/blocks). Today order and position effects are confounded with the
    design; the thesis facts now disclose it, but fixing it is cheap. Record the shown order in the
    response so the export can carry it.

@@ -16,7 +16,8 @@ import csv
 import io
 from typing import Any, Dict, List, Optional, Tuple
 
-from lib.conjoint_quality import data_quality_report, flags_by_index
+from lib.conjoint_quality import (data_quality_report, displayed_profile_ids,
+                                  displayed_task_index, flags_by_index, randomization_summary)
 
 DEMO_FIELDS_ORDER = ["age", "gender", "occupation", "education", "region", "income"]
 
@@ -44,9 +45,16 @@ def build_long_table(study: Dict, responses: List[Dict],
 
     quality = quality or data_quality_report(study, responses)
     flags = flags_by_index(quality)
+    # Since 2026-11 the survey shuffles task order and alternative positions per
+    # respondent and records what was shown. `task` / `alt` stay the DESIGN
+    # position (what the estimators use); the displayed ones are extra columns,
+    # present only when at least one response recorded them (blank = not recorded).
+    with_display = randomization_summary(study, responses)["n_with_display_order"] > 0
 
     header = ["respondent_id", "respondent_index", "response_id", "submitted_at", "duration_sec",
               "situation_id", "task", "choice_set_id", "alt", "profile_id", "chosen", "usable"]
+    if with_display:
+        header += ["display_task", "display_alt"]
     for a in attrs:
         nm = _safe_col(a.get("name"))
         header += [nm, f"{nm}__code"]
@@ -67,10 +75,15 @@ def build_long_table(study: Dict, responses: List[Dict],
             usable = int(len(profiles) >= 2 and sum(1 for p in profiles if p.get("id") == sel) == 1)
             task = cs.get("set_number") or (cs_list.index(cs) + 1)
             situation = idx * 1000 + int(task)
+            shown = displayed_profile_ids(cs, ch) if with_display else None
+            d_task = displayed_task_index(ch) if with_display else None
             for alt_i, prof in enumerate(profiles, start=1):
                 row = [r.get("respondent_id") or f"resp{idx + 1}", idx + 1, r.get("id") or "",
                        submitted, r.get("duration_sec") or 0, situation, task, cs["id"], alt_i,
                        prof.get("id"), int(prof.get("id") == sel), usable]
+                if with_display:
+                    row += [d_task if d_task is not None else "",
+                            (shown.index(prof.get("id")) + 1) if shown is not None else ""]
                 for a in attrs:
                     lid = (prof.get("attribute_levels") or {}).get(a["id"])
                     code, label = level_info.get((a["id"], lid), (None, None))
@@ -88,7 +101,7 @@ def build_long_table(study: Dict, responses: List[Dict],
     return header, rows
 
 
-def build_codebook(study: Dict) -> List[List[Any]]:
+def build_codebook(study: Dict, with_display: bool = False) -> List[List[Any]]:
     """variable · code · label · role/reference note."""
     out = [["variable", "code", "label", "note"]]
     fixed = [
@@ -96,13 +109,20 @@ def build_codebook(study: Dict) -> List[List[Any]]:
         ("respondent_index", "", "ลำดับผู้ตอบตามที่ระบบอ่าน (ระบบใช้ค่านี้เป็นตัวระบุผู้ตอบในการประมาณค่า)", "integer"),
         ("situation_id", "", "รหัสสถานการณ์การเลือก = respondent_index×1000 + task (ใช้เป็น group ใน clogit)", "integer"),
         ("task", "", "ลำดับชุดคำถาม (choice task) ตามการออกแบบ", "integer"),
-        ("alt", "", "ตำแหน่งของทางเลือกบนหน้าจอ (1 = ซ้ายสุด/บนสุด)", "integer"),
+        ("alt", "", "ลำดับของทางเลือกในชุดคำถามตามการออกแบบ (design position)", "integer"),
         ("chosen", "0/1", "1 = ทางเลือกที่ถูกเลือก", "dependent variable"),
         ("usable", "0/1", "1 = สถานการณ์นี้มีการเลือกที่ถูกต้องหนึ่งทางเลือกพอดี (ระบบใช้เฉพาะ usable = 1)", "filter"),
         ("duration_sec", "", "เวลาที่ใช้ทำแบบสอบถามทั้งชุด (วินาที; 0 = ไม่ได้บันทึก)", "integer"),
         ("flag_speeder / flag_straightliner / flag_duplicate", "0/1",
          "ธงคุณภาพข้อมูล (ดูชีต README) — ระบบไม่ได้ตัดออกจากการวิเคราะห์", "quality"),
     ]
+    if with_display:
+        fixed += [
+            ("display_task", "", "ลำดับที่ชุดคำถามนี้ถูกแสดงต่อผู้ตอบคนนี้ (1 = ข้อแรก; ระบบสุ่มลำดับรายบุคคล; "
+             "ว่าง = คำตอบเก่าที่ไม่ได้บันทึก ซึ่งเห็นตามลำดับ task)", "integer"),
+            ("display_alt", "", "ตำแหน่งที่ทางเลือกนี้ถูกแสดงบนหน้าจอ (1 = ซ้ายสุด/บนสุด; ระบบสุ่มรายบุคคล; "
+             "ว่าง = ไม่ได้บันทึก ซึ่งแสดงตามลำดับ alt) — ใช้ตรวจ position/order effect ได้", "integer"),
+        ]
     for v, c, l, n in fixed:
         out.append([v, c, l, n])
     for a in study.get("attributes", []) or []:
@@ -181,7 +201,7 @@ def export_xlsx(study: Dict, responses: List[Dict]) -> bytes:
     ws.freeze_panes = "A2"
 
     ws = wb.create_sheet("codebook")
-    for r in build_codebook(study):
+    for r in build_codebook(study, "display_task" in header):
         ws.append(r)
 
     ws = wb.create_sheet("design")

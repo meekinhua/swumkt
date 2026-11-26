@@ -63,6 +63,7 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts';
+import { apiErrorText } from '@/lib/apiError';
 
 const ConjointResultsPage = () => {
   const navigate = useNavigate();
@@ -207,7 +208,7 @@ const ConjointResultsPage = () => {
       console.error('Error loading results:', error);
       if (error.response?.status === 401) {
         toast.error('กรุณา login เพื่อดูผลการวิจัยนี้');
-        navigate('/login');
+        navigate(`/login?redirect=${encodeURIComponent(`/research/conjoint/${studyId}/results`)}`);
       } else {
         toast.error('ไม่สามารถโหลดผลการวิเคราะห์ได้');
       }
@@ -390,7 +391,7 @@ const ConjointResultsPage = () => {
       // navigate(`/content/${response.data.content_id}`);
     } catch (error) {
       console.error('Error sharing as content:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถแชร์เป็นเนื้อหาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถแชร์เป็นเนื้อหาได้'));
     } finally {
       setSharingContent(false);
     }
@@ -411,7 +412,7 @@ const ConjointResultsPage = () => {
       toast.success('✅ วิเคราะห์ NCA เสร็จสมบูรณ์!');
     } catch (error) {
       console.error('Error running NCA:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ NCA ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถวิเคราะห์ NCA ได้'));
     } finally {
       setLoadingNCA(false);
     }
@@ -430,7 +431,7 @@ const ConjointResultsPage = () => {
       toast.success('✅ วิเคราะห์ fsQCA เสร็จสมบูรณ์!');
     } catch (error) {
       console.error('Error running fsQCA:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ fsQCA ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถวิเคราะห์ fsQCA ได้'));
     } finally {
       setLoadingFsQCA(false);
     }
@@ -451,10 +452,10 @@ const ConjointResultsPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('ลบการศึกษาสำเร็จ');
-      navigate('/research/conjoint');
+      navigate('/market-research/conjoint-analysis');
     } catch (error) {
       console.error('Error deleting study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบการศึกษาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบการศึกษาได้'));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -743,6 +744,8 @@ const ConjointResultsPage = () => {
             </div>
             <select
               value={selectedMethod}
+              aria-label="เลือกวิธีการวิเคราะห์"
+              data-testid="method-select"
               onChange={(e) => {
                 setSelectedMethod(e.target.value);
                 loadStatisticalAnalysis(e.target.value);

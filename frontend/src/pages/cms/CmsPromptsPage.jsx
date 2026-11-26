@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cmsApi } from './cmsApi';
+import { apiErrorText } from '@/lib/apiError';
 
 const SCOPE_LABEL = {
   text: 'Text (Article body)',
@@ -33,13 +34,13 @@ const CmsPromptsPage = () => {
         toast.success('สร้างแล้ว');
       }
       setEditing(null); setCreating(false); load();
-    } catch (e) { toast.error('บันทึกไม่สำเร็จ: ' + (e.response?.data?.detail || e.message)); }
+    } catch (e) { toast.error('บันทึกไม่สำเร็จ: ' + (apiErrorText(e, e.message))); }
   };
 
   const remove = async (id) => {
     if (!window.confirm('ลบ template นี้?')) return;
     try { await cmsApi.deletePrompt(id); toast.success('ลบแล้ว'); load(); }
-    catch (e) { toast.error(e.response?.data?.detail || 'ลบไม่สำเร็จ'); }
+    catch (e) { toast.error(apiErrorText(e, 'ลบไม่สำเร็จ')); }
   };
 
   return (

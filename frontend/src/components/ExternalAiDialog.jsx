@@ -9,11 +9,22 @@
  *   open, onOpenChange(bool)   controlled open state (required)
  *   title                      dialog title (Thai); falls back to the response's `title`
  *   promptRequest              { method?: 'GET'|'POST', url, data? } — endpoint returning
- *                              { title, instructions_th, expected_format: 'markdown'|'json',
- *                                parts: [{key,title,system_prompt?,prompt,json_example?}], filename }
- *   importUrl                  POST endpoint receiving { part_key, content, model_label }.
+ *                              { title, instructions_th,
+ *                                expected_format: 'markdown'|'json'|'yaml'|'text'|'image'|'image-prompt',
+ *                                parts: [{key,title,system_prompt?,prompt,json_example?,sections?}],
+ *                                images?: [{index, kind, note, mime_type}], filename }
+ *                              The prompt is re-fetched when method, url OR data change (the
+ *                              body is part of the cache key — no URL cache-busting needed).
+ *   importUrl                  POST endpoint receiving { ...importExtra, part_key, content, model_label }.
  *                              OMIT for prompt-only cases (image prompts, thesis packs):
  *                              step 2 is then hidden and the dialog only offers copy/download.
+ *                              expected_format 'image' / 'image-prompt' never shows step 2.
+ *   importExtra                object, or (partKey) => object, merged into every import body
+ *                              (e.g. {method, compare_all} or {brand_id, category}). The core
+ *                              fields part_key / content / model_label always win.
+ *   onlyParts                  optional array of part keys (or of `sections` names a part
+ *                              covers): show/import only those parts — e.g. the sections a
+ *                              Brand Equity analysis could not finish. Ignored if nothing matches.
  *   onImported(data, {partKey}) called after each part is imported successfully with the
  *                              response body; the dialog closes once every part is done.
  *   className                  extra classes for the dialog content
@@ -24,8 +35,10 @@
  *     fallback for insecure contexts) and a ".md" download of all parts in one file.
  *   - Step 2: textarea per part (status per part), optional "ใช้ AI ตัวไหน" label
  *     (remembered in localStorage), import button. 400/422 errors from the server are
- *     shown inline under the relevant part. expected_format 'json' shows the example and
- *     does a light client-side "contains a JSON object" check before sending.
+ *     shown inline under the relevant part, including a 422 `detail.errors` list.
+ *     expected_format 'json' shows the example and does a light client-side "contains a
+ *     JSON object" check before sending; 'yaml' only shows a format hint.
+ *   - A prompt response with `images` lists the images the user must attach in their chat.
  *   - Closing while pasted text is not yet imported asks for confirmation.
  *
  * Example
@@ -58,6 +71,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 import { copyToClipboard } from '@/lib/clipboard';
+import { apiErrorText } from '@/lib/apiError';
 
 const LABEL_KEY = 'swumkt.externalAi.modelLabel';
 
@@ -96,11 +110,18 @@ const downloadText = (text, filename) => {
 
 const errorText = (err, fallback) => {
   const d = err?.response?.data?.detail;
-  if (typeof d === 'string') return d;
-  if (d && typeof d === 'object' && !Array.isArray(d) && d.message) return d.message;
   if (Array.isArray(d) && d[0]?.msg) return d.map((x) => x.msg).join('; ');
-  return err?.message || fallback;
+  return apiErrorText(err, err?.message || fallback);
 };
+
+/** Per-item validation messages of a 422 `{detail: {message, errors: [...]}}`. */
+const errorList = (err) => {
+  const list = err?.response?.data?.detail?.errors;
+  if (!Array.isArray(list)) return [];
+  return list.map((x) => (typeof x === 'string' ? x : (x && (x.message || x.msg)) || JSON.stringify(x))).filter(Boolean);
+};
+
+const PROMPT_ONLY_FORMATS = new Set(['image', 'image-prompt']);
 
 const looksLikeJson = (s) => {
   const a = s.indexOf('{');
@@ -109,7 +130,7 @@ const looksLikeJson = (s) => {
 };
 
 const ExternalAiDialog = ({
-  open, onOpenChange, promptRequest, importUrl, onImported, title, className = '',
+  open, onOpenChange, promptRequest, importUrl, importExtra, onlyParts, onImported, title, className = '',
 }) => {
   const { token } = useAuth();
   const [data, setData] = useState(null);
@@ -119,22 +140,31 @@ const ExternalAiDialog = ({
   const [contents, setContents] = useState({});
   const [status, setStatus] = useState({}); // key -> idle|busy|done
   const [errors, setErrors] = useState({});
+  const [errorLists, setErrorLists] = useState({});
   const [modelLabel, setModelLabel] = useState(readLabel);
   const [confirmClose, setConfirmClose] = useState(false);
   const reqRef = useRef(0);
-  const reqKey = promptRequest ? `${promptRequest.method || 'GET'} ${promptRequest.url}` : '';
-  const hasImport = !!importUrl;
+  // The body is part of the key: a POST prompt whose data changed is a new prompt.
+  // Only computed while open (bodies may embed base64 images).
+  const reqKey = open && promptRequest
+    ? `${promptRequest.method || 'GET'} ${promptRequest.url} ${promptRequest.data === undefined ? '' : JSON.stringify(promptRequest.data)}`
+    : '';
+  const reqRefLatest = useRef(promptRequest);
+  reqRefLatest.current = promptRequest;
+  const extraRef = useRef(importExtra);
+  extraRef.current = importExtra;
 
   const load = useCallback(async () => {
-    if (!promptRequest?.url) return;
+    const req = reqRefLatest.current;
+    if (!req?.url) return;
     const id = ++reqRef.current;
     setLoading(true);
     setLoadError('');
     try {
       const r = await axios({
-        method: promptRequest.method || 'GET',
-        url: promptRequest.url,
-        data: promptRequest.data,
+        method: req.method || 'GET',
+        url: req.url,
+        data: req.data,
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         timeout: 60000,
       });
@@ -146,7 +176,10 @@ const ExternalAiDialog = ({
     } finally {
       if (id === reqRef.current) setLoading(false);
     }
-  }, [reqKey, token]);
+  }, [reqKey, token]); // eslint-disable-line
+
+  // Ignore responses that arrive after unmount.
+  useEffect(() => () => { reqRef.current += 1; }, []);
 
   // (Re)load whenever the dialog opens; reset state for a fresh session.
   useEffect(() => {
@@ -155,13 +188,25 @@ const ExternalAiDialog = ({
     setContents({});
     setStatus({});
     setErrors({});
+    setErrorLists({});
     setConfirmClose(false);
     setData(null);
     load();
   }, [open, load]);
 
-  const parts = useMemo(() => (data?.parts || []), [data]);
-  const isJson = data?.expected_format === 'json';
+  const onlyKey = Array.isArray(onlyParts) ? onlyParts.join('|') : '';
+  const parts = useMemo(() => {
+    const all = data?.parts || [];
+    if (!onlyKey) return all;
+    const keep = new Set(onlyKey.split('|'));
+    const sub = all.filter((p) => keep.has(p.key) || (p.sections || []).some((x) => keep.has(x)));
+    return sub.length ? sub : all;
+  }, [data, onlyKey]);
+  const fmt = data?.expected_format || 'markdown';
+  const isJson = fmt === 'json';
+  const isYaml = fmt === 'yaml';
+  const hasImport = !!importUrl && !PROMPT_ONLY_FORMATS.has(fmt);
+  const images = Array.isArray(data?.images) ? data.images : [];
   const multi = parts.length > 1;
   const allDone = parts.length > 0 && parts.every((p) => status[p.key] === 'done');
   const dirty = parts.some((p) => status[p.key] !== 'done' && (contents[p.key] || '').trim());
@@ -185,10 +230,14 @@ const ExternalAiDialog = ({
       return false;
     }
     setErrors((e) => ({ ...e, [p.key]: '' }));
+    setErrorLists((e) => ({ ...e, [p.key]: [] }));
     setStatus((s) => ({ ...s, [p.key]: 'busy' }));
     if (modelLabel.trim()) writeLabel(modelLabel.trim());
+    const ex = extraRef.current;
+    const extra = (typeof ex === 'function' ? ex(p.key) : ex) || {};
     try {
       const r = await axios.post(importUrl, {
+        ...extra,
         part_key: p.key,
         content,
         model_label: modelLabel.trim() || undefined,
@@ -203,6 +252,7 @@ const ExternalAiDialog = ({
       setStatus((s) => ({ ...s, [p.key]: 'idle' }));
       const msg = errorText(e, 'นำเข้าไม่สำเร็จ');
       setErrors((er) => ({ ...er, [p.key]: msg }));
+      setErrorLists((er) => ({ ...er, [p.key]: errorList(e) }));
       toast.error(multi ? `นำเข้า "${p.title || p.key}" ไม่สำเร็จ` : 'นำเข้าไม่สำเร็จ', { description: msg });
       return false;
     }
@@ -303,6 +353,26 @@ const ExternalAiDialog = ({
                   ))}
                 </div>
 
+                {images.length > 0 && (
+                  <section aria-label="รูปที่ต้องแนบ" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm" data-testid="external-ai-images">
+                    <h3 className="font-bold mb-1">แนบรูปเหล่านี้ในแชตของ AI ตามลำดับ ({images.length} รูป)</h3>
+                    <ol className="list-decimal pl-5 space-y-0.5 text-[13px]">
+                      {images.map((im, i) => (
+                        <li key={im.index ?? i}>
+                          {[im.kind, im.note].filter(Boolean).join(' — ') || `รูปที่ ${(im.index ?? i) + 1}`}
+                          {im.mime_type ? <span className="text-[#4A4A4A]"> ({im.mime_type})</span> : null}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
+
+                {PROMPT_ONLY_FORMATS.has(fmt) && (
+                  <p className="text-xs text-[#4A4A4A]" data-testid="external-ai-image-hint">
+                    คัดลอกพรอมต์ไปใช้ในเครื่องมือสร้างภาพของคุณ แล้วอัปโหลดภาพที่ได้ด้วยปุ่มอัปโหลดตามปกติ (ไม่ต้องวางข้อความกลับมา)
+                  </p>
+                )}
+
                 {parts.map((p, i) => {
                   const text = partPromptText(p);
                   return (
@@ -340,6 +410,11 @@ const ExternalAiDialog = ({
                   />
                 </div>
 
+                {isYaml && (
+                  <p className="text-xs text-[#4A4A4A]">
+                    ให้ AI ตอบเป็น <b>YAML</b> ตามรูปแบบในพรอมต์ แล้ววางทั้งคำตอบ (มี code fence ได้ ระบบจะตัดให้)
+                  </p>
+                )}
                 {isJson && (
                   <p className="text-xs text-[#4A4A4A]">
                     ให้ AI ตอบเป็น <b>JSON</b> ตามตัวอย่างในขั้นตอนที่ 1 แล้ววางทั้งคำตอบ (มี code fence หรือคำอธิบายนำหน้าได้ ระบบจะตัดให้)
@@ -349,6 +424,7 @@ const ExternalAiDialog = ({
                 {parts.map((p, i) => {
                   const st = status[p.key] || 'idle';
                   const err = errors[p.key];
+                  const errItems = errorLists[p.key] || [];
                   return (
                     <section key={p.key} aria-label={p.title || p.key} data-testid={`external-ai-import-${p.key}`}>
                       <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -389,6 +465,12 @@ const ExternalAiDialog = ({
                         <p id={`ext-ai-err-${p.key}`} role="alert" className="mt-1 flex items-start gap-1.5 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800" data-testid={`external-ai-error-${p.key}`}>
                           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span className="whitespace-pre-line">{err}</span>
                         </p>
+                      )}
+                      {err && errItems.length > 0 && (
+                        <ul className="mt-1 list-disc pl-6 text-xs text-red-800 space-y-0.5" data-testid={`external-ai-error-list-${p.key}`}>
+                          {errItems.slice(0, 30).map((m, j) => <li key={j} className="break-words">{m}</li>)}
+                          {errItems.length > 30 && <li>…และอีก {errItems.length - 30} รายการ</li>}
+                        </ul>
                       )}
                       {multi && st !== 'done' && (
                         <Button type="button" size="sm" variant="outline" className="mt-2" disabled={st === 'busy' || !(contents[p.key] || '').trim()} onClick={() => importPart(p)} data-testid={`external-ai-import-btn-${p.key}`}>

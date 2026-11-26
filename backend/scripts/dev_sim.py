@@ -19,6 +19,10 @@ What it does (all in-process, nothing touches production code paths):
 * Optionally serves ``frontend/build`` at ``/`` (SPA fallback) so a browser
   smoke test runs against one origin.
 
+Requires the dev-only packages (mongomock-motor is not in requirements.txt)::
+
+    pip install -r requirements.txt -r requirements-dev.txt
+
 Commands
 --------
 Backend only (default port 18090)::
@@ -49,13 +53,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import json
 import logging
 import os
 import sys
 import types
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 REPO_DIR = BACKEND_DIR.parent
@@ -73,6 +78,144 @@ PNG_1x1_B64 = ("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhf
                "60e6kgAAAABJRU5ErkJggg==")
 
 FAKE_LLM_CALLS: List[Dict[str, Any]] = []
+
+SMART = "smart"   # pass reply=SMART: answer known JSON/YAML prompts schema-validly
+
+
+# ---------------------------------------------------------------------------
+# Smart canned answers — so the system path of JSON/YAML features can be
+# watched SUCCEEDING end to end (brand-equity ai-analyze, visual identity,
+# attribute translation, conjoint qualitative, survey generation). Anything
+# not recognised gets the plain FAKE_REPLY text (fine for markdown features:
+# interpretation, thesis chapters, CMS text …).
+# ---------------------------------------------------------------------------
+_SDL_YAML = """survey: "แบบสอบถามจำลองจาก dev_sim"
+type: perception
+description: "สร้างโดย fake LLM ของ dev_sim — ไม่ได้เรียก LLM จริง"
+demographics:
+  collect: true
+  auto_fill: true
+  fields:
+    - birth_sex
+    - age_group
+sections:
+  - name: "ความคิดเห็นทั่วไป"
+    description: "ตัวอย่าง"
+    questions:
+      - text: "คุณรู้จักแบรนด์นี้จากช่องทางใด?"
+        type: multiple_choice_single
+        required: yes
+        data_type: nominal
+        options:
+          - "โซเชียลมีเดีย"
+          - "เพื่อนแนะนำ"
+          - "หน้าร้าน"
+      - text: "ให้คะแนนความพึงพอใจโดยรวม"
+        type: rating_scale
+        scale: "1-5"
+        labels:
+          "1": "น้อยที่สุด"
+          "5": "มากที่สุด"
+        required: yes
+        data_type: scale
+      - text: "ข้อเสนอแนะเพิ่มเติม"
+        type: open_ended
+        required: no
+        data_type: nominal
+"""
+
+_BE_SECTION_MARKS = (("coding", "### งาน: เข้ารหัส"), ("themes", "### งาน: สกัดประเด็น"),
+                     ("identity", "### งาน: เทียบอัตลักษณ์"), ("insights", "### งาน: ข้อเสนอแนะ"))
+
+
+def _be_ai_analyze_answer(prompt: str) -> Optional[str]:
+    """Answer a brand-equity ai-analyze part (lib/be_external prompt format)."""
+    import re as _re
+    m = _re.search(r"## ชุดงาน (\S+):", prompt)
+    if not m:
+        return None
+    secs = [sname for sname, mark in _BE_SECTION_MARKS if mark in prompt]
+    out: Dict[str, Any] = {"part": m.group(1)}
+    item_rx = r"^(a[0-9a-f]{8,12}) \| \((\d+)\) \| (.*)$"
+    if "coding" in secs:
+        sec = prompt.split("### งาน: สกัดประเด็น")[0]
+        brands = []
+        bm = _re.search(r"แบรนด์ที่รู้จัก[^:\n]*:\s*(.+)", sec)
+        if bm:
+            brands = [b.strip() for b in _re.split(r"[,،、]", bm.group(1)) if b.strip()]
+        coding = {}
+        for block in _re.split(r"^#### คำถาม ", sec, flags=_re.M)[1:]:
+            tm = _re.search(r"ประเภท (\w+)", block.splitlines()[0])
+            task = tm.group(1) if tm else "concept"
+            for aid, _n, text in _re.findall(item_rx, block, _re.M):
+                low = text.lower()
+                hits = [b for b in brands if b.lower() in low]
+                if task == "brand_multi":
+                    coding[aid] = hits
+                elif task == "brand_single":
+                    coding[aid] = hits[0] if hits else None
+                else:
+                    coding[aid] = (text.strip()[:30] or None)
+        out["coding"] = coding
+    if "themes" in secs:
+        sec = prompt.split("### งาน: สกัดประเด็น")[1].split("### งาน:")[0]
+        themes = {}
+        for block in _re.split(r"^#### คำถาม ", sec, flags=_re.M)[1:]:
+            qid = block.split()[0]
+            ids = _re.findall(r"^(a[0-9a-f]{8,12}) \|", block, _re.M)
+            half = max(1, len(ids) // 2)
+            themes[qid] = [t for t in (
+                {"name": "ราคาและความคุ้มค่า", "description": "พูดถึงราคา (จำลอง)", "sentiment": -0.2,
+                 "answer_ids": ids[:half]},
+                {"name": "ประสบการณ์และบริการ", "description": "พูดถึงบริการ (จำลอง)", "sentiment": 0.5,
+                 "answer_ids": ids[half:]}) if t["answer_ids"]]
+        out["themes"] = themes
+    if "identity" in secs:
+        out["identity"] = {"perceived_traits": [{"trait": "Modern", "count": 10, "sentiment": 0.4}],
+                           "aligned": ["Modern"], "lost": [], "unintended": [],
+                           "alignment_score_0_100": 50,
+                           "narrative": "[FAKE-LLM] ภาพลักษณ์จำลองจาก dev_sim"}
+    if "insights" in secs:
+        out["insights"] = [{"headline": f"[FAKE-LLM] ข้อเสนอแนะจำลอง {i}",
+                            "evidence": "ตัวเลขจากแดชบอร์ด (จำลอง)",
+                            "recommendation": "ทดสอบเส้นทาง system LLM ใน dev_sim",
+                            "priority": "medium"} for i in range(1, 4)]
+    return "```json\n" + json.dumps(out, ensure_ascii=False) + "\n```"
+
+
+def smart_reply(system: str, prompt: str) -> Optional[str]:
+    """Schema-valid canned answer for the known JSON/YAML prompts, else None."""
+    text = prompt or ""
+    if "## ชุดงาน " in text and "### งาน:" in text:
+        return _be_ai_analyze_answer(text)
+    if "Survey Definition Language (SDL)" in text:
+        return _SDL_YAML
+    if "Choice-Based Conjoint" in text and '"attributes"' in text:
+        return json.dumps({"attributes": [
+            {"name": "ราคา", "description": "ราคาต่อหน่วย (จำลอง)",
+             "levels": [{"value": "59 บาท"}, {"value": "79 บาท"}, {"value": "99 บาท"}]},
+            {"name": "ขนาด", "description": "ขนาดบรรจุ (จำลอง)",
+             "levels": [{"value": "เล็ก"}, {"value": "กลาง"}, {"value": "ใหญ่"}]},
+            {"name": "ช่องทาง", "description": "ช่องทางซื้อ (จำลอง)",
+             "levels": [{"value": "ออนไลน์"}, {"value": "หน้าร้าน"}]},
+        ], "recommendations": "[FAKE-LLM] คำแนะนำจำลองจาก dev_sim"}, ensure_ascii=False)
+    if "derived_traits" in text and "visual_palette" in text:
+        return json.dumps({"derived_traits": ["Modern", "Friendly"], "visual_palette": ["#C8102E", "#1A1A1A"],
+                           "visual_keywords": ["minimal"], "design_style": "minimal",
+                           "archetype": "Everyman", "summary": "[FAKE-LLM] อัตลักษณ์จำลอง"},
+                          ensure_ascii=False)
+    if '{"suggestions":' in text or '"is_real_demand"' in text or '"checklist"' in text:
+        # Customer Value ai-suggest / ai-needs / ai-step (routes/customer_value.py)
+        return json.dumps({
+            "suggestions": [{"label": "[FAKE-LLM] คุ้มค่ากับราคา", "weight": 2,
+                             "rationale": "จำลองจาก dev_sim", "principle": "kotler-value"}],
+            "need": "จำลอง", "want": "จำลอง", "buying_power": "จำลอง", "is_real_demand": True,
+            "demand_verdict": "[FAKE-LLM] จำลอง", "tips": ["จำลอง"],
+            "summary": "[FAKE-LLM] สรุปจำลอง", "checklist": ["ข้อ 1", "ข้อ 2"]}, ensure_ascii=False)
+    if "Translate each of the following Thai brand quality attributes" in text:
+        attrs = [ln for ln in text.split("\n\n", 1)[-1].splitlines() if ln.strip()]
+        return "\n".join(f"sim-{i + 1}" for i in range(len(attrs)))
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -120,12 +263,14 @@ def install_fake_emergentintegrations(reply: str = FAKE_REPLY, calls: List[Dict[
                         "prompt": (text or "")[:200]})
             logging.getLogger("dev_sim").info("[FAKE-LLM] chat model=%s session=%s",
                                               self.model, self.session_id)
+            if reply == SMART:
+                return smart_reply(self.system_message or "", text or "") or FAKE_REPLY
             return reply
 
         async def send_message_multimodal_response(self, user_message):
             log.append({"kind": "image", "model": self.model, "session": self.session_id})
             logging.getLogger("dev_sim").info("[FAKE-LLM] multimodal model=%s", self.model)
-            return reply, [{"mime_type": "image/png", "data": PNG_1x1_B64}]
+            return (FAKE_REPLY if reply == SMART else reply), [{"mime_type": "image/png", "data": PNG_1x1_B64}]
 
     class OpenAIImageGeneration:
         def __init__(self, api_key: str = None, **kw):
@@ -221,7 +366,7 @@ def prepare_sim_env(db_name: str = "swumkt_sim") -> None:
     mma.AsyncIOMotorClient = _SimClient
 
     if "emergentintegrations" not in sys.modules:
-        install_fake_emergentintegrations()
+        install_fake_emergentintegrations(reply=SMART)
     patch_object_storage()
 
 
