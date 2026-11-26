@@ -35,19 +35,26 @@ export const BRAND_HEALTH_TIERS = [
 ];
 
 export function getBrandHealthTier(bes) {
-  const v = Number(bes ?? 0);
+  // Classify the value the user SEES. Every surface displays a rounded BES, so
+  // classifying the raw number made 49.7 display as "50 · At Watch" on the list
+  // card and "50 · Healthy" on the dashboard hero.
+  const v = Math.round(Number(bes ?? 0));
   return BRAND_HEALTH_TIERS.find(t => v >= t.min && v <= t.max) || BRAND_HEALTH_TIERS[BRAND_HEALTH_TIERS.length - 1];
 }
 
 // Identify the weakest dimension for a "watch this" callout.
+// `scores._measured` (served by the backend) lists the dimensions that actually
+// produced a score; unmeasured ones arrive as 0 and must not be named as the
+// brand's weak point.
 export function getWeakestDimension(scores) {
   if (!scores) return null;
+  const measured = Array.isArray(scores._measured) ? scores._measured : null;
   const dims = [
     { key: 'awareness', label: 'Awareness', labelTh: 'การรู้จัก' },
     { key: 'quality', label: 'Perceived Quality', labelTh: 'คุณภาพที่รับรู้' },
     { key: 'identity', label: 'Identity vs Image', labelTh: 'ภาพลักษณ์' },
     { key: 'loyalty', label: 'Loyalty', labelTh: 'ความภักดี' },
-  ];
+  ].filter(d => !measured || measured.includes(d.key));
   let weakest = null;
   for (const d of dims) {
     const v = Number(scores[d.key] ?? 0);

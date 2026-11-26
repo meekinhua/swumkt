@@ -5,6 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import { Topbar, Footer, Eyebrow } from '@/pages/swumkt/SwumktComponents';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { SWU_LOGO_URL } from '@/pages/brand-equity/be-components';
+import ShareBar from '@/components/ShareBar';
+import { FacultyLink, API_ORIGIN } from '@/pages/people/peopleShared';
 import { copyToClipboard } from '@/lib/clipboard';
 import { youtubeId } from '@/components/SlideMedia';
 
@@ -32,19 +34,41 @@ const CmsArticleView = () => {
     return () => { alive = false; };
   }, [slug]);
 
-  const url = typeof window !== 'undefined' ? window.location.href : '';
+  // Origin + path only. href would carry any ?utm_… into the canonical, so
+  // every tracked link would declare itself a different page — and disagree
+  // with the canonical the share bridge emits.
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const url = post ? `${origin}/learn/${post.slug}` : '';
+  // A cover served through /api/media is site-relative; structured data and
+  // og:image need an absolute URL.
+  const coverAbs = !post?.cover_image ? SWU_LOGO_URL
+    : /^https?:/i.test(post.cover_image) ? post.cover_image
+    : post.cover_image.startsWith('/') ? `${API_ORIGIN}${post.cover_image}`
+    : SWU_LOGO_URL;
   useDocumentMeta(post ? {
     title: `${post.title} · SWU MKT`,
     description: post.excerpt || '',
-    image: post.cover_image || SWU_LOGO_URL,
+    image: coverAbs,
     url, type: 'article',
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: post.title,
       description: post.excerpt || '',
-      image: post.cover_image || SWU_LOGO_URL,
-      author: { '@type': 'Organization', name: 'SWU Marketing Research' },
+      image: coverAbs,
+      // A Person with the profile's @id when the post names its lecturers —
+      // the same entity the share bridge and the profile page describe. This
+      // used to credit the Organization while the bridge credited a Person,
+      // and a crawler that saw both had two conflicting answers.
+      author: (post.authors || []).length
+        ? post.authors.map(a => ({
+            '@type': 'Person',
+            '@id': `${window.location.origin}/people/${a.slug}#person`,
+            name: a.name_th || a.display_name_th,
+            ...(a.name_en ? { alternateName: a.name_en } : {}),
+            url: `${window.location.origin}/people/${a.slug}`,
+          }))
+        : { '@type': 'Organization', name: 'SWU Marketing Research' },
       publisher: {
         '@type': 'Organization',
         name: 'SWU Marketing Research',
@@ -129,6 +153,21 @@ const CmsArticleView = () => {
         {post.excerpt && (
           <p className="lede" style={{ fontSize: 19, marginTop: 28, color: 'var(--ink-2)' }}>
             {post.excerpt}
+          </p>
+        )}
+        {(post.authors || []).length > 0 && (
+          // The byline links to each lecturer's profile: the link a reader
+          // follows to find more of their work, and the link a crawler
+          // follows to attribute this article to a named person.
+          <p data-testid="article-byline"
+             style={{ margin: '22px 0 0', fontSize: 15, color: 'var(--ink-2)' }}>
+            โดย{' '}
+            {post.authors.map((a, i) => (
+              <React.Fragment key={a.slug}>
+                {i > 0 && (i === post.authors.length - 1 ? ' และ ' : ', ')}
+                <FacultyLink person={a} />
+              </React.Fragment>
+            ))}
           </p>
         )}
       </section>
@@ -285,6 +324,9 @@ const CmsArticleView = () => {
                                                    display: 'flex', flexWrap: 'wrap',
                                                    gap: 16, alignItems: 'center',
                                                    justifyContent: 'space-between' }}>
+        {/* Copy-link already existed; these are the one-tap routes. On a phone,
+            copy-then-paste into LINE is where most sharing is abandoned. */}
+        <ShareBar kind="learn" idOrSlug={post.slug} title={post.title} compact />
         <Link to="/learn" className="btn-pill btn-pill--ghost" data-testid="cms-article-back">
           ← All Articles
         </Link>

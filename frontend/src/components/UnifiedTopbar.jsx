@@ -26,6 +26,7 @@ import '@/components/unified-topbar.css';
 const PUBLIC_LINKS = [
   { key: 'home',          to: '/',              label: 'หน้าแรก' },
   { key: 'learn',         to: '/learn',         label: 'เรียนรู้' },
+  { key: 'people',        to: '/people',        label: 'คณาจารย์' },
   { key: 'announcements', to: '/announcements', label: 'ประชาสัมพันธ์' },
   { key: 'showcase',      to: '/showcase',      label: 'Showcase' },
 ];
@@ -216,7 +217,7 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
 
           {showInternal && (
             <Dropdown testid="utb-tools-dd"
-                      trigger={<span className={active === 'tools' || ['brand_equity', 'conjoint', 'surveys'].includes(active) ? 'is-active' : ''}>เครื่องมือ</span>}>
+                      trigger={<span className={active === 'tools' || ['brand_equity', 'conjoint', 'surveys', 'customer_journey'].includes(active) ? 'is-active' : ''}>เครื่องมือ</span>}>
               {TOOLS_LINKS.map(t => (
                 <Link key={t.to} to={t.to} className="utb-dd-item" data-testid={`utb-tools-${t.hint.toLowerCase()}`}>
                   <span className="utb-dd-label">{t.label}</span>

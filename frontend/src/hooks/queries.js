@@ -13,7 +13,7 @@
  *   const qc = useQueryClient();
  *   qc.invalidateQueries({ queryKey: queryKeys.pinnedAnnouncements });
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -22,6 +22,10 @@ const API = `${BACKEND_URL}/api`;
 // Centralised query keys — change once, invalidate everywhere
 export const queryKeys = {
   landing: ['cms', 'landing'],
+  siteSettings: ['cms', 'settings'],
+  faculty: ['faculty'],
+  facultyProfile: (slug) => ['faculty', slug],
+  publications: (params = {}) => ['publications', params],
   pinnedAnnouncements: ['cms', 'announcements', 'pinned'],
   announcementsArchive: (params = {}) => ['cms', 'announcements', 'archive', params],
   showcaseIndex: ['showcase', 'index'],
@@ -42,6 +46,43 @@ export const useLanding = () => useQuery({
   queryKey: queryKeys.landing,
   queryFn: () => fetchJson(`${API}/cms/landing`),
   staleTime: 5 * 60_000,
+});
+
+// ============ Site settings — strings the owner can change without a deploy ============
+// Read through useSiteText(); every consumer supplies the current hardcoded
+// value as a fallback, so an empty document renders the site unchanged.
+export const useSiteSettings = () => useQuery({
+  queryKey: queryKeys.siteSettings,
+  queryFn: () => fetchJson(`${API}/cms/settings`),
+  staleTime: 5 * 60_000,
+});
+
+// ============ Faculty + publications ============
+// Profiles change rarely and every page links to them, so cache generously.
+export const useFaculty = () => useQuery({
+  queryKey: queryKeys.faculty,
+  queryFn: () => fetchJson(`${API}/faculty`),
+  staleTime: 10 * 60_000,
+  select: (data) => data?.items || [],
+});
+
+export const useFacultyProfile = (slug) => useQuery({
+  queryKey: queryKeys.facultyProfile(slug),
+  queryFn: () => fetchJson(`${API}/faculty/${encodeURIComponent(slug)}`),
+  enabled: !!slug,
+  staleTime: 10 * 60_000,
+  retry: (n, err) => err?.response?.status !== 404 && n < 1,
+});
+
+export const usePublications = (params = {}) => useQuery({
+  queryKey: queryKeys.publications(params),
+  queryFn: () => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')).toString();
+    return fetchJson(`${API}/publications${qs ? `?${qs}` : ''}`);
+  },
+  staleTime: 10 * 60_000,
+  placeholderData: keepPreviousData,
 });
 
 // ============ Pinned hero announcements (60s freshness) ============

@@ -31,6 +31,7 @@ from lib.ref_extract import RefExtract
 from lib.citation_replacer import CitationReplacer
 from lib.doc_formatter import DocFormatter
 from lib.ttl_cache import async_ttl_cache
+from lib import api_keys
 from PIL import Image
 from io import BytesIO
 
@@ -313,14 +314,24 @@ async def create_indexes():
     """Create database indexes for better query performance"""
     indexes_created = 0
     indexes_skipped = 0
+    indexes_failed = 0
     
     async def safe_create_index(collection, keys, **kwargs):
-        nonlocal indexes_created, indexes_skipped
+        nonlocal indexes_created, indexes_skipped, indexes_failed
         try:
             await collection.create_index(keys, **kwargs)
             indexes_created += 1
-        except Exception:
-            indexes_skipped += 1
+        except Exception as e:
+            # "already exists" is the expected, harmless case. A unique index
+            # that cannot be built because the collection holds duplicates is
+            # not, and counting both as "skipped" hid it completely.
+            msg = str(e).lower()
+            if "already exists" in msg or "indexoptionsconflict" in msg:
+                indexes_skipped += 1
+            else:
+                indexes_failed += 1
+                logging.warning("[INDEXES] %s %s could not be created: %s",
+                                getattr(collection, "name", "?"), keys, e)
     
     # Content collection indexes (most important for performance)
     await safe_create_index(db.contents, "id", unique=True, background=True)
@@ -367,14 +378,120 @@ async def create_indexes():
     # Content course_id index for filtering by course
     await safe_create_index(db.contents, "course_id", background=True)
     
-    # Analysis cache indexes
-    await safe_create_index(db.analysis_cache, [("study_id", 1), ("method", 1)], unique=True, background=True)
+    # Analysis cache indexes.
+    #
+    # The unique key MUST include `filter_sig`. Conjoint upserts its statistical
+    # analysis on (study_id, method, filter_sig) so each date/segment slice gets
+    # its own cached row, but this index used to be unique on (study_id, method)
+    # alone. The first slice inserted fine; viewing a SECOND slice matched no
+    # document, attempted an insert, and the narrower unique index rejected it
+    # with DuplicateKeyError — surfacing as a 500 on the results page every time
+    # a user filtered by segment or date.
+    #
+    # Deployed databases already carry the old two-field index, and
+    # `safe_create_index` swallows failures, so simply declaring the wider one
+    # would leave the old constraint in force. Drop it first.
+    try:
+        await db.analysis_cache.drop_index("study_id_1_method_1")
+        logging.info("[INDEXES] dropped stale unique index analysis_cache.study_id_1_method_1")
+    except Exception:
+        pass  # never existed, or already dropped
+    # AI-interpretation and thesis rows write no `filter_sig`; Mongo indexes a
+    # missing key as null, so those keep exactly one row per (study_id, method),
+    # which is the existing intent.
+    await safe_create_index(
+        db.analysis_cache,
+        [("study_id", 1), ("method", 1), ("filter_sig", 1)],
+        unique=True, background=True,
+    )
     await safe_create_index(db.analysis_cache, "created_at", background=True)
-    
-    logging.info(f"[INDEXES] Created: {indexes_created}, Skipped (already exist): {indexes_skipped}")
+
+    # Customer Journey (quantitative). Its analysis cache is a SEPARATE
+    # collection on purpose (spec 8.2): rebuilding a unique index on the shared
+    # `analysis_cache` would put two shipping modules at risk for no gain.
+    await safe_create_index(db.journey_studies, "id", unique=True, background=True)
+    await safe_create_index(db.journey_studies, "share_token", background=True)
+    await safe_create_index(db.journey_studies, "owner_id", background=True)
+    await safe_create_index(db.journey_responses, "study_id", background=True)
+    await safe_create_index(db.journey_responses, "respondent_token", background=True)
+    await safe_create_index(db.journey_response_drafts, "id", unique=True, background=True)
+    await safe_create_index(db.journey_recontacts, "respondent_token", background=True)
+    await safe_create_index(db.qualitative_runs, "id", unique=True, background=True)
+    await safe_create_index(db.qualitative_runs, "owner_id", background=True)
+    await safe_create_index(
+        db.journey_analysis_cache,
+        [("study_id", 1), ("method", 1), ("filter_sig", 1)],
+        unique=True, background=True,
+    )
+
+    # CMS and Brand Equity — these four collections sit behind every public
+    # page (homepage, Learn, both showcases) and carried no index but `_id`,
+    # so each of those requests was a full collection scan. `brand_responses`
+    # is the one that hurts: the showcase list counts responses per study.
+    await safe_create_index(db.cms_posts, "id", unique=True, background=True)
+    await safe_create_index(db.cms_posts, "slug", background=True)
+    await safe_create_index(
+        db.cms_posts,
+        [("status", 1), ("type", 1), ("published_at", -1)], background=True)
+    await safe_create_index(
+        db.cms_posts,
+        [("pinned_to_home", 1), ("pinned_order", 1)], background=True)
+    await safe_create_index(db.cms_landing, "key", unique=True, background=True)
+
+    await safe_create_index(db.brand_studies, "id", unique=True, background=True)
+    await safe_create_index(db.brand_studies, "share_token", background=True)
+    await safe_create_index(db.brand_studies, "owner_id", background=True)
+    await safe_create_index(
+        db.brand_studies,
+        [("is_public_showcase", 1), ("updated_at", -1)], background=True)
+    await safe_create_index(db.brand_responses, "study_id", background=True)
+    await safe_create_index(
+        db.brand_responses,
+        [("study_id", 1), ("created_at", -1)], background=True)
+    await safe_create_index(
+        db.conjoint_studies,
+        [("is_public_result", 1), ("updated_at", -1)], background=True)
+
+    # Content ops — revision history is read by doc and sorted by time.
+    await safe_create_index(db.cms_revisions, "id", unique=True, background=True)
+    await safe_create_index(
+        db.cms_revisions,
+        [("collection", 1), ("doc_id", 1), ("saved_at", -1)], background=True)
+    await safe_create_index(db.cms_site_settings, "key", unique=True, background=True)
+    await safe_create_index(db.api_keys, "id", unique=True, background=True)
+    await safe_create_index(db.api_keys, "key_hash", unique=True, background=True)
+
+    # Faculty + publications. Papers are looked up by lecturer (the profile
+    # page) and listed by year (the publications page).
+    await safe_create_index(db.faculty, "id", unique=True, background=True)
+    await safe_create_index(db.faculty, "slug", background=True)
+    await safe_create_index(db.faculty, [("status", 1), ("sort_order", 1)], background=True)
+    await safe_create_index(db.faculty_papers, "id", unique=True, background=True)
+    await safe_create_index(db.faculty_papers, "faculty_ids", background=True)
+    await safe_create_index(db.faculty_papers, [("status", 1), ("year", -1)], background=True)
+    await safe_create_index(db.faculty_papers, "doi", background=True)
+    await safe_create_index(db.cms_posts, "author_faculty_ids", background=True)
+
+    logging.info(f"[INDEXES] Created: {indexes_created}, "
+                 f"Skipped (already exist): {indexes_skipped}, Failed: {indexes_failed}")
 
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'swumkt-secret-key-change-in-production')
+JWT_SECRET = os.environ.get('JWT_SECRET', '')
+if not JWT_SECRET:
+    # This used to fall back to a literal published in this repository, which
+    # let anyone who could read the repo mint a valid admin token. There is no
+    # safe default, and no "is this production" signal to key one off — the
+    # deployment sets no ENVIRONMENT variable — so the only honest options are
+    # to refuse to start or to be insecure. Refuse, and say exactly what to do.
+    if not os.environ.get('ALLOW_INSECURE_JWT_SECRET'):
+        raise RuntimeError(
+            "JWT_SECRET is not set. Every environment must provide its own: add "
+            "JWT_SECRET=<random 32+ chars> to the backend environment. For a "
+            "throwaway local run, export ALLOW_INSECURE_JWT_SECRET=1 instead.")
+    JWT_SECRET = 'swumkt-insecure-local-secret'
+    logging.error("[AUTH] running with a publicly-known JWT secret because "
+                  "ALLOW_INSECURE_JWT_SECRET is set. Never do this on a "
+                  "deployment that real people log in to.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 72
 
@@ -428,6 +545,7 @@ async def log_slow_requests(request, call_next):
 # loads instant.
 # ──────────────────────────────────────────────────────────────
 from lib.object_storage import init_storage, get_object as _objstore_get
+from lib.inline_media import externalize as _externalize_inline
 
 @app.on_event("startup")
 async def _init_object_storage():
@@ -525,11 +643,11 @@ class ContentStatus(str, Enum):
 class AIModel(str, Enum):
     GPT_4O = "gpt-4o"
     GPT_4_TURBO = "gpt-4-turbo"
-    CLAUDE_SONNET = "claude-sonnet-4-20250514"
+    CLAUDE_SONNET = "claude-sonnet-4-6"
     GEMINI_FLASH = "gemini-2.0-flash-exp"
 
 class AISettings(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid4()))
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     model: AIModel = AIModel.GPT_4O
     prompt_template: str
     max_tokens: int = 4000
@@ -1016,6 +1134,30 @@ async def get_current_user_from_session(session_token: str):
     return User(**user)
 
 
+def _principal_for_key(key_doc: dict) -> "User":
+    """The user object a scoped key acts as.
+
+    It carries the ADMIN role because the CMS endpoints check `role == admin`
+    and there is no value in teaching twenty handlers a second notion of
+    authority. What actually bounds the key is the scope gate in
+    `get_current_user`, which has already refused anything outside
+    `lib/api_keys.SCOPE_RULES` by the time this is called — so the role is
+    only ever exercised on a request the key was explicitly granted.
+
+    The id and email identify the key rather than a person, which is what
+    revision history should record: `actor` becomes the key's label, not a
+    human who was not there.
+    """
+    label = key_doc.get("label") or "api-key"
+    return User(
+        id=f"apikey:{key_doc['id']}",
+        email=f"{key_doc.get('fingerprint', 'key')}@api-key.swumkt",
+        full_name=f"API key · {label}",
+        role=UserRole.ADMIN,
+        auth_method="api_key",
+    )
+
+
 async def _ensure_hardcoded_admin(user_obj: "User") -> "User":
     """If the user's email is in HARDCODED_ADMIN_EMAILS, make sure their role
     is ADMIN — both in-memory and persisted in DB. This way *every* endpoint
@@ -1034,9 +1176,29 @@ async def _ensure_hardcoded_admin(user_obj: "User") -> "User":
     return user_obj
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     token = credentials.credentials
-    
+
+    # An API key travels in the same Authorization header and is recognisable
+    # by its prefix, so it never reaches the JWT decoder. The scope check
+    # happens here, before any principal exists: a key that is not allowed to
+    # make this exact request never becomes a user object at all, so no
+    # downstream admin check can be reached by one.
+    if api_keys.looks_like_api_key(token):
+        try:
+            key_doc = await api_keys.authorize(
+                db, token, request.method, request.url.path)
+        except api_keys.KeyRejected as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
+        await api_keys.touch(db, key_doc["id"])
+        # The path gate cannot see what a generic route will touch — a restore
+        # can roll back any collection — so the handler gets the scopes too.
+        request.state.api_key_scopes = key_doc.get("scopes") or []
+        return _principal_for_key(key_doc)
+
     # Try JWT first (most common path — avoids unnecessary session DB query)
     try:
         payload = decode_token(token)
@@ -1478,7 +1640,7 @@ async def create_survey(
 
 @api_router.get("/surveys", response_model=List[Survey])
 async def list_surveys(
-    status: Optional[SurveyStatus] = None,
+    status: Optional[SurveyStatus] = None,  # noqa: F811 — query param, shadows fastapi.status
     survey_type: Optional[SurveyType] = None,
     created_by: Optional[str] = None,
     skip: int = 0,
@@ -1660,7 +1822,7 @@ async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCrede
             _set_cached_user(user.id, user)
             return user
         return None
-    except:
+    except Exception:
         return None
 
 @api_router.post("/surveys/{survey_id}/respond")
@@ -2219,7 +2381,7 @@ async def create_course(
 
 @api_router.get("/admin/courses", response_model=List[Course])
 async def list_all_courses(
-    status: Optional[CourseStatus] = None,
+    status: Optional[CourseStatus] = None,  # noqa: F811 — query param, shadows fastapi.status
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_admin_user)
@@ -2606,7 +2768,7 @@ async def get_my_contents(
 async def get_contents(
     request: Request,
     content_type: Optional[ContentType] = None,
-    status: Optional[ContentStatus] = None,
+    status: Optional[ContentStatus] = None,  # noqa: F811 — query param, shadows fastapi.status
     category: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
@@ -2880,7 +3042,7 @@ async def ai_rearrange_content(
                     if img_data and img_data.startswith('data:image'):
                         # Create vision chat for this image
                         vision_chat = VisionChat(
-                            api_key=emergent_key,
+                            api_key=os.environ.get('EMERGENT_LLM_KEY'),
                             session_id=f"vision_{content_id}_{idx}_{datetime.now().timestamp()}",
                             system_message="คุณเป็นผู้เชี่ยวชาญในการวิเคราะห์รูปภาพ"
                         )
@@ -3010,10 +3172,9 @@ async def ai_rearrange_content(
         
         # Call AI with custom model settings
         from emergentintegrations.llm.chat import LlmChat, UserMessage
-        import os
         
         # Get Emergent LLM key
-        emergent_key = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-8C9010bB74cCfAc069')
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY', '')
         
         # Parse model name to provider and model
         if model_name == 'gpt-4o' or model_name == 'gpt-4-turbo':
@@ -3371,6 +3532,10 @@ class JourneyMapRequest(BaseModel):
 class JourneyMapResponse(BaseModel):
     mermaid_code: str
     analysis_summary: str
+    # Persisted id of the stored qualitative run, so the quantitative journey
+    # module can seed a study from it. This endpoint used to be stateless, which
+    # left `/journey/studies/{id}/seed` with nothing to read.
+    qualitative_run_id: Optional[str] = None
 
 class JourneyMapContentCreate(BaseModel):
     title: str = Field(..., description="Content title")
@@ -3524,7 +3689,7 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
             api_key=api_key,
             session_id=f"journey-map-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         # Determine language instruction
         language_name = "Thai" if request.target_language == "th" else "English"
@@ -3587,9 +3752,26 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
                 analysis_summary = response_text
                 mermaid_code = "graph TD\n    A[Start] --> B[Process Data]\n    B --> C[End]"
         
+        # Persist the run so the quantitative module can seed a study from it.
+        run_id = str(uuid.uuid4())
+        try:
+            await db.qualitative_runs.insert_one({
+                "id": run_id,
+                "owner_id": current_user.id,
+                "raw_text": (request.raw_data or "")[:20000],
+                "context": request.research_context or "",
+                "mermaid_code": mermaid_code,
+                "analysis": analysis_summary,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as persist_err:
+            logging.warning(f"[Journey] qualitative_runs persist failed: {persist_err}")
+            run_id = None
+
         return JourneyMapResponse(
             mermaid_code=mermaid_code,
-            analysis_summary=analysis_summary
+            analysis_summary=analysis_summary,
+            qualitative_run_id=run_id,
         )
         
     except Exception as e:
@@ -4203,7 +4385,7 @@ async def generate_behavior_analysis(
             api_key=api_key,
             session_id=f"behavior-analysis-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         # Determine language
         language_name = "Thai" if request.target_language == "th" else "English"
@@ -4667,7 +4849,7 @@ No explanation, just the style name."""
             api_key=api_key,
             session_id=f"style-detect-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response = await chat.send_message(msg)
@@ -4777,7 +4959,7 @@ Extract ALL formatting specifications as comprehensive JSON."""
             api_key=api_key,
             session_id=f"extract-specs-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response = await chat.send_message(msg)
@@ -4822,7 +5004,7 @@ def generate_template_from_specs(specs: dict, output_path: str):
                 color_hex = font_color.lstrip('#')
                 r, g, b = tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
                 normal_font.color.rgb = RGBColor(r, g, b)
-            except:
+            except Exception:
                 pass
         
         # Paragraph formatting
@@ -4916,7 +5098,7 @@ def generate_template_from_specs(specs: dict, output_path: str):
             
             quote_font = quote_style.font
             quote_font.size = Pt(specs.get('block_quote_font_size', 12))
-        except:
+        except Exception:
             pass  # Quote style might not exist
         
         # ============ CAPTION STYLE ============
@@ -4930,7 +5112,7 @@ def generate_template_from_specs(specs: dict, output_path: str):
             cap_alignment = specs.get('caption_alignment', 'left')
             if cap_alignment in alignment_map:
                 cap_para.alignment = alignment_map[cap_alignment]
-        except:
+        except Exception:
             pass
         
         # Add dummy content to activate styles
@@ -5002,7 +5184,7 @@ async def extract_references_to_bib(docx_path: str, output_bib_path: str):
             return False
         
         # Use RefExtract with AI to convert to BibTeX
-        emergent_key = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-8C9010bB74cCfAc069')
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY', '')
         extractor = RefExtract(api_key=emergent_key, model="gpt-4o")
         
         # Extract references
@@ -5059,7 +5241,7 @@ def format_document_with_pandoc(input_file: str, output_file: str, csl_file: str
         logging.error(f"Pandoc conversion error: {str(e)}")
         return False
 
-async def get_format_editor_model():
+async def fetch_format_editor_model():
     """Get configured LLM model for format editor from admin settings"""
     try:
         settings = await db.admin_settings.find_one(
@@ -5076,12 +5258,12 @@ async def get_format_editor_model():
 def get_llm_provider_and_model(model_name: str):
     """Map model name to provider and full model identifier"""
     model_map = {
-        "claude-sonnet-4": ("anthropic", "claude-sonnet-4-20250514"),
+        "claude-sonnet-4": ("anthropic", "claude-sonnet-4-6"),
         "gpt-5": ("openai", "gpt-5"),
         "gemini-2.5-pro": ("google", "gemini-2.5-pro-preview-01-17"),
         "gemini-flash": ("google", "gemini-2.0-flash-exp")
     }
-    return model_map.get(model_name, ("anthropic", "claude-sonnet-4-20250514"))
+    return model_map.get(model_name, ("anthropic", "claude-sonnet-4-6"))
 
 def split_document_into_sections(text: str):
     """Split document into logical sections for processing"""
@@ -5281,7 +5463,7 @@ async def generate_perception_questions(
             api_key=api_key,
             session_id=f"perception-questions-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         user_message = UserMessage(text=user_prompt)
         
@@ -5339,7 +5521,7 @@ async def generate_perception_analysis(
             api_key=api_key,
             session_id=f"perception-analysis-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         user_message = UserMessage(text=user_prompt)
         
@@ -5756,7 +5938,7 @@ Please suggest suitable academic journals for this research."""
             api_key=api_key,
             session_id=f"journal-finder-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response_text = await chat.send_message(msg)
@@ -6045,7 +6227,7 @@ If you're not certain about specific details, indicate that with "Note: Please v
             api_key=api_key,
             session_id=f"fetch-guidelines-{uuid.uuid4()}",
             system_message=system_prompt
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-6")
         
         msg = UserMessage(text=user_prompt)
         response_text = await chat.send_message(msg)
@@ -7623,9 +7805,9 @@ async def set_thesis_export_permission(
 # because non-conjoint code in this file still depends on them:
 #   - LLMPromptTemplate / UpdateLLMPromptRequest  -> used by /admin/llm-prompts
 #   - initialize_default_prompts                  -> used by /admin/llm-prompts
-#   - SurveyResponse (conjoint variant)           -> intentionally shadows the
-#       survey SurveyResponse defined earlier; preserved to keep existing
-#       global-name behavior unchanged.
+#   - ConjointSurveyResponse                      -> the conjoint request body.
+#       It used to be called SurveyResponse and silently shadowed the survey
+#       model above, so POST /surveys/{id}/responses built the WRONG model.
 # ============================================================================
 
 class LLMPromptTemplate(BaseModel):
@@ -7635,7 +7817,7 @@ class LLMPromptTemplate(BaseModel):
     prompt_template: str
     system_message: Optional[str] = None
     model_provider: str = "anthropic"
-    model_name: str = "claude-sonnet-4-20250514"
+    model_name: str = "claude-sonnet-4-6"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_by: Optional[str] = None
@@ -7647,7 +7829,7 @@ class UpdateLLMPromptRequest(BaseModel):
     model_name: Optional[str] = None
 
 
-class SurveyResponse(BaseModel):
+class ConjointSurveyResponse(BaseModel):
     study_id: str
     respondent_id: Optional[str] = None
     respondent_email: Optional[str] = None
@@ -7698,7 +7880,7 @@ Output Format (JSON):
 
 Respond in {target_language} language.""",
             "model_provider": "anthropic",
-            "model_name": "claude-sonnet-4-20250514",
+            "model_name": "claude-sonnet-4-6",
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc)
         }
@@ -7743,22 +7925,34 @@ async def _unified_showcase_index_cached():
          "created_at": 1, "updated_at": 1, "identity.visual_assets": 1},
     ).sort("updated_at", -1)
     be_raw = await be_cur.to_list(500)
+    # One grouped count rather than a count_documents per study.
+    be_counts = {
+        row["_id"]: row["n"]
+        async for row in db.brand_responses.aggregate([
+            {"$match": {"study_id": {"$in": [s["id"] for s in be_raw]}}},
+            {"$group": {"_id": "$study_id", "n": {"$sum": 1}}},
+        ])
+    }
     be_items = []
     for s in be_raw:
         tok = s.get("share_token")
         if not tok:
             continue
         brand = s.get("brand") or {}
-        # Resolve logo: prefer brand.logo_url, else fall back to uploaded
-        # visual asset of kind 'logo' (returned as data URI for direct <img> use)
+        # Resolve logo: prefer brand.logo_url, else the uploaded visual asset
+        # of kind 'logo'. That asset used to be inlined as a data URI, which
+        # made this endpoint 678 KB; `/api/media/...` serves the same bytes as
+        # a cacheable file.
         logo = brand.get("logo_url")
         if not logo:
-            for a in ((s.get("identity") or {}).get("visual_assets") or []):
-                if (a.get("kind") == "logo") and a.get("image_base64"):
-                    mime = a.get("mime_type") or "image/png"
-                    logo = f"data:{mime};base64,{a['image_base64']}"
+            identity = _externalize_inline(
+                {"identity": s.get("identity") or {}}, "brand", s["id"],
+            )["identity"]
+            for a in (identity.get("visual_assets") or []):
+                if (a.get("kind") == "logo") and a.get("image_url"):
+                    logo = a["image_url"]
                     break
-        n_resp = await db.brand_responses.count_documents({"study_id": s["id"]})
+        n_resp = be_counts.get(s["id"], 0)
         be_items.append({
             "method": "brand_equity",
             "id": s["id"],
@@ -7976,9 +8170,28 @@ api_router.include_router(brand_equity_routes)
 
 # ============ CMS — Content Management ============
 from routes.cms import get_cms_routes
+from routes.content_ops import get_content_ops_routes
 
-cms_routes = get_cms_routes(db, get_current_user)
+
+def _require_admin(user):
+    if getattr(user, "role", None) != "admin":
+        raise HTTPException(403, "Admin only")
+
+
+# Built before the CMS routes because they take its snapshot helper — every
+# destructive CMS write stores the prior document so it can be restored.
+content_ops_routes = get_content_ops_routes(db, get_current_user, _require_admin)
+api_router.include_router(content_ops_routes)
+
+cms_routes = get_cms_routes(db, get_current_user,
+                            snapshot_hook=content_ops_routes.snapshot)
 api_router.include_router(cms_routes)
+
+# ============ FACULTY — profiles + publications ============
+from routes.faculty import get_faculty_routes
+
+api_router.include_router(get_faculty_routes(
+    db, get_current_user, _require_admin, snapshot=content_ops_routes.snapshot))
 
 # ============ CONJOINT ANALYSIS ============
 from routes.conjoint import get_conjoint_routes
@@ -7992,12 +8205,23 @@ from routes.customer_value import get_customer_value_routes
 cv_routes = get_customer_value_routes(db, get_current_user, get_current_user_optional)
 api_router.include_router(cv_routes)
 
+# ============ CUSTOMER JOURNEY (quantitative) ============
+from routes.journey import get_journey_routes
+
+journey_routes = get_journey_routes(db, get_current_user, get_current_user_optional)
+api_router.include_router(journey_routes)
+
 # ============ SHARE — OG / Social Media Preview Bridges ============
 from routes.share import get_share_routes
 from routes.brand_equity import _aggregate_responses as _be_aggregate_responses
 
 share_routes = get_share_routes(db, brand_aggregate_helper=_be_aggregate_responses)
 api_router.include_router(share_routes)
+
+# ============ MEDIA — inline base64 served as cacheable image files ============
+from routes.media import get_media_routes
+
+api_router.include_router(get_media_routes(db))
 
 app.include_router(api_router)
 
@@ -8026,39 +8250,13 @@ if _YOLO_DIR.exists():
     app.mount("/api/yolo", _YoloStatic(directory=str(_YOLO_DIR), html=True), name="yolo")
 
 
-# ============ meekintube — YouTube/FB downloader (Flask app) at /api/meekintube ============
-# Mounted as a WSGI sub-app via a2wsgi. The Flask app's own routes are defined
-# relative to "/" (e.g. /, /api/config, /static/<f>, /media/<rel>); the mount
-# prefix is stripped before Flask sees the request. Static assets were already
-# rewritten to the /api/meekintube/ base path. Requires ffmpeg + yt-dlp on host.
-_MEEK_DIR = ROOT_DIR / "meekintube_app"
+# ============ meekinTube — YouTube-style PWA (static) at /api/meekintube ============
+# Pure static PWA (HTML/CSS/JS, no backend). Plays via YouTube embed; search uses
+# public Invidious/Piped instances from the browser. All asset paths are relative,
+# so StaticFiles(html=True) at /api/meekintube serves it correctly. No ffmpeg/yt-dlp.
+_MEEK_DIR = ROOT_DIR / "meekintube_static"
 if _MEEK_DIR.exists():
-    try:
-        import sys as _sys
-        import importlib.util as _ilu
-        from a2wsgi import WSGIMiddleware as _WSGIMiddleware
-        if str(_MEEK_DIR) not in _sys.path:
-            _sys.path.insert(0, str(_MEEK_DIR))
-        # The uvicorn --reload worker runs with a stripped PATH that omits the
-        # venv bin dir, so shutil.which("yt-dlp") (resolved at meekintube import
-        # time) would return None. Prepend the running interpreter's bin dir so
-        # yt-dlp (installed in the same venv) is discoverable.
-        _venv_bin = os.path.dirname(_sys.executable)
-        if _venv_bin and _venv_bin not in os.environ.get("PATH", "").split(os.pathsep):
-            os.environ["PATH"] = _venv_bin + os.pathsep + os.environ.get("PATH", "")
-        # Keep staged downloads inside the backend dir (writable).
-        os.environ.setdefault("MEEKIN_VIDEO_DIR", str(ROOT_DIR / "meekintube_video"))
-        # Load meekintube_app/server.py under a unique module name to avoid
-        # clashing with this main `server` module already in sys.modules.
-        _meek_spec = _ilu.spec_from_file_location(
-            "meekintube_server", str(_MEEK_DIR / "server.py")
-        )
-        _meek_mod = _ilu.module_from_spec(_meek_spec)
-        _meek_spec.loader.exec_module(_meek_mod)
-        app.mount("/api/meekintube", _WSGIMiddleware(_meek_mod.app), name="meekintube")
-        logging.info("[MEEKINTUBE] Mounted Flask downloader at /api/meekintube")
-    except Exception as _e:
-        logging.error(f"[MEEKINTUBE] Failed to mount: {_e}")
+    app.mount("/api/meekintube", _StaticFiles(directory=str(_MEEK_DIR), html=True), name="meekintube")
 
 
 app.add_middleware(
@@ -8069,12 +8267,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# GZip compression — reduces response size significantly for JSON/text
-app.add_middleware(GZipMiddleware, minimum_size=500)
+# GZip compression — reduces response size significantly for JSON/text.
+# Level 6 rather than Starlette's default 9: on a payload of any size 9 costs
+# several times the CPU of 6 and buys about a percent of ratio, and that CPU is
+# spent on the request's critical path.
+app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
+
+
+# robots.txt now lets crawlers fetch the public data endpoints, because the
+# pages cannot render without them. That must not turn the JSON itself into
+# search results, so API responses say noindex. Exceptions: the share bridge,
+# whose pages carry a canonical to the real page (Google advises against
+# pairing that with noindex), and images, which may usefully appear in image
+# search — a lecturer's portrait among them.
+_INDEXABLE_API_PREFIXES = ("/api/share/", "/api/media/", "/api/files/")
+
+
+@app.middleware("http")
+async def _noindex_api_responses(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/") and not path.startswith(_INDEXABLE_API_PREFIXES):
+        response.headers.setdefault("X-Robots-Tag", "noindex")
+    return response
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    # `force=True` is load-bearing. `_install_llm_concurrency_patch()` runs at
+    # import time (above) and ends in a module-level `logging.info(...)`. The
+    # root `logging.info` helper calls `basicConfig()` with no arguments when
+    # root has no handler, which installs a default StreamHandler and leaves
+    # the root level at WARNING. This call would then be a silent no-op, and
+    # every `logging.info` in the backend — the [INDEXES] migration line, the
+    # [LLM-PATCH] line, every diagnostic — would be discarded, with the format
+    # above never applied. `force` replaces that handler instead of yielding.
+    force=True,
 )
 logger = logging.getLogger(__name__)
 

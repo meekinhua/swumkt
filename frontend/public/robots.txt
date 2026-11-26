@@ -9,6 +9,33 @@ Allow: /learn
 Allow: /learn/
 Allow: /about/
 
+# /api — what a crawler may fetch, and why.
+#
+# This site is a single-page app: every public page is an empty shell until
+# its JavaScript fetches data from /api. Googlebot renders JavaScript, but it
+# obeys robots.txt for those fetches too — so a blanket `Disallow: /api/` meant
+# Google rendered every page here (home, articles, showcases) with no content
+# and no structured data. On production the data host serves this same file,
+# so the block applied there as well.
+#
+# The read-only public endpoints the pages render from are allowed below.
+# Their JSON responses carry `X-Robots-Tag: noindex` (set in server.py), so
+# Google can use them to render the page without listing the JSON itself.
+# Everything else under /api stays closed. Longest match wins.
+Allow: /api/share/
+Allow: /api/media/
+Allow: /api/files/
+Allow: /api/cms/landing
+Allow: /api/cms/settings
+Allow: /api/cms/posts/public
+Allow: /api/cms/announcements/pinned
+Allow: /api/faculty
+Disallow: /api/faculty/*/contact
+Allow: /api/publications
+Allow: /api/showcase/index
+Allow: /api/brand-equity/showcase
+Allow: /api/conjoint/showcase
+Allow: /api/conjoint/studies/
 Disallow: /api/
 Disallow: /admin
 Disallow: /dashboard
@@ -31,4 +58,8 @@ Allow: /
 User-agent: WhatsApp
 Allow: /
 
+# The static map below lists category pages only. The generated one is built
+# from the database, so articles and showcases published through the CMS
+# appear without a redeploy.
+Sitemap: https://swumkt.org/api/share/sitemap.xml
 Sitemap: https://swumkt.org/sitemap.xml

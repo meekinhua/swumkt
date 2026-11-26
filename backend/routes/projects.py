@@ -682,6 +682,50 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         
         return new_column
     
+    @project_router.put("/{project_id}/columns/reorder")
+    async def reorder_columns(
+        project_id: str,
+        column_ids: List[str],
+        current_user = Depends(get_current_user)
+    ):
+        """Reorder columns.
+
+        Unreachable until this route was moved above `/columns/{column_id}`,
+        so it had never been exercised — and it shipped with no permission
+        check and wrote back only the ids it was sent. Once live, any
+        signed-in user could send `[]` and erase every column of any project.
+        It now requires the same rights as editing a column, and a complete
+        permutation of the existing ids, so it can reorder and nothing else.
+        """
+        project = await db.projects.find_one({"id": project_id})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        is_admin = current_user.role == UserRole.ADMIN
+        is_member = any(m["user_id"] == current_user.id and m["role"] in ["owner", "admin"]
+                        for m in project.get("members", []))
+        if not (is_admin or is_member):
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+        columns = project.get("columns", [])
+        col_map = {c["id"]: c for c in columns}
+        if len(column_ids) != len(col_map) or set(column_ids) != set(col_map):
+            raise HTTPException(
+                status_code=400,
+                detail="column_ids must list every existing column exactly once")
+
+        reordered = []
+        for i, col_id in enumerate(column_ids):
+            col_map[col_id]["order"] = i
+            reordered.append(col_map[col_id])
+        
+        await db.projects.update_one(
+            {"id": project_id},
+            {"$set": {"columns": reordered, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"message": "Columns reordered"}
+    
     @project_router.put("/{project_id}/columns/{column_id}")
     async def update_column(
         project_id: str,
@@ -771,34 +815,6 @@ def get_project_routes(db, get_current_user, get_optional_user, UserRole):
         )
         
         return {"message": "Column deleted"}
-    
-    @project_router.put("/{project_id}/columns/reorder")
-    async def reorder_columns(
-        project_id: str,
-        column_ids: List[str],
-        current_user = Depends(get_current_user)
-    ):
-        """Reorder columns"""
-        project = await db.projects.find_one({"id": project_id})
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-        
-        # Update order
-        columns = project.get("columns", [])
-        col_map = {c["id"]: c for c in columns}
-        
-        reordered = []
-        for i, col_id in enumerate(column_ids):
-            if col_id in col_map:
-                col_map[col_id]["order"] = i
-                reordered.append(col_map[col_id])
-        
-        await db.projects.update_one(
-            {"id": project_id},
-            {"$set": {"columns": reordered, "updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
-        
-        return {"message": "Columns reordered"}
     
     # ============ CARD CRUD ============
     

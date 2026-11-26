@@ -1,0 +1,24 @@
+{
+  "summary": "Verified the reported Conjoint 'สร้างการศึกษาใหม่' modal cascade bug fix independently by driving the UI and asserting the computed position and bounding rect of every `.fixed.inset-0` overlay on `.be-root` pages. Bug is FIXED end-to-end. Frontend only, per request.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL: consider redirecting or 404-ing the plain '/conjoint' route — it currently renders a completely blank body (0 chars), which is easy to hit from a stale bookmark. Correct route is /market-research/conjoint-analysis."
+  ],
+  "critical_code_review_comments": [
+    "The narrowed rule `.be-root > *:not(.fixed)` only protects DIRECT children of `.be-root`. If a future modal is rendered inside a nested wrapper (e.g. `.be-root > div > .fixed.inset-0`), the child selector won't match it, so the `position:relative` demotion won't apply anyway — but conversely, if any future modal is portalled INSIDE `.be-root` behind another wrapper, the `.be-root > .fixed { z-index: 50 }` boost also won't reach it. Prefer a defensive rule such as `.be-root .fixed.inset-0 { position: fixed !important; z-index: 50; }` OR portal all app modals to document.body via a Radix/Headless UI Portal to eliminate class-cascade coupling entirely."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100%"},
+  "seed_data_creation": "Created conjoint study 'QA_ModalFix_Study' (id 5a56f3e9-7c8f-4f50-840a-cf94e50241b5) as required by the flow; soft-trashed via UI-triggered API, then purged permanently via DELETE /api/conjoint/studies/{id}/purge. No residual test data.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@swu.ac.th / admin123 (from /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Cascade-bug regression tests to keep re-running on any change to /app/frontend/src/pages/brand-equity/brand-equity-styles.css: after opening each modal, assert getComputedStyle(overlay).position === 'fixed' AND bounding rect top ≈ 0 AND height ≥ viewport.h. DOM-presence-only assertions are insufficient (that's exactly how the original defect slipped through). The `⋮` row-menu on the Conjoint list is a Radix DropdownMenu — locate its trigger via `button[aria-haspopup=\"menu\"]`, not by text '⋮'. The delete-confirm modal's destructive button reads 'ย้ายไปถังขยะ' (Move to Trash) — do NOT fallback to `.locator('button').last`, which selects the ยกเลิก (Cancel) button. Study 'demo-sim-chathai-001' study page needs ~3s to hydrate; a 1.5s wait returns only 20 chars and looks broken. To fully purge a soft-deleted conjoint study use DELETE /api/conjoint/studies/{id}/purge (not `?permanent=true`, which is silently ignored and only re-trashes).",
+  "rca_of_the_issue": "Original defect: brand-equity-styles.css declared `.be-root > * { position: relative; z-index: 1 }`. That rule had equal specificity to Tailwind's `.fixed` utility but came later in the cascade, so every direct-child `.fixed.inset-0` modal (create-study, delete-confirm, weight-editor, export, etc.) got laid out as `position: relative` in normal flow — pushed to the very bottom of the document (top ≈ 2799px), invisible below the fold, and unreachable. Fix applied by developer: `.be-root > *:not(.fixed) { position: relative; z-index: 1 }` plus `.be-root > .fixed { z-index: 50 }`. Verified independently in preview: create-study overlay now computes {position:'fixed', zIndex:'50', top:0, height:900 (= viewport h)}; delete-confirm overlay {position:'fixed', zIndex:'50', top:0, height:900}; brand-equity weight-editor overlay identical; results-page Export overlay identical. Full end-to-end flow works: /market-research/conjoint-analysis → click [data-testid='conjoint-new-study'] → modal appears centered → fill title 'QA_ModalFix_Study' → submit 'สร้างและเริ่มต้น' → POST /api/conjoint/studies returns study 5a56f3e9-... → navigation to /research/conjoint/{id}/qualitative → study appears in list. Row-menu (Radix DropdownMenu) → 'ลบการศึกษา' → destructive confirm modal is a proper fixed overlay → clicking 'ย้ายไปถังขยะ' soft-trashes. Regression smoke on /market-research/conjoint-analysis, /conjoint/results/6099ac5b-..., /research/conjoint/6099ac5b-.../qualitative, /brand-equity, /brand-equity/studies/demo-sim-chathai-001, /brand-equity/respond/demosimchathai all render normally with the topbar present and no z-index artefacts. Conjoint list tabs (conjoint-tab-active / conjoint-tab-trash) and the ⋮ menu 'ซิงค์จำนวนผู้ตอบ' respond correctly. Bare '/conjoint' route renders an empty body — pre-existing, unrelated to this fix, flagged as OPTIONAL cleanup."
+}

@@ -27,6 +27,14 @@ export const cmsApi = {
   // Sources
   listSources: (q) => axios.get(`${API}/cms/sources`, { ...auth(), params: q ? { q } : {} }),
 
+  // Setup — faculty seed + API keys
+  seedFaculty: (dryRun) => axios.post(`${API}/cms/faculty/seed`, {}, { ...auth(), params: { dry_run: dryRun } }),
+  listKeys: () => axios.get(`${API}/cms/keys`, auth()),
+  createKey: (data) => axios.post(`${API}/cms/keys`, data, auth()),
+  revokeKey: (id) => axios.delete(`${API}/cms/keys/${id}`, auth()),
+  publicFaculty: () => axios.get(`${API}/faculty`),
+  publicPublications: () => axios.get(`${API}/publications`),
+
   // AI
   aiText: (data) => axios.post(`${API}/cms/ai/generate-text`, data, { ...auth(), timeout: 90000 }),
   aiFull: (data) => axios.post(`${API}/cms/ai/generate-full`, data, { ...auth(), timeout: 120000 }),

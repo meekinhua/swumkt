@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
 import { BeTopbar, Icon, StatusPill, BeLoading, BrandLogo } from './be-components';
+import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -16,7 +17,9 @@ const LOGO_GRADIENTS = [
   'linear-gradient(140deg,#374151,#6B7280)',
 ];
 
-const tierColor = (s) => s == null ? '#A6A8AF' : s >= 70 ? '#10B981' : s >= 40 ? '#D4A017' : '#C8102E';
+// One canonical scale — see @/lib/brandHealthVerdict. The private >=70 / >=40
+// mapping that used to live here disagreed with the dashboard and the thesis.
+const tierColor = (s) => s == null ? '#A6A8AF' : getBrandHealthTier(s).color;
 
 const BrandEquityListPage = () => {
   const { user, token } = useAuth();
@@ -28,10 +31,11 @@ const BrandEquityListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState('all'); // admin-only: 'all' | 'mine' | <email>
+  const [scores, setScores] = useState({}); // study_id -> {overall, awareness, ...}
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
-  useEffect(() => { loadStudies(); loadTrashCount(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadStudies(); loadTrashCount(); loadScores(); /* eslint-disable-next-line */ }, []);
   useEffect(() => {
     if (view === 'trash') loadTrash();
     /* eslint-disable-next-line */
@@ -46,6 +50,15 @@ const BrandEquityListPage = () => {
       console.error(e);
     }
     setLoading(false);
+  };
+
+  // Scores are fetched separately so the cards paint immediately; the study list
+  // endpoint carries no aggregates.
+  const loadScores = async () => {
+    try {
+      const r = await axios.get(`${API}/brand-equity/studies/scores`, authH);
+      setScores(r.data.scores || {});
+    } catch (e) { /* cards fall back to the "open to see" hint */ }
   };
 
   const loadTrashCount = async () => {
@@ -424,13 +437,14 @@ const BrandEquityListPage = () => {
          ) : (
           <div className="be-list-grid" data-testid="be-list-grid">
             {filtered.map((s, i) => {
+              const sc = scores[s.id] || {};
               const dims = [
-                ['AW', '#1B75BC', s.aggregate?.composite?.awareness ?? 0],
-                ['PQ', '#D4A017', s.aggregate?.composite?.quality ?? 0],
-                ['BI', '#C8102E', s.aggregate?.composite?.identity ?? 0],
-                ['LY', '#10B981', s.aggregate?.composite?.loyalty ?? 0],
+                ['AW', '#1B75BC', sc.awareness ?? s.aggregate?.composite?.awareness ?? 0],
+                ['PQ', '#D4A017', sc.quality ?? s.aggregate?.composite?.quality ?? 0],
+                ['BI', '#C8102E', sc.identity ?? s.aggregate?.composite?.identity ?? 0],
+                ['LY', '#10B981', sc.loyalty ?? s.aggregate?.composite?.loyalty ?? 0],
               ];
-              const score = s.aggregate?.composite?.overall ?? null;
+              const score = sc.overall ?? s.aggregate?.composite?.overall ?? null;
               const targetN = s.target_responses || 100;
               const n = s.response_count || 0;
               return (
@@ -530,10 +544,19 @@ const BrandEquityListPage = () => {
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                           <span className="big" style={{ color: tierColor(score) }}>{Math.round(score)}</span>
                           <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>BES</span>
+                          {/* Same tier label the dashboard hero shows, so the two
+                              surfaces cannot disagree about a brand's health. */}
+                          <span data-testid={`be-study-tier-${s.id}`}
+                                style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.10em',
+                                         color: tierColor(score), border: `1px solid ${tierColor(score)}`,
+                                         padding: '1px 6px' }}>
+                            {getBrandHealthTier(score).label}
+                          </span>
                         </div>
                       ) : (
-                        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>
-                          BES locked · {Math.max(0, 10 - n)} more
+                        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}
+                              data-testid={`be-study-bes-hint-${s.id}`}>
+                          {n >= 10 ? 'กำลังคำนวณ…' : `BES locked · ${Math.max(0, 10 - n)} more`}
                         </span>
                       )}
                     </div>

@@ -1,0 +1,45 @@
+{
+  "summary": "Frontend-only E2E of the Journey Codebook package via Playwright on the public preview URL. Walked the full 5-step wizard (new quant study -> step labels -> NEW step 3 'ลงรหัสปัญหา'), pasted 5 Thai interviews, extracted candidates, verified verbatim quotes + interview index, renamed/approved/rejected rows, confirmed activation gates block with Thai reasons, activated codebook v1, published, completed a full public respondent run (approved category ids + 'อื่น ๆ' + nomination cap), verified the owner dashboard provenance/other-rate/saturation/reliability cards, back-coded the free text (rate 0% -> 50%), verified the qualitative-audit card with a Mermaid-seeded second study, and re-verified the pre-existing demo study (140 responses, Mermaid map, all tables, library_default warning) plus its public link. All test data purged: demo-journey-kafae-001 is back at EXACTLY 140 responses, 0 TEST_QA studies, 0 codebooks, 0 leftover drafts.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/journey/studies/{id}/codebook/extract", "issue": "Thai pain cues are matched as plain substrings, so 'วนอยู่หลายรอบ' matched the cue 'รอ' (waiting) and that sentence was attached as a verbatim quote to the 'รอคิวนาน' candidate — a false-positive verbatim under the wrong category. Also the default label of every candidate is the whole sentence and a near-duplicate row ('… · นาน') is produced, so the student must rename every row manually."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "JourneyBackCoding", "issue": "Queue item shows the raw state id as the step label: 'ขั้น s1' instead of the Thai step label (labelOf). Raw ID leaks into owner-facing copy.", "selector": "[data-testid^='bc-item-'] (JourneyBackCoding.jsx L95)", "priority": "MEDIUM"},
+      {"component": "JourneyProvenance / QualitativeAuditCard", "issue": "The 'ดูรายเส้นทาง' detail table prints raw state ids in the from/to columns (rendered 's1  s2') instead of Thai step labels.", "selector": "[data-testid='journey-audit-detail']", "priority": "MEDIUM"},
+      {"component": "JourneyBackCoding", "issue": "data-testids are keyed on response_id only, so a respondent who writes 'อื่น ๆ' on two steps produces duplicate ids: two bc-item-<response_id>, eight bc-cat-<response_id>-<cid> (4 categories x 2 rows) and two bc-apply-<response_id>. Internal state key already uses response_id|state_id — the testids should too. Functionality still worked (pending 2 -> 1).", "selector": "bc-item-*, bc-cat-*, bc-apply-*", "priority": "MEDIUM"},
+      {"component": "JourneyDashboardPage", "issue": "data-testid 'journey-provenance-line' is rendered twice on the same page (lines 456 and 575), so the selector is ambiguous.", "selector": "[data-testid='journey-provenance-line']", "priority": "LOW"},
+      {"component": "JourneyCodebookStep", "issue": "'เปิดใช้ชุดรหัสนี้' is enabled on first load before any blockers are known, so the first click can fail with a server error instead of being prevented; blockers only appear after 'บันทึกและตรวจ'. Once saved the behaviour is correct (button disabled + full Thai reason list).", "selector": "[data-testid='cb-activate']", "priority": "LOW"},
+      {"component": "JourneyWizardPage", "issue": "After successful activation the wizard jumps straight to step 4, so the 'ใช้ชุดรหัสเวอร์ชัน 1 อยู่' confirmation card (cb-active) is never seen unless the user navigates back to step 3.", "selector": "[data-testid='cb-active']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Owner dashboard (new study, 1 response)", "issues": ["No contrast/spacing problems found; warnings render in the red jy-warn band and are readable", "Tables and the Mermaid map render at 1920px without overflow"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Replace raw state ids with Thai step labels in the back-coding queue ('ขั้น s1') and in the qualitative-audit detail table (from/to columns).",
+    "Make back-coding data-testids unique per (response_id, state_id) so a respondent with two 'อื่น ๆ' texts does not create duplicate testids.",
+    "Render 'journey-provenance-line' only once per dashboard page (or give the second instance its own testid).",
+    "Optional: fetch blockers on codebook-step load so cb-activate starts disabled with reasons already visible.",
+    "Optional: tighten the Thai cue matcher (word-boundary / negative list) so 'รอบ' does not match the 'รอ' cue, and seed shorter default candidate labels."
+  ],
+  "critical_code_review_comments": [
+    "JourneyBackCoding.jsx L92-L105: keyOf(it) already combines response_id|state_id for state; the data-testid should use the same key. Duplicate DOM testids make the queue untestable and ambiguous for screen readers.",
+    "JourneyProvenance.jsx rows(): e.from / e.to are state ids; pass the study's label map into QualitativeAuditCard and render label_th.",
+    "JourneyDashboardPage.jsx L456 & L575: same data-testid used twice.",
+    "Verified (no action): patchRow (wizard) and toggleCat/setPainDetail (respondent) are functional updaters — rapid double toggling kept the correct final state, so the two lost-update fixes hold. No TDZ white screen on the respondent page; no console errors anywhere in the run."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "95%"},
+  "seed_data_creation": "Created and then PURGED two temp studies (TEST_QA_CJM_Codebook b81b7ae7-…, TEST_QA_CJM_Audit 4182e889-…) and withdrew the one demo response submitted (token 9b9d5329…). Verified afterwards: demo-journey-kafae-001 = 140 responses, journey_codebooks = 0, TEST_QA studies = 0, journey_response_drafts = 0.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@swu.ac.th / admin123 (from /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Login must be done with page.type (not fill) plus a ~1.2s wait after the login form appears, otherwise the email field stays empty. Wizard step navigation uses the shared Stepper testids be-step-0..4 (there is no journey-step-* clickable). Replay screen confirm button is jy-replay-confirm. Respondent flow order: consent -> episode -> (subject) -> checklist -> first -> branch(jy-branch-conv ends) -> replay -> grid -> pain -> paindepth -> outcome -> segments. The qualitative-audit card only renders when the codebook carries claimed edges, i.e. Mermaid code was pasted in the codebook step (verified working). Saturation/reliability/back-coding cards are hidden for the library_default demo study by design. Always purge created studies and withdraw demo responses; delete leftover rows in journey_response_drafts too.",
+  "rca_of_the_issue": "Both raw-id leaks come from components that receive ids without the study's label map: JourneyBackCoding prints it.state_id directly and QualitativeAuditCard prints e.from/e.to from edge_coverage output. The duplicate testids come from keying DOM attributes on response_id while the component's own state key is response_id|state_id — one respondent can produce several queue rows."
+}

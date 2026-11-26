@@ -155,7 +155,109 @@ const BrandEquityRespondentPage = () => {
   const [answers, setAnswers] = useState({});
   const [demographics, setDemographics] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
   const [startedAt] = useState(Date.now());
+  const [savedDraft, setSavedDraft] = useState(null); // resume prompt on the welcome screen
+  const [serverDraftId, setServerDraftId] = useState(null);
+  const [resumeLinkCopied, setResumeLinkCopied] = useState(false);
+  const DRAFT_KEY = `be_draft_${token}`;
+  const DRAFT_ID_KEY = `be_draft_id_${token}`;
+
+  // Save progress locally on every change. The survey is 40+ items on a phone;
+  // a lost tab, a phone call or a browser refresh used to mean starting over.
+  useEffect(() => {
+    if (section < 0 || section > 4) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        answers, demographics, section, saved_at: Date.now(),
+      }));
+    } catch { /* private mode / quota — progress just is not saved */ }
+    /* eslint-disable-next-line */
+  }, [answers, demographics, section]);
+
+  // ...and to the SERVER, debounced. Local storage is tied to one browser on one
+  // device; a resume link works from anywhere and lets the study owner see who
+  // started but never finished.
+  useEffect(() => {
+    if (section < 0 || section > 4) return;
+    const payload = Object.entries(answers).map(([question_id, value]) => ({ question_id, value }));
+    if (!payload.length) return;
+    const t = setTimeout(() => {
+      axios.post(`${API}/brand-equity/public/${token}/draft`, {
+        draft_id: serverDraftId, answers: payload, demographics, section,
+      }).then(r => {
+        if (r.data?.draft_id && r.data.draft_id !== serverDraftId) {
+          setServerDraftId(r.data.draft_id);
+          try { localStorage.setItem(DRAFT_ID_KEY, r.data.draft_id); } catch { /* ignore */ }
+        }
+      }).catch(() => { /* offline or private mode — local copy still holds */ });
+    }, 1500);
+    return () => clearTimeout(t);
+    /* eslint-disable-next-line */
+  }, [answers, demographics, section]);
+
+  // Resume link in the URL (?draft=<id>) wins over the local copy: it is how a
+  // respondent moves from phone to laptop.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const did = params.get('draft') || (() => {
+      try { return localStorage.getItem(DRAFT_ID_KEY); } catch { return null; }
+    })();
+    if (!did) return;
+    setServerDraftId(did);
+    if (!params.get('draft')) return;   // only auto-load when the link was used
+    axios.get(`${API}/brand-equity/public/${token}/draft/${did}`)
+      .then(r => {
+        const d = r.data || {};
+        const asObj = {};
+        (d.answers || []).forEach(a => { asObj[a.question_id] = a.value; });
+        if (Object.keys(asObj).length) {
+          setAnswers(asObj);
+          setDemographics(d.demographics || {});
+          setSection(Math.min(4, Math.max(0, d.section ?? 0)));
+          toast.success(`กู้คำตอบที่ทำไว้ ${Object.keys(asObj).length} ข้อกลับมาแล้ว`);
+        }
+      })
+      .catch(() => { /* stale link — respondent just starts fresh */ });
+    /* eslint-disable-next-line */
+  }, [token]);
+
+  // Look for a draft once the study is known, so the welcome screen can offer it.
+  useEffect(() => {
+    if (!study) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      const answered = Object.keys(d?.answers || {}).length;
+      // Ignore anything older than 7 days or with nothing in it.
+      if (!answered || Date.now() - (d.saved_at || 0) > 7 * 24 * 3600 * 1000) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      setSavedDraft({ ...d, answered });
+    } catch { /* ignore */ }
+    /* eslint-disable-next-line */
+  }, [study]);
+
+  const resumeDraft = () => {
+    if (!savedDraft) return;
+    setAnswers(savedDraft.answers || {});
+    setDemographics(savedDraft.demographics || {});
+    setSection(Math.min(4, Math.max(0, savedDraft.section ?? 0)));
+    setSavedDraft(null);
+  };
+  const discardDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(DRAFT_ID_KEY);
+    } catch { /* ignore */ }
+    if (serverDraftId) {
+      axios.delete(`${API}/brand-equity/public/${token}/draft/${serverDraftId}`).catch(() => {});
+      setServerDraftId(null);
+    }
+    setSavedDraft(null);
+  };
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem('be_lang') || 'th'; } catch { return 'th'; }
   });
@@ -237,6 +339,13 @@ const BrandEquityRespondentPage = () => {
   }, {});
   const totalQ = (study.questions || []).length;
   const answered = Object.keys(answers).length;
+  // Honest time estimate. `estimated_minutes` came from the wizard and understated
+  // a 36-40 question survey badly; 15-25 s per item is the usual planning range
+  // for short self-administered items, so quote a RANGE and never less than the
+  // stored figure.
+  const timeLo = Math.max(Number(study.estimated_minutes) || 0, Math.ceil(totalQ * 15 / 60));
+  const timeHi = Math.max(timeLo + 1, Math.ceil(totalQ * 25 / 60));
+  const timeEstimate = `${timeLo}-${timeHi}`;
 
   // Lang toggle pill — shown on every screen
   const LangToggle = () => (
@@ -284,7 +393,7 @@ const BrandEquityRespondentPage = () => {
               {study.brand?.name}
             </h1>
             <div className="be-muted" style={{ marginBottom: 24, lineHeight: 1.7 }}>
-              {T.welcomeAsk(study.estimated_minutes)}
+              {T.welcomeAsk(timeEstimate)}
             </div>
             <div className="be-card" style={{ background: 'var(--paper-2)' }}>
               <div className="be-eyebrow" style={{ marginBottom: 10 }}>{T.welcomeWhat}</div>
@@ -297,6 +406,29 @@ const BrandEquityRespondentPage = () => {
                        : <>คำตอบเป็น <strong>anonymous</strong> — เราไม่เก็บอีเมล/ชื่อ</>}</div>
               </div>
             </div>
+            {savedDraft && (
+              <div className="be-card" data-testid="be-resume-draft"
+                   style={{ marginTop: 16, borderColor: 'var(--be-red)', background: 'rgba(200,16,46,0.04)' }}>
+                <div className="be-eyebrow" style={{ marginBottom: 8 }}>
+                  <span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>
+                  {lang === 'en' ? 'UNFINISHED RESPONSE' : 'มีคำตอบที่ค้างไว้'}
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+                  {lang === 'en'
+                    ? <>You answered <strong>{savedDraft.answered}</strong> question(s) on this device before —
+                        continue where you left off?</>
+                    : <>เครื่องนี้ตอบไว้แล้ว <strong>{savedDraft.answered}</strong> ข้อ — ทำต่อจากที่ค้างไว้ไหม?</>}
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                  <button className="be-btn be-btn-red" onClick={resumeDraft} data-testid="be-resume-continue">
+                    {lang === 'en' ? 'Continue' : 'ทำต่อ'}<Icon name="arrowR" size={11}/>
+                  </button>
+                  <button className="be-btn be-btn-ghost" onClick={discardDraft} data-testid="be-resume-discard">
+                    {lang === 'en' ? 'Start over' : 'เริ่มใหม่'}
+                  </button>
+                </div>
+              </div>
+            )}
             <button className="be-btn be-btn-red be-btn-lg" style={{ width: '100%', marginTop: 24, justifyContent: 'center' }}
                     onClick={() => setSection(0)} data-testid="be-respondent-start">
               {T.start}<Icon name="arrowR" size={12}/>
@@ -345,21 +477,45 @@ const BrandEquityRespondentPage = () => {
                     {c.options.map(opt => (
                       <div key={opt}
                            className={'be-resp-mcq-opt ' + (demographics[s] === opt ? 'sel' : '')}
-                           onClick={() => setDemographics({ ...demographics, [s]: opt })}
+                           onClick={() => setDemographics(prev => {
+                             // Tapping the selected option clears it. Every
+                             // demographic answer used to be permanent once
+                             // tapped — a mis-tap could not be undone.
+                             const next = { ...prev };
+                             if (next[s] === opt) delete next[s];
+                             else next[s] = opt;
+                             return next;
+                           })}
                            data-testid={`be-resp-demo-${s}-${opt}`}>
                         <div className="check">{demographics[s] === opt && <Icon name="check" size={10}/>}</div>
                         <span>{opt}</span>
                       </div>
                     ))}
                   </div>
+                  {demographics[s] && (
+                    <button className="be-btn be-btn-ghost be-tiny" style={{ marginTop: 8 }}
+                            onClick={() => setDemographics(prev => {
+                              const next = { ...prev }; delete next[s]; return next;
+                            })}
+                            data-testid={`be-resp-demo-clear-${s}`}>
+                      {lang === 'en' ? 'Clear' : 'ล้างคำตอบนี้'}
+                    </button>
+                  )}
                 </div>
               );
             })}
-            <button className="be-btn be-btn-red be-btn-lg"
-                    style={{ width: '100%', marginTop: 20, justifyContent: 'center' }}
-                    onClick={submit} disabled={submitting} data-testid="be-respondent-submit">
-              {submitting ? T.sending : T.submit}<Icon name="check" size={12}/>
-            </button>
+            <div className="be-resp-foot">
+              {/* The last screen had no way back at all: a respondent who
+                  wanted to change an answer had to abandon the survey. */}
+              <button className="be-btn be-btn-ghost" onClick={() => setSection(3)}
+                      data-testid="be-respondent-demo-back">
+                <Icon name="chevronL" size={11}/>{T.back}
+              </button>
+              <button className="be-btn be-btn-red"
+                      onClick={submit} disabled={submitting} data-testid="be-respondent-submit">
+                {submitting ? T.sending : T.submit}<Icon name="check" size={12}/>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -390,14 +546,34 @@ const BrandEquityRespondentPage = () => {
   const dim = dims[section];
   const sectionQs = questionsByDim[dim] || [];
 
-  const canProceed = sectionQs.every(q => {
-    if (!q.required) return true;
+  const isAnswered = (q) => {
     const v = answers[q.id];
     if (v == null || v === '') return false;
     if (Array.isArray(v) && v.length === 0) return false;
     if (q.type === 'trait_grid' && Array.isArray(v) && v.length < (q.min || 3)) return false;
     return true;
-  });
+  };
+  const missingQs = sectionQs.filter(q => q.required && !isAnswered(q));
+  const canProceed = missingQs.length === 0;
+
+  // The Next button used to be `disabled` with no explanation, on a 36-question
+  // required-heavy survey — the respondent had no way to know which item was
+  // blocking them. It now always clicks, and says what is missing.
+  const handleNext = () => {
+    if (!canProceed) {
+      setShowMissing(true);
+      toast.error(
+        lang === 'en'
+          ? `${missingQs.length} required question(s) still unanswered — highlighted in red`
+          : `ยังมี ${missingQs.length} ข้อที่ต้องตอบ — ทำเครื่องหมายสีแดงไว้ให้แล้ว`
+      );
+      const el = document.querySelector('.be-resp-q-missing');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setShowMissing(false);
+    setSection(section + 1);
+  };
 
   async function submit() {
     setSubmitting(true);
@@ -407,8 +583,13 @@ const BrandEquityRespondentPage = () => {
         demographics,
         answers: answersList,
         duration_sec: Math.round((Date.now() - startedAt) / 1000),
+        draft_id: serverDraftId,
       });
       setSection(5);
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(DRAFT_ID_KEY);
+      } catch { /* ignore */ }
     } catch (e) {
       toast.error('ส่งไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
     }
@@ -530,11 +711,19 @@ const BrandEquityRespondentPage = () => {
                   </div>
                 </div>
               )}
-              {g.qs.map(q => (
-                <div className="be-resp-q" key={q.id}>
+              {g.qs.map(q => {
+                const missing = showMissing && q.required && !isAnswered(q);
+                return (
+                <div className={'be-resp-q' + (missing ? ' be-resp-q-missing' : '')} key={q.id}
+                     data-testid={missing ? `be-resp-q-missing-${q.id}` : undefined}>
                   <div className="be-resp-q-num">
                     <span className="be-dot-sm" style={{ background: 'var(--ink)' }}/>
                     {q.template_id || q.id.slice(0, 5)}
+                    {missing && (
+                      <span className="be-resp-q-missing-tag">
+                        {lang === 'en' ? 'not answered' : 'ยังไม่ได้ตอบ'}
+                      </span>
+                    )}
                   </div>
                   <div className="be-resp-q-prompt">
                     {tx(q, 'prompt')}
@@ -570,7 +759,8 @@ const BrandEquityRespondentPage = () => {
                   <QuestionInput q={q} value={answers[q.id]} onChange={v => setAnswers({ ...answers, [q.id]: v })}
                                  lang={lang} T={T}/>
                 </div>
-              ))}
+                );
+              })}
             </React.Fragment>
           ));
         })()}
@@ -582,12 +772,44 @@ const BrandEquityRespondentPage = () => {
               <Icon name="chevronL" size={11}/>{T.back}
             </button>
           ) : <span/>}
-          <button className="be-btn be-btn-primary" disabled={!canProceed}
-                  onClick={() => setSection(section + 1)} data-testid="be-respondent-next">
+          <button className="be-btn be-btn-primary"
+                  onClick={handleNext} data-testid="be-respondent-next">
             {section === 3
               ? (lang === 'en' ? 'Next · about you' : 'ถัดไป · ข้อมูล')
               : T.untilNext}<Icon name="arrowR" size={11}/>
           </button>
+        </div>
+        {!canProceed && (
+          <div className="be-small" data-testid="be-respondent-missing-hint"
+               style={{ paddingBottom: 14, color: 'var(--be-red)', lineHeight: 1.5 }}>
+            {lang === 'en'
+              ? `${missingQs.length} required question(s) left in this section`
+              : `เหลืออีก ${missingQs.length} ข้อที่ต้องตอบในตอนนี้`}
+          </div>
+        )}
+        <div className="be-tiny be-muted" data-testid="be-autosave-note"
+             style={{ paddingBottom: 18, lineHeight: 1.5 }}>
+          {lang === 'en'
+            ? 'Your answers are saved automatically — you can close the page and come back to finish.'
+            : 'คำตอบถูกบันทึกอัตโนมัติ — ปิดหน้านี้แล้วกลับมาทำต่อได้'}
+          {serverDraftId && (
+            <>
+              {' '}
+              <button className="be-btn be-tiny" style={{ marginLeft: 4 }}
+                      data-testid="be-copy-resume-link"
+                      onClick={() => {
+                        const url = `${window.location.origin}/brand-equity/respond/${token}?draft=${serverDraftId}`;
+                        navigator.clipboard?.writeText(url);
+                        setResumeLinkCopied(true);
+                        toast.success(lang === 'en' ? 'Resume link copied' : 'คัดลอกลิงก์ทำต่อแล้ว');
+                        setTimeout(() => setResumeLinkCopied(false), 2500);
+                      }}>
+                {resumeLinkCopied
+                  ? (lang === 'en' ? 'Copied' : 'คัดลอกแล้ว')
+                  : (lang === 'en' ? 'Copy resume link' : 'คัดลอกลิงก์ทำต่อ (ใช้ได้ทุกเครื่อง)')}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

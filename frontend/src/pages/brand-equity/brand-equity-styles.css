@@ -33,7 +33,12 @@
   background: var(--paper);
   color: var(--ink);
   min-height: 100vh;
-  overflow-x: hidden; /* defensive — guards against SVG label bleeds & wide content */
+  /* `overflow-x: hidden` computes to `overflow: hidden auto`, which turns this
+     element into the scrolling ancestor for any `position: sticky` descendant —
+     and since it never actually scrolls (the window does), the shared topbar
+     silently stopped sticking on every .be-root page. `clip` gives the same
+     protection against wide content WITHOUT creating a scroll container. */
+  overflow-x: clip;
 }
 
 /* Allow grid/flex children to shrink below their intrinsic min-content width
@@ -53,8 +58,8 @@
 /* Defensive: cards must clip overflowing children on mobile.
    Without this, long brand names / SVG dots / NPS labels can push the card
    wider than its column and break the entire grid layout. */
-.be-root .be-card { overflow-x: hidden; }
-.be-root .be-page { overflow-x: hidden; max-width: 100vw; }
+.be-root .be-card { overflow-x: clip; }
+.be-root .be-page { overflow-x: clip; max-width: 100vw; }
 
 /* Subtle paper grain — pure CSS, no images */
 .be-root::before {
@@ -67,7 +72,34 @@
   background-position: 0 0, 1px 1px;
   z-index: 0;
 }
-.be-root > * { position: relative; z-index: 1; }
+/* Direct children sit above the grain overlay. Exclude fixed-position children:
+   this rule silently demoted every Tailwind `fixed inset-0` modal inside a
+   `.be-root` page to `position: relative`, which laid the dialog out at the bottom
+   of the document — the Conjoint "สร้างการศึกษาใหม่" button looked completely dead. */
+.be-root > *:not(.fixed) { position: relative; z-index: 1; }
+.be-root > .fixed { z-index: 50; }
+
+/* The blanket rule above wins on specificity (0,2,0) over `.utb-root` (0,1,0),
+   so it was silently overriding the topbar's own `position: sticky; z-index: 50`
+   with `position: relative; z-index: 1`. Two consequences on every `.be-root`
+   page: the topbar stopped being sticky, and — because the sibling that follows
+   it also sits at z-index 1 and paints later — the topbar's "เครื่องมือ" dropdown
+   opened UNDERNEATH the page content and could not be clicked. `.utb-dd-menu`
+   carries `z-index: 100`, but that only orders it inside the topbar's own
+   stacking context; it cannot escape a parent pinned at z-index 1.
+   Same specificity, declared later, so these win. Same fix for the two legacy
+   in-file topbars, which have the identical rule.
+
+   z-index 40 is deliberate: above ordinary page content (which the rule above
+   pins at 1) but still BELOW `.be-root > .fixed` modals at 50, so a dialog keeps
+   covering the topbar rather than opening behind it. */
+.be-root > .utb-root,
+.be-root > .be-topbar,
+.be-root > .be-public-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
 
 .be-root *, .be-root *::before, .be-root *::after { box-sizing: border-box; }
 .be-root button { font-family: inherit; cursor: pointer; }
@@ -1205,4 +1237,127 @@
   .be-hero-brand { gap: 12px; flex-wrap: wrap; }
   .be-score-block { flex-direction: column; align-items: flex-start; gap: 14px; }
   .be-dim-card { min-height: 100px; padding: 12px 10px; }
+}
+
+/* ============ Respondent survey — mobile answer controls ============
+   Every answer control was authored desktop-first: an 11-column NPS grid gives
+   ~26px tap targets on a 390px phone, and most respondents arrive from a shared
+   link on mobile. Targets below are >=44px per WCAG 2.5.5 / Apple HIG. */
+@media (max-width: 600px) {
+  .be-resp-likert { flex-wrap: wrap; gap: 8px; }
+  .be-resp-likert button { flex: 1 1 calc(20% - 8px); min-width: 46px; min-height: 48px; font-size: 16px; }
+  .be-resp-comparative { flex-wrap: wrap; gap: 8px; }
+  .be-resp-comparative button { flex: 1 1 calc(25% - 8px); min-width: 46px; min-height: 48px; font-size: 16px; }
+  .be-resp-nps-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  .be-resp-nps-grid button { min-height: 48px; font-size: 16px; }
+  .be-resp-trait-grid { grid-template-columns: 1fr; }
+  .be-resp-trait { min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .be-resp-mcq-opt { min-height: 48px; font-size: 15px; }
+  .be-resp-q { padding: 18px 0; }
+  .be-resp-q-prompt { font-size: 17px; }
+  .be-resp-foot { padding: 12px 0; }
+  .be-resp-foot .be-btn { min-height: 46px; }
+}
+
+/* Unanswered required question — highlighted only after the respondent tries to
+   advance, so the previously-silent disabled Next button now explains itself. */
+.be-resp-q.be-resp-q-missing {
+  background: rgba(200,16,46,0.04);
+  border-left: 3px solid var(--be-red);
+  padding-left: 12px;
+}
+.be-resp-q-missing-tag {
+  display: inline-block; margin-left: 8px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--be-red); border: 1px solid var(--be-red); padding: 1px 6px;
+}
+
+/* ============ Modal (weight editor) ============ */
+.be-root .be-modal-backdrop, .be-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(20,22,26,0.45);
+  display: grid; place-items: center; padding: 20px; z-index: 60;
+  backdrop-filter: blur(2px);
+}
+.be-modal {
+  background: var(--paper, #F7F4EE); border: 1px solid var(--rule-strong);
+  box-shadow: 8px 8px 0 rgba(20,22,26,0.12);
+  width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; padding: 24px;
+  font-family: 'IBM Plex Sans Thai', sans-serif;
+}
+.be-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 600px) {
+  .be-modal { padding: 18px; }
+}
+
+/* ============ Wave significance table ============ */
+.be-table { border-collapse: collapse; font-size: 12px; }
+.be-table th {
+  text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+  border-bottom: 1px solid var(--rule-strong); padding: 6px 8px; white-space: nowrap;
+}
+.be-table td { padding: 8px; border-bottom: 1px dashed var(--rule); vertical-align: top; }
+.be-table tr:last-child td { border-bottom: none; }
+@media (max-width: 780px) {
+  .be-table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+/* ============ Selection chips / toggles inside .be-root ============
+   The Conjoint pages are wrapped in `.be-root`, where Tailwind colour utilities
+   are rewritten into the editorial palette. A demographic chip carried BOTH
+   `bg-blue-600` and `border-blue-700`, so it matched the "primary button" rule
+   AND the "outline button" rule — the later outline rule won on `background`, and
+   the SELECTED chip rendered transparent, identical to the unselected ones. The
+   respondent could not see what they had picked. These classes own their look
+   outright instead of depending on which utility rule wins. */
+.be-root button.be-chip, button.be-chip {
+  background: var(--paper) !important;
+  color: var(--ink-2) !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  min-height: 40px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.be-root button.be-chip:hover, button.be-chip:hover {
+  border-color: var(--ink) !important;
+  color: var(--ink) !important;
+}
+.be-root button.be-chip[aria-pressed="true"], button.be-chip[aria-pressed="true"] {
+  background: var(--ink) !important;
+  color: var(--paper) !important;
+  border-color: var(--ink) !important;
+  font-weight: 600 !important;
+  box-shadow: 2px 2px 0 var(--be-red);
+}
+.be-root button.be-chip[aria-pressed="true"]:hover, button.be-chip[aria-pressed="true"]:hover {
+  background: var(--be-red) !important;
+  border-color: var(--be-red) !important;
+  color: #fff !important;
+}
+.be-chip-check { font-size: 11px; margin-right: 6px; }
+
+/* Card-style multi-select toggle (which demographics to collect) */
+.be-root button.be-toggle-card, button.be-toggle-card {
+  background: var(--paper) !important;
+  color: var(--ink-2) !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 0 !important;
+  text-align: left !important;
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+  font-size: 13px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  padding: 10px 12px !important;
+}
+.be-root button.be-toggle-card[aria-pressed="true"], button.be-toggle-card[aria-pressed="true"] {
+  background: var(--paper-2) !important;
+  color: var(--ink) !important;
+  border-color: var(--ink) !important;
+  box-shadow: inset 3px 0 0 var(--be-red);
 }

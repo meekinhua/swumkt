@@ -93,14 +93,11 @@ const ConjointDemographicsConfig = ({ studyId, token, initialValue, disabled, on
             <button
               key={f.key}
               type="button"
+              aria-pressed={active}
               onClick={() => toggle(f.key)}
               disabled={disabled}
               data-testid={`demo-config-toggle-${f.key}`}
-              className={`text-left px-3 py-2 rounded-lg border transition-all ${
-                active
-                  ? 'bg-indigo-50 border-indigo-400 text-indigo-900'
-                  : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300'
-              } ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+              className={`be-toggle-card ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${

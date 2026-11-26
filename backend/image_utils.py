@@ -90,5 +90,5 @@ def get_image_size_kb(base64_string: str) -> float:
         
         image_data = base64.b64decode(base64_string)
         return len(image_data) / 1024
-    except:
+    except Exception:
         return 0.0

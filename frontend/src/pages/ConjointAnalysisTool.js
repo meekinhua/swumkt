@@ -771,12 +771,10 @@ const ConjointAnalysisTool = () => {
                           setNewStudy({ ...newStudy, demographics_to_capture: next });
                         }}
                         data-testid={`create-demo-chip-${opt.key}`}
-                        className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
-                          active
-                            ? 'bg-indigo-600 text-white border-indigo-700'
-                            : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
-                        }`}
+                        aria-pressed={active}
+                        className="be-chip"
                       >
+                        {active && <span className="be-chip-check">✓</span>}
                         {opt.label}
                       </button>
                     );

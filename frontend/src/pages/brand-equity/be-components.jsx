@@ -3,6 +3,7 @@
    All components are scoped via .be-root parent. */
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import UnifiedTopbar from '@/components/UnifiedTopbar';
+import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 
 // ============ Inline icon system (line-art, 16px viewBox) ============
 const ICON_PATHS = {
@@ -49,7 +50,10 @@ export const DIMENSIONS = {
 export const ScoreRing = ({ value = 0, size = 148, stroke = 9, color }) => {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const tier = value >= 70 ? '#10B981' : value >= 40 ? '#D4A017' : '#C8102E';
+  // One canonical 5-tier scale for every surface (see @/lib/brandHealthVerdict).
+  // This was a private >=70 / >=40 mapping, so the ring could be green while the
+  // headline next to it said "เฝ้าระวัง".
+  const tier = getBrandHealthTier(value).color;
   const ringColor = color || tier;
   const [v, setV] = useState(0);
   useEffect(() => { const t = setTimeout(() => setV(value), 80); return () => clearTimeout(t); }, [value]);
@@ -220,6 +224,62 @@ export const HBar = ({ rows, color = '#1B75BC' }) => (
     ))}
   </div>
 );
+
+// ============ TrendLine (score history over time) ============
+// points: [{ label, n, values: { key: number|null } }]
+// series: [{ key, label, color }]
+export const TrendLine = ({ points = [], series = [], height = 240, testid = 'be-trendline' }) => {
+  const W = 860, PAD_L = 44, PAD_R = 24, PAD_T = 14, PAD_B = 34;
+  const H = height;
+  const n = points.length;
+  const x = (i) => (n <= 1 ? PAD_L : PAD_L + (i * (W - PAD_L - PAD_R)) / (n - 1));
+  const y = (v) => PAD_T + (1 - (v / 100)) * (H - PAD_T - PAD_B);
+
+  return (
+    <div style={{ overflowX: 'auto' }} data-testid={testid}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 520, display: 'block' }}>
+        {[0, 25, 50, 75, 100].map(g => (
+          <g key={g}>
+            <line x1={PAD_L} x2={W - PAD_R} y1={y(g)} y2={y(g)}
+                  stroke="rgba(26,26,26,0.10)" strokeDasharray={g === 0 ? '' : '3 4'}/>
+            <text x={PAD_L - 8} y={y(g) + 3} textAnchor="end"
+                  style={{ fontSize: 9, fontFamily: 'IBM Plex Mono, monospace', fill: '#8A8D94' }}>{g}</text>
+          </g>
+        ))}
+        {points.map((p, i) => (
+          <text key={i} x={x(i)} y={H - 14}
+                textAnchor={n > 1 && i === 0 ? 'start' : n > 1 && i === n - 1 ? 'end' : 'middle'}
+                style={{ fontSize: 9.5, fontFamily: 'IBM Plex Mono, monospace', fill: '#5C5F66' }}>
+            {p.label} <tspan style={{ fill: '#A6A8AF' }}>n={p.n}</tspan>
+          </text>
+        ))}
+        {series.map(s => {
+          const pts = points.map((p, i) => [i, p.values?.[s.key]])
+                            .filter(([, v]) => typeof v === 'number');
+          if (!pts.length) return null;
+          const d = pts.map(([i, v], k) => `${k === 0 ? 'M' : 'L'}${x(i)},${y(v)}`).join(' ');
+          return (
+            <g key={s.key} data-testid={`${testid}-series-${s.testid || s.key}`}>
+              <path d={d} fill="none" stroke={s.color} strokeWidth={s.key === 'overall' ? 2.6 : 1.6}
+                    strokeDasharray={s.key === 'overall' ? '' : '5 4'}/>
+              {pts.map(([i, v]) => (
+                <g key={i}>
+                  <circle cx={x(i)} cy={y(v)} r={s.key === 'overall' ? 4.5 : 3} fill={s.color}/>
+                  {s.key === 'overall' && (
+                    <text x={x(i)} y={y(v) - 10} textAnchor="middle"
+                          style={{ fontSize: 10, fontWeight: 700, fill: s.color,
+                                   fontFamily: 'IBM Plex Mono, monospace' }}>{Math.round(v)}</text>
+                  )}
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
 
 // ============ Histogram ============
 export const Histogram = ({ values, peakIdx, color = '#D4A017', labels }) => {
@@ -539,8 +599,18 @@ export const AIInsightCard = ({ dimension = 'awareness', title, bullets = [], pr
 };
 
 // ============ Brand Logo (real image with fallback to initial+gradient) ============
-// Priority: identity.visual_assets[kind='logo'].image_base64 → brand.logo_url → initial letter on gradient
+// Priority: the asset's image_url or image_base64 → brand.logo_url → initial letter on gradient
 // Pass `logoAsset` directly when available (e.g. from public endpoint).
+//
+// Public endpoints hand back `image_url` (a path into /api/media or /api/files)
+// instead of base64, so the browser can cache the logo instead of re-reading it
+// inside every JSON response. Accept a site-relative path as well as an
+// absolute one — a check for `https?://` alone silently drops both of those.
+// An absolute URL, a site-relative path, or an inline data URI — anything a
+// browser will load as an image. Rejects the empty string and stray values.
+const isImageSrc = (s) =>
+  typeof s === 'string' && /^(https?:\/\/|\/|data:image\/)/i.test(s.trim());
+
 export const BrandLogo = ({
   brand = {}, identity = {}, logoAsset = null,
   size = 48, radius = 0, gradient,
@@ -549,11 +619,12 @@ export const BrandLogo = ({
   const [imgError, setImgError] = React.useState(false);
   const asset = logoAsset
     || (identity?.visual_assets || []).find(a => a?.kind === 'logo');
-  const inlineSrc = asset?.image_base64
-    ? `data:${asset.mime_type || 'image/png'};base64,${asset.image_base64}`
-    : null;
-  const urlSrc = brand?.logo_url && /^https?:\/\//i.test(brand.logo_url) ? brand.logo_url : null;
-  const src = imgError ? null : (inlineSrc || urlSrc);
+  const assetSrc = asset?.image_url
+    || (asset?.image_base64
+      ? `data:${asset.mime_type || 'image/png'};base64,${asset.image_base64}`
+      : null);
+  const urlSrc = isImageSrc(brand?.logo_url) ? brand.logo_url : null;
+  const src = imgError ? null : (assetSrc || urlSrc);
   const initial = (brand?.name?.[0] || 'B').toUpperCase();
   const fallbackBg = gradient || 'linear-gradient(140deg,#14161A 0%,#3A3D45 100%)';
 
@@ -565,6 +636,8 @@ export const BrandLogo = ({
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0 }}>
         <img src={src} alt={brand?.name || 'Brand logo'}
+             loading="lazy" decoding="async"
+             width={size} height={size}
              onError={() => setImgError(true)}
              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}/>
       </div>

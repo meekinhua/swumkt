@@ -13,6 +13,7 @@ import useDocumentMeta from '@/hooks/useDocumentMeta';
 import { getBrandHealthTier, getWeakestDimension } from '@/lib/brandHealthVerdict';
 import { SWU_LOGO_URL } from './brand-equity/be-components';
 import SlideMedia from '../components/SlideMedia';
+import { useSiteText } from '@/hooks/useSiteText';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -75,6 +76,8 @@ const HeroClickable = ({ href, children, testid }) => {
 };
 
 const HomePage = () => {
+  const t = useSiteText();
+
   const [headIdx, setHeadIdx] = useState(0);
 
   // React Query: shared cache across pages, instant on revisit
@@ -162,10 +165,13 @@ const HomePage = () => {
     return () => clearInterval(id);
   }, [HEADLINES.length, ROTATION_MS, heroPaused]);
 
-  // Preload all rotation images so transitions don't flash blank
+  // Warm the next slide so the transition doesn't flash blank. Only the next
+  // one: the images are separate requests now, and preloading all of them on
+  // load would compete with the hero for bandwidth.
+  const nextHeroImage = HEADLINES[(headIdx + 1) % HEADLINES.length]?.image;
   useEffect(() => {
-    HEADLINES.forEach((h) => { if (h?.image) { const i = new Image(); i.src = h.image; } });
-  }, [landing]);
+    if (nextHeroImage) { const i = new Image(); i.src = nextHeroImage; }
+  }, [nextHeroImage]);
 
   const head = HEADLINES[headIdx] || HEADLINES[0];
 
@@ -297,11 +303,13 @@ const HomePage = () => {
                 )}
               </HeroClickable>
               <div style={{ display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
-                <Link to="/showcase" className="btn-pill btn-pill--blue" data-testid="hero-showcase-btn">
-                  ดูผลงานทั้งหมด <span>→</span>
+                <Link to={t('home.heroCtaPrimaryPath', '/showcase')}
+                      className="btn-pill btn-pill--blue" data-testid="hero-showcase-btn">
+                  {t('home.heroCtaPrimary', 'ดูผลงานทั้งหมด')} <span>→</span>
                 </Link>
-                <Link to="/register" className="btn-pill btn-pill--ghost" data-testid="hero-register-btn">
-                  เริ่มอ่านใจตลาดฟรี
+                <Link to={t('home.heroCtaSecondaryPath', '/register')}
+                      className="btn-pill btn-pill--ghost" data-testid="hero-register-btn">
+                  {t('home.heroCtaSecondary', 'เริ่มอ่านใจตลาดฟรี')}
                 </Link>
               </div>
               {/* Rotation dots */}
@@ -338,6 +346,7 @@ const HomePage = () => {
                 fallbackAlt={head.imageAlt}
                 fallbackCaption={head.imageCaption}
                 onPauseRequest={setHeroPaused}
+                priority
                 testid="hero-image-cell"
               />
 
@@ -433,7 +442,38 @@ const HomePage = () => {
                             { k: 'identity', label: 'Identity vs Image', color: '#8B5CF6' },
                             { k: 'loyalty', label: 'Loyalty', color: '#10B981' },
                           ].map(d => {
+                            // `_measured` (from the backend) lists the dimensions
+                            // that actually produced a score. Missing ones are
+                            // coerced to 0 for backward compatibility, and this
+                            // card used to render that 0 as a real result — and
+                            // getWeakestDimension then named it as the brand's
+                            // weakest point.
+                            const measured = featured.scores._measured;
+                            const isMeasured = !Array.isArray(measured) || measured.includes(d.k);
                             const v = Number(featured.scores[d.k] || 0);
+                            if (!isMeasured) {
+                              return (
+                                <div key={d.k} data-testid={`featured-score-${d.k}`}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between',
+                                                  marginBottom: 3, alignItems: 'baseline' }}>
+                                    <span style={{ fontFamily: 'var(--mono)', fontSize: 9,
+                                                      color: 'var(--ink-2)', textTransform: 'uppercase',
+                                                      letterSpacing: '0.06em' }}>
+                                      {d.label}
+                                    </span>
+                                    <span className="serif" style={{ fontSize: 13, fontWeight: 500,
+                                                                        color: 'var(--ink-3)' }}>
+                                      —
+                                    </span>
+                                  </div>
+                                  <div style={{ height: 4, background: 'rgba(26,26,26,0.06)', borderRadius: 999 }}/>
+                                  <div style={{ fontSize: 8.5, color: 'var(--ink-3)', marginTop: 2,
+                                                  fontFamily: 'var(--mono)', letterSpacing: '0.06em' }}>
+                                    ยังไม่ได้วัด
+                                  </div>
+                                </div>
+                              );
+                            }
                             return (
                               <div key={d.k} data-testid={`featured-score-${d.k}`}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between',
@@ -512,11 +552,17 @@ const HomePage = () => {
                style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
                         gap: 56, marginBottom: 40, alignItems: 'end' }}>
             <div>
-              <Eyebrow red>● Open Tools</Eyebrow>
-              <h2 className="h-section" style={{ marginTop: 14 }}>เครื่องมืออ่านใจ<br/>ผู้บริโภค</h2>
+              <Eyebrow red>● {t('home.toolsEyebrow', 'Open Tools')}</Eyebrow>
+              <h2 className="h-section" style={{ marginTop: 14 }}>
+                {t('home.toolsHeading', 'เครื่องมืออ่านใจ')}<br/>
+                {t('home.toolsHeadingLine2', 'ผู้บริโภค')}</h2>
             </div>
             <p className="lede" style={{ fontSize: 17 }}>
-              แปดเครื่องมือมาตรฐานวิชาการ ออกแบบโดยอาจารย์และนักวิจัยจากสาขาการตลาด มศว. — ช่วยให้ SME นักศึกษา และนักการตลาดเห็นในสิ่งที่ตลาดยังไม่เห็น โดยไม่มีค่าใช้จ่าย
+              {/* The count comes from the CMS-driven tool list — it used to read
+                  "แปด" (eight) in the source and went wrong whenever a card
+                  was added or removed. */}
+              {t('home.toolsLede',
+                 `${landing?.tools?.length ? `${landing.tools.length} เครื่องมือ` : 'เครื่องมือ'}มาตรฐานวิชาการ ออกแบบโดยอาจารย์และนักวิจัยจากสาขาการตลาด มศว. — ช่วยให้ SME นักศึกษา และนักการตลาดเห็นในสิ่งที่ตลาดยังไม่เห็น โดยไม่มีค่าใช้จ่าย`)}
             </p>
           </div>
 

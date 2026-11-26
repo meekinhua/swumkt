@@ -1,0 +1,50 @@
+{
+  "summary": "Iter 30 — independent verification of the two production-data 500s fixed by the developer: (BUG 1) Brand Equity thesis-export on Thai-brand studies, and (BUG 2) segment-significance on zero-variance demographic groups. Plus a compatibility sweep across old & edited-after-collection studies in both Brand Equity and Conjoint. New backend suite /app/backend/tests/test_iter30_thai_export_zero_variance.py — 9 passed, 2 skipped (skips are for study 993a5ce4-... which is not present in this DB; the fix is verified on the two studies that ARE present, plus a full enumeration of every Thai-brand study returned by GET /studies). No-drift regression across the 5 named suites (test_brand_equity_audit_2026_08 + test_thesis_export_academic_2026_08 + test_brand_equity_wave_significance + test_conjoint_audit_2026_08 + test_conjoint_final_e2e) — 140 passed, 2 skipped, 0 failures. Frontend UI sweep on 4 Brand-Equity dashboards (Mali 24r edited-and-republished, Mali 13r legacy, TEST_UIBrand 12r, ChaThai demo) — all render cleanly, no console error, no 'ORPHAN'/'MISSING'/'NaN%' placeholders in DOM; be-reliability-card / be-score-history / be-segment-significance each present exactly once per dashboard; be-trendline-series-bes rendered on the two seeded demo studies. Conjoint results page for นมหมี (120r) renders with attribute importances summing to 100.0 (32.1+21.7+17.1+16.2+12.9) and zero placeholder tokens. Zero-response conjoint study b3bb853e-... returns status='insufficient_data' with empty importance_scores gracefully (200, not 500).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_acceptance_criteria": [
+    "BUG 1 FIXED — POST /api/brand-equity/studies/demo-sim-chathai-001/thesis-export returns HTTP 200 with a valid .docx (opens in python-docx) and Content-Disposition carries BOTH filename=\"thesis-brand-YYYYMMDD.docx\" AND filename*=UTF-8''<percent-encoded-Thai>ชาไทยมะลิ<...>",
+    "BUG 1 FIXED — zz-wavesig-0001 (ASCII brand) still returns 200 with valid docx (no regression on non-Thai path)",
+    "BUG 1 FIXED — enumeration of EVERY study whose brand.name contains a Thai character returns 200 with valid docx and RFC 5987 filename* header (no failures across the full sweep)",
+    "BUG 2 FIXED — GET /api/brand-equity/studies/c5b3458f-.../segment-significance?field=gender returns HTTP 200 with body.testable=true and all 4 dimensions (awareness/quality/identity/loyalty) present under by_dimension",
+    "BUG 2 FIXED — response body contains NO 'NaN' / 'Infinity' tokens and every float is finite (recursive check)",
+    "BUG 2 FIXED — dimensions that cannot be tested carry a structured Thai reason ('zero_variance_in_group' / 'zero_variance' / 'test_not_computable' / 'too_few_respondents_per_group') and do NOT fabricate a p_value",
+    "BUG 2 FIXED — same on field=age and same on the tiny study 02a6ff40-... (both fields, 200)",
+    "OLD DATA (BE) — 4 dashboards render fully: c5b3458f (Mali 24r, republished twice), a407a08f (Mali 13r legacy-id), 0a0a1f3b (TEST_UIBrand 12r), demo-sim-chathai-001. be-reliability-card / be-score-history / be-segment-significance each render once per dashboard; no console error; no placeholder tokens in DOM",
+    "EDITED-AFTER-COLLECTION — c5b3458f reliability card reports non-zero n_complete for QUALITY (n=16, k=4) and LOYALTY (n=24, k=2). Legacy question-id pooling works. (awareness legitimately k_items=1 -> fewer_than_2_likert_items; identity still shows n_complete=0 with k=11 items — flagged as observation, not a bug for this iter)",
+    "EDITED-AFTER-COLLECTION — POST /studies/c5b3458f/compare {wave_a:{wave:'1'},wave_b:{wave:'2'}} returns 200 with significance.by_dimension carrying testable results for quality/identity/loyalty (n_a=21, n_b=3) — no 'zero testable respondents' claim",
+    "OLD DATA (CONJOINT) — 6099ac5b (นมหมี 120r) results page renders with attribute importances summing to 100.0% and zero 'ORPHAN'/'MISSING' text in DOM (visual confirmation)",
+    "OLD DATA (CONJOINT) — 38d01d61 (ข้าว 51r) /results returns 200 with importance_scores summing to 100.0 and no placeholder tokens",
+    "GRACEFUL DEGRADATION — b3bb853e (0 responses) /results returns 200 with status='insufficient_data' and empty importance_scores (does NOT crash)",
+    "NO-DRIFT — full regression 140/140 passed on: test_brand_equity_audit_2026_08.py + test_thesis_export_academic_2026_08.py + test_brand_equity_wave_significance.py + test_conjoint_audit_2026_08.py + test_conjoint_final_e2e.py (2 skipped are pre-existing conditional skips)"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iter30_thai_export_zero_variance.py",
+    "/app/test_reports/pytest/iter30_fixes.xml",
+    "/app/test_reports/pytest/iter30_all.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "OBSERVATION (not a regression, not blocking): on c5b3458f the IDENTITY dimension reliability card shows n_complete=0 despite k_items=11 and 24 total responses. Quality (16) and loyalty (24) pool legacy ids correctly — the acceptance criterion is met — but identity does not. If the developer wants perfect legacy-id coverage, worth investigating whether identity's 11 items include a mix of legacy + republished ids that don't pool the same way quality/loyalty do."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter30_thai_export_zero_variance.py (new — 11 tests, 9 pass, 2 skip on absent study)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 new fix-verification tests + 140/140 regression across the 5 named suites)",
+    "frontend": "100% of the 4 BE dashboards + conjoint results page render with expected data-testids present and zero placeholder tokens"
+  },
+  "seed_data_creation": "None. Read-only against existing DB. demo-sim-chathai-001 and zz-wavesig-0001 NOT deleted (per developer's explicit instruction).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@swu.ac.th / admin123",
+  "context_for_next_testing_agent": "Both production-data 500s are independently confirmed fixed at both API and UI level. Thai-brand thesis export: header now carries filename=\"...ASCII...\" AND filename*=UTF-8''<pct-encoded-Thai>, docx opens in python-docx. Zero-variance segment-significance: _has_variance filter + fallback + _json_safe sanitiser produce 200 with structured Thai reason (zero_variance_in_group / test_not_computable) instead of NaN. Study 993a5ce4-88b1-4e90-82c9-46dd10a32cb6 mentioned in review-request is NOT present in the DB (404); the two tests that reference it are pytest.skip in test_iter30_thai_export_zero_variance.py so they will auto-run if the study is later re-seeded. One non-blocking observation: on c5b3458f the identity-dimension reliability still reports n_complete=0 despite 24 responses; quality and loyalty pool legacy ids correctly. Worth a separate look but does NOT block sign-off — the acceptance criterion (non-zero n for quality AND loyalty) is met.",
+  "rca_of_the_issue": "BUG 1 root cause was that Starlette encodes Content-Disposition as latin-1 by default, and Thai characters passing str.isalnum() slipped through the previous filename sanitiser. Fix uses `c.isascii() and c.isalnum()` for the legacy filename= parameter, and RFC 5987 quote() for the filename*=UTF-8'' extension — the two together satisfy every UA. BUG 2 root cause was that scipy.stats.alexandergovern divides by group variances, so when at least one usable group had zero within-group variance both statistic and pvalue came back NaN and JSONResponse then crashed on `float('nan')`. Fix filters usable groups by _has_variance() BEFORE calling the ANOVA, falls back to one-way F if the Welch-ANOVA still yields non-finite, and wraps the return in _json_safe() as a defence-in-depth sanitiser. Both fixes verified end-to-end (API + UI)."
+}

@@ -129,7 +129,7 @@ def _summarize_be_for_ai(
 BRAND_REFERENCES_APA = """\
 - Aaker, D. A. (1991). *Managing brand equity: Capitalizing on the value of a brand name*. The Free Press.
 - Aaker, D. A. (1996). *Building strong brands*. The Free Press.
-- Aaker, D. A. (1997). Dimensions of brand personality. *Journal of Marketing Research, 34*(3), 347–356.
+- Aaker, J. L. (1997). Dimensions of brand personality. *Journal of Marketing Research, 34*(3), 347–356. https://doi.org/10.1177/002224379703400304
 - Aaker, J. L., Fournier, S., & Brasel, S. A. (2004). When good brands do bad. *Journal of Consumer Research, 31*(1), 1–16.
 - Keller, K. L. (1993). Conceptualizing, measuring, and managing customer-based brand equity. *Journal of Marketing, 57*(1), 1–22. https://doi.org/10.2307/1252054
 - Keller, K. L. (2001). Building customer-based brand equity: A blueprint for creating strong brands. *Marketing Management, 10*(2), 14–19.
@@ -142,6 +142,10 @@ BRAND_REFERENCES_APA = """\
 - Pappu, R., Quester, P. G., & Cooksey, R. W. (2005). Consumer-based brand equity: Improving the measurement – empirical evidence. *Journal of Product & Brand Management, 14*(3), 143–154.
 - Christodoulides, G., & de Chernatony, L. (2010). Consumer-based brand equity conceptualization and measurement: A literature review. *International Journal of Market Research, 52*(1), 43–66.
 - DeVellis, R. F. (2017). *Scale development: Theory and applications* (4th ed.). SAGE Publications.
+- Cohen, P., Cohen, J., Aiken, L. S., & West, S. G. (1999). The problem of units and the circumstance for POMP. *Multivariate Behavioral Research, 34*(3), 315–346. https://doi.org/10.1207/S15327906MBR3403_2
+- Cronbach, L. J. (1951). Coefficient alpha and the internal structure of tests. *Psychometrika, 16*(3), 297–334. https://doi.org/10.1007/BF02310555
+- Nunnally, J. C., & Bernstein, I. H. (1994). *Psychometric theory* (3rd ed.). McGraw-Hill.
+- Fornell, C., & Larcker, D. F. (1981). Evaluating structural equation models with unobservable variables and measurement error. *Journal of Marketing Research, 18*(1), 39–50. https://doi.org/10.2307/3151312
 """
 
 
@@ -211,6 +215,66 @@ def build_be_thesis_prompts(
         n_total=n_total, n_filtered=n_filtered,
     )
     sysmsg = _system_msg(extra_prompt)
+
+    # ---- Reliability: report what was MEASURED, never a threshold ----------
+    # This block used to be the literal instruction
+    #   "- การทดสอบความเที่ยง (Cronbach's α) — ผู้ใช้จะใส่ค่าจริงเพิ่ม"   (§3.3)
+    #   "- ความเที่ยง (reliability) ของ scale: Cronbach's α ≥ 0.7"        (§3.7)
+    # while nothing in the system computed alpha. Combined with the system
+    # message's own rules ("ห้ามใส่ placeholder", "ห้ามใช้คำว่า 'ผู้ใช้จะใส่เอง'"),
+    # the only output the model could produce was a methodology chapter
+    # asserting that a reliability test had been passed. Now the real per-
+    # dimension alpha is computed in `_dimension_reliability` and injected here,
+    # including the cases where it CANNOT be estimated — which the chapter is
+    # explicitly required to disclose rather than paper over.
+    _rel = (aggregate or {}).get("reliability") or {}
+    _dim_th = {"awareness": "การรู้จักแบรนด์ (Awareness)",
+               "quality": "การรับรู้คุณภาพ (Perceived Quality)",
+               "identity": "อัตลักษณ์และภาพลักษณ์ (Identity vs Image)",
+               "loyalty": "ความภักดี (Loyalty)"}
+    _rel_rows, _rel_caveats = [], []
+    for _d, _label in _dim_th.items():
+        _r = _rel.get(_d) or {}
+        _a = _r.get("alpha")
+        if _a is None:
+            _rel_rows.append(f"| {_label} | {_r.get('k_items', 0)} | – | ประเมินไม่ได้ | {_r.get('interpretation') or '-'} |")
+            _rel_caveats.append(f"{_label}: {_r.get('interpretation') or 'ประเมินความเที่ยงไม่ได้'}")
+        else:
+            _mark = "ผ่านเกณฑ์ ≥ 0.70" if _r.get("meets_threshold") else "**ต่ำกว่าเกณฑ์ 0.70**"
+            _rel_rows.append(
+                f"| {_label} | {_r.get('k_items')} | {_a:.3f} | {_mark} | {_r.get('interpretation') or ''} |")
+            if not _r.get("meets_threshold"):
+                _rel_caveats.append(f"{_label}: α = {_a:.3f} ต่ำกว่าเกณฑ์ 0.70")
+    reliability_block = (
+        "| มิติ | จำนวนข้อ (k) | Cronbach's α | เกณฑ์ | การตีความ |\n"
+        "|---|---|---|---|---|\n" + "\n".join(_rel_rows)
+    )
+    reliability_rule = (
+        "**กฎเด็ดขาดเรื่องความเที่ยง**: อ้างอิงได้เฉพาะตัวเลขในตารางด้านบนเท่านั้น "
+        "ห้ามเขียนเกณฑ์ลอยๆ เป็นข้อสมมติ และห้ามสรุปว่ามิติใดผ่านเกณฑ์ "
+        "หากคอลัมน์ 'เกณฑ์' ของมิตินั้นไม่ได้ระบุเช่นนั้น "
+        "มิติใดที่ระบุว่า 'ประเมินไม่ได้' ให้เขียนตรงๆ ว่ายังประเมินความเที่ยงไม่ได้พร้อมเหตุผล "
+        "และนำไปกล่าวซ้ำในข้อจำกัดของการวิจัย (บทที่ 5) ห้ามละเว้น"
+        + (("\n**ประเด็นที่ต้องระบุเป็นข้อจำกัด**: " + " · ".join(_rel_caveats)) if _rel_caveats else "")
+    )
+
+    # ---- Weight table generated from the CODE, not hand-copied -------------
+    # The hard-coded table in §3.5 drifted from DIMENSION_WEIGHTS (it still
+    # listed signals that had been removed as unreachable). Generating it means
+    # the methodology chapter cannot describe a model the software does not run.
+    try:
+        from .brand_equity import DIMENSION_WEIGHTS as _DW
+        _w_rows = []
+        for _d, _label in _dim_th.items():
+            for _kind, _w in (_DW.get(_d) or {}).items():
+                _w_rows.append(f"| {_label} | `{_kind}` | {_w:.2f} |")
+        weight_table = ("| Dimension | Signal (kind) | Weight |\n|---|---|---|\n"
+                        + "\n".join(_w_rows))
+    except Exception:  # pragma: no cover — never let the export die on this
+        weight_table = "(ไม่สามารถดึงตารางน้ำหนักจากระบบได้)"
+
+    _adq = (aggregate or {}).get("sample_adequacy") or {}
+    sample_adequacy_note = _adq.get("message") or ""
 
     prompts: Dict[int, str] = {}
 
@@ -334,6 +398,8 @@ def build_be_thesis_prompts(
 ### 3.2 ประชากรและกลุ่มตัวอย่าง
 - ระบุประชากร (consumers ใน category "{category}")
 - ขนาดตัวอย่าง n={n_filtered} — อ้างเกณฑ์ขนาดกลุ่มตัวอย่าง (Hair et al., 2010 หรือ Cochran, 1977 — ผู้ใช้จะปรับ)
+- การประเมินความเพียงพอของกลุ่มตัวอย่างจากระบบ: {sample_adequacy_note}
+  (ถ้าข้อความข้างต้นระบุว่ายังไม่เพียงพอ ให้เขียนไว้ในข้อจำกัดของการวิจัยด้วย ห้ามละเว้น)
 - วิธีการสุ่ม: convenience/purposive sampling
 - Inclusion criteria
 
@@ -344,14 +410,26 @@ def build_be_thesis_prompts(
   2. Perceived Quality: Overall, Reliability, Value, Comparative
   3. Identity vs Image: Trait grid (3-5 traits), Brand Promise, Aaker's 4 Perspectives
   4. Loyalty: NPS, Repeat Intent, Switching Resistance
-- การทดสอบความเที่ยง (Cronbach's α) — ผู้ใช้จะใส่ค่าจริงเพิ่ม
+- หมายเหตุ: เครื่องมือนี้พัฒนาขึ้นตามกรอบแนวคิดของ Aaker (1996) และ Yoo & Donthu (2001)
+  แต่**ไม่ได้ใช้ข้อคำถามมาตรฐาน (validated items) ของ MBE scale โดยตรง** ให้ระบุข้อนี้ตามตรง
+
+**3.3.1 การทดสอบความเที่ยง (Internal Consistency Reliability)**
+ใช้ค่าที่คำนวณจากข้อมูลจริงต่อไปนี้ ห้ามแก้ไขตัวเลข:
+
+{reliability_block}
+
+{reliability_rule}
 
 ### 3.4 การคำนวณ Brand Equity Score (BES)
 อธิบายสูตรการคำนวณแต่ละมิติ + composite ดังนี้:
 
-**3.4.1 Likert Score Normalization**
+**3.4.1 Likert Score Normalization (POMP — Percentage of Maximum Possible)**
 $$\\text{{score}}_{{100}} = \\frac{{\\bar{{x}} - 1}}{{k - 1}} \\times 100$$
-เมื่อ $\\bar{{x}}$ = ค่าเฉลี่ย, $k$ = scale max (5 หรือ 7) — สูตรมาตรฐาน DeVellis (2017)
+เมื่อ $\\bar{{x}}$ = ค่าเฉลี่ย, $k$ = ค่าสูงสุดของมาตรวัด (5 หรือ 7)
+การแปลงนี้คือ POMP score ตาม Cohen, Cohen, Aiken และ West (1999) ซึ่งเป็นการแปลง
+เชิงเส้นให้ค่าต่ำสุดของมาตรวัดเป็น 0 และค่าสูงสุดเป็น 100 เพื่อให้เทียบข้ามมาตรวัดที่มี
+จำนวนระดับต่างกันได้ (ห้ามอ้าง DeVellis (2017) เป็นแหล่งของสูตรนี้ — เป็นตำราการพัฒนา
+มาตรวัด ไม่ใช่ที่มาของ POMP)
 
 **3.4.2 Net Promoter Score**
 $$\\text{{NPS}} = \\frac{{n_{{promoters}} - n_{{detractors}}}}{{n}} \\times 100$$
@@ -372,24 +450,10 @@ $$\\text{{BES}} = \\frac{{\\sum_{{i \\in \\{{aw,q,id,ly\\}}}} D_i \\cdot W_i}}{{
 ### 3.5 น้ำหนักของแต่ละ Signal (ตามทฤษฎี Aaker / Keller)
 ใส่ตาราง Markdown แสดงน้ำหนัก:
 
-| Dimension | Signal | Weight |
-|-----------|--------|--------|
-| Awareness | Top-of-Mind | 0.40 |
-| Awareness | Spontaneous Recall | 0.25 |
-| Awareness | Aided Recognition | 0.20 |
-| Awareness | Brand Familiarity | 0.15 |
-| Quality | Overall Quality | 0.35 |
-| Quality | Reliability | 0.20 |
-| Quality | Value-for-Money | 0.20 |
-| Quality | Comparative vs Competitor | 0.15 |
-| Quality | Design | 0.10 |
-| Identity | Trait-Grid Pickup | 0.20 |
-| Identity | Brand Promise Match | 0.15 |
-| Identity | Aaker 4 Perspectives | ≈0.50 |
-| Identity | AI Identity-Image Alignment | 0.10 |
-| Loyalty | NPS | 0.40 |
-| Loyalty | Repeat Intent | 0.30 |
-| Loyalty | Switching Resistance | 0.30 |
+{weight_table}
+
+(ตารางนี้ดึงจาก `DIMENSION_WEIGHTS` ในระบบโดยตรง จึงตรงกับที่ใช้คำนวณจริงเสมอ
+นอกจากนี้มิติ Identity ยังรวมค่า AI Identity-Image Alignment ที่น้ำหนัก 0.10 เมื่อมีข้อมูล)
 
 ### 3.6 การวิเคราะห์ข้อมูล
 - Descriptive: mean, std, T2B/B2B, frequency, distribution
@@ -397,10 +461,16 @@ $$\\text{{BES}} = \\frac{{\\sum_{{i \\in \\{{aw,q,id,ly\\}}}} D_i \\cdot W_i}}{{
 - Theme extraction และ Identity-Image alignment ผ่าน LLM
 - **สำคัญ**: สร้างแผนภาพ mermaid flowchart แสดงขั้นตอนการวิจัยทั้งกระบวนการ (Survey design → Data collection → AI normalization → Aggregate → Composite calculation → Report)
 
-### 3.7 สมมติฐานของแบบจำลอง
-- ความเที่ยง (reliability) ของ scale: Cronbach's α ≥ 0.7
-- ความตรงเชิงเนื้อหา (content validity) อ้าง Aaker (1996)
+### 3.7 สมมติฐานและข้อจำกัดของแบบจำลอง
+- ความเที่ยง (reliability): ใช้ค่า α ที่รายงานไว้ในตาราง §3.3.1 เท่านั้น ห้ามอ้างเกณฑ์ลอยๆ
+- ความตรงเชิงเนื้อหา (content validity): อ้างกรอบของ Aaker (1996) — ระบุตามตรงว่า
+  **ยังไม่ได้ทดสอบความตรงเชิงโครงสร้าง (construct validity) ด้วย EFA/CFA** และยังไม่ได้
+  รายงาน AVE/CR ตาม Fornell & Larcker (1981)
 - สมมติฐาน normalization ของ Likert มีระยะห่างเท่ากัน (Equal-interval assumption)
+- BES เป็น **ดัชนีแบบถ่วงน้ำหนัก (weighted composite index)** ที่กำหนดน้ำหนักจากทฤษฎี
+  ไม่ใช่ค่าที่ประมาณจากแบบจำลองสมการโครงสร้าง — ให้ระบุข้อนี้ตามตรง
+- การเปรียบเทียบกับคู่แข่งและระหว่างกลุ่ม/ช่วงเวลาในรายงานนี้เป็น **ผลต่างเชิงพรรณนา**
+  ยังไม่ได้ทดสอบนัยสำคัญทางสถิติ ห้ามใช้ถ้อยคำที่สื่อว่ามีนัยสำคัญ
 
 ข้อกำหนด: ภาษาไทยวิชาการ, in-text citation APA 7 ครบทุกที่ที่อ้างทฤษฎี, สูตรใช้ LaTeX ($$..$$ display, $..$ inline) เสมอ
 

@@ -18,7 +18,21 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 
 ## System 1: Marketing Research Tool (COMPLETE)
 
-### Brand Equity / Brand Health Check (COMPLETE — Feb 2026, polished Apr 27 2026)
+### Brand Equity / Brand Health Check (COMPLETE — Feb 2026, polished Apr 27 2026, correctness audit Jun 2026)
+- **Correctness audit applied Jun 14 2026** (`/app/memory/BRAND_EQUITY_AUDIT_2026_08.md`, `/app/memory/THESIS_EXPORT_AUDIT_2026_08.md`, CHANGELOG entry of the same date): Cronbach's α actually computed, dead weights removed (Awareness summed to 1.25), identity ceiling fixed, Awareness no longer waits for AI, reverse coding, public-answer validation, 95% CI, sample adequacy, one canonical verdict scale, thesis prompts no longer claim uncomputed statistics. **Some studies now show a LOWER (correct) score than before.** 103 tests.
+- **Frontend follow-ups shipped Jun 14 2026**: respondent survey UX (explained Next, Back on demographics, clearable answers, honest time range), full mobile layout for answer controls, glossary card, new `BeWeightEditor.jsx` dimension-weight editor, corrected methodology appendix + new limitations section, count-vs-percent bar fixes, n on the image radar, honest Brand Association labels, unified tier scale, unmeasured dimensions render "—" not 0.
+- **Second follow-up batch Jun 14 2026**: `GET /brand-equity/studies/scores` (list cards show real BES + tier chip, cached per response-count/weights), **wave-over-wave significance testing** (Welch t-test on respondent-level POMP dimension scores, Holm-adjusted, 95% CI + Cohen's d, shown as a table with SIG/ns markers), respondent **progress autosave + resume** via localStorage, Cronbach α now pools legacy question ids (α was unreportable on any study whose instrument had been republished), thesis DOCX verified to match the dashboard, and tier labels classified on the rounded score everywhere.
+- **Third batch Jun 14 2026**: realistic **simulated demo study** `demo-sim-chathai-001` (183 responses, 2 waves, archetype + graded-response model → α 0.72-0.93, `is_simulated` badge), **segment significance** endpoint + card (Welch t / Welch ANOVA + post-hoc, Holm), **server-side resumable drafts** with cross-device resume link and an owner "started but never finished" nudge card, and **score history chart** (wave / month / week). See CHANGELOG for details.
+
+### Conjoint Analysis — certified production-ready Jun 14 2026
+- Full researcher journey walked end to end by the testing agent (iteration_28, 22/22) plus 108 unit tests.
+- Last defect found and fixed: internal encoder placeholders (`__ORPHAN_…`) leaked into thesis coefficient tables as level names; humanised and cache version bumped to 5 (iteration_29 re-certified).
+- Known gap (not requested): no market-simulation / share-of-preference what-if tool.
+
+### Backward compatibility — audited Jun 14 2026
+- `backend/scripts/compat_sweep.py` exercises every endpoint against every study in the database (129 checks). Re-run it after any change to aggregation, export or significance code.
+- Two production 500s found on OLD data and fixed: thesis export for Thai brand names (latin-1 Content-Disposition), and segment-significance on zero-variance groups (NaN not JSON-serialisable). Verified by iteration_30.
+- Studies whose questionnaire was republished are handled everywhere via `legacy_ids` pooling (aggregation, Cronbach α, significance tests).
 - Aaker's 4-dimension framework: Awareness · Quality · Identity vs Image · Loyalty
 - Auto-generated questions (~18) from template lib + brand/competitor/category context
 - 4-step Wizard: Brand basics → Identity traits (3-8) → Segments → Question review
@@ -68,6 +82,19 @@ A comprehensive marketing research and academic tool for Srinakharinwirot Univer
 - AI Interpretation: Background task + polling (same as thesis, prevents 502)
 - **Trash Bin** (Feb 2026): soft-delete with 30-day recovery, restore + purge endpoints, UI tabs in `ConjointAnalysisTool.js`
 - **Stats correctness audit (May 29, 2026)**: all 5 methods verified via synthetic ground-truth tests (`backend/tests/test_conjoint_stats_correctness.py`, 12 PASS). Confirmed low McFadden ρ² on live studies is genuine (random/test responses), not a calculation bug. Added `ANALYSIS_CACHE_VERSION` to `analysis_cache` so new fit-diagnostic fields (LR test, fit_label) self-heal stale caches instead of serving null.
+- **Theoretical audit (Jun 2026, applied from `conjoint-audit-2026-08` package)** — see `/app/memory/CONJOINT_AUDIT_2026_08.md` + `/app/HANDOFF_CONJOINT.md`:
+  - D-optimal generator rewritten as modified Fedorov on the β=0 MNL information matrix (+45-60% D-efficiency, 5-40× faster); seeded, `EVAL_BUDGET=400_000`
+  - BIC (choice-situation basis) is now the model-selection criterion; OLS excluded from ranking; Raftery gap grading
+  - HB importance = mean of per-respondent importances (Sawtooth); HB no longer crashes on skipped tasks
+  - Mixed/HB keep only coefficients with a significant taste SD as random; coefficient lookup is name-based
+  - OLS reference level must exist in data; adjusted McFadden ρ² emitted; task-count/sample-size rules unified (cap 24)
+  - Sample adequacy card computed (Johnson & Orme) instead of hardcoded; plain-language summary; intent-based method picker
+  - `ANALYSIS_CACHE_VERSION` 2→4, `schema_version` guard added to AI-interpretation and thesis caches (first view per study recomputes — expected)
+  - Tests: `backend/tests/test_conjoint_audit_2026_08.py` (31 PASS) + existing conjoint suites (55 PASS)
+- **P1 follow-ups (Jun 2026)**:
+  - Academic tab: new `Model Specification` card (adjusted ρ², choice situations, K, random/fixed vars, reference & excluded levels with human-readable names); repaired the previously broken/orphaned `สถิติการวิจัย` card JSX; MNL ρ² no longer rendered as a percentage
+  - New `GET /api/conjoint/studies/{id}/design-recommendation` → recommended tasks + required respondents; Design page shows ขั้นต่ำ/แนะนำ live (replaces hardcoded "Recommended Sample: 200"); `generate-design` returns `sample_size`
+  - Compare tab now works on the PUBLIC results route (token no longer required)
 
 ### Customer Value Lab (NEW — May 29, 2026) — COMPLETE
 **Reference concept (permanent asset): `/app/memory/CONCEPT_marketing_principles_intaka.md`** — always consult before changing this tool.
@@ -219,7 +246,7 @@ alumni_jobs: {
 
 ## Embedded Sub-Apps (Jun 2026)
 - **YOLO Detect PWA** — static-only, mounted at `/api/yolo/` (in-browser ONNX/OpenCV). Dir: `backend/yolo_static/`.
-- **meekintube** (YouTube/FB downloader) — Flask app mounted at `/api/meekintube/` via `a2wsgi.WSGIMiddleware`. Public, no auth. Dir: `backend/meekintube_app/`. Frontend `/meekintube` redirects to it. Requires `ffmpeg` + `yt-dlp` on host (PREVIEW-ONLY installs — production redeploy must reinstall).
+- **meekinTube** (YouTube-style PWA) — **static** PWA mounted at `/api/meekintube/` via `StaticFiles(html=True)`. Public, no auth. Dir: `backend/meekintube_static/`. Frontend `/meekintube` redirects to it. Plays via YouTube embed; search/feed via public Invidious/Piped (client-side). No backend/ffmpeg/yt-dlp needed. (Replaced the old Flask downloader on 2026-06-14.)
 
 ## 3rd Party Integrations
 - Emergent LLM Key → Gemini 2.5 Flash (`gemini-2.5-flash`) via `emergentintegrations` (text/translate/summary)
@@ -547,3 +574,115 @@ endpoints ทั้งหมดมี projection ตัด heavy fields ออ�
 - **Object storage migration (when cleanup runs):** conjoint_studies ~20MB → expected ~50KB
 - **React Query caching:** เปลี่ยนหน้าระหว่าง dashboard/showcase → instant (จาก cache)
 - **Polling load:** tab idle → 0 API calls (was 2 req/min per tab)
+
+---
+
+## Quantitative Customer Journey (CJM) — Phase 0b + Phase 1 · 18 ส.ค. 2026
+
+Source of truth: `/app/HANDOFF_CJM.md` + `/app/memory/CJM_QUANT_SPEC.md` (1,438 บรรทัด).
+งานเดิมของ package (index `analysis_cache`, cache-write guard, ipma, sticky topbar) เสร็จและผ่าน testing agent iteration 35–36 แล้ว
+
+### สิ่งที่ลงในรอบนี้ (iteration 37 — ผ่านทั้ง backend และ frontend)
+**Phase 0b (แบบเบา ตามที่ตกลง)**
+- `backend/lib/consent.py` — consent object 3 ข้อแยกกัน (participation บังคับ / recontact / linkage), รหัสถอนความยินยอม 128-bit, blocklist PDPA ม.26 (reject จริง ไม่ใช่เตือน), retention เพดาน 24 เดือน
+- collections ใหม่ + index: `journey_studies`, `journey_responses`, `journey_response_drafts`, `journey_recontacts`, `qualitative_runs`, และ `journey_analysis_cache` (unique `study_id + method + filter_sig` แยกจาก `analysis_cache` เดิม)
+- `/api/generate-journey-map` บันทึกผลลง `qualitative_runs` และคืน `qualitative_run_id` (เดิมไม่เก็บอะไรเลย)
+- ตัด gate "อาจารย์ที่ปรึกษาอนุมัติ" ออก (ผู้สร้างเผยแพร่เองได้) · ยังไม่ retrofit Brand Equity
+
+**Phase 1 (model-free layer — ไม่มีสมมติฐาน Markov)**
+- `backend/routes/journey.py` — CRUD, seed จากแผนที่เชิงคุณภาพ, budget hard-block, design-preview, lock-instrument, ลิงก์สาธารณะ + draft/resume, withdraw (hard delete), analysis
+- `backend/routes/journey_instrument.py` — 3 เทมเพลตขั้นตอน, state id คงที่เมื่อแก้ถ้อยคำ, `structure_hash` (คีย์เดียวที่ใช้ pool ข้อมูล), คำถามกลุ่มแบบช่วง 5 ข้อ
+- `backend/routes/_analysis_common.py` — สำเนา filter/segment helper (import-only, ไม่แตะโมดูลที่ ship แล้ว)
+- ผลวิเคราะห์: เส้นทางจริง + Wilson CI, reach/ทำซ้ำ/rework รายขั้น, Burden 0–100 (POMP บนปลายสเกล ไม่ normalize ตาม sample), pain incidence + severity แบบมีเงื่อนไข, adequacy band + จำนวน "ลิงก์ที่ต้องส่งเพิ่ม", diagnostics ทุกตัวมีผลจริง (option position, late addition, mask violation, other, unknown, exclusions), careless battery คัดออกเมื่อเข้า ≥2 ข้อที่ประเมินได้เท่านั้น
+- ห้ามอ้างเกินข้อมูล: `matrix`/`map`/`priority` = null, gate ทั้งสองเป็น `not_run` และ p = null, สัดส่วนเส้นทางถูกซ่อนเมื่อผู้ตอบ < 30 คน
+- Frontend: `pages/journey/` — Hub (แท็บเชิงปริมาณ/เชิงคุณภาพ), List, Wizard 4 ขั้น (พื้นฐาน → ขั้นตอน → งบเวลา+สิ่งที่ได้ → ลิงก์), Dashboard แบบตารางล้วน, Respondent flow เต็ม (consent → recency → checklist → ก้าวทีละก้าว + trap → replay แก้ลำดับแบบแตะ → grid → pain → outcome → segments), PathBuilder (ไม่ใช้ drag)
+- Route: `/market-research/customer-journey`, `.../quant/new`, `.../quant/:id/wizard`, `.../quant/:id`, สาธารณะ `/journey/r/:token`
+- ทดสอบ: `backend/tests/test_journey_phase1.py` 29 เคส + testing agent สร้าง `test_journey_api_phase1.py` 12 เคส (ผ่านหมด) + main agent เดินฟลอว์ผู้ตอบครบทุกหน้าจนส่งคำตอบและถอนความยินยอมสำเร็จ
+- Seed: `backend/scripts/seed_journey_demo.py` → `demo-journey-kafae-001` (140 คำตอบจำลอง, ลิงก์ `/journey/r/demojourney1`)
+
+### Backlog CJM ที่ยังเหลือ (ตามลำดับ)
+- **P0 · Phase 2** — เมทริกซ์การเปลี่ยนขั้น, Gate A (order test) / Gate B (predictive), loss decomposition, bootstrap BCa, แผนที่ถ่วงน้ำหนัก
+- **P1 · Phase 3** — counterfactual Δ, tier, รายการ "ควรแก้อะไรก่อน", quadrant
+- **P1 · Phase 4** — เปรียบเทียบกลุ่มย่อย (ตัว filter/segment พร้อมแล้วใน backend)
+- **P2 · Phase 5** — Level B สินค้าใหม่ที่ยังไม่มีตัวเทียบ
+- **P2 · Phase 6** — narrative AI + export วิทยานิพนธ์ของ CJM
+- **P2** — retrofit consent/retention ไปยัง Brand Equity ตาม spec 2.10
+
+### เพิ่มเติม 19 ส.ค. 2026 — แผนที่ (Mermaid) ในโมดูลเชิงปริมาณ
+- ผู้ใช้ขอให้มีแผนที่ วาดด้วย Mermaid แนวเดิม "ปรับปรุงได้ แต่ห้ามแย่ลง"
+- ทำเป็น **แผนที่เส้นทางที่พบจริง (observed flow)** ซึ่งเป็น model-free จึงไม่ขัดกับ spec (spec ปฏิเสธ Mermaid เฉพาะ *weighted map* ของ Phase 2 ที่ต้องเข้ารหัสน้ำหนักต่อเนื่อง + ความไม่แน่นอน)
+- Backend: `results.observed_flow` (nodes/edges, `count`, `share_of_source` แสดงเฉพาะขั้นที่มีทางออก ≥10 ครั้ง, `thin` เมื่อ <5 คน, self-loop = การทำซ้ำ) · `gates.unlocked` เพิ่ม `observed_flow` แยกจาก `map` ที่ยังเป็น null · `ANALYSIS_SCHEMA_VERSION` = 2
+- Frontend: `pages/journey/JourneyFlowMap.jsx` สร้างโค้ด Mermaid แล้ว render ผ่าน `components/MermaidViewer` ตัวเดิม (ได้ zoom/pan/fullscreen ครบ) — ความหนาเส้น = จำนวนคน, สีกล่อง = ระดับความยุ่งยาก, เส้นประ = หลักฐานบาง, ปุ่มสลับ "ทำซ้ำในขั้นเดิม / ซ่อนเส้นบาง / ดูโค้ด / คัดลอกโค้ด"
+- แก้บั๊ก UI: `.be-chip` ต้องใช้ `aria-pressed` (CSS `!important` ทับ `.solid`) → สถานะเลือกของแท็บ Hub / ปุ่มแผนที่ / เทมเพลตในวิซาร์ด มองเห็นชัดแล้ว
+- ทดสอบ: unit 34 + API 12 = 46 เคสผ่าน · ตรวจหน้าจริงด้วย Playwright (แผนที่ render, ปุ่มสลับทำงาน, แท็บเชิงคุณภาพยังใช้ได้)
+
+### เพิ่มเติม 19 ส.ค. 2026 (รอบ 2) — แยก touchpoint / pain point ในมุมมองลูกค้า
+คำสั่งผู้ใช้: "ทุกอย่างต้องดูในมุมมองลูกค้าสิ มันเป็นการทำ UX research"
+- **Touchpoint วัดจากลูกค้า ไม่ให้ผู้วิจัยเดาแทน**: เพิ่มคำถามรายขั้นในหน้ากริด "ตอนนั้นคุณทำขั้นนี้ผ่านช่องทางไหน" (`experience[sid].channel`, validate กับ `study.channel_options`) · ตั้งเปิด/ปิดได้ที่ `ask_channel_per_step` และนับรวมในงบเวลา (`journey_budget.estimate(ask_channel_per_step=True)` → +16 วิ)
+- **ระยะ (stage) เขียนใหม่จากมุมลูกค้า**: "ยังหาข้อมูล/เทียบตัวเลือก · กำลังตัดสินใจและซื้อ · ได้ของแล้วและใช้งาน" และแก้ระยะรายขั้นได้ในวิซาร์ด (`state_meta`, ไม่กระทบ `structure_hash`)
+- **หน้าผลใหม่**: `results.touchpoints` (หน่วยนับ = การผ่านหนึ่งขั้นของหนึ่งคน; % ของการผ่าน, Burden + CI, ความรู้สึก, % ที่ระบุว่ามีปัญหา + Wilson CI, ธง thin เมื่อ <10) และ `results.stages_summary` (reach, Burden + CI, pain rate, n) · ตารางรายขั้นเพิ่มคอลัมน์ "ระยะ" + "ช่องทางหลักที่ลูกค้าใช้ (%, n)"
+- **แผนที่ Mermaid ปรับปรุง**: กรอบ subgraph ตามระยะ, รูปทรงกล่องตามช่องทางหลักที่ลูกค้าใช้ (+ legend), ขอบหนาแดงเมื่อผู้ผ่านขั้นนั้นระบุว่ามีปัญหา ≥30%, ป้ายบนกล่องแสดง % มีปัญหา, ปุ่มสลับ "จัดกลุ่มตามระยะ"
+- ฟิลด์ `owner` (แบรนด์/คู่ค้า/ลูกค้า/สังคม) และ `feasibility` ยังเก็บไว้ในฐานข้อมูลสำหรับ Phase 3 แต่ **ไม่แสดงและไม่ให้กรอก** เพราะเป็นมุมแบรนด์ ไม่ใช่มุมลูกค้า
+- ทดสอบ: unit 42 + API 12 = 54 เคสผ่าน · Playwright ยืนยัน: แผนที่มีกรอบระยะ/รูปทรง/ขอบแดง, การ์ด touchpoint + stage แสดงผลจริง (ช่องทาง "แอป/เว็บไซต์" ยุ่งยาก 51.4 และมีปัญหา 20% สูงสุด), วิซาร์ดเลือกระยะได้, หน้าผู้ตอบบังคับเลือกช่องทางก่อนไปต่อ
+- Seed ใหม่: `seed_journey_demo.py` ใส่ช่องทางรายขั้นแบบสมจริงแล้ว (630 การผ่านขั้น)
+
+### เพิ่มเติม 19 ส.ค. 2026 (รอบ 3) — touchpoint หลายจุดต่อขั้น + ประเภท + cardinality
+คำถามผู้ใช้: หนึ่ง touchpoint มีหลาย painpoint ไหม / แยก physical กับ non-physical ไหม / หนึ่งขั้นมีหลายจุดทั้ง one-one one-many many-many ไหม
+- **หนึ่งขั้น = หลาย touchpoint**: คำถามช่องทางรายขั้นเปลี่ยนเป็น **multi-select** (`experience[sid].channels[]`, เก็บ `channel` เป็น primary เพื่อความเข้ากันได้ย้อนหลัง) · `study.channel_multi` · งบเวลาคิดเพิ่มจริง (เดโม 368 วิ ≈ 6.1 นาที ยังไม่เกินเพดาน)
+- **ประเภทช่องทาง**: `channel_types` (digital / physical / human) + roll-up 2 ทาง **physical vs non-physical** (คนต่อคนถูกนับฝั่ง non-physical และแสดงแยกใน 3-way) · แก้ประเภทได้ในวิซาร์ด
+- **รูปแบบปฏิสัมพันธ์ (cardinality)**: `channel_modes` (one_to_one / one_to_many / many_to_many) + การ์ดสรุปแยก พร้อมหมายเหตุว่า many-to-many แบรนด์คุมไม่ได้ · เดโม: one-to-many ยุ่งยาก 46.8 มีปัญหา 20% ขณะ many-to-many ยุ่งยาก 30.7 มีปัญหา 5%
+- **หลาย painpoint ต่อ touchpoint**: การ์ด touchpoint กดขยายได้ → ประเภทปัญหาของช่องทางนั้น + เกิดที่ขั้นไหน · การ์ดใหม่ **ปัญหา × ขั้นตอน** และ **ปัญหา × ช่องทาง** (heat table) + ระบุข้อจำกัด (severity ถามต่อขั้นไม่ใช่ต่อประเภท, จำกัด 2 ขั้นต่อคน)
+- **การ์ดใหม่ ขั้นตอน × ช่องทาง**: ช่องทางเฉลี่ยต่อคน (1.31–1.45 ในเดโม) + ธง "ผสมทั้งไปที่จริงและออนไลน์"
+- **แผนที่**: กล่องแสดงช่องทางถึง 3 อันดับ + ธงผสม + กรอบระยะ + ขอบหนาแดงเมื่อมีปัญหา ≥30%
+- Backend helper ใหม่: `_channels_of`, `_pool`, `_by_type`, `_by_mode`, `_step_touchpoints`, `_pain_matrix` (pool จากคะแนนระดับการผ่านขั้น ไม่เฉลี่ยจากค่าเฉลี่ยช่องทาง)
+- ทดสอบ: unit 55 + API 12 = **67 เคสผ่าน** · Playwright ยืนยันทั้งแดชบอร์ด (ตาราง 4 ชุดใหม่ + แผนที่) และหน้าผู้ตอบ (เลือกช่องทางได้หลายข้อ, บังคับเลือกก่อนไปต่อ)
+
+### เพิ่มเติม 19 ส.ค. 2026 (รอบ 4) — pain point ไม่ใช่แค่ความยุ่งยาก
+คำถามผู้ใช้: "painpoint จริงไม่ได้มีแค่ความยุ่งยากไหม"
+- **เพิ่มแกนความกังวล/ความไม่มั่นใจ** ถามรายขั้น (`experience[sid].anxiety_1_5`, `study.ask_anxiety_per_step`) → รายงานเป็น Anxiety 0–100 + CI คู่กับ Burden **ไม่รวมเป็นดัชนีเดียว** (ห้ามเฉลี่ยกลบกัน) · งบเวลาคิดเพิ่มจริง (เดโม 384 วิ ≈ 6.4 นาที ยังไม่เกินเพดาน 8 นาที)
+- **คอลัมน์ "จับตา" (watch flags)** รายขั้น: ยุ่งยากมาก (≥60) · กังวลสูง (≥60) · ความรู้สึกติดลบ (≤−0.3) · ถูกระบุว่าเป็นปัญหา (≥30%) · ต้องทำซ้ำบ่อย (≥1.3) — เป็นธงแยกแกน ไม่มี composite index
+- **taxonomy ปัญหาใหม่ 10 ตัวเลือก / 8 ประเภท**: กระบวนการ · เวลา · ข้อมูล · ค่าใช้จ่าย · คนและบริการ · ระบบใช้งานไม่ได้ · **ความรู้สึกและความมั่นใจ** · **การเข้าถึง** (เพิ่ม "ไม่มั่นใจ/กังวลถูกเอาเปรียบ-ข้อมูลไม่ปลอดภัย", "หงุดหงิด/อึดอัด", "เดินทางลำบาก/เข้าถึงยาก", "ต้องทำซ้ำ/ตามเรื่องเอง") + การ์ดสรุป "ปัญหาแบ่งตามประเภท" (แต่ละตัวเลือกอยู่ประเภทเดียว ไม่นับซ้ำ)
+- แผนที่แสดง "กังวล x/100" บนกล่องด้วย · หัวข้อหน้ากริดของผู้ตอบเปลี่ยนเป็น "แต่ละขั้นเป็นอย่างไรสำหรับคุณ"
+- เดโมพิสูจน์ประเด็นนี้ชัด: ขั้น **"สั่งและชำระเงิน" ยุ่งยากแค่ 44.7 แต่กังวลสูงสุด 77.6** → ติดธงเฉพาะ "กังวล/ไม่มั่นใจสูง" (ถ้าดูแค่ความยุ่งยากจะมองข้ามขั้นนี้)
+- ทดสอบ: unit 61 + API 12 = **73 เคสผ่าน** · Playwright ยืนยันสเกลความกังวลบังคับตอบและตารางใหม่แสดงผลจริง
+
+### 19 ส.ค. 2026 — งานค้าง P0 ที่มีสเปกแล้วแต่ยังไม่ implement
+**`/app/memory/CJM_PAINPOINT_SPEC.md`** — pain point ต้องสืบทอดจากงานวิจัยเชิงคุณภาพ ไม่ใช่ taxonomy คงที่ในโค้ด
+- ผู้ใช้ชี้ว่าการ hard-code `PAIN_TAXONOMY` ผิดระเบียบวิธี: งานเชิงคุณภาพต้องเป็นตัว "ค้นพบ" ปัญหา งานเชิงปริมาณแค่ "วัดขนาด"
+- สเปกครอบคลุม: collection `journey_pain_codebooks` (มี version + provenance + verbatim quote บังคับ), pipeline S0–S6 (สกัด → ลงรหัส → อนุมัติ → วัด → back-code → รายงาน), API 7 endpoint ใหม่, gate ก่อน activate (บล็อกจริง), ช่อง "อื่น ๆ ระบุ" + other_rate warning, inter-coder κ, ผลกระทบ structure_hash/งบเวลา, migration ของการศึกษาเดิม (`pain_source: library_default` + คำเตือนใน dashboard/export), เกณฑ์ยอมรับ 19 ข้อ และลำดับงาน P0–P2
+- **สถานะ: สเปกเท่านั้น ยังไม่แตะโค้ด** (ผู้ใช้สั่งให้ agent ตัวถัดไปดึงผ่าน git)
+- คำถามค้างให้ผู้ใช้ตัดสิน 4 ข้อ (cap 2/3 ขั้น · บังคับ coder คนที่ 2 หรือไม่ · severity ต่อประเภทปัญหา · อนุญาต library_default หรือบล็อก)
+
+### 20 ส.ค. 2026 — รับแพ็กเกจ `journey-codebook-2026-08` จาก agent ภายนอก แล้วปิดช่องว่างที่เหลือ
+- แพ็กเกจ implement `CJM_PAINPOINT_SPEC.md` (revision 2): pain point มาจากข้อมูลเชิงคุณภาพของการศึกษานั้นจริง
+  - `backend/lib/journey_codebook.py` (แกนคำนวณล้วน), collection `journey_codebooks`, endpoint `/codebook/extract`, `/codebook` GET+PUT, `/codebook/activate`, `/codebook/reliability`, `/pain-other-texts`, `/pain-back-code`
+  - frontend: `JourneyCodebookStep.jsx` (วิซาร์ดเป็น 5 ขั้น ขั้นที่ 3 = ลงรหัสปัญหา), `JourneyProvenance.jsx`, `JourneyBackCoding.jsx`
+  - respondent เก็บ `category_ids` + `อื่น ๆ` free text, dashboard มี provenance / saturation / qualitative audit / reliability
+  - base commit ตรงกับ HEAD จึงคัดลอกไฟล์เต็มทั้งชุด (patch มี offset เพี้ยน — ใช้ full-file copy ตาม BASE.txt)
+- **ทดสอบหลังรับเข้า:** pytest journey ทั้งหมด **225 เคสผ่าน** · testing agent (frontend-only, `test_reports/iteration_38.json`) เดินฟลอว์เต็มผ่าน 95%
+- **แก้ 5 ข้อที่ testing agent พบ (ทำเองรอบนี้):**
+  1. คิว back-coding แสดง `s3` ดิบ → แสดงชื่อขั้นภาษาไทย และ `data-testid` เปลี่ยนเป็น `bc-item-${response_id|state_id}` (คนเดียวมีได้หลายแถว)
+  2. การ์ด qualitative audit แสดง state id ดิบในคอลัมน์จาก/ไป → map เป็นชื่อขั้น + START/CONV/ABANDON/UNKNOWN เป็นไทย
+  3. `journey-provenance-line` ซ้ำ 2 จุด → อันในการ์ด pain matrix เป็น `journey-provenance-line-matrix`
+  4. `journey-tptype-physical` ซ้ำ (roll-up vs 3-way) → เปลี่ยนเป็น `journey-tptype-roll-*` / `journey-tptype-detail-*`
+  5. ปุ่ม activate เคย enable ก่อนคลิกครั้งแรก → `GET /codebook` คืน `blockers`/`warnings` มาด้วย ปุ่มจึง disable พร้อมเหตุผลตั้งแต่โหลด
+  + ปรับ `_cue_hits` ให้ไม่จับคำผิด (รอบ/เรียบร้อย/ไม่แพง/เสียงดัง) ตามที่ agent ภายนอกตั้งข้อสังเกต
+- **ยังเหลือจาก handoff (ยังไม่ทำ):** ฝัง provenance/คำเตือน/κ/saturation ลง **ไฟล์ export** · ปุ่ม merge candidate · LLM booster (stub บน dev)
+
+### 20 มิ.ย. 2026 — เดโม "UX ซอสมะเขือเทศขวดแก้ว" ครบสาย qualitative → codebook → quantitative
+คำสั่งผู้ใช้: "จำลอง sample data ใหม่ให้ 1 กรณี ... UX ของคนใช้ซอสมะเขือเทศขวดแก้ว ... ทำทั้งระบบ ตั้งแต่ qualitative ไปจน quantitative"
+- `backend/scripts/seed_journey_ketchup.py` เดินผ่าน API จริงทุกขั้น: บทสัมภาษณ์ 8 ราย → extract → อนุมัติ 9 รหัสปัญหา (แต่ละรหัสมี quote + pain_type + ขั้นที่ใช้) → activate (ผ่าน gate วิธีเก็บข้อมูลเชิงคุณภาพ) → lock → 160 คำตอบจำลองที่เก็บ `category_ids` จริง · ลิงก์ผู้ตอบ `/journey/r/demoketchup1`
+- **บั๊กที่พบและแก้ (ตัวตัดสายเชิงคุณภาพ→เชิงปริมาณ):** analysis นับปัญหาจาก free text `categories` เท่านั้น การศึกษาที่ใช้ codebook เก็บเป็น `category_ids` จึงทำให้ทุกมุมมองปัญหาว่างเปล่าแม้ provenance บอกว่า qualitative v1 → เพิ่ม `_code_index` / `_pain_codes` / `_pain_type_of`, ส่ง codebook เข้า `compute_model_free`, ประเภทปัญหามาจาก codebook (ไม่ใช่เดาจากคำ), นับ `back_coded_ids` ด้วย, cache key รวม `codebook_version` · การศึกษาเดิมแบบ free text (เดโมกาแฟ) ยังทำงานเหมือนเดิม
+- **แก้ตาม testing agent iteration_39:** blockers ของ `GET /codebook` บอกเหตุผลจริงเมื่อมีคำตอบแล้ว · back-code รับได้เฉพาะรหัสที่ขั้นนั้นถามจริง · `/pain-other-texts` คืน `allowed_categories` รายข้อ และ UI แสดงเฉพาะชิปเหล่านั้น · วิซาร์ดขั้น 3 เคารพ `can_edit=false` → แสดงเป็น "บันทึกหลักฐาน" (รหัส + ประเภท + quote + วิธีเก็บข้อมูล) แทนแผงแก้ไขที่กดแล้วได้ 400
+- ทดสอบ: pytest journey/markov **247 เคสผ่าน** (เพิ่ม 3 เคสเรื่องการแปลง id → ป้าย, back-code, รหัสที่ยังไม่อนุมัติ) · testing agent iteration_39 backend 19/19 + frontend 90% (ข้อที่ fail คือ can_edit ซึ่งแก้แล้ว)
+- **ค้างระดับ LOW:** วิซาร์ดขั้น 1 ยังไม่มีแถบ "ล็อกแล้ว" เมื่อมีคำตอบ · แผนที่ Mermaid เว้นพื้นที่ว่างซ้ายมากที่ 1920px
+
+### 27 ต.ค. 2026 — รวมงานจาก GitHub `meekintubeDone` @ 82e2822
+ดึงจาก `https://github.com/meekinhua/swumkt.git` (branch `meekintubeDone`) ซึ่งต่อจาก `3bf602e` ของเราโดยตรง — conflict แค่ 2 จุด (`EMERGENT_LLM_KEY` default ที่ทั้งสองฝั่งลบอยู่แล้ว, `yarn.lock`) · รายละเอียดแพ็กเกจอยู่ใน `HANDOFF_2026_10.md` + `memory/PERFORMANCE_AUDIT_2026_10.md`, `CONTENT_OPS_2026_10.md`, `FACULTY_SEO_2026_10.md`, `REPUTATION_AUDIT_2026_10.md`
+- **เพิ่มเข้ามา**: media externalize (`lib/inline_media.py`, `routes/media.py`) · content ops + revisions + `sitectl` · scoped API keys (`lib/api_keys.py`, `mint_api_key.py`) · หน้าคณาจารย์/ผลงาน (`routes/faculty.py`, `/people`, `/publications`) · robots.txt เปิด `Allow: /api/...` ให้ Googlebot render SPA ได้ · `JWT_SECRET` ไม่มี default อีกแล้ว
+- **ตรวจใน preview แล้ว**: seed_faculty (4 ท่าน / 47 ผลงาน / 30 เผยแพร่ / 17 รอตรวจ) · `/people` `/publications` `/people/:slug` แสดงจริง · public posts ไม่มี base64 · กด Save แบบไม่แก้อะไรแล้วรูป hero ยังอยู่ (พิสูจน์ด้วย base64 >4KB ผ่าน GET→PUT→Mongo) · เทส 130+248+80 ผ่าน
+- **ยังไม่ทำตามที่สั่ง/ทำไม่ได้จาก preview**: `migrate_b64_to_storage.py` (ต้องขออนุมัติก่อน) · `mint_api_key.py` (คีย์ที่ออกใน preview ใช้กับ prod ไม่ได้ และห้ามแสดงคีย์ในแชท) · ไม่แตะ paper `status=review`
+- **บั๊กเดิมที่เจอระหว่าง lint sweep และแก้แล้ว**: `SurveyResponse` ของ conjoint บังโมเดลแบบสอบถาม ทำให้ `POST /surveys/{id}/respond` สร้างโมเดลผิด · route `columns/reorder` ถูก `columns/{column_id}` กลืน · `uuid4`/`emergent_key` undefined · คีย์ `sk-emergent-…` ที่ hard-code อยู่ 2 จุด
+
+### 27 ต.ค. 2026 (ครั้งที่ 2) — หน้า `/admin/cms/setup` แทนการรันสคริปต์บน production
+production ไม่มี shell ให้รัน `seed_faculty.py` / `mint_api_key.py` และคีย์ที่ออกจาก preview ใช้กับ prod ไม่ได้ จึงย้ายงานเข้ามาในแอป: `POST /api/cms/faculty/seed?dry_run=` (admin เท่านั้น, insert-only, ล้างแคชให้) + หน้า `/admin/cms/setup` ที่มีปุ่ม "ตรวจก่อน / นำเข้าข้อมูล" และส่วนออกคีย์ sitectl ที่แสดงคีย์ครั้งเดียวในเบราว์เซอร์ของเจ้าของ (พร้อมรายการคีย์และปุ่มเพิกถอน) · CLI เดิมยังใช้ได้ โดยแชร์ฟังก์ชัน `apply_seed()` ร่วมกัน

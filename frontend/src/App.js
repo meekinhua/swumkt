@@ -25,6 +25,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ============ LAZY imports — heavy / admin / rarely-used pages ============
 // Heavy tool pages (>= 900 lines each)
+// Faculty — public, crawlable profiles and the department's publications
+const PeopleIndexPage = lazy(() => import('@/pages/people/PeopleIndexPage'));
+const PeopleProfilePage = lazy(() => import('@/pages/people/PeopleProfilePage'));
+const PublicationsPage = lazy(() => import('@/pages/people/PublicationsPage'));
 const ConjointResultsPage = lazy(() => import('@/pages/ConjointResultsPage'));
 const ConjointDesignPage = lazy(() => import('@/pages/ConjointDesignPage'));
 const ConjointAnalysisTool = lazy(() => import('@/pages/ConjointAnalysisTool'));
@@ -34,7 +38,10 @@ const KanbanBoard = lazy(() => import('@/pages/KanbanBoard'));
 const ContentEditor = lazy(() => import('@/pages/ContentEditor'));
 const ContentBrowse = lazy(() => import('@/pages/ContentBrowse'));
 const ContentDetail = lazy(() => import('@/pages/ContentDetail'));
-const CustomerJourneyTool = lazy(() => import('@/pages/CustomerJourneyTool'));
+const CustomerJourneyHub = lazy(() => import('@/pages/journey/CustomerJourneyHub'));
+const JourneyWizardPage = lazy(() => import('@/pages/journey/JourneyWizardPage'));
+const JourneyDashboardPage = lazy(() => import('@/pages/journey/JourneyDashboardPage'));
+const JourneyRespondentPage = lazy(() => import('@/pages/journey/JourneyRespondentPage'));
 const CustomerBehaviorTool = lazy(() => import('@/pages/CustomerBehaviorTool'));
 const CustomerPerceptionTool = lazy(() => import('@/pages/CustomerPerceptionTool'));
 const CustomerValueListPage = lazy(() => import('@/pages/customer-value/CustomerValueListPage'));
@@ -63,6 +70,7 @@ const CmsListPage = lazy(() => import('@/pages/cms/CmsListPage'));
 const CmsEditorPage = lazy(() => import('@/pages/cms/CmsEditorPage'));
 const CmsPromptsPage = lazy(() => import('@/pages/cms/CmsPromptsPage'));
 const CmsLandingPage = lazy(() => import('@/pages/cms/CmsLandingPage'));
+const CmsSetupPage = lazy(() => import('@/pages/cms/CmsSetupPage'));
 
 // Projects
 const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'));
@@ -85,9 +93,19 @@ export const API = `${BACKEND_URL}/api`;
 // Set default timeout for all requests (30 seconds)
 axios.defaults.timeout = 30000;
 
+// LLM-backed and heavy statistical endpoints legitimately run 40-120s. With the
+// 30s default the browser aborted while the backend was still working and the
+// user saw "ไม่สามารถวิเคราะห์ข้อมูลได้" on a request that actually succeeded —
+// exactly what happened to Conjoint Phase 1. Widen the window for those paths
+// only, so a genuinely hung normal request still fails fast.
+const SLOW_API_PATTERN = /\/(qualitative-analysis|statistical-analysis|ai-analysis|ai-analyze|ai-suggest|ai-needs|ai-step|ai-interpretation|interpretation|thesis|export-thesis|generate-image|generate-questions|regenerate-questions|compare|score-history|segment-significance|dashboard)/i;
+
 // Request interceptor - add timestamp for debugging
 axios.interceptors.request.use(
   (config) => {
+    if (SLOW_API_PATTERN.test(config.url || '')) {
+      config.timeout = 180000;
+    }
     config.metadata = { startTime: new Date() };
     return config;
   },
@@ -156,7 +174,12 @@ const queryClient = new QueryClient({
       staleTime: 60_000,           // data considered fresh for 60s
       gcTime: 5 * 60_000,           // unused cache kept 5 min then GC
       retry: 1,                     // 1 retry on failure (not 3 — fail fast)
-      refetchOnWindowFocus: 'always', // refetch when tab regains focus IF stale
+      // `true`, not `'always'`: refetch on focus only when the data is stale.
+      // `'always'` ignores staleTime, so every alt-tab back to the page
+      // re-ran all four homepage queries — 10.3 MB on production — however
+      // recently they had been fetched. The comment here always said "IF
+      // stale"; the value did not match it.
+      refetchOnWindowFocus: true,
       refetchOnMount: true,
     },
   },
@@ -206,6 +229,9 @@ function App() {
             <Route path="/learn" element={<LearnIndexPage />} />
             <Route path="/learn/:slug" element={<CmsArticleView />} />
             <Route path="/about/swu-marketing" element={<AboutSwuMarketing />} />
+            <Route path="/people" element={<PeopleIndexPage />} />
+            <Route path="/people/:slug" element={<PeopleProfilePage />} />
+            <Route path="/publications" element={<PublicationsPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/content" element={<ContentBrowse />} />
@@ -215,10 +241,36 @@ function App() {
               path="/market-research/customer-journey"
               element={
                 <ProtectedRoute>
-                  <CustomerJourneyTool />
+                  <CustomerJourneyHub />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/market-research/customer-journey/quant/new"
+              element={
+                <ProtectedRoute>
+                  <JourneyWizardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/market-research/customer-journey/quant/:studyId/wizard"
+              element={
+                <ProtectedRoute>
+                  <JourneyWizardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/market-research/customer-journey/quant/:studyId"
+              element={
+                <ProtectedRoute>
+                  <JourneyDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Public respondent link — no auth */}
+            <Route path="/journey/r/:token" element={<JourneyRespondentPage />} />
             <Route
               path="/market-research/customer-behavior"
               element={
@@ -235,6 +287,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Stale bookmarks / hand-typed URLs used to land on a blank page. */}
+            <Route path="/conjoint" element={<Navigate to="/market-research/conjoint-analysis" replace />} />
             <Route
               path="/market-research/conjoint-analysis"
               element={
@@ -360,6 +414,7 @@ function App() {
             <Route path="/admin/cms" element={<ProtectedRoute><CmsListPage /></ProtectedRoute>} />
             <Route path="/admin/cms/landing" element={<ProtectedRoute><CmsLandingPage /></ProtectedRoute>} />
             <Route path="/admin/cms/prompts" element={<ProtectedRoute><CmsPromptsPage /></ProtectedRoute>} />
+            <Route path="/admin/cms/setup" element={<ProtectedRoute><CmsSetupPage /></ProtectedRoute>} />
             <Route path="/admin/cms/new" element={<ProtectedRoute><CmsEditorPage /></ProtectedRoute>} />
             <Route path="/admin/cms/:id" element={<ProtectedRoute><CmsEditorPage /></ProtectedRoute>} />
             <Route

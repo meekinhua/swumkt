@@ -1,3 +1,426 @@
+## 2026-10-27 (ครั้งที่ 2) — หน้า "ตั้งค่าเริ่มต้นของเว็บ" สำหรับ production ที่ไม่มี shell
+
+`seed_faculty.py` และ `mint_api_key.py` ต้องรันบนเครื่องที่ต่อ DB ของ production ซึ่งจาก preview ทำไม่ได้ และคีย์ที่ออก
+จาก preview ก็ใช้กับ prod ไม่ได้ จึงย้ายทั้งสองงานมาไว้ในแอป:
+- `scripts/seed_faculty.py` แยก `apply_seed(db, data, dry_run)` + `load_seed()` ออกมาใช้ร่วมกัน (CLI ยังทำงานเหมือนเดิม)
+- `POST /api/cms/faculty/seed?dry_run=` ใน `routes/faculty.py` — admin เท่านั้น, insert-only, ล้างแคชให้ทันทีเมื่อเขียนจริง
+- `/admin/cms/setup` (`CmsSetupPage.jsx`) — ปุ่มตรวจก่อน / นำเข้าข้อมูล + ออกคีย์ sitectl พร้อมเลือก scope,
+  แสดงคีย์ครั้งเดียวในเบราว์เซอร์ของเจ้าของเอง (ไม่ผ่านแชท ไม่ลง commit), มีรายการคีย์ + ปุ่มเพิกถอน
+- ลิงก์ "ตั้งค่าเริ่มต้น" ที่หัวหน้า `/admin/cms`
+
+ตรวจใน preview: dry-run → 0/0 (มีอยู่แล้ว 4/47) · ลบ 1 อาจารย์ + 1 ผลงานแล้วกดนำเข้า → added 1/1 และ `/api/faculty`
+กลับมา 4, `/api/publications` 30 ทันที (แคชถูกล้าง) · ไม่ล็อกอิน → 403 · ออกคีย์ผ่าน UI ได้จริง (scope `cms.*`,
+คีย์ 47 ตัวอักษร) แล้วเพิกถอนคีย์ทดสอบนั้นทิ้ง · `test_faculty` + `test_api_keys` 55 passed
+
+ระวัง: wildcard scope ของระบบคือ `cms.*` ไม่ใช่ `*` — ส่งผิดจะได้ 400 (เจอตอนทดสอบ UI รอบแรก)
+
+
+## 2026-10-27 — merge `origin/meekintubeDone` @ 82e2822 (perf · content ops · scoped API keys · faculty+SEO)
+
+Pulled from `https://github.com/meekinhua/swumkt.git`, branch `meekintubeDone`. The commit is a direct child of our
+`3bf602e`, so the only conflicts were two `EMERGENT_LLM_KEY` lines (both sides removed the leaked default; kept
+theirs, `''`) and `yarn.lock` (took theirs — it matches `package.json`). Everything from this session survived the
+merge: codebook pain-id resolution, the `ConjointSurveyResponse` rename, `columns/reorder` route order,
+`fetch_format_editor_model`, `self.clients` in the service worker. See `HANDOFF_2026_10.md` for the package itself.
+
+Lint/correctness sweep done before the merge (pre-existing defects, two of them real):
+- `SurveyResponse` (conjoint) silently shadowed the survey model → `POST /surveys/{id}/respond` built the WRONG
+  model at call time. Renamed to `ConjointSurveyResponse`; `routes/conjoint.py` reads the new name.
+- `PUT /{project_id}/columns/reorder` was shadowed by `columns/{column_id}` → moved above it.
+- `uuid4` undefined in `AISettings`, `emergent_key` undefined in `/content/{id}/ai-rearrange`, duplicate
+  `get_format_editor_model`, bare `except`s, hardcoded `sk-emergent-…` fallbacks removed, `clients` → `self.clients`.
+
+Verified in preview after merging (backend restarted clean, 63 indexes created):
+- `seed_faculty.py --dry-run` then real → 4 faculty, 47 papers (30 public, 17 held at `status=review`, untouched)
+- `/api/faculty` 4 · `/api/publications` 30 · `/people`, `/publications`, `/people/intaka-piriyakul` (16 papers) all render
+- `/api/cms/posts/public` has 0 base64 · public landing externalises to `/api/media/...`
+- **rehydrate guard proven**: seeded a >4 KB base64 hero, GET returned `/api/media/landing/home?f=slides.0.image&v=…`,
+  PUT that document back unchanged → base64 still intact in Mongo and the image still serves (200, image/png).
+  Test hero removed afterwards; slide 0 restored to its original Unsplash URL.
+- `X-Robots-Tag: noindex, nofollow` appears on every preview path including `/` → that one comes from the preview
+  ingress, not the app. The app's own middleware does exclude `/api/share/`, `/api/media/`, `/api/files/`.
+- Tests: `test_inline_media / test_content_ops / test_api_keys / test_faculty / test_journey_ketchup_iter39`
+  → 130 passed, 63 skipped · journey+markov → 248 passed · conjoint refactor/audit → 80 passed, 4 skipped
+
+NOT done, by instruction or because preview cannot: `migrate_b64_to_storage.py` (needs the owner's go-ahead),
+`mint_api_key.py` (a preview-DB key is useless on prod and a key must never be shown in chat), publishing any
+`status=review` paper.
+
+
+## 2026-06-20 — CJM: ketchup-bottle UX teaching case, end to end (qualitative → codebook → quantitative)
+
+New demo study seeded through the REAL API by `backend/scripts/seed_journey_ketchup.py`: 8 verbatim interviews →
+codebook extract → 9 approved pain codes (each with its quote and its `pain_type`) → activation (only after the
+qualitative collection-method gate is satisfied) → instrument lock → 160 simulated responses that carry
+`category_ids`, not labels. Public link `/journey/r/demoketchup1`.
+
+**The bug that made the chain look broken**: `compute_model_free()` counted pain only from the legacy free-text
+`categories` list. A study fielded with a codebook stores `category_ids`, so every pain view (per-step pain list,
+pain × step matrix, pain × touchpoint, pain-by-type) was empty while the provenance card correctly said
+"qualitative v1". Fixed by resolving ids through the active codebook:
+- `_code_index(codebook)` / `_pain_codes(cell, codes)` / `_pain_type_of(label, codes)` in `routes/journey.py`
+- `compute_model_free(study, responses, quality_reference, codebook)`; `_pain_matrix` / `_touchpoint_summary` take `codes`
+- pain *type* now comes from the codebook row, not from keyword-matching the label
+- back-coded ids (`back_coded_ids`) count too, de-duplicated against the chosen ids
+- analysis cache key now includes `codebook_version`
+- legacy free-text studies (coffee demo) are untouched — verified
+
+**Follow-ups from testing agent iteration_39** (all fixed):
+- `GET /codebook` blockers stated "no draft yet" for a locked study; now states the real reason (answers exist, n)
+- `POST /pain-back-code` accepted any approved code; now only codes that step actually offered
+- `GET /pain-other-texts` returns `allowed_categories` per pending item; the queue UI shows only those chips
+- `JourneyCodebookStep` ignored `can_edit=false`; now renders a read-only record of the approved codes, their types,
+  the supporting quotes and the qualitative method note, instead of a dead extract panel
+
+Ketchup demo numbers: R=160, CONV 84.4% / ABANDON 9.4% / UNKNOWN 6.3%, burden peaks on "เคาะก้นขวด" (78/100) and
+"ใช้มีดแคะ" (81/100), 265 pain nominations across 7 pain types. Tests: 247 journey/markov tests pass (3 new cases for
+id-resolution, back-coding and unapproved ids).
+
+
+## 2026-06-14 (round 7) — BUG: selected demographic options were invisible ("ดูไม่ออกว่าเลือกอะไรไปแล้ว")
+
+Same family of defect as the dead modal: the `.be-root` stylesheet rewrites Tailwind colour utilities with
+`!important`, and the demographic chip carried BOTH `bg-blue-600` and `border-blue-700`. It therefore matched the
+primary-button rule AND the outline-button rule; the outline rule won on `background`, so the SELECTED chip rendered
+transparent — pixel-identical to its unselected siblings. Nothing about the markup or the state logic was wrong,
+which is why it survived every previous round.
+
+- Fix: two self-contained classes that do not depend on which utility rule wins —
+  `.be-chip` (pill; `aria-pressed="true"` → dark fill, light text, red offset shadow, ✓ prefix) and
+  `.be-toggle-card` (`aria-pressed="true"` → tinted background with a red inset bar). Selection state is now carried
+  by `aria-pressed`, which is also the accessible way to express it.
+- Applied on all three surfaces the user could have meant: the respondent survey demographics step
+  (`ConjointDemographicsStep.jsx`), the create-study modal chips (`ConjointAnalysisTool.js`) and the
+  "ข้อมูลผู้ตอบที่จะเก็บ" toggles on the Design page (`ConjointDemographicsConfig.jsx`).
+- Verified by iteration_34 using COMPUTED styles rather than class presence (the whole bug was that both states
+  looked the same): survey chip selected `rgb(200,16,46)` on white vs unselected paper on ink; config toggle gets a
+  `3px 0 0 inset` red bar; single-select moves the highlight; 40px tap targets and no overflow at 390px; no button
+  regressions on Brand Equity or the conjoint results page.
+- Rule of thumb for this codebase: inside `.be-root`, never express state with Tailwind colour utilities — give the
+  component its own class.
+
+
+## 2026-06-14 (round 6) — BUG: Conjoint Phase 1 "เริ่มวิเคราะห์" failed (retired Claude model + 30s axios timeout)
+
+Two independent causes behind one user-visible failure.
+
+1. **Retired model alias.** `claude-sonnet-4-20250514` is no longer served through the Emergent LLM key; the
+   provider returns `not_found_error`. Switched all 18 call sites in `server.py` and `routes/conjoint.py` to
+   `claude-sonnet-4-6`, migrated the one stored prompt config in the `llm_prompts` collection, and added a guard in
+   the qualitative endpoint that coerces any saved `claude-sonnet-4-2025…` alias to the current model, so an old
+   admin-saved prompt cannot resurrect the 404.
+2. **Frontend aborted the request before the backend finished.** `axios.defaults.timeout = 30000` (App.js) killed a
+   call that legitimately takes ~43s, so even after the model fix the user saw "ไม่สามารถวิเคราะห์ข้อมูลได้" on a
+   request the backend answered 200. Added an axios request interceptor raising the timeout to 180s for slow paths
+   only (`SLOW_API_PATTERN`: qualitative/statistical analysis, ai-*, interpretation, thesis, generate-*, compare,
+   score-history, segment-significance, dashboard); everything else still fails fast at 30s.
+
+Verified by testing agent iteration_32 (backend: 200 with Thai attributes, 65 regression tests pass) and
+iteration_33 (browser: Phase 1 completes at 43.5s and renders the Thai attribute suggestions, no ECONNABORTED, no
+regressions on normal pages).
+
+Noted for later (not urgent): the slow-path regex matches bare substrings like `/dashboard` and `/compare`; if it
+ever needs tightening, anchor it to `/api/` prefixes.
+
+Earlier the same day: the user's "still cannot create a study" follow-up turned out to be a stale browser cache on
+their production domain (swumkt.org) — resolved by a hard refresh, no code change.
+
+
+## 2026-06-14 (round 5) — BUG: Conjoint "สร้างการศึกษาใหม่" did nothing (CSS cascade)
+
+User report: clicking the create-study button on the Conjoint page was completely dead.
+
+Root cause was NOT the button or the API. The dialog mounted correctly, but
+`.be-root > * { position: relative; z-index: 1 }` in `brand-equity-styles.css` matched the Tailwind
+`fixed inset-0` overlay (same specificity, later in the cascade) and demoted it to `position: relative`, so the
+dialog was laid out as an ordinary block at the BOTTOM of the document — measured at top: 2799px, far below the
+fold. Any DOM-presence assertion would have passed, which is why five previous testing rounds missed it.
+
+- Fix: `.be-root > *:not(.fixed) { position: relative; z-index: 1 }` plus `.be-root > .fixed { z-index: 50 }`.
+  This also un-broke the other overlays that live directly inside a `.be-root` page (3 more in
+  ConjointAnalysisTool, 1 in ConjointQualitativePage, 1 in ConjointResultsPage).
+- Added a redirect for the plain `/conjoint` path, which rendered a blank page (correct route is
+  `/market-research/conjoint-analysis`) — an easy hit from a stale bookmark.
+- Verified by testing agent iteration_31: create-study flow works end to end, every `.fixed.inset-0` overlay on
+  `.be-root` pages now computes `position: fixed` inside the viewport, and no layering regressions on the
+  Brand Equity dashboard / respondent / weight-editor screens.
+- Lesson recorded: when asserting "a modal is open", assert its computed position and bounding rect, not just DOM
+  presence.
+
+
+## 2026-06-14 (round 4) — Compatibility audit of ALL existing data: two production 500s found and fixed
+
+Question asked: are both modules ready, and do they handle data already collected plus instruments edited afterwards.
+Answered by sweeping every study in the database rather than by inspection — `backend/scripts/compat_sweep.py`
+(129 checks: dashboard, score-history × 3 granularities, segment-significance × 2 fields, drafts-summary,
+thesis-export for every Brand Equity study; summary view, design-recommendation and 2 analysis methods for every
+Conjoint study). First run surfaced two real bugs on OLD data:
+
+- **Thesis export 500 for any Thai brand name.** The download filename was built with
+  `c if c.isalnum() else "_"` — Thai passes `isalnum()`, so Thai characters survived into the
+  `Content-Disposition` header, which must encode as latin-1. Every study named in Thai (ชาไทยมะลิ, มาม่า, …) got a
+  500 instead of a document, on both the plain and the AI thesis download paths. Fixed with an ASCII fallback
+  filename plus RFC 5987 `filename*=UTF-8''…` so the real Thai name still reaches the browser.
+- **segment-significance 500 on zero-variance groups.** A demographic group where everyone answered identically
+  (common in small legacy groups — Mali has a 3-person gender group) makes Welch ANOVA return NaN, and NaN cannot
+  be JSON-encoded. Fixed by excluding zero-variance groups with an explicit Thai reason, falling back to one-way
+  ANOVA, reporting non-computable results as not-testable, and running both significance endpoints through a
+  `_json_safe` non-finite sanitiser.
+
+Second sweep: **129 checks, 0 failures** — including studies with 0 / 1 / 2 responses, studies republished twice
+(18 and 41 questions carrying legacy ids) and the seeded demo data.
+
+**iteration_30** independently verified both fixes and swept old data in the browser: 140 backend tests pass,
+4 Brand Equity dashboards and 4 Conjoint result pages render clean on legacy data, importances still sum to 100.0,
+no placeholder tokens in the DOM, and a zero-response conjoint study degrades to `insufficient_data` rather than
+crashing. New suite: `backend/tests/test_iter30_thai_export_zero_variance.py`.
+
+
+## 2026-06-14 (round 3) — Simulated data, segment significance, resume links, score history + FINAL conjoint certification
+
+**Reliability Boost — realistic simulated dataset** `backend/scripts/seed_simulated_brand_study.py`
+- Study `demo-sim-chathai-001` "DEMO · ชาไทยมะลิ (ข้อมูลจำลอง)", 183 completed responses over 2 waves (Feb + May)
+  plus ~27 abandoned drafts. Flagged `is_simulated` and badged in the UI so it can never be mistaken for fieldwork.
+- Built as a measurement model, not noise: latent brand attitude per respondent from 5 archetypes → graded-response
+  thresholds per item, per-dimension factors correlated r≈0.75 with the overall attitude, and facet sub-factors
+  inside a dimension (as_person / as_product …). That is what produces credible α (quality 0.89, identity 0.93,
+  loyalty 0.72) instead of the ~0.0 uniform random answers would give, or the implausible 0.97 a single latent gave.
+- Also modelled: acquiescence, extreme and midpoint response styles, 3% straight-liners, speeders, item
+  non-response, 12% true drop-offs stored as drafts, Thai open-ended text per archetype with typos and nicknames,
+  a plausible campaign lift in wave 2 (awareness most, loyalty least), and **demographic effects** (under-25s
+  warmer, 45+ cooler, biting hardest on identity/loyalty) so the segment tests have something real to find.
+
+**Segment Significance** — `GET /studies/{id}/segment-significance?field=`
+- Two groups → Welch t-test; three or more → Alexander-Govern Welch ANOVA plus pairwise Welch post-hoc, all
+  Holm-adjusted across the four dimensions. Groups under 3 respondents are excluded and said so; nothing is
+  reported when it cannot be tested. New `BeSegmentSignificance.jsx` card with field switcher.
+- On the demo study: age is significant on identity (p=0.010) and loyalty (p<0.001), gender is ns — both paths visible.
+
+**Survey Reminder / Resume Link**
+- Drafts now live on the server (`brand_response_drafts`): `POST/GET/DELETE /public/{token}/draft`, debounced
+  autosave from the respondent page, `?draft=<id>` resume link with a copy button (works across devices, no email
+  needed), draft deleted when the response is submitted (`respond` accepts `draft_id`).
+- Owner-side `GET /studies/{id}/drafts-summary` + `BeUnfinishedCard`: how many started and never finished, median
+  items answered, and a copyable Thai nudge message.
+
+**Score History Chart** — `GET /studies/{id}/score-history?granularity=wave|month|week`
+- New `TrendLine` SVG component and `BeScoreHistory.jsx`: BES solid with value labels, four dimensions dashed,
+  n printed under every point, togglable legend, and an honest empty state when there is only one period.
+
+**FINAL CONJOINT CERTIFICATION**
+- 108 conjoint tests + 4 skips PASS. testing agent iteration_28 walked the full researcher journey on a fresh
+  study (create → attributes → sample-size card → D-optimal design → 14 public responses → overview → all four
+  methods → BIC compare → trash/restore → edge cases): 22/22 checks green, no defects.
+- Found by my own DOCX inspection afterwards (missed by every earlier round): the thesis coefficient table printed
+  the encoder's internal placeholder `ORPHAN_8b5ca0c7` as a level name for levels deleted after the design was
+  generated. Fixed with `_humanize_internal_labels` applied before results are cached or returned
+  (`__ORPHAN_xxxx__` → "ระดับที่ถูกลบภายหลัง (xxxx)", `__MISSING__` → "ไม่ได้แสดงในรอบนั้น") and
+  `ANALYSIS_CACHE_VERSION` 4→5 so stale rows carrying raw tokens cannot be served.
+- iteration_29 re-certified the fix: zero raw tokens across all four methods, cache invalidation confirmed, and a
+  freshly generated DOCX shows the readable label with all 13 β values matching the API exactly.
+- Not present in the module (reported, not requested): no market-simulation / share-of-preference what-if tool.
+
+
+## 2026-06-14 (later) — Brand Equity follow-ups: list scores, wave significance testing, resume-draft, thesis parity check
+
+**1. Thesis Export Check (verified, no code change needed for parity)**
+- Exported `c5b3458f` (Mali) and diffed the DOCX against `/dashboard`: BES + all four dimension scores, tier
+  labels and the Awareness weight table (now summing to 1.00) match exactly.
+- Found and fixed a real defect while checking it: `_dimension_reliability` matched question ids only, so every
+  response collected before the instrument was regenerated looked like a missing value and Cronbach's α reported
+  `n complete = 0`. Legacy ids are now pooled the same way `_aggregate_responses` pools them (Mali: quality
+  n 0→16, loyalty 0→23; the seeded 90-response study now reports α 0.65 / 0.80 / 0.32).
+
+**2. List Page Scores**
+- NEW `GET /api/brand-equity/studies/scores` — BES + 4 dimensions for every visible study, cached on the study
+  document keyed by response count + weights signature (cache invalidates when weights change). ~0.6s cold,
+  <0.3s warm.
+- List cards show the real BES, the AW/PQ/BI/LY mini scores and a tier chip; only studies under 10 responses
+  still say "BES locked · N more".
+
+**3. Wave Comparison significance testing**
+- `_respondent_dimension_scores` → per-respondent POMP 0-100 score per dimension (legacy ids pooled),
+  `_welch_t_test` (Welch two-sample, 95% CI of the difference, Cohen's d + effect label),
+  `_holm_adjust` (Holm–Bonferroni across the 4 dimensions), `_wave_significance` wiring it together with Thai
+  interpretations and an explicit caveat that the BES index itself is not what is tested.
+- Dashboard wave-compare now shows a SIG / ns marker per delta plus a full table (means, Δ with 95% CI, t(df),
+  Holm p, d, verdict sentence). Under-powered waves say so instead of printing a fabricated p.
+- Fixed two real bugs found while wiring it: `/compare` crashed with `TypeError: unsupported operand type(s)
+  for -: 'list' and 'list'` because the audit added the `_measured` metadata key to `composite`, and it silently
+  ignored a `wave` selector (comparing "wave 1 vs wave 2" actually pooled every response).
+- Tests: `backend/tests/test_brand_equity_wave_significance.py` (6) — includes a null case that must come back
+  not-significant and a real +1.1-point shift that must be detected.
+- QA seed: `backend/scripts/seed_wave_significance_study.py` → study `zz-wavesig-0001`, 45+45 responses.
+
+**4. Respondent Progress Save**
+- Answers, demographics and section position autosave to `localStorage['be_draft_<shareToken>']` on every change;
+  the welcome screen offers ทำต่อ / เริ่มใหม่ (`be-resume-draft`), drafts older than 7 days are dropped and the
+  draft is cleared on successful submit. Footer note tells respondents they can close the page.
+
+**Rounding-order fix (from the iteration_26 report)**: `getBrandHealthTier` / `brand_health_tier` now classify the
+ROUNDED score, so a raw 49.7 can no longer display as "50 · At Watch" on a card and "50 · Healthy" on the hero.
+
+**Verification**: 90 backend tests PASS (audit 49 + thesis 23 + wave-sig 6 + follow-ups 12) · testing agent
+iteration_26: 100% of acceptance criteria, 0 critical/minor, the single low-priority tier-boundary note fixed and
+re-verified by screenshot.
+
+
+## 2026-06-14 — Brand Equity + thesis-export correctness audit applied, plus ALL frontend P1+P2 follow-ups
+
+Applied the external `brand-equity-audit-2026-08` package (base `aedda54` = HEAD, CRLF normalised to LF).
+Audit docs: `/app/memory/BRAND_EQUITY_AUDIT_2026_08.md`, `/app/memory/THESIS_EXPORT_AUDIT_2026_08.md`,
+`/app/HANDOFF_BRAND_EQUITY.md`.
+
+**Backend (from the package)** — `brand_equity.py`, `be_thesis_ai.py`, `thesis_renderer.py`, `conjoint.py`
+- Cronbach's α now actually computed per dimension (it was claimed in every thesis but never calculated)
+- Dead dimension weights removed (Awareness weights summed to 1.25); identity trait-pickup ceiling fixed
+- Awareness no longer waits for an AI job: deterministic brand-name counting, so the score stops jumping
+- Reverse-worded custom attributes are reverse-coded or flagged, never counted as virtues
+- Public survey answers validated (out-of-range values dropped, response still accepted)
+- 95% CI on every Likert score, 4-band sample adequacy, one canonical verdict scale everywhere
+- Thesis prompts/renderers no longer claim Hausman tests, VIF, Gibbs/R̂, Cholesky or mis-attributed citations
+- 103 new tests PASS (`test_brand_equity_audit_2026_08.py`, `test_thesis_export_academic_2026_08.py`)
+
+**Backend (added here)**
+- `image_radar` now uses the POMP `score_100` scale (was `mean/7`) and carries `n_values` / `n_min` / `n_max`
+
+**Frontend (all 10 follow-ups the package left open)**
+- Respondent survey: Next button explains itself (toast + red `be-resp-q-missing-*` highlights + hint) instead of
+  being silently disabled; demographics screen finally has a Back button and answers can be cleared;
+  honest time RANGE instead of the understated single figure
+- Full mobile layout for every answer control (≥44px targets, NPS wraps to 2×6) — the survey had none
+- Wizard no longer advertises "AI GENERATION COMPLETE" for template-generated questions
+- Dashboard: `be-glossary-card` defines T2B/B2B/Net-Q/σ/POMP/CI/α/NPS/n; method-update note; normalization
+  basis; 95% CI on the quality card; loyalty theme bars and perceived-trait bars no longer plot raw COUNTS as
+  percentages; radar legend shows n per brand and warns under n=10; Brand Association card no longer claims to
+  compare against intended identity (it never read it)
+- **NEW `BeWeightEditor.jsx`** — real dimension-weight editor (hero button + methodology appendix link).
+  The appendix had pointed at a "Wizard step 4" screen that never existed; the backend already accepted
+  `study.weights`, nothing ever wrote it. Verified BES moves 57→55 at 40/10/25/25 and back on reset.
+- Methodology appendix: corrected comparative formula `(7 − mean)/6 × 100`, corrected Awareness/Identity
+  descriptions, and a new §06 "ความน่าเชื่อถือและข้อจำกัด" listing what is and is not measured (no EFA/CFA/AVE,
+  descriptive comparisons only, convenience sampling)
+- One canonical brand-health scale on every surface (`@/lib/brandHealthVerdict`); tier chip added to list cards;
+  the misleading "BES locked" on studies that already have ≥10 responses now reads "เปิดดูคะแนน →"
+- Public home page renders "— / ยังไม่ได้วัด" for unmeasured dimensions instead of 0, and never names one as the
+  brand's weak point
+
+**Verification**: 103 audit tests + 5 follow-up backend tests PASS · testing agent iteration_25 = 100% pass,
+0 critical/minor issues (2 cosmetic notes, both fixed) · mobile 390px verified with 0 horizontal overflow.
+Pre-existing stale suites (`test_brand_equity.py`, `_v3`, `_showcase`, `_translation`) still fail identically on
+pre-audit code — outdated expectations, not regressions.
+
+
+## 2026-06-14 — Conjoint theoretical audit applied (external `conjoint-audit-2026-08` package) + P1 follow-ups
+
+Applied the external audit package verbatim onto base commit `24c3aaf` (matched HEAD, clean apply),
+then normalised its CRLF line endings back to LF.
+
+**Backend** (`routes/conjoint.py`, ~600 lines changed)
+- F1 D-optimal generator → modified Fedorov on the β=0 MNL information matrix (+45–60% D-efficiency, 5–40× faster)
+- F2 encoder picks a reference level that exists in the data; drops columns with no within-set variation
+- F3 model selection on **BIC** (not raw log-likelihood), OLS excluded, Raftery gap grading
+- F4 BIC/AIC on the choice-situation basis for MNL, Mixed and HB alike
+- F5 HB no longer crashes on tasks with no recorded selection; F6 HB importance = mean of per-respondent importances
+- F7 only coefficients with a significant taste SD stay random; coefficient lookup name-based
+- F8 OLS reference level must have been shown; F9 adjusted McFadden ρ²; F10 task-count rule on contrasts, cap 24
+- `ANALYSIS_CACHE_VERSION` 2→4, `schema_version` guard on AI-interpretation and thesis caches
+- `view=summary` now returns `num_choice_sets` + `alternatives_per_set` without shipping `choice_sets`
+- **NEW** `GET /api/conjoint/studies/{id}/design-recommendation` → recommended tasks + Johnson & Orme respondent counts; `generate-design` now returns `sample_size`
+
+**Frontend**
+- `ConjointResultsPage.js`: computed sample-adequacy card (was hardcoded), plain-language summary, method picker,
+  ρ² no longer shown as a percentage; **NEW** `Model Specification` card (adj ρ², choice situations, K, random/fixed
+  vars, reference & excluded levels resolved to attribute/level names); repaired the previously orphaned
+  `สถิติการวิจัย` card JSX; added `tab-overview` / `tab-academic` / `tab-advanced` / `academic-method-select` /
+  `academic-calc-btn` testids
+- `ConjointCompareMethods.jsx`: BIC-based verdict; **fix** — Compare tab now loads on the PUBLIC results route
+  (it bailed out when `token` was null)
+- `ConjointDesignPage.js`: live "ต้องการผู้ตอบกี่คน" card from the new endpoint (replaces the hardcoded
+  "Recommended Sample: 200"), fallback task formula mirrors the backend (contrasts, cap 24)
+
+**Verification**: 31 audit tests + 55 existing conjoint tests PASS · all 4 methods exercised over the API on a real
+120-respondent study · design generation exercised end-to-end · frontend E2E via testing agent (iteration_24) — all
+acceptance criteria met after the public-Compare fix.
+
+
+## 2026-06-14 — meekintube REPLACED with mytube-pwa (static), rebranded "meekinTube"
+
+User asked to remove the old meekintube (Flask downloader) entirely and replace it with
+`mytube-pwa.zip` — a YouTube-style **static PWA** (HTML/CSS/JS only, no backend, no yt-dlp/
+ffmpeg). Plays via YouTube embed player; search/feed pull from public Invidious/Piped
+instances client-side. Also rebranded the UI name "MyTube" → "meekinTube".
+
+### Changes
+- **Removed**: `backend/meekintube_app/` (Flask), `meekintube_video/`, the a2wsgi WSGI mount
+  block + PATH/yt-dlp/ffmpeg logic in `server.py`. No more ffmpeg dependency (the recurring
+  preview-pod ffmpeg-loss problem is now gone).
+- **Added**: `backend/meekintube_static/` (index.html, sw.js, manifest, icons). All paths are
+  relative, so served via `StaticFiles(html=True)` mounted at `/api/meekintube` (same pattern
+  as YOLO). Route + frontend `/meekintube` redirect unchanged.
+- **Rebrand** MyTube → meekinTube: `<title>`, apple-mobile-web-app-title meta, brand span
+  (`meekin<sup>Tube</sup>`), share title, manifest name/short_name. (Internal `mytube_*`
+  localStorage keys left as-is — not user-visible.)
+
+### Verified
+- `/api/meekintube/` + index/manifest/sw/icons → 200 (correct MIME); served `<title>` = meekinTube.
+- Old Flask endpoint `/api/meekintube/api/config` → 404 (correctly removed).
+- Browser: full YouTube-style UI renders with live trending feed (real data via Invidious/Piped),
+  sidebar (หน้าแรก/Shorts/การติดตาม/ประวัติ/เพลย์ลิสต์/ดูภายหลัง/สำรวจ), category chips, brand "meekinTube".
+
+### Production note (swumkt.org)
+- REDEPLOY needed. No host packages required anymore (pure static) — simpler than before.
+
+
+## 2026-06-12 — meekintube updated v37 → v42 (drop-in) + ffmpeg recurring-loss note
+
+User uploaded `meekintube_v42_emergent.zip`. Drop-in replacement; mount unchanged; no new
+endpoints (embedok already present). New since v37: v38 full-screen mobile search overlay,
+now-playing queue UI with prev/next, Spotify-style autoplay toggle (frontend-only).
+
+### Actions
+- Replaced `/app/backend/meekintube_app/` with v42 (app.js confirms `v42`).
+- **ffmpeg was MISSING AGAIN** — the preview pod recycles periodically and wipes apt-installed
+  packages (this is the 2nd time this session). Reinstalled via `apt-get install ffmpeg`.
+  ⚠️ RECURRING: any apt package (ffmpeg) is ephemeral in preview — if meekintube search/embed
+  breaks, first check `/api/meekintube/api/config` for `ffmpeg:false` and reinstall.
+  yt-dlp (pip/venv) + node (/usr/bin) persist.
+
+### Verified
+- config → `{ffmpeg:true, ytdlp:true}`; embedok → `{ok:true}`; UI v42 renders with mode toggle.
+
+
+## 2026-06-12 — meekintube updated v31 → v37 (drop-in from external agent)
+
+User uploaded `meekintube_v37_emergent.zip` (built by an external agent) — a drop-in
+replacement for `backend/meekintube_app/`. Paths already rewritten for `/api/meekintube/`;
+FastAPI mount in server.py unchanged (no edits needed).
+
+### Changes (v33–v37)
+- v33: Watch/Download mode toggle (watch = instant YouTube embed; download = stream+store).
+  Background audio handoff `<video>`→hidden `<audio>` + Media Session queue.
+- v34/v35: mode switch moved into fixed topbar; z-index fix; bigger mobile search;
+  TV/keyboard nav; watch history in localStorage.
+- v36/v37: watch mode embeds instantly with auto-fallback to download+stream when embed
+  is blocked — via NEW endpoint `GET /api/embedok?id=` (oEmbed probe) + iframe onError.
+
+### Deploy actions taken (preview)
+- Replaced `/app/backend/meekintube_app/` with v37 folder (video staging dir untouched).
+- **Reinstalled ffmpeg** — this is a FORKED job on a fresh pod, so the previous apt install
+  did NOT persist (`which ffmpeg` was empty, config reported `ffmpeg:false`). `apt-get install
+  ffmpeg` restored it. yt-dlp (pip/venv) + node (/usr/bin) persisted fine.
+
+### Verified
+- `/api/meekintube/api/config` → `{ffmpeg:true, ytdlp:true}`.
+- NEW `/api/meekintube/api/embedok?id=jNQXAC9IVRw` → `{ok:true}`.
+- index/static/manifest/logo all 200; live yt-dlp search returned real results.
+- Browser: v37 UI renders with the new topbar Watch/Download mode toggle (red "ดู" + "โหลด").
+
+### Production note (swumkt.org)
+- REDEPLOY needed to ship v37 files. ffmpeg + yt-dlp (+ ideally node) MUST be installed on the
+  production host — preview installs do not persist to a fresh production deploy.
+
+
 ## 2026-06-10 — meekintube (YouTube/FB downloader) mounted at /api/meekintube/
 
 User provided meekintube.zip — a Flask PWA that wraps yt-dlp + ffmpeg to download

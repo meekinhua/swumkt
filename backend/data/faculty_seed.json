@@ -1,0 +1,1454 @@
+{
+  "fetched": "2026-10-27",
+  "sources": [
+    "https://bas.swu.ac.th/faculty/marketing-management",
+    "https://openalex.org",
+    "https://orcid.org"
+  ],
+  "faculty": [
+    {
+      "id": "fac-intaka-piriyakul",
+      "slug": "intaka-piriyakul",
+      "title_th": "รองศาสตราจารย์ ดร.",
+      "name_th": "อินทกะ พิริยะกุล",
+      "title_en": "Associate Professor Dr.",
+      "name_en": "Intaka Piriyakul",
+      "rank_th": "รองศาสตราจารย์",
+      "rank_en": "Associate Professor",
+      "department_th": "ภาควิชาการตลาดและการจัดการ",
+      "department_en": "Department of Marketing and Management",
+      "bio_th": "รองศาสตราจารย์ ภาควิชาการตลาดและการจัดการ คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ",
+      "bio_en": "Associate Professor, Department of Marketing and Management, Faculty of Business Administration for Society, Srinakharinwirot University",
+      "email": "intaka@g.swu.ac.th",
+      "photo": "https://bas.swu.ac.th/Portals/4/Images/faculty_and_staff/marketing_and_management/MK01.png",
+      "photo_credit": "Faculty of Business Administration for Society, SWU",
+      "research_areas": [
+        {
+          "th": "วิศวกรรมการตลาด",
+          "en": "Marketing engineering"
+        },
+        {
+          "th": "เหมืองข้อความและ AI เพื่อข่าวกรองการตลาด",
+          "en": "Text mining and AI for marketing intelligence"
+        },
+        {
+          "th": "เส้นทางลูกค้าและคุณค่าตราสินค้า",
+          "en": "Customer journey and brand equity"
+        },
+        {
+          "th": "การวิเคราะห์คอนจอยท์และส่วนประสมการตลาด",
+          "en": "Conjoint analysis and marketing-mix optimisation"
+        }
+      ],
+      "links": {
+        "orcid": "https://orcid.org/0000-0002-2501-4578",
+        "openalex": "https://openalex.org/A5022371165",
+        "cv": "https://bas.swu.ac.th/Portals/4/cv/MAJOR/MKT/01-CV-associate_professor_dr_intaka_piriyakul.pdf",
+        "department": "https://bas.swu.ac.th/faculty/marketing-management",
+        "scholar": null,
+        "scopus": null
+      },
+      "sort_order": 1,
+      "status": "published",
+      "source": "https://bas.swu.ac.th/faculty/marketing-management (fetched 2026-10-27); OpenAlex; ORCID"
+    },
+    {
+      "id": "fac-warinrampai-rungruangjit",
+      "slug": "warinrampai-rungruangjit",
+      "title_th": "รองศาสตราจารย์ ดร.",
+      "name_th": "วรินรำไพ รุ่งเรืองจิตต์",
+      "title_en": "Associate Professor Dr.",
+      "name_en": "Warinrampai Rungruangjit",
+      "rank_th": "รองศาสตราจารย์",
+      "rank_en": "Associate Professor",
+      "department_th": "ภาควิชาการตลาดและการจัดการ",
+      "department_en": "Department of Marketing and Management",
+      "bio_th": "รองศาสตราจารย์ ภาควิชาการตลาดและการจัดการ คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ",
+      "bio_en": "Associate Professor, Department of Marketing and Management, Faculty of Business Administration for Society, Srinakharinwirot University",
+      "email": "warinrampai@g.swu.ac.th",
+      "photo": "https://bas.swu.ac.th/Portals/4/Images/faculty_and_staff/marketing_and_management/MK02.png",
+      "photo_credit": "Faculty of Business Administration for Society, SWU",
+      "research_areas": [
+        {
+          "th": "พาณิชย์ผ่านการไลฟ์สด",
+          "en": "Live-streaming commerce"
+        },
+        {
+          "th": "การตลาดผ่านอินฟลูเอนเซอร์และอินฟลูเอนเซอร์เสมือน",
+          "en": "Influencer and virtual-influencer marketing"
+        },
+        {
+          "th": "พฤติกรรมผู้บริโภคในเมตาเวิร์ส",
+          "en": "Consumer behaviour in the metaverse"
+        },
+        {
+          "th": "การยอมรับเทคโนโลยีของผู้บริโภค",
+          "en": "Consumer technology adoption"
+        }
+      ],
+      "links": {
+        "orcid": "https://orcid.org/0000-0003-2917-9887",
+        "openalex": "https://openalex.org/A5041075489",
+        "cv": "https://bas.swu.ac.th/Portals/4/cv/MAJOR/MKT/02-CV-assistant_professor_dr_warinrampai_rungruangjit.pdf",
+        "department": "https://bas.swu.ac.th/faculty/marketing-management",
+        "scholar": null,
+        "scopus": null
+      },
+      "sort_order": 2,
+      "status": "published",
+      "source": "https://bas.swu.ac.th/faculty/marketing-management (fetched 2026-10-27); OpenAlex; ORCID"
+    },
+    {
+      "id": "fac-poompak-kusawat",
+      "slug": "poompak-kusawat",
+      "title_th": "ดร.",
+      "name_th": "ภูมิภักดิ์ คูสวัสดิ์",
+      "title_en": "Dr.",
+      "name_en": "Poompak Kusawat",
+      "rank_th": "อาจารย์",
+      "rank_en": "Lecturer",
+      "department_th": "ภาควิชาการตลาดและการจัดการ",
+      "department_en": "Department of Marketing and Management",
+      "bio_th": "อาจารย์ ภาควิชาการตลาดและการจัดการ คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ",
+      "bio_en": "Lecturer, Department of Marketing and Management, Faculty of Business Administration for Society, Srinakharinwirot University",
+      "email": "poompak@g.swu.ac.th",
+      "photo": "https://bas.swu.ac.th/Portals/4/Images/faculty_and_staff/marketing_and_management/MK03.png",
+      "photo_credit": "Faculty of Business Administration for Society, SWU",
+      "research_areas": [
+        {
+          "th": "การบอกต่อแบบออนไลน์ข้ามวัฒนธรรม",
+          "en": "Cross-cultural electronic word-of-mouth"
+        },
+        {
+          "th": "รีวิวออนไลน์ของผู้ใช้",
+          "en": "Online user reviews"
+        },
+        {
+          "th": "การเปิดเผยการสนับสนุนในโฆษณาแบบเนทีฟ",
+          "en": "Sponsorship disclosure in native advertising"
+        },
+        {
+          "th": "AI เชิงสร้างสรรค์ในการศึกษาธุรกิจ",
+          "en": "Generative AI in business education"
+        }
+      ],
+      "links": {
+        "orcid": "https://orcid.org/0009-0004-3952-014X",
+        "openalex": "https://openalex.org/A5088657190",
+        "cv": "https://bas.swu.ac.th/Portals/4/cv/MAJOR/MKT/04-CV-dr_poompak_kusawat.pdf",
+        "department": "https://bas.swu.ac.th/faculty/marketing-management",
+        "scholar": null,
+        "scopus": null
+      },
+      "sort_order": 3,
+      "status": "published",
+      "source": "https://bas.swu.ac.th/faculty/marketing-management (fetched 2026-10-27); OpenAlex; ORCID"
+    },
+    {
+      "id": "fac-kanokkan-bunchabusabong",
+      "slug": "kanokkan-bunchabusabong",
+      "title_th": "ผู้ช่วยศาสตราจารย์",
+      "name_th": "กนกกาญจน์ บัญชาบุษบง",
+      "title_en": "Assistant Professor",
+      "name_en": "Kanokkan Bunchabusabong",
+      "rank_th": "ผู้ช่วยศาสตราจารย์",
+      "rank_en": "Assistant Professor",
+      "department_th": "ภาควิชาการตลาดและการจัดการ",
+      "department_en": "Department of Marketing and Management",
+      "bio_th": "ผู้ช่วยศาสตราจารย์ ภาควิชาการตลาดและการจัดการ คณะบริหารธุรกิจเพื่อสังคม มหาวิทยาลัยศรีนครินทรวิโรฒ",
+      "bio_en": "Assistant Professor, Department of Marketing and Management, Faculty of Business Administration for Society, Srinakharinwirot University",
+      "email": "kanokkan@g.swu.ac.th",
+      "photo": "https://bas.swu.ac.th/Portals/4/Images/faculty_and_staff/marketing_and_management/MK06.png",
+      "photo_credit": "Faculty of Business Administration for Society, SWU",
+      "research_areas": [
+        {
+          "th": "การสื่อสารความยั่งยืน",
+          "en": "Sustainability communication"
+        },
+        {
+          "th": "การเล่าเรื่องด้าน ESG ของแบรนด์",
+          "en": "Brand ESG storytelling"
+        }
+      ],
+      "links": {
+        "orcid": null,
+        "openalex": "https://openalex.org/A5115407616",
+        "cv": null,
+        "department": "https://bas.swu.ac.th/faculty/marketing-management",
+        "scholar": null,
+        "scopus": null
+      },
+      "sort_order": 4,
+      "status": "published",
+      "source": "https://bas.swu.ac.th/faculty/marketing-management (fetched 2026-10-27); OpenAlex; ORCID"
+    }
+  ],
+  "papers": [
+    {
+      "id": "pap-w7219351382",
+      "slug": "decoding-sustainable-storytelling-the-brewing-esg-framework-of-coffee-brands-on",
+      "title": "Decoding Sustainable Storytelling: The Brewing ESG Framework of Coffee Brands on Digital Platforms",
+      "authors": [
+        "Kanokkan Bunchabusabong",
+        "Kullatip Satararuji"
+      ],
+      "faculty_ids": [
+        "fac-kanokkan-bunchabusabong"
+      ],
+      "year": 2026,
+      "venue": "Ramkhamhaeng International Journal of Science and Technology",
+      "type": "article",
+      "doi": null,
+      "url": "https://ph02.tci-thaijo.org/index.php/RIST/article/view/264343",
+      "pdf_url": "https://ph02.tci-thaijo.org/index.php/RIST/article/download/264343/173776",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7219351382",
+      "confidence": "venue",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w7127053278",
+      "slug": "forming-purchase-intention-from-the-metaverse-to-the-real-world-a-mixed-method-s",
+      "title": "Forming purchase intention from the metaverse to the real world: A mixed-method study on metaverse experiential consumption values in digital fashion",
+      "authors": [
+        "Warinrampai Rungruangjit",
+        "Kulachet Mongkol",
+        "Kitti Charoenpornpanichkul"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2026,
+      "venue": "Journal of Retailing and Consumer Services",
+      "type": "article",
+      "doi": "10.1016/j.jretconser.2026.104753",
+      "url": "https://doi.org/10.1016/j.jretconser.2026.104753",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 6,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7127053278",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w7164550528",
+      "slug": "linking-relief-service-quality-to-beneficiaries-satisfaction-in-humanitarian-sup",
+      "title": "Linking relief service quality to beneficiaries’ satisfaction in humanitarian supply chains: an exploratory study using the HUMSERVPERF tool",
+      "authors": [
+        "Ruth Banomyong",
+        "Puthipong Julagasigorn",
+        "Huay Ling Tay",
+        "Paitoon Varadejsatitwong",
+        "Poompak Kusawat"
+      ],
+      "faculty_ids": [
+        "fac-poompak-kusawat"
+      ],
+      "year": 2026,
+      "venue": "Journal of Humanitarian Logistics and Supply Chain Management",
+      "type": "article",
+      "doi": "10.1108/jhlscm-08-2025-0148",
+      "url": "https://doi.org/10.1108/jhlscm-08-2025-0148",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7164550528",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4411780699",
+      "slug": "determining-optimal-marketing-mix-configurations-an-integration-of-opinion-orien",
+      "title": "Determining optimal marketing mix configurations: An integration of opinion-oriented language and necessary condition analysis",
+      "authors": [
+        "Intaka Piriyakul",
+        "Shawanluck Kunathikornkit",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2025,
+      "venue": "Journal Of Vacation Marketing",
+      "type": "article",
+      "doi": "10.1177/13567667251351025",
+      "url": "https://doi.org/10.1177/13567667251351025",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 1,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4411780699",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4413246896",
+      "slug": "grouped-semantic-feature-relation-extraction-from-texts-to-represent-medicinal-p",
+      "title": "Grouped semantic-feature relation extraction from texts to represent medicinal-plant property knowledge on social media",
+      "authors": [
+        "Chaveevan Pechsiri",
+        "Intaka Piriyakul",
+        "Joseph Santhi Pechsiri"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2025,
+      "venue": "Frontiers in Artificial Intelligence",
+      "type": "article",
+      "doi": "10.3389/frai.2025.1579357",
+      "url": "https://doi.org/10.3389/frai.2025.1579357",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4413246896",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4411794665",
+      "slug": "integrating-llms-and-text-mining-for-cost-effective-marketing-intelligence",
+      "title": "Integrating LLMs and Text Mining for Cost-Effective Marketing Intelligence",
+      "authors": [
+        "Shawanluck Kunathikornkit",
+        "Intaka Piriyakul",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2025,
+      "venue": "International Journal of Knowledge Management",
+      "type": "article",
+      "doi": "10.4018/ijkm.383328",
+      "url": "https://doi.org/10.4018/ijkm.383328",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 1,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4411794665",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4413142087",
+      "slug": "opportunities-and-challenges-of-integrating-chatgpt-in-education-sentiment-analy",
+      "title": "Opportunities and challenges of integrating ChatGPT in education: Sentiment analysis and topic modeling",
+      "authors": [
+        "Surat Teerakapibal",
+        "Poompak Kusawat"
+      ],
+      "faculty_ids": [
+        "fac-poompak-kusawat"
+      ],
+      "year": 2025,
+      "venue": "Journal of Education for Business",
+      "type": "article",
+      "doi": "10.1080/08832323.2025.2536255",
+      "url": "https://doi.org/10.1080/08832323.2025.2536255",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 3,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4413142087",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4405304635",
+      "slug": "comparative-analysis-of-sustainability-communication-strategies-of-thai-and-glob",
+      "title": "Comparative Analysis of Sustainability Communication Strategies of Thai and Global Brand Restaurants on Social Media and Websites",
+      "authors": [
+        "Kanokkan Bunchabusabong",
+        "Jukkrit Tiwasuppachai",
+        "Shawanluck Kunathikornkit"
+      ],
+      "faculty_ids": [
+        "fac-kanokkan-bunchabusabong"
+      ],
+      "year": 2024,
+      "venue": "European Journal of Studies in Management and Business",
+      "type": "article",
+      "doi": "10.32038/mbrq.2024.32.02",
+      "url": "https://doi.org/10.32038/mbrq.2024.32.02",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 1,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4405304635",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4396533364",
+      "slug": "evaluating-brand-equity-in-the-hospitality-industry-insights-from-customer-journ",
+      "title": "Evaluating brand equity in the hospitality industry: Insights from customer journeys and text mining",
+      "authors": [
+        "Intaka Piriyakul",
+        "Shawanluck Kunathikornkit",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2024,
+      "venue": "International Journal of Information Management Data Insights",
+      "type": "article",
+      "doi": "10.1016/j.jjimei.2024.100245",
+      "url": "https://doi.org/10.1016/j.jjimei.2024.100245",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 20,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4396533364",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4403471000",
+      "slug": "human-agility-management-in-thai-smes-a-catalyst-for-enhancing-employee-value-pr",
+      "title": "Human agility management in Thai SMEs: A catalyst for enhancing employee value proposition",
+      "authors": [
+        "Intaka Piriyakul",
+        "Benjamas Sirijai",
+        "Rapepun Piriyakul",
+        "Noraphol Chiranunthadej"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2024,
+      "venue": "Journal of Infrastructure Policy and Development",
+      "type": "article",
+      "doi": "10.24294/jipd.v8i11.7478",
+      "url": "https://doi.org/10.24294/jipd.v8i11.7478",
+      "pdf_url": "https://systems.enpress-publisher.com/index.php/jipd/article/download/7478/4213",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4403471000",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4404346202",
+      "slug": "the-power-of-human-like-virtual-influencer-generated-content-impact-on-consumers",
+      "title": "The power of human-like virtual-influencer-generated content: Impact on consumers’ willingness to follow and purchase intentions",
+      "authors": [
+        "Warinrampai Rungruangjit",
+        "Kulachet Mongkol",
+        "Intaka Piriyakul",
+        "Kitti Charoenpornpanichkul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul",
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2024,
+      "venue": "Computers in Human Behavior Reports",
+      "type": "article",
+      "doi": "10.1016/j.chbr.2024.100523",
+      "url": "https://doi.org/10.1016/j.chbr.2024.100523",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 32,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4404346202",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4399654973",
+      "slug": "unveiling-the-power-of-storytelling-and-codesign-enhancing-customer-value-in-cul",
+      "title": "Unveiling the power of storytelling and co‐design: Enhancing customer value in cultural boutique hotels",
+      "authors": [
+        "Intaka Piriyakul",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2024,
+      "venue": "International Journal of Tourism Research",
+      "type": "article",
+      "doi": "10.1002/jtr.2653",
+      "url": "https://doi.org/10.1002/jtr.2653",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 8,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4399654973",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4377087826",
+      "slug": "automated-analysis-of-causal-relationships-in-customer-reviews",
+      "title": "Automated Analysis of Causal Relationships in Customer Reviews",
+      "authors": [
+        "Intaka Piriyakul",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2023,
+      "venue": "Research Square",
+      "type": "preprint",
+      "doi": "10.21203/rs.3.rs-2944732/v1",
+      "url": "https://doi.org/10.21203/rs.3.rs-2944732/v1",
+      "pdf_url": "https://www.researchsquare.com/article/rs-2944732/latest.pdf",
+      "open_access": true,
+      "cited_by": 2,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4377087826",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4372318605",
+      "slug": "one-to-one-marketing-management-via-customer-complaint",
+      "title": "One-to-one marketing management via customer complaint",
+      "authors": [
+        "Shawanluck Kunathikornkit",
+        "Intaka Piriyakul",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2023,
+      "venue": "Social Network Analysis and Mining",
+      "type": "article",
+      "doi": "10.1007/s13278-023-01082-z",
+      "url": "https://doi.org/10.1007/s13278-023-01082-z",
+      "pdf_url": "https://www.researchsquare.com/article/rs-2716680/latest.pdf",
+      "open_access": true,
+      "cited_by": 13,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4372318605",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4378976080",
+      "slug": "the-evidence-of-a-thai-restaurant-s-mass-customization-implementation-for-firm-s",
+      "title": "The Evidence of a Thai Restaurant's Mass Customization Implementation for Firm Survival During the Pandemic Crisis",
+      "authors": [
+        "Intaka Piriyakul",
+        "Nart-anong Nambuddee",
+        "Rapepun Piriyakul",
+        "Montree Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2023,
+      "venue": "International Journal of Asian Business and Information Management",
+      "type": "article",
+      "doi": "10.4018/ijabim.323797",
+      "url": "https://doi.org/10.4018/ijabim.323797",
+      "pdf_url": "https://www.igi-global.com/ViewTitle.aspx?TitleId=323797&isxn=9781668479445",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4378976080",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4327966853",
+      "slug": "understanding-different-types-of-followers-engagement-and-the-transformation-of",
+      "title": "Understanding Different Types of Followers’ Engagement and the Transformation of Millennial Followers into Cosmetic Brand Evangelists",
+      "authors": [
+        "Warinrampai Rungruangjit",
+        "Thitinan Chankoson",
+        "Kitti Charoenpornpanichkul"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2023,
+      "venue": "Behavioral Sciences",
+      "type": "article",
+      "doi": "10.3390/bs13030270",
+      "url": "https://doi.org/10.3390/bs13030270",
+      "pdf_url": "https://www.mdpi.com/2076-328X/13/3/270/pdf?version=1679215811",
+      "open_access": true,
+      "cited_by": 19,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4327966853",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4388830959",
+      "slug": "what-motivates-consumers-continued-usage-intentions-of-food-delivery-application",
+      "title": "What motivates consumers’ continued usage intentions of food delivery applications in post-COVID-19 outbreak? Comparing Generations X, Y and Z",
+      "authors": [
+        "Warinrampai Rungruangjit",
+        "Kitti Charoenpornpanichkul"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2023,
+      "venue": "Journal of Asia Business Studies",
+      "type": "article",
+      "doi": "10.1108/jabs-06-2023-0234",
+      "url": "https://doi.org/10.1108/jabs-06-2023-0234",
+      "pdf_url": "https://www.emerald.com/insight/content/doi/10.1108/JABS-06-2023-0234/full/pdf?title=what-motivates-consumers-continued-usage-intentions-of-food-delivery-applications-in-post-covid-19-outbreak-comparing-generations-x-y-and-z",
+      "open_access": true,
+      "cited_by": 20,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4388830959",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w7215668802",
+      "slug": "w7215668802",
+      "title": "ปจจยทมอทธพลตอความตงใจซออาหารออรแกนกของกลมคนรกสขภาพในเครอขายสงคม",
+      "authors": [
+        "Wiranat Wiriyakluythong",
+        "Warinrampai Rungruangjit"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2023,
+      "venue": "Journal of Accountancy and Management",
+      "type": "article",
+      "doi": null,
+      "url": "https://so02.tci-thaijo.org/index.php/mbs/article/view/259720",
+      "pdf_url": "https://so02.tci-thaijo.org/index.php/mbs/article/download/259720/177853",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7215668802",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Thai title arrived without its vowel and tone marks from the index — correct it from the journal page before publishing."
+    },
+    {
+      "id": "pap-w7215673311",
+      "slug": "w7215673311",
+      "title": "เรอง ปจจยทมอทธพลตอการซอตนไมผานการถายทอดสดบนเฟซบก",
+      "authors": [
+        "Tithirat Tanamai",
+        "Warinrampai Rungruangjit"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2023,
+      "venue": "The Journal of Integrated Business Innovation and Sustainability (JIBIS) (Online)",
+      "type": "article",
+      "doi": null,
+      "url": "https://so02.tci-thaijo.org/index.php/fam/article/view/260184",
+      "pdf_url": "https://so02.tci-thaijo.org/index.php/fam/article/download/260184/175238",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7215673311",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Thai title arrived without its vowel and tone marks from the index — correct it from the journal page before publishing."
+    },
+    {
+      "id": "pap-w4289536807",
+      "slug": "analysis-of-thai-text-from-social-media-for-mass-customization",
+      "title": "Analysis of Thai text from social media for mass customization",
+      "authors": [
+        "Intaka Piriyakul",
+        "Rapepun Piriyakul",
+        "Montree Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2022,
+      "venue": "Kasetsart Journal of Social Sciences",
+      "type": "article",
+      "doi": "10.34044/j.kjss.2022.43.3.11",
+      "url": "https://doi.org/10.34044/j.kjss.2022.43.3.11",
+      "pdf_url": "https://kasetsartjournal.ku.ac.th/downloadFile.aspx?param=bWVkaWFJRD03Mzk5",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4289536807",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4310231303",
+      "slug": "building-stronger-brand-evangelism-for-sustainable-marketing-through-micro-influ",
+      "title": "Building Stronger Brand Evangelism for Sustainable Marketing through Micro-Influencer-Generated Content on Instagram in the Fashion Industry",
+      "authors": [
+        "Warinrampai Rungruangjit",
+        "Kitti Charoenpornpanichkul"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2022,
+      "venue": "Sustainability",
+      "type": "article",
+      "doi": "10.3390/su142315770",
+      "url": "https://doi.org/10.3390/su142315770",
+      "pdf_url": "https://www.mdpi.com/2071-1050/14/23/15770/pdf?version=1669804356",
+      "open_access": true,
+      "cited_by": 29,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4310231303",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4221015773",
+      "slug": "cross-cultural-electronic-word-of-mouth-a-systematic-literature-review",
+      "title": "Cross-cultural electronic word-of-mouth: a systematic literature review",
+      "authors": [
+        "Poompak Kusawat",
+        "Surat Teerakapibal"
+      ],
+      "faculty_ids": [
+        "fac-poompak-kusawat"
+      ],
+      "year": 2022,
+      "venue": "Spanish Journal of Marketing - ESIC",
+      "type": "review",
+      "doi": "10.1108/sjme-06-2021-0116",
+      "url": "https://doi.org/10.1108/sjme-06-2021-0116",
+      "pdf_url": "https://www.emerald.com/insight/content/doi/10.1108/SJME-06-2021-0116/full/pdf?title=cross-cultural-electronic-word-of-mouth-a-systematic-literature-review",
+      "open_access": true,
+      "cited_by": 28,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4221015773",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4211016404",
+      "slug": "facial-skincare-journey",
+      "title": "Facial Skincare Journey",
+      "authors": [
+        "Intaka Piriyakul",
+        "Shawanluck Kunathikornkit",
+        "Montree Piriyakul",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2022,
+      "venue": "International Journal of Business Intelligence Research",
+      "type": "article",
+      "doi": "10.4018/ijbir.297614",
+      "url": "https://doi.org/10.4018/ijbir.297614",
+      "pdf_url": "https://www.igi-global.com/ViewTitle.aspx?TitleId=297614&isxn=9781683181897",
+      "open_access": true,
+      "cited_by": 3,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4211016404",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w4281995483",
+      "slug": "what-drives-taobao-live-streaming-commerce-the-role-of-parasocial-relationships",
+      "title": "What drives Taobao live streaming commerce? The role of parasocial relationships, congruence and source credibility in Chinese consumers’ purchase intentions",
+      "authors": [
+        "Warinrampai Rungruangjit"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2022,
+      "venue": "Heliyon",
+      "type": "article",
+      "doi": "10.1016/j.heliyon.2022.e09676",
+      "url": "https://doi.org/10.1016/j.heliyon.2022.e09676",
+      "pdf_url": "http://www.cell.com/article/S2405844022009641/pdf",
+      "open_access": true,
+      "cited_by": 134,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W4281995483",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w7220270984",
+      "slug": "w7220270984",
+      "title": "การเลาตำนานและประสบการณลกคาทสงเสรมบตคโฮเตลรโซแนนซ",
+      "authors": [
+        "Nart-anong Nambuddee",
+        "Intaka Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2022,
+      "venue": "Modern Management Frontier Journal",
+      "type": "article",
+      "doi": null,
+      "url": "https://so04.tci-thaijo.org/index.php/stou-sms-pr/article/view/261378",
+      "pdf_url": "https://so04.tci-thaijo.org/index.php/stou-sms-pr/article/download/261378/177734",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7220270984",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Thai title arrived without its vowel and tone marks from the index — correct it from the journal page before publishing."
+    },
+    {
+      "id": "pap-w3155560473",
+      "slug": "sponsorship-disclosure-in-native-advertising-a-theoretical-framework",
+      "title": "Sponsorship Disclosure in Native Advertising: A Theoretical Framework",
+      "authors": [
+        "Poompak Kusawat"
+      ],
+      "faculty_ids": [
+        "fac-poompak-kusawat"
+      ],
+      "year": 2021,
+      "venue": "arXiv (Cornell University)",
+      "type": "preprint",
+      "doi": "10.14456/jcdr-hs.2021.13",
+      "url": "https://doi.org/10.14456/jcdr-hs.2021.13",
+      "pdf_url": "https://arxiv.org/pdf/2311.01051",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3155560473",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w3166994873",
+      "slug": "the-roles-of-culture-in-online-user-reviews-an-empirical-investigation",
+      "title": "The Roles of Culture in Online User Reviews: An Empirical Investigation",
+      "authors": [
+        "Poompak Kusawat",
+        "Surat Teerakapibal"
+      ],
+      "faculty_ids": [
+        "fac-poompak-kusawat"
+      ],
+      "year": 2021,
+      "venue": "Journal of Global Marketing",
+      "type": "article",
+      "doi": "10.1080/08911762.2021.1903641",
+      "url": "https://doi.org/10.1080/08911762.2021.1903641",
+      "pdf_url": "https://arxiv.org/pdf/2311.01040",
+      "open_access": true,
+      "cited_by": 15,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3166994873",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w3207764477",
+      "slug": "the-moderating-effect-of-influencer-on-the-causal-map-of-mutual-information-copr",
+      "title": "The moderating effect of influencer on the causal map of mutual information, coproducer and customer value: a thematic analysis of messages posted by brand communities",
+      "authors": [
+        "Intaka Piriyakul",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2021,
+      "venue": "Journal of Marketing Analytics",
+      "type": "article",
+      "doi": "10.1057/s41270-021-00124-9",
+      "url": "https://doi.org/10.1057/s41270-021-00124-9",
+      "pdf_url": "https://link.springer.com/content/pdf/10.1057/s41270-021-00124-9.pdf",
+      "open_access": true,
+      "cited_by": 10,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3207764477",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w7218275118",
+      "slug": "w7218275118",
+      "title": "การจดการประสบการณลกคาและการปรบแตงตามลกคาเพอสรางคณคาตราสนคาโดยมเพศเปนตวแปรกำกบ",
+      "authors": [
+        "Intaka Piriyakul",
+        "Rapepun Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2021,
+      "venue": "Journal of Business Innovation and Sustainability (JBIS)",
+      "type": "article",
+      "doi": null,
+      "url": "https://so02.tci-thaijo.org/index.php/BECJournal/article/view/242561",
+      "pdf_url": "https://so02.tci-thaijo.org/index.php/BECJournal/article/download/242561/170494",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7218275118",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Thai title arrived without its vowel and tone marks from the index — correct it from the journal page before publishing."
+    },
+    {
+      "id": "pap-w3147368625",
+      "slug": "application-of-conjoint-analysis-for-analyzing-the-industrial-material-testing-m",
+      "title": "APPLICATION OF CONJOINT ANALYSIS FOR ANALYZING THE INDUSTRIAL MATERIAL TESTING MACHINE MARKET",
+      "authors": [
+        "Rawiwan Punoi",
+        "รวิวรรณ ภู่น้อย",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2020,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/805",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3147368625",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w3132213976",
+      "slug": "conjoint-analysis-for-plastic-surgery-service-development",
+      "title": "CONJOINT ANALYSIS FOR PLASTIC SURGERY SERVICE DEVELOPMENT",
+      "authors": [
+        "Yaowaluk Kumnerdkan",
+        "เยาวลักษณ์ กําเนิดกาญจน์",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2020,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/752",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3132213976",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w3081251970",
+      "slug": "causal-web-determination-from-texts",
+      "title": "Causal Web Determination from Texts",
+      "authors": [
+        "Chaveevan Pechsiri",
+        "Narongdech Keeratipranon",
+        "Intaka Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2020,
+      "venue": "Journal of Advances in Information Technology",
+      "type": "article",
+      "doi": "10.12720/jait.11.2.64-70",
+      "url": "https://doi.org/10.12720/jait.11.2.64-70",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 2,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3081251970",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w3217162369",
+      "slug": "electronic-word-of-mouth-marketing-mix-on-customer-perspective-and-brand-equity",
+      "title": "ELECTRONIC WORD OF MOUTH, MARKETING MIX ON CUSTOMER PERSPECTIVE AND BRAND EQUITY TOWARD PROPERTY PERFECT PCL. MIDDLE CLASS CONDOMINIUM PURCHASING DECISIONIN BANGKOK METROPOLIS",
+      "authors": [
+        "Phaphatsorn Chamsaksit",
+        "พภัสสรณ์ แช่มศักดิ์สิทธิ์",
+        "Warinrampai Rungruangjit",
+        "วรินรําไพ รุ่งเรืองจิตต์"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2020,
+      "venue": null,
+      "type": "thesis",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/717",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3217162369",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Indexed as a dissertation — confirm whose."
+    },
+    {
+      "id": "pap-w3108559679",
+      "slug": "gender-differences-in-young-consumers-intentions-to-redeem-mobile-coupons-using",
+      "title": "Gender Differences in Young Consumers' Intentions to Redeem Mobile Coupons Using an Application: A Case of 7-Eleven Convenience Stores",
+      "authors": [
+        "Warinrampai Rungruangjit"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2020,
+      "venue": "Thammasat Review",
+      "type": "article",
+      "doi": "10.14456/tureview.2020.14",
+      "url": "https://doi.org/10.14456/tureview.2020.14",
+      "pdf_url": "https://sc01.tci-thaijo.org/index.php/tureview/article/download/239843/163623",
+      "open_access": true,
+      "cited_by": 4,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3108559679",
+      "confidence": "doi",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w3177500245",
+      "slug": "factors-influencing-intentions-to-purchase-clothes-online-among-generation-y-con",
+      "title": "FACTORS INFLUENCING INTENTIONS TO PURCHASE CLOTHES ONLINE AMONG GENERATION Y CONSUMERS IN THE BANGKOK METROPOLITAN AREA AND VICINITY",
+      "authors": [
+        "Benjaporn Jeamsripong",
+        "เบญจพร เจียมศรีพงษ์",
+        "Warinrampai Rungruangjit",
+        "วรินรําไพ รุ่งเรืองจิตต์"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2019,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/253",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3177500245",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w3163971020",
+      "slug": "integrated-marketing-communication-factors-affecting-buying-decision-of-consumer",
+      "title": "INTEGRATED MARKETING COMMUNICATION FACTORS AFFECTING BUYING DECISION OF CONSUMERS STARBUCK COFFEE IN BANGKOK METROPOLIS",
+      "authors": [
+        "Bussarakum Petchjumrus",
+        "บุศราคัม เพชรจํารัส",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2019,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/187",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3163971020",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w3003433576",
+      "slug": "impact-of-investing-characteristics-on-financial-performance-of-individual-inves",
+      "title": "Impact of Investing Characteristics on Financial Performance of Individual Investors: An Exploratory Study",
+      "authors": [
+        "Poompak Kusawat",
+        "Nopadol Rompho"
+      ],
+      "faculty_ids": [
+        "fac-poompak-kusawat"
+      ],
+      "year": 2019,
+      "venue": null,
+      "type": "other",
+      "doi": "10.1109/ieem44572.2019.8978725",
+      "url": "https://doi.org/10.1109/ieem44572.2019.8978725",
+      "pdf_url": "https://arxiv.org/pdf/2311.00384",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3003433576",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w3166670463",
+      "slug": "job-performance-motivation-organizational-culture-and-satisfaction-affecting-org",
+      "title": "JOB PERFORMANCE MOTIVATION ORGANIZATIONAL CULTURE AND SATISFACTION AFFECTING ORGANIZATIONAL LOYALTY OF GENERATION Y OPERATIONAL EMPLOYEES FOR LIMITED PUBLIC COMPANY IN THE BANGKOK METROPOLITAN AREA",
+      "authors": [
+        "Ratchanee Junkaew",
+        "รัชนี จันทร์แก้ว",
+        "Warinrampai Rungruangjit",
+        "วรินรําไพ รุ่งเรืองจิตต์"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2019,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/193",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3166670463",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w3005759475",
+      "slug": "problem-event-extraction-to-develop-causal-loop-representation-from-texts",
+      "title": "Problem Event Extraction to Develop Causal Loop Representation from Texts",
+      "authors": [
+        "Chaveevan Pechsiri",
+        "Narongdech Keeratipranon",
+        "Intaka Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2019,
+      "venue": "International Conference on Science in Information Technology",
+      "type": "other",
+      "doi": "10.1109/icsitech46713.2019.8987473",
+      "url": "https://doi.org/10.1109/icsitech46713.2019.8987473",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 2,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3005759475",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w3138021790",
+      "slug": "satisfaction-brand-image-tools-on-loyalty-towards-thai-smile-airways",
+      "title": "SATISFACTION BRAND IMAGE TOOLS ON LOYALTY TOWARDS THAI SMILE AIRWAYS",
+      "authors": [
+        "Ploypapat Ariyakamolrat",
+        "พลอยปภัส อริยะกมลรัตน์",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2019,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/530",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3138021790",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w7218278545",
+      "slug": "w7218278545",
+      "title": "ดชนชวดศกยภาพของหนวยงานของรฐเพอสนบสนนการเขาสไทยแลนด 4.0",
+      "authors": [
+        "อินทกะ พิริยะกุล [Intaka Piriyakul]",
+        "ชวัลลักษณ์ คุณาธิกรกิจ [Shawanluck Kunathikornkit]",
+        "สุธารัตน์ จุ้ยเจริญ [Sutarat Juicharoen]",
+        "ระพีพรรณ พิริยะกุล [Rapepun Piriyakul]"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2019,
+      "venue": "Journal of Business Innovation and Sustainability (JBIS)",
+      "type": "article",
+      "doi": null,
+      "url": "https://so02.tci-thaijo.org/index.php/BECJournal/article/view/135007",
+      "pdf_url": "https://so02.tci-thaijo.org/index.php/BECJournal/article/download/135007/145917",
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W7218278545",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Thai title arrived without its vowel and tone marks from the index — correct it from the journal page before publishing."
+    },
+    {
+      "id": "pap-w3124547281",
+      "slug": "w3124547281",
+      "title": "บทบาทอทธพลกา กบของประสบการณซอสนคาแบบไรรอยตอและการรบรความสอดคลองทมผลตอความพงพอใจในการซอสนคา:บรบทธรกจ คาปลกฟาสตแฟชน (The Moderating Role of Seamless Shopping Experience and Perceived Consistency on Shopping Satisfaction: Fast Fashion Retailing Industry Context)",
+      "authors": [
+        "Warinrampai Rungruangjit"
+      ],
+      "faculty_ids": [
+        "fac-warinrampai-rungruangjit"
+      ],
+      "year": 2019,
+      "venue": "SSRN Electronic Journal",
+      "type": "preprint",
+      "doi": "10.2139/ssrn.3462157",
+      "url": "https://doi.org/10.2139/ssrn.3462157",
+      "pdf_url": null,
+      "open_access": true,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3124547281",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Thai title arrived without its vowel and tone marks from the index — correct it from the journal page before publishing."
+    },
+    {
+      "id": "pap-w3124717010",
+      "slug": "brand-image-marketing-mix-factor-and-complaint-are-influencing-the-loyalty-of-ag",
+      "title": "BRAND IMAGE MARKETING MIX FACTOR AND COMPLAINT ARE INFLUENCING THE LOYALTY OF AGODA WEBSITE FROM CONSUMER IN BANGKOK",
+      "authors": [
+        "Chompunot Termprayoon",
+        "ชมพูนท เติมประยูร",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2018,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/82",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3124717010",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w3130793052",
+      "slug": "brand-image-marketing-mix-service-satisfaction-influences-brand-loyalty-jubilee",
+      "title": "BRAND IMAGE MARKETING MIX SERVICE SATISFACTION INFLUENCES BRAND LOYALTY JUBILEE DIAMOND FOR EMPLOYEES OF PRIVATE COMPANIES IN BANGKOK.",
+      "authors": [
+        "Panida Boonprasert",
+        "พนิดา บุญประเสริฐ",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2018,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/204",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3130793052",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI, title in capitals — this pattern is usually a supervised student thesis indexed under the advisor. Confirm authorship."
+    },
+    {
+      "id": "pap-w2907446110",
+      "slug": "extracting-a-sequence-of-cause-effect-concept-pairs-from-texts",
+      "title": "Extracting a Sequence of Cause-Effect Concept Pairs from Texts",
+      "authors": [
+        "Chaveevan Pechsiri",
+        "Renu Sukharomana",
+        "Intaka Piriyakul"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2018,
+      "venue": "International Conference on Enterprise Systems (ES)",
+      "type": "other",
+      "doi": "10.1109/es.2018.00017",
+      "url": "https://doi.org/10.1109/es.2018.00017",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W2907446110",
+      "confidence": "orcid",
+      "status": "published",
+      "review_note": null
+    },
+    {
+      "id": "pap-w3195777167",
+      "slug": "factors-related-to-buddhism-loyalty-of-thai-buddhists",
+      "title": "FACTORS RELATED TO BUDDHISM LOYALTY OF THAI BUDDHISTS",
+      "authors": [
+        "Surat Paknoi",
+        "สุรัตน์ พักน้อย",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2018,
+      "venue": null,
+      "type": "thesis",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/59",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3195777167",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "Indexed as a dissertation — confirm whose."
+    },
+    {
+      "id": "pap-w3120911872",
+      "slug": "the-integrated-marketing-communication-and-satisfaction-affecting-consumers-bran",
+      "title": "THE INTEGRATED MARKETING COMMUNICATION AND SATISFACTION AFFECTING CONSUMERS BRAND LOYALTY ON S-Pure IN BANGKOK METROPOLITAN AREA",
+      "authors": [
+        "Supisara Ketklud",
+        "ศุภิสรา เกตุกลัด",
+        "Intaka Piriyakul",
+        "อินทกะ พิริยะกุล"
+      ],
+      "faculty_ids": [
+        "fac-intaka-piriyakul"
+      ],
+      "year": 2018,
+      "venue": null,
+      "type": "article",
+      "doi": null,
+      "url": "http://ir-ithesis.swu.ac.th/dspace/handle/123456789/90",
+      "pdf_url": null,
+      "open_access": false,
+      "cited_by": 0,
+      "cited_by_as_of": "2026-10-27",
+      "source": "openalex",
+      "source_id": "W3120911872",
+      "confidence": "review",
+      "status": "review",
+      "review_note": "No DOI and no venue — confirm before publishing."
+    }
+  ]
+}

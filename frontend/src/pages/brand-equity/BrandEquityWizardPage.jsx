@@ -762,9 +762,13 @@ const BrandEquityWizardPage = () => {
               <div className="be-card" style={{ marginBottom: 18, background: '#FFFAF0', borderColor: 'var(--be-red)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                   <div>
-                    <div className="be-eyebrow"><span className="be-dot-sm be-pulse" style={{ background: 'var(--be-red)' }}/>AI GENERATION COMPLETE</div>
+                    <div className="be-eyebrow"><span className="be-dot-sm be-pulse" style={{ background: 'var(--be-red)' }}/>แบบสอบถามพร้อมแล้ว</div>
                     <div style={{ marginTop: 8, fontSize: 13 }}>
                       สร้าง <strong>{totalQ} คำถาม</strong> ครอบคลุม 4 dimensions · ปรับตามบริบท <strong>{brand.name}</strong>
+                    </div>
+                    <div className="be-tiny be-muted" style={{ marginTop: 6, lineHeight: 1.5 }}>
+                      สร้างจาก <strong>คลังคำถามมาตรฐาน (Aaker framework)</strong> โดยแทนชื่อแบรนด์/คู่แข่ง/หมวดสินค้าลงในแม่แบบ
+                      — ไม่ใช่การเขียนคำถามด้วย AI · AI จะเข้ามาช่วยตอนวิเคราะห์ผล (จัดกลุ่มคำตอบปลายเปิดและสรุป insight)
                     </div>
                     <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
                       {Object.values(DIMENSIONS).map(d => (

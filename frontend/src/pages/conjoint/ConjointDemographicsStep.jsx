@@ -108,14 +108,12 @@ const ConjointDemographicsStep = ({ fields, value, onChange, onContinue }) => {
                   <button
                     key={opt.value}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => set(field, opt.value)}
                     data-testid={`demo-chip-${field}-${opt.value}`}
-                    className={`px-3 py-1.5 text-sm rounded-full transition-all border ${
-                      active
-                        ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                    }`}
+                    className="be-chip"
                   >
+                    {active && <span className="be-chip-check">✓</span>}
                     {opt.label}
                   </button>
                 );

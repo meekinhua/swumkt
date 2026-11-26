@@ -718,12 +718,30 @@ const ConjointDesignPage = () => {
   const [surveyStarted, setSurveyStarted] = useState(false); // Track if survey is active
   const [startingSurvey, setStartingSurvey] = useState(false);
   const [referenceImages, setReferenceImages] = useState([]); // Reference images for AI
+  const [designRec, setDesignRec] = useState(null); // Server-side task/sample recommendation
 
   useEffect(() => {
     if (user && token && studyId) {
       loadStudy();
     }
   }, [user, token, studyId]);
+
+  // Task count and respondents needed come from the backend so the number shown
+  // before launch is the same rule the Results page's adequacy card checks.
+  useEffect(() => {
+    if (!token || !studyId || attributes.length === 0) return;
+    let cancelled = false;
+    const params = { alternatives_per_set: alternativesPerSet };
+    if (numberOfSets) params.number_of_sets = numberOfSets;
+    axios
+      .get(`${API}/conjoint/studies/${studyId}/design-recommendation`, {
+        params,
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => { if (!cancelled) setDesignRec(res.data); })
+      .catch(() => { if (!cancelled) setDesignRec(null); });
+    return () => { cancelled = true; };
+  }, [token, studyId, alternativesPerSet, numberOfSets, attributes.length, study?.updated_at]);
 
   const loadStudy = async () => {
     try {
@@ -995,11 +1013,15 @@ const ConjointDesignPage = () => {
 
   const calculateRecommendedSets = () => {
     if (attributes.length === 0) return 12;
-    
+    if (designRec?.recommended_sets) return designRec.recommended_sets;
+
+    // Fallback mirror of backend calculate_optimal_choice_sets: a set of `a`
+    // alternatives supplies `a - 1` contrasts, not `a`.
     const totalLevels = attributes.reduce((sum, attr) => sum + attr.levels.length, 0);
-    const totalParams = totalLevels - attributes.length;
-    const minSets = Math.max(8, Math.ceil((3 * totalParams) / alternativesPerSet));
-    return Math.min(Math.ceil(minSets / 4) * 4, 20);
+    const totalParams = Math.max(totalLevels - attributes.length, 1);
+    const contrasts = Math.max(alternativesPerSet - 1, 1);
+    const minSets = Math.max(8, Math.ceil((3 * totalParams) / contrasts));
+    return Math.min(Math.ceil(minSets / 4) * 4, 24);
   };
 
   if (loading) {
@@ -1340,7 +1362,7 @@ const ConjointDesignPage = () => {
                   onChange={(e) => setNumberOfSets(Number(e.target.value) || null)}
                   placeholder={`แนะนำ: ${recommendedSets}`}
                   min={8}
-                  max={20}
+                  max={24}
                   className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
                 />
                 <p className="text-xs text-gray-600 mt-1">
@@ -1357,8 +1379,32 @@ const ConjointDesignPage = () => {
                 <p>• Alternatives per Set: {alternativesPerSet}</p>
                 <p>• Choice Sets: {numberOfSets || recommendedSets}</p>
                 <p>• Total Profiles: {(numberOfSets || recommendedSets) * alternativesPerSet}</p>
-                <p className="font-bold mt-2">• Recommended Sample: {Math.max(200, (numberOfSets || recommendedSets) * 15)} respondents</p>
               </div>
+            </div>
+
+            {/* Respondents needed — Johnson & Orme, same rule as the Results page */}
+            <div className="p-4 bg-emerald-50 rounded-lg border-2 border-emerald-200 mb-6" data-testid="sample-size-recommendation">
+              <h3 className="font-bold text-emerald-900 mb-2">ต้องการผู้ตอบกี่คน?</h3>
+              {designRec?.sample_size ? (
+                <div className="space-y-1 text-sm text-emerald-800">
+                  <p>
+                    • ขั้นต่ำ (รายงานผลรวมได้):{' '}
+                    <b className="text-lg" data-testid="sample-size-min">{designRec.sample_size.minimum}</b> คน
+                  </p>
+                  <p>
+                    • แนะนำ (วิเคราะห์กลุ่มย่อยได้สบาย):{' '}
+                    <b className="text-lg" data-testid="sample-size-recommended">{designRec.sample_size.recommended}</b> คน
+                  </p>
+                  <p className="text-xs text-emerald-700 mt-2 font-mono">
+                    เกณฑ์ {designRec.sample_size.rule} · c = {designRec.sample_size.largest_attribute_levels} (attribute ที่มี level มากที่สุด)
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    ตัวเลขนี้ใช้เกณฑ์เดียวกับการ์ด "ข้อมูลเพียงพอหรือยัง" ในหน้าผลลัพธ์
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-emerald-700">กำลังคำนวณ… (บันทึก attributes ก่อนเพื่อดูตัวเลข)</p>
+              )}
             </div>
 
             {/* Warning if unsaved changes */}

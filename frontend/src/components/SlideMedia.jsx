@@ -35,6 +35,7 @@ export const SlideMedia = ({
   fallbackCaption = '',
   interval = 4500,
   onPauseRequest,        // (paused: bool) — bubble up so parent can pause outer rotation
+  priority = false,      // true for the above-the-fold hero: load it first, never lazily
   testid = 'slide-media',
 }) => {
   const items = useMemo(() => {
@@ -121,6 +122,9 @@ export const SlideMedia = ({
       {cur.kind === 'image' ? (
         <img key={`m-${idx}`} src={cur.src} alt={cur.alt || ''}
              className="rotate-in-slow"
+             loading={priority ? 'eager' : 'lazy'}
+             fetchPriority={priority ? 'high' : 'auto'}
+             decoding="async"
              style={{ filter: 'saturate(1.08) contrast(1.04)',
                       width: '100%', height: '100%', objectFit: 'cover',
                       position: 'absolute', inset: 0 }}/>
