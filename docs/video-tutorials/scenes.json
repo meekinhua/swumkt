@@ -1,0 +1,779 @@
+{
+ "version": 1,
+ "language": "th",
+ "aspect": "16:9",
+ "resolution": [
+  1920,
+  1080
+ ],
+ "mobile_viewport": [
+  390,
+  844
+ ],
+ "videos": {
+  "conjoint": "Conjoint Analysis — รู้ว่าลูกค้ายอมแลกอะไรกับอะไร",
+  "brand-health-check": "Brand Health Check — วัดสุขภาพแบรนด์เทียบคู่แข่ง"
+ },
+ "scenes": [
+  {
+   "id": "C1",
+   "video": "conjoint",
+   "title_th": "เปิดเรื่อง",
+   "visual_th": "หน้ารวมเครื่องมือ `/market-research` การ์ด Conjoint",
+   "narration_th": "ถ้าอยากรู้ว่าลูกค้าให้น้ำหนักกับราคา รสชาติ หรือแบรนด์มากแค่ไหน และยอมจ่ายเพิ่มเพื่ออะไร — Conjoint ตอบเรื่องนี้ได้ โดยให้คนเลือกระหว่างสินค้าสมมติ ไม่ใช่ให้ให้คะแนนทีละข้อ",
+   "duration_hint_s": 15,
+   "callouts": [
+    "text=Conjoint"
+   ],
+   "record": {
+    "path": "/market-research",
+    "actions": [
+     [
+      "highlight",
+      "text=Conjoint"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C1.webm",
+    "still": "out/C1.png"
+   }
+  },
+  {
+   "id": "C2",
+   "video": "conjoint",
+   "title_th": "สร้างการศึกษา",
+   "visual_th": "หน้ารายการ → ปุ่มสร้างการศึกษาใหม่",
+   "narration_th": "กดสร้างการศึกษาใหม่ ตั้งชื่อให้รู้ว่าศึกษาอะไร",
+   "duration_hint_s": 6,
+   "callouts": [
+    "[data-testid=conjoint-new-study]"
+   ],
+   "record": {
+    "path": "/market-research/conjoint-analysis",
+    "actions": [
+     [
+      "highlight",
+      "[data-testid=conjoint-new-study]"
+     ],
+     [
+      "wait",
+      2000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C2.webm",
+    "still": "out/C2.png"
+   }
+  },
+  {
+   "id": "C3",
+   "video": "conjoint",
+   "title_th": "กำหนดคุณลักษณะ",
+   "visual_th": "หน้าออกแบบ: ใส่คุณลักษณะ 3–5 ตัว แต่ละตัว 2–4 ระดับ + กล่องคำแนะนำ",
+   "narration_th": "เลือกคุณลักษณะที่ลูกค้าใช้ตัดสินใจจริง 3–5 ตัว เช่น ราคา ขนาด แบรนด์ ถ้าอยากรู้ว่ายอมจ่ายเท่าไร ให้ใส่ราคาเป็นตัวเลข เช่น 39 49 59 บาท ระบบจะบอกจำนวนผู้ตอบที่ควรเก็บให้เองทางขวา",
+   "duration_hint_s": 15,
+   "callouts": [],
+   "record": {
+    "path": "/research/conjoint/{CJ}/design",
+    "actions": [
+     [
+      "scroll",
+      500
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C3.webm",
+    "still": "out/C3.png"
+   }
+  },
+  {
+   "id": "C4",
+   "video": "conjoint",
+   "title_th": "สร้างชุดคำถาม",
+   "visual_th": "ปุ่มสร้าง design → รายการชุดคำถาม",
+   "narration_th": "กดสร้างชุดคำถาม ระบบจัดให้แต่ละชุดเปรียบเทียบกันได้คุ้มที่สุด และสลับลำดับให้ผู้ตอบแต่ละคนอัตโนมัติ",
+   "duration_hint_s": 9,
+   "callouts": [],
+   "record": {
+    "path": "/research/conjoint/{CJ}/design",
+    "actions": [
+     [
+      "scroll",
+      1400
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C4.webm",
+    "still": "out/C4.png"
+   }
+  },
+  {
+   "id": "C5",
+   "video": "conjoint",
+   "title_th": "ตรวจก่อนเผยแพร่",
+   "visual_th": "รายการตรวจก่อนเผยแพร่ → ยืนยัน",
+   "narration_th": "ก่อนเผยแพร่ ระบบให้ตรวจอีกรอบ เพราะ**ห้ามแก้ชุดคำถามหลังเริ่มเก็บข้อมูล** ไม่งั้นคำตอบเดิมจะใช้วิเคราะห์ไม่ได้\"",
+   "duration_hint_s": 12,
+   "callouts": [],
+   "record": {
+    "path": "/research/conjoint/{CJ}/design",
+    "actions": [
+     [
+      "scroll",
+      99999
+     ],
+     [
+      "wait",
+      2000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C5.webm",
+    "still": "out/C5.png"
+   }
+  },
+  {
+   "id": "C6",
+   "video": "conjoint",
+   "title_th": "ส่งลิงก์",
+   "visual_th": "คัดลอกลิงก์ / หน้าตอบบนมือถือ (390px)",
+   "narration_th": "คัดลอกลิงก์ส่งทาง LINE หรือโซเชียล ผู้ตอบเห็นแบบนี้บนมือถือ เลือกตัวเลือกที่ชอบทีละข้อ",
+   "duration_hint_s": 7,
+   "callouts": [],
+   "record": {
+    "path": "/survey/conjoint/{CJ}",
+    "viewport": "mobile",
+    "actions": [
+     [
+      "click?",
+      "[data-testid=start-survey-btn]"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C6.webm",
+    "still": "out/C6.png"
+   }
+  },
+  {
+   "id": "C7",
+   "video": "conjoint",
+   "title_th": "ดูผลภาพรวม",
+   "visual_th": "หน้าผล: สรุปบนสุด + ความสำคัญของคุณลักษณะ",
+   "narration_th": "พอได้ผู้ตอบพอแล้ว เปิดหน้าผล ด้านบนสรุปว่าอะไรสำคัญที่สุดและตัวอย่างพอไหม กราฟนี้คือสัดส่วนที่แต่ละคุณลักษณะมีผลต่อการตัดสินใจ",
+   "duration_hint_s": 11,
+   "callouts": [],
+   "record": {
+    "path": "/research/conjoint/{CJ}/results",
+    "actions": [
+     [
+      "wait",
+      2500
+     ],
+     [
+      "scroll",
+      400
+     ],
+     [
+      "wait",
+      1500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C7.webm",
+    "still": "out/C7.png"
+   }
+  },
+  {
+   "id": "C8",
+   "video": "conjoint",
+   "title_th": "ระดับที่ชอบ",
+   "visual_th": "ตารางคะแนนความชอบรายระดับ",
+   "narration_th": "ตารางนี้บอกว่าในแต่ละคุณลักษณะ ลูกค้าชอบระดับไหนมากกว่ากัน ระดับที่เขียนว่า 'ระดับอ้างอิง' คือจุดเทียบ",
+   "duration_hint_s": 9,
+   "callouts": [],
+   "record": {
+    "path": "/research/conjoint/{CJ}/results",
+    "actions": [
+     [
+      "scroll",
+      1100
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C8.webm",
+    "still": "out/C8.png"
+   }
+  },
+  {
+   "id": "C9",
+   "video": "conjoint",
+   "title_th": "ความเต็มใจจ่าย",
+   "visual_th": "แท็บ ราคา & จำลองตลาด → การ์ด WTP",
+   "narration_th": "ถ้าใส่ราคาเป็นตัวเลข ระบบคำนวณว่าลูกค้ายอมจ่ายเพิ่มเท่าไรเพื่อเปลี่ยนจากระดับหนึ่งไปอีกระดับ พร้อมช่วงความเชื่อมั่น ถ้าคำนวณไม่ได้ ระบบจะบอกเหตุผล",
+   "duration_hint_s": 13,
+   "callouts": [
+    "[data-testid=wtp-card]"
+   ],
+   "record": {
+    "path": "/research/conjoint/{CJ}/results",
+    "actions": [
+     [
+      "click?",
+      "[data-testid=tab-market]"
+     ],
+     [
+      "highlight",
+      "[data-testid=wtp-card]"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C9.webm",
+    "still": "out/C9.png"
+   }
+  },
+  {
+   "id": "C10",
+   "video": "conjoint",
+   "title_th": "จำลองตลาด",
+   "visual_th": "การ์ดจำลองตลาด: ตั้งสินค้า A/B/C → กดคำนวณ",
+   "narration_th": "ลองจับคู่สินค้าของเรากับคู่แข่ง แล้วดูว่าน่าจะได้ส่วนแบ่งความชอบเท่าไร ลองลดราคาหรือเปลี่ยนแพ็กเกจแล้วกดใหม่ได้ทันที",
+   "duration_hint_s": 10,
+   "callouts": [
+    "[data-testid=simulator-card]"
+   ],
+   "record": {
+    "path": "/research/conjoint/{CJ}/results",
+    "actions": [
+     [
+      "click?",
+      "[data-testid=tab-market]"
+     ],
+     [
+      "highlight",
+      "[data-testid=simulator-card]"
+     ],
+     [
+      "click?",
+      "[data-testid=sim-run]"
+     ],
+     [
+      "wait",
+      3000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C10.webm",
+    "still": "out/C10.png"
+   }
+  },
+  {
+   "id": "C11",
+   "video": "conjoint",
+   "title_th": "คุณภาพข้อมูล",
+   "visual_th": "การ์ดคุณภาพข้อมูล",
+   "narration_th": "ก่อนเชื่อผล ดูการ์ดนี้ ถ้าผู้ตอบจำนวนมากถูกทำเครื่องหมายว่าคำตอบซ้ำกันผิดธรรมชาติ แปลว่าอาจมีคนส่งซ้ำ ต้องตรวจก่อนนำผลไปใช้",
+   "duration_hint_s": 11,
+   "callouts": [
+    "[data-testid=data-quality-card]"
+   ],
+   "record": {
+    "path": "/research/conjoint/{CJ}/results",
+    "actions": [
+     [
+      "highlight",
+      "[data-testid=data-quality-card]"
+     ],
+     [
+      "wait",
+      3000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C11.webm",
+    "still": "out/C11.png"
+   }
+  },
+  {
+   "id": "C12",
+   "video": "conjoint",
+   "title_th": "ตีความด้วย AI ของตัวเอง",
+   "visual_th": "ปุ่ม AI → กล่อง \"ใช้ AI ของฉันเอง\" ขั้น 1 คัดลอก → ขั้น 2 วางผล",
+   "narration_th": "อยากได้สรุปเป็นภาษาคน กดปุ่ม AI คัดลอก prompt ไปวางใน ChatGPT หรือ Gemini แล้วเอาคำตอบกลับมาวาง ระบบเก็บไว้พร้อมบอกว่าเขียนโดย AI ตัวไหน",
+   "duration_hint_s": 11,
+   "callouts": [],
+   "record": {
+    "path": "/research/conjoint/{CJ}/results",
+    "actions": [
+     [
+      "click?",
+      "[data-testid=ai-interpret-btn]"
+     ],
+     [
+      "wait",
+      2500
+     ],
+     [
+      "click?",
+      "[data-testid=external-ai-next]"
+     ],
+     [
+      "wait",
+      2000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C12.webm",
+    "still": "out/C12.png"
+   }
+  },
+  {
+   "id": "C13",
+   "video": "conjoint",
+   "title_th": "ส่งออกข้อมูล",
+   "visual_th": "ปุ่มส่งออก → Excel",
+   "narration_th": "ดาวน์โหลดข้อมูลเป็น Excel ไปทำกราฟหรือวิเคราะห์ต่อได้",
+   "duration_hint_s": 6,
+   "callouts": [],
+   "record": {
+    "path": "/research/conjoint/{CJ}/results",
+    "actions": [
+     [
+      "click?",
+      "[data-testid=export-long-btn]"
+     ],
+     [
+      "wait",
+      2000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C13.webm",
+    "still": "out/C13.png"
+   }
+  },
+  {
+   "id": "C14",
+   "video": "conjoint",
+   "title_th": "ปิดท้าย",
+   "visual_th": "สรุป 3 บรรทัด",
+   "narration_th": "สรุป: เลือกคุณลักษณะให้ตรงการตัดสินใจจริง · อย่าแก้หลังเริ่มเก็บ · ดูคุณภาพข้อมูลก่อนเชื่อผล",
+   "duration_hint_s": 8,
+   "callouts": [],
+   "record": {
+    "path": "/market-research",
+    "actions": [
+     [
+      "wait",
+      2000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/C14.webm",
+    "still": "out/C14.png"
+   }
+  },
+  {
+   "id": "B1",
+   "video": "brand-health-check",
+   "title_th": "เปิดเรื่อง",
+   "visual_th": "การ์ด Brand Health Check ในหน้ารวม",
+   "narration_th": "อยากรู้ว่าแบรนด์เราแข็งแรงแค่ไหน คนรู้จักไหม คิดว่าคุณภาพดีไหม ภาพในใจตรงกับที่เราตั้งใจไหม และจะกลับมาซื้อไหม — เครื่องมือนี้วัด 4 ด้านนี้พร้อมเทียบคู่แข่ง",
+   "duration_hint_s": 13,
+   "callouts": [
+    "text=Brand Health Check"
+   ],
+   "record": {
+    "path": "/market-research",
+    "actions": [
+     [
+      "highlight",
+      "text=Brand Health Check"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B1.webm",
+    "still": "out/B1.png"
+   }
+  },
+  {
+   "id": "B2",
+   "video": "brand-health-check",
+   "title_th": "ตั้งค่าแบรนด์",
+   "visual_th": "Wizard: ชื่อแบรนด์ หมวดสินค้า",
+   "narration_th": "ใส่ชื่อแบรนด์และหมวดสินค้า",
+   "duration_hint_s": 6,
+   "callouts": [
+    "[data-testid=be-wizard-brand-name]"
+   ],
+   "record": {
+    "path": "/brand-equity/new",
+    "actions": [
+     [
+      "highlight",
+      "[data-testid=be-wizard-brand-name]"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B2.webm",
+    "still": "out/B2.png"
+   }
+  },
+  {
+   "id": "B3",
+   "video": "brand-health-check",
+   "title_th": "ใส่คู่แข่ง",
+   "visual_th": "เพิ่มคู่แข่ง 2–3 ราย",
+   "narration_th": "ใส่คู่แข่งหลัก 2–3 ราย ผลจะเทียบแบรนด์เรากับแต่ละราย",
+   "duration_hint_s": 6,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/new",
+    "actions": [
+     [
+      "scroll",
+      600
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B3.webm",
+    "still": "out/B3.png"
+   }
+  },
+  {
+   "id": "B4",
+   "video": "brand-health-check",
+   "title_th": "อัตลักษณ์ที่ตั้งใจ",
+   "visual_th": "ช่องบุคลิกแบรนด์ที่ตั้งใจ",
+   "narration_th": "บอกว่าอยากให้คนมองแบรนด์เราแบบไหน ระบบจะเทียบกับสิ่งที่ผู้ตอบรู้สึกจริง ขั้นนี้ใช้ AI ช่วยได้ แต่ไม่บังคับ",
+   "duration_hint_s": 9,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/new",
+    "actions": [
+     [
+      "click?",
+      "[data-testid=be-wizard-next]"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B4.webm",
+    "still": "out/B4.png"
+   }
+  },
+  {
+   "id": "B5",
+   "video": "brand-health-check",
+   "title_th": "สร้างแบบสอบถาม",
+   "visual_th": "ปุ่มสร้างแบบสอบถาม → ตัวอย่างคำถาม",
+   "narration_th": "กดสร้างแบบสอบถาม ระบบใช้ชุดคำถามมาตรฐานด้าน brand equity ปรับตามแบรนด์ของเรา",
+   "duration_hint_s": 7,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/studies/{BE}/edit",
+    "actions": [
+     [
+      "scroll",
+      800
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B5.webm",
+    "still": "out/B5.png"
+   }
+  },
+  {
+   "id": "B6",
+   "video": "brand-health-check",
+   "title_th": "เปิดเก็บข้อมูล",
+   "visual_th": "ปุ่มเปิดใช้ → ลิงก์",
+   "narration_th": "เปิดเก็บข้อมูลแล้วส่งลิงก์",
+   "duration_hint_s": 6,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity",
+    "actions": [
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B6.webm",
+    "still": "out/B6.png"
+   }
+  },
+  {
+   "id": "B7",
+   "video": "brand-health-check",
+   "title_th": "มุมผู้ตอบ",
+   "visual_th": "หน้าตอบบนมือถือ รวมสเกล 7 ระดับ",
+   "narration_th": "ผู้ตอบทำบนมือถือได้สะดวก ใช้เวลาไม่กี่นาที",
+   "duration_hint_s": 6,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/respond/{BE_TOKEN}",
+    "viewport": "mobile",
+    "actions": [
+     [
+      "click?",
+      "[data-testid=be-respondent-start]"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B7.webm",
+    "still": "out/B7.png"
+   }
+  },
+  {
+   "id": "B8",
+   "video": "brand-health-check",
+   "title_th": "อ่านคะแนนรวม",
+   "visual_th": "แดชบอร์ด: วงคะแนน + 4 มิติ + การ์ดสรุป 3 ใบ",
+   "narration_th": "คะแนนรวมเต็ม 100 พร้อม 4 มิติ การ์ดด้านล่างบอกว่าแข็งตรงไหน อ่อนตรงไหน ตัวอย่างพอหรือยัง และควรทำอะไรต่อ",
+   "duration_hint_s": 9,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/studies/{BE}",
+    "actions": [
+     [
+      "wait",
+      3000
+     ],
+     [
+      "scroll",
+      500
+     ],
+     [
+      "wait",
+      2000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B8.webm",
+    "still": "out/B8.png"
+   }
+  },
+  {
+   "id": "B9",
+   "video": "brand-health-check",
+   "title_th": "เทียบคู่แข่ง",
+   "visual_th": "ตารางเทียบคู่แข่ง",
+   "narration_th": "ตารางนี้เทียบเรากับคู่แข่งทีละข้อ บอกว่าต่างกันจริงหรือแค่บังเอิญ",
+   "duration_hint_s": 6,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/studies/{BE}",
+    "actions": [
+     [
+      "find-scroll",
+      "text=คู่แข่ง"
+     ],
+     [
+      "wait",
+      3000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B9.webm",
+    "still": "out/B9.png"
+   }
+  },
+  {
+   "id": "B10",
+   "video": "brand-health-check",
+   "title_th": "คำตอบปลายเปิด",
+   "visual_th": "ส่วนเข้ารหัส: 3 ทางเลือก",
+   "narration_th": "คำตอบที่ผู้ตอบพิมพ์เอง จัดกลุ่มได้ 3 ทาง: ใช้ AI ของคุณเอง, ดาวน์โหลดไปจัดกลุ่มในสเปรดชีตแล้วอัปโหลดกลับ หรือใช้ AI ของระบบถ้าเปิดไว้",
+   "duration_hint_s": 11,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/studies/{BE}",
+    "actions": [
+     [
+      "find-scroll",
+      "text=เข้ารหัส"
+     ],
+     [
+      "wait",
+      3000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B10.webm",
+    "still": "out/B10.png"
+   }
+  },
+  {
+   "id": "B11",
+   "video": "brand-health-check",
+   "title_th": "คุณภาพข้อมูล",
+   "visual_th": "สวิตช์ตัดผู้ตอบที่น่าสงสัย",
+   "narration_th": "เปิดสวิตช์นี้เพื่อดูผลเมื่อตัดคนที่ตอบเร็วผิดปกติหรือตอบเหมือนกันทุกข้อ ถ้าผลเปลี่ยนมาก ต้องระวัง",
+   "duration_hint_s": 9,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/studies/{BE}",
+    "actions": [
+     [
+      "find-scroll",
+      "text=คุณภาพข้อมูล"
+     ],
+     [
+      "wait",
+      3000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B11.webm",
+    "still": "out/B11.png"
+   }
+  },
+  {
+   "id": "B12",
+   "video": "brand-health-check",
+   "title_th": "กรองกลุ่ม",
+   "visual_th": "แถบตัวกรองช่วงเวลา/กลุ่ม",
+   "narration_th": "กรองดูเฉพาะกลุ่ม เช่น อายุหรือช่วงเวลา แต่ถ้ากลุ่มเล็กเกินไป ตัวเลขจะเหวี่ยง",
+   "duration_hint_s": 7,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/studies/{BE}",
+    "actions": [
+     [
+      "scroll",
+      0
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B12.webm",
+    "still": "out/B12.png"
+   }
+  },
+  {
+   "id": "B13",
+   "video": "brand-health-check",
+   "title_th": "ส่งออก",
+   "visual_th": "ปุ่มส่งออกข้อมูลดิบ",
+   "narration_th": "ดาวน์โหลดข้อมูลดิบเป็น Excel พร้อมคำอธิบายตัวแปร",
+   "duration_hint_s": 6,
+   "callouts": [],
+   "record": {
+    "path": "/brand-equity/studies/{BE}",
+    "actions": [
+     [
+      "find-scroll",
+      "text=ส่งออก"
+     ],
+     [
+      "wait",
+      2500
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B13.webm",
+    "still": "out/B13.png"
+   }
+  },
+  {
+   "id": "B14",
+   "video": "brand-health-check",
+   "title_th": "ปิดท้าย",
+   "visual_th": "สรุป 3 บรรทัด",
+   "narration_th": "สรุป: เลือกคู่แข่งที่ลูกค้าเทียบจริง · เก็บให้ได้อย่างน้อย 100 คน · ดูคุณภาพข้อมูลก่อนสรุป",
+   "duration_hint_s": 8,
+   "callouts": [],
+   "record": {
+    "path": "/market-research",
+    "actions": [
+     [
+      "wait",
+      2000
+     ]
+    ]
+   },
+   "media": {
+    "video": "out/B14.webm",
+    "still": "out/B14.png"
+   }
+  }
+ ]
+}
