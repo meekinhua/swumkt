@@ -231,9 +231,13 @@ def render_thesis_docx(
     _eyebrow(doc, "02 · METHODOLOGY")
     _h(doc, "Conceptual framework", level=1)
     _p(doc,
-       "This study operationalizes Aaker's customer-based brand equity model (Aaker, "
-       "1991, 1996) integrated with Keller's CBBE pyramid (Keller, 1993) and "
-       "Reichheld's Net Promoter Score (Reichheld, 2003). Composite scores per "
+       "This study operationalizes four of Aaker's brand-equity asset categories — "
+       "awareness, perceived quality, brand associations (measured as identity vs "
+       "image through Aaker's brand-as-product/organization/person/symbol "
+       "perspectives) and loyalty (Aaker, 1991, 1996) — informed by Keller's (1993) "
+       "customer-based brand equity conceptualization, with Reichheld's (2003) Net "
+       "Promoter Score as one loyalty indicator. Loyalty is measured attitudinally "
+       "(intentions), not from purchase behaviour. Composite scores per "
        "dimension use kind-aware weighted aggregation: every question on the "
        "instrument is mapped to a signal kind and assigned a theoretically "
        "informed weight; weights renormalize over signals that are present so a "

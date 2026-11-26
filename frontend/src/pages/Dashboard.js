@@ -356,6 +356,9 @@ const Dashboard = () => {
                     {group.assignments.slice(0, 3).map((assignment) => (
                       <div
                         key={assignment.id}
+                        role="link"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/content/${assignment.id}`); }}
                         onClick={() => navigate(`/content/${assignment.id}`)}
                         className="flex items-center justify-between p-3 bg-gray-50 hover:bg-purple-50 rounded-lg cursor-pointer border border-gray-200 hover:border-purple-300 transition-all"
                       >
@@ -453,6 +456,9 @@ const Dashboard = () => {
                       <div className="flex justify-between items-start gap-2 sm:gap-4">
                         <div 
                           className="flex-1 cursor-pointer min-w-0"
+                          role="link"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/content/${content.id}`); }}
                           onClick={() => navigate(`/content/${content.id}`)}
                         >
                           <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 truncate">{content.title}</h3>
@@ -478,6 +484,7 @@ const Dashboard = () => {
                             setShowDeleteConfirm(true);
                           }}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 p-2"
+                          aria-label={`ลบเนื้อหา ${content.title}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
