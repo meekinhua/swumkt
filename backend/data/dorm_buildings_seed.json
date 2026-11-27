@@ -1913,5 +1913,299 @@
     "web_review_sources": [
       "Renthub"
     ]
+  },
+  {
+    "slug": "trakoonsuk-asoke-dindaeng",
+    "name": "ตระกูลสุข อพาร์ทเม้นท์ (อโศก-ดินแดง)",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 22,
+    "travel_mode": "bus",
+    "transit": "ถนนอโศก-ดินแดง ต่อ MRT พระราม 9 หรือรถเมล์เข้าอโศก",
+    "pros": [
+      "ติดถนนใหญ่ เดินทางสะดวก ใกล้เซ็นทรัลพระราม 9 และฟอร์จูน",
+      "ห้องแอร์ราคาประหยัดมากสำหรับนิสิต (4,600 บ.)"
+    ],
+    "cons": [
+      "ต้องต่อรถเมล์/MRT/วินไป มศว"
+    ],
+    "price_seen": "4,600 บาท/เดือน",
+    "aliases": [
+      "ตระกูลสุข อพาร์ทเม้นท์ (อโศก-ดินแดง)"
+    ],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202507/20250707/gvheQUGaZ1HvKdYveypF.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ตระกูลสุข-ap-ห้องแอร์ติดถนนใหญ่-ราคามิตรภาพ-ใกล้-เซ็นทรัลพระราม9-lotus-ฟอร์จูนทาวน์-กรมแรงงาน",
+        "bytes": 221812
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202507/20250707/J15HBRvPXDo6RWjqhYw3.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ตระกูลสุข-ap-ห้องแอร์ติดถนนใหญ่-ราคามิตรภาพ-ใกล้-เซ็นทรัลพระราม9-lotus-ฟอร์จูนทาวน์-กรมแรงงาน",
+        "bytes": 224992
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202507/20250707/7oamCd5zohgxU5GaMwfS.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ตระกูลสุข-ap-ห้องแอร์ติดถนนใหญ่-ราคามิตรภาพ-ใกล้-เซ็นทรัลพระราม9-lotus-ฟอร์จูนทาวน์-กรมแรงงาน",
+        "bytes": 187021
+      }
+    ],
+    "official_url": "https://www.renthub.in.th/ตระกูลสุข-ap-ห้องแอร์ติดถนนใหญ่-ราคามิตรภาพ-ใกล้-เซ็นทรัลพระราม9-lotus-ฟอร์จูนทาวน์-กรมแรงงาน",
+    "web_review_summary": "ข้อมูลประกาศจาก Renthub ราคา 4,600 บาท/เดือน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "rungrueng-apartment-dindaeng",
+    "name": "รุ่งเรือง อพาร์ทเม้นท์ ดินแดง",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 24,
+    "travel_mode": "moto",
+    "transit": "ย่านดินแดง ใกล้อนุสาวรีย์ชัยฯ และ MRT พระราม 9",
+    "pros": [
+      "ค่าเช่าประหยัดมาก เหมาะกับนิสิตคุมงบ",
+      "ใกล้แหล่งของกินตลาดดินแดง"
+    ],
+    "cons": [
+      "ห้องขนาดกะทัดรัด เดินทางไปมอด้วยวินหรือรถเมล์"
+    ],
+    "price_seen": "3,200 บาท/เดือน",
+    "aliases": [
+      "รุ่งเรือง อพาร์ทเม้นท์ ดินแดง"
+    ],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210121/74o4K8N66qFNc9rCXCi2.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/รุ่งเรือง-อพาร์ทเม้นท์",
+        "bytes": 74729
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210121/DTNMbaojSrFKQDVHrv1r.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/รุ่งเรือง-อพาร์ทเม้นท์",
+        "bytes": 56162
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210121/rYhz7ZD6oYjayC4TapLE.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/รุ่งเรือง-อพาร์ทเม้นท์",
+        "bytes": 54402
+      }
+    ],
+    "official_url": "https://www.renthub.in.th/รุ่งเรือง-อพาร์ทเม้นท์",
+    "web_review_summary": "ข้อมูลประกาศจาก Renthub ราคา 3,200 บาท/เดือน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "the-key-point-prachasongkhro",
+    "name": "The Key Point ประชาสงเคราะห์",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 20,
+    "travel_mode": "mrt",
+    "transit": "ซอยประชาสงเคราะห์ เชื่อม MRT ห้วยขวาง / ศูนย์วัฒนธรรม / พระราม 9",
+    "pros": [
+      "มีทั้งแบบ 1 ห้องนอนและ 2 ห้องนอน (เหมาะหารเมท)",
+      "ห้องใหญ่สไตล์คอนโด สภาพใหม่"
+    ],
+    "cons": [
+      "อยู่ในซอย ต้องต่อวินไปขึ้น MRT"
+    ],
+    "price_seen": "8,000–18,000 บาท/เดือน",
+    "aliases": [
+      "The Key Point ประชาสงเคราะห์"
+    ],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210114/i63tJpX1uxH6DJ84GLNZ.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/the-key-point",
+        "bytes": 58488
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210114/A4Sy2jqxJXtPupLWYD8z.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/the-key-point",
+        "bytes": 63446
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210114/UPBXczyc1hYL8zybpjwi.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/the-key-point",
+        "bytes": 42438
+      }
+    ],
+    "official_url": "https://www.renthub.in.th/the-key-point",
+    "web_review_summary": "ข้อมูลประกาศจาก Renthub ราคา 8,000–18,000 บาท/เดือน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "santi-tower-mansion-dindaeng",
+    "name": "สันติ ทาวเวอร์ แมนชั่น (ดินแดง)",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 22,
+    "travel_mode": "bus",
+    "transit": "ย่านดินแดง เชื่อมอนุสาวรีย์ฯ ห้วยขวาง และพระราม 9",
+    "pros": [
+      "ห้อง 30 ตร.ม. แยกสัดส่วนครัว-ห้องน้ำชัดเจน มีอ่างอาบน้ำ",
+      "ใกล้ถนนใหญ่และแหล่งของกินดินแดง"
+    ],
+    "cons": [
+      "ต้องต่อรถเข้าซอยอโศกหรือ MRT พระราม 9"
+    ],
+    "price_seen": "6,900–7,300 บาท/เดือน",
+    "aliases": [
+      "สันติ ทาวเวอร์ แมนชั่น (ดินแดง)"
+    ],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202001/20200106/bBraqdwLpxpKweXyTuk2.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/สันติ-ทาวเวอร์-แมนชั่น-อพาร์ทเม้นท์เปิดใหม่ย่านดินแดง-ใกล้อนุสาวรีย์ชัยฯ-ห้วยขวาง-สุทธิสาร-วิภาวดี",
+        "bytes": 52350
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202001/20200106/3GmY9EJ8HAoXCjsyeoSK.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/สันติ-ทาวเวอร์-แมนชั่น-อพาร์ทเม้นท์เปิดใหม่ย่านดินแดง-ใกล้อนุสาวรีย์ชัยฯ-ห้วยขวาง-สุทธิสาร-วิภาวดี",
+        "bytes": 49148
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202001/20200106/tPhzYEoaP6fscKqBcJbd.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/สันติ-ทาวเวอร์-แมนชั่น-อพาร์ทเม้นท์เปิดใหม่ย่านดินแดง-ใกล้อนุสาวรีย์ชัยฯ-ห้วยขวาง-สุทธิสาร-วิภาวดี",
+        "bytes": 46456
+      }
+    ],
+    "official_url": "https://www.renthub.in.th/สันติ-ทาวเวอร์-แมนชั่น-อพาร์ทเม้นท์เปิดใหม่ย่านดินแดง-ใกล้อนุสาวรีย์ชัยฯ-ห้วยขวาง-สุทธิสาร-วิภาวดี",
+    "web_review_summary": "ข้อมูลประกาศจาก Renthub ราคา 6,900–7,300 บาท/เดือน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "sapnapa-sukhumvit36",
+    "name": "ทรัพย์นภา อพาร์ทเม้นท์ (สุขุมวิท 36)",
+    "type": "apartment",
+    "zone": "other",
+    "walk_to_swu": false,
+    "minutes_to_swu": 22,
+    "travel_mode": "mrt",
+    "transit": "ใกล้ BTS ทองหล่อ ต่อ BTS/MRT มาอโศก-เพชรบุรี",
+    "pros": [
+      "เดินไป BTS ทองหล่อได้ในซอยสุขุมวิท 36",
+      "มีลิฟต์และระบบคีย์การ์ดปลอดภัย"
+    ],
+    "cons": [
+      "ต้องต่อรถไฟฟ้า 2 สถานีมาลงอโศกแล้วเดินต่อ"
+    ],
+    "price_seen": "7,200 บาท/เดือน",
+    "aliases": [
+      "ทรัพย์นภา อพาร์ทเม้นท์ (สุขุมวิท 36)"
+    ],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202403/20240322/JGrrSbB2gAQD1UHZoKaq.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ทรัพย์นภา-สุขุมวิท-36-ทองหล่อ-bts-thong-lo",
+        "bytes": 144486
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202403/20240322/ppzVMz7Ud1fHWtc41orz.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ทรัพย์นภา-สุขุมวิท-36-ทองหล่อ-bts-thong-lo",
+        "bytes": 227145
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202403/20240322/tM3xxTbfPNpvWqGm8HS6.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ทรัพย์นภา-สุขุมวิท-36-ทองหล่อ-bts-thong-lo",
+        "bytes": 140005
+      }
+    ],
+    "official_url": "https://www.renthub.in.th/ทรัพย์นภา-สุขุมวิท-36-ทองหล่อ-bts-thong-lo",
+    "web_review_summary": "ข้อมูลประกาศจาก Renthub ราคา 7,200 บาท/เดือน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "iris-apartment-phetchaburi",
+    "name": "ไอริส อพาร์ทเม้นท์ (ถนนเพชรบุรี)",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "bus",
+    "transit": "ติดถนนเพชรบุรี ใกล้ ARL พญาไท-ราชปรารภ และประตูน้ำ นั่งเรือ/รถเมล์มา มศว สะดวก",
+    "pros": [
+      "อยู่บนแนวถนนเพชรบุรี นั่งรถเมล์หรือเรือคลองแสนแสบตรงถึง มศว",
+      "ราคา 6,900 บาทกลางเมือง"
+    ],
+    "cons": [
+      "รถติดช่วงเร่งด่วนบนถนนเพชรบุรี"
+    ],
+    "price_seen": "6,900 บาท/เดือน",
+    "aliases": [
+      "ไอริส อพาร์ทเม้นท์ (ถนนเพชรบุรี)"
+    ],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201609/20160912/FXyPMBEmngFKWCFSN3Fb.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ไอริส-อพาร์ทเม้นท์",
+        "bytes": 40654
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201609/20160912/ned5UNhASUkCfmgtwyrj.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ไอริส-อพาร์ทเม้นท์",
+        "bytes": 42973
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201609/20160912/p71fYn1nq7HQNKLeHgvC.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/ไอริส-อพาร์ทเม้นท์",
+        "bytes": 62685
+      }
+    ],
+    "official_url": "https://www.renthub.in.th/ไอริส-อพาร์ทเม้นท์",
+    "web_review_summary": "ข้อมูลประกาศจาก Renthub ราคา 6,900 บาท/เดือน",
+    "web_review_sources": [
+      "Renthub"
+    ]
   }
 ]
