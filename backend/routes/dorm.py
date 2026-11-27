@@ -56,6 +56,7 @@ NATIVE_GONE_AUTO_PAUSE = 3
 NATIVE_GONE_GRACE_HOURS = 48
 ARCHIVE_VISIBLE_DAYS = 90
 MAX_ACTIVE_LISTINGS = 5
+MAX_CHAT_MSGS_PER_MIN = 30
 ADMIN_CLOSED_MSG = "แอดมินปิดประกาศนี้ไว้ เปิดเองไม่ได้ ถ้าคิดว่าปิดผิด แจ้งแอดมินในกลุ่ม OpenChat ได้"
 AUTO_MOD_CLOSED_MSG = "ประกาศถูกพักชั่วคราวเนื่องจากมีผู้รายงานหลายคน หากคิดว่าผิดพลาด แจ้งแอดมินเพื่อตรวจสอบและเปิดคืนได้"
 DEFAULT_GOOGLE_CLIENT_ID = "949663376782-cd9128nvekdavpu09mko30rfn9c2kre4.apps.googleusercontent.com"
@@ -1510,6 +1511,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             await db.dorm_threads.create_index("pair_key", unique=True)
             await db.dorm_threads.create_index([("participants", 1), ("last_at", -1)])
             await db.dorm_messages.create_index([("thread_id", 1), ("created_at", 1)])
+            await db.dorm_messages.create_index([("sender_id", 1), ("created_at", -1)])
             await db.dorm_interests.create_index("mate_id")
             await db.dorm_peeks.create_index([("listing_id", 1), ("anon_id", 1)], unique=True)
             await db.dorm_gone_signals.create_index([("listing_id", 1), ("actor_key", 1)], unique=True)
@@ -2761,9 +2763,26 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             })
         return out
 
+    async def _latest_messages(tid: str, me_id: str, limit: int = 100) -> List[dict]:
+        msgs = await db.dorm_messages.find({"thread_id": tid}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+        msgs.reverse()
+        for mdoc in msgs:
+            mdoc["is_mine"] = mdoc["sender_id"] == me_id
+            mdoc.pop("sender_id", None)
+        return msgs
+
+    async def _check_chat_rate(u) -> None:
+        if _is_admin(u):
+            return
+        since = _iso(_now() - timedelta(minutes=1))
+        n = await db.dorm_messages.count_documents({"sender_id": u.id, "created_at": {"$gte": since}})
+        if n >= MAX_CHAT_MSGS_PER_MIN:
+            raise HTTPException(429, "ส่งข้อความเร็วเกินไป กรุณารอสักครู่แล้วลองใหม่")
+
     @dorm_router.post("/threads")
     async def start_thread(body: ThreadStartIn, u=Depends(get_current_user)):
         await _ensure()
+        mate_live_ok = True
         if body.target_type == "listing":
             x = await db.dorm_listings.find_one({"id": body.target_id}, {"_id": 0})
             if not x:
@@ -2779,6 +2798,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             m = await db.dorm_mates.find_one({"id": body.target_id}, {"_id": 0})
             if not m:
                 raise HTTPException(404, "ไม่พบโปรไฟล์นี้")
+            mate_live_ok = _mate_live(m)
             other_id = m.get("user_id") or ""
             ctx_title = m.get("display_name") or "โปรไฟล์หาเมท"
             ctx_link = f"/dorm/mates?focus={m['id']}"
@@ -2790,11 +2810,22 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         if not other_id or other_id == u.id:
             raise HTTPException(400, "ส่งข้อความหาตัวเองไม่ได้")
         pair = sorted([u.id, other_id])
-        ctx_key = f"mate:{body.target_id}:{body.room_id}" if (body.target_type == "mate" and body.room_id) else f"{body.target_type}:{body.target_id}"
-        pair_key = f"{pair[0]}:{pair[1]}:{ctx_key}"
+        if body.target_type == "mate":
+            ctx_key = f"mate_room:{body.room_id}" if body.room_id else "mate"
+            pair_key = f"{pair[0]}:{pair[1]}:{ctx_key}"
+            suffix = f":{body.room_id}" if body.room_id else ""
+            candidate_keys = [pair_key, f"{pair[0]}:{pair[1]}:mate:{body.target_id}{suffix}"]
+            my_m = await _my_mate(u)
+            if my_m and my_m.get("id"):
+                candidate_keys.append(f"{pair[0]}:{pair[1]}:mate:{my_m['id']}{suffix}")
+        else:
+            pair_key = f"{pair[0]}:{pair[1]}:listing:{body.target_id}"
+            candidate_keys = [pair_key]
         now = _iso(_now())
-        t = await db.dorm_threads.find_one({"pair_key": pair_key}, {"_id": 0})
+        t = await db.dorm_threads.find_one({"pair_key": {"$in": candidate_keys}}, {"_id": 0})
         if not t:
+            if body.target_type == "mate" and not mate_live_ok:
+                raise HTTPException(410, "โปรไฟล์นี้ปิดหรือหมดอายุแล้ว")
             t = {
                 "id": uuid.uuid4().hex[:12], "pair_key": pair_key, "participants": pair,
                 "context_type": body.target_type, "context_id": body.target_id,
@@ -2809,6 +2840,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                     raise
                 t = await db.dorm_threads.find_one({"pair_key": pair_key}, {"_id": 0}) or t
         if body.message:
+            await _check_chat_rate(u)
             msg = {"id": uuid.uuid4().hex[:12], "thread_id": t["id"], "sender_id": u.id,
                    "body": body.message, "kind": "text", "created_at": now}
             await db.dorm_messages.insert_one(dict(msg))
@@ -2817,17 +2849,14 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 {"$set": {"last_message": body.message[:140], "last_sender_id": u.id, "last_at": now, f"read_at.{u.id}": now}},
             )
             t.update({"last_message": body.message[:140], "last_sender_id": u.id, "last_at": now})
-            # Log a deduplicated lead event just like /contact
+            # Log a deduplicated lead event consistent with /contact
             ev_type = "contact_listing" if body.target_type == "listing" else "contact_mate"
-            seen = await db.dorm_events.find_one({"type": ev_type, "target_id": body.target_id, "viewer_id": u.id})
+            seen = await db.dorm_events.find_one({"type": ev_type, "target_id": body.target_id, "user_id": u.id})
             if not seen:
-                await db.dorm_events.insert_one({"type": ev_type, "target_id": body.target_id, "viewer_id": u.id, "at": now})
+                await db.dorm_events.insert_one({"type": ev_type, "target_id": body.target_id, "user_id": u.id, "at": now})
                 coll = db.dorm_listings if body.target_type == "listing" else db.dorm_mates
                 await coll.update_one({"id": body.target_id}, {"$inc": {"contact_reveals": 1}})
-        msgs = await db.dorm_messages.find({"thread_id": t["id"]}, {"_id": 0}).sort("created_at", 1).to_list(100)
-        for mdoc in msgs:
-            mdoc["is_mine"] = mdoc["sender_id"] == u.id
-            mdoc.pop("sender_id", None)
+        msgs = await _latest_messages(t["id"], u.id)
         dec = (await _decorate_threads([t], u.id))[0]
         return {"thread": dec, "messages": msgs, "my_line": await _my_line_id(u.id)}
 
@@ -2855,10 +2884,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         now = _iso(_now())
         await db.dorm_threads.update_one({"id": tid}, {"$set": {f"read_at.{u.id}": now}})
         t.setdefault("read_at", {})[u.id] = now
-        msgs = await db.dorm_messages.find({"thread_id": tid}, {"_id": 0}).sort("created_at", 1).to_list(100)
-        for mdoc in msgs:
-            mdoc["is_mine"] = mdoc["sender_id"] == u.id
-            mdoc.pop("sender_id", None)
+        msgs = await _latest_messages(tid, u.id)
         dec = (await _decorate_threads([t], u.id))[0]
         return {"thread": dec, "messages": msgs, "my_line": await _my_line_id(u.id)}
 
@@ -2870,6 +2896,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             raise HTTPException(404, "ไม่พบห้องแชทนี้")
         if u.id not in t.get("participants", []):
             raise HTTPException(403, "ไม่มีสิทธิ์ส่งข้อความในห้องแชทนี้")
+        await _check_chat_rate(u)
         now = _iso(_now())
         msg = {"id": uuid.uuid4().hex[:12], "thread_id": tid, "sender_id": u.id,
                "body": body.body, "kind": body.kind, "created_at": now}
@@ -2892,9 +2919,9 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         # First message in a thread also counts as a lead for the target owner
         if not t.get("last_message"):
             ev_type = "contact_listing" if t["context_type"] == "listing" else "contact_mate"
-            seen = await db.dorm_events.find_one({"type": ev_type, "target_id": t["context_id"], "viewer_id": u.id})
+            seen = await db.dorm_events.find_one({"type": ev_type, "target_id": t["context_id"], "user_id": u.id})
             if not seen:
-                await db.dorm_events.insert_one({"type": ev_type, "target_id": t["context_id"], "viewer_id": u.id, "at": now})
+                await db.dorm_events.insert_one({"type": ev_type, "target_id": t["context_id"], "user_id": u.id, "at": now})
                 coll = db.dorm_listings if t["context_type"] == "listing" else db.dorm_mates
                 await coll.update_one({"id": t["context_id"]}, {"$inc": {"contact_reveals": 1}})
         msg["is_mine"] = True

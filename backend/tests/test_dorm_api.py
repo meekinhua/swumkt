@@ -1339,3 +1339,77 @@ def test_auto_resolve_gone_and_deleted_reports_and_crowd_auto_moderation_with_un
         client.close()
 
 
+def test_chat_fixes_latest_100_bidirectional_dedup_closed_mate_and_rate_limit(ctx):
+    from pymongo import MongoClient
+    from datetime import datetime, timedelta, timezone
+
+    # 1) Create two open mate profiles and test A -> B vs B -> A deduplication (plain + room_id)
+    u_x, u_y = _register("แชท X"), _register("แชท Y")
+    mate_base = {
+        "gender": "female", "mate_gender_pref": "any", "year": "2", "faculty": "บริหาร",
+        "budget_min": 4000, "budget_max": 7000, "zones": ["asoke"], "move_in": "2026-12",
+        "has_room": False, "tags": [], "about": "", "contact_line": "line_xy", "consent": True,
+    }
+    mx = requests.put(f"{BASE}/dorm/mates/me", headers=u_x, json={**mate_base, "display_name": "เอ็กซ์"}).json()["profile"]
+    my = requests.put(f"{BASE}/dorm/mates/me", headers=u_y, json={**mate_base, "display_name": "วาย"}).json()["profile"]
+    ext_room_id = requests.get(f"{BASE}/dorm/listings", params={"limit": 1}).json()["items"][0]["id"]
+
+    client = MongoClient(os.environ.get("MONGO_URL", "mongodb://localhost:27017"))
+    mdb = client[os.environ.get("DB_NAME", "swumkt_dev")]
+    created_tids = []
+    try:
+        t_ab = requests.post(f"{BASE}/dorm/threads", headers=u_x, json={"target_type": "mate", "target_id": my["id"], "message": "ทักจาก X"}).json()["thread"]
+        t_ba = requests.post(f"{BASE}/dorm/threads", headers=u_y, json={"target_type": "mate", "target_id": mx["id"]}).json()["thread"]
+        created_tids.append(t_ab["id"])
+        assert t_ab["id"] == t_ba["id"]
+
+        tr_ab = requests.post(f"{BASE}/dorm/threads", headers=u_x, json={"target_type": "mate", "target_id": my["id"], "room_id": ext_room_id, "message": "ทักห้องเดียวกัน"}).json()["thread"]
+        tr_ba = requests.post(f"{BASE}/dorm/threads", headers=u_y, json={"target_type": "mate", "target_id": mx["id"], "room_id": ext_room_id}).json()["thread"]
+        created_tids.append(tr_ab["id"])
+        assert tr_ab["id"] == tr_ba["id"] and tr_ab["id"] != t_ab["id"]
+
+        # 2) Latest 100 messages returned chronologically when > 100 messages exist
+        uid_x = requests.get(f"{BASE}/auth/me", headers=u_x).json()["id"]
+        base_dt = datetime.now(timezone.utc) - timedelta(hours=2)
+        mdb.dorm_messages.delete_many({"thread_id": t_ab["id"]})
+        bulk = [{
+            "id": f"m{i:04d}" + uuid.uuid4().hex[:7],
+            "thread_id": t_ab["id"],
+            "sender_id": uid_x,
+            "body": f"msg-{i:03d}",
+            "kind": "text",
+            "created_at": (base_dt + timedelta(seconds=i)).isoformat(),
+        } for i in range(1, 106)]
+        mdb.dorm_messages.insert_many(bulk)
+        res_msgs = requests.get(f"{BASE}/dorm/threads/{t_ab['id']}/messages", headers=u_y).json()["messages"]
+        assert len(res_msgs) == 100
+        assert res_msgs[0]["body"] == "msg-006" and res_msgs[-1]["body"] == "msg-105"
+
+        # 3) Per-user chat rate limit (429 after 30 messages within 1 minute)
+        now_dt = datetime.now(timezone.utc)
+        mdb.dorm_messages.insert_many([{
+            "id": "rl_" + uuid.uuid4().hex[:9],
+            "thread_id": tr_ab["id"],
+            "sender_id": uid_x,
+            "body": f"burst-{i}",
+            "kind": "text",
+            "created_at": now_dt.isoformat(),
+        } for i in range(30)])
+        r_rl = requests.post(f"{BASE}/dorm/threads/{tr_ab['id']}/messages", headers=u_x, json={"body": "too fast"})
+        assert r_rl.status_code == 429
+
+        # 4) Closed mate profile rejects starting a brand-new thread with 410
+        assert requests.post(f"{BASE}/dorm/mates/me/close", headers=u_y).status_code == 200
+        u_z = _register("แชท Z")
+        r_closed = requests.post(f"{BASE}/dorm/threads", headers=u_z, json={"target_type": "mate", "target_id": my["id"]})
+        assert r_closed.status_code == 410
+    finally:
+        requests.delete(f"{BASE}/dorm/mates/me", headers=u_x)
+        requests.delete(f"{BASE}/dorm/mates/me", headers=u_y)
+        if created_tids:
+            mdb.dorm_messages.delete_many({"thread_id": {"$in": created_tids}})
+            mdb.dorm_threads.delete_many({"id": {"$in": created_tids}})
+        client.close()
+
+
+
