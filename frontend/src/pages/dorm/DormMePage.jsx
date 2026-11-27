@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import * as Tabs from '@radix-ui/react-tabs';
 import {
-  BadgeCheck, Check, CircleAlert, Eye, HandHeart, HeartHandshake, ImagePlus, LogOut, Megaphone, MessageCircle, Pencil, Plus, Power, RotateCw, Share2, Trash2, TriangleAlert, Users,
+  BadgeCheck, Check, CircleAlert, Eye, HandHeart, HeartHandshake, ImagePlus, LogOut, Megaphone, MessageCircle, Pencil, Plus, Power, RotateCw, Share2, ShieldCheck, Trash2, TriangleAlert, Users,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import DormLayout, {
@@ -38,7 +38,78 @@ const BLANK = {
 const STEPS = ['เกี่ยวกับคุณ', 'ห้องที่อยากได้', 'นิสัยและติดต่อ'];
 const TABS = ['listings', 'chat', 'mate', 'interests', 'saved'];
 const FieldErr = ({ msg }) => (msg ? <span className="dm-field-err" role="alert"><CircleAlert size={15} aria-hidden="true" />{msg}</span> : null);
+const GOOGLE_CLIENT_ID = '949663376782-cd9128nvekdavpu09mko30rfn9c2kre4.apps.googleusercontent.com';
 const swuVerified = (u) => u?.auth_method === 'google' && /(^|\.|@)swu\.ac\.th$/i.test(u?.email || '');
+
+// Dedicated Google Sign-In button inside VerifySheet: chooses @g.swu.ac.th without replacing the user's personal session.
+const SwuGoogleVerifyButton = ({ clientId, token, onVerified, onError }) => {
+  const btnRef = useRef(null);
+  const onVerifiedRef = useRef(onVerified);
+  const onErrorRef = useRef(onError);
+  onVerifiedRef.current = onVerified;
+  onErrorRef.current = onError;
+  const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(() => !!(typeof window !== 'undefined' && window.google?.accounts?.id));
+
+  useEffect(() => {
+    let alive = true;
+    const initAndRender = () => {
+      if (!alive || !window.google?.accounts?.id || !btnRef.current) return;
+      setReady(true);
+      window.google.accounts.id.initialize({
+        client_id: clientId || GOOGLE_CLIENT_ID,
+        auto_select: false,
+        callback: async (response) => {
+          if (!response?.credential) return;
+          setBusy(true);
+          onErrorRef.current('');
+          try {
+            const r = await axios.post(`${API}/verify/google-link`, { credential: response.credential }, authHeaders(token));
+            onVerifiedRef.current(r.data.verification);
+          } catch (e) {
+            onErrorRef.current(errMsg(e, 'ยืนยันบัญชี Google มศว ไม่สำเร็จ ลองอีกครั้ง'));
+          } finally {
+            setBusy(false);
+          }
+        },
+      });
+      btnRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(btnRef.current, {
+        type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', locale: 'th', width: 300,
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      initAndRender();
+      return () => { alive = false; };
+    }
+    let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    const created = !script;
+    if (!script) {
+      script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+    script.addEventListener('load', initAndRender);
+    return () => {
+      alive = false;
+      script.removeEventListener('load', initAndRender);
+      if (created && script.parentNode && !window.google?.accounts?.id) script.parentNode.removeChild(script);
+    };
+  }, [clientId, token]);
+
+  return (
+    <div className="dm-gverify-box" data-testid="dorm-google-verify-box">
+      <div className="dm-gverify-btnwrap">
+        <div ref={btnRef} aria-label="เข้าสู่ระบบด้วยบัญชี Google มศว" />
+      </div>
+      {!ready && <p className="dm-tiny dm-muted" style={{ textAlign: 'center', margin: 0 }}>กำลังโหลดปุ่ม Google...</p>}
+      {busy && <p className="dm-tiny" style={{ textAlign: 'center', margin: 0, color: 'var(--khlong-ink)' }}>กำลังตรวจสอบอีเมล @g.swu.ac.th...</p>}
+    </div>
+  );
+};
 
 // Slim progress bar with step names (same look as the post form).
 const Progress = ({ steps, step }) => (
@@ -133,11 +204,14 @@ const MyListing = ({ x, token, patch, reload, remove }) => {
   const rd = x.status === 'reserved' && x.reserved_until ? daysLeft(x.reserved_until) : null;
   // closed by an admin (moderation): the owner can't reopen it, only delete it
   const adminClosed = x.status === 'closed' && x.closed_by === 'admin';
+  const autoModerated = x.status === 'closed' && x.closed_reason === 'auto_moderated';
   const pausedUnconfirmed = x.status === 'closed' && x.closed_reason === 'paused_unconfirmed';
   const ttlDays = x.kind === 'mate_wanted' || x.kind === 'transfer' ? 14 : 30;
-  const [state, cls] = adminClosed ? ['แอดมินปิดไว้', 'off'] : pausedUnconfirmed ? ['พักรอเจ้าของยืนยัน', 'hold']
-    : x.status === 'closed' ? ['ปิดแล้ว', 'off'] : x.expired ? ['หมดอายุ', 'off']
-      : x.status === 'reserved' ? ['มีคนจองแล้ว', 'hold'] : ['แสดงอยู่', 'live'];
+  const [state, cls] = adminClosed ? ['แอดมินปิดไว้', 'off']
+    : autoModerated ? ['พักชั่วคราว (มีผู้รายงาน)', 'off']
+      : pausedUnconfirmed ? ['พักรอเจ้าของยืนยัน', 'hold']
+        : x.status === 'closed' ? ['ปิดแล้ว', 'off'] : x.expired ? ['หมดอายุ', 'off']
+          : x.status === 'reserved' ? ['มีคนจองแล้ว', 'hold'] : ['แสดงอยู่', 'live'];
   const visible = x.status !== 'closed' && !x.expired;
   // anything that changes what others see also refreshes the building room counts
   const call = async (fn) => {
@@ -193,7 +267,7 @@ const MyListing = ({ x, token, patch, reload, remove }) => {
         </div>
       </div>
       <div className="dm-myrow-acts">
-        {adminClosed ? null : pausedUnconfirmed ? (
+        {(adminClosed || autoModerated) ? null : pausedUnconfirmed ? (
           <button type="button" className="dm-btn dm-btn-ink dm-btn-sm" onClick={confirmOpen} aria-label="ยืนยันว่ายังว่างและเปิดอีกครั้ง"><Check size={15} aria-hidden="true" />ยืนยันยังว่าง</button>
         ) : x.status === 'closed' ? (
           <button type="button" className="dm-btn dm-btn-ink dm-btn-sm" onClick={reopen} aria-label="เปิดประกาศอีกครั้ง"><RotateCw size={15} aria-hidden="true" />เปิดใหม่</button>
@@ -204,7 +278,7 @@ const MyListing = ({ x, token, patch, reload, remove }) => {
         {x.status !== 'closed' ? <button type="button" className="dm-btn dm-btn-quiet dm-btn-sm" onClick={close} aria-label="ปิดประกาศ"><Power size={15} aria-hidden="true" />ปิด</button>
           : <button type="button" className="dm-btn dm-btn-quiet dm-btn-sm dm-btn-del" onClick={del} aria-label="ลบประกาศนี้ถาวร"><Trash2 size={15} aria-hidden="true" />ลบ</button>}
       </div>
-      {(x.owner_confirm_needed || pausedUnconfirmed) && !adminClosed && (
+      {(x.owner_confirm_needed || pausedUnconfirmed) && !adminClosed && !autoModerated && (
         <div className="dm-myrow-warnbanner" role="alert" data-testid="dorm-owner-confirm-banner">
           <span><TriangleAlert size={15} aria-hidden="true" />{pausedUnconfirmed ? 'ประกาศถูกพักเพราะยังไม่ได้ยืนยันภายใน 48 ชม.' : 'มีคนแจ้งว่าห้องนี้อาจไม่ว่าง — ยังว่างอยู่ไหม?'}</span>
           <div className="dm-actions">
@@ -219,9 +293,11 @@ const MyListing = ({ x, token, patch, reload, remove }) => {
           <Link to={`/dorm/rooms/${x.id}#interested`} className="dm-btn dm-btn-primary dm-btn-sm">ดูและทักคุย</Link>
         </div>
       )}
-      {adminClosed && (
+      {(adminClosed || autoModerated) && (
         <p className="dm-myrow-note" role="note" data-testid="dorm-admin-closed">
-          แอดมินปิดประกาศนี้ไว้ เปิดเองไม่ได้ ถ้าคิดว่าปิดผิด แจ้งแอดมินในกลุ่ม OpenChat ได้
+          {autoModerated
+            ? 'ประกาศถูกพักชั่วคราวเนื่องจากมีผู้รายงานหลายคน หากคิดว่าผิดพลาด แจ้งแอดมินเพื่อตรวจสอบและเปิดคืนได้'
+            : 'แอดมินปิดประกาศนี้ไว้ เปิดเองไม่ได้ ถ้าคิดว่าปิดผิด แจ้งแอดมินในกลุ่ม OpenChat ได้'}
         </p>
       )}
       {noPhotos && x.status !== 'closed' && (
@@ -247,10 +323,11 @@ const VERIFY_KINDS = [
   { id: 'student', label: 'นิสิตปัจจุบัน (มีเมล ม.)' },
 ];
 
-const VerifySheet = ({ verification, token, onClose, onDone }) => {
+const VerifySheet = ({ verification, userEmail, token, onClose, onDone }) => {
   const { toast } = useShell();
   const smtp = !!verification?.smtp_enabled;
-  const [mode, setMode] = useState(smtp ? 'otp' : 'manual');
+  const googleClientId = verification?.google_client_id || GOOGLE_CLIENT_ID;
+  const [mode, setMode] = useState('google');
   const [swuEmail, setSwuEmail] = useState(verification?.swu_email || '');
   const [otpSent, setOtpSent] = useState(verification?.status === 'otp_sent');
   const [code, setCode] = useState('');
@@ -296,24 +373,46 @@ const VerifySheet = ({ verification, token, onClose, onDone }) => {
     setBusy(false);
   };
 
+  const modeOpts = [
+    { id: 'google', label: 'ยืนยันด้วย @g.swu.ac.th' },
+    ...(smtp ? [{ id: 'otp', label: 'รับรหัส OTP' }] : []),
+    { id: 'manual', label: 'ไม่มีเมล มศว' },
+  ];
+
   return (
-    <Sheet title="ยืนยันตัวตน มศว" onClose={onClose} testid="dorm-verify-sheet"
+    <Sheet title="ยืนยันตัวตน มศว (อัตโนมัติ)" onClose={onClose} testid="dorm-verify-sheet" modal={false}
            footer={mode === 'otp' ? (
              otpSent
                ? <button type="button" className="dm-btn dm-btn-primary" onClick={confirmOtp} disabled={busy || code.trim().length !== 6}>ยืนยันรหัส OTP</button>
                : <button type="button" className="dm-btn dm-btn-primary" onClick={sendOtp} disabled={busy || !swuEmail.trim()}>ส่งรหัสไปที่อีเมล มศว</button>
-           ) : (
+           ) : mode === 'manual' ? (
              <button type="button" className="dm-btn dm-btn-primary" onClick={sendManual} disabled={busy}>ส่งคำขอให้แอดมินตรวจ</button>
+           ) : (
+             <button type="button" className="dm-btn dm-btn-quiet" onClick={onClose}>ปิด</button>
            )}>
       <div className="dm-form">
-        <p className="dm-small dm-muted" style={{ margin: 0 }}>
-          ใช้อีเมลส่วนตัวเป็นบัญชีหลักได้ตลอด แม้เรียนจบแล้วเมล มศว หมดอายุ บัญชีและป้ายยืนยันของคุณจะยังอยู่ครบ
-        </p>
-        {smtp && (
-          <Seg value={mode} onChange={(v) => { setMode(v); setErr(''); }} label="วิธีรับรองตัวตน" full
-               options={[{ id: 'otp', label: 'รับรหัสทางเมล มศว' }, { id: 'manual', label: 'นิสิตใหม่ / ศิษย์เก่า' }]} />
-        )}
-        {mode === 'otp' ? (
+        <Seg value={mode} onChange={(v) => { setMode(v); setErr(''); }} label="วิธีรับรองตัวตน" full options={modeOpts} />
+        {mode === 'google' ? (
+          <>
+            <p className="dm-small" style={{ margin: 0, lineHeight: 1.55 }}>
+              บัญชีหลักของคุณยังเป็น <b>{userEmail || 'อีเมลส่วนตัว'}</b> เหมือนเดิม — แค่ล็อกอิน Google{' '}
+              <code>@g.swu.ac.th</code> ครั้งเดียว ป้ายยืนยันจะขึ้นทันทีในทุกประกาศ <b>ไม่ต้องรอแอดมิน</b>
+            </p>
+            <SwuGoogleVerifyButton
+              clientId={googleClientId}
+              token={token}
+              onError={setErr}
+              onVerified={(v) => {
+                toast('ยืนยันนิสิต มศว เรียบร้อยแล้ว');
+                onDone(v);
+                onClose();
+              }}
+            />
+            <p className="dm-tiny dm-muted" style={{ margin: 0 }}>
+              หากหน้าต่าง Google ขึ้นอีเมลส่วนตัว ให้กด <b>“ใช้บัญชีอื่น”</b> แล้วเลือก <code>@g.swu.ac.th</code> (1 อีเมล มศว ยืนยันได้ 1 บัญชี)
+            </p>
+          </>
+        ) : mode === 'otp' ? (
           <>
             <label className="dm-field"><span>อีเมล มศว ของคุณ</span>
               <input type="email" value={swuEmail} onChange={(e) => setSwuEmail(e.target.value)} placeholder="name@g.swu.ac.th" autoCapitalize="none" />
@@ -327,6 +426,10 @@ const VerifySheet = ({ verification, token, onClose, onDone }) => {
           </>
         ) : (
           <>
+            <div className="dm-myrow-note" role="note" style={{ margin: 0 }}>
+              เฉพาะนิสิตเข้าใหม่ที่ยังไม่ได้รับเมล หรือศิษย์เก่าที่เมลหมดอายุ — หากมี <code>@g.swu.ac.th</code>{' '}
+              <button type="button" className="dm-textbtn" onClick={() => { setMode('google'); setErr(''); }}>กดยืนยันทันทีตรงนี้</button> ไม่ต้องรอแอดมิน
+            </div>
             <div className="dm-field"><span>สถานะของคุณ</span>
               <Pick options={VERIFY_KINDS} value={kind} onChange={setKind} label="สถานะของคุณ" />
             </div>
@@ -372,6 +475,10 @@ function MePage() {
   const [interests, setInterests] = useState([]);
   const [verification, setVerification] = useState(null);
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [vouchOpen, setVouchOpen] = useState(false);
+  const [vouchEmail, setVouchEmail] = useState('');
+  const [vouchBusy, setVouchBusy] = useState(false);
+  const [vouchErr, setVouchErr] = useState('');
   const [f, setF] = useState(() => ({ ...BLANK, ...(readMateDraft() || {}) }));
   const [editing, setEditing] = useState(false);
   const [step, setStep] = useState(0);
@@ -650,7 +757,41 @@ function MePage() {
   const live = profile && profile.status === 'active' && dl > 0;
   const name = user.full_name || 'บัญชีของฉัน';
 
+  useEffect(() => {
+    if (user && loaded && params.get('verify') === '1' && !verification?.verified && !swuVerified(user)) {
+      setVerifyOpen(true);
+    }
+  }, [user, loaded, params, verification]);
+
+  const closeVerify = () => {
+    setVerifyOpen(false);
+    if (params.get('verify')) {
+      const n = new URLSearchParams(window.location.search);
+      n.delete('verify');
+      setParams(n, { replace: true });
+    }
+  };
+
+  const submitVouch = async (e) => {
+    e.preventDefault();
+    setVouchErr('');
+    setVouchBusy(true);
+    try {
+      const r = await axios.post(`${API}/verify/vouch-personal-email`, { personal_email: vouchEmail.trim() }, authHeaders(token));
+      setVerification(r.data.verification);
+      setVouchOpen(false);
+      setVouchEmail('');
+      toast(r.data.applied
+        ? `ยืนยันป้าย มศว ให้ ${r.data.personal_email} แล้ว`
+        : `บันทึกสิทธิ์ให้ ${r.data.personal_email} แล้ว (เมื่อเข้าสู่ระบบด้วยอีเมลนี้จะได้ป้ายทันที)`);
+    } catch (e2) {
+      setVouchErr(errMsg(e2, 'ยืนยันอีเมลส่วนตัวไม่สำเร็จ'));
+    }
+    setVouchBusy(false);
+  };
+
   const isVerified = Boolean(verification?.verified || swuVerified(user));
+  const isGoogleSwuSession = swuVerified(user);
   const badgeLabel = verification?.status_label || 'ยืนยันนิสิต มศว';
 
   return (
@@ -677,22 +818,64 @@ function MePage() {
         <div className="dm-verify-strip" data-testid="dorm-verify-strip">
           <div>
             {verification?.status === 'pending' ? (
-              <><b>ส่งคำขอยืนยันแล้ว · รอแอดมินตรวจ</b><span>ใช้เว็บได้ตามปกติ ป้ายยืนยันจะขึ้นให้ทุกประกาศทันทีที่อนุมัติ</span></>
+              <><b>ส่งคำขอรอแอดมินตรวจแล้ว · ยืนยันเองได้เลยถ้ามี @g.swu.ac.th</b><span>ล็อกอิน Google มศว แค่ครั้งเดียวจะได้ป้ายทันทีโดยไม่ต้องรอแอดมิน</span></>
             ) : verification?.status === 'rejected' ? (
-              <><b>คำขอยืนยันรอบก่อนไม่ผ่าน</b><span>{verification.reject_reason || 'ส่งข้อมูลเพิ่มเติมเพื่อขอตรวจใหม่ได้'}</span></>
+              <><b>คำขอยืนยันรอบก่อนไม่ผ่าน</b><span>{verification.reject_reason || 'ลองยืนยันด้วยบัญชี Google @g.swu.ac.th หรือส่งข้อมูลใหม่ได้'}</span></>
             ) : (
-              <><b>รับป้ายยืนยันนิสิต มศว (ใช้เมลส่วนตัวได้ตลอด)</b><span>ยืนยันด้วย @g.swu.ac.th หรือส่งข้อมูลสำหรับนิสิตเข้าใหม่ / ศิษย์เก่า</span></>
+              <><b>รับป้ายยืนยันนิสิต มศว ทันที (ไม่ต้องรอแอดมิน)</b><span>ยืนยันครั้งเดียวด้วยบัญชี Google @g.swu.ac.th บัญชีหลักยังเป็นอีเมลส่วนตัวเหมือนเดิม</span></>
             )}
           </div>
-          {verification?.status !== 'pending' && (
+          <div className="dm-verify-acts">
             <button type="button" className="dm-btn dm-btn-tint dm-btn-sm" onClick={() => setVerifyOpen(true)} data-testid="dorm-open-verify">
-              <BadgeCheck size={15} aria-hidden="true" />ยืนยันตัวตน
+              <BadgeCheck size={15} aria-hidden="true" />
+              {verification?.status === 'pending' ? 'มี @g.swu.ac.th? ยืนยันทันที' : 'ยืนยันทันทีด้วย @g.swu.ac.th'}
             </button>
+          </div>
+        </div>
+      )}
+      {loaded && isGoogleSwuSession && (
+        <div className="dm-vouch-strip" data-testid="dorm-vouch-strip">
+          <div className="dm-vouch-head">
+            <div>
+              {verification?.vouched_personal_email ? (
+                <>
+                  <b>ผูกอีเมลส่วนตัวไว้ใช้หลังเรียนจบแล้ว: {verification.vouched_personal_email}</b>
+                  <span>{verification.vouch_claimed
+                    ? 'บัญชีอีเมลส่วนตัวนี้ได้รับป้ายยืนยัน มศว เรียบร้อยแล้ว'
+                    : 'เมื่อเข้าสู่ระบบด้วยอีเมลส่วนตัวนี้ ระบบจะติดป้ายยืนยัน มศว ให้อัตโนมัติ (ไม่ต้องแจ้งแอดมิน)'}</span>
+                </>
+              ) : (
+                <>
+                  <b>ยืนยันให้อีเมลส่วนตัวของคุณ (เก็บป้ายไว้ใช้ต่อหลังเรียนจบ)</b>
+                  <span>ใช้อีเมล @g.swu.ac.th นี้รับรอง Gmail/อีเมลส่วนตัวของคุณได้ 1 บัญชีทันที โดยไม่ต้องแจ้งแอดมิน</span>
+                </>
+              )}
+            </div>
+            {(!verification?.vouched_personal_email || !verification?.vouch_claimed) && (
+              <button type="button" className="dm-btn dm-btn-quiet dm-btn-sm"
+                      onClick={() => { setVouchOpen((v) => !v); setVouchErr(''); setVouchEmail(verification?.vouched_personal_email || ''); }}
+                      data-testid="dorm-vouch-toggle">
+                <ShieldCheck size={15} aria-hidden="true" />
+                {vouchOpen ? 'ซ่อน' : verification?.vouched_personal_email ? 'แก้ไขอีเมล' : 'ยืนยันอีเมลส่วนตัว'}
+              </button>
+            )}
+          </div>
+          {vouchOpen && (
+            <form className="dm-vouch-form" onSubmit={submitVouch}>
+              <input type="email" required value={vouchEmail} onChange={(e) => setVouchEmail(e.target.value)}
+                     placeholder="เช่น myname@gmail.com" autoCapitalize="none" aria-label="อีเมลส่วนตัวที่ต้องการยืนยัน"
+                     data-testid="dorm-vouch-input" />
+              <button type="submit" className="dm-btn dm-btn-ink dm-btn-sm" disabled={vouchBusy || !vouchEmail.trim()}
+                      data-testid="dorm-vouch-submit">
+                {vouchBusy ? 'กำลังบันทึก...' : 'ยืนยันอีเมลนี้'}
+              </button>
+            </form>
           )}
+          {vouchErr && <div className="dm-err" role="alert">{vouchErr}</div>}
         </div>
       )}
       {verifyOpen && (
-        <VerifySheet verification={verification} token={token} onClose={() => setVerifyOpen(false)}
+        <VerifySheet verification={verification} userEmail={user.email} token={token} onClose={closeVerify}
                      onDone={(v) => { setVerification(v); load(); }} />
       )}
 

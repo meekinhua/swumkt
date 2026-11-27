@@ -39,6 +39,7 @@ const ACTION_TH = {
   patch_external_listing: 'อัปเดตข้อมูลห้อง',
   update_building_media: 'อัปเดตสื่อ/ตึก',
   refresh_external_batch: 'ซิงก์ห้องภายนอก',
+  auto_moderate: 'ระบบพักเนื้อหาอัตโนมัติ',
   review_verification: 'พิจารณาคำขอยืนยัน',
   close_native_listing: 'ปิดประกาศ',
   delete_listing: 'ลบประกาศ',
@@ -67,7 +68,8 @@ const statusOf = (x) => {
             : ['ไม่ว่างแล้ว', 'off'];
     }
     return x.closed_reason === 'paused_unconfirmed' ? ['พัก (ไม่ยืนยัน 48 ชม.)', 'hold']
-      : x.closed_by === 'admin' ? ['แอดมินปิด', 'off'] : ['เจ้าของปิด', 'off'];
+      : x.closed_reason === 'auto_moderated' ? ['พัก (รายงานครบ)', 'hold']
+        : x.closed_by === 'admin' ? ['แอดมินปิด', 'off'] : ['เจ้าของปิด', 'off'];
   }
   if (expiredOf(x)) return ['หมดอายุ', 'off'];
   if (x.maybe_gone) return [`อาจไม่ว่าง (${x.gone_reports || 1})`, 'hold'];
@@ -160,6 +162,10 @@ export default function DormAdminPage() {
     if (ok) call(x.id, () => axios.delete(`${API}/listings/${x.id}`, authHeaders(authToken)), 'ลบประกาศแล้ว');
   };
   const resolve = (r) => call(r.id, () => axios.post(`${API}/admin/reports/${r.id}/resolve`, {}, authHeaders(authToken)), 'ตรวจแล้ว');
+  const resolveAllStale = () => call('resolve-stale', async () => {
+    const r = await axios.post(`${API}/admin/reports/resolve-stale`, {}, authHeaders(authToken));
+    toast(`เคลียร์รายงานที่เป้าหมายปิดแล้ว ${r.data?.resolved ?? 0} รายการ`);
+  });
   const reviewVerify = (v, action) => call(`v-${v.user_id}`, () => axios.post(`${API}/admin/verifications/${v.user_id}`, { action }, authHeaders(authToken)),
     action === 'approve' ? 'อนุมัติป้ายยืนยัน มศว แล้ว' : 'ปฏิเสธคำขอยืนยันแล้ว');
 
@@ -213,11 +219,22 @@ export default function DormAdminPage() {
 
   const nExt = (o?.listings || []).filter((x) => x.external && x.status !== 'closed' && !expiredOf(x)).length;
   const nNative = (o?.listings || []).filter((x) => !x.external && x.status !== 'closed' && !expiredOf(x)).length;
+  const auto = o?.autopilot_30d || {};
+  const staleReportCount = (o?.reports || []).filter((r) => r.target_status === 'closed' || r.target_status === 'deleted').length;
 
   return (
     <DormLayout title="แอดมิน" className="dm-adminpage">
       <PageHead title="แอดมิน" sub={o ? `เปิดอยู่ ลงในเว็บ ${nNative} จากเว็บภายนอก ${nExt} โปรไฟล์หาเมท ${o.mates_total} กดดูช่องทางติดต่อ 30 วัน ${o.leads_30d} ครั้ง` : undefined} />
       {err && <div className="dm-err" role="alert">{err}</div>}
+
+      {o && (
+        <section className="dm-autopilot-strip" aria-label="ระบบจัดการอัตโนมัติ (30 วัน)" data-testid="dorm-admin-autopilot">
+          <div className="dm-auto-kpi"><b>{auto.self_verified_google ?? 0}</b><span>ยืนยัน มศว ด้วยตนเอง</span></div>
+          <div className="dm-auto-kpi"><b>{auto.auto_closed_gone ?? 0}</b><span>ปิดห้องไม่ว่างอัตโนมัติ</span></div>
+          <div className="dm-auto-kpi"><b>{auto.auto_resolved_reports ?? 0}</b><span>เคลียร์รายงานอัตโนมัติ</span></div>
+          <div className="dm-auto-kpi"><b>{auto.auto_moderated ?? 0}</b><span>พักเนื้อหาต้องสงสัย</span></div>
+        </section>
+      )}
 
       <section className="dm-admin-card dm-prop-section" aria-labelledby="dm-ad-prop" data-testid="dorm-admin-proposals">
         <div className="dm-prop-head">
@@ -399,7 +416,15 @@ export default function DormAdminPage() {
           </section>
 
           <section className="dm-admin-card" aria-labelledby="dm-ad-rep">
-            <h2 id="dm-ad-rep">รายงานรอตรวจ {o ? <span className="dm-admin-n">{o.reports.length}</span> : null}</h2>
+            <div className="dm-rep-head">
+              <h2 id="dm-ad-rep">รายงานรอตรวจ {o ? <span className="dm-admin-n">{o.reports.length}</span> : null}</h2>
+              {staleReportCount > 0 && (
+                <button type="button" className="dm-btn dm-btn-quiet dm-btn-sm" disabled={busy === 'resolve-stale'}
+                        onClick={resolveAllStale} data-testid="dorm-admin-resolve-stale">
+                  <Check size={14} aria-hidden="true" />เคลียร์รายงานค้างทั้งหมด ({staleReportCount})
+                </button>
+              )}
+            </div>
             {o && !o.reports.length && <p className="dm-muted dm-small">ไม่มีรายงานค้าง</p>}
             {o?.reports.length > 0 && (
               <ul className="dm-admin-reports">

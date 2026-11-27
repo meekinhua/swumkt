@@ -266,27 +266,22 @@ verify minutes-to-SWU; fix the `/api/auth/register` role and password-length gap
 | `/dorm/admin` | the new admin UI was not viewed as an admin, and not on small screens; a guest is redirected to the site `/login` |
 | Dorm sign-up sheet password length | 6 characters enforced in the browser only; `POST /api/auth/register` still accepts shorter (deliberately untouched, same hole family as the role issue) |
 | Not tested | Google sign-in, a real phone file-picker photo upload |
-| Register role hole (below) | still open, by the owner's decision |
-| Production data / Emergent deploy | local sim only |
+| Register role hole (below) | **FIXED (27 พ.ย. 2569)** — `POST /api/auth/register` rejects privileged roles with 403 |
+| Production data / Emergent deploy | deployed live on `swumkt.org/dorm` (subpath redirect from `roommate.swumkt.org`) |
 | LINE actually rendering the preview card | LINE's crawler can't reach localhost; the OG HTML was checked directly |
 | Real phone photos (HEIC, very large) | tested with generated JPEGs through the same code path |
 | Link preview for a copied `/dorm/rooms/{id}` URL | crawlers get the SPA's site-wide meta; only the share link `/api/dorm/og/rooms/{id}` has the listing card (fixing it needs a crawler rule in the ingress) |
 
-## ⚠ Found while testing: pre-existing hole, not fixed here
+## ✅ Fixed: `POST /api/auth/register` privilege escalation hole
 
-**Still open, by the owner's decision.** `POST /api/auth/register` (`backend/server.py`, `register()`) copies `role` from the
-request body, so anyone can register with `"role": "admin"` and gets a working admin
-token for the **whole site**, not just `/dorm`. Reproduced in the sim. Suggested fix:
-ignore client `role` (always `public_user`), or allow only
-`public_user`/`current_student`/`alumni`.
+Previously, `POST /api/auth/register` (`backend/server.py`, `register()`) copied `role` from the request body without checking, allowing anyone to self-register as `"admin"`. **Fixed (27 พ.ย. 2569):** `register()` now enforces `SELF_REGISTER_ROLES = {PUBLIC_USER, CURRENT_STUDENT, ALUMNI}` (returning HTTP 403 on `"admin"` or any non-whitelist role) and performs case-insensitive duplicate email checks. Covered by `test_register_blocks_admin_role_escalation` in `backend/tests/test_dorm_api.py`.
 
 ## Next steps (prioritised)
 
-1. Fix the register role hole above.
+1. Deploy latest `dorm` branch commits (pre-serialized gzip cache, register fix, self-serve verification & autopilot moderation) to production.
 2. Link `/dorm` from the home page / top bar; agree with the OpenChat admin ("พี่ มศว") on a weekly digest post.
-3. Clean up orphaned photos (uploaded but never attached to a listing) with a periodic job.
-4. Trust: get real photos (nudge posters, photograph a few partner buildings), seed real reviews, verify the estimated minutes.
-5. Monetisation hooks already in data: `featured` (admin pin), `poster_role=owner|agent`,
+3. Verify estimated building minutes to SWU & photo licensing / partner photos.
+4. Monetisation hooks already in data: `featured` (admin pin), `poster_role=owner|agent`,
    and `contact_reveals` per listing (leads to report to room owners).
 
 ## Gotchas

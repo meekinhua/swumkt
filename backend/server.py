@@ -1316,17 +1316,27 @@ async def logout(current_user: User = Depends(get_current_user)):
     await db.user_sessions.delete_many({"user_id": current_user.id})
     return {"message": "Logged out successfully"}
 
+SELF_REGISTER_ROLES = {UserRole.PUBLIC_USER, UserRole.CURRENT_STUDENT, UserRole.ALUMNI}
+
+
 @api_router.post("/auth/register", response_model=AuthResponse)
 async def register(user_data: UserRegister):
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
+    # Prevent self-assigning privileged roles (e.g. admin)
+    if user_data.role not in SELF_REGISTER_ROLES:
+        raise HTTPException(status_code=403, detail="Cannot self-register with privileged role")
+
+    email_clean = user_data.email.strip()
+    # Check if user exists (case-insensitive to prevent spoofed casing duplicates)
+    existing_user = await db.users.find_one(
+        {"email": {"$regex": f"^{re.escape(email_clean)}$", "$options": "i"}}
+    )
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Create user
     hashed_pw = await hash_password_async(user_data.password)
     user = User(
-        email=user_data.email,
+        email=email_clean,
         full_name=user_data.full_name,
         role=user_data.role,
         student_id=user_data.student_id,

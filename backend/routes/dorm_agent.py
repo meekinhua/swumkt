@@ -184,6 +184,7 @@ def register_dorm_agent_routes(dorm_router: APIRouter, db, get_current_user, dep
     is_listing_gone = deps["is_listing_gone"]
     EXT_TTL_DAYS = deps["EXT_TTL_DAYS"]
     GONE_REASONS = deps["GONE_REASONS"]
+    _bust_cache = deps.get("_bust_cache") or (lambda: None)
 
     def _admin(u) -> None:
         if not _is_admin(u):
@@ -242,6 +243,7 @@ def register_dorm_agent_routes(dorm_router: APIRouter, db, get_current_user, dep
             "undone_by": None,
         }
         await db.dorm_agent_actions.insert_one(dict(doc))
+        _bust_cache()
         return _format_action_row(doc)
 
     async def _enrich_proposals(props: List[dict]) -> List[dict]:
@@ -619,6 +621,7 @@ def register_dorm_agent_routes(dorm_router: APIRouter, db, get_current_user, dep
             {"id": action_id},
             {"$set": {"undone_at": now_s, "undone_by": _actor_label(u)}},
         )
+        _bust_cache()
         return {"ok": True, "id": action_id, "restored": len(snaps), "undone_at": now_s}
 
     # ------------------------------------------------------------------ Lane B: Proposals

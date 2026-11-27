@@ -1171,3 +1171,171 @@ def test_agent_proposals_dedup_confirm_inline_override_undo_and_reject(ctx):
         requests.delete(f"{BASE}/dorm/listings/{rm['id']}", headers=ctx["a"])
         _revoke_dorm_key(admin, kid)
 
+
+def test_register_blocks_admin_role_escalation():
+    admin_email = f"dormtest-evil-{uuid.uuid4().hex[:8]}@example.com"
+    r_evil = requests.post(f"{BASE}/auth/register", json={
+        "email": admin_email, "password": "pw-123456", "full_name": "Evil Admin", "role": "admin",
+    })
+    assert r_evil.status_code == 403, r_evil.text
+
+    # Legitimate non-privileged roles remain allowed
+    for allowed_role in ("public_user", "current_student", "alumni"):
+        em = f"dormtest-ok-{uuid.uuid4().hex[:8]}@example.com"
+        r_ok = requests.post(f"{BASE}/auth/register", json={
+            "email": em, "password": "pw-123456", "full_name": f"Ok {allowed_role}", "role": allowed_role,
+        })
+        assert r_ok.status_code == 200, r_ok.text
+        h = {"Authorization": f"Bearer {r_ok.json()['access_token']}"}
+        assert r_ok.json()["user"]["role"] == allowed_role
+        assert requests.get(f"{BASE}/dorm/admin/overview", headers=h).status_code == 403
+        assert requests.get(f"{BASE}/dorm/admin/keys", headers=h).status_code == 403
+
+
+def test_preserialized_gzip_cache_and_invalidation(ctx):
+    # Pre-serialized gzip responses work seamlessly with Accept-Encoding: gzip and reflect mutations immediately
+    for path in ("/dorm/listings?limit=300", "/dorm/buildings", "/dorm/stats", "/dorm/meta"):
+        r1 = requests.get(f"{BASE}{path}", headers={"Accept-Encoding": "gzip"})
+        assert r1.status_code == 200 and r1.json()
+        r2 = requests.get(f"{BASE}{path}", headers={"Accept-Encoding": "gzip"})
+        assert r2.status_code == 200 and r2.headers.get("content-encoding") == "gzip" and r2.json() == r1.json()
+
+    created = requests.post(f"{BASE}/dorm/listings", json={**LISTING, "title": "ทดสอบ Cache Bust Live"}, headers=ctx["a"])
+    assert created.status_code == 200
+    cid = created.json()["id"]
+    try:
+        r3 = requests.get(f"{BASE}/dorm/listings?limit=300", headers={"Accept-Encoding": "gzip"})
+        assert any(x["id"] == cid for x in r3.json()["items"])
+    finally:
+        requests.delete(f"{BASE}/dorm/listings/{cid}", headers=ctx["a"])
+    r4 = requests.get(f"{BASE}/dorm/listings?limit=300", headers={"Accept-Encoding": "gzip"})
+    assert all(x["id"] != cid for x in r4.json()["items"])
+
+
+def test_google_link_aud_enforced_and_self_verify_vouch_pregrant(ctx):
+    from pymongo import MongoClient
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    from server import create_access_token
+
+    # 1) google-link rejects bogus credential even when GOOGLE_CLIENT_ID env is unset (uses hardcoded client ID)
+    r_bad = requests.post(f"{BASE}/dorm/verify/google-link", json={"credential": "x" * 30}, headers=ctx["a"])
+    assert r_bad.status_code == 400
+
+    # 2) Non-SWU user cannot vouch for another personal email
+    assert requests.post(
+        f"{BASE}/dorm/verify/vouch-personal-email",
+        json={"personal_email": "someone@gmail.com"},
+        headers=ctx["a"],
+    ).status_code == 403
+
+    # 3) Google @g.swu.ac.th user vouches for a not-yet-registered personal email -> auto-claimed on signup
+    client = MongoClient(os.environ.get("MONGO_URL", "mongodb://localhost:27017"))
+    mdb = client[os.environ.get("DB_NAME", "swumkt_dev")]
+    swu_uid = f"u-swu-{uuid.uuid4().hex[:8]}"
+    swu_em = f"student.{uuid.uuid4().hex[:6]}@g.swu.ac.th"
+    personal_em = f"dormtest-vouch-{uuid.uuid4().hex[:8]}@gmail.com"
+    personal_em_2 = f"dormtest-vouch2-{uuid.uuid4().hex[:8]}@gmail.com"
+    try:
+        mdb.users.insert_one({
+            "id": swu_uid, "email": swu_em, "full_name": "SWU Google Student",
+            "role": "current_student", "auth_method": "google",
+        })
+        swu_h = {"Authorization": f"Bearer {create_access_token(swu_uid, swu_em, 'current_student')}"}
+
+        # Rejects SWU email as personal_email target
+        assert requests.post(f"{BASE}/dorm/verify/vouch-personal-email", json={"personal_email": "other@g.swu.ac.th"}, headers=swu_h).status_code == 422
+
+        # Vouch before personal signup
+        v1 = requests.post(f"{BASE}/dorm/verify/vouch-personal-email", json={"personal_email": personal_em}, headers=swu_h)
+        assert v1.status_code == 200 and v1.json()["applied"] is False and v1.json()["pending_signup"] is True
+        assert v1.json()["verification"]["vouched_personal_email"] == personal_em
+        assert v1.json()["verification"]["vouch_claimed"] is False
+
+        # Personal user signs up & visits /dorm/my -> pre-grant auto-claimed with zero admin involvement
+        r_p = requests.post(f"{BASE}/auth/register", json={"email": personal_em, "password": "pw-123456", "full_name": "Personal Account"})
+        assert r_p.status_code == 200
+        p_h = {"Authorization": f"Bearer {r_p.json()['access_token']}"}
+        my_p = requests.get(f"{BASE}/dorm/my", headers=p_h).json()
+        assert my_p["verification"]["verified"] is True
+        assert my_p["verification"]["method"] == "swu_account_vouch"
+        assert my_p["verification"]["swu_email"] == swu_em
+
+        # Trying to vouch a second personal email with the same SWU account is rejected (1-to-1)
+        v2 = requests.post(f"{BASE}/dorm/verify/vouch-personal-email", json={"personal_email": personal_em_2}, headers=swu_h)
+        assert v2.status_code == 409
+
+        # Listings created by personal account inherit verified badge automatically
+        rm = requests.post(f"{BASE}/dorm/listings", json={**LISTING, "title": "ทดสอบ Vouch Badge"}, headers=p_h)
+        assert rm.status_code == 200 and rm.json()["poster_swu_verified"] is True
+        requests.delete(f"{BASE}/dorm/listings/{rm.json()['id']}", headers=p_h)
+    finally:
+        mdb.users.delete_many({"id": swu_uid})
+        mdb.dorm_verify_pregrants.delete_many({"swu_email": swu_em})
+        mdb.dorm_verifications.delete_many({"swu_email": swu_em})
+        client.close()
+
+
+def test_auto_resolve_gone_and_deleted_reports_and_crowd_auto_moderation_with_undo(ctx):
+    from pymongo import MongoClient
+    admin = _login(*ADMIN)
+
+    # 1) Closing a listing auto-resolves its gone reports while deleting resolves all open reports
+    rm1 = requests.post(f"{BASE}/dorm/listings", json={**LISTING, "title": "ทดสอบ AutoResolve Close"}, headers=ctx["a"]).json()
+    try:
+        assert requests.post(f"{BASE}/dorm/reports", json={
+            "target_type": "listing", "target_id": rm1["id"], "reason": "ห้องเต็มแล้วแต่ไม่ปิดประกาศ", "note": "gone"
+        }, headers=ctx["b"]).status_code == 200
+        assert requests.post(f"{BASE}/dorm/listings/{rm1['id']}/status", json={"status": "closed"}, headers=ctx["a"]).status_code == 200
+        open_reps = requests.get(f"{BASE}/dorm/admin/overview", headers=admin).json()["reports"]
+        assert not any(r["target_id"] == rm1["id"] for r in open_reps)
+    finally:
+        requests.delete(f"{BASE}/dorm/listings/{rm1['id']}", headers=ctx["a"])
+
+    # 2) 3 verified reporters trigger reversible crowd auto-moderation
+    client = MongoClient(os.environ.get("MONGO_URL", "mongodb://localhost:27017"))
+    mdb = client[os.environ.get("DB_NAME", "swumkt_dev")]
+    rep_users = [_register(f"ผู้รายงาน {i}") for i in range(3)]
+    rep_uids = [requests.get(f"{BASE}/auth/me", headers=h).json()["id"] for h in rep_users]
+    rm2 = requests.post(f"{BASE}/dorm/listings", json={**LISTING, "title": "ทดสอบ Crowd AutoModerate"}, headers=ctx["a"]).json()
+    try:
+        for uid in rep_uids:
+            mdb.dorm_verifications.update_one(
+                {"user_id": uid},
+                {"$set": {"user_id": uid, "status": "verified", "method": "google_swu_link", "swu_email": f"{uid}@g.swu.ac.th"}},
+                upsert=True,
+            )
+        for idx, h in enumerate(rep_users):
+            rr = requests.post(f"{BASE}/dorm/reports", json={
+                "target_type": "listing", "target_id": rm2["id"], "reason": "สแกม/ขอโอนเงินก่อน", "note": f"scam-{idx}"
+            }, headers=h)
+            assert rr.status_code == 200
+            if idx == 2:
+                assert rr.json().get("auto_moderated") is True
+
+        # Listing is hidden & owner cannot self-reopen
+        assert requests.get(f"{BASE}/dorm/listings/{rm2['id']}").status_code == 410
+        assert requests.post(f"{BASE}/dorm/listings/{rm2['id']}/status", json={"status": "active"}, headers=ctx["a"]).status_code == 403
+
+        # Action recorded in dorm_agent_actions + reports resolved + autopilot counter populated
+        ov = requests.get(f"{BASE}/dorm/admin/overview", headers=admin).json()
+        assert ov["autopilot_30d"]["auto_moderated"] >= 1
+        assert not any(r["target_id"] == rm2["id"] for r in ov["reports"])
+        act = next(a for a in ov["recent_actions"] if a["action"] == "auto_moderate" and a["target_id"] == rm2["id"])
+        assert act["can_undo"] is True
+
+        # Admin undo restores the listing cleanly & resolve-stale works
+        assert requests.post(f"{BASE}/dorm/admin/actions/{act['id']}/undo", headers=admin).status_code == 200
+        assert requests.get(f"{BASE}/dorm/listings/{rm2['id']}").status_code == 200
+
+        # Resolve-stale endpoint clears reports on already-closed targets in bulk
+        assert requests.post(f"{BASE}/dorm/listings/{rm2['id']}/status", json={"status": "closed"}, headers=ctx["a"]).status_code == 200
+        rs = requests.post(f"{BASE}/dorm/admin/reports/resolve-stale", headers=admin)
+        assert rs.status_code == 200 and rs.json()["resolved"] >= 1
+        assert not any(r["target_id"] == rm2["id"] for r in requests.get(f"{BASE}/dorm/admin/overview", headers=admin).json()["reports"])
+    finally:
+        requests.delete(f"{BASE}/dorm/listings/{rm2['id']}", headers=ctx["a"])
+        mdb.dorm_verifications.delete_many({"user_id": {"$in": rep_uids}})
+        client.close()
+
+

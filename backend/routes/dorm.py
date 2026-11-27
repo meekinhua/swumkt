@@ -18,13 +18,17 @@ log a lead event — that event count is also what the product can later sell
 to room owners.
 """
 
+import asyncio
 import base64
+import gzip
+import hashlib
 import html as _html
 import io
 import json
 import math
 import secrets
 import smtplib
+import time
 from email.message import EmailMessage
 
 import httpx
@@ -53,6 +57,15 @@ NATIVE_GONE_GRACE_HOURS = 48
 ARCHIVE_VISIBLE_DAYS = 90
 MAX_ACTIVE_LISTINGS = 5
 ADMIN_CLOSED_MSG = "แอดมินปิดประกาศนี้ไว้ เปิดเองไม่ได้ ถ้าคิดว่าปิดผิด แจ้งแอดมินในกลุ่ม OpenChat ได้"
+AUTO_MOD_CLOSED_MSG = "ประกาศถูกพักชั่วคราวเนื่องจากมีผู้รายงานหลายคน หากคิดว่าผิดพลาด แจ้งแอดมินเพื่อตรวจสอบและเปิดคืนได้"
+DEFAULT_GOOGLE_CLIENT_ID = "949663376782-cd9128nvekdavpu09mko30rfn9c2kre4.apps.googleusercontent.com"
+SEVERE_REPORT_REASONS = frozenset({
+    "สแกม/ขอโอนเงินก่อน", "ข้อมูลเท็จ/ไม่มีห้องจริง",
+    "โปรไฟล์ปลอม/ไม่มีตัวตน", "คุกคามหรือไม่สุภาพ",
+    "ข้อมูลเท็จ", "โฆษณาหรือสแปม",
+})
+AUTO_MOD_MIN_REPORTERS = 3
+AUTO_MOD_MIN_WEIGHT = 2.5  # SWU-verified reporter = 1.0, unverified signed-in = 0.5
 
 # ---------------------------------------------------------------- vocab
 # One source of truth; the frontend reads it from GET /dorm/meta.
@@ -377,6 +390,20 @@ class VerifyOtpConfirmIn(BaseModel):
 
 class VerifyGoogleLinkIn(BaseModel):
     credential: str = Field(..., min_length=20, max_length=4000)
+
+
+class VerifyVouchPersonalIn(BaseModel):
+    personal_email: str = Field(..., min_length=5, max_length=120)
+
+    @field_validator("personal_email")
+    @classmethod
+    def _em(cls, v: str):
+        v = (v or "").strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", v):
+            raise ValueError("รูปแบบอีเมลไม่ถูกต้อง")
+        if SWU_EMAIL_RE.match(v):
+            raise ValueError("กรุณาใส่อีเมลส่วนตัวที่ไม่ใช่อีเมล มศว (อีเมล มศว ยืนยันอัตโนมัติอยู่แล้ว)")
+        return v
 
 
 class VerifyManualRequestIn(BaseModel):
@@ -987,7 +1014,42 @@ def clean_chat_posts(raw: dict) -> dict:
         posts.append(x)
     posts.sort(key=lambda x: (x["date"], x["id"]), reverse=True)
     period = raw.get("period") or {}
-    return {"period": {"from": period.get("from"), "to": period.get("to")}, "posts": posts}
+    by_building = {}
+    by_zone = {}
+    for x in posts:
+        if x.get("building_slug"):
+            by_building.setdefault(x["building_slug"], []).append(x)
+        if x.get("zone"):
+            by_zone.setdefault(x["zone"], []).append(x)
+    overview = {
+        "posts": len(posts),
+        "seeking": sum(1 for p in posts if p["kind"] == "seeking"),
+        "priced": sum(1 for p in posts if p.get("per_person")),
+        "period": {"from": period.get("from"), "to": period.get("to")},
+        "per_person": price_summary([p["per_person"] for p in posts if p.get("per_person")]),
+        "by_zone": {z["id"]: chat_summary(by_zone[z["id"]]) for z in ZONES if z["id"] in by_zone},
+    }
+    return {"period": {"from": period.get("from"), "to": period.get("to")}, "posts": posts,
+            "by_building": by_building, "overview": overview}
+
+
+_insights_cache = {"mtime": None, "data": None}
+
+
+def load_insights() -> Optional[dict]:
+    """Read insights summary once and refresh only when the file changes."""
+    path = DATA_DIR / "dorm_insights.json"
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return None
+    if _insights_cache["mtime"] != mtime:
+        try:
+            _insights_cache["data"] = json.loads(path.read_text(encoding="utf-8"))
+            _insights_cache["mtime"] = mtime
+        except Exception:
+            return _insights_cache["data"]
+    return _insights_cache["data"]
 
 
 def load_chat_posts() -> dict:
@@ -1223,25 +1285,142 @@ def site_origin(request) -> str:
 
 # ---------------------------------------------------------------- routes
 def get_dorm_routes(db, get_current_user, get_current_user_optional):
-    state = {"indexed": False, "seeded": False}
+    state = {"indexed": False, "seeded": False, "cache_ver": 0, "rcache": {}, "rlocks": {}}
+
+    def _bust_cache() -> None:
+        state["cache_ver"] += 1
+        state["rcache"].clear()
+
+    async def _cached(key, ttl: int, loader):
+        now_m = time.monotonic()
+        hit = state["rcache"].get(key)
+        if hit and (now_m - hit[0]) < ttl:
+            return hit[1]
+        lock = state["rlocks"].setdefault(key, asyncio.Lock())
+        async with lock:
+            hit = state["rcache"].get(key)
+            if hit and (time.monotonic() - hit[0]) < ttl:
+                return hit[1]
+            ver = state["cache_ver"]
+            val = await loader()
+            if state["cache_ver"] == ver:
+                if len(state["rcache"]) >= 250:
+                    oldest = min(state["rcache"].items(), key=lambda kv: kv[1][0])[0]
+                    state["rcache"].pop(oldest, None)
+                state["rcache"][key] = (time.monotonic(), val)
+            return val
+
+    def _response_from_bytes(raw_bytes: bytes, gz_bytes: Optional[bytes], request: Request) -> Response:
+        accept_enc = (request.headers.get("accept-encoding") or "").lower()
+        if "gzip" in accept_enc and gz_bytes is not None:
+            return Response(
+                content=gz_bytes,
+                media_type="application/json; charset=utf-8",
+                headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"},
+            )
+        return Response(
+            content=raw_bytes,
+            media_type="application/json; charset=utf-8",
+            headers={"Vary": "Accept-Encoding"},
+        )
+
+    async def _cached_json(key, ttl: int, loader, request: Request) -> Response:
+        jkey = ("_json", key)
+        now_m = time.monotonic()
+        hit = state["rcache"].get(jkey)
+        if hit and (now_m - hit[0]) < ttl:
+            return _response_from_bytes(hit[1], hit[2], request)
+        lock = state["rlocks"].setdefault(jkey, asyncio.Lock())
+        async with lock:
+            hit = state["rcache"].get(jkey)
+            if hit and (time.monotonic() - hit[0]) < ttl:
+                return _response_from_bytes(hit[1], hit[2], request)
+            ver = state["cache_ver"]
+            val = await loader()
+            raw_bytes = json.dumps(val, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            gz_bytes = gzip.compress(raw_bytes, compresslevel=5) if len(raw_bytes) >= 500 else None
+            if state["cache_ver"] == ver:
+                if len(state["rcache"]) >= 250:
+                    oldest = min(state["rcache"].items(), key=lambda kv: kv[1][0])[0]
+                    state["rcache"].pop(oldest, None)
+                state["rcache"][jkey] = (time.monotonic(), raw_bytes, gz_bytes)
+            return _response_from_bytes(raw_bytes, gz_bytes, request)
 
     def _is_admin(u) -> bool:
         return getattr(u, "role", None) == "admin"
 
+    def _google_client_id() -> str:
+        return (os.environ.get("GOOGLE_CLIENT_ID") or DEFAULT_GOOGLE_CLIENT_ID).strip()
+
     def _swu_verified(u) -> bool:
         email = (getattr(u, "email", "") or "").lower()
-        return getattr(u, "auth_method", "") == "google" and             (email.endswith("@swu.ac.th") or email.endswith(".swu.ac.th"))
+        return getattr(u, "auth_method", "") == "google" and (email.endswith("@swu.ac.th") or email.endswith(".swu.ac.th"))
+
+    async def _dismiss_verification_proposals(user_id: str, note: str) -> None:
+        await db.dorm_admin_proposals.update_many(
+            {"kind": "review_verification", "target_id": user_id, "status": "pending"},
+            {"$set": {"status": "dismissed", "decided_at": _iso(_now()), "decided_by": "system:auto", "decision_note": note}},
+        )
+
+    async def _claim_pregrant(u) -> bool:
+        if not u or _swu_verified(u):
+            return False
+        email = (getattr(u, "email", "") or "").strip().lower()
+        if not email:
+            return False
+        existing = await db.dorm_verifications.find_one({"user_id": u.id, "status": "verified"}, {"_id": 1})
+        if existing:
+            return False
+        pg = await db.dorm_verify_pregrants.find_one({"personal_email": email, "claimed_by": None}, {"_id": 0})
+        if not pg or not pg.get("swu_email"):
+            return False
+        taken = await db.dorm_verifications.find_one(
+            {"swu_email": pg["swu_email"], "status": "verified", "user_id": {"$ne": u.id}}, {"_id": 1}
+        )
+        if taken:
+            return False
+        now_s = _iso(_now())
+        claimed = await db.dorm_verify_pregrants.update_one(
+            {"swu_email": pg["swu_email"], "personal_email": email, "claimed_by": None},
+            {"$set": {"claimed_by": u.id, "claimed_at": now_s}},
+        )
+        if not claimed.matched_count:
+            return False
+        await db.dorm_verifications.update_one(
+            {"user_id": u.id},
+            {"$set": {
+                "user_id": u.id, "status": "verified", "method": "swu_account_vouch", "kind": "student",
+                "status_label": VERIFY_LABELS["student"], "swu_email": pg["swu_email"],
+                "vouched_by": pg.get("vouched_by") or "", "verified_at": now_s, "updated_at": now_s, "reject_reason": "",
+            }, "$setOnInsert": {"created_at": now_s}},
+            upsert=True,
+        )
+        await _backfill_verified(u.id)
+        await _dismiss_verification_proposals(u.id, "self_verified_vouch_pregrant")
+        _bust_cache()
+        return True
 
     async def _swu_verified_async(u) -> bool:
         if _swu_verified(u):
             return True
         doc = await db.dorm_verifications.find_one({"user_id": u.id, "status": "verified"}, {"_id": 1})
-        return bool(doc)
+        if doc:
+            return True
+        return await _claim_pregrant(u)
 
     async def _backfill_verified(user_id: str) -> None:
         await db.dorm_listings.update_many({"owner_id": user_id}, {"$set": {"poster_swu_verified": True}})
         await db.dorm_mates.update_many({"user_id": user_id}, {"$set": {"swu_verified": True}})
         await db.dorm_reviews.update_many({"user_id": user_id}, {"$set": {"swu_verified": True}})
+
+    async def _auto_resolve_reports(target_type: str, target_id: str, reason_tag: str, reasons_in: Optional[list] = None) -> int:
+        if not target_id:
+            return 0
+        q: dict = {"target_type": target_type, "target_id": target_id, "resolved": False}
+        if reasons_in is not None:
+            q["reason"] = {"$in": list(reasons_in)}
+        res = await db.dorm_reports.update_many(q, {"$set": {"resolved": True, "resolved_at": _iso(_now()), "resolved_by": reason_tag}})
+        return res.modified_count
 
     def _smtp_enabled() -> bool:
         return bool(os.environ.get("DORM_SMTP_HOST", "").strip())
@@ -1273,14 +1452,20 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 s.send_message(msg)
 
     async def _verification_info(u) -> dict:
-        doc = await db.dorm_verifications.find_one({"user_id": u.id}, {"_id": 0, "otp_hash": 0})
+        cid = _google_client_id()
         if _swu_verified(u):
+            swu_em = (u.email or "").strip().lower()
+            pg = await db.dorm_verify_pregrants.find_one({"swu_email": swu_em}, {"_id": 0, "personal_email": 1, "claimed_by": 1})
             return {
                 "verified": True, "status": "verified", "method": "google_swu",
-                "status_label": VERIFY_LABELS["student"], "swu_email": (u.email or "").lower(),
+                "status_label": VERIFY_LABELS["student"], "swu_email": swu_em,
                 "reject_reason": "", "smtp_enabled": _smtp_enabled(),
-                "google_enabled": bool(os.environ.get("GOOGLE_CLIENT_ID")),
+                "google_enabled": bool(cid), "google_client_id": cid,
+                "vouched_personal_email": (pg or {}).get("personal_email") or "",
+                "vouch_claimed": bool(pg and pg.get("claimed_by")),
             }
+        await _claim_pregrant(u)
+        doc = await db.dorm_verifications.find_one({"user_id": u.id}, {"_id": 0, "otp_hash": 0})
         if doc:
             return {
                 "verified": doc.get("status") == "verified",
@@ -1291,19 +1476,22 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 "swu_email": doc.get("swu_email") or "",
                 "reject_reason": doc.get("reject_reason") or "",
                 "smtp_enabled": _smtp_enabled(),
-                "google_enabled": bool(os.environ.get("GOOGLE_CLIENT_ID")),
+                "google_enabled": bool(cid), "google_client_id": cid,
+                "vouched_personal_email": "", "vouch_claimed": False,
             }
         return {
             "verified": False, "status": "none", "method": "", "kind": "",
             "status_label": "", "swu_email": "", "reject_reason": "",
             "smtp_enabled": _smtp_enabled(),
-            "google_enabled": bool(os.environ.get("GOOGLE_CLIENT_ID")),
+            "google_enabled": bool(cid), "google_client_id": cid,
+            "vouched_personal_email": "", "vouch_claimed": False,
         }
 
     async def _ensure():
         if not state["indexed"]:
             await db.dorm_listings.create_index("id", unique=True)
             await db.dorm_listings.create_index([("status", 1), ("expires_at", -1)])
+            await db.dorm_listings.create_index([("building_slug", 1), ("status", 1), ("expires_at", -1)])
             await db.dorm_mates.create_index("id", unique=True)
             await db.dorm_mates.create_index("user_id", unique=True)
             await db.dorm_buildings.create_index("slug", unique=True)
@@ -1316,6 +1504,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             await db.dorm_interests.create_index("user_id")
             await db.dorm_verifications.create_index("user_id", unique=True)
             await db.dorm_verifications.create_index("status")
+            await db.dorm_verify_pregrants.create_index("swu_email", unique=True)
+            await db.dorm_verify_pregrants.create_index("personal_email")
             await db.dorm_threads.create_index("id", unique=True)
             await db.dorm_threads.create_index("pair_key", unique=True)
             await db.dorm_threads.create_index([("participants", 1), ("last_at", -1)])
@@ -1329,8 +1519,13 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             # idempotent: inserts missing buildings, backfills new fields, keeps admin edits
             await _seed_buildings()
             state["seeded"] = True
-        await _sync_external()
-        await _sweep_unconfirmed_native()
+        sync_res = await _sync_external()
+        if sync_res and (sync_res.get("upserted") or sync_res.get("closed")):
+            _bust_cache()
+        if await _sweep_unconfirmed_native():
+            _bust_cache()
+        if await _sweep_maintenance():
+            _bust_cache()
 
     async def _sweep_unconfirmed_native(force: bool = False) -> int:
         """Auto-pauses native listings that received gone reports >= 48h ago without owner confirmation."""
@@ -1341,13 +1536,17 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         state["sweep_at"] = now_dt
         cutoff = _iso(now_dt - timedelta(hours=NATIVE_GONE_GRACE_HOURS))
         now_s = _iso(now_dt)
+        q = {
+            "external": {"$ne": True},
+            "status": {"$in": ["active", "reserved"]},
+            "owner_confirm_needed": True,
+            "gone_check_since": {"$ne": None, "$lte": cutoff},
+        }
+        lids = [x["id"] for x in await db.dorm_listings.find(q, {"_id": 0, "id": 1}).to_list(200)]
+        if not lids:
+            return 0
         res = await db.dorm_listings.update_many(
-            {
-                "external": {"$ne": True},
-                "status": {"$in": ["active", "reserved"]},
-                "owner_confirm_needed": True,
-                "gone_check_since": {"$ne": None, "$lte": cutoff},
-            },
+            {"id": {"$in": lids}},
             {"$set": {
                 "status": "closed",
                 "closed_by": "system",
@@ -1356,10 +1555,101 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 "reserved_until": None,
             }},
         )
+        await db.dorm_reports.update_many(
+            {"target_type": "listing", "target_id": {"$in": lids}, "reason": {"$in": list(GONE_REASONS)}, "resolved": False},
+            {"$set": {"resolved": True, "resolved_at": now_s, "resolved_by": "system_paused_48h"}},
+        )
         return res.modified_count
+
+    async def _sweep_maintenance(force: bool = False) -> int:
+        """Periodic self-healing cleanup so stale queues and orphans don't pile up for admin."""
+        now_dt = _now()
+        last = state.get("maint_at")
+        if not force and last and (now_dt - last).total_seconds() < 300:
+            return 0
+        state["maint_at"] = now_dt
+        now_s = _iso(now_dt)
+        changed = 0
+
+        # 1) Auto-resolve open reports pointing to deleted targets OR closed >= 7 days ago
+        old_closed_cutoff = _iso(now_dt - timedelta(days=7))
+        open_reps = await db.dorm_reports.find({"resolved": False}, {"_id": 0, "id": 1, "target_type": 1, "target_id": 1}).to_list(500)
+        if open_reps:
+            lids = list({r["target_id"] for r in open_reps if r.get("target_type") == "listing"})
+            mids = list({r["target_id"] for r in open_reps if r.get("target_type") == "mate"})
+            rids = list({r["target_id"] for r in open_reps if r.get("target_type") == "review"})
+            lmap = {x["id"]: x async for x in db.dorm_listings.find({"id": {"$in": lids}}, {"_id": 0, "id": 1, "status": 1, "closed_at": 1})} if lids else {}
+            mmap = {x["id"]: x async for x in db.dorm_mates.find({"id": {"$in": mids}}, {"_id": 0, "id": 1, "status": 1, "closed_at": 1})} if mids else {}
+            rev_set = {x["id"] async for x in db.dorm_reviews.find({"id": {"$in": rids}}, {"_id": 0, "id": 1})} if rids else set()
+            stale_rids = []
+            for r in open_reps:
+                tt, tid = r.get("target_type"), r.get("target_id")
+                if tt == "listing":
+                    tgt = lmap.get(tid)
+                    if tgt is None or (tgt.get("status") == "closed" and (tgt.get("closed_at") or "") <= old_closed_cutoff):
+                        stale_rids.append(r["id"])
+                elif tt == "mate":
+                    tgt = mmap.get(tid)
+                    if tgt is None or (tgt.get("status") == "closed" and (tgt.get("closed_at") or "") <= old_closed_cutoff):
+                        stale_rids.append(r["id"])
+                elif tt == "review" and tid not in rev_set:
+                    stale_rids.append(r["id"])
+            if stale_rids:
+                rr = await db.dorm_reports.update_many(
+                    {"id": {"$in": stale_rids}, "resolved": False},
+                    {"$set": {"resolved": True, "resolved_at": now_s, "resolved_by": "system_stale_sweep"}},
+                )
+                changed += rr.modified_count
+
+        # 2) Clean orphaned uploaded photos older than 24h not referenced by any listing
+        photo_cutoff = _iso(now_dt - timedelta(hours=24))
+        old_photos = await db.dorm_photos.find({"created_at": {"$lte": photo_cutoff}}, {"_id": 0, "id": 1}).to_list(200)
+        if old_photos:
+            used_pids = set()
+            async for lst in db.dorm_listings.find({"photo_links.0": {"$exists": True}}, {"_id": 0, "photo_links": 1}):
+                for u in lst.get("photo_links") or []:
+                    m = re.fullmatch(r"/api/dorm/photos/([a-f0-9]{16})", u or "")
+                    if m:
+                        used_pids.add(m.group(1))
+            orphan_pids = [p["id"] for p in old_photos if p["id"] not in used_pids]
+            if orphan_pids:
+                dr = await db.dorm_photos.delete_many({"id": {"$in": orphan_pids}})
+                changed += dr.deleted_count
+
+        # 3) Clean expired abandoned OTP records (> 24h past expiry)
+        otp_cutoff = _iso(now_dt - timedelta(hours=24))
+        od = await db.dorm_verifications.delete_many({"status": "otp_sent", "otp_expires_at": {"$lte": otp_cutoff}})
+        changed += od.deleted_count
+
+        # 4) Auto-dismiss obsolete pending admin proposals whose target is already handled
+        pend_props = await db.dorm_admin_proposals.find(
+            {"status": "pending", "kind": {"$in": ["review_verification", "resolve_report"]}},
+            {"_id": 0, "id": 1, "kind": 1, "target_id": 1},
+        ).to_list(200)
+        if pend_props:
+            vuids = [p["target_id"] for p in pend_props if p["kind"] == "review_verification" and p.get("target_id")]
+            rpids = [p["target_id"] for p in pend_props if p["kind"] == "resolve_report" and p.get("target_id")]
+            verified_uids = {v["user_id"] async for v in db.dorm_verifications.find({"user_id": {"$in": vuids}, "status": "verified"}, {"_id": 0, "user_id": 1})} if vuids else set()
+            resolved_rids = {r["id"] async for r in db.dorm_reports.find({"id": {"$in": rpids}, "resolved": True}, {"_id": 0, "id": 1})} if rpids else set()
+            obs_ids = [
+                p["id"] for p in pend_props
+                if (p["kind"] == "review_verification" and p.get("target_id") in verified_uids)
+                or (p["kind"] == "resolve_report" and p.get("target_id") in resolved_rids)
+            ]
+            if obs_ids:
+                pr = await db.dorm_admin_proposals.update_many(
+                    {"id": {"$in": obs_ids}, "status": "pending"},
+                    {"$set": {"status": "dismissed", "decided_at": now_s, "decided_by": "system:auto", "decision_note": "target_already_handled"}},
+                )
+                changed += pr.modified_count
+        return changed
 
     async def _sync_external(force: bool = False) -> Optional[dict]:
         """Imports data/dorm_external_listings.json once per process and again whenever the file changes."""
+        now_m = time.monotonic()
+        if not force and state.get("ext_mtime") is not None and (now_m - (state.get("ext_stat_at") or 0)) < 5:
+            return None
+        state["ext_stat_at"] = now_m
         path = DATA_DIR / EXT_FILE
         try:
             mtime = path.stat().st_mtime
@@ -1448,6 +1738,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         if not listing_ids:
             return {}
         ints = await db.dorm_interests.find({"listing_id": {"$in": list(listing_ids)}}, {"_id": 0}).sort("created_at", 1).to_list(20000)
+        if not ints:
+            return {}
         mids = list({i["mate_id"] for i in ints})
         mates = {m["id"]: m for m in await db.dorm_mates.find(
             {"id": {"$in": mids}, **_active_q()},
@@ -1466,19 +1758,35 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         return m if _mate_live(m) else None
 
     async def _annotate(items: List[dict], u=None) -> List[dict]:
+        if not items:
+            return items
         lids = [x["id"] for x in items]
-        people = await _interest_people(lids)
-        peeks = {
-            r["_id"]: int(r["n"])
-            async for r in db.dorm_peeks.aggregate([
-                {"$match": {"listing_id": {"$in": lids}}},
-                {"$group": {"_id": "$listing_id", "n": {"$sum": 1}}},
-            ])
-        } if lids else {}
         slugs = list({x["building_slug"] for x in items if x.get("building_slug") and x.get("bedrooms") == 0})
-        btype = {b["slug"]: b.get("type") for b in await db.dorm_buildings.find(
-            {"slug": {"$in": slugs}}, {"_id": 0, "slug": 1, "type": 1}).to_list(500)} if slugs else {}
-        me = await _live_mate(u) if u else None
+
+        async def _get_peeks():
+            return {
+                r["_id"]: int(r["n"])
+                async for r in db.dorm_peeks.aggregate([
+                    {"$match": {"listing_id": {"$in": lids}}},
+                    {"$group": {"_id": "$listing_id", "n": {"$sum": 1}}},
+                ])
+            }
+
+        async def _get_btypes():
+            if not slugs:
+                return {}
+            return {b["slug"]: b.get("type") for b in await db.dorm_buildings.find(
+                {"slug": {"$in": slugs}}, {"_id": 0, "slug": 1, "type": 1}).to_list(500)}
+
+        async def _no_mate():
+            return None
+
+        people, peeks, btype, me = await asyncio.gather(
+            _interest_people(lids),
+            _get_peeks(),
+            _get_btypes(),
+            _live_mate(u) if u else _no_mate(),
+        )
         now_s = _iso(_now())
         for x in items:
             x.update(interest_fields(x, people.get(x["id"], []), getattr(u, "id", None), me))
@@ -1497,6 +1805,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
     async def _waiting_ids() -> List[str]:
         """Listings with at least one counting interest (the caller filters for open ones)."""
         ints = await db.dorm_interests.find({}, {"_id": 0, "listing_id": 1, "mate_id": 1}).to_list(50000)
+        if not ints:
+            return []
         live = {m["id"] for m in await db.dorm_mates.find({"id": {"$in": list({i["mate_id"] for i in ints})}, **_active_q()},
                                                           {"_id": 0, "id": 1}).to_list(50000)}
         return list({i["listing_id"] for i in ints if i["mate_id"] in live})
@@ -1522,93 +1832,90 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         return {"ok": True}
 
     @dorm_router.get("/meta")
-    async def meta():
-        return {
-            "zones": ZONES, "kinds": KINDS, "poster_roles": POSTER_ROLES, "tags": LIFESTYLE_TAGS,
-            "amenities": AMENITIES, "genders": GENDERS, "gender_prefs": GENDER_PREFS, "years": YEARS,
-            "review_aspects": REVIEW_ASPECTS, "report_reasons": REPORT_REASONS, "expiry_days": EXPIRY_DAYS,
-            "expiry_by_kind": EXPIRY_BY_KIND, "reserved_show_days": RESERVED_SHOW_DAYS,
-            "ext_ttl_days": EXT_TTL_DAYS, "ext_gone_auto_close": EXT_GONE_AUTO_CLOSE,
-            "native_gone_auto_pause": NATIVE_GONE_AUTO_PAUSE, "native_gone_grace_hours": NATIVE_GONE_GRACE_HOURS,
-            "archive_visible_days": ARCHIVE_VISIBLE_DAYS,
-            "report_reasons_by_type": REPORT_REASONS_BY_TYPE, "report_note_max": REPORT_NOTE_MAX,
-            "chat_kinds": CHAT_KIND_LABELS, "room_types": ROOM_TYPES,
-            "ext_gone_reason": EXT_GONE_REASON, "max_interests": MAX_ACTIVE_INTERESTS, "share_by_bedrooms": SHARE_BY_BEDROOMS,
-        }
+    async def meta(request: Request):
+        async def _load_meta():
+            return {
+                "zones": ZONES, "kinds": KINDS, "poster_roles": POSTER_ROLES, "tags": LIFESTYLE_TAGS,
+                "amenities": AMENITIES, "genders": GENDERS, "gender_prefs": GENDER_PREFS, "years": YEARS,
+                "review_aspects": REVIEW_ASPECTS, "report_reasons": REPORT_REASONS, "expiry_days": EXPIRY_DAYS,
+                "expiry_by_kind": EXPIRY_BY_KIND, "reserved_show_days": RESERVED_SHOW_DAYS,
+                "ext_ttl_days": EXT_TTL_DAYS, "ext_gone_auto_close": EXT_GONE_AUTO_CLOSE,
+                "native_gone_auto_pause": NATIVE_GONE_AUTO_PAUSE, "native_gone_grace_hours": NATIVE_GONE_GRACE_HOURS,
+                "archive_visible_days": ARCHIVE_VISIBLE_DAYS,
+                "report_reasons_by_type": REPORT_REASONS_BY_TYPE, "report_note_max": REPORT_NOTE_MAX,
+                "chat_kinds": CHAT_KIND_LABELS, "room_types": ROOM_TYPES,
+                "ext_gone_reason": EXT_GONE_REASON, "max_interests": MAX_ACTIVE_INTERESTS, "share_by_bedrooms": SHARE_BY_BEDROOMS,
+            }
+        return await _cached_json(("meta",), 3600, _load_meta, request)
 
     def _chat_overview() -> dict:
-        chat = load_chat_posts()
-        posts = chat["posts"]
-        zones = {}
-        for z in _ids(ZONES):
-            zp = [p for p in posts if p.get("zone") == z]
-            if zp:
-                zones[z] = chat_summary(zp)
-        return {
-            "posts": len(posts),
-            "seeking": sum(1 for p in posts if p["kind"] == "seeking"),
-            "priced": sum(1 for p in posts if p.get("per_person")),
-            "period": chat["period"],
-            "per_person": price_summary([p["per_person"] for p in posts if p.get("per_person")]),
-            "by_zone": zones,
-        }
+        return load_chat_posts()["overview"]
 
     @dorm_router.get("/chat-posts")
-    async def chat_posts(building: Optional[str] = None, zone: Optional[str] = None, kind: Optional[str] = None,
+    async def chat_posts(request: Request, building: Optional[str] = None, zone: Optional[str] = None, kind: Optional[str] = None,
                          max_price: Optional[int] = None, min_price: Optional[int] = None,
                          limit: int = Query(20, ge=1, le=500), skip: int = Query(0, ge=0)):
         """Old anonymised OpenChat ads, newest first. An archive of prices and demand, not rooms on offer."""
-        chat = load_chat_posts()
-        items = filter_chat(chat["posts"], building=building, zone=zone, kind=kind,
-                            max_price=max_price, min_price=min_price)
-        return {"total": len(items), "items": items[skip:skip + limit], "period": chat["period"]}
+        async def _load_chat():
+            chat = load_chat_posts()
+            items = filter_chat(chat["posts"], building=building, zone=zone, kind=kind,
+                                max_price=max_price, min_price=min_price)
+            return {"total": len(items), "items": items[skip:skip + limit], "period": chat["period"]}
+        if building is None and zone is None and kind is None and max_price is None and min_price is None and skip == 0:
+            return await _cached_json(("chat-posts", limit), 60, _load_chat, request)
+        return await _load_chat()
 
     @dorm_router.get("/stats")
-    async def stats():
+    async def stats(request: Request):
         await _ensure()
-        q_m = _active_q()
-        q_l = _active_listing_q()
-        listings = await db.dorm_listings.find(q_l, {"_id": 0, "id": 1, "kind": 1, "zone": 1, "price_per_person": 1,
-                                                     "external": 1, "source": 1}).to_list(5000)
-        waiting = set(await _waiting_ids())
-        peeking = set(await db.dorm_peeks.distinct("listing_id"))
-        by_source = {}
-        for x in listings:
-            if x.get("external"):
-                by_source[x.get("source") or ""] = by_source.get(x.get("source") or "", 0) + 1
-        mates = await db.dorm_mates.find(q_m, {"_id": 0, "gender": 1, "zones": 1, "budget_max": 1, "has_room": 1}).to_list(5000)
-        by_kind, by_zone = {}, {}
-        for x in listings:
-            by_kind[x["kind"]] = by_kind.get(x["kind"], 0) + 1
-        for z in _ids(ZONES):
-            # the same rule as GET /mates?zone=: people who named the zone, plus people open to any zone
-            n = sum(1 for m in mates if mate_in_zone(m, z))
-            if n:
-                by_zone[z] = n
-        try:
-            insights = json.loads((DATA_DIR / "dorm_insights.json").read_text(encoding="utf-8"))
-        except Exception:
-            insights = None
-        return {
-            "chat": _chat_overview(),
-            "live": {
-                "listings": len(listings), "mates": len(mates),
-                "buildings": await db.dorm_buildings.count_documents({}),
-                "reviews": await db.dorm_reviews.count_documents({}),
-                "listings_by_kind": by_kind, "mate_demand_by_zone": by_zone,
-                "external": sum(by_source.values()), "external_by_source": by_source,
-                "waiting": sum(1 for x in listings if x["id"] in waiting),
-                "peeking": sum(1 for x in listings if x["id"] in peeking),
-                "mates_female": sum(1 for m in mates if m.get("gender") == "female"),
-                "mates_male": sum(1 for m in mates if m.get("gender") == "male"),
-                "mates_without_room": sum(1 for m in mates if not m.get("has_room")),
-            },
-            "insights": insights,
-        }
+
+        async def _load():
+            q_m = _active_q()
+            q_l = _active_listing_q()
+            listings, waiting_l, peeking_l, mates, n_buildings, n_reviews = await asyncio.gather(
+                db.dorm_listings.find(q_l, {"_id": 0, "id": 1, "kind": 1, "zone": 1, "price_per_person": 1,
+                                            "external": 1, "source": 1}).to_list(5000),
+                _waiting_ids(),
+                db.dorm_peeks.distinct("listing_id"),
+                db.dorm_mates.find(q_m, {"_id": 0, "gender": 1, "zones": 1, "budget_max": 1, "has_room": 1}).to_list(5000),
+                db.dorm_buildings.count_documents({}),
+                db.dorm_reviews.count_documents({"hidden": {"$ne": True}}),
+            )
+            waiting = set(waiting_l)
+            peeking = set(peeking_l)
+            by_source = {}
+            by_kind = {}
+            for x in listings:
+                by_kind[x["kind"]] = by_kind.get(x["kind"], 0) + 1
+                if x.get("external"):
+                    by_source[x.get("source") or ""] = by_source.get(x.get("source") or "", 0) + 1
+            by_zone = {}
+            for z in _ids(ZONES):
+                n = sum(1 for m in mates if mate_in_zone(m, z))
+                if n:
+                    by_zone[z] = n
+            return {
+                "chat": _chat_overview(),
+                "live": {
+                    "listings": len(listings), "mates": len(mates),
+                    "buildings": n_buildings, "reviews": n_reviews,
+                    "listings_by_kind": by_kind, "mate_demand_by_zone": by_zone,
+                    "external": sum(by_source.values()), "external_by_source": by_source,
+                    "waiting": sum(1 for x in listings if x["id"] in waiting),
+                    "peeking": sum(1 for x in listings if x["id"] in peeking),
+                    "mates_female": sum(1 for m in mates if m.get("gender") == "female"),
+                    "mates_male": sum(1 for m in mates if m.get("gender") == "male"),
+                    "mates_without_room": sum(1 for m in mates if not m.get("has_room")),
+                },
+                "insights": load_insights(),
+            }
+
+        return await _cached_json(("stats",), 20, _load, request)
 
     # ---------- listings
     @dorm_router.get("/listings")
     async def list_listings(
+        request: Request,
         kind: Optional[str] = None, zone: Optional[str] = None, max_price: Optional[int] = None,
         min_price: Optional[int] = None, gender: Optional[str] = None, building: Optional[str] = None, q: Optional[str] = None,
         amenity: Optional[str] = None, sort: str = "new", limit: int = Query(30, ge=1, le=300), skip: int = Query(0, ge=0),
@@ -1628,61 +1935,64 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             pos = {lid: i for i, lid in enumerate(want)}
             found.sort(key=lambda x: pos.get(x["id"], 0))
             return {"total": len(found), "items": await _annotate(found, u)}
-        base_f = {}
-        if kind:
-            base_f["kind"] = kind
-        if zone:
-            base_f["zone"] = zone
-        if building:
-            base_f["building_slug"] = building
-        if amenity:
-            base_f["amenities"] = amenity
-        if max_price is not None or min_price is not None:
-            base_f["price_per_person"] = {**({"$lte": max_price} if max_price is not None else {}),
-                                          **({"$gte": min_price} if min_price is not None else {})}
-        if gender in ("female", "male"):
-            base_f["gender_pref"] = {"$in": [gender, "any"]}
-        if q:
-            rx = {"$regex": re.escape(q.strip()[:60]), "$options": "i"}
-            base_f["$or"] = [{"title": rx}, {"building_name": rx}, {"description": rx}]
-        if engaged:
-            eng_ids = set(await _waiting_ids()) | set(await db.dorm_peeks.distinct("listing_id"))
-            base_f["id"] = {"$in": list(eng_ids)}
-        elif interested:
-            base_f["id"] = {"$in": await _waiting_ids()}
-        if external is not None:
-            base_f["external"] = True if external else {"$ne": True}
-        now_dt = _now()
-        now_s = _iso(now_dt)
-        cutoff_s = _iso(now_dt - timedelta(days=ARCHIVE_VISIBLE_DAYS))
-        sort = sort if sort in SORTS else "new"
-        if include_closed:
-            all_rows = await _annotate(await db.dorm_listings.find(base_f, PUBLIC_LISTING).to_list(3000), u)
-            rows = [x for x in all_rows if not x.get("is_gone") or is_publicly_archivable(x, cutoff_s)]
-            total = len(rows)
-            ext_total = sum(1 for x in rows if x.get("external")) if external is None else (total if external else 0)
-            closed_total = sum(1 for x in rows if x.get("is_gone"))
-            archived_total = closed_total
-            waiting_total = sum(1 for x in rows if not x.get("is_gone") and (x.get("interest_people") or 0) > 0)
-            peeked_total = sum(1 for x in rows if not x.get("is_gone") and (x.get("peek_count") or 0) > 0)
-            items = sort_listings(rows, sort)[skip:skip + limit]
+        async def _load_listings():
+            base_f = {}
+            if kind:
+                base_f["kind"] = kind
+            if zone:
+                base_f["zone"] = zone
+            if building:
+                base_f["building_slug"] = building
+            if amenity:
+                base_f["amenities"] = amenity
+            if max_price is not None or min_price is not None:
+                base_f["price_per_person"] = {**({"$lte": max_price} if max_price is not None else {}),
+                                              **({"$gte": min_price} if min_price is not None else {})}
+            if gender in ("female", "male"):
+                base_f["gender_pref"] = {"$in": [gender, "any"]}
+            if q:
+                rx = {"$regex": re.escape(q.strip()[:60]), "$options": "i"}
+                base_f["$or"] = [{"title": rx}, {"building_name": rx}, {"description": rx}]
+            if engaged:
+                w_l, p_l = await asyncio.gather(_waiting_ids(), db.dorm_peeks.distinct("listing_id"))
+                base_f["id"] = {"$in": list(set(w_l) | set(p_l))}
+            elif interested:
+                base_f["id"] = {"$in": await _waiting_ids()}
+            if external is not None:
+                base_f["external"] = True if external else {"$ne": True}
+            now_dt = _now()
+            now_s = _iso(now_dt)
+            cutoff_s = _iso(now_dt - timedelta(days=ARCHIVE_VISIBLE_DAYS))
+            sort_k = sort if sort in SORTS else "new"
+            base_docs = await db.dorm_listings.find(base_f, PUBLIC_LISTING).to_list(3000)
+            if include_closed:
+                all_rows = await _annotate(base_docs, u)
+                rows = [x for x in all_rows if not x.get("is_gone") or is_publicly_archivable(x, cutoff_s)]
+                total = len(rows)
+                ext_total = sum(1 for x in rows if x.get("external")) if external is None else (total if external else 0)
+                closed_total = sum(1 for x in rows if x.get("is_gone"))
+                archived_total = closed_total
+                waiting_total = sum(1 for x in rows if not x.get("is_gone") and (x.get("interest_people") or 0) > 0)
+                peeked_total = sum(1 for x in rows if not x.get("is_gone") and (x.get("peek_count") or 0) > 0)
+                items = sort_listings(rows, sort_k)[skip:skip + limit]
+                return {"total": total, "external_total": ext_total, "waiting_total": waiting_total,
+                        "peeked_total": peeked_total, "archived_total": archived_total, "closed_total": closed_total, "items": items}
+            active_docs = [d for d in base_docs if not is_listing_gone(d, now_s)]
+            archived_total = sum(1 for d in base_docs if is_listing_gone(d, now_s) and is_publicly_archivable(d, cutoff_s))
+            total = len(active_docs)
+            ext_total = sum(1 for d in active_docs if d.get("external")) if external is None else (total if external else 0)
+            rows = await _annotate(active_docs, u)
+            waiting_total = sum(1 for x in rows if (x.get("interest_people") or 0) > 0)
+            peeked_total = sum(1 for x in rows if (x.get("peek_count") or 0) > 0)
+            items = sort_listings(rows, sort_k)[skip:skip + limit]
             return {"total": total, "external_total": ext_total, "waiting_total": waiting_total,
-                    "peeked_total": peeked_total, "archived_total": archived_total, "closed_total": closed_total, "items": items}
-        f = {**base_f, **_active_listing_q()}
-        total = await db.dorm_listings.count_documents(f)
-        ext_total = await db.dorm_listings.count_documents({**f, "external": True}) if external is None else (total if external else 0)
-        arch_docs = await db.dorm_listings.find(
-            base_f,
-            {"_id": 0, "external": 1, "status": 1, "closed_by": 1, "closed_reason": 1, "closed_at": 1,
-             "reserved_until": 1, "expires_at": 1, "renewed_at": 1, "created_at": 1},
-        ).to_list(3000)
-        archived_total = sum(1 for d in arch_docs if is_listing_gone(d, now_s) and is_publicly_archivable(d, cutoff_s))
-        rows = await _annotate(await db.dorm_listings.find(f, PUBLIC_LISTING).to_list(3000), u)
-        waiting_total = sum(1 for x in rows if (x.get("interest_people") or 0) > 0)
-        peeked_total = sum(1 for x in rows if (x.get("peek_count") or 0) > 0)
-        items = sort_listings(rows, sort)[skip:skip + limit]
-        return {"total": total, "external_total": ext_total, "waiting_total": waiting_total,
-                "peeked_total": peeked_total, "archived_total": archived_total, "closed_total": 0, "items": items}
+                    "peeked_total": peeked_total, "archived_total": archived_total, "closed_total": 0, "items": items}
+
+        if u is None and q is None:
+            ckey = ("listings", kind, zone, building, min_price, max_price, gender, amenity,
+                    external, interested, engaged, include_closed, sort, limit, skip)
+            return await _cached_json(ckey, 20, _load_listings, request)
+        return await _load_listings()
 
     @dorm_router.get("/listings/{lid}")
     async def get_listing(lid: str, u=Depends(get_current_user_optional)):
@@ -1777,6 +2087,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         })
         await db.dorm_listings.insert_one(dict(doc))
         doc.pop("_id", None)
+        _bust_cache()
         return doc
 
     def _check_listing(body: ListingIn, creating: bool):
@@ -1835,6 +2146,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         await _resolve_building(doc)
         doc["price_per_person"] = per_person_of(doc["price_total"], doc["people_total"])
         await db.dorm_listings.update_one({"id": lid}, {"$set": doc})
+        _bust_cache()
         return await db.dorm_listings.find_one({"id": lid}, {"_id": 0})
 
     @dorm_router.post("/listings/{lid}/renew")
@@ -1857,6 +2169,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             "renewed_at": _iso(now), "expires_at": exp,
             "gone_reports": 0, "owner_confirm_needed": False, "gone_check_since": None,
         }})
+        _bust_cache()
         return {"ok": True, "expires_at": exp}
 
     @dorm_router.post("/listings/{lid}/status")
@@ -1873,10 +2186,12 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             if not was_closed:
                 # who closed it decides who may reopen it: an admin's close is moderation, the owner can't undo it
                 ch.update({"closed_by": "admin" if by_admin else "owner", "closed_at": now_s})
+            # Auto-resolve stale availability ("gone") reports while keeping fraud/spam reports intact
+            await _auto_resolve_reports("listing", lid, "system_listing_closed", list(GONE_REASONS))
         elif body.status == "reserved":
             if was_closed:
-                if x.get("closed_by") == "admin" and not _is_admin(u):
-                    raise HTTPException(403, ADMIN_CLOSED_MSG)
+                if (x.get("closed_by") == "admin" or x.get("closed_reason") == "auto_moderated") and not _is_admin(u):
+                    raise HTTPException(403, AUTO_MOD_CLOSED_MSG if x.get("closed_reason") == "auto_moderated" else ADMIN_CLOSED_MSG)
                 if not x.get("external") and not by_admin:
                     await _check_cap(u, except_id=lid)
                 ch.update({"closed_by": None, "closed_at": None})
@@ -1885,8 +2200,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         else:
             # body.status == "active"
             if was_closed:
-                if x.get("closed_by") == "admin" and not _is_admin(u):
-                    raise HTTPException(403, ADMIN_CLOSED_MSG)
+                if (x.get("closed_by") == "admin" or x.get("closed_reason") == "auto_moderated") and not _is_admin(u):
+                    raise HTTPException(403, AUTO_MOD_CLOSED_MSG if x.get("closed_reason") == "auto_moderated" else ADMIN_CLOSED_MSG)
                 if not x.get("external") and not by_admin:
                     await _check_cap(u, except_id=lid)
             ch.update({
@@ -1906,6 +2221,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         elif body.status == "active":
             ch["closed_reason"] = None
         await db.dorm_listings.update_one({"id": lid}, {"$set": ch})
+        _bust_cache()
         return {"ok": True, "status": body.status, **({"reserved_until": ch["reserved_until"]} if body.status == "reserved" else {})}
 
     async def _record_gone_signal(x: dict, actor_key: str, u=None, anon_id: Optional[str] = None,
@@ -1955,11 +2271,14 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                         "closed_at": now_s, "gone_reports": n, "maybe_gone": False, "reserved_until": None,
                     }},
                 )
+                await _auto_resolve_reports("listing", lid, "system_crowd_gone", list(GONE_REASONS))
+                _bust_cache()
                 return {"ok": True, "status": "closed", "auto_closed": True, "gone_reports": n, "maybe_gone": False}
             await db.dorm_listings.update_one(
                 {"id": lid},
                 {"$set": {"gone_reports": n, "maybe_gone": True, "gone_flagged_at": now_s}},
             )
+            _bust_cache()
             return {"ok": True, "status": x.get("status"), "auto_closed": False, "gone_reports": n, "maybe_gone": True}
         ch = {
             "gone_reports": n, "owner_confirm_needed": True,
@@ -1971,8 +2290,11 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 "closed_at": now_s, "reserved_until": None,
             })
             await db.dorm_listings.update_one({"id": lid}, {"$set": ch})
+            await _auto_resolve_reports("listing", lid, "system_crowd_gone", list(GONE_REASONS))
+            _bust_cache()
             return {"ok": True, "status": "closed", "auto_paused": True, "needs_owner_confirm": False, "gone_reports": n}
         await db.dorm_listings.update_one({"id": lid}, {"$set": ch})
+        _bust_cache()
         return {"ok": True, "status": x.get("status"), "auto_paused": False, "needs_owner_confirm": True, "gone_reports": n}
 
     @dorm_router.post("/listings/{lid}/gone")
@@ -2004,8 +2326,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         _no_external(x)
         now = _now()
         now_s = _iso(now)
-        if x.get("status") == "closed" and x.get("closed_by") == "admin" and not _is_admin(u):
-            raise HTTPException(403, ADMIN_CLOSED_MSG)
+        if x.get("status") == "closed" and (x.get("closed_by") == "admin" or x.get("closed_reason") == "auto_moderated") and not _is_admin(u):
+            raise HTTPException(403, AUTO_MOD_CLOSED_MSG if x.get("closed_reason") == "auto_moderated" else ADMIN_CLOSED_MSG)
         if is_listing_gone(x, now_s) and not _is_admin(u):
             await _check_cap(u, except_id=lid)
         exp = _iso(now + timedelta(days=expiry_days_for(x.get("kind"), False)))
@@ -2023,6 +2345,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 "renewed_at": now_s, "expires_at": exp, "owner_confirmed_at": now_s,
             }},
         )
+        _bust_cache()
         return {"ok": True, "status": "active", "expires_at": exp}
 
     @dorm_router.delete("/listings/{lid}")
@@ -2031,9 +2354,11 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         x = await _owned_listing(lid, u)
         await db.dorm_interests.delete_many({"listing_id": lid})
         await db.dorm_gone_signals.delete_many({"listing_id": lid})
+        await _auto_resolve_reports("listing", lid, "system_target_deleted")
         if x.get("external"):
             # kept as a closed tombstone so the next import doesn't bring it back
             await db.dorm_listings.update_one({"id": lid}, {"$set": {"status": "closed", "closed_reason": "deleted"}})
+            _bust_cache()
             return {"ok": True}
         pids = [m.group(1) for p in x.get("photo_links") or []
                 if (m := re.fullmatch(r"/api/dorm/photos/([a-f0-9]{16})", p or ""))]
@@ -2041,66 +2366,70 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             await db.dorm_photos.delete_many({"id": {"$in": pids}, "owner_id": x.get("owner_id")})
         await db.dorm_events.delete_many({"target_id": lid})
         await db.dorm_listings.delete_one({"id": lid})
+        _bust_cache()
         return {"ok": True}
 
     # ---------- mates
     @dorm_router.get("/mates")
     async def list_mates(
+        request: Request,
         gender: Optional[str] = None, zone: Optional[str] = None, budget: Optional[int] = None,
         move_in: Optional[str] = None, has_room: Optional[bool] = None, tag: Optional[str] = None,
         year: Optional[str] = None, sort: str = "match", limit: int = Query(60, ge=1, le=200), skip: int = Query(0, ge=0),
         u=Depends(get_current_user_optional),
     ):
         await _ensure()
-        f = _active_q()
-        if gender in ("female", "male", "other"):
-            f["gender"] = gender
-        if zone:
-            f["$or"] = mate_zone_q(zone)
-        if budget:
-            f["budget_min"] = {"$lte": budget}
-        if move_in and _MONTH.match(move_in):
-            f["move_in"] = move_in
-        if has_room is not None:
-            f["has_room"] = has_room
-        if tag:
-            f["tags"] = tag
-        if year:
-            f["year"] = year
-        me = await _my_mate(u)
-        items = await db.dorm_mates.find(f, PUBLIC_MATE).sort([("renewed_at", -1), ("id", 1)]).to_list(1000)
-        for m in items:
-            m["match"] = match_score(me, m)
-            m["is_me"] = bool(me) and me["id"] == m["id"]
-        hidden = {"total": 0, "theirs": 0, "mine": 0}
-        if me and sort == "match":
-            # gender mismatch (score 0) drops out entirely when you have a profile; count who was
-            # hidden and why, so the page never says "nobody is here" when people are
-            def _acc(a, b):
-                p = a.get("mate_gender_pref", "any")
-                return p == "any" or p == b.get("gender")
-            kept = []
+
+        async def _load_mates():
+            f = _active_q()
+            if gender in ("female", "male", "other"):
+                f["gender"] = gender
+            if zone:
+                f["$or"] = mate_zone_q(zone)
+            if budget:
+                f["budget_min"] = {"$lte": budget}
+            if move_in and _MONTH.match(move_in):
+                f["move_in"] = move_in
+            if has_room is not None:
+                f["has_room"] = has_room
+            if tag:
+                f["tags"] = tag
+            if year:
+                f["year"] = year
+            me = await _my_mate(u) if u else None
+            items = await db.dorm_mates.find(f, PUBLIC_MATE).sort([("renewed_at", -1), ("id", 1)]).to_list(1000)
             for m in items:
-                if m["is_me"] or (m["match"] and m["match"]["score"] > 0):
-                    kept.append(m)
-                    continue
-                hidden["total"] += 1
-                if not _acc(m, me):
-                    hidden["theirs"] += 1      # they want a different gender than yours
-                if not _acc(me, m):
-                    hidden["mine"] += 1        # their gender is not what you asked for
-            items = kept
-            items.sort(key=lambda m: (not m["is_me"], -(m["match"] or {}).get("score", 0)))
-        page = items[skip:skip + limit]
-        # Who is interested in which room is shown only to a viewer with a live profile, and only on cards that
-        # pass the gender gate with them (the same rule as GET /listings/{id}/interested); guests, profile-less
-        # viewers and gated-out cards get no room links.
-        live_me = me if _mate_live(me) else None
-        await _attach_rooms([m for m in page if live_me and (m["is_me"] or gate_ok(live_me, m))])
-        for m in page:
-            m.setdefault("interested_rooms", [])
-            m.setdefault("interested_rooms_total", 0)
-        return {"total": len(items), "items": page, "me": bool(me), "hidden_by_gender": hidden}
+                m["match"] = match_score(me, m)
+                m["is_me"] = bool(me) and me["id"] == m["id"]
+            hidden = {"total": 0, "theirs": 0, "mine": 0}
+            if me and sort == "match":
+                def _acc(a, b):
+                    p = a.get("mate_gender_pref", "any")
+                    return p == "any" or p == b.get("gender")
+                kept = []
+                for m in items:
+                    if m["is_me"] or (m["match"] and m["match"]["score"] > 0):
+                        kept.append(m)
+                        continue
+                    hidden["total"] += 1
+                    if not _acc(m, me):
+                        hidden["theirs"] += 1
+                    if not _acc(me, m):
+                        hidden["mine"] += 1
+                items = kept
+                items.sort(key=lambda m: (not m["is_me"], -(m["match"] or {}).get("score", 0)))
+            page = items[skip:skip + limit]
+            live_me = me if _mate_live(me) else None
+            await _attach_rooms([m for m in page if live_me and (m["is_me"] or gate_ok(live_me, m))])
+            for m in page:
+                m.setdefault("interested_rooms", [])
+                m.setdefault("interested_rooms_total", 0)
+            return {"total": len(items), "items": page, "me": bool(me), "hidden_by_gender": hidden}
+
+        if u is None:
+            ckey = ("mates", gender, zone, budget, move_in, has_room, tag, year, sort, limit, skip)
+            return await _cached_json(ckey, 20, _load_mates, request)
+        return await _load_mates()
 
     async def _attach_rooms(mates: List[dict]):
         """Each mate's open rooms they pressed interest on (newest first, max 2 shown, plus the total)."""
@@ -2139,6 +2468,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         else:
             doc.update({"id": uuid.uuid4().hex[:12], "created_at": _iso(now), "contact_reveals": 0})
             await db.dorm_mates.insert_one(dict(doc))
+        _bust_cache()
         return {"profile": await _my_mate(u)}
 
     @dorm_router.post("/mates/me/renew")
@@ -2148,17 +2478,26 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         now = _now()
         await db.dorm_mates.update_one({"user_id": u.id}, {"$set": {
             "status": "active", "renewed_at": _iso(now), "expires_at": _iso(now + timedelta(days=EXPIRY_DAYS))}})
+        _bust_cache()
         return {"ok": True}
 
     @dorm_router.post("/mates/me/close")
     async def close_mate(u=Depends(get_current_user)):
-        await db.dorm_mates.update_one({"user_id": u.id}, {"$set": {"status": "closed"}})
+        m = await _my_mate(u)
+        await db.dorm_mates.update_one({"user_id": u.id}, {"$set": {"status": "closed", "closed_at": _iso(_now())}})
+        if m:
+            await _auto_resolve_reports("mate", m["id"], "system_mate_closed")
+        _bust_cache()
         return {"ok": True}
 
     @dorm_router.delete("/mates/me")
     async def delete_mate(u=Depends(get_current_user)):
+        m = await _my_mate(u)
+        if m:
+            await _auto_resolve_reports("mate", m["id"], "system_target_deleted")
         await db.dorm_mates.delete_one({"user_id": u.id})
         await db.dorm_interests.delete_many({"user_id": u.id})
+        _bust_cache()
         return {"ok": True}
 
     @dorm_router.get("/mates/{mid}/contact")
@@ -2236,6 +2575,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
              "$unset": {"otp_hash": "", "otp_expires_at": "", "otp_tries": ""}},
         )
         await _backfill_verified(u.id)
+        await _dismiss_verification_proposals(u.id, "self_verified_otp")
+        _bust_cache()
         return {"ok": True, "verification": await _verification_info(u)}
 
     @dorm_router.post("/verify/google-link")
@@ -2254,8 +2595,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             raise
         except Exception:
             raise HTTPException(502, "เชื่อมต่อ Google ไม่สำเร็จ ลองอีกครั้ง")
-        expected_aud = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
-        if expected_aud and info.get("aud") != expected_aud:
+        expected_aud = _google_client_id()
+        if not expected_aud or info.get("aud") != expected_aud:
             raise HTTPException(400, "โทเค็น Google ไม่ตรงกับระบบ")
         email = (info.get("email") or "").strip().lower()
         if str(info.get("email_verified", "")).lower() != "true" or not SWU_EMAIL_RE.match(email):
@@ -2263,6 +2604,9 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         taken = await db.dorm_verifications.find_one({"swu_email": email, "status": "verified", "user_id": {"$ne": u.id}})
         if taken:
             raise HTTPException(409, "อีเมล มศว นี้ถูกใช้ยืนยันกับบัญชีอื่นไปแล้ว")
+        pg = await db.dorm_verify_pregrants.find_one({"swu_email": email, "claimed_by": {"$nin": [None, u.id]}}, {"_id": 1})
+        if pg:
+            raise HTTPException(409, "อีเมล มศว นี้ถูกใช้ยืนยันให้อีเมลส่วนตัวอื่นไปแล้ว")
         now = _iso(_now())
         await db.dorm_verifications.update_one(
             {"user_id": u.id},
@@ -2273,8 +2617,80 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             }, "$setOnInsert": {"created_at": now}},
             upsert=True,
         )
+        await db.dorm_verify_pregrants.delete_one({"swu_email": email, "claimed_by": None})
         await _backfill_verified(u.id)
+        await _dismiss_verification_proposals(u.id, "self_verified_google")
+        _bust_cache()
         return {"ok": True, "verification": await _verification_info(u)}
+
+    @dorm_router.post("/verify/vouch-personal-email")
+    async def verify_vouch_personal_email(body: VerifyVouchPersonalIn, u=Depends(get_current_user)):
+        """An @g.swu.ac.th Google user confirms 1 personal email (now or before signup) with zero admin effort."""
+        await _ensure()
+        if not _swu_verified(u):
+            raise HTTPException(403, "เฉพาะบัญชีที่เข้าสู่ระบบ Google ด้วยอีเมล มศว (@g.swu.ac.th / @swu.ac.th) เท่านั้น")
+        swu_email = (u.email or "").strip().lower()
+        target_email = body.personal_email
+        now_s = _iso(_now())
+
+        # Enforce 1 SWU account -> at most 1 verified personal email
+        existing_link = await db.dorm_verifications.find_one({"swu_email": swu_email, "status": "verified"}, {"_id": 0})
+        if existing_link:
+            owner_usr = await db.users.find_one({"id": existing_link["user_id"]}, {"_id": 0, "id": 1, "email": 1})
+            owner_em = (owner_usr or {}).get("email", "").strip().lower()
+            if owner_em == target_email:
+                return {"ok": True, "applied": True, "already": True, "personal_email": target_email,
+                        "verification": await _verification_info(u)}
+            raise HTTPException(409, "อีเมล มศว นี้ถูกใช้ยืนยันให้อีเมลส่วนตัวอื่นไปแล้ว (1 อีเมล มศว ยืนยันได้ 1 บัญชี)")
+
+        existing_pg = await db.dorm_verify_pregrants.find_one({"swu_email": swu_email}, {"_id": 0})
+        if existing_pg and existing_pg.get("claimed_by"):
+            if (existing_pg.get("personal_email") or "").strip().lower() == target_email:
+                return {"ok": True, "applied": True, "already": True, "personal_email": target_email,
+                        "verification": await _verification_info(u)}
+            raise HTTPException(409, "อีเมล มศว นี้ถูกใช้ยืนยันให้อีเมลส่วนตัวอื่นไปแล้ว (1 อีเมล มศว ยืนยันได้ 1 บัญชี)")
+
+        target = await db.users.find_one(
+            {"email": {"$regex": f"^{re.escape(target_email)}$", "$options": "i"}}, {"_id": 0, "id": 1, "email": 1}
+        )
+        if target:
+            await db.dorm_verifications.update_one(
+                {"user_id": target["id"]},
+                {"$set": {
+                    "user_id": target["id"], "status": "verified", "method": "swu_account_vouch", "kind": "student",
+                    "status_label": VERIFY_LABELS["student"], "swu_email": swu_email,
+                    "vouched_by": u.id, "verified_at": now_s, "updated_at": now_s, "reject_reason": "",
+                }, "$setOnInsert": {"created_at": now_s}},
+                upsert=True,
+            )
+            await db.dorm_verify_pregrants.update_one(
+                {"swu_email": swu_email},
+                {"$set": {
+                    "swu_email": swu_email, "personal_email": target_email, "vouched_by": u.id,
+                    "claimed_by": target["id"], "claimed_at": now_s, "updated_at": now_s,
+                }, "$setOnInsert": {"created_at": now_s}},
+                upsert=True,
+            )
+            await _backfill_verified(target["id"])
+            await _dismiss_verification_proposals(target["id"], "self_verified_vouch")
+            _bust_cache()
+            return {"ok": True, "applied": True, "personal_email": target_email, "verification": await _verification_info(u)}
+
+        await db.dorm_verify_pregrants.update_one(
+            {"swu_email": swu_email},
+            {"$set": {
+                "swu_email": swu_email, "personal_email": target_email, "vouched_by": u.id,
+                "claimed_by": None, "claimed_at": None, "updated_at": now_s,
+            }, "$setOnInsert": {"created_at": now_s}},
+            upsert=True,
+        )
+        return {"ok": True, "applied": False, "pending_signup": True, "personal_email": target_email,
+                "verification": await _verification_info(u)}
+
+    @dorm_router.get("/verify/me")
+    async def verify_me(u=Depends(get_current_user)):
+        await _ensure()
+        return {"verification": await _verification_info(u)}
 
     @dorm_router.post("/verify/request")
     async def verify_manual_request(body: VerifyManualRequestIn, u=Depends(get_current_user)):
@@ -2524,6 +2940,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             )
         else:
             await db.dorm_peeks.delete_one({"listing_id": lid, "anon_id": body.anon_id})
+        _bust_cache()
         return {"ok": True, "peek_count": await db.dorm_peeks.count_documents({"listing_id": lid})}
 
     @dorm_router.post("/listings/{lid}/interest")
@@ -2555,11 +2972,13 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             except Exception:   # a double tap raced the unique index: keep the one that landed
                 await db.dorm_interests.update_one({"listing_id": lid, "user_id": u.id}, {"$set": {"party_size": body.party_size}})
             await _log("interest", lid, u)
+        _bust_cache()
         return await _interest_summary(lid, u)
 
     @dorm_router.delete("/listings/{lid}/interest")
     async def withdraw_interest(lid: str, u=Depends(get_current_user)):
         await db.dorm_interests.delete_one({"listing_id": lid, "user_id": u.id})
+        _bust_cache()
         if not await db.dorm_listings.find_one({"id": lid}, {"_id": 1}):
             return {"ok": True}
         return {"ok": True, **await _interest_summary(lid, u)}
@@ -2630,36 +3049,64 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 **interest_fields(x, counting, getattr(u, "id", None), me)}
 
     # ---------- buildings + reviews
+    async def _building_summaries(items: List[dict]) -> List[dict]:
+        """Batch-enrich building summaries with reviews & active room counts in 2 parallel DB queries."""
+        if not items:
+            return items
+        slugs = [b["slug"] for b in items]
+        reviews, counts_raw = await asyncio.gather(
+            db.dorm_reviews.find({"building_slug": {"$in": slugs}, "hidden": {"$ne": True}}, {"_id": 0, "building_slug": 1, "ratings": 1}).to_list(20000),
+            db.dorm_listings.aggregate([
+                {"$match": {"building_slug": {"$in": slugs}, **_active_listing_q()}},
+                {"$group": {"_id": "$building_slug", "n": {"$sum": 1}}},
+            ]).to_list(1000),
+        )
+        rev_by_slug = {}
+        for r in reviews:
+            rev_by_slug.setdefault(r["building_slug"], []).append(r)
+        count_map = {c["_id"]: int(c["n"]) for c in counts_raw if c.get("_id")}
+        by_b_chat = load_chat_posts()["by_building"]
+        aspect_ids = _ids(REVIEW_ASPECTS)
+        for b in items:
+            sl = b["slug"]
+            revs = rev_by_slug.get(sl, [])
+            avg = {}
+            for a in aspect_ids:
+                vals = [r["ratings"][a] for r in revs if a in r.get("ratings", {})]
+                if vals:
+                    avg[a] = round(sum(vals) / len(vals), 1)
+            b["review_count"] = len(revs)
+            b["ratings_avg"] = avg
+            b["overall"] = round(sum(avg.values()) / len(avg), 1) if avg else None
+            b["active_listings"] = count_map.get(sl, 0)
+            b["photos"] = b.get("photos") or []
+            b["official_url"] = b.get("official_url")
+            b["thumb"] = building_thumb(b["photos"])
+            b["chat"] = chat_summary(by_b_chat.get(sl, []))
+        return items
+
     async def _building_summary(b: dict) -> dict:
-        reviews = await db.dorm_reviews.find({"building_slug": b["slug"]}, {"_id": 0, "ratings": 1}).to_list(2000)
-        avg = {}
-        for a in _ids(REVIEW_ASPECTS):
-            vals = [r["ratings"][a] for r in reviews if a in r.get("ratings", {})]
-            if vals:
-                avg[a] = round(sum(vals) / len(vals), 1)
-        b["review_count"] = len(reviews)
-        b["ratings_avg"] = avg
-        b["overall"] = round(sum(avg.values()) / len(avg), 1) if avg else None
-        b["active_listings"] = await db.dorm_listings.count_documents({"building_slug": b["slug"], **_active_listing_q()})
-        b["photos"] = b.get("photos") or []
-        b["official_url"] = b.get("official_url")
-        b["thumb"] = building_thumb(b["photos"])
-        b["chat"] = chat_summary(filter_chat(load_chat_posts()["posts"], building=b["slug"]))
-        return b
+        return (await _building_summaries([b]))[0]
 
     @dorm_router.get("/buildings")
-    async def list_buildings(zone: Optional[str] = None, q: Optional[str] = None):
+    async def list_buildings(request: Request, zone: Optional[str] = None, q: Optional[str] = None):
         await _ensure()
-        f = {}
-        if zone:
-            f["zone"] = zone
-        if q:
-            rx = {"$regex": re.escape(q.strip()[:60]), "$options": "i"}
-            f["$or"] = [{"name": rx}, {"aliases": rx}]
-        items = await db.dorm_buildings.find(f, {"_id": 0, "aliases": 0}).sort("name", 1).to_list(500)
-        items = [await _building_summary(b) for b in items]
-        items.sort(key=lambda b: (-b["active_listings"], -b["review_count"], b["name"]))
-        return {"items": items}
+
+        async def _load_buildings():
+            f = {}
+            if zone:
+                f["zone"] = zone
+            if q:
+                rx = {"$regex": re.escape(q.strip()[:60]), "$options": "i"}
+                f["$or"] = [{"name": rx}, {"aliases": rx}]
+            items = await db.dorm_buildings.find(f, {"_id": 0, "aliases": 0}).sort("name", 1).to_list(500)
+            await _building_summaries(items)
+            items.sort(key=lambda b: (-b["active_listings"], -b["review_count"], b["name"]))
+            return {"items": items}
+
+        if q is None:
+            return await _cached_json(("buildings", zone), 20, _load_buildings, request)
+        return await _load_buildings()
 
     @dorm_router.get("/buildings/{slug}")
     async def get_building(slug: str, u=Depends(get_current_user_optional)):
@@ -2668,7 +3115,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         if not b:
             raise HTTPException(404, "ไม่พบตึกนี้")
         b = await _building_summary(b)
-        reviews = await db.dorm_reviews.find({"building_slug": slug}, {"_id": 0}).sort("created_at", -1).to_list(200)
+        reviews = await db.dorm_reviews.find({"building_slug": slug, "hidden": {"$ne": True}}, {"_id": 0}).sort("created_at", -1).to_list(200)
         for r in reviews:
             r["is_mine"] = bool(u) and r.get("user_id") == u.id
             r.pop("user_id", None)
@@ -2695,11 +3142,16 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                       "display_name": name, "updated_at": now},
              "$setOnInsert": {"id": uuid.uuid4().hex[:12], "created_at": now}},
             upsert=True)
+        _bust_cache()
         return {"ok": True}
 
     @dorm_router.delete("/buildings/{slug}/reviews/me")
     async def delete_my_review(slug: str, u=Depends(get_current_user)):
+        rv = await db.dorm_reviews.find_one({"building_slug": slug, "user_id": u.id}, {"_id": 0, "id": 1})
         r = await db.dorm_reviews.delete_one({"building_slug": slug, "user_id": u.id})
+        if rv:
+            await _auto_resolve_reports("review", rv["id"], "system_target_deleted")
+        _bust_cache()
         return {"ok": True, "deleted": r.deleted_count}
 
     # ---------- photos (client compresses to ~1280px JPEG before upload)
@@ -2788,22 +3240,108 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         allowed = REPORT_REASONS_BY_TYPE[body.target_type] + ([EXT_GONE_REASON] if body.target_type == "listing" else [])
         if body.reason not in allowed:
             raise HTTPException(422, "เลือกเหตุผลจากรายการ")
-        coll = {"listing": db.dorm_listings, "mate": db.dorm_mates, "review": db.dorm_reviews}[body.target_type]
+        coll_name = {"listing": "dorm_listings", "mate": "dorm_mates", "review": "dorm_reviews"}[body.target_type]
+        coll = db[coll_name]
         target = await coll.find_one({"id": body.target_id}, {"_id": 0})
         if not target:
             raise HTTPException(404, "ไม่พบสิ่งที่รายงาน")
         dup = await db.dorm_reports.find_one({"target_id": body.target_id, "user_id": u.id, "resolved": False})
         if dup:
             return {"ok": True, "duplicate": True}
-        await db.dorm_reports.insert_one({
+        now_s = _iso(_now())
+        rep_verified = await _swu_verified_async(u)
+        rep_doc = {
             "id": uuid.uuid4().hex[:12], "target_type": body.target_type, "target_id": body.target_id,
-            "reason": body.reason, "note": body.note, "user_id": u.id, "resolved": False, "created_at": _iso(_now())})
+            "reason": body.reason, "note": body.note, "user_id": u.id,
+            "reporter_verified": rep_verified, "resolved": False, "created_at": now_s,
+        }
+        await db.dorm_reports.insert_one(dict(rep_doc))
         await coll.update_one({"id": body.target_id}, {"$inc": {"reports": 1}})
         if body.target_type == "listing" and body.reason in GONE_REASONS:
             if not target.get("external") and target.get("owner_id") == u.id:
                 return {"ok": True}
             sig = await _record_gone_signal(target, f"u:{u.id}", u=u, note=body.note, log_report=False)
             return {"ok": True, **sig}
+
+        # Safe crowd auto-moderation for severe spam/scam reports (reversible via dorm_agent_actions)
+        already_hidden = (
+            (body.target_type in ("listing", "mate") and target.get("status") == "closed")
+            or (body.target_type == "review" and bool(target.get("hidden")))
+        )
+        can_auto_mod = (
+            body.reason in SEVERE_REPORT_REASONS
+            and not already_hidden
+            and not (body.target_type == "listing" and target.get("external"))
+        )
+        if can_auto_mod:
+            owner_id = target.get("owner_id") or target.get("user_id")
+            open_severe = await db.dorm_reports.find({
+                "target_type": body.target_type,
+                "target_id": body.target_id,
+                "reason": {"$in": list(SEVERE_REPORT_REASONS)},
+                "resolved": False,
+                **({"user_id": {"$ne": owner_id}} if owner_id else {}),
+            }, {"_id": 0}).to_list(50)
+            by_user = {r["user_id"]: r for r in open_severe if r.get("user_id")}
+            weight = sum(1.0 if r.get("reporter_verified") else 0.5 for r in by_user.values())
+            if len(by_user) >= AUTO_MOD_MIN_REPORTERS and weight >= AUTO_MOD_MIN_WEIGHT:
+                import copy
+                snaps = [{"collection": coll_name, "query": {"id": body.target_id}, "before": copy.deepcopy(target)}]
+                for r in open_severe:
+                    snaps.append({"collection": "dorm_reports", "query": {"id": r["id"]}, "before": copy.deepcopy(r)})
+                if body.target_type == "listing":
+                    await coll.update_one(
+                        {"id": body.target_id},
+                        {"$set": {
+                            "status": "closed", "closed_by": "system", "closed_reason": "auto_moderated",
+                            "closed_at": now_s, "reserved_until": None,
+                        }},
+                    )
+                    tgt_title = target.get("title") or body.target_id
+                    tgt_link = f"/dorm/rooms/{body.target_id}"
+                elif body.target_type == "mate":
+                    await coll.update_one(
+                        {"id": body.target_id},
+                        {"$set": {"status": "closed", "closed_by": "system", "closed_reason": "auto_moderated", "closed_at": now_s}},
+                    )
+                    tgt_title = target.get("display_name") or body.target_id
+                    tgt_link = f"/dorm/mates?focus={body.target_id}"
+                else:
+                    await coll.update_one(
+                        {"id": body.target_id},
+                        {"$set": {"hidden": True, "hidden_reason": "auto_moderated", "hidden_at": now_s}},
+                    )
+                    tgt_title = f"รีวิว {target.get('building_slug') or body.target_id}"
+                    tgt_link = f"/dorm/buildings/{target.get('building_slug')}" if target.get("building_slug") else "/dorm/admin"
+                rids = [r["id"] for r in open_severe]
+                await db.dorm_reports.update_many(
+                    {"id": {"$in": rids}, "resolved": False},
+                    {"$set": {"resolved": True, "resolved_at": now_s, "resolved_by": "system_auto_mod"}},
+                )
+                await db.dorm_admin_proposals.update_many(
+                    {"status": "pending", "kind": "resolve_report", "target_id": {"$in": rids}},
+                    {"$set": {"status": "dismissed", "decided_at": now_s, "decided_by": "system:auto", "decision_note": "auto_moderated"}},
+                )
+                await db.dorm_agent_actions.insert_one({
+                    "id": "act_" + uuid.uuid4().hex[:12],
+                    "action": "auto_moderate",
+                    "source": "system_auto",
+                    "title": f"พักเนื้อหาชั่วคราว ({len(by_user)} ผู้รายงาน): {tgt_title}"[:160],
+                    "reason": f"รายงานรุนแรง {len(by_user)} คน (คะแนนความน่าเชื่อถือ {weight:.1f})",
+                    "target_type": body.target_type,
+                    "target_id": body.target_id,
+                    "target_link": tgt_link,
+                    "affected_count": len(snaps),
+                    "actor": "system:auto-guard",
+                    "proposal_id": None,
+                    "snapshot_count": len(snaps),
+                    "snapshots": snaps,
+                    "created_at": now_s,
+                    "undone_at": None,
+                    "undone_by": None,
+                })
+                _bust_cache()
+                return {"ok": True, "auto_moderated": True}
         return {"ok": True}
 
     # ---------- admin
@@ -2844,12 +3382,39 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 v["user_name"] = usr.get("full_name") or ""
                 v["user_email"] = usr.get("email") or ""
         proposals = await agent_views["list_pending_proposals"](100)
+        self_ver_n, auto_closed_n, auto_rep_n, auto_mod_n = await asyncio.gather(
+            db.dorm_verifications.count_documents({
+                "status": "verified",
+                "method": {"$in": ["google_swu_link", "swu_account_vouch", "swu_email_otp"]},
+                "verified_at": {"$gte": since},
+            }),
+            db.dorm_listings.count_documents({
+                "status": "closed",
+                "closed_by": {"$in": ["crowd", "system", "agent"]},
+                "closed_at": {"$gte": since},
+            }),
+            db.dorm_reports.count_documents({
+                "resolved": True,
+                "resolved_by": {"$regex": "^system_"},
+                "resolved_at": {"$gte": since},
+            }),
+            db.dorm_agent_actions.count_documents({
+                "action": "auto_moderate",
+                "created_at": {"$gte": since},
+            }),
+        )
         return {"reports": reports, "verifications": verifs, "listings": listings, "leads_30d": leads,
                 "qr_scans_30d": qr_scans, "qr_total_30d": qr_total,
                 "mates_total": await db.dorm_mates.count_documents({}),
                 "proposals": proposals,
                 "pending_proposals_count": len(proposals),
-                "recent_actions": await agent_views["list_recent_actions"](30)}
+                "recent_actions": await agent_views["list_recent_actions"](30),
+                "autopilot_30d": {
+                    "self_verified_google": self_ver_n,
+                    "auto_closed_gone": auto_closed_n,
+                    "auto_resolved_reports": auto_rep_n,
+                    "auto_moderated": auto_mod_n,
+                }}
 
     @dorm_router.post("/admin/verifications/{uid}")
     async def admin_review_verification(uid: str, body: AdminVerifyActionIn, u=Depends(get_current_user)):
@@ -2872,6 +3437,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 {"user_id": uid},
                 {"$set": {"status": "rejected", "updated_at": now, "reviewed_by": u.id, "reject_reason": body.reason.strip()}},
             )
+        await _dismiss_verification_proposals(uid, f"human_{body.action}")
+        _bust_cache()
         return {"ok": True}
 
     async def _report_targets(reports: List[dict]):
@@ -2894,6 +3461,50 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             t = found.get((r["target_type"], r["target_id"]))
             r["target_title"], r["target_link"], r["target_status"] = t if t else ("(ถูกลบไปแล้ว)", None, "deleted")
 
+    @dorm_router.post("/admin/reports/resolve-stale")
+    async def resolve_stale_reports_bulk(u=Depends(get_current_user)):
+        """Human admin clears all open reports whose target is already closed, expired, hidden, or deleted."""
+        _admin(u)
+        if getattr(u, "auth_method", None) == "api_key":
+            raise HTTPException(403, "กรุณาเข้าสู่ระบบด้วยบัญชีแอดมิน (API key ทำรายการนี้ไม่ได้)")
+        await _ensure()
+        now_s = _iso(_now())
+        open_reps = await db.dorm_reports.find({"resolved": False}, {"_id": 0, "id": 1, "target_type": 1, "target_id": 1}).to_list(1000)
+        if not open_reps:
+            return {"ok": True, "resolved": 0}
+        lids = list({r["target_id"] for r in open_reps if r.get("target_type") == "listing"})
+        mids = list({r["target_id"] for r in open_reps if r.get("target_type") == "mate"})
+        rids = list({r["target_id"] for r in open_reps if r.get("target_type") == "review"})
+        lmap = {x["id"]: x async for x in db.dorm_listings.find({"id": {"$in": lids}}, {"_id": 0})} if lids else {}
+        mmap = {x["id"]: x async for x in db.dorm_mates.find({"id": {"$in": mids}}, {"_id": 0})} if mids else {}
+        rmap = {x["id"]: x async for x in db.dorm_reviews.find({"id": {"$in": rids}}, {"_id": 0})} if rids else {}
+        stale_ids = []
+        for r in open_reps:
+            tt, tid = r.get("target_type"), r.get("target_id")
+            if tt == "listing":
+                tgt = lmap.get(tid)
+                if tgt is None or is_listing_gone(tgt, now_s):
+                    stale_ids.append(r["id"])
+            elif tt == "mate":
+                tgt = mmap.get(tid)
+                if tgt is None or tgt.get("status") == "closed" or (tgt.get("expires_at") or "") <= now_s:
+                    stale_ids.append(r["id"])
+            elif tt == "review":
+                tgt = rmap.get(tid)
+                if tgt is None or tgt.get("hidden"):
+                    stale_ids.append(r["id"])
+        if not stale_ids:
+            return {"ok": True, "resolved": 0}
+        res = await db.dorm_reports.update_many(
+            {"id": {"$in": stale_ids}, "resolved": False},
+            {"$set": {"resolved": True, "resolved_at": now_s, "resolved_by": f"admin_stale:{u.id}"}},
+        )
+        await db.dorm_admin_proposals.update_many(
+            {"status": "pending", "kind": "resolve_report", "target_id": {"$in": stale_ids}},
+            {"$set": {"status": "dismissed", "decided_at": now_s, "decided_by": "system:auto", "decision_note": "stale_bulk_cleared"}},
+        )
+        return {"ok": True, "resolved": res.modified_count}
+
     @dorm_router.post("/admin/reports/{rid}/resolve")
     async def resolve_report(rid: str, u=Depends(get_current_user)):
         _admin(u)
@@ -2908,6 +3519,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         r = await db.dorm_listings.update_one({"id": lid}, {"$set": {"featured": body.featured}})
         if not r.matched_count:
             raise HTTPException(404, "ไม่พบประกาศ")
+        _bust_cache()
         return {"ok": True}
 
     @dorm_router.get("/admin/digest")
@@ -2928,18 +3540,23 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
     async def upsert_building(body: BuildingIn, u=Depends(get_current_user)):
         _admin(u)
         await db.dorm_buildings.update_one({"slug": body.slug}, {"$set": body.model_dump()}, upsert=True)
+        _bust_cache()
         return {"ok": True}
 
     @dorm_router.post("/admin/import-external")
     async def reimport_external(u=Depends(get_current_user)):
         _admin(u)
         await _ensure()
-        return {"ok": True, **(await _sync_external(force=True) or {})}
+        res = await _sync_external(force=True) or {}
+        _bust_cache()
+        return {"ok": True, **res}
 
     @dorm_router.post("/admin/seed-buildings")
     async def reseed(overwrite: bool = False, u=Depends(get_current_user)):
         _admin(u)
-        return {"ok": True, "count": await _seed_buildings(overwrite=overwrite)}
+        n = await _seed_buildings(overwrite=overwrite)
+        _bust_cache()
+        return {"ok": True, "count": n}
 
     agent_views = register_dorm_agent_routes(dorm_router, db, get_current_user, {
         "_is_admin": _is_admin,
@@ -2954,6 +3571,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         "is_listing_gone": is_listing_gone,
         "EXT_TTL_DAYS": EXT_TTL_DAYS,
         "GONE_REASONS": GONE_REASONS,
+        "_bust_cache": _bust_cache,
     })
 
     return dorm_router
