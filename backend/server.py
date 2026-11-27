@@ -499,7 +499,7 @@ JWT_EXPIRATION_HOURS = 72
 security = HTTPBearer()
 
 # Google OAuth Configuration
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_ID = (os.environ.get('GOOGLE_CLIENT_ID') or '949663376782-cd9128nvekdavpu09mko30rfn9c2kre4.apps.googleusercontent.com').strip()
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://mnl-results-hub.preview.emergentagent.com/auth/google/callback')
 

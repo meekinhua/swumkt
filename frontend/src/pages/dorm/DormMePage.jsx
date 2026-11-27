@@ -43,6 +43,7 @@ const swuVerified = (u) => u?.auth_method === 'google' && /(^|\.|@)swu\.ac\.th$/
 
 // Dedicated Google Sign-In button inside VerifySheet: chooses @g.swu.ac.th without replacing the user's personal session.
 const SwuGoogleVerifyButton = ({ clientId, token, onVerified, onError }) => {
+  const wrapRef = useRef(null);
   const btnRef = useRef(null);
   const onVerifiedRef = useRef(onVerified);
   const onErrorRef = useRef(onError);
@@ -56,9 +57,11 @@ const SwuGoogleVerifyButton = ({ clientId, token, onVerified, onError }) => {
     const initAndRender = () => {
       if (!alive || !window.google?.accounts?.id || !btnRef.current) return;
       setReady(true);
+      onErrorRef.current('');
       window.google.accounts.id.initialize({
         client_id: clientId || GOOGLE_CLIENT_ID,
         auto_select: false,
+        ux_mode: 'popup',
         callback: async (response) => {
           if (!response?.credential) return;
           setBusy(true);
@@ -73,10 +76,14 @@ const SwuGoogleVerifyButton = ({ clientId, token, onVerified, onError }) => {
           }
         },
       });
+      const w = Math.max(220, Math.min(340, Math.floor((wrapRef.current?.clientWidth || 320) - 28)));
       btnRef.current.innerHTML = '';
       window.google.accounts.id.renderButton(btnRef.current, {
-        type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', locale: 'th', width: 300,
+        type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', locale: 'th', width: w,
       });
+    };
+    const onLoadErr = () => {
+      if (alive) onErrorRef.current('โหลดปุ่ม Google ไม่สำเร็จ กรุณาปิดตัวบล็อกโฆษณาหรือรีเฟรชหน้าแล้วลองใหม่');
     };
 
     if (window.google?.accounts?.id) {
@@ -84,7 +91,6 @@ const SwuGoogleVerifyButton = ({ clientId, token, onVerified, onError }) => {
       return () => { alive = false; };
     }
     let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    const created = !script;
     if (!script) {
       script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
@@ -93,15 +99,17 @@ const SwuGoogleVerifyButton = ({ clientId, token, onVerified, onError }) => {
       document.body.appendChild(script);
     }
     script.addEventListener('load', initAndRender);
+    script.addEventListener('error', onLoadErr);
+    if (window.google?.accounts?.id) initAndRender();
     return () => {
       alive = false;
       script.removeEventListener('load', initAndRender);
-      if (created && script.parentNode && !window.google?.accounts?.id) script.parentNode.removeChild(script);
+      script.removeEventListener('error', onLoadErr);
     };
   }, [clientId, token]);
 
   return (
-    <div className="dm-gverify-box" data-testid="dorm-google-verify-box">
+    <div ref={wrapRef} className="dm-gverify-box" data-testid="dorm-google-verify-box">
       <div className="dm-gverify-btnwrap">
         <div ref={btnRef} aria-label="เข้าสู่ระบบด้วยบัญชี Google มศว" />
       </div>
