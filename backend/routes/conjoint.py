@@ -28,6 +28,12 @@ from pydantic import BaseModel, Field
 from docx.shared import Pt
 
 from lib.ttl_cache import async_ttl_cache
+from utils.external_ai import (
+    START_MARKER,
+    END_MARKER,
+    validate_conjoint_qualitative_payload,
+    validate_conjoint_interpretation_payload,
+)
 
 conjoint_router = APIRouter(tags=["conjoint"])
 
@@ -2979,6 +2985,133 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             logging.error(traceback.format_exc())
             raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
+    class ExternalQualitativeImportReq(BaseModel):
+        raw_text: str
+        qualitative_data: Optional[List[QualitativeInput]] = None
+        dry_run: bool = False
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-prompt")
+    async def generate_qualitative_prompt(
+        study_id: str,
+        request: QualitativeAnalysisRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Generate a ready-to-copy prompt for external AI to extract Conjoint attributes & levels."""
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        combined_data = "\n\n".join([
+            f"=== {str(item.type).upper()} ===\n{item.content}"
+            for item in (request.qualitative_data or [])
+        ])
+        lang_hint = "ภาษาไทย (Thai)" if (request.target_language or "th").startswith("th") else "English"
+        prompt = f"""คุณคือ Senior Marketing Researcher ผู้เชี่ยวชาญด้าน Choice-Based Conjoint Analysis (CBC)
+วิเคราะห์ข้อมูลเชิงคุณภาพด้านล่าง เพื่อสกัดคุณลักษณะ (Attributes) และระดับตัวเลือก (Levels) สำหรับนำไปสร้างแบบสอบถาม Conjoint Analysis
+
+ชื่อการศึกษา: {study.get('title', '')}
+หมวดสินค้า/บริการ: {study.get('product_category', '')}
+ภาษาที่ต้องการในผลลัพธ์: {lang_hint}
+
+ข้อมูลเชิงคุณภาพ:
+\"\"\"{combined_data[:16000]}\"\"\"
+
+ข้อกำหนดในการตอบ (สำคัญมาก):
+1. ตอบกลับเป็น JSON ที่ถูกต้องตามโครงสร้างด้านล่างเท่านั้น และครอบด้วย {START_MARKER} และ {END_MARKER}
+2. ห้ามมี text อื่นนอกเหนือ marker · ห้ามใส่ trailing comma · ห้ามเว้นระดับว่าง
+3. สร้าง 3–6 ปัจจัยหลักที่ผู้บริโภคใช้ตัดสินใจเลือกซื้อจริง โดยแต่ละปัจจัยต้องมี 2–5 levels ที่แยกกันชัดเจนและเทียบกันได้ (mutually exclusive & actionable)
+
+{START_MARKER}
+{{
+  "summary": "สรุปปัจจัยสำคัญจากข้อมูลสัมภาษณ์ 2-3 ประโยค",
+  "attributes": [
+    {{
+      "name": "ชื่อปัจจัย 1",
+      "description": "คำอธิบายปัจจัย",
+      "rationale": "เหตุผลที่สกัดจากบทสัมภาษณ์",
+      "levels": [
+        {{"value": "ระดับที่ 1", "description": "รายละเอียดสั้นๆ"}},
+        {{"value": "ระดับที่ 2", "description": "รายละเอียดสั้นๆ"}},
+        {{"value": "ระดับที่ 3", "description": "รายละเอียดสั้นๆ"}}
+      ]
+    }}
+  ]
+}}
+{END_MARKER}"""
+        return {"schema_version": "conjoint_qual_v1", "prompt": prompt}
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-import")
+    async def import_external_qualitative(
+        study_id: str,
+        request: ExternalQualitativeImportReq,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Validate and apply pasted external AI JSON into suggested_attributes + attributes."""
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        res = validate_conjoint_qualitative_payload(request.raw_text)
+        if request.dry_run or not res["valid"]:
+            return {
+                "valid": res["valid"],
+                "applied": False,
+                "errors": res["errors"],
+                "warnings": res["warnings"],
+                "preview": res["preview"],
+                "repair_prompt": res["repair_prompt"],
+            }
+
+        data = res["data"]
+        suggested_attributes = []
+        for i, attr_data in enumerate(data["attributes"]):
+            attr_levels = [
+                AttributeLevel(value=lvl["value"], description=lvl.get("description"))
+                for lvl in attr_data["levels"]
+            ]
+            suggested_attributes.append(ConjointAttribute(
+                name=attr_data["name"],
+                description=attr_data.get("description"),
+                levels=attr_levels,
+                order=i,
+            ))
+
+        attrs_dicts = [attr.model_dump() if hasattr(attr, "model_dump") else attr.dict() for attr in suggested_attributes]
+        update_doc = {
+            "suggested_attributes": attrs_dicts,
+            "llm_analysis": {
+                "summary": data.get("summary") or "",
+                "attributes": data["attributes"],
+                "source": "external_ai",
+            },
+            "updated_at": datetime.now(timezone.utc),
+        }
+        # Populate editable attributes too when study has none or hasn't started survey yet
+        if not study.get("survey_started") and not (study.get("choice_sets")):
+            update_doc["attributes"] = attrs_dicts
+        if request.qualitative_data is not None:
+            update_doc["qualitative_data"] = [
+                item.model_dump() if hasattr(item, "model_dump") else item.dict()
+                for item in request.qualitative_data
+            ]
+
+        await db.conjoint_studies.update_one({"id": study_id}, {"$set": update_doc})
+        return {
+            "valid": True,
+            "applied": True,
+            "errors": [],
+            "warnings": res["warnings"],
+            "preview": res["preview"],
+            "repair_prompt": None,
+            "suggested_attributes": attrs_dicts,
+            "recommendations": data.get("summary") or "",
+            "raw_analysis": update_doc["llm_analysis"],
+        }
+
     @conjoint_router.put("/conjoint/studies/{study_id}/attributes")
     async def update_study_attributes(
         study_id: str,
@@ -3004,7 +3137,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         # Build the new (attr_id, level_id) universe from the incoming request.
         new_universe = set()
         for attr in request.attributes:
+            if not (attr.name or "").strip():
+                raise HTTPException(status_code=400, detail="Attribute name cannot be blank")
+            if len(attr.levels or []) < 1:
+                raise HTTPException(status_code=400, detail=f"Attribute '{attr.name}' must have at least 1 level")
             for lvl in (attr.levels or []):
+                if not (lvl.value or "").strip():
+                    raise HTTPException(status_code=400, detail=f"ระดับคุณลักษณะ (Level) ของ '{attr.name}' ห้ามเว้นว่าง")
                 new_universe.add((attr.id, lvl.id))
 
         # Check whether existing choice_sets reference any (attr_id, level_id)
@@ -3061,11 +3200,15 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if study["creator_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     
-        if not study.get("attributes"):
-            raise HTTPException(status_code=400, detail="No attributes defined. Please complete Phase 1 first.")
+        if not study.get("attributes") or len(study["attributes"]) < 2:
+            raise HTTPException(status_code=400, detail="Conjoint study requires at least 2 attributes (with >= 2 levels each) to create choice trade-offs.")
     
         # Parse attributes
         attributes = [ConjointAttribute(**attr) for attr in study["attributes"]]
+        for attr in attributes:
+            non_empty = [lvl for lvl in (attr.levels or []) if (lvl.value or "").strip()]
+            if len(non_empty) < 2:
+                raise HTTPException(status_code=400, detail=f"Attribute '{attr.name}' must have at least 2 non-empty levels.")
     
         # Calculate optimal number of choice sets if not provided
         num_sets = request.number_of_sets
@@ -4234,52 +4377,64 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     @conjoint_router.post("/conjoint/studies/{study_id}/nca-analysis")
     async def run_nca_analysis(
         study_id: str,
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
         current_user: User = Depends(get_current_user)
     ):
         """
-        Run Necessary Condition Analysis (NCA) on conjoint study results
+        Run Necessary Condition Analysis (NCA) on conjoint study results (supports time & segment filters)
         """
         from lib.nca_analysis import analyze_nca_for_conjoint
-    
+
         # Get study
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
-    
+
         # Get all responses
-        responses = await db.conjoint_responses.find(
+        all_responses = await db.conjoint_responses.find(
             {"study_id": study_id},
             {"_id": 0}
         ).to_list(10000)
-    
+
+        seg_filter = _parse_segments_param(segments)
+        has_filter = bool(from_ or to or seg_filter)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
+
         if len(responses) == 0:
-            raise HTTPException(status_code=400, detail="No responses available for analysis")
-    
+            raise HTTPException(status_code=400, detail="ไม่มีคำตอบในกลุ่มที่กรองอยู่สำหรับการวิเคราะห์ NCA")
+
         # Calculate part-worths and importance using existing functions
         try:
             part_worths = calculate_part_worths(study, responses)
             importance_scores = calculate_importance_scores(part_worths, study)
-        
+
             if not part_worths or not importance_scores:
                 raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
-        
+
             # Run NCA analysis
             nca_results = analyze_nca_for_conjoint(
                 part_worths=part_worths,
                 attribute_importance=importance_scores,
                 respondent_count=len(responses)
             )
-        
-            # Store NCA results in database for caching
-            await db.conjoint_studies.update_one(
-                {"id": study_id},
-                {"$set": {"nca_results": nca_results, "nca_updated_at": datetime.now(timezone.utc).isoformat()}}
-            )
-        
-            logging.info(f"[NCA] Analysis completed for study {study_id}")
-        
+            nca_results["respondent_count"] = len(responses)
+            nca_results["filtered"] = has_filter
+
+            # Store full-study NCA results in database for caching only when unfiltered
+            if not has_filter:
+                await db.conjoint_studies.update_one(
+                    {"id": study_id},
+                    {"$set": {"nca_results": nca_results, "nca_updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+
+            logging.info(f"[NCA] Analysis completed for study {study_id} (n={len(responses)}, filtered={has_filter})")
+
             return nca_results
-        
+
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"[NCA] Error: {str(e)}")
             import traceback
@@ -4291,35 +4446,42 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         study_id: str,
         consistency_threshold: float = 0.75,
         coverage_threshold: float = 0.1,
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
         current_user: User = Depends(get_current_user)
     ):
         """
-        Run Fuzzy-Set Qualitative Comparative Analysis (fsQCA) on conjoint study results
+        Run Fuzzy-Set Qualitative Comparative Analysis (fsQCA) on conjoint study results (supports filters)
         """
         from lib.fsqca_analysis import analyze_fsqca_for_conjoint
-    
+
         # Get study
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
-    
+
         # Get all responses
-        responses = await db.conjoint_responses.find(
+        all_responses = await db.conjoint_responses.find(
             {"study_id": study_id},
             {"_id": 0}
         ).to_list(10000)
-    
+
+        seg_filter = _parse_segments_param(segments)
+        has_filter = bool(from_ or to or seg_filter)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
+
         if len(responses) == 0:
-            raise HTTPException(status_code=400, detail="No responses available for analysis")
-    
+            raise HTTPException(status_code=400, detail="ไม่มีคำตอบในกลุ่มที่กรองอยู่สำหรับการวิเคราะห์ fsQCA")
+
         # Calculate part-worths and importance
         try:
             part_worths = calculate_part_worths(study, responses)
             importance_scores = calculate_importance_scores(part_worths, study)
-        
+
             if not part_worths or not importance_scores:
                 raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
-        
+
             # Run fsQCA analysis
             fsqca_results = analyze_fsqca_for_conjoint(
                 part_worths=part_worths,
@@ -4328,19 +4490,23 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 consistency_threshold=consistency_threshold,
                 coverage_threshold=coverage_threshold
             )
-        
+
             # Check for errors
             if 'error' in fsqca_results:
                 raise HTTPException(status_code=400, detail=fsqca_results['error'])
-        
-            # Store results in database
-            await db.conjoint_studies.update_one(
-                {"id": study_id},
-                {"$set": {"fsqca_results": fsqca_results, "fsqca_updated_at": datetime.now(timezone.utc).isoformat()}}
-            )
-        
-            logging.info(f"[fsQCA] Analysis completed for study {study_id}")
-        
+
+            fsqca_results["respondent_count"] = len(responses)
+            fsqca_results["filtered"] = has_filter
+
+            # Store full-study results in database for caching only when unfiltered
+            if not has_filter:
+                await db.conjoint_studies.update_one(
+                    {"id": study_id},
+                    {"$set": {"fsqca_results": fsqca_results, "fsqca_updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+
+            logging.info(f"[fsQCA] Analysis completed for study {study_id} (n={len(responses)}, filtered={has_filter})")
+
             return fsqca_results
         
         except HTTPException:
@@ -4571,6 +4737,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             "study_id": study["id"],
             "title": study["title"],
             "description": study.get("description"),
+            "status": current_status,
+            "survey_started": bool(study.get("survey_started")),
             "attributes": study.get("attributes", []),
             "choice_sets": choice_sets,
             "alternatives_per_set": study.get("alternatives_per_set", 3),
@@ -5749,9 +5917,12 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     async def generate_interpretation_prompt(
         study_id: str,
         request: AIInterpretationRequest,
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
         current_user: Optional[User] = Depends(get_current_user_optional)
     ):
-        """Generate the prompt text with real data — user can copy and use with their own AI."""
+        """Generate the prompt text with real (optionally filtered) data for external AI."""
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
@@ -5763,18 +5934,117 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
                 raise HTTPException(status_code=403, detail="Not authorized")
 
-        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        all_responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        seg_filter = _parse_segments_param(segments)
+        has_filter = bool(from_ or to or seg_filter)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
         if len(responses) < 10:
-            raise HTTPException(status_code=400, detail="Need at least 10 responses")
+            raise HTTPException(status_code=400, detail="Need at least 10 responses in this view")
 
         analysis_summary = await _prepare_analysis_summary(study, responses, request.method, request.compare_all)
         system_message, prompt = _build_interpretation_prompt(analysis_summary)
+        filter_line = (
+            f"\n[Filter Scope]: วิเคราะห์เฉพาะกลุ่มตัวอย่างที่กรอง (N = {len(responses)} จากทั้งหมด {len(all_responses)} คน · filter={segments or f'{from_}..{to}'})\n"
+            if has_filter else ""
+        )
 
-        full_prompt = f"""[System Instructions]\n{system_message}\n\n[Analysis Request]\n{prompt}"""
+        full_prompt = f"""[System Instructions]
+{system_message}{filter_line}
+
+[Analysis Request]
+{prompt}
+
+[Output Format Requirements]
+- ตอบกลับเป็นภาษาไทย (อ่านง่ายเชิงธุรกิจ + อ้างอิงตัวเลขสถิติจริงสำหรับงานวิชาการ)
+- อ้างเฉพาะตัวเลขที่มีในข้อมูลด้านบนเท่านั้น ห้ามสมมติค่าสถิติหรือ p-value เอง
+- สรุปให้ครบ 4 ส่วน: 1) สรุปผู้บริหารและปัจจัยสำคัญสุด 2) วิเคราะห์ระดับตัวเลือกและ Trade-off/ราคา 3) สเปกสินค้าที่ชนะตลาด (Optimal Configuration) 4) ข้อเสนอแนะเชิงกลยุทธ์และข้อจำกัดทางสถิติ"""
 
         return {
             "prompt": full_prompt,
             "summary_data": analysis_summary,
+            "filtered": has_filter,
+            "respondent_count": len(responses),
+        }
+
+    class ExternalInterpretationImportReq(BaseModel):
+        raw_text: str
+        method: str = "mnl"
+        compare_all: bool = False
+        dry_run: bool = False
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/import-ai-interpretation")
+    async def import_external_interpretation(
+        study_id: str,
+        request: ExternalInterpretationImportReq,
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Validate & save external AI interpretation into analysis_cache (isolated per filter)."""
+        import hashlib
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        res = validate_conjoint_interpretation_payload(request.raw_text)
+        if request.dry_run or not res["valid"]:
+            return {
+                "valid": res["valid"],
+                "applied": False,
+                "errors": res["errors"],
+                "warnings": res["warnings"],
+                "preview": res["preview"],
+                "repair_prompt": res["repair_prompt"],
+            }
+
+        all_responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        seg_filter = _parse_segments_param(segments)
+        has_filter = bool(from_ or to or seg_filter)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
+        if len(responses) < 10:
+            raise HTTPException(status_code=400, detail="Need at least 10 responses in this view before saving interpretation")
+
+        analysis_summary = await _prepare_analysis_summary(study, responses, request.method, request.compare_all)
+        cache_key = f"ai_{request.method}_{'all' if request.compare_all else 'single'}"
+        if has_filter:
+            sig_src = f"{from_ or ''}|{to or ''}|{segments or ''}"
+            cache_key = f"{cache_key}_f_{hashlib.md5(sig_src.encode()).hexdigest()[:10]}"
+        respondent_count = len(responses)
+        interp_text = res["data"]["interpretation"]
+        result_data = {
+            "interpretation": interp_text,
+            "summary_data": analysis_summary,
+            "source": "external_ai",
+            "filtered": has_filter,
+        }
+        await db.analysis_cache.update_one(
+            {"study_id": study_id, "method": cache_key},
+            {"$set": {
+                "study_id": study_id,
+                "method": cache_key,
+                "schema_version": ANALYSIS_CACHE_VERSION,
+                "respondent_count": respondent_count,
+                "results": result_data,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+        return {
+            "valid": True,
+            "applied": True,
+            "errors": [],
+            "warnings": res["warnings"],
+            "preview": res["preview"],
+            "repair_prompt": None,
+            "status": "ready",
+            "interpretation": interp_text,
+            "summary_data": analysis_summary,
+            "source": "external_ai",
+            "filtered": has_filter,
+            "respondent_count": respondent_count,
         }
 
     @conjoint_router.post("/conjoint/studies/{study_id}/export-thesis")

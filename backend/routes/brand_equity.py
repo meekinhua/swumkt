@@ -25,6 +25,12 @@ from pydantic import BaseModel, Field
 
 from lib.ttl_cache import async_ttl_cache
 from lib.inline_media import externalize
+from utils.external_ai import (
+    START_MARKER,
+    END_MARKER,
+    validate_be_identity_payload,
+    validate_be_analysis_payload,
+)
 
 brand_equity_router = APIRouter(prefix="/brand-equity", tags=["Brand Equity"])
 
@@ -1890,6 +1896,9 @@ def _aggregate_responses(study: dict, responses: List[dict], normalized: Optiona
             "perspective": q.get("perspective"),
             "axis_label": q.get("axis_label"),
             "compare_brand": q.get("compare_brand"),
+            "score_eligible": q.get("score_eligible"),
+            "reverse_scored": q.get("reverse_scored"),
+            "polarity_suspected_negative": q.get("polarity_suspected_negative"),
             "stats": stats,
         })
 
@@ -3177,7 +3186,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             {"is_public_showcase": True, "deleted_at": {"$exists": False}},
             {"_id": 0, "id": 1, "brand": 1, "share_token": 1, "status": 1,
              "created_at": 1, "updated_at": 1, "is_public_showcase": 1,
-             "identity.visual_assets": 1}
+             "is_simulated": 1, "identity.visual_assets": 1}
         ).sort("updated_at", -1)
         items = await cur.to_list(500)
 
@@ -3219,6 +3228,7 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
                 "id": s["id"],
                 "share_token": tok,
                 "status": s.get("status"),
+                "is_simulated": bool(s.get("is_simulated")),
                 "brand_name": brand.get("name"),
                 "category": brand.get("category"),
                 "competitors": (brand.get("competitors") or [])[:5],
@@ -3296,6 +3306,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "identity_image": ai_cache_active.get("identity_image", {}),
             "master_insights": ai_cache_active.get("master_insights", []),
             "normalized_by_question": ai_cache_active.get("normalized_by_question", {}),
+            "positioning_analysis": ai_cache_active.get("positioning_analysis", {}),
+            "source": ai_cache_active.get("source"),
             "status": ai_cache_active.get("status"),
             "filter_signature": sig,
         }
@@ -3321,6 +3333,8 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
             "id": study["id"],
             "share_token": share_token,
             "status": study.get("status"),
+            "is_simulated": bool(study.get("is_simulated")),
+            "weights": study.get("weights"),
             "brand": study["brand"],
             "identity": identity_safe,
             "logo_asset": logo_asset,
@@ -4180,6 +4194,9 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
     async def segment_significance(
         study_id: str,
         field: str,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        wave: Optional[str] = Query(None),
         current_user=Depends(get_current_user),
     ):
         """Test whether the gap between demographic groups is real.
@@ -4193,6 +4210,12 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         responses = await db.brand_responses.find(
             {"study_id": study_id}, {"_id": 0}
         ).to_list(20000)
+
+        wave_from, wave_to, _ = _wave_bounds(study.get("wave_history") or [], wave)
+        eff_from = from_iso or wave_from
+        eff_to = to_iso or wave_to
+        if eff_from or eff_to:
+            responses = _apply_response_filter(responses, from_iso=eff_from, to_iso=eff_to)
 
         groups: Dict[str, List[dict]] = {}
         for r in responses:
@@ -4422,5 +4445,319 @@ def get_brand_equity_routes(db, get_current_user, get_optional_user):
         if not cache:
             return {"status": "idle", "signature": sig, "wave": wave or "all"}
         return {**cache, "signature": sig, "wave": wave or "all"}
+
+    # ---- Bring-Your-Own-AI (External AI Prompt → Validate → Import) ----
+
+    class ExternalIdentityPromptReq(BaseModel):
+        brand_name: str
+        category: Optional[str] = ""
+        description: Optional[str] = ""
+        traits: List[str] = []
+        brand_promise: Optional[str] = None
+        pricing_tier: Optional[str] = "mid"
+        image_notes: List[str] = []
+
+    class ExternalAiImportReq(BaseModel):
+        raw_text: str
+        dry_run: bool = False
+
+    @brand_equity_router.post("/external-ai/identity-prompt")
+    async def build_external_identity_prompt(
+        payload: ExternalIdentityPromptReq,
+        current_user=Depends(get_current_user),
+    ):
+        """Generate a ready-to-copy prompt for external AI (ChatGPT/Gemini/Claude) to extract brand identity."""
+        notes = [n for n in (payload.image_notes or []) if n]
+        img_note_text = (
+            f"\n(ผู้ใช้มีภาพอ้างอิง {len(notes)} ภาพ: {', '.join(notes)} — "
+            "แนะนำให้แนบภาพโลโก้/พาเลตต์สีของแบรนด์ลงในแชท AI พร้อม Prompt นี้ด้วย เพื่อให้สกัด visual_palette และ visual_keywords ได้แม่นยำขึ้น)"
+            if notes else ""
+        )
+        prompt = f"""คุณคือ Senior Brand Strategist + Visual Designer วิเคราะห์อัตลักษณ์แบรนด์ด้านล่างอย่างเป็นระบบ
+
+Brand Name: {payload.brand_name}
+Category: {payload.category or '(ไม่ระบุ)'}
+Pricing Tier: {payload.pricing_tier or 'mid'}
+Brand Promise: {payload.brand_promise or '(ยังไม่ระบุ)'}
+Owner-selected traits: {', '.join(payload.traits) if payload.traits else '(none)'}
+Brand Description:
+\"\"\"{payload.description or '(none)'}\"\"\"{img_note_text}
+
+ข้อกำหนดในการตอบ (สำคัญมาก):
+1. ตอบกลับเป็น JSON ที่ถูกต้องตามโครงสร้างด้านล่างเท่านั้น และต้องครอบด้วย {START_MARKER} และ {END_MARKER}
+2. ห้ามมีคำอธิบายก่อนหรือหลัง JSON นอกเหนือจาก marker (ถ้าแนบภาพ ให้สกัด hex colors จากภาพจริง)
+3. `derived_traits`: 5-8 คำภาษาอังกฤษแบบ Title-Case (เช่น "Modern", "Artisanal", "Warm")
+4. `visual_palette`: 3-6 รหัสสี hex (#RRGGBB)
+5. `summary`: สรุป brand essence 2-3 ประโยคภาษาไทย
+
+{START_MARKER}
+{{
+  "derived_traits": ["Modern", "Warm", "Trustworthy"],
+  "visual_palette": ["#0E5538", "#F4EFE6", "#C8102E"],
+  "visual_keywords": ["minimalist", "craft", "authentic"],
+  "design_style": "Clean Modern Editorial",
+  "archetype": "Creator",
+  "summary": "สรุปอัตลักษณ์และคุณค่าหลักของแบรนด์ 2-3 ประโยค"
+}}
+{END_MARKER}"""
+        return {
+            "schema_version": "be_identity_v1",
+            "has_images": len(notes) > 0,
+            "prompt": prompt,
+        }
+
+    @brand_equity_router.post("/external-ai/identity-import")
+    async def import_external_identity(
+        payload: ExternalAiImportReq,
+        current_user=Depends(get_current_user),
+    ):
+        """Validate & normalize pasted external AI JSON for Wizard Step 1 visual identity."""
+        return validate_be_identity_payload(payload.raw_text)
+
+    @brand_equity_router.post("/studies/{study_id}/external-ai-prompt")
+    async def build_external_analysis_prompt(
+        study_id: str,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        wave: Optional[str] = Query(None, description="latest | all | <wave_number>"),
+        current_user=Depends(get_current_user),
+    ):
+        """Build a unified external AI prompt containing open responses + competitor positioning matrix."""
+        study = await _get_owned_study(study_id, current_user)
+        seg_filter = _parse_segments_param(segments)
+        wave_from, wave_to, _ = _wave_bounds(study.get("wave_history") or [], wave)
+        eff_from = from_iso or wave_from
+        eff_to = to_iso or wave_to
+        sig = _filter_signature(eff_from, eff_to, seg_filter)
+
+        all_resp = await db.brand_responses.find({"study_id": study_id}, {"_id": 0}).to_list(5000)
+        responses = _apply_response_filter(all_resp, from_iso=eff_from, to_iso=eff_to, segments=seg_filter)
+        if not responses:
+            raise HTTPException(400, "ยังไม่มีคำตอบในช่วงตัวกรองที่เลือกสำหรับสร้าง Prompt")
+
+        agg = _aggregate_responses(study, responses)
+
+        # Pool open responses per question (including legacy_ids)
+        by_q: Dict[str, List[str]] = {}
+        for r in responses:
+            for a in r.get("answers", []):
+                qid_ans = a.get("question_id")
+                val = a.get("value")
+                if qid_ans and val is not None and str(val).strip():
+                    by_q.setdefault(qid_ans, []).append(str(val).strip())
+
+        normalize_questions = {}
+        theme_questions = {}
+        personality_open_samples = []
+        for q in (study.get("questions") or []):
+            qid = q["id"]
+            ap = q.get("ai_processing")
+            if not ap:
+                continue
+            vals = list(by_q.get(qid, []))
+            for lid in (q.get("legacy_ids") or []):
+                vals.extend(by_q.get(lid, []))
+            if not vals:
+                continue
+            if ap in ("extract_brand", "extract_brands", "word_cloud"):
+                normalize_questions[qid] = {
+                    "kind": q.get("kind"),
+                    "prompt": q.get("prompt"),
+                    "n_responses": len(vals),
+                    "responses": vals[:150],
+                }
+            elif ap == "theme_extraction":
+                theme_questions[qid] = {
+                    "kind": q.get("kind"),
+                    "prompt": q.get("prompt"),
+                    "n_responses": len(vals),
+                    "responses": vals[:100],
+                }
+            elif ap == "extract_personality":
+                personality_open_samples.extend(vals[:80])
+
+        # Balanced digest matching internal _ai_master_insights
+        def _slim_q(q_agg: dict) -> dict:
+            s = q_agg.get("stats") or {}
+            out = {"qid": q_agg["id"], "kind": q_agg.get("kind"), "dim": q_agg.get("dimension"), "n": s.get("n")}
+            for k in ("score_100", "mean", "t2b", "b2b", "net", "score", "promoters_pct", "detractors_pct"):
+                if s.get(k) is not None:
+                    out[k] = s[k]
+            if s.get("counts"):
+                out["top"] = [{"label": c.get("label"), "pct": c.get("pct")} for c in s["counts"][:5]]
+            return out
+
+        picked_stats, seen_dim = [], {d: 0 for d in DIMENSIONS}
+        for q_agg in (agg.get("questions") or []):
+            d = q_agg.get("dimension")
+            if d in seen_dim and seen_dim[d] < 6 and not q_agg.get("compare_brand"):
+                picked_stats.append(_slim_q(q_agg))
+                seen_dim[d] += 1
+
+        radar = agg.get("image_radar") or {"axes": [], "series": []}
+        brand_obj = study.get("brand") or {}
+        ident_obj = study.get("identity") or {}
+        payload_data = {
+            "brand": brand_obj.get("name"),
+            "category": brand_obj.get("category"),
+            "competitors": brand_obj.get("competitors") or [],
+            "intended_identity_traits": ident_obj.get("traits") or [],
+            "brand_promise": ident_obj.get("brand_promise"),
+            "n_responses": len(responses),
+            "sample_adequacy": agg.get("sample_adequacy"),
+            "scores": {k: v for k, v in (agg.get("composite") or {}).items() if k != "_measured"},
+            "measured_dimensions": (agg.get("composite") or {}).get("_measured"),
+            "reliability_alpha": {d: (agg.get("reliability") or {}).get(d, {}).get("alpha") for d in DIMENSIONS},
+            "key_stats": picked_stats,
+            "perceptual_map_matrix_0_100": {
+                "axes": radar.get("axes") or [],
+                "brands": [
+                    {"name": s.get("name"), "kind": s.get("kind"), "scores": s.get("values"), "n_values": s.get("n_values")}
+                    for s in (radar.get("series") or [])
+                ],
+            },
+            "open_questions_for_normalization": normalize_questions,
+            "open_questions_for_themes": theme_questions,
+            "personality_and_oneword_samples": personality_open_samples[:120],
+        }
+
+        axes_list = radar.get("axes") or []
+        axes_note = (
+            f"เลือกแกนจากรายการที่มีจริงเท่านั้น: {json.dumps(axes_list, ensure_ascii=False)}"
+            if len(axes_list) >= 2 else "ไม่มีแกนคู่แข่งเปรียบเทียบ ให้เว้น positioning_analysis.recommended_axes เป็น null"
+        )
+        prompt = f"""คุณคือ Senior Brand Strategist & Quantitative Marketing Researcher วิเคราะห์ข้อมูล Brand Health Check + Competitive Positioning จาก JSON ด้านล่างครบทุกส่วนในครั้งเดียว
+
+กฎเหล็กความถูกต้อง (Strict Grounding & Schema Rules):
+1. ใช้เฉพาะตัวเลขและคำตอบที่ปรากฏในข้อมูลด้านล่างเท่านั้น **ห้ามเดาหรือสร้างสถิติใหม่**
+2. ตอบเป็น JSON เดียวครอบด้วย {START_MARKER} ... {END_MARKER} (ห้ามมี text อื่นนอก JSON)
+3. สำหรับ `normalized_by_question`: ใช้ key เป็นรหัสคำถาม (question_id) ตาม `open_questions_for_normalization` เท่านั้น และจัดกลุ่มคำตอบไทย/อังกฤษ/สะกดผิด/คำพ้องเป็น `canonical` + `variants` + `count`
+4. สำหรับ `themes_by_question`: ใช้ key ตาม `open_questions_for_themes` สรุป 3-6 themes ต่อข้อ (`sentiment` อยู่ระหว่าง -1.0 ถึง 1.0, `sample_quotes` คัดจากคำตอบจริง)
+5. สำหรับ `identity_image`: เทียบ `intended_identity_traits` กับ `personality_and_oneword_samples` ออกเป็น `aligned`, `lost`, `unintended`, `perceived_traits`, `alignment_score_0_100` (0-100), และ `narrative` ภาษาไทย
+6. สำหรับ `master_insights`: สร้าง 5 actionable insights ครอบคลุมทั้ง 4 มิติ อ้างอิง `qid` และตัวเลขจริงใน `key_stats` / `scores` พร้อมระบุความไม่แน่นอนหาก `sample_adequacy.level` เป็น insufficient/provisional
+7. สำหรับ `positioning_analysis`: วิเคราะห์ตำแหน่งแบรนด์เทียบคู่แข่งจาก `perceptual_map_matrix_0_100` ({axes_note}) ระบุช่องว่างตลาด (white_space) และจุดแข็ง/จุดอ่อนรายแบรนด์
+
+ข้อมูลการวิจัย (Study Data JSON):
+{json.dumps(payload_data, ensure_ascii=False)}
+
+โครงสร้าง JSON ที่ต้องส่งกลับ:
+{START_MARKER}
+{{
+  "schema_version": "be_analysis_v1",
+  "normalized_by_question": {{
+    "<question_id>": {{
+      "clusters": [
+        {{"canonical": "BrandOrConcept", "variants": ["variant1", "คำพ้อง"], "count": 5}}
+      ]
+    }}
+  }},
+  "themes_by_question": {{
+    "<question_id>": [
+      {{"name": "ชื่อ Theme", "description": "คำอธิบาย 1 ประโยค", "count": 4, "sample_quotes": ["ประโยคจริง"], "sentiment": 0.6}}
+    ]
+  }},
+  "identity_image": {{
+    "perceived_traits": [{{"trait": "Modern", "count": 6, "sentiment": 0.7}}],
+    "aligned": ["Modern"],
+    "lost": ["Artisanal"],
+    "unintended": ["Expensive"],
+    "alignment_score_0_100": 68,
+    "narrative": "สรุปช่องว่าง Identity กับ Image 2 ประโยค"
+  }},
+  "master_insights": [
+    {{
+      "headline": "หัวข้อ 1 บรรทัด",
+      "evidence": "หลักฐานพร้อมตัวเลขและ [qid]",
+      "recommendation": "สิ่งที่แบรนด์ควรทำจริง",
+      "priority": "high"
+    }}
+  ],
+  "positioning_analysis": {{
+    "summary": "สรุปการวางตำแหน่งแบรนด์เทียบคู่แข่งบน Perceptual Map",
+    "recommended_axes": {{"x": "High-quality", "y": "Premium", "reason": "เหตุผลที่ 2 แกนนี้แยกความแตกต่างในตลาดได้ชัดสุด"}},
+    "white_space": "ช่องว่างตำแหน่งที่ยังไม่มีผู้เล่นครอง",
+    "competitor_positions": [
+      {{"brand": "BrandName", "position_label": "กลุ่มตำแหน่ง", "strength": "จุดเด่นหลัก", "weakness": "จุดด้อยเทียบตลาด"}}
+    ]
+  }}
+}}
+{END_MARKER}"""
+
+        return {
+            "schema_version": "be_analysis_v1",
+            "signature": sig,
+            "wave": wave or "all",
+            "n_responses": len(responses),
+            "prompt": prompt,
+            "metadata": {
+                "competitors": brand_obj.get("competitors") or [],
+                "axes": axes_list,
+                "open_question_ids": list(normalize_questions.keys()) + list(theme_questions.keys()),
+            },
+        }
+
+    @brand_equity_router.post("/studies/{study_id}/external-ai-import")
+    async def import_external_analysis(
+        study_id: str,
+        payload: ExternalAiImportReq,
+        from_iso: Optional[str] = Query(None, alias="from"),
+        to_iso: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = Query(None),
+        wave: Optional[str] = Query(None, description="latest | all | <wave_number>"),
+        current_user=Depends(get_current_user),
+    ):
+        """Validate & optionally apply pasted external AI analysis JSON to ai_cache / ai_cache_by_filter."""
+        study = await _get_owned_study(study_id, current_user)
+        seg_filter = _parse_segments_param(segments)
+        wave_from, wave_to, _ = _wave_bounds(study.get("wave_history") or [], wave)
+        eff_from = from_iso or wave_from
+        eff_to = to_iso or wave_to
+        sig = _filter_signature(eff_from, eff_to, seg_filter)
+        cache_path = "ai_cache" if sig == "all" else f"ai_cache_by_filter.{sig}"
+
+        all_resp = await db.brand_responses.find({"study_id": study_id}, {"_id": 0}).to_list(5000)
+        responses = _apply_response_filter(all_resp, from_iso=eff_from, to_iso=eff_to, segments=seg_filter)
+        agg = _aggregate_responses(study, responses) if responses else {"questions": [], "image_radar": {"axes": []}}
+
+        result = validate_be_analysis_payload(payload.raw_text, study, responses, agg)
+        if payload.dry_run or not result["valid"]:
+            return {
+                "valid": result["valid"],
+                "applied": False,
+                "errors": result["errors"],
+                "warnings": result["warnings"],
+                "preview": result["preview"],
+                "repair_prompt": result["repair_prompt"],
+                "signature": sig,
+            }
+
+        data = result["data"]
+        cache_payload = {
+            "status": "ready",
+            "source": "external_ai",
+            "normalized_by_question": data["normalized_by_question"],
+            "themes_by_question": data["themes_by_question"],
+            "identity_image": data["identity_image"],
+            "master_insights": data["master_insights"],
+            "positioning_analysis": data.get("positioning_analysis") or {},
+            "updated_at": _now_iso(),
+            "filter": {
+                "from": eff_from, "to": eff_to, "segments": seg_filter or {}, "n": len(responses),
+            },
+        }
+        await db.brand_studies.update_one(
+            {"id": study_id},
+            {"$set": {cache_path: cache_payload, "updated_at": _now_iso()}},
+        )
+        return {
+            "valid": True,
+            "applied": True,
+            "errors": [],
+            "warnings": result["warnings"],
+            "preview": result["preview"],
+            "repair_prompt": None,
+            "signature": sig,
+        }
 
     return brand_equity_router

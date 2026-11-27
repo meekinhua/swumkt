@@ -147,12 +147,35 @@ export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360,
   const yMin = yRange?.[0] ?? 0, yMax = yRange?.[1] ?? 100;
   const xMid = (xMin + xMax) / 2;
   const yMid = (yMin + yMax) / 2;
-  // when normalized, the dot.x / dot.y are already 0-100 within the rescaled range
   const toX = (v) => pad + (v / 100) * inner;
   const toY = (v) => size - pad - (v / 100) * inner;
   const fmt = (v) => v == null ? '' : (v >= 10 ? Math.round(v) : v.toFixed(1));
+
+  // Collision-aware label positioning so close competitors stay legible
+  const positioned = dots.map((d, idx) => ({
+    ...d,
+    cx: toX(d.x),
+    cy: toY(d.y),
+    r: d.kind === 'brand' ? 9 : 6,
+    idx,
+  }));
+  const labelOffsets = positioned.map(() => 0);
+  for (let i = 0; i < positioned.length; i++) {
+    for (let j = 0; j < i; j++) {
+      const dx = positioned[i].cx - positioned[j].cx;
+      const dy = (positioned[i].cy + labelOffsets[i]) - (positioned[j].cy + labelOffsets[j]);
+      if (Math.abs(dx) < 62 && Math.abs(dy) < 26) {
+        labelOffsets[i] += (i % 2 === 0 ? -20 : 20);
+      }
+    }
+  }
+
   return (
-    <svg width={size} height={size} style={{ overflow: 'visible' }} data-testid="be-perceptual-map">
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      style={{ width: '100%', maxWidth: size, height: 'auto', overflow: 'visible' }}
+      data-testid="be-perceptual-map"
+    >
       {/* Quadrant background */}
       <rect x={pad} y={pad} width={inner} height={inner} fill="rgba(20,22,26,0.02)" stroke="rgba(20,22,26,0.15)"/>
       {/* Crosshair at MID (50% in normalized space) */}
@@ -160,15 +183,19 @@ export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360,
             stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
       <line x1={pad} y1={pad + inner / 2} x2={size - pad} y2={pad + inner / 2}
             stroke="rgba(20,22,26,0.20)" strokeWidth="1" strokeDasharray="3 3"/>
-      {/* Axis labels — both placed OUTSIDE the chart box so they never overlap the grid:
-          X-axis at bottom-right, Y-axis at top-left (symmetric corners). */}
-      <text x={size - pad} y={size - pad + 32} textAnchor="end" fontSize="10.5"
+      {/* Subtle Quadrant hints */}
+      <text x={size - pad - 6} y={pad + 14} textAnchor="end" fontSize="8.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#B2B5BC">HIGH BOTH ★</text>
+      <text x={pad + 6} y={size - pad - 6} textAnchor="start" fontSize="8.5"
+            fontFamily="IBM Plex Mono, monospace" fill="#B2B5BC">LOW BOTH</text>
+      {/* Axis labels */}
+      <text x={size - pad} y={size - pad + 34} textAnchor="end" fontSize="10.5"
             fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
             style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>{xAxis} →</text>
       <text x={pad} y={pad - 18} textAnchor="start" fontSize="10.5"
             fontFamily="IBM Plex Mono, monospace" fill="#3B3D43"
             style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>↑ {yAxis}</text>
-      {/* Axis range tickmarks (corners) */}
+      {/* Axis range tickmarks */}
       <text x={pad - 4} y={size - pad + 14} textAnchor="end" fontSize="9.5"
             fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF">{fmt(xMin)}</text>
       <text x={size - pad + 4} y={size - pad + 14} fontSize="9.5"
@@ -177,28 +204,30 @@ export const PerceptualMap = ({ xAxis, yAxis, dots = [], size = 360,
             fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF">{fmt(yMax)}</text>
       <text x={pad - 6} y={size - pad + 4} textAnchor="end" fontSize="9.5"
             fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF">{fmt(yMin)}</text>
-      {normalized && (
-        <text x={pad + inner / 2} y={size - pad + 18} textAnchor="middle" fontSize="9"
-              fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF"
-              style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          axes auto-zoomed · midline {fmt(xMid)} × {fmt(yMid)}
-        </text>
-      )}
+      <text x={pad + inner / 2} y={size - pad + 18} textAnchor="middle" fontSize="9"
+            fontFamily="IBM Plex Mono, monospace" fill="#A6A8AF"
+            style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        {normalized ? `axes auto-zoomed · midline ${fmt(xMid)} × ${fmt(yMid)}` : 'full 0–100 scale · midline 50 × 50'}
+      </text>
       {/* Dots */}
-      {dots.map((d, i) => {
-        const cx = toX(d.x), cy = toY(d.y);
-        const r = d.kind === 'brand' ? 9 : 6;
+      {positioned.map((d, i) => {
+        const dyOff = labelOffsets[i] || 0;
+        const labelY = d.cy - d.r - 6 + dyOff;
         return (
-          <g key={i}>
-            <circle cx={cx} cy={cy} r={r} fill={d.color || (d.kind === 'brand' ? '#C8102E' : '#5C5F66')}
-                    fillOpacity={d.kind === 'brand' ? 0.85 : 0.55}
-                    stroke={d.kind === 'brand' ? '#0A0A0A' : 'transparent'} strokeWidth="2"/>
-            <text x={cx} y={cy - r - 6} textAnchor="middle" fontSize="11.5"
+          <g key={i} data-testid={`be-pm-dot-${d.name}`}>
+            {dyOff !== 0 && (
+              <line x1={d.cx} y1={d.cy} x2={d.cx} y2={labelY + 3}
+                    stroke="rgba(20,22,26,0.28)" strokeWidth="1" strokeDasharray="2 2"/>
+            )}
+            <circle cx={d.cx} cy={d.cy} r={d.r} fill={d.color || (d.kind === 'brand' ? '#C8102E' : '#5C5F66')}
+                    fillOpacity={d.kind === 'brand' ? 0.88 : 0.65}
+                    stroke={d.kind === 'brand' ? '#0A0A0A' : '#FFFFFF'} strokeWidth={d.kind === 'brand' ? 2 : 1.2}/>
+            <text x={d.cx} y={labelY} textAnchor="middle" fontSize="11.5"
                   fontFamily="IBM Plex Serif, Georgia, serif"
                   fontWeight={d.kind === 'brand' ? 600 : 500}
                   fill="#0A0A0A">{d.name}</text>
             {d.rawX != null && d.rawY != null && (
-              <text x={cx} y={cy + r + 12} textAnchor="middle" fontSize="9.5"
+              <text x={d.cx} y={d.cy + d.r + 12} textAnchor="middle" fontSize="9.5"
                     fontFamily="IBM Plex Mono, monospace" fill="#5C5F66"
                     style={{ letterSpacing: '0.04em' }}>
                 {fmt(d.rawX)}, {fmt(d.rawY)}

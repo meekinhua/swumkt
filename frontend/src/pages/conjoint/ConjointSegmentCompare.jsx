@@ -35,12 +35,23 @@ const buildQs = (f) => {
   return parts.length ? `&${parts.join('&')}` : '';
 };
 
+const FIELD_TH = {
+  age: 'อายุ', gender: 'เพศ', income: 'รายได้',
+  education: 'การศึกษา', occupation: 'อาชีพ', region: 'ภูมิภาค', usage_frequency: 'ความถี่การใช้',
+};
+const VAL_TH = {
+  female: 'หญิง', male: 'ชาย', nonbinary: 'อื่นๆ', other: 'อื่นๆ', prefer_not_to_say: 'ไม่ระบุ',
+  employed: 'ทำงานประจำ', self_employed: 'ธุรกิจส่วนตัว', student: 'นักศึกษา', unemployed: 'ว่างงาน',
+  high_school: 'ม.ปลาย/ปวช.', bachelor: 'ปริญญาตรี', master: 'ปริญญาโท', doctorate: 'ปริญญาเอก',
+  bangkok: 'กรุงเทพฯ', central: 'กลาง', north: 'เหนือ', northeast: 'อีสาน', south: 'ใต้', east: 'ตะวันออก',
+};
+
 const summariseFilter = (f) => {
   if (!f) return '—';
   const segs = Object.entries(f.segments || {})
     .filter(([, vs]) => (vs || []).length)
-    .map(([k, vs]) => `${k}: ${vs.join('/')}`);
-  const time = f.from || f.to ? `${f.from || '∞'}…${f.to || '∞'}` : null;
+    .map(([k, vs]) => `${FIELD_TH[k] || k}: ${vs.map(v => VAL_TH[v] || v).join('/')}`);
+  const time = f.from || f.to ? `${f.from ? f.from.slice(0, 10) : '∞'}…${f.to ? f.to.slice(0, 10) : '∞'}` : null;
   const bits = [...(time ? [time] : []), ...segs];
   return bits.length ? bits.join(' · ') : 'ทั้งหมด (ไม่กรอง)';
 };
@@ -59,9 +70,9 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
   const keyB = useMemo(() => JSON.stringify(filterB || {}), [filterB]);
 
   useEffect(() => {
-    if (!studyId || !token) return;
+    if (!studyId) return;
     let cancelled = false;
-    const headers = { Authorization: `Bearer ${token}` };
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
     setLoadingA(true); setLoadingB(true);
     setResultA(null);  setResultB(null);
@@ -171,7 +182,7 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
               <div className="text-sm text-gray-800 font-medium">{summariseFilter(f)}</div>
               {!loading && !err && r && (
                 <div className="mt-3 text-[11px] text-gray-600 font-mono">
-                  Pseudo R² = {r.pseudo_r_squared != null ? (r.pseudo_r_squared * 100).toFixed(2) + '%' : '—'}
+                  McFadden ρ² = {r.pseudo_r_squared != null ? Number(r.pseudo_r_squared).toFixed(3) : '—'}
                   {r.log_likelihood != null && <> · LL = {r.log_likelihood.toFixed(2)}</>}
                 </div>
               )}

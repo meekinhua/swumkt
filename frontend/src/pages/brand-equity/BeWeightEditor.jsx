@@ -16,12 +16,24 @@ const DEFAULTS = { awareness: 25, quality: 25, identity: 25, loyalty: 25 };
  * `study.weights` and accepted it on PUT, but nothing ever wrote it. This is
  * that screen.
  */
-export const BeWeightEditor = ({ study, token, onClose, onSaved }) => {
+export const BeWeightEditor = ({ study, composite = null, token, onClose, onSaved }) => {
   const [w, setW] = useState(() => ({ ...DEFAULTS, ...(study?.weights || {}) }));
   const [saving, setSaving] = useState(false);
 
   const sum = Object.values(w).reduce((a, b) => a + (Number(b) || 0), 0);
   const effective = (k) => (sum > 0 ? ((Number(w[k]) || 0) / sum * 100) : 0);
+
+  const previewBes = (() => {
+    if (!composite) return null;
+    const measured = composite._measured || ['awareness', 'quality', 'identity', 'loyalty'];
+    let num = 0, den = 0;
+    measured.forEach(k => {
+      const val = composite[k];
+      const wt = Number(w[k]) || 0;
+      if (val != null && wt > 0) { num += Number(val) * wt; den += wt; }
+    });
+    return den > 0 ? Math.round((num / den) * 10) / 10 : null;
+  })();
 
   const save = async () => {
     if (sum <= 0) {
@@ -63,7 +75,7 @@ export const BeWeightEditor = ({ study, token, onClose, onSaved }) => {
         <p className="be-muted be-small" style={{ lineHeight: 1.6, marginBottom: 16 }}>
           BES = Σ (D<sub>i</sub> × w<sub>i</sub>) / Σw<sub>i</sub> — ค่าเริ่มต้นคือ 25 เท่ากันทุกมิติ
           (ไม่มีงานวิจัยที่กำหนดว่าน้ำหนักควรเป็นเท่าไร จึงถ่วงเท่ากันเป็นค่ากลาง)
-          ถ้าหมวดสินค้าของคุณให้ความสำคัญกับมิติใดมากกว่า ให้ปรับที่นี่และ<b>ระบุเหตุผลไว้ในรายงาน</b>
+          ถ้าหมวดสินค้าของคุณให้ความสำคัญกับมิติใดมากกว่า ให้ปรับที่นี่และ<b>ระบุเหตุผลไว้ในรายงาน</b>{' '}
           มิติที่ยังไม่มีข้อมูลจะถูกตัดออกจากการถ่วงน้ำหนักอัตโนมัติ
         </p>
 
@@ -94,9 +106,17 @@ export const BeWeightEditor = ({ study, token, onClose, onSaved }) => {
           </div>
         ))}
 
-        <div className="be-mono be-tiny" style={{ marginTop: 4, color: sum === 100 ? 'var(--be-green)' : 'var(--ink-3)' }}
-             data-testid="be-weight-sum">
-          รวม {sum} {sum === 100 ? '· ครบ 100' : '· ระบบจะ normalize ให้เอง'}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
+          <div className="be-mono be-tiny" style={{ color: sum === 100 ? 'var(--be-green)' : 'var(--ink-3)' }}
+               data-testid="be-weight-sum">
+            รวม {sum} {sum === 100 ? '· ครบ 100' : '· ระบบจะ normalize ให้เอง'}
+          </div>
+          {previewBes != null && (
+            <div className="be-mono be-tiny" style={{ color: 'var(--ink-2)' }} data-testid="be-weight-preview-bes">
+              BES Preview: <strong>{previewBes}</strong>
+              {composite?.overall != null && ` (เดิม ${Number(composite.overall).toFixed(1)})`}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>

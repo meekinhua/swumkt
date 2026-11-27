@@ -202,7 +202,7 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
 
       {/* Images Grid */}
       {referenceImages.length > 0 && (
-        <div className="mb-4 grid grid-cols-5 gap-3">
+        <div className="mb-4 grid grid-cols-3 sm:grid-cols-5 gap-3">
           {referenceImages.map((imgUrl, index) => (
             <div key={index} className="relative group">
               <img
@@ -212,7 +212,8 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
               />
               <button
                 onClick={() => handleDelete(index)}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
+                title="ลบรูป"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -272,7 +273,7 @@ const ReferenceImagesSection = ({ studyId, referenceImages = [], token, onUpdate
             <label className="text-sm font-semibold text-gray-700 mb-2 block">
               เลือกรูปอ้างอิง (เลือกได้หลายรูป):
             </label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {referenceImages.map((refImg, index) => (
                 <div key={index} className="relative">
                   <label className="cursor-pointer block">

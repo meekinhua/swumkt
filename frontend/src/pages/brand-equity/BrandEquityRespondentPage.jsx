@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import './brand-equity-styles.css';
-import { Icon, BeLoading, SWU_LOGO_URL } from './be-components';
+import { Icon, BeLoading, BrandLogo, SWU_LOGO_URL } from './be-components';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -52,8 +52,9 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
     return (
       <>
         <div className="be-resp-likert-labels" style={{ marginBottom: 6 }}>
-          <span style={{ fontWeight: 500 }}>{sl || (lang === 'en' ? 'Left is better' : 'ซ้ายดีกว่า')}</span>
-          <span style={{ fontWeight: 500 }}>{sr || (lang === 'en' ? 'Right is better' : 'ขวาดีกว่า')}</span>
+          <span style={{ fontWeight: 500 }}>1 · {sl || (lang === 'en' ? 'Left is better' : 'ซ้ายดีกว่า')}</span>
+          <span className="be-muted" style={{ fontSize: 11 }}>{lang === 'en' ? '4 · Equal' : '4 · เท่ากัน'}</span>
+          <span style={{ fontWeight: 500, textAlign: 'right' }}>7 · {sr || (lang === 'en' ? 'Right is better' : 'ขวาดีกว่า')}</span>
         </div>
         <div className="be-resp-comparative" data-testid={`be-resp-q-${q.id}`}>
           {Array.from({ length: 7 }, (_, i) => i + 1).map(n => (
@@ -106,6 +107,7 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
   if (q.type === 'trait_grid') {
     const arr = Array.isArray(value) ? value : [];
     const min = q.min || 3, max = q.max || 5;
+    const atMax = arr.length >= max;
     const opts = q.options || [];
     const optsLocalized = (lang === 'en' && q.options_en) ? q.options_en
                        : (lang === 'th' && q.options_th) ? q.options_th
@@ -115,11 +117,15 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
         <div className="be-resp-trait-grid" data-testid={`be-resp-q-${q.id}`}>
           {opts.map((opt, idx) => {
             const sel = arr.includes(opt);
+            const dimmed = atMax && !sel;
             return (
-              <div key={opt} className={'be-resp-trait ' + (sel ? 'sel' : '')}
+              <div key={opt}
+                   className={'be-resp-trait ' + (sel ? 'sel' : '')}
+                   style={dimmed ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
                    onClick={() => {
                      if (sel) onChange(arr.filter(x => x !== opt));
-                     else if (arr.length < max) onChange([...arr, opt]);
+                     else if (!atMax) onChange([...arr, opt]);
+                     else toast.info(lang === 'en' ? `You can choose up to ${max} — tap a selected one to swap` : `เลือกได้สูงสุด ${max} คำ — กดคำที่เลือกไว้เพื่อเปลี่ยนได้`);
                    }}
                    data-testid={`be-resp-trait-${q.id}-${opt}`}>
                 {optsLocalized[idx] || opt}
@@ -128,19 +134,24 @@ const QuestionInput = ({ q, value, onChange, lang = 'th', T }) => {
           })}
         </div>
         <div className="be-resp-likert-labels" style={{ marginTop: 8 }}>
-          <span>{lang === 'en' ? `selected ${arr.length} / ${max}` : `เลือกแล้ว ${arr.length} / ${max}`}</span>
-          <span>{lang === 'en' ? `(min ${min})` : `(อย่างน้อย ${min})`}</span>
+          <span>{lang === 'en' ? `Selected ${arr.length} / ${max}` : `เลือกแล้ว ${arr.length} / ${max}`}</span>
+          <span>
+            {atMax
+              ? (lang === 'en' ? 'Limit reached — tap one to change' : 'ครบจำนวนแล้ว (กดซ้ำเพื่อเปลี่ยน)')
+              : (lang === 'en' ? `(min ${min})` : `(อย่างน้อย ${min})`)}
+          </span>
         </div>
       </>
     );
   }
   if (q.type === 'open_short') {
     return <input className="be-input" value={value || ''} onChange={e => onChange(e.target.value)}
-                  placeholder="พิมพ์คำตอบสั้นๆ" data-testid={`be-resp-q-${q.id}`}/>;
+                  placeholder={lang === 'en' ? 'Type a short answer' : 'พิมพ์คำตอบสั้นๆ'}
+                  data-testid={`be-resp-q-${q.id}`}/>;
   }
   if (q.type === 'open_long') {
     return <textarea className="be-textarea" value={value || ''} onChange={e => onChange(e.target.value)}
-                     placeholder="พิมพ์คำตอบ — ยิ่งละเอียดยิ่งดี"
+                     placeholder={lang === 'en' ? 'Share your thoughts — the more detail the better' : 'พิมพ์คำตอบ — ยิ่งละเอียดยิ่งดี'}
                      style={{ minHeight: 100 }} data-testid={`be-resp-q-${q.id}`}/>;
   }
   return null;
@@ -151,7 +162,7 @@ const BrandEquityRespondentPage = () => {
   const [study, setStudy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [section, setSection] = useState(-1); // -1 = welcome, 0..3 = dimension sections, 4 = demographics, 5 = thank you
+  const [section, setSection] = useState(-1); // -1 = welcome, 0..sections.length-1 = question pages, sections.length = demographics, sections.length+1 = thank you
   const [answers, setAnswers] = useState({});
   const [demographics, setDemographics] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -163,10 +174,17 @@ const BrandEquityRespondentPage = () => {
   const DRAFT_KEY = `be_draft_${token}`;
   const DRAFT_ID_KEY = `be_draft_id_${token}`;
 
+  // Smooth scroll to top when moving between survey sections on mobile & desktop
+  useEffect(() => {
+    if (section >= 0 && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [section]);
+
   // Save progress locally on every change. The survey is 40+ items on a phone;
   // a lost tab, a phone call or a browser refresh used to mean starting over.
   useEffect(() => {
-    if (section < 0 || section > 4) return;
+    if (!study || section < 0 || section > 5) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         answers, demographics, section, saved_at: Date.now(),
@@ -179,7 +197,7 @@ const BrandEquityRespondentPage = () => {
   // device; a resume link works from anywhere and lets the study owner see who
   // started but never finished.
   useEffect(() => {
-    if (section < 0 || section > 4) return;
+    if (!study || section < 0 || section > 5) return;
     const payload = Object.entries(answers).map(([question_id, value]) => ({ question_id, value }));
     if (!payload.length) return;
     const t = setTimeout(() => {
@@ -214,8 +232,12 @@ const BrandEquityRespondentPage = () => {
         if (Object.keys(asObj).length) {
           setAnswers(asObj);
           setDemographics(d.demographics || {});
-          setSection(Math.min(4, Math.max(0, d.section ?? 0)));
-          toast.success(`กู้คำตอบที่ทำไว้ ${Object.keys(asObj).length} ข้อกลับมาแล้ว`);
+          setSection(Math.min(5, Math.max(0, d.section ?? 0)));
+          toast.success(
+            lang === 'en'
+              ? `Restored ${Object.keys(asObj).length} saved answer(s)`
+              : `กู้คำตอบที่ทำไว้ ${Object.keys(asObj).length} ข้อกลับมาแล้ว`
+          );
         }
       })
       .catch(() => { /* stale link — respondent just starts fresh */ });
@@ -244,7 +266,7 @@ const BrandEquityRespondentPage = () => {
     if (!savedDraft) return;
     setAnswers(savedDraft.answers || {});
     setDemographics(savedDraft.demographics || {});
-    setSection(Math.min(4, Math.max(0, savedDraft.section ?? 0)));
+    setSection(Math.min(5, Math.max(0, savedDraft.section ?? 0)));
     setSavedDraft(null);
   };
   const discardDraft = () => {
@@ -276,29 +298,32 @@ const BrandEquityRespondentPage = () => {
       const r = await axios.get(`${API}/brand-equity/public/${token}`);
       setStudy(r.data);
     } catch (e) {
-      setError(e.response?.data?.detail || 'Survey ไม่พร้อมรับคำตอบ');
+      setError(
+        e.response?.data?.detail ||
+          (lang === 'en' ? 'Survey is not currently accepting responses' : 'แบบสอบถามยังไม่พร้อมรับคำตอบ')
+      );
     }
     setLoading(false);
   };
 
   const dims = ['awareness', 'quality', 'identity', 'loyalty'];
   const dimLabels = lang === 'en' ? {
-    awareness: 'Awareness · brand recall',
-    quality:   'Quality · perceived quality',
-    identity:  'Identity · brand image',
-    loyalty:   'Loyalty · loyalty',
+    awareness: 'Brand awareness & recall',
+    quality:   'Perceived quality & value',
+    identity:  'Brand image & personality',
+    loyalty:   'Brand loyalty & recommendation',
   } : {
-    awareness: 'Awareness · การจดจำแบรนด์',
-    quality:   'Quality · คุณภาพที่รับรู้',
-    identity:  'Identity · อัตลักษณ์',
-    loyalty:   'Loyalty · ความภักดี',
+    awareness: 'ความรู้จักและการนึกถึงแบรนด์',
+    quality:   'คุณภาพและความคุ้มค่าที่รับรู้',
+    identity:  'ภาพลักษณ์และตัวตนแบรนด์',
+    loyalty:   'ความผูกพันและการบอกต่อ',
   };
   const T = lang === 'en' ? {
     untilNext: 'Next', back: 'Back', submit: 'Submit', sending: 'Sending…',
     start: 'Start survey', recorded: 'RESPONSE RECORDED', thanks: 'Thank you!',
     thanksBody: (b) => <>Your response helps <strong>{b}</strong> understand its brand health.</>,
     progress: (a, b, n, t) => `Section ${a} / ${b} · ${n} / ${t}`,
-    aboutYou: 'About you', aboutYouDesc: 'Used for slicing data — anonymous',
+    aboutYou: 'About you', aboutYouDesc: 'Used for grouped analysis only — anonymous',
     welcomeAsk: (m) => <>Please give us <strong>{m} minutes</strong> — answer honestly to help us improve.</>,
     welcomeWhat: "WHAT YOU'LL DO",
     finalSection: 'FINAL SECTION',
@@ -306,26 +331,30 @@ const BrandEquityRespondentPage = () => {
     leftLabel: 'Lowest', rightLabel: 'Highest',
   } : {
     untilNext: 'ถัดไป', back: 'ย้อน', submit: 'ส่งคำตอบ', sending: 'กำลังส่ง…',
-    start: 'เริ่มทำแบบสอบถาม', recorded: 'RESPONSE RECORDED', thanks: 'ขอบคุณ!',
-    thanksBody: (b) => <>คำตอบของคุณช่วยให้ <strong>{b}</strong> เข้าใจ brand health ได้ดีขึ้น</>,
-    progress: (a, b, n, t) => `ตอนที่ ${a} / ${b} · ${n} / ${t}`,
-    aboutYou: 'เกี่ยวกับคุณ', aboutYouDesc: 'ใช้เพื่อ slice ข้อมูล (เช่น ตอบกลุ่มไหนต่างกันยังไง) · ไม่ระบุตัวตน',
-    welcomeAsk: (m) => <>ขอเวลา <strong>{m} นาที</strong> ของคุณ — ตอบคำถามตรงๆ เพื่อช่วยให้แบรนด์ของเราดีขึ้น</>,
-    welcomeWhat: 'WHAT YOU\'LL DO',
-    finalSection: 'FINAL SECTION',
+    start: 'เริ่มทำแบบสอบถาม', recorded: 'บันทึกคำตอบเรียบร้อย', thanks: 'ขอบคุณครับ/ค่ะ!',
+    thanksBody: (b) => <>คำตอบของคุณช่วยให้ <strong>{b}</strong> พัฒนาสินค้าและบริการได้ดียิ่งขึ้น</>,
+    progress: (a, b, n, t) => `ส่วนที่ ${a} / ${b} · ตอบแล้ว ${n} / ${t}`,
+    aboutYou: 'ข้อมูลเพิ่มเติมเกี่ยวกับคุณ', aboutYouDesc: 'ใช้เพื่อวิเคราะห์ภาพรวมรายกลุ่มเท่านั้น · ไม่ระบุตัวตน',
+    welcomeAsk: (m) => <>ขอเวลาประมาณ <strong>{m} นาที</strong> — ตอบตามความคิดเห็นจริง ไม่มีคำตอบถูกหรือผิด</>,
+    welcomeWhat: 'ขั้นตอนการตอบ',
+    finalSection: 'ส่วนสุดท้าย',
     selected: 'เลือกแล้ว', minimum: 'อย่างน้อย',
     leftLabel: 'น้อยสุด', rightLabel: 'มากสุด',
   };
 
-  if (loading) return <div className="be-root"><BeLoading text="กำลังโหลด survey…"/></div>;
+  if (loading) return <div className="be-root"><BeLoading text={lang === 'en' ? 'Loading survey…' : 'กำลังโหลดแบบสอบถาม…'}/></div>;
   if (error) {
     return (
       <div className="be-root">
         <div className="be-resp-wrap">
           <div className="be-card" style={{ marginTop: 60, textAlign: 'center' }}>
-            <div className="be-eyebrow" style={{ color: 'var(--be-red)' }}>SURVEY UNAVAILABLE</div>
+            <div className="be-eyebrow" style={{ color: 'var(--be-red)' }}>
+              {lang === 'en' ? 'SURVEY UNAVAILABLE' : 'แบบสอบถามปิดรับหรือยังไม่ได้เปิด'}
+            </div>
             <div className="be-h3" style={{ marginTop: 14 }}>{error}</div>
-            <div className="be-muted be-small" style={{ marginTop: 10 }}>กรุณาติดต่อผู้ส่ง link</div>
+            <div className="be-muted be-small" style={{ marginTop: 10 }}>
+              {lang === 'en' ? 'Please contact the person who shared this link.' : 'กรุณาติดต่อผู้ส่งลิงก์เพื่อขอลิงก์ที่เปิดใช้งานอยู่'}
+            </div>
           </div>
         </div>
       </div>
@@ -337,15 +366,43 @@ const BrandEquityRespondentPage = () => {
     acc[d] = (study.questions || []).filter(q => q.dimension === d);
     return acc;
   }, {});
+  // Isolate Unaided Awareness (AW-1 / AW-2) on its own blind first page before Aided Awareness
+  // so respondents cannot scroll down and see the focal brand before recalling top-of-mind brands.
+  const unaidedAwarenessQs = questionsByDim.awareness.filter(
+    q => q.template_id === 'AW-1' || q.template_id === 'AW-2' || q.code === 'AW-1' || q.code === 'AW-2' || q.subdimension === 'unaided' || q.ai_processing === 'extract_brand'
+  );
+  const aidedAwarenessQs = questionsByDim.awareness.filter(q => !unaidedAwarenessQs.includes(q));
+  const sections = [
+    ...(unaidedAwarenessQs.length > 0 ? [{
+      key: 'awareness-unaided',
+      dim: 'awareness',
+      blindFocal: true,
+      label: lang === 'en' ? 'Brand recall (Unaided)' : 'การนึกถึงแบรนด์ (ตอบอิสระ)',
+      questions: unaidedAwarenessQs,
+    }] : []),
+    ...(aidedAwarenessQs.length > 0 ? [{
+      key: 'awareness-aided',
+      dim: 'awareness',
+      blindFocal: false,
+      label: lang === 'en' ? 'Brand recognition & familiarity' : 'ความรู้จักและคุ้นเคยแบรนด์',
+      questions: aidedAwarenessQs,
+    }] : []),
+    ...['quality', 'identity', 'loyalty'].map(d => ({
+      key: d,
+      dim: d,
+      blindFocal: false,
+      label: dimLabels[d],
+      questions: questionsByDim[d] || [],
+    })),
+  ];
+  const demoSectionIndex = sections.length;
+  const thanksSectionIndex = sections.length + 1;
   const totalQ = (study.questions || []).length;
   const answered = Object.keys(answers).length;
-  // Honest time estimate. `estimated_minutes` came from the wizard and understated
-  // a 36-40 question survey badly; 15-25 s per item is the usual planning range
-  // for short self-administered items, so quote a RANGE and never less than the
-  // stored figure.
-  const timeLo = Math.max(Number(study.estimated_minutes) || 0, Math.ceil(totalQ * 15 / 60));
+  // Honest 15-25s per item planning range (matching Wizard estimate)
+  const timeLo = Math.max(1, Math.ceil(totalQ * 15 / 60));
   const timeHi = Math.max(timeLo + 1, Math.ceil(totalQ * 25 / 60));
-  const timeEstimate = `${timeLo}-${timeHi}`;
+  const timeEstimate = `${timeLo}–${timeHi}`;
 
   // Lang toggle pill — shown on every screen
   const LangToggle = () => (
@@ -378,8 +435,9 @@ const BrandEquityRespondentPage = () => {
     </div>
   );
 
-  // Welcome screen
+  // Welcome screen — hide focal brand name & logo to prevent priming before Unaided Awareness (AW-1 / AW-2)
   if (section === -1) {
+    const catName = study.brand?.category || (lang === 'en' ? 'Consumer Brand' : 'สินค้าและบริการ');
     return (
       <div className="be-root" data-testid="be-respondent-page">
         <PublicTopbar/>
@@ -387,10 +445,10 @@ const BrandEquityRespondentPage = () => {
           <div style={{ paddingTop: 20 }}>
             <div className="be-eyebrow" style={{ marginBottom: 16 }}>
               <span className="be-dot-sm be-pulse" style={{ background: 'var(--be-red)' }}/>
-              BRAND HEALTH CHECK
+              BRAND PERCEPTION SURVEY
             </div>
-            <h1 className="be-h1" style={{ fontSize: 36, marginBottom: 16 }}>
-              {study.brand?.name}
+            <h1 className="be-h1" style={{ fontSize: 32, marginBottom: 16 }}>
+              {lang === 'en' ? `Consumer Survey · ${catName}` : `แบบสำรวจความคิดเห็นหมวด ${catName}`}
             </h1>
             <div className="be-muted" style={{ marginBottom: 24, lineHeight: 1.7 }}>
               {T.welcomeAsk(timeEstimate)}
@@ -399,11 +457,11 @@ const BrandEquityRespondentPage = () => {
               <div className="be-eyebrow" style={{ marginBottom: 10 }}>{T.welcomeWhat}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>
                 <div>{lang === 'en'
-                       ? <>{totalQ} questions · 4 dimensions · no wrong answers</>
-                       : <>{totalQ} คำถาม · 4 dimensions · ไม่มีคำตอบที่ผิด</>}</div>
+                       ? <>{totalQ} questions · {sections.length} short sections · no right or wrong answers</>
+                       : <>{totalQ} คำถาม · แบ่งเป็น {sections.length} ส่วนสั้นๆ · ไม่มีคำตอบถูกหรือผิด</>}</div>
                 <div>{lang === 'en'
-                       ? <>Responses are <strong>anonymous</strong> — no email/name collected</>
-                       : <>คำตอบเป็น <strong>anonymous</strong> — เราไม่เก็บอีเมล/ชื่อ</>}</div>
+                       ? <>Responses are <strong>anonymous</strong> — no email or name collected</>
+                       : <>คำตอบเป็น <strong>ความลับและไม่ระบุตัวตน</strong> — ไม่เก็บชื่อหรืออีเมล</>}</div>
               </div>
             </div>
             {savedDraft && (
@@ -439,23 +497,66 @@ const BrandEquityRespondentPage = () => {
     );
   }
 
-  // Demographics screen (last)
-  if (section === 4) {
+  // Demographics screen (last) — store canonical English keys so TH & EN responses merge cleanly
+  if (section === demoSectionIndex) {
     const segs = study.segments_to_capture || [];
-    const segConfig = lang === 'en' ? {
-      age: { label: 'Age', options: ['<18', '18-24', '25-34', '35-44', '45-54', '55+'] },
-      gender: { label: 'Gender', options: ['Female', 'Male', 'Other', 'Prefer not to say'] },
-      region: { label: 'Region', options: ['Bangkok', 'Central', 'North', 'Northeast', 'South', 'East'] },
-      occupation: { label: 'Occupation', options: ['Student', 'Employee', 'Freelancer', 'Business owner', 'Other'] },
-      income: { label: 'Income/month', options: ['<15K', '15-30K', '30-50K', '50-100K', '100K+'] },
-      usage_frequency: { label: 'Usage frequency', options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never'] },
-    } : {
-      age: { label: 'อายุ', options: ['<18', '18-24', '25-34', '35-44', '45-54', '55+'] },
-      gender: { label: 'เพศ', options: ['หญิง', 'ชาย', 'อื่นๆ', 'ไม่ระบุ'] },
-      region: { label: 'ภูมิภาค', options: ['กรุงเทพ', 'กลาง', 'เหนือ', 'อีสาน', 'ใต้', 'ตะวันออก'] },
-      occupation: { label: 'อาชีพ', options: ['นักศึกษา', 'พนักงานบริษัท', 'ฟรีแลนซ์', 'เจ้าของกิจการ', 'อื่นๆ'] },
-      income: { label: 'รายได้/เดือน', options: ['<15K', '15-30K', '30-50K', '50-100K', '100K+'] },
-      usage_frequency: { label: 'ใช้ผลิตภัณฑ์บ่อยแค่ไหน', options: ['รายวัน', 'รายสัปดาห์', 'รายเดือน', 'นานๆ ครั้ง', 'ไม่เคย'] },
+    const segConfig = {
+      age: {
+        label: lang === 'en' ? 'Age' : 'ช่วงอายุ',
+        options: [
+          { value: '<18', label: '<18' }, { value: '18-24', label: '18-24' },
+          { value: '25-34', label: '25-34' }, { value: '35-44', label: '35-44' },
+          { value: '45-54', label: '45-54' }, { value: '55+', label: '55+' },
+        ],
+      },
+      gender: {
+        label: lang === 'en' ? 'Gender' : 'เพศ',
+        options: [
+          { value: 'female', label: lang === 'en' ? 'Female' : 'หญิง' },
+          { value: 'male', label: lang === 'en' ? 'Male' : 'ชาย' },
+          { value: 'other', label: lang === 'en' ? 'Other' : 'อื่นๆ' },
+          { value: 'prefer_not_to_say', label: lang === 'en' ? 'Prefer not to say' : 'ไม่ระบุ' },
+        ],
+      },
+      region: {
+        label: lang === 'en' ? 'Region' : 'ภูมิภาคที่อาศัย',
+        options: [
+          { value: 'bangkok', label: lang === 'en' ? 'Bangkok & Metro' : 'กรุงเทพฯ และปริมณฑล' },
+          { value: 'central', label: lang === 'en' ? 'Central' : 'ภาคกลาง' },
+          { value: 'north', label: lang === 'en' ? 'North' : 'ภาคเหนือ' },
+          { value: 'northeast', label: lang === 'en' ? 'Northeast' : 'ภาคตะวันออกเฉียงเหนือ' },
+          { value: 'south', label: lang === 'en' ? 'South' : 'ภาคใต้' },
+          { value: 'east', label: lang === 'en' ? 'East' : 'ภาคตะวันออก' },
+        ],
+      },
+      occupation: {
+        label: lang === 'en' ? 'Occupation' : 'อาชีพ',
+        options: [
+          { value: 'student', label: lang === 'en' ? 'Student' : 'นักเรียน / นิสิตนักศึกษา' },
+          { value: 'employee', label: lang === 'en' ? 'Employee' : 'พนักงานบริษัท / ข้าราชการ' },
+          { value: 'freelancer', label: lang === 'en' ? 'Freelancer' : 'ฟรีแลนซ์ / อาชีพอิสระ' },
+          { value: 'business_owner', label: lang === 'en' ? 'Business owner' : 'เจ้าของกิจการ' },
+          { value: 'other', label: lang === 'en' ? 'Other' : 'อื่นๆ' },
+        ],
+      },
+      income: {
+        label: lang === 'en' ? 'Monthly income' : 'รายได้ต่อเดือน',
+        options: [
+          { value: '<15K', label: '<15K' }, { value: '15-30K', label: '15-30K' },
+          { value: '30-50K', label: '30-50K' }, { value: '50-100K', label: '50-100K' },
+          { value: '100K+', label: '100K+' },
+        ],
+      },
+      usage_frequency: {
+        label: lang === 'en' ? 'Usage frequency' : 'ความถี่ในการใช้สินค้า/บริการหมวดนี้',
+        options: [
+          { value: 'daily', label: lang === 'en' ? 'Daily' : 'ทุกวัน' },
+          { value: 'weekly', label: lang === 'en' ? 'Weekly' : 'รายสัปดาห์' },
+          { value: 'monthly', label: lang === 'en' ? 'Monthly' : 'รายเดือน' },
+          { value: 'rarely', label: lang === 'en' ? 'Rarely' : 'นานๆ ครั้ง' },
+          { value: 'never', label: lang === 'en' ? 'Never' : 'ไม่เคยใช้' },
+        ],
+      },
     };
     return (
       <div className="be-root" data-testid="be-respondent-demographics">
@@ -474,23 +575,23 @@ const BrandEquityRespondentPage = () => {
                 <div className="be-resp-q" key={s}>
                   <div className="be-resp-q-prompt" style={{ fontSize: 16 }}>{c.label}</div>
                   <div className="be-resp-mcq">
-                    {c.options.map(opt => (
-                      <div key={opt}
-                           className={'be-resp-mcq-opt ' + (demographics[s] === opt ? 'sel' : '')}
-                           onClick={() => setDemographics(prev => {
-                             // Tapping the selected option clears it. Every
-                             // demographic answer used to be permanent once
-                             // tapped — a mis-tap could not be undone.
-                             const next = { ...prev };
-                             if (next[s] === opt) delete next[s];
-                             else next[s] = opt;
-                             return next;
-                           })}
-                           data-testid={`be-resp-demo-${s}-${opt}`}>
-                        <div className="check">{demographics[s] === opt && <Icon name="check" size={10}/>}</div>
-                        <span>{opt}</span>
-                      </div>
-                    ))}
+                    {c.options.map(opt => {
+                      const isSel = demographics[s] === opt.value || demographics[s] === opt.label;
+                      return (
+                        <div key={opt.value}
+                             className={'be-resp-mcq-opt ' + (isSel ? 'sel' : '')}
+                             onClick={() => setDemographics(prev => {
+                               const next = { ...prev };
+                               if (next[s] === opt.value || next[s] === opt.label) delete next[s];
+                               else next[s] = opt.value;
+                               return next;
+                             })}
+                             data-testid={`be-resp-demo-${s}-${opt.value}`}>
+                          <div className="check">{isSel && <Icon name="check" size={10}/>}</div>
+                          <span>{opt.label}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                   {demographics[s] && (
                     <button className="be-btn be-btn-ghost be-tiny" style={{ marginTop: 8 }}
@@ -505,15 +606,13 @@ const BrandEquityRespondentPage = () => {
               );
             })}
             <div className="be-resp-foot">
-              {/* The last screen had no way back at all: a respondent who
-                  wanted to change an answer had to abandon the survey. */}
-              <button className="be-btn be-btn-ghost" onClick={() => setSection(3)}
+              <button className="be-btn be-btn-ghost" onClick={() => setSection(Math.max(0, demoSectionIndex - 1))}
                       data-testid="be-respondent-demo-back">
-                <Icon name="chevronL" size={11}/>{T.back}
+                <Icon name="chevronL" size={11}/>{' '}{T.back}
               </button>
               <button className="be-btn be-btn-red"
                       onClick={submit} disabled={submitting} data-testid="be-respondent-submit">
-                {submitting ? T.sending : T.submit}<Icon name="check" size={12}/>
+                {submitting ? T.sending : T.submit}{' '}<Icon name="check" size={12}/>
               </button>
             </div>
           </div>
@@ -523,7 +622,7 @@ const BrandEquityRespondentPage = () => {
   }
 
   // Thank you
-  if (section === 5) {
+  if (section === thanksSectionIndex) {
     return (
       <div className="be-root" data-testid="be-respondent-thanks">
         <PublicTopbar/>
@@ -543,8 +642,13 @@ const BrandEquityRespondentPage = () => {
   }
 
   // Question section
-  const dim = dims[section];
-  const sectionQs = questionsByDim[dim] || [];
+  const currentSection = sections[section] || sections[sections.length - 1] || { key: 'empty', dim: 'awareness', blindFocal: true, label: '', questions: [] };
+  const sectionQs = currentSection.questions || [];
+  const familiarityQ = (questionsByDim.awareness || []).find(
+    q => q.template_id === 'AW-4' || q.kind === 'brand_familiarity'
+  );
+  const isUnawareOfBrand = familiarityQ && Number(answers[familiarityQ.id]) === 1;
+  const isEffectiveRequired = (q) => Boolean(q.required) && !(isUnawareOfBrand && q.template_id === 'LY-4');
 
   const isAnswered = (q) => {
     const v = answers[q.id];
@@ -553,7 +657,7 @@ const BrandEquityRespondentPage = () => {
     if (q.type === 'trait_grid' && Array.isArray(v) && v.length < (q.min || 3)) return false;
     return true;
   };
-  const missingQs = sectionQs.filter(q => q.required && !isAnswered(q));
+  const missingQs = sectionQs.filter(q => isEffectiveRequired(q) && !isAnswered(q));
   const canProceed = missingQs.length === 0;
 
   // The Next button used to be `disabled` with no explanation, on a 36-question
@@ -585,13 +689,13 @@ const BrandEquityRespondentPage = () => {
         duration_sec: Math.round((Date.now() - startedAt) / 1000),
         draft_id: serverDraftId,
       });
-      setSection(5);
+      setSection(thanksSectionIndex);
       try {
         localStorage.removeItem(DRAFT_KEY);
         localStorage.removeItem(DRAFT_ID_KEY);
       } catch { /* ignore */ }
     } catch (e) {
-      toast.error('ส่งไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error((lang === 'en' ? 'Failed to submit: ' : 'ส่งไม่สำเร็จ: ') + (e.response?.data?.detail || e.message));
     }
     setSubmitting(false);
   }
@@ -601,25 +705,39 @@ const BrandEquityRespondentPage = () => {
       <PublicTopbar/>
       <div className="be-resp-wrap">
         <div className="be-resp-head">
-          <div style={{ width: 32, height: 32, background: 'var(--ink)', color: 'var(--paper)',
-                        display: 'grid', placeItems: 'center', fontFamily: 'IBM Plex Serif',
-                        fontWeight: 600, fontSize: 16 }}>
-            {study.brand?.name?.[0]?.toUpperCase() || 'B'}
-          </div>
-          <div style={{ flex: 1 }}>
-            <strong style={{ fontFamily: 'IBM Plex Serif', fontSize: 14 }}>{study.brand?.name}</strong>
-            <div className="be-mono be-tiny be-muted">BRAND HEALTH CHECK</div>
-          </div>
+          {currentSection.blindFocal ? (
+            <>
+              <div style={{ width: 32, height: 32, background: 'var(--ink)', color: 'var(--paper)',
+                            display: 'grid', placeItems: 'center', fontFamily: 'IBM Plex Serif',
+                            fontWeight: 600, fontSize: 15 }}>
+                Q{section + 1}
+              </div>
+              <div style={{ flex: 1 }}>
+                <strong style={{ fontFamily: 'IBM Plex Serif', fontSize: 14 }}>
+                  {study.brand?.category || (lang === 'en' ? 'Brand Survey' : 'แบบสำรวจความคิดเห็น')}
+                </strong>
+                <div className="be-mono be-tiny be-muted">BRAND PERCEPTION SURVEY</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <BrandLogo brand={study.brand} identity={study.identity} logoAsset={study.logo_asset} size={34}/>
+              <div style={{ flex: 1 }}>
+                <strong style={{ fontFamily: 'IBM Plex Serif', fontSize: 14 }}>{study.brand?.name}</strong>
+                <div className="be-mono be-tiny be-muted">BRAND PERCEPTION SURVEY</div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="be-resp-progress">
           <div className="be-resp-progress-segs">
-            {dims.map((d, i) => (
-              <div key={d} className={'s ' + (i < section ? 'done' : i === section ? 'on' : '')}/>
+            {sections.map((s, i) => (
+              <div key={s.key} className={'s ' + (i < section ? 'done' : i === section ? 'on' : '')}/>
             ))}
           </div>
           <div className="be-resp-progress-meta">
-            <span>{T.progress(section + 1, 4, answered, totalQ)} · {dimLabels[dim]}</span>
+            <span>{T.progress(section + 1, sections.length, answered, totalQ)} · {currentSection.label}</span>
             <span>{answered} / {totalQ}</span>
           </div>
         </div>
@@ -653,21 +771,21 @@ const BrandEquityRespondentPage = () => {
             }
           });
 
-          // Non-axis grouping (Identity perspective fallback)
+          // Non-axis grouping (plain consumer-friendly titles instead of academic Aaker jargon)
           const perspectiveOrder = lang === 'en' ? [
-            { key: '_brand_image',   label: 'Brand Image · overall',         match: q => q.dimension === 'identity' && !q.perspective },
-            { key: 'as_organization', label: 'As Organization',               match: q => q.perspective === 'as_organization' },
-            { key: 'as_person',       label: 'As Person',                     match: q => q.perspective === 'as_person' },
-            { key: 'as_symbol',       label: 'As Symbol',                     match: q => q.perspective === 'as_symbol' },
-            { key: 'as_product',      label: 'As Product',                    match: q => q.perspective === 'as_product' },
-            { key: 'competitor',      label: 'About competitors',             match: q => q.perspective === 'competitor' },
+            { key: '_brand_image',   label: 'Overall brand impression',         match: q => q.dimension === 'identity' && !q.perspective },
+            { key: 'as_organization', label: 'Trust & company reputation',       match: q => q.perspective === 'as_organization' },
+            { key: 'as_person',       label: 'Brand personality',                match: q => q.perspective === 'as_person' },
+            { key: 'as_symbol',       label: 'Visuals & recognizability',        match: q => q.perspective === 'as_symbol' },
+            { key: 'as_product',      label: 'Product experience',               match: q => q.perspective === 'as_product' },
+            { key: 'competitor',      label: 'Compared with other brands',       match: q => q.perspective === 'competitor' },
           ] : [
-            { key: '_brand_image', label: 'Brand Image · ภาพรวม', match: q => q.dimension === 'identity' && !q.perspective },
-            { key: 'as_organization', label: 'As Organization · องค์กร',  match: q => q.perspective === 'as_organization' },
-            { key: 'as_person',       label: 'As Person · บุคลิก',        match: q => q.perspective === 'as_person' },
-            { key: 'as_symbol',       label: 'As Symbol · สัญลักษณ์',      match: q => q.perspective === 'as_symbol' },
-            { key: 'as_product',      label: 'As Product · ผลิตภัณฑ์',     match: q => q.perspective === 'as_product' },
-            { key: 'competitor',      label: 'About competitors · เกี่ยวกับคู่แข่ง', match: q => q.perspective === 'competitor' },
+            { key: '_brand_image', label: 'ภาพรวมของแบรนด์ในสายตาคุณ', match: q => q.dimension === 'identity' && !q.perspective },
+            { key: 'as_organization', label: 'ความน่าเชื่อถือและภาพลักษณ์องค์กร',  match: q => q.perspective === 'as_organization' },
+            { key: 'as_person',       label: 'บุคลิกและความรู้สึกที่มีต่อแบรนด์',  match: q => q.perspective === 'as_person' },
+            { key: 'as_symbol',       label: 'สัญลักษณ์และการจดจำ',                 match: q => q.perspective === 'as_symbol' },
+            { key: 'as_product',      label: 'จุดเด่นของสินค้าและบริการ',          match: q => q.perspective === 'as_product' },
+            { key: 'competitor',      label: 'เปรียบเทียบกับแบรนด์อื่น',            match: q => q.perspective === 'competitor' },
           ];
 
           const renderableGroups = [];
@@ -694,6 +812,8 @@ const BrandEquityRespondentPage = () => {
             });
           });
 
+          let qCounter = 0;
+          const totalSectionQs = sectionQs.length;
           return renderableGroups.map((g, gi) => (
             <React.Fragment key={g.key}>
               {g.label && (
@@ -712,13 +832,16 @@ const BrandEquityRespondentPage = () => {
                 </div>
               )}
               {g.qs.map(q => {
-                const missing = showMissing && q.required && !isAnswered(q);
+                qCounter += 1;
+                const reqNow = isEffectiveRequired(q);
+                const missing = showMissing && reqNow && !isAnswered(q);
+                const skipUnawareNote = isUnawareOfBrand && q.template_id === 'LY-4';
                 return (
                 <div className={'be-resp-q' + (missing ? ' be-resp-q-missing' : '')} key={q.id}
                      data-testid={missing ? `be-resp-q-missing-${q.id}` : undefined}>
                   <div className="be-resp-q-num">
                     <span className="be-dot-sm" style={{ background: 'var(--ink)' }}/>
-                    {q.template_id || q.id.slice(0, 5)}
+                    {lang === 'en' ? `Question ${qCounter} / ${totalSectionQs}` : `ข้อ ${qCounter} / ${totalSectionQs}`}
                     {missing && (
                       <span className="be-resp-q-missing-tag">
                         {lang === 'en' ? 'not answered' : 'ยังไม่ได้ตอบ'}
@@ -727,9 +850,16 @@ const BrandEquityRespondentPage = () => {
                   </div>
                   <div className="be-resp-q-prompt">
                     {tx(q, 'prompt')}
-                    {q.required && <span style={{ color: 'var(--be-red)', marginLeft: 4 }}>*</span>}
+                    {reqNow && <span style={{ color: 'var(--be-red)', marginLeft: 4 }}>*</span>}
                   </div>
                   {tx(q, 'help') && <div className="be-resp-q-help">{tx(q, 'help')}</div>}
+                  {skipUnawareNote && (
+                    <div className="be-resp-q-help" style={{ color: 'var(--be-gold)' }}>
+                      {lang === 'en'
+                        ? 'Optional — you indicated earlier you are unfamiliar with this brand.'
+                        : 'ข้ามข้อนี้ได้หากคุณยังไม่เคยรู้จักหรือทดลองใช้แบรนด์นี้'}
+                    </div>
+                  )}
                   {/* Visual stimulus: logo / palette image / hex swatches */}
                   {q.display_image && q.display_image.image_base64 && (
                     <div style={{ marginBottom: 16, padding: 14, background: 'var(--paper-2)',
@@ -769,14 +899,14 @@ const BrandEquityRespondentPage = () => {
           {section > 0 ? (
             <button className="be-btn be-btn-ghost" onClick={() => setSection(section - 1)}
                     data-testid="be-respondent-prev">
-              <Icon name="chevronL" size={11}/>{T.back}
+              <Icon name="chevronL" size={11}/>{' '}{T.back}
             </button>
           ) : <span/>}
           <button className="be-btn be-btn-primary"
                   onClick={handleNext} data-testid="be-respondent-next">
-            {section === 3
-              ? (lang === 'en' ? 'Next · about you' : 'ถัดไป · ข้อมูล')
-              : T.untilNext}<Icon name="arrowR" size={11}/>
+            {section === demoSectionIndex - 1
+              ? (lang === 'en' ? 'Next · About you' : 'ถัดไป · ข้อมูลเพิ่มเติม')
+              : T.untilNext}{' '}<Icon name="arrowR" size={11}/>
           </button>
         </div>
         {!canProceed && (

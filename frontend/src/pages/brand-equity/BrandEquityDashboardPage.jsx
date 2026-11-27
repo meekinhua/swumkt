@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { copyToClipboard } from '@/lib/clipboard';
+import ExternalAiWorkflowModal from '@/components/ExternalAiWorkflowModal';
 import './brand-equity-styles.css';
 import {
   BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
@@ -15,7 +16,7 @@ import { BeMethodology } from './BeMethodology';
 import { BeWeightEditor } from './BeWeightEditor';
 import { BeScoreHistory, BeUnfinishedCard } from './BeScoreHistory';
 import { BeSegmentSignificance } from './BeSegmentSignificance';
-import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
+import { getBrandHealthTier, getWeakestDimension } from '@/lib/brandHealthVerdict';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -151,6 +152,7 @@ const ShowcaseHead = ({ study, score, tier, responseCount }) => {
 
 const BrandEquityDashboardPage = () => {
   const { user, token } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -160,8 +162,17 @@ const BrandEquityDashboardPage = () => {
   const shareToken = params.token;      // showcase mode key
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [aiRunning, setAiRunning] = useState(false);
-  const [activeSegment, setActiveSegment] = useState('all');
+  const [externalAiOpen, setExternalAiOpen] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem('be_dash_view') || 'business'; } catch { return 'business'; }
+  });
+  const setViewModePersist = (m) => {
+    setViewMode(m);
+    try { localStorage.setItem('be_dash_view', m); } catch { /* ignore */ }
+  };
   const [togglingShowcase, setTogglingShowcase] = useState(false);
   const pollRef = useRef(null);
 
@@ -218,28 +229,27 @@ const BrandEquityDashboardPage = () => {
       }
     })();
     /* eslint-disable-next-line */
-  }, [compareFilter, filter.from, filter.to, JSON.stringify(filter.segments)]);
+  }, [compareFilter, filter.from, filter.to, filter.wave, JSON.stringify(filter.segments)]);
 
   const load = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const qs = buildFilterQS(filter);
       if (isShowcase) {
         // PUBLIC fetch — no auth header
         const r = await axios.get(`${API}/brand-equity/showcase/${shareToken}${qs}`);
-        // Normalize the showcase payload to the same { study, aggregate, ai_cache, ready_for_dashboard }
-        // shape the rest of this component already understands.
         const sd = r.data;
         setData({
           study: {
             id: sd.id,
             share_token: sd.share_token,
             status: sd.status,
+            is_simulated: Boolean(sd.is_simulated),
+            weights: sd.weights || null,
+            created_at: sd.created_at || null,
+            updated_at: sd.updated_at || null,
             brand: sd.brand,
-            // Use server-sanitized identity (traits, brand_promise, archetype, ai_summary,
-            // visual_palette, visual_keywords, visual_assets) so the Identity-vs-Image
-            // section renders the brand's intended identity properly. Falls back to a
-            // logo-only object for older payloads that don't return identity yet.
             identity: sd.identity || (sd.logo_asset ? { visual_assets: [sd.logo_asset] } : { visual_assets: [] }),
             target_responses: sd.target_responses,
             is_public_showcase: true,
@@ -260,9 +270,64 @@ const BrandEquityDashboardPage = () => {
         }
       }
     } catch (e) {
+      const detail = e?.response?.data?.detail || (e?.response?.status === 404 ? 'ไม่พบ Study หรือ Showcase นี้' : 'โหลด dashboard ไม่สำเร็จ');
+      setLoadError(detail);
+      setData(null);
       toast.error(isShowcase ? 'Showcase ไม่พร้อม' : 'โหลด dashboard ไม่สำเร็จ');
     }
     setLoading(false);
+  };
+
+  const exportRawCsv = async () => {
+    if (!studyId || isShowcase) return;
+    setExportingCsv(true);
+    try {
+      const r = await axios.get(`${API}/brand-equity/studies/${studyId}/responses`, {
+        params: { limit: 5000 },
+        ...authH,
+      });
+      const rows = r.data?.responses || [];
+      if (!rows.length) {
+        toast.info('ยังไม่มีข้อมูลคำตอบสำหรับ export');
+        setExportingCsv(false);
+        return;
+      }
+      const qList = data?.study?.questions || [];
+      const qIds = qList.map(q => q.id);
+      const qHeaders = qList.map(q => q.template_id || q.id);
+      const demoKeys = Array.from(new Set(rows.flatMap(resp => Object.keys(resp.demographics || {}))));
+      const esc = (val) => {
+        const s = val == null ? '' : (Array.isArray(val) ? val.join(' | ') : String(val));
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+      const header = ['response_id', 'submitted_at', 'duration_sec', ...demoKeys, ...qHeaders];
+      const lines = [header.map(esc).join(',')];
+      rows.forEach(resp => {
+        const ansMap = {};
+        (resp.answers || []).forEach(a => { ansMap[a.question_id] = a.value; });
+        const line = [
+          resp.id || '',
+          resp.submitted_at || '',
+          resp.duration_sec ?? '',
+          ...demoKeys.map(k => (resp.demographics || {})[k] ?? ''),
+          ...qIds.map(qid => ansMap[qid] ?? ''),
+        ];
+        lines.push(line.map(esc).join(','));
+      });
+      const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `brand-equity-${(data?.study?.brand?.name || studyId).replace(/[^a-zA-Z0-9ก-๙_-]+/g, '_')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${rows.length} rows (UTF-8 CSV)`);
+    } catch (e) {
+      toast.error('Export CSV ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+    }
+    setExportingCsv(false);
   };
 
   const [aiProgress, setAiProgress] = useState(null);
@@ -297,9 +362,39 @@ const BrandEquityDashboardPage = () => {
       setAiProgress({ step: 0, total: 4, phase: 'รอเริ่ม…', pct: 0, elapsed_sec: 0 });
       startPolling();
     } catch (e) {
-      toast.error('AI start ไม่สำเร็จ');
+      toast.error('AI ภายในไม่พร้อมใช้งาน — กด "ใช้ AI ภายนอก (ฟรี)" เพื่อคัดลอก Prompt ไปใช้กับ ChatGPT/Gemini/Claude ได้เลย');
     }
   };
+
+  const fetchBeExternalPrompt = useCallback(async () => {
+    const qs = buildFilterQS(filter);
+    const r = await axios.post(`${API}/brand-equity/studies/${studyId}/external-ai-prompt${qs}`, {}, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    return r.data;
+  }, [studyId, filter, token]);
+
+  const validateBeExternal = useCallback(async (rawText) => {
+    const qs = buildFilterQS(filter);
+    const r = await axios.post(
+      `${API}/brand-equity/studies/${studyId}/external-ai-import${qs}`,
+      { raw_text: rawText, dry_run: true },
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+    return r.data;
+  }, [studyId, filter, token]);
+
+  const applyBeExternal = useCallback(async (rawText) => {
+    const qs = buildFilterQS(filter);
+    const r = await axios.post(
+      `${API}/brand-equity/studies/${studyId}/external-ai-import${qs}`,
+      { raw_text: rawText, dry_run: false },
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+    if (!r.data?.applied) {
+      throw new Error((r.data?.errors || []).join(', ') || 'ไม่สามารถนำเข้าข้อมูลได้');
+    }
+    toast.success('นำเข้าผลวิเคราะห์และ Positioning Map จาก AI ภายนอกเรียบร้อย!');
+    await load();
+  }, [studyId, filter, token]); // eslint-disable-line
 
   // ---------- Thesis Export — feature-flagged off until backend whitelist is enabled ----------
   // The button is rendered by BeMethodology but DISABLED unless the current user is on the
@@ -480,23 +575,52 @@ const BrandEquityDashboardPage = () => {
   };
 
   if (loading) return <div className="be-root"><BeLoading text="กำลังโหลด dashboard…"/></div>;
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="be-root" data-testid="be-dashboard-error">
+        {!isShowcase && (
+          <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
+                    right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/brand-equity')}>
+                             <Icon name="chevronL" size={10}/>Studies
+                           </button>}/>
+        )}
+        <div className="be-page">
+          <div className="be-card" style={{ padding: 48, textAlign: 'center', maxWidth: 520, margin: '48px auto' }}>
+            <div className="be-eyebrow" style={{ color: 'var(--be-red)', justifyContent: 'center', marginBottom: 10 }}>
+              UNAVAILABLE
+            </div>
+            <h2 className="be-h2" style={{ marginBottom: 10 }}>{loadError || 'ไม่พบข้อมูล study นี้'}</h2>
+            <div className="be-small be-muted" style={{ marginBottom: 20 }}>
+              study นี้อาจถูกลบ ย้ายไปถังขยะ หรือคุณไม่มีสิทธิ์เข้าถึง
+            </div>
+            <button className="be-btn be-btn-primary"
+                    onClick={() => navigate(isShowcase ? '/showcase/brand-equity' : '/brand-equity')}>
+              <Icon name="chevronL" size={11}/>{isShowcase ? 'กลับหน้า Public Showcase' : 'กลับหน้ารายการ Brand Equity'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const { study, aggregate, ai_cache, ready_for_dashboard } = data;
   const composite = aggregate?.composite || {};
-  const score = Math.round(composite.overall || 0);
+  const hasRealScore = Boolean(ready_for_dashboard && composite.overall != null && (aggregate?.total_responses || 0) >= 10);
+  const score = hasRealScore ? Math.round(composite.overall || 0) : 0;
   const tier = tierFor(score);
   const agg = aggregate;
-  // Lowest per-dimension coverage the backend reported. `composite_meta[d].coverage`
-  // was already computed server-side as the incomplete-data flag but nothing
-  // rendered it, so a headline resting on a third of its designed signals looked
-  // exactly like one resting on all of them.
   const coverages = Object.values(aggregate?.composite_meta || {})
     .map(m => (typeof m?.coverage === 'number' ? m.coverage : null))
     .filter(v => v !== null);
   const minCoverage = coverages.length ? Math.min(...coverages) : null;
   const responseCount = aggregate?.total_responses || 0;
+  const totalUnfiltered = data.responses_total ?? responseCount;
+  const isFilteredSlice = Boolean(filter.from || filter.to || (filter.wave && filter.wave !== 'all') || Object.values(filter.segments || {}).some(v => (v || []).length));
   const targetN = study.target_responses || 100;
+  const shareActive = study.status === 'collecting' || study.status === 'analyzing';
+  const rawWeights = { awareness: 25, quality: 25, identity: 25, loyalty: 25, ...(study.weights || {}) };
+  const weightSum = Object.values(rawWeights).reduce((s, v) => s + (Number(v) || 0), 0) || 100;
+  const weakestDim = hasRealScore ? getWeakestDimension(composite) : null;
 
   return (
     <div className="be-root" data-testid={isShowcase ? 'be-showcase-page' : 'be-dashboard-page'}>
@@ -543,7 +667,10 @@ const BrandEquityDashboardPage = () => {
                                  fontFamily: 'IBM Plex Sans Thai' }}>Brand Health Check</span>
                 </h1>
                 <div className="be-mono be-tiny be-muted" style={{ marginTop: 6 }}>
-                  {study.brand?.category} · {responseCount} / {targetN} respondents
+                  {study.brand?.category} ·{' '}
+                  {isFilteredSlice
+                    ? `${responseCount} / ${totalUnfiltered} responses (กรองอยู่)`
+                    : `${responseCount} / ${targetN} respondents`}
                 </div>
                 {study.is_simulated && (
                   <div className="be-mono be-tiny" data-testid="be-simulated-badge"
@@ -558,6 +685,20 @@ const BrandEquityDashboardPage = () => {
             {!isShowcase ? (
               <div className="be-hero-actions">
                 <StatusPill status={study.status}/>
+                <div className="be-mono be-tiny" style={{ display: 'inline-flex', border: '1px solid var(--rule-strong)' }}
+                     data-testid="be-view-mode-toggle">
+                  {[
+                    ['business', 'โหมดผู้บริหาร'],
+                    ['academic', 'โหมดงานวิจัย'],
+                  ].map(([m, lbl]) => (
+                    <button key={m} type="button" onClick={() => setViewModePersist(m)}
+                            style={{ padding: '5px 10px', fontSize: 10.5, border: 0, cursor: 'pointer',
+                                     background: viewMode === m ? 'var(--ink)' : 'transparent',
+                                     color: viewMode === m ? 'var(--paper)' : 'var(--ink)' }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
                 <button className="be-btn" onClick={() => navigate(`/brand-equity/studies/${study.id}/edit`)}
                         data-testid="be-dashboard-edit">
                   <Icon name="edit" size={11}/>Edit study
@@ -567,9 +708,20 @@ const BrandEquityDashboardPage = () => {
                     <Icon name="arrowR" size={11}/>เปิดรับคำตอบ
                   </button>
                 )}
-                <button className="be-btn" onClick={copyShareLink} data-testid="be-dashboard-share">
+                <button className="be-btn"
+                        onClick={copyShareLink}
+                        disabled={!shareActive}
+                        title={shareActive ? 'คัดลอกลิงก์แบบสอบถาม' : 'กรุณากด "เปิดรับคำตอบ" ก่อน เพื่อให้ลิงก์แบบสอบถามใช้งานได้'}
+                        data-testid="be-dashboard-share">
                   <Icon name="share" size={11}/>Copy share link
                 </button>
+                {totalUnfiltered > 0 && (
+                  <button className="be-btn" onClick={exportRawCsv} disabled={exportingCsv}
+                          title="ดาวน์โหลดคำตอบดิบทั้งหมดเป็น CSV (เหมาะสำหรับ SPSS / R / Excel)"
+                          data-testid="be-dashboard-export-csv">
+                    {exportingCsv ? 'Exporting…' : 'Export Raw CSV'}
+                  </button>
+                )}
                 <button className={'be-btn ' + (study.is_public_showcase ? 'be-btn-primary' : '')}
                         onClick={toggleShowcase}
                         disabled={togglingShowcase || !ready_for_dashboard}
@@ -592,10 +744,20 @@ const BrandEquityDashboardPage = () => {
                 <button className="be-btn" onClick={load} data-testid="be-dashboard-refresh">
                   <Icon name="refresh" size={11}/>Refresh
                 </button>
-                <button className="be-btn be-btn-primary" onClick={runAI}
-                        disabled={!ready_for_dashboard || aiRunning} data-testid="be-dashboard-run-ai">
-                  <Icon name="sparkle" size={11}/>{aiRunning ? 'AI working…' : 'Run AI analysis'}
+                <button className="be-btn be-btn-primary"
+                        type="button"
+                        onClick={() => setExternalAiOpen(true)}
+                        disabled={!ready_for_dashboard}
+                        title={!ready_for_dashboard ? 'ต้องมีอย่างน้อย 10 คำตอบก่อนวิเคราะห์' : 'คัดลอก Prompt ไปใช้กับ ChatGPT / Gemini / Claude ฟรี'}
+                        data-testid="be-dashboard-external-ai">
+                  <Icon name="copy" size={11}/>ใช้ AI ภายนอก (ฟรี)
                 </button>
+                {isAdmin && (
+                  <button className="be-btn" onClick={runAI}
+                          disabled={!ready_for_dashboard || aiRunning} data-testid="be-dashboard-run-ai">
+                    <Icon name="sparkle" size={11}/>{aiRunning ? 'AI working…' : 'Run AI (Admin)'}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="be-hero-actions">
@@ -616,23 +778,36 @@ const BrandEquityDashboardPage = () => {
               <div className="be-ring">
                 <ScoreRing value={score} size={148} stroke={9}/>
                 <div className="be-ring-inner">
-                  <div className="be-data" style={{ fontSize: 44 }}>{score}</div>
+                  <div className="be-data" style={{ fontSize: 44 }}>{hasRealScore ? score : '—'}</div>
                   <div className="be-mono be-tiny be-muted">/ 100</div>
                 </div>
               </div>
               <div className="be-score-meta">
                 <div className="be-eyebrow">BRAND EQUITY SCORE</div>
-                <div className="be-tier-line">
-                  <span className="be-tier" style={{ color: tier.color }}>{tier.name}</span>
-                  <span className="be-mono be-tiny be-muted">{tier.th}</span>
-                </div>
-                {/* Note comes from the same canonical tier as the label above,
-                    so the headline and its explanation cannot disagree. */}
-                <div className="be-muted be-small" style={{ maxWidth: 320, lineHeight: 1.55, marginTop: 4 }}>
-                  {getBrandHealthTier(score).note}
-                </div>
-                {/* How much to trust this number. Both come from the backend. */}
-                {agg?.sample_adequacy && (
+                {hasRealScore ? (
+                  <>
+                    <div className="be-tier-line">
+                      <span className="be-tier" style={{ color: tier.color }}>{tier.name}</span>
+                      <span className="be-mono be-tiny be-muted">{tier.th}</span>
+                    </div>
+                    <div className="be-muted be-small" style={{ maxWidth: 320, lineHeight: 1.55, marginTop: 4 }}>
+                      {getBrandHealthTier(score).note}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="be-tier-line">
+                      <span className="be-tier" style={{ color: 'var(--be-gold)' }}>Pending</span>
+                      <span className="be-mono be-tiny be-muted">รอเก็บข้อมูล</span>
+                    </div>
+                    <div className="be-muted be-small" style={{ maxWidth: 320, lineHeight: 1.55, marginTop: 4 }}>
+                      {isFilteredSlice
+                        ? `ตัวกรองนี้มี ${responseCount} คำตอบ (ต้องการ ≥ 10 เพื่อแสดงคะแนน)`
+                        : `เก็บแล้ว ${responseCount} / 10 คำตอบขั้นต่ำ — เมื่อครบแล้วระบบจะคำนวณ BES ให้อัตโนมัติ`}
+                    </div>
+                  </>
+                )}
+                {agg?.sample_adequacy && hasRealScore && (
                   <div
                     className="be-small"
                     data-testid="be-sample-adequacy"
@@ -648,31 +823,27 @@ const BrandEquityDashboardPage = () => {
                     {agg.sample_adequacy.message}
                   </div>
                 )}
-                {minCoverage != null && minCoverage < 1 && (
+                {hasRealScore && minCoverage != null && minCoverage < 1 && (
                   <div className="be-small" data-testid="be-coverage-warning"
                        style={{ marginTop: 6, color: 'var(--be-gold)', maxWidth: 340, lineHeight: 1.5 }}>
                     ⚠ คะแนนนี้ยังไม่ครบทุกสัญญาณ (ครบ {Math.round(minCoverage * 100)}% ของที่ออกแบบไว้)
                     — ถือเป็นตัวเลขเบื้องต้น
                   </div>
                 )}
-                {/* Method note — the audit corrected several scoring defects that
-                    inflated scores (dead weights, an unreachable identity ceiling,
-                    reverse-worded items counted as virtues, and Awareness losing
-                    65% of its weight until an AI job ran). A brand's number may be
-                    lower than it was before; that is the correction, not a bug. */}
-                <div className="be-tiny be-muted" data-testid="be-method-update-note"
-                     style={{ marginTop: 8, maxWidth: 360, lineHeight: 1.5 }}>
-                  หมายเหตุ: วิธีคำนวณคะแนนได้รับการปรับให้ถูกต้องตามหลักวิชาการ (มิ.ย. 2026)
-                  — บาง study อาจเห็นคะแนนต่างจากเดิม · ดูรายละเอียดได้ที่ภาคผนวกวิธีวิจัยด้านล่าง
-                </div>
-                {agg?.normalization?.basis && agg.normalization.basis !== 'none' && (
+                {hasRealScore && viewMode === 'academic' && (
+                  <div className="be-tiny be-muted" data-testid="be-method-update-note"
+                       style={{ marginTop: 8, maxWidth: 360, lineHeight: 1.5 }}>
+                    หมายเหตุ: คำนวณด้วย POMP (0–100) + ถ่วงน้ำหนัก 4 มิติ · ดูสูตรและข้อจำกัดได้ที่ภาคผนวกวิธีวิจัยด้านล่าง
+                  </div>
+                )}
+                {hasRealScore && agg?.normalization?.basis && agg.normalization.basis !== 'none' && (
                   <div className="be-tiny be-muted" data-testid="be-normalization-basis"
                        style={{ marginTop: 6, maxWidth: 360, lineHeight: 1.5 }}>
                     การนับชื่อแบรนด์จากคำถามปลายเปิด:{' '}
                     <b>{agg.normalization.basis === 'ai' ? 'ผ่าน AI แล้ว (แม่นกับคำสะกดผิด/ชื่อเล่น)'
                                                           : 'นับตรงจากข้อความ (ยังไม่ได้รัน AI)'}</b>
-                    {agg.normalization.basis === 'deterministic'
-                      ? ' — คะแนนไม่ได้รอ AI แล้ว แต่กด "Run AI analysis" จะช่วยให้แม่นขึ้น'
+                    {agg.normalization.basis === 'deterministic' && !isShowcase
+                      ? ' — กด "ใช้ AI ภายนอก (ฟรี)" จะช่วยจัดกลุ่มคำพ้องได้แม่นขึ้น'
                       : ''}
                   </div>
                 )}
@@ -680,16 +851,20 @@ const BrandEquityDashboardPage = () => {
             </div>
             <div className="be-dim-grid" data-testid="be-dim-grid">
               {Object.values(DIMENSIONS).map(d => {
-                const v = Math.round(composite[d.key] || 0);
+                const v = hasRealScore ? Math.round(composite[d.key] || 0) : 0;
+                const wPct = Math.round(((Number(rawWeights[d.key]) || 0) / weightSum) * 100);
                 return (
                   <div key={d.key} className="be-dim-card">
-                    <div className="be-mono be-tiny" style={{ color: 'var(--ink-4)', letterSpacing: '0.10em' }}>{d.num}</div>
-                    <div className="be-dim-num" style={{ color: v > 0 ? d.color : 'var(--ink-4)' }}>
-                      {v > 0 ? v : '—'}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div className="be-mono be-tiny" style={{ color: 'var(--ink-4)', letterSpacing: '0.10em' }}>{d.num}</div>
+                      <span className="be-mono be-tiny be-muted" title="น้ำหนักของมิตินี้ใน BES">w={wPct}%</span>
+                    </div>
+                    <div className="be-dim-num" style={{ color: hasRealScore && v > 0 ? d.color : 'var(--ink-4)' }}>
+                      {hasRealScore && v > 0 ? v : '—'}
                     </div>
                     <div className="be-dim-name">{d.label}</div>
                     <div className="be-dim-bar">
-                      <div className="be-dim-bar-fill" style={{ width: v + '%', background: d.color }}/>
+                      <div className="be-dim-bar-fill" style={{ width: (hasRealScore ? v : 0) + '%', background: d.color }}/>
                     </div>
                     <div className="be-mono be-tiny be-muted">{d.th}</div>
                   </div>
@@ -699,12 +874,35 @@ const BrandEquityDashboardPage = () => {
           </div>
         </div>
 
-        {/* ===== ความน่าเชื่อถือของการวัด =====
-            Cronbach's alpha per dimension, computed server-side. Shown next to
-            the score because a number nobody can check is not a measurement —
-            and because the exported thesis used to assert this had been tested
-            when it never had been. */}
-        {agg?.reliability && (
+        {/* ===== EXECUTIVE PRIORITY STRIP (Business mode) ===== */}
+        {ready_for_dashboard && viewMode === 'business' && weakestDim && (
+          <div className="be-card" style={{ padding: 18, marginTop: 18, borderLeft: '4px solid var(--be-red)',
+                                          background: '#FFFAF0' }}
+               data-testid="be-executive-priority">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div>
+                <div className="be-eyebrow" style={{ color: 'var(--be-red)', marginBottom: 4 }}>
+                  EXECUTIVE PRIORITY · จุดที่ควรโฟกัสก่อน
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>
+                  มิติที่คะแนนต่ำสุดตอนนี้คือ <strong>{weakestDim.labelTh} ({weakestDim.label})</strong> ·{' '}
+                  <span style={{ color: 'var(--be-red)' }}>{Math.round(weakestDim.value)}/100</span>
+                </div>
+                {(ai_cache?.master_insights || [])[0] && (
+                  <div className="be-small be-muted" style={{ marginTop: 4 }}>
+                    คำแนะนำอันดับ 1: {ai_cache.master_insights[0].recommendation || ai_cache.master_insights[0].headline}
+                  </div>
+                )}
+              </div>
+              <button className="be-btn be-btn-ghost be-tiny" onClick={() => setViewModePersist('academic')}>
+                สลับดูค่าสถิติวิชาการ (α / CI / POMP) →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== ความน่าเชื่อถือของการวัด (shown automatically in Academic mode) ===== */}
+        {agg?.reliability && viewMode === 'academic' && (
           <div className="be-card" style={{ padding: 20, marginTop: 18 }} data-testid="be-reliability-card">
             <div className="be-eyebrow" style={{ marginBottom: 6 }}>
               <span className="be-dot-sm" style={{ background: 'var(--be-blue)' }}/>
@@ -746,11 +944,8 @@ const BrandEquityDashboardPage = () => {
           </div>
         )}
 
-        {/* ===== อ่านค่าตัวเลขบนหน้านี้ยังไง (GLOSSARY) =====
-            Every one of these terms appeared on the dashboard — and in the
-            methodology appendix that claims to explain every score — without ever
-            being defined. */}
-        {ready_for_dashboard && (
+        {/* ===== อ่านค่าตัวเลขบนหน้านี้ยังไง (GLOSSARY, Academic mode) ===== */}
+        {ready_for_dashboard && viewMode === 'academic' && (
           <div className="be-card" style={{ padding: 20, marginTop: 18 }} data-testid="be-glossary-card">
             <div className="be-eyebrow" style={{ marginBottom: 10 }}>
               <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>
@@ -820,6 +1015,7 @@ const BrandEquityDashboardPage = () => {
             <BeScoreHistory studyId={studyId} token={token}/>
             <BeSegmentSignificance
               studyId={studyId} token={token}
+              filter={filter}
               fields={Object.keys(data.segments_available || {})}/>
             <BeUnfinishedCard studyId={studyId} token={token}
                               shareToken={study?.share_token}/>
@@ -830,57 +1026,72 @@ const BrandEquityDashboardPage = () => {
         {!ready_for_dashboard && (
           <div className="be-card" style={{ padding: 40, textAlign: 'center', marginTop: 20 }}
                data-testid="be-dashboard-locked">
-            <div className="be-eyebrow" style={{ marginBottom: 12, justifyContent: 'center' }}>
-              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>DASHBOARD LOCKED
-            </div>
-            <div className="be-h2" style={{ fontSize: 22, marginBottom: 12 }}>
-              ต้องการ {Math.max(0, 10 - responseCount)} responses เพิ่ม
-            </div>
-            <div className="be-muted be-small" style={{ marginBottom: 22, maxWidth: 480, margin: '0 auto 22px' }}>
-              ต้องมีอย่างน้อย 10 responses เพื่อ unlock dashboard และ AI analysis
-              · ปัจจุบัน {responseCount} responses
-            </div>
-            <button className="be-btn" onClick={copyShareLink}>
-              <Icon name="share" size={11}/>คัดลอก link เชิญตอบ
-            </button>
+            {isFilteredSlice && totalUnfiltered >= 10 ? (
+              <>
+                <div className="be-eyebrow" style={{ marginBottom: 12, justifyContent: 'center' }}>
+                  <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>FILTER SLICE TOO SMALL
+                </div>
+                <div className="be-h2" style={{ fontSize: 22, marginBottom: 12 }}>
+                  ตัวกรองนี้มีเพียง {responseCount} คำตอบ (ต้องการ ≥ 10)
+                </div>
+                <div className="be-muted be-small" style={{ marginBottom: 22, maxWidth: 480, margin: '0 auto 22px' }}>
+                  ข้อมูลทั้ง study มีทั้งหมด {totalUnfiltered} คำตอบ — ลองขยายช่วงเวลาหรือล้างตัวกรองเพื่อดูผลรวม
+                </div>
+                <button className="be-btn be-btn-primary"
+                        onClick={() => setFilter({ from: '', to: '', wave: 'all', segments: {} })}
+                        data-testid="be-dashboard-clear-filter">
+                  ล้างตัวกรองทั้งหมด
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="be-eyebrow" style={{ marginBottom: 12, justifyContent: 'center' }}>
+                  <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>DASHBOARD LOCKED
+                </div>
+                <div className="be-h2" style={{ fontSize: 22, marginBottom: 12 }}>
+                  ต้องการอีก {Math.max(0, 10 - responseCount)} คำตอบเพื่อปลดล็อก
+                </div>
+                <div className="be-muted be-small" style={{ marginBottom: 22, maxWidth: 480, margin: '0 auto 22px' }}>
+                  ต้องมีอย่างน้อย 10 คำตอบจึงจะคำนวณผลคะแนน 4 มิติและรัน AI analysis ได้อย่างน่าเชื่อถือ
+                  · ปัจจุบัน{isFilteredSlice ? `ในตัวกรองมี ${responseCount} / ${totalUnfiltered}` : `เก็บแล้ว ${responseCount} / 10`} คำตอบ
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {isFilteredSlice && (
+                    <button className="be-btn be-btn-primary"
+                            onClick={() => setFilter({ from: '', to: '', wave: 'all', segments: {} })}
+                            data-testid="be-dashboard-clear-filter">
+                      ล้างตัวกรองทั้งหมด
+                    </button>
+                  )}
+                  {shareActive ? (
+                    <button className="be-btn be-btn-red" onClick={copyShareLink}>
+                      <Icon name="share" size={11}/>คัดลอกลิงก์เชิญตอบแบบสอบถาม
+                    </button>
+                  ) : !isShowcase && study.status === 'draft' ? (
+                    <button className="be-btn be-btn-red" onClick={launch}>
+                      <Icon name="arrowR" size={11}/>เปิดรับคำตอบตอนนี้
+                    </button>
+                  ) : null}
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        {/* DASH BODY */}
+        {/* DASH BODY — 2 columns: full-width Main + Right AI Insights rail */}
         {ready_for_dashboard && (
           <div className="be-dash-body">
-            {/* LEFT RAIL */}
-            <div className="be-dash-rail" data-testid="be-dashboard-rail">
-              <div className="be-rail-section">
-                <h5>Filter by segment</h5>
-                <div className={'be-rail-item ' + (activeSegment === 'all' ? 'on' : '')}
-                     onClick={() => setActiveSegment('all')}>
-                  <span>All respondents</span>
-                  <span className="pct">{responseCount}</span>
-                </div>
-              </div>
-              <div className="be-rail-section">
-                <h5>Study info</h5>
-                <div className="be-mono be-tiny" style={{ lineHeight: 1.7, color: 'var(--ink-2)' }}>
-                  Created · {new Date(study.created_at).toLocaleDateString()}<br/>
-                  Updated · {new Date(study.updated_at).toLocaleDateString()}<br/>
-                  Token · /{study.share_token?.slice(0, 6)}
-                </div>
-              </div>
-              <div className="be-rail-section">
-                <h5>AI status</h5>
-                <div className="be-mono be-tiny" style={{ color: 'var(--ink-2)' }}>
-                  Status: {ai_cache?.status || 'idle'}<br/>
-                  {ai_cache?.updated_at && `Updated: ${new Date(ai_cache.updated_at).toLocaleTimeString()}`}
-                </div>
-              </div>
-            </div>
-
             {/* MAIN */}
             <div className="be-dash-main">
               <SectionAwareness study={study} aggregate={aggregate} ai={ai_cache}/>
               <SectionQuality study={study} aggregate={aggregate} ai={ai_cache}/>
-              <SectionIdentity study={study} aggregate={aggregate} ai={ai_cache}/>
+              <SectionIdentity
+                study={study}
+                aggregate={aggregate}
+                ai={ai_cache}
+                isShowcase={isShowcase}
+                onOpenExternalAi={!isShowcase ? () => setExternalAiOpen(true) : null}
+              />
               <SectionLoyalty study={study} aggregate={aggregate} ai={ai_cache}/>
             </div>
 
@@ -888,6 +1099,15 @@ const BrandEquityDashboardPage = () => {
             <div className="be-dash-ai" data-testid="be-dashboard-ai-rail">
               <div className="be-eyebrow" style={{ marginBottom: 8 }}>
                 MASTER AI INSIGHTS
+                {ai_cache?.source === 'external_ai' && (
+                  <span style={{
+                    marginLeft: 8, padding: '2px 7px', fontSize: 9,
+                    background: 'rgba(27,117,188,0.12)', color: '#1B75BC',
+                    borderRadius: 3, letterSpacing: '0.04em',
+                  }}>
+                    EXTERNAL AI
+                  </span>
+                )}
                 {filter.wave && filter.wave !== 'all' && (
                   <span style={{
                     marginLeft: 8, padding: '2px 8px', fontSize: 9,
@@ -913,9 +1133,9 @@ const BrandEquityDashboardPage = () => {
 
               {(ai_cache?.master_insights || []).length === 0 ? (
                 <div className="be-muted be-small" style={{ padding: '20px 0', textAlign: 'center' }}>
-                  {study.is_public_showcase
-                    ? <>ยังไม่มี master insights —<br/>เจ้าของ study ต้องรัน AI analysis ก่อน</>
-                    : <>ยังไม่มี master insights —<br/>กดปุ่ม <strong>Run AI analysis</strong> ด้านบน</>
+                  {isShowcase
+                    ? <>ยังไม่มี master insights —<br/>เจ้าของ study ต้องวิเคราะห์ด้วย AI ก่อน</>
+                    : <>ยังไม่มี master insights —<br/>กดปุ่ม <strong>ใช้ AI ภายนอก (ฟรี)</strong> ด้านล่างเพื่อนำเข้าผลวิเคราะห์</>
                   }
                 </div>
               ) : (ai_cache.master_insights || []).map((rec, i) => (
@@ -940,10 +1160,20 @@ const BrandEquityDashboardPage = () => {
               ))}
 
               {!isShowcase && (
-                <button className="be-btn" style={{ width: '100%', marginTop: 16, justifyContent: 'center' }}
-                        onClick={runAI} disabled={aiRunning} data-testid="be-dashboard-regen-insights">
-                  <Icon name="refresh" size={11}/>{aiRunning ? 'Regenerating…' : 'Generate new insights'}
-                </button>
+                <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
+                  <button className="be-btn be-btn-primary" style={{ width: '100%', justifyContent: 'center' }}
+                          type="button"
+                          onClick={() => setExternalAiOpen(true)}
+                          data-testid="be-dashboard-rail-external-ai">
+                    <Icon name="copy" size={11}/>ใช้ AI ภายนอก (ฟรี · Copy Prompt → วางผล)
+                  </button>
+                  {isAdmin && (
+                    <button className="be-btn" style={{ width: '100%', justifyContent: 'center' }}
+                            onClick={runAI} disabled={aiRunning} data-testid="be-dashboard-regen-insights">
+                      <Icon name="refresh" size={11}/>{aiRunning ? 'Regenerating…' : 'Generate new insights (Admin)'}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -967,7 +1197,7 @@ const BrandEquityDashboardPage = () => {
       </div>
 
       {weightEditorOpen && !isShowcase && (
-        <BeWeightEditor study={study} token={token}
+        <BeWeightEditor study={study} composite={composite} token={token}
                         onClose={() => setWeightEditorOpen(false)}
                         onSaved={load}/>
       )}
@@ -1006,6 +1236,36 @@ const BrandEquityDashboardPage = () => {
           </div>
         </div>
       )}
+
+      <ExternalAiWorkflowModal
+        open={externalAiOpen}
+        onClose={() => setExternalAiOpen(false)}
+        title="วิเคราะห์ Brand Equity & Positioning Map ด้วย AI ภายนอก (ฟรี)"
+        subtitle="คัดลอก Prompt ที่มีผลสำรวจ คำตอบปลายเปิด และคะแนนเทียบคู่แข่งทั้งหมดไปวางใน ChatGPT / Gemini / Claude แล้วนำ JSON กลับมาตรวจสอบและบันทึก"
+        fetchPrompt={fetchBeExternalPrompt}
+        validatePayload={validateBeExternal}
+        applyPayload={applyBeExternal}
+        renderPreview={(preview) => (
+          <div className="space-y-1.5">
+            <div>
+              <strong>จัดกลุ่มคำตอบปลายเปิด:</strong> {preview.normalized_questions} ข้อ ·{' '}
+              <strong>Themes:</strong> {preview.theme_questions} ข้อ ·{' '}
+              <strong>Identity Alignment:</strong> {preview.alignment_score_0_100}/100 ({preview.aligned_count} aligned)
+            </div>
+            <div>
+              <strong>Master Insights:</strong> {preview.insights_count} ข้อ
+              {preview.has_positioning && preview.recommended_axes?.x && (
+                <> · <strong>Perceptual Map AI แนะนำ:</strong> {preview.recommended_axes.x} × {preview.recommended_axes.y}</>
+              )}
+            </div>
+            {preview.insights_headlines?.length > 0 && (
+              <ul className="list-disc pl-5 text-gray-700">
+                {preview.insights_headlines.slice(0, 3).map((h, i) => <li key={i}>{h}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+      />
     </div>
   );
 };
@@ -1019,16 +1279,19 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
   const aided = qs.find(q => q.kind === 'aided_recognition');
   const score = Math.round(aggregate?.composite?.awareness || 0);
 
-  // Top-of-mind word cloud
+  // Top-of-mind word cloud (deterministic jitter so unrelated UI clicks don't jump words)
   const tomCounts = tom?.stats?.counts || [];
   const target = study.brand?.name;
-  const cloudWords = tomCounts.slice(0, 12).map((c, i) => ({
-    text: c.label,
-    size: Math.max(11, 14 + Math.round(c.pct * 0.5)),
-    target: c.label?.toLowerCase().includes(target?.toLowerCase() || '___'),
-    x: 12 + (i % 4) * 22 + Math.random() * 10,
-    y: 18 + Math.floor(i / 4) * 26 + Math.random() * 8,
-  }));
+  const cloudWords = tomCounts.slice(0, 12).map((c, i) => {
+    const h = (String(c.label || '').split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) + i * 17) % 10;
+    return {
+      text: c.label,
+      size: Math.max(11, 14 + Math.round(c.pct * 0.5)),
+      target: c.label?.toLowerCase().includes(target?.toLowerCase() || '___'),
+      x: 10 + (i % 4) * 22 + h * 0.8,
+      y: 16 + Math.floor(i / 4) * 27 + (h % 5) * 1.4,
+    };
+  });
 
   // Unaided recall — AI normalized counts (each response may list multiple brands)
   const recallRows = (recall?.stats?.counts || []).slice(0, 8).map(c => ({
@@ -1195,11 +1458,11 @@ const SectionQuality = ({ study, aggregate, ai }) => {
   const radarAxesData = attrQs.slice(0, 8).map(q => ({
     axis: ((q.axis_label || sluggify(q.kind)) + '').toUpperCase(),
     slug: sluggify(q.kind),
-    brandValue: Math.round((q.stats?.mean || 0) / 7 * 100),
+    brandValue: q.stats?.score_100 != null ? Math.round(q.stats.score_100) : Math.round((q.stats?.mean || 0) / 7 * 100),
   }));
   const radarAxes = radarAxesData.map(a => a.axis);
 
-  // Competitor parallels (kind=competitor_<slug>) — gather mean per (compare_brand, slug)
+  // Competitor parallels (kind=competitor_<slug>) — gather POMP score_100 per (compare_brand, slug)
   const compMap = {}; // { brandName: { slug: pct } }
   qs.filter(q =>
     q.dimension === 'quality'
@@ -1210,7 +1473,7 @@ const SectionQuality = ({ study, aggregate, ai }) => {
     const cb = q.compare_brand || 'Competitor';
     const slug = sluggify(q.kind);
     if (!compMap[cb]) compMap[cb] = {};
-    compMap[cb][slug] = Math.round((q.stats.mean || 0) / 7 * 100);
+    compMap[cb][slug] = q.stats?.score_100 != null ? Math.round(q.stats.score_100) : Math.round((q.stats.mean || 0) / 7 * 100);
   });
   const competitorNames = Object.keys(compMap);
   const hasCompetitorRadar = competitorNames.length > 0 && radarAxesData.length >= 3;
@@ -1371,15 +1634,17 @@ const SectionQuality = ({ study, aggregate, ai }) => {
   );
 };
 
-const SectionIdentity = ({ study, aggregate, ai }) => {
+const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExternalAi = null }) => {
   const score = Math.round(aggregate?.composite?.identity || 0);
   const qs = aggregate?.questions || [];
   const ii = ai?.identity_image || {};
+  const aiPos = ai?.positioning_analysis || {};
   const association = aggregate?.association || {};
   const imageRadar = aggregate?.image_radar || { axes: [], series: [] };
 
-  // Perceptual map state — pick 2 axes from radar
+  // Perceptual map state — auto-defaults to first 2 available axes and supports dropdown or radar click
   const [pmAxes, setPmAxes] = React.useState([]);
+  const [pmScale, setPmScale] = React.useState('auto'); // 'auto' | 'full' (0-100)
   const [radarMode, setRadarMode] = React.useState('common'); // 'common' = intersection, 'all' = union
   const togglePmAxis = (ax) => {
     setPmAxes(prev => {
@@ -1402,6 +1667,11 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
     };
   }, [imageRadar, radarMode]);
 
+  const COMP_DOT_COLORS = ['#1B75BC', '#D4A017', '#10B981', '#7C3AED', '#EA580C', '#06B6D4'];
+  const effectivePmAxes = pmAxes.length === 2
+    ? pmAxes
+    : (displayedRadar.axes?.length >= 2 ? [displayedRadar.axes[0], displayedRadar.axes[1]] : pmAxes);
+
   const intended = study.identity?.traits || [];
   const aligned = ii.aligned || [];
   const unintended = ii.unintended || [];
@@ -1423,16 +1693,19 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
     kind: aligned.includes(p.trait) ? 'aligned' : unintended.includes(p.trait) ? 'unintended' : 'lost',
   }));
 
-  // 1-word identity cloud (BI-3 word_cloud question)
+  // 1-word identity cloud (deterministic coordinates)
   const oneWord = qs.find(q => q.kind === 'image_one_word');
   const oneWordCounts = oneWord?.stats?.counts || [];
-  const oneWordCloudWords = oneWordCounts.slice(0, 14).map((c, i) => ({
-    text: c.label,
-    size: Math.max(12, 14 + Math.round(c.pct * 0.6)),
-    target: aligned.includes(c.label),
-    x: 10 + (i % 5) * 18 + Math.random() * 8,
-    y: 18 + Math.floor(i / 5) * 28 + Math.random() * 6,
-  }));
+  const oneWordCloudWords = oneWordCounts.slice(0, 14).map((c, i) => {
+    const h = (String(c.label || '').split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) + i * 19) % 10;
+    return {
+      text: c.label,
+      size: Math.max(12, 14 + Math.round(c.pct * 0.6)),
+      target: aligned.includes(c.label),
+      x: 10 + (i % 5) * 18 + h * 0.7,
+      y: 16 + Math.floor(i / 5) * 28 + (h % 5) * 1.1,
+    };
+  });
 
   return (
     <div className="be-section be-section-centerpiece"
@@ -1630,13 +1903,13 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
               <RadarChart axes={displayedRadar.axes}
                           series={displayedRadar.series.map((s, i) => ({
                             ...s,
-                            color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
+                            color: s.kind === 'brand' ? '#C8102E' : COMP_DOT_COLORS[(i - 1) % COMP_DOT_COLORS.length],
                             dash: s.kind === 'brand' ? '0' : '4 3',
                             fill: s.kind === 'brand' ? 0.18 : 0.06,
                           }))}
                           size={Math.min(360, displayedRadar.axes.length * 36 + 200)}
                           onAxisClick={togglePmAxis}
-                          selectedAxes={pmAxes}
+                          selectedAxes={effectivePmAxes}
                           testidPrefix="be-image-radar-axis"/>
             </div>
             <div>
@@ -1647,7 +1920,7 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12,
                               flexWrap: 'wrap' }}>
                   <span style={{ width: 16, height: 3,
-                          background: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
+                          background: s.kind === 'brand' ? '#C8102E' : COMP_DOT_COLORS[(i - 1) % COMP_DOT_COLORS.length],
                           borderTop: s.kind !== 'brand' ? '1px dashed' : 'none' }}/>
                   <span style={{ fontWeight: s.kind === 'brand' ? 600 : 400 }}>{s.name}</span>
                   {s.kind === 'brand' && <span className="be-mono be-tiny be-muted">· focal</span>}
@@ -1683,9 +1956,9 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
         </div>
       )}
 
-      {/* === 2D Perceptual Map (interactive — pick 2 axes from radar, AUTO-NORMALIZED) === */}
-      {pmAxes.length === 2 && displayedRadar.series.length > 0 && (() => {
-        const [xAx, yAx] = pmAxes;
+      {/* === 2D Perceptual Map (auto-displayed with dropdown X/Y selectors, AUTO-NORMALIZED) === */}
+      {effectivePmAxes.length === 2 && displayedRadar.series.length > 0 && (() => {
+        const [xAx, yAx] = effectivePmAxes;
         const xIdx = displayedRadar.axes.indexOf(xAx);
         const yIdx = displayedRadar.axes.indexOf(yAx);
         if (xIdx < 0 || yIdx < 0) return null;
@@ -1697,13 +1970,13 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
           if (xv == null || yv == null) return null;
           return {
             name: s.name, rawX: xv, rawY: yv, kind: s.kind,
-            color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
+            color: s.kind === 'brand' ? '#C8102E' : COMP_DOT_COLORS[(i - 1) % COMP_DOT_COLORS.length],
           };
         }).filter(Boolean);
 
         if (raw.length === 0) return null;
 
-        // Compute min/max with 12% padding so dots aren't on the edge
+        // Compute min/max with 18% padding (auto-zoom) OR fixed 0..100 scale
         const xs = raw.map(d => d.rawX);
         const ys = raw.map(d => d.rawY);
         const xMinR = Math.min(...xs), xMaxR = Math.max(...xs);
@@ -1711,41 +1984,183 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
         const padPct = 0.18;
         const xRange = xMaxR - xMinR;
         const yRange = yMaxR - yMinR;
-        const xMin = Math.max(0, xMinR - (xRange || 5) * padPct);
-        const xMax = Math.min(100, xMaxR + (xRange || 5) * padPct);
-        const yMin = Math.max(0, yMinR - (yRange || 5) * padPct);
-        const yMax = Math.min(100, yMaxR + (yRange || 5) * padPct);
+        const useAuto = pmScale === 'auto';
+        const xMin = useAuto ? Math.max(0, xMinR - (xRange || 5) * padPct) : 0;
+        const xMax = useAuto ? Math.min(100, xMaxR + (xRange || 5) * padPct) : 100;
+        const yMin = useAuto ? Math.max(0, yMinR - (yRange || 5) * padPct) : 0;
+        const yMax = useAuto ? Math.min(100, yMaxR + (yRange || 5) * padPct) : 100;
         const dots = raw.map(d => ({
           ...d,
           x: ((d.rawX - xMin) / Math.max(0.001, xMax - xMin)) * 100,
           y: ((d.rawY - yMin) / Math.max(0.001, yMax - yMin)) * 100,
         }));
+        const focalDot = raw.find(d => d.kind === 'brand');
+        const hasAiRecAxes = Boolean(
+          aiPos?.recommended_axes?.x &&
+          aiPos?.recommended_axes?.y &&
+          (displayedRadar.axes || []).includes(aiPos.recommended_axes.x) &&
+          (displayedRadar.axes || []).includes(aiPos.recommended_axes.y)
+        );
 
         return (
           <div className="be-card" style={{ padding: 22, marginBottom: 16 }}
                data-testid="be-perceptual-map-card">
-            <div className="be-card-h">
+            <div className="be-card-h" style={{ flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <h3 className="be-card-t">Perceptual Map · {xAx} × {yAx}</h3>
                 <div className="be-card-d">
                   Positioning ของ {study.brand?.name} เทียบกับคู่แข่ง
-                  · auto-zoom · {dots.length} brand{dots.length > 1 ? 's' : ''} plotted
+                  · {useAuto ? 'auto-zoom' : 'สเกล 0-100'} · {dots.length} brand{dots.length > 1 ? 's' : ''} plotted
                 </div>
               </div>
-              <div className="be-mono be-tiny be-muted" style={{ textAlign: 'right', lineHeight: 1.6 }}>
-                X · {xAx}<br/>
-                Y · {yAx}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="be-mono be-tiny" style={{ display: 'flex', border: '1px solid var(--rule-strong)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPmScale('auto')}
+                    data-testid="be-pm-scale-auto"
+                    style={{
+                      padding: '4px 8px',
+                      background: useAuto ? 'var(--ink)' : 'transparent',
+                      color: useAuto ? 'var(--paper)' : 'var(--ink)',
+                      border: 0, cursor: 'pointer', fontSize: 10,
+                    }}
+                  >
+                    AUTO-ZOOM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPmScale('full')}
+                    data-testid="be-pm-scale-full"
+                    style={{
+                      padding: '4px 8px',
+                      background: !useAuto ? 'var(--ink)' : 'transparent',
+                      color: !useAuto ? 'var(--paper)' : 'var(--ink)',
+                      border: 0, borderLeft: '1px solid var(--rule-strong)', cursor: 'pointer', fontSize: 10,
+                    }}
+                  >
+                    0–100
+                  </button>
+                </div>
+                <label className="be-mono be-tiny be-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  X:
+                  <select className="be-input" style={{ padding: '4px 6px', fontSize: 11, width: 'auto' }}
+                          value={xAx} onChange={e => setPmAxes([e.target.value, yAx])}
+                          data-testid="be-pm-x-select">
+                    {(displayedRadar.axes || []).map(ax => <option key={ax} value={ax}>{ax}</option>)}
+                  </select>
+                </label>
+                <label className="be-mono be-tiny be-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  Y:
+                  <select className="be-input" style={{ padding: '4px 6px', fontSize: 11, width: 'auto' }}
+                          value={yAx} onChange={e => setPmAxes([xAx, e.target.value])}
+                          data-testid="be-pm-y-select">
+                    {(displayedRadar.axes || []).map(ax => <option key={ax} value={ax}>{ax}</option>)}
+                  </select>
+                </label>
               </div>
             </div>
+
+            {dots.length === 1 && (
+              <div style={{ marginTop: 8, padding: '8px 12px', background: '#FFFAF0', border: '1px solid var(--be-gold)', fontSize: 12, color: 'var(--ink-2)' }}>
+                💡 ตอนนี้มีข้อมูลเฉพาะแบรนด์ของคุณ — หากต้องการแผนที่เทียบคู่แข่ง เพิ่มรายชื่อคู่แข่งในหน้าแก้ไข Study แล้วเก็บข้อมูลเพิ่มเติม
+              </div>
+            )}
+
             <div style={{ display: 'grid', placeItems: 'center', padding: '14px 0' }}>
               <PerceptualMap xAxis={xAx} yAxis={yAx} dots={dots}
                              xRange={[xMin, xMax]} yRange={[yMin, yMax]}
-                             normalized={true} size={460}/>
+                             normalized={useAuto} size={460}/>
             </div>
             <div className="be-tiny be-muted" style={{ textAlign: 'center', marginTop: 4, lineHeight: 1.5 }}>
-              ค่าตัวเลขใต้แต่ละจุด = score 0-100 จริง · กรอบแสดง {Math.round(xMin)}-{Math.round(xMax)}
-              บนแกน X และ {Math.round(yMin)}-{Math.round(yMax)} บนแกน Y เพื่อขยายความต่างให้เห็นชัด
+              ค่าตัวเลขใต้แต่ละจุด = score 0-100 จริง · กรอบแสดง {Math.round(xMin)}-{Math.round(xMax)} บนแกน X และ {Math.round(yMin)}-{Math.round(yMax)} บนแกน Y
             </div>
+
+            {/* Brand & Competitor Coordinates + Gap Table */}
+            {dots.length > 0 && (
+              <div style={{ marginTop: 14, overflowX: 'auto' }} data-testid="be-pm-table">
+                <table className="be-table" style={{ width: '100%', fontSize: 12 }}>
+                  <thead>
+                    <tr>
+                      <th>แบรนด์</th>
+                      <th style={{ textAlign: 'right' }}>{xAx} (0-100)</th>
+                      <th style={{ textAlign: 'right' }}>{yAx} (0-100)</th>
+                      {focalDot && dots.length > 1 && <th style={{ textAlign: 'right' }}>ส่วนต่างเทียบ {focalDot.name}</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {raw.map((row) => {
+                      const isFocal = row.kind === 'brand';
+                      const dx = focalDot ? (row.rawX - focalDot.rawX) : 0;
+                      const dy = focalDot ? (row.rawY - focalDot.rawY) : 0;
+                      return (
+                        <tr key={row.name}>
+                          <td style={{ fontWeight: isFocal ? 700 : 400, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: row.color, display: 'inline-block' }}/>
+                            {row.name}
+                            {isFocal && <span className="be-mono be-tiny be-muted">· focal</span>}
+                          </td>
+                          <td className="be-mono" style={{ textAlign: 'right' }}>{row.rawX.toFixed(1)}</td>
+                          <td className="be-mono" style={{ textAlign: 'right' }}>{row.rawY.toFixed(1)}</td>
+                          {focalDot && dots.length > 1 && (
+                            <td className="be-mono be-tiny" style={{ textAlign: 'right', color: isFocal ? 'var(--ink-4)' : 'var(--ink-2)' }}>
+                              {isFocal ? '—' : `X ${dx >= 0 ? '+' : ''}${dx.toFixed(1)} · Y ${dy >= 0 ? '+' : ''}${dy.toFixed(1)}`}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* AI Positioning Analysis & White Space */}
+            {(aiPos?.summary || aiPos?.white_space || (aiPos?.competitor_positions || []).length > 0 || hasAiRecAxes) && (
+              <div style={{ marginTop: 16, padding: 14, background: 'var(--paper-2)', border: '1px solid var(--rule-strong)' }}
+                   data-testid="be-ai-positioning-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                  <div className="be-eyebrow" style={{ color: 'var(--be-red)' }}>
+                    <Icon name="sparkle" size={11}/>AI COMPETITIVE POSITIONING ANALYSIS
+                  </div>
+                  {hasAiRecAxes && (
+                    <button
+                      type="button"
+                      className="be-btn be-btn-sm be-btn-primary"
+                      data-testid="be-pm-apply-ai-axes"
+                      onClick={() => setPmAxes([aiPos.recommended_axes.x, aiPos.recommended_axes.y])}
+                    >
+                      ใช้แกนที่ AI แนะนำ ({aiPos.recommended_axes.x} × {aiPos.recommended_axes.y})
+                    </button>
+                  )}
+                </div>
+                {aiPos.summary && (
+                  <p className="be-small" style={{ marginBottom: 8, lineHeight: 1.6, color: 'var(--ink)' }}>{aiPos.summary}</p>
+                )}
+                {aiPos.recommended_axes?.reason && (
+                  <div className="be-tiny be-muted" style={{ marginBottom: 8 }}>
+                    <strong>เหตุผลเลือกแกน:</strong> {aiPos.recommended_axes.reason}
+                  </div>
+                )}
+                {aiPos.white_space && (
+                  <div className="be-small" style={{ padding: '8px 10px', background: '#fff', borderLeft: '3px solid var(--be-green)', marginBottom: 10 }}>
+                    <strong>ช่องว่างทางการตลาด (White Space):</strong> {aiPos.white_space}
+                  </div>
+                )}
+                {(aiPos.competitor_positions || []).length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 8 }}>
+                    {aiPos.competitor_positions.map((cp, idx) => (
+                      <div key={idx} style={{ background: '#fff', border: '1px solid var(--rule)', padding: '8px 10px', fontSize: 12 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>{cp.brand}</div>
+                        {cp.position_label && <div className="be-mono be-tiny" style={{ color: 'var(--be-blue)', marginBottom: 4 }}>{cp.position_label}</div>}
+                        {cp.strength && <div className="be-tiny">✅ {cp.strength}</div>}
+                        {cp.weakness && <div className="be-tiny be-muted">⚠ {cp.weakness}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       })()}
@@ -1754,12 +2169,17 @@ const SectionIdentity = ({ study, aggregate, ai }) => {
       {!ai?.identity_image || Object.keys(ii).length === 0 ? (
         <div className="be-card" style={{ padding: 30, textAlign: 'center', marginBottom: 16 }}>
           <div className="be-eyebrow" style={{ marginBottom: 10, justifyContent: 'center' }}>AI ANALYSIS PENDING</div>
-          <div className="be-muted be-small">
-            {study.is_public_showcase
-              ? 'Identity-Image map ยังไม่พร้อม · เจ้าของ study ต้องรัน AI analysis ก่อน'
-              : <>Identity-Image map ต้องการ AI analysis · กดปุ่ม <strong>Run AI analysis</strong> ด้านบน</>
+          <div className="be-muted be-small" style={{ marginBottom: onOpenExternalAi ? 12 : 0 }}>
+            {isShowcase
+              ? 'Identity-Image map ยังไม่พร้อม · เจ้าของ study ต้องวิเคราะห์ด้วย AI ก่อน'
+              : <>Identity-Image map ต้องการการวิเคราะห์ข้อความจาก AI · กดปุ่ม <strong>ใช้ AI ภายนอก (ฟรี)</strong> ด้านล่างเพื่อ Copy Prompt ไปใช้ได้เลย</>
             }
           </div>
+          {!isShowcase && onOpenExternalAi && (
+            <button type="button" className="be-btn be-btn-primary" onClick={onOpenExternalAi} data-testid="be-identity-pending-external-ai">
+              <Icon name="copy" size={11}/>ใช้ AI ภายนอก (ฟรี · Copy Prompt → วางผล)
+            </button>
+          )}
         </div>
       ) : (
         <div className="be-card" style={{ padding: 24, marginBottom: 16 }}>
@@ -1883,10 +2303,10 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
                     <span>Repeat intent</span>
-                    <span className="be-num">{repeat.stats?.mean} / 7</span>
+                    <span className="be-num">{repeat.stats?.mean} / 7 ({Math.round(repeat.stats?.score_100 ?? ((repeat.stats?.mean || 0) / 7 * 100))}/100)</span>
                   </div>
                   <div className="be-hbar" style={{ height: 14 }}>
-                    <div className="be-hbar-fill" style={{ width: ((repeat.stats?.mean || 0) / 7 * 100) + '%', background: DIMENSIONS.loyalty.color }}/>
+                    <div className="be-hbar-fill" style={{ width: (repeat.stats?.score_100 ?? ((repeat.stats?.mean || 0) / 7 * 100)) + '%', background: DIMENSIONS.loyalty.color }}/>
                   </div>
                 </div>
               )}
@@ -1894,10 +2314,10 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
                     <span>Switching resistance (vs 20% discount)</span>
-                    <span className="be-num">{switching.stats?.mean} / 7</span>
+                    <span className="be-num">{switching.stats?.mean} / 7 ({Math.round(switching.stats?.score_100 ?? ((switching.stats?.mean || 0) / 7 * 100))}/100)</span>
                   </div>
                   <div className="be-hbar" style={{ height: 14 }}>
-                    <div className="be-hbar-fill" style={{ width: ((switching.stats?.mean || 0) / 7 * 100) + '%', background: DIMENSIONS.quality.color }}/>
+                    <div className="be-hbar-fill" style={{ width: (switching.stats?.score_100 ?? ((switching.stats?.mean || 0) / 7 * 100)) + '%', background: DIMENSIONS.quality.color }}/>
                   </div>
                 </div>
               )}
@@ -1981,7 +2401,7 @@ const WaveCompareCard = ({ data }) => {
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 36 }}>
+      <div className="be-wave-compare-deltas" style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 36 }}>
         {rows.map(r => {
           const d = deltas?.[r.key];
           const dir = d == null ? 'flat' : (d > 0.1 ? 'up' : (d < -0.1 ? 'down' : 'flat'));
@@ -1989,10 +2409,11 @@ const WaveCompareCard = ({ data }) => {
           return (
             <div key={r.key} className={`be-wave-compare-delta ${dir}`}
                  data-testid={`be-wave-delta-${r.key}`}>
-              <span className="arrow">{dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'}</span>
-              <span className="be-mono be-tiny" style={{ fontWeight: 600 }}>{fmtDelta(d)}</span>
-              {/* Significance marker: a delta alone cannot tell a real shift from
-                  sampling noise. ns = not significant after Holm adjustment. */}
+              <span className="be-mono be-tiny be-muted" style={{ fontSize: 10 }}>{r.label}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span className="arrow">{dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'}</span>
+                <span className="be-mono be-tiny" style={{ fontWeight: 600 }}>{fmtDelta(d)}</span>
+              </span>
               {t?.testable && (
                 <span className="be-mono" data-testid={`be-wave-sig-${r.key}`}
                       title={t.interpretation}

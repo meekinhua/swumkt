@@ -6,6 +6,7 @@ import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import ExternalAiWorkflowModal from '@/components/ExternalAiWorkflowModal';
 import { API } from '@/App';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ const ConjointQualitativePage = () => {
   const navigate = useNavigate();
   const { studyId } = useParams();
   const { user, token } = useAuth();
+  const isAdmin = user?.role === 'admin';
   
   const [study, setStudy] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ const ConjointQualitativePage = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showAddInput, setShowAddInput] = useState(false);
   const [analysisHistory, setAnalysisHistory] = useState([]);
+  const [externalAiOpen, setExternalAiOpen] = useState(false);
 
   useEffect(() => {
     if (user && token && studyId) {
@@ -124,7 +127,7 @@ const ConjointQualitativePage = () => {
       await loadStudy();
     } catch (error) {
       console.error('Error analyzing:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ข้อมูลได้');
+      toast.error('AI ภายในไม่พร้อมใช้งาน — แนะนำกด "ใช้ AI ภายนอก (ฟรี)" เพื่อ Copy Prompt ไปรันกับ ChatGPT/Gemini/Claude ได้ทันที');
     } finally {
       setAnalyzing(false);
     }
@@ -201,29 +204,39 @@ const ConjointQualitativePage = () => {
           </p>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4">
+        {/* Progress Indicator — Unified 4-step workflow */}
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-max">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-[#00A9CE] text-white flex items-center justify-center font-bold">
+              <div className="w-9 h-9 rounded-full bg-[#00A9CE] text-white flex items-center justify-center font-bold text-sm">
                 1
               </div>
-              <span className="font-bold text-[#00A9CE]">Qualitative</span>
+              <span className="font-bold text-[#00A9CE] text-sm">Qualitative (ไม่บังคับ)</span>
             </div>
-            <div className="h-1 w-16 bg-gray-300"></div>
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold">
+            <div className="h-1 w-8 sm:w-12 bg-gray-300"></div>
+            <button type="button" onClick={() => navigate(`/research/conjoint/${studyId}/design`)}
+                    className="flex items-center gap-2 hover:opacity-80">
+              <div className="w-9 h-9 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center font-bold text-sm">
                 2
               </div>
-              <span className="text-gray-600">Design</span>
-            </div>
-            <div className="h-1 w-16 bg-gray-300"></div>
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold">
+              <span className="text-gray-700 text-sm">Design &amp; Preview</span>
+            </button>
+            <div className="h-1 w-8 sm:w-12 bg-gray-300"></div>
+            <button type="button" onClick={() => navigate(`/research/conjoint/${studyId}/design`)}
+                    className="flex items-center gap-2 hover:opacity-80">
+              <div className="w-9 h-9 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
                 3
               </div>
-              <span className="text-gray-600">Analysis</span>
-            </div>
+              <span className="text-gray-600 text-sm">เปิดรับคำตอบ</span>
+            </button>
+            <div className="h-1 w-8 sm:w-12 bg-gray-300"></div>
+            <button type="button" onClick={() => navigate(`/research/conjoint/${studyId}/results`)}
+                    className="flex items-center gap-2 hover:opacity-80">
+              <div className="w-9 h-9 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
+                4
+              </div>
+              <span className="text-gray-600 text-sm">วิเคราะห์ผล</span>
+            </button>
           </div>
         </div>
 
@@ -309,30 +322,43 @@ const ConjointQualitativePage = () => {
               <p className="text-blue-700 mb-4">
                 LLM จะวิเคราะห์ข้อมูลของคุณและแนะนำ Attributes และ Levels ที่เหมาะสม
               </p>
-              <div className="flex gap-3 justify-center">
+              <div className="flex flex-wrap gap-3 justify-center">
                 <Button
-                  onClick={handleAnalyze}
+                  onClick={() => setExternalAiOpen(true)}
                   disabled={analyzing}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  data-testid="conjoint-qual-external-ai"
                 >
-                  {analyzing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      กำลังวิเคราะห์...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      เริ่มวิเคราะห์
-                    </>
-                  )}
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  ใช้ AI ภายนอก (ฟรี · Copy Prompt → วางผล)
                 </Button>
+                {isAdmin && (
+                  <Button
+                    onClick={handleAnalyze}
+                    disabled={analyzing}
+                    variant="outline"
+                    className="border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-bold"
+                    data-testid="conjoint-qual-server-ai"
+                  >
+                    {analyzing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        กำลังวิเคราะห์...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Server AI (Admin)
+                      </>
+                    )}
+                  </Button>
+                )}
                 <Button
                   onClick={handleSkipToDesign}
                   variant="outline"
                   className="border-2 border-blue-400 text-blue-700 hover:bg-blue-100"
                 >
-                  ข้ามไป Phase 2
+                  ข้ามไป Step 2
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
@@ -460,22 +486,26 @@ const ConjointQualitativePage = () => {
             )}
 
             {/* Proceed Button */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-3">
               <div className="text-sm text-gray-600">
                 💡 ไม่พอใจผล? คุณสามารถ
                 <button 
-                  onClick={() => setQualitativeInputs([...qualitativeInputs])}
-                  className="text-blue-600 hover:underline mx-1"
+                  type="button"
+                  onClick={() => {
+                    setAnalysisResult(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="text-blue-600 hover:underline mx-1 font-semibold"
                 >
-                  แก้ไขข้อมูล
+                  กลับไปแก้ไขข้อมูลแล้ววิเคราะห์ใหม่
                 </button>
-                และวิเคราะห์ใหม่ หรือไปแก้ไข attributes ใน Phase 2
+                หรือไปปรับ Attributes เองในขั้นตอนถัดไป
               </div>
               <Button
                 onClick={handleProceedToDesign}
                 className="bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white font-bold"
               >
-                ดำเนินการต่อไป Phase 2
+                ดำเนินการต่อไป Step 2 (Design)
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -509,15 +539,37 @@ const ConjointQualitativePage = () => {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  ชื่อไฟล์/แหล่งที่มา (ถ้ามี)
+                  นำเข้าจากไฟล์ข้อความ (ถ้ามี — .txt / .csv) หรือพิมพ์ชื่อแหล่งที่มา
                 </label>
-                <input
-                  type="text"
-                  value={newInput.filename}
-                  onChange={(e) => setNewInput({ ...newInput, filename: e.target.value })}
-                  placeholder="เช่น: interview_transcript_01.txt"
-                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
-                />
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newInput.filename}
+                    onChange={(e) => setNewInput({ ...newInput, filename: e.target.value })}
+                    placeholder="เช่น: interview_transcript_01.txt"
+                    className="flex-1 p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
+                  />
+                  <label className="inline-flex items-center justify-center px-4 py-2 border-2 border-[#00A9CE] text-[#007B9A] rounded-lg cursor-pointer hover:bg-cyan-50 text-sm font-semibold">
+                    <Upload className="w-4 h-4 mr-2" />
+                    เลือกไฟล์ .txt/.csv
+                    <input
+                      type="file"
+                      accept=".txt,.csv,.md,text/plain,text/csv"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const text = await f.text();
+                        setNewInput(prev => ({
+                          ...prev,
+                          filename: prev.filename || f.name,
+                          content: text.slice(0, 50000),
+                        }));
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
 
               <div>
@@ -555,6 +607,51 @@ const ConjointQualitativePage = () => {
           </Card>
         </div>
       )}
+
+      <ExternalAiWorkflowModal
+        open={externalAiOpen}
+        onClose={() => setExternalAiOpen(false)}
+        title="สกัดปัจจัย Conjoint จากข้อมูลเชิงคุณภาพด้วย AI ภายนอก (ฟรี)"
+        subtitle="คัดลอก Prompt พร้อมบทสัมภาษณ์ของคุณไปรันใน ChatGPT / Gemini / Claude แล้วนำ JSON กลับมาวางเพื่อสร้าง Attributes & Levels ทันที"
+        fetchPrompt={async () => {
+          const r = await axios.post(
+            `${API}/conjoint/studies/${studyId}/qualitative-prompt`,
+            { study_id: studyId, qualitative_data: qualitativeInputs, target_language: 'th' },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          return r.data;
+        }}
+        validatePayload={async (rawText) => {
+          const r = await axios.post(
+            `${API}/conjoint/studies/${studyId}/qualitative-import`,
+            { raw_text: rawText, dry_run: true },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          return r.data;
+        }}
+        applyPayload={async (rawText) => {
+          const r = await axios.post(
+            `${API}/conjoint/studies/${studyId}/qualitative-import`,
+            { raw_text: rawText, qualitative_data: qualitativeInputs, dry_run: false },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setAnalysisResult(r.data);
+          toast.success(`นำเข้า ${r.data?.suggested_attributes?.length || 0} Attributes สำเร็จ!`);
+          await loadStudy();
+        }}
+        renderPreview={(preview) => (
+          <div className="space-y-1.5">
+            <div><strong>สกัดได้ {preview.attribute_count} ปัจจัย ({preview.total_levels} levels):</strong></div>
+            <ul className="list-disc pl-5 space-y-0.5">
+              {(preview.attributes || []).map((a, idx) => (
+                <li key={idx}>
+                  <strong>{a.name}:</strong> {(a.levels || []).join(' · ')}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      />
     </div>
   );
 };

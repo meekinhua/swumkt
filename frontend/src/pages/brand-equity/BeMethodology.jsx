@@ -196,8 +196,7 @@ const SECTIONS = [
             discriminant validity</li>
           <li>BES เป็น <strong>weighted composite index</strong> ไม่ใช่ latent variable — น้ำหนักมาจากกรอบทฤษฎี
             ไม่ได้ประมาณค่าจากข้อมูล</li>
-          <li>การเปรียบเทียบทุกชุด (แบรนด์ vs คู่แข่ง, wave vs wave, segment vs segment)
-            เป็น<strong>เชิงพรรณนา</strong> — ยังไม่มีการทดสอบนัยสำคัญของผลต่าง</li>
+          <li>การเปรียบเทียบ <strong>แบรนด์ vs คู่แข่ง</strong> เป็นเชิงพรรณนา (descriptive) — ส่วน <strong>Wave vs Wave</strong> และ <strong>Segment vs Segment</strong> ระบบทดสอบด้วย Welch&apos;s t / Welch&apos;s ANOVA + Holm correction (แสดง p-value บน Dashboard เมื่อกลุ่มตัวอย่างเพียงพอ)</li>
           <li>ผู้ตอบมาจาก<strong>การเลือกแบบสะดวก (convenience sampling)</strong> ผ่านลิงก์ที่แชร์
             ไม่ใช่ตัวแทนประชากรแบบสุ่ม</li>
         </ul>
@@ -353,10 +352,10 @@ export const BeMethodology = ({
           <div className="be-appendix-body be-thesis-body" data-testid="be-thesis-export-body">
             {!canExportThesis && (
               <p className="be-thesis-lede">
-                ฟีเจอร์นี้เปิดใช้สำหรับ <strong>admin · อาจารย์ · นิสิต</strong> เท่านั้น
+                ฟีเจอร์นี้เปิดใช้สำหรับบัญชี <strong>admin · อาจารย์ · นิสิตที่ได้รับสิทธิ์ Export Thesis</strong>
                 <br/>
                 <span className="be-tiny be-muted">
-                  หากท่านเป็นนิสิต/อาจารย์ — กรุณาลงทะเบียนกับระบบและ login ก่อน
+                  หากคุณ login แล้วแต่ยังกดใช้งานไม่ได้ — กรุณาติดต่อผู้ดูแลระบบ (admin) เพื่อเปิดสิทธิ์ Export ให้บัญชีของคุณ (สามารถกด Export Raw CSV ด้านบนไปวิเคราะห์ต่อใน SPSS/R ได้ทันที)
                 </span>
               </p>
             )}

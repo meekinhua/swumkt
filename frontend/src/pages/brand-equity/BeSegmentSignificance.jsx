@@ -5,13 +5,27 @@ import { DIMENSIONS } from './be-components';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const DIM_ORDER = ['awareness', 'quality', 'identity', 'loyalty'];
+const FIELD_LABELS = {
+  age: 'อายุ', gender: 'เพศ', region: 'ภูมิภาค',
+  occupation: 'อาชีพ', income: 'รายได้/เดือน', usage_frequency: 'ความถี่การใช้',
+};
+const VAL_LABELS = {
+  female: 'หญิง', male: 'ชาย', other: 'อื่นๆ', prefer_not_to_say: 'ไม่ระบุ',
+  bangkok: 'กรุงเทพฯ', central: 'กลาง', north: 'เหนือ', northeast: 'อีสาน', south: 'ใต้', east: 'ตะวันออก',
+  student: 'นักศึกษา', employee: 'พนักงานบริษัท', freelancer: 'ฟรีแลนซ์', business_owner: 'เจ้าของกิจการ',
+  daily: 'ทุกวัน', weekly: 'รายสัปดาห์', monthly: 'รายเดือน', rarely: 'นานๆ ครั้ง', never: 'ไม่เคย',
+};
+const TEST_LABELS = {
+  welch_t_two_sided: "Welch's t-test",
+  welch_anova: "Welch's ANOVA",
+};
 
 /**
  * Segment significance. The dashboard could always FILTER by gender or age, but a
  * 6-point gap between two groups of 15 people looks identical to a real
  * difference, and nothing said which one you were looking at.
  */
-export const BeSegmentSignificance = ({ studyId, token, fields = [] }) => {
+export const BeSegmentSignificance = ({ studyId, token, fields = [], filter = {} }) => {
   const [field, setField] = useState(fields[0] || '');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,17 +36,22 @@ export const BeSegmentSignificance = ({ studyId, token, fields = [] }) => {
     if (!studyId || !token || !field) return;
     let cancelled = false;
     setLoading(true);
+    const params = { field };
+    if (filter?.from) params.from = filter.from;
+    if (filter?.to) params.to = filter.to;
+    if (filter?.wave && filter.wave !== 'all') params.wave = filter.wave;
     axios.get(`${API}/brand-equity/studies/${studyId}/segment-significance`, {
-      params: { field },
+      params,
       headers: { Authorization: `Bearer ${token}` },
     }).then(r => { if (!cancelled) setData(r.data); })
       .catch(() => { if (!cancelled) setData(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [studyId, token, field]);
+  }, [studyId, token, field, filter?.from, filter?.to, filter?.wave]);
 
   if (!fields.length) return null;
   const fmtP = (p) => (p == null ? '—' : p < 0.001 ? '< 0.001' : p.toFixed(3));
+  const lbl = (v) => VAL_LABELS[v] || v;
 
   return (
     <div className="be-card" style={{ padding: 20, marginTop: 18 }} data-testid="be-segment-significance">
@@ -47,7 +66,7 @@ export const BeSegmentSignificance = ({ studyId, token, fields = [] }) => {
           {fields.map(f => (
             <button key={f} className={'be-btn be-tiny' + (field === f ? ' be-btn-red' : '')}
                     onClick={() => setField(f)} data-testid={`be-segment-field-${f}`}>
-              {f}
+              {FIELD_LABELS[f] || f}
             </button>
           ))}
         </div>
@@ -66,9 +85,10 @@ export const BeSegmentSignificance = ({ studyId, token, fields = [] }) => {
         <>
           <div className="be-mono be-tiny be-muted" style={{ marginBottom: 10 }}
                data-testid="be-segment-groups">
-            กลุ่มที่ทดสอบ: {Object.entries(data.groups).map(([g, n]) => `${g} (n=${n})`).join(' · ')}
+            กลุ่มที่ทดสอบ: {Object.entries(data.groups).map(([g, n]) => `${lbl(g)} (n=${n})`).join(' · ')}
             {' '}· {data.excluded_note}
           </div>
+          <div style={{ overflowX: 'auto' }}>
           <table className="be-table" style={{ width: '100%' }}>
             <thead>
               <tr>
@@ -88,14 +108,14 @@ export const BeSegmentSignificance = ({ studyId, token, fields = [] }) => {
                       <>
                         <td className="be-tiny">
                           {Object.entries(t.groups).map(([g, v]) => (
-                            <div key={g}>{g}: <b>{v.mean}</b> <span className="be-muted">(n={v.n})</span></div>
+                            <div key={g}>{lbl(g)}: <b>{v.mean}</b> <span className="be-muted">(n={v.n})</span></div>
                           ))}
                         </td>
                         <td className="be-mono be-tiny">
                           {t.test === 'welch_t_two_sided'
                             ? <>t = {t.t} (df {t.df})</>
                             : <>F* = {t.statistic}</>}
-                          <div className="be-muted">{t.test}</div>
+                          <div className="be-muted">{TEST_LABELS[t.test] || t.test}</div>
                         </td>
                         <td className="be-mono be-tiny"
                             style={{ fontWeight: 600,
@@ -117,7 +137,7 @@ export const BeSegmentSignificance = ({ studyId, token, fields = [] }) => {
                               {t.pairwise.map((p, i) => (
                                 <div key={i} className="be-muted"
                                      style={{ color: p.significant ? 'var(--be-green)' : undefined }}>
-                                  {p.group_a} vs {p.group_b}: {p.diff > 0 ? '+' : ''}{p.diff}
+                                  {lbl(p.group_a)} vs {lbl(p.group_b)}: {p.diff > 0 ? '+' : ''}{p.diff}
                                   {' '}(p {fmtP(p.p_value_holm)}{p.cohens_d != null ? `, d=${p.cohens_d}` : ''})
                                 </div>
                               ))}
@@ -133,6 +153,7 @@ export const BeSegmentSignificance = ({ studyId, token, fields = [] }) => {
               })}
             </tbody>
           </table>
+          </div>
           <div className="be-tiny be-muted" style={{ marginTop: 10, lineHeight: 1.6 }}>
             วิธี: {data.method} · {data.caveat}
           </div>

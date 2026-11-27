@@ -140,9 +140,17 @@ const ShowcaseIndexPage = () => {
                     <BrandLogo brand={{ name: b.brand_name, logo_url: b.logo_url }}
                                identity={{ visual_assets: b.logo_asset ? [b.logo_asset] : [] }}
                                gradient={gradientForBrand(b.id)}/>
-                    {b.ready_for_dashboard
-                      ? <StatusPill kind="green">Public · n={b.response_count || 0}</StatusPill>
-                      : <StatusPill kind="red">Collecting · n={b.response_count || 0}</StatusPill>}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      {b.ready_for_dashboard
+                        ? <StatusPill kind="green">Public · n={b.response_count || 0}</StatusPill>
+                        : <StatusPill kind="red">Collecting · n={b.response_count || 0}</StatusPill>}
+                      {b.is_simulated && (
+                        <span className="meta" style={{ fontSize: 10, padding: '2px 6px',
+                              border: '1px solid #D4A017', color: '#8A6300', borderRadius: 4 }}>
+                          SIMULATED DEMO
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <div className="serif" style={{ fontSize: 24, lineHeight: 1.12,

@@ -30,9 +30,18 @@ const ConjointSurveyPage = () => {
   const [phase, setPhase] = useState('intro'); // 'intro' (= demographics) | 'choice'
   const [startedAt] = useState(() => Date.now());
 
+  const isPreview = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1';
+
   useEffect(() => {
     loadSurvey();
+    /* eslint-disable-next-line */
   }, [studyId]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentSetIndex, phase]);
 
   const loadSurvey = async (retryCount = 0) => {
     try {
@@ -124,7 +133,8 @@ const ConjointSurveyPage = () => {
       toast.success('ส่งคำตอบสำเร็จ! ขอบคุณที่ร่วมตอบแบบสอบถาม');
     } catch (error) {
       console.error('Error submitting:', error);
-      toast.error('ไม่สามารถส่งคำตอบได้');
+      const detail = error.response?.data?.detail;
+      toast.error(detail ? `ไม่สามารถส่งคำตอบได้: ${detail}` : 'ไม่สามารถส่งคำตอบได้');
     } finally {
       setSubmitting(false);
     }
@@ -216,7 +226,35 @@ const ConjointSurveyPage = () => {
     );
   }
 
+  const hasSets = Array.isArray(survey.choice_sets) && survey.choice_sets.length > 0;
+  const isDraftOrClosed = survey.status && survey.status !== 'active' && !isPreview;
+  if (!hasSets || isDraftOrClosed) {
+    return (
+      <div className="be-root">
+        <PublicTopbar/>
+        <div className="be-conjoint-page" style={{ maxWidth: 640, paddingTop: 60 }}>
+          <div className="be-card" style={{ padding: 40, textAlign: 'center' }}>
+            <div className="be-eyebrow" style={{ marginBottom: 14, justifyContent: 'center' }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>SURVEY UNAVAILABLE
+            </div>
+            <h2 className="be-h2" style={{ fontSize: 22, marginBottom: 12, fontFamily: 'IBM Plex Serif' }}>
+              {survey.status === 'completed' || survey.status === 'archived'
+                ? 'แบบสอบถามนี้ปิดรับคำตอบแล้ว'
+                : !hasSets
+                  ? 'แบบสอบถามนี้ยังออกแบบชุดคำถามไม่เสร็จ'
+                  : 'แบบสอบถามยังไม่เปิดรับคำตอบ'}
+            </h2>
+            <p className="be-small be-muted">
+              กรุณาติดต่อผู้จัดทำวิจัย ({survey.title}) เพื่อตรวจสอบสถานะหรือขอลิงก์ที่เปิดใช้งานอยู่
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const currentSet = survey.choice_sets[currentSetIndex];
+  if (!currentSet) return null;
   const progress = ((currentSetIndex + 1) / survey.choice_sets.length) * 100;
   const isLastSet = currentSetIndex === survey.choice_sets.length - 1;
   const demoFields = survey.demographics_to_capture || [];
@@ -229,6 +267,11 @@ const ConjointSurveyPage = () => {
       <div className="be-root">
         <PublicTopbar/>
         <div className="be-conjoint-page" style={{ maxWidth: 720 }}>
+          {isPreview && (
+            <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-300 text-amber-900 text-sm rounded">
+              <strong>โหมดตัวอย่าง (Preview)</strong> — สำหรับผู้วิจัยตรวจดูหน้าตาแบบสอบถามก่อนเปิดเก็บข้อมูลจริง (คำตอบในโหมดนี้จะยังไม่ถูกบันทึก)
+            </div>
+          )}
           <Card className="p-6 mb-4 bg-white border-2 border-blue-300">
             <h1 className="text-2xl font-black text-gray-900 mb-1" style={{ fontFamily: 'IBM Plex Serif' }}>
               {survey.title}
@@ -253,6 +296,11 @@ const ConjointSurveyPage = () => {
       <PublicTopbar/>
       <div className="be-conjoint-page" style={{ maxWidth: 1200 }}>
         {/* Header */}
+        {isPreview && (
+          <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-300 text-amber-900 text-sm rounded">
+            <strong>โหมดตัวอย่าง (Preview)</strong> — สำหรับผู้วิจัยตรวจดูหน้าตาแบบสอบถามก่อนเปิดเก็บข้อมูลจริง (คำตอบในโหมดนี้จะยังไม่ถูกบันทึก)
+          </div>
+        )}
         <Card className="p-6 mb-6 bg-white border-2 border-blue-300">
           <h1 className="text-3xl font-black text-gray-900 mb-2">
             {survey.title}
@@ -438,42 +486,61 @@ const ConjointSurveyPage = () => {
         </Card>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <Button
-            onClick={handlePrevious}
-            disabled={currentSetIndex === 0}
-            variant="outline"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            ย้อนกลับ
-          </Button>
+        <div className="flex items-center justify-between gap-3">
+          {currentSetIndex === 0 && demoFields.length > 0 ? (
+            <Button
+              onClick={() => setPhase('intro')}
+              variant="outline"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              แก้ไขข้อมูลส่วนตัว
+            </Button>
+          ) : (
+            <Button
+              onClick={handlePrevious}
+              disabled={currentSetIndex === 0}
+              variant="outline"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              ย้อนกลับ
+            </Button>
+          )}
 
           {isLastSet ? (
             <div className="flex-1 max-w-md mx-4">
-              <input
-                type="email"
-                value={respondentEmail}
-                onChange={(e) => setRespondentEmail(e.target.value)}
-                placeholder="อีเมล (ถ้าต้องการ)"
-                className="w-full p-2 border-2 border-gray-300 rounded-lg mb-2 text-sm"
-              />
-              <Button
-                onClick={handleSubmit}
-                disabled={submitting || !selections[currentSet.id]}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold"
-              >
-                {submitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    กำลังส่ง...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    ส่งคำตอบ
-                  </>
-                )}
-              </Button>
+              {!isPreview && (
+                <>
+                  <input
+                    type="email"
+                    value={respondentEmail}
+                    onChange={(e) => setRespondentEmail(e.target.value)}
+                    placeholder="อีเมล (ไม่บังคับ — กรอกเฉพาะกรณีต้องการรับผลสรุป)"
+                    className="w-full p-2 border-2 border-gray-300 rounded-lg mb-2 text-sm"
+                  />
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={submitting || !selections[currentSet.id]}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        กำลังส่ง...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        ส่งคำตอบ
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+              {isPreview && (
+                <div className="text-right text-xs text-amber-800 font-semibold">
+                  จบตัวอย่างแบบสอบถาม — กลับไปหน้า Design เพื่อกด &ldquo;เริ่มสำรวจ&rdquo;
+                </div>
+              )}
             </div>
           ) : (
             <Button
