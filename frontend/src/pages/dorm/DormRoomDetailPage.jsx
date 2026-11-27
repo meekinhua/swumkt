@@ -17,6 +17,7 @@ import { MapCard } from './DormBuildingPage';
 import {
   API, agoTh, authHeaders, baht, daysLeft, errMsg, invalidateBuildings, labelOf, lineShareUrl, perPersonOf, priceView, roomsHref, shareTextFor, splitDemo, thDate, useBuildings, useDormMeta, zoneMinutes,
 } from './dormApi';
+import { campusOf, canonicalUrl, roomJsonLd } from './dormSeo';
 
 const ART = '/dorm/illustrations';
 const AMEN_ICON = {
@@ -135,7 +136,7 @@ export default function DormRoomDetailPage() {
     const gPhotos = (gx.photo_links || []).filter((p) => p.startsWith('/api/dorm/photos/'));
     const closedDate = gx.closed_at || gx.reserved_until || gx.expires_at;
     return (
-      <DormLayout title={gx.gone_label || 'ประกาศปิดแล้ว'}>
+      <DormLayout title={gx.gone_label || 'ประกาศปิดแล้ว'} robots="noindex, follow" canonical={canonicalUrl(`/dorm/rooms/${id}`)}>
         <Link to={roomsHref()} className="dm-back"><ArrowLeft size={16} aria-hidden="true" />ห้องทั้งหมด</Link>
         <section className="dm-softclosed dm-rise" data-testid="dorm-soft-closed">
           <div className="dm-softclosed-media">
@@ -180,7 +181,7 @@ export default function DormRoomDetailPage() {
 
   if (err) {
     return (
-      <DormLayout title="ไม่พบประกาศ">
+      <DormLayout title="ไม่พบประกาศ" robots="noindex, follow">
         <Empty title={err} art={`${ART}/empty-saved.svg`} className="dm-detail-empty"
                action={<Link to="/dorm/rooms" className="dm-btn dm-btn-tint">ดูห้องอื่น</Link>}>
           ประกาศอาจถูกลบหรือหมดอายุไปแล้ว
@@ -254,8 +255,16 @@ export default function DormRoomDetailPage() {
     : zm && <Minutes minutes={zm.minutes} mode={zm.mode} long zone filled lg />;
   const shareHref = lineShareUrl(shareText);
 
+  const rCamp = campusOf(meta);
+  const rPriceText = pv ? `${baht(pv.head)} ${pv.unitLong}` : per ? `${baht(per)} ${unit}` : '';
+  const rTitle = `${title}${rPriceText ? ` — ${rPriceText}` : ''}${where ? ` | ${where}` : ''}`;
+  const rDesc = [title, rPriceText, where, zoneName && `โซน${zoneName}`, `ใกล้ ${rCamp.name_th}`, x.description?.slice(0, 80)].filter(Boolean).join(' · ').slice(0, 160);
+  const rImg = photos[0] ? `${window.location.origin}${photos[0]}` : x.ext_photos?.[0]?.url || projectPhotos[0]?.url;
+
   return (
-    <DormLayout title={title} className="dm-detail-page">
+    <DormLayout title={rTitle} description={rDesc} canonical={canonicalUrl(`/dorm/rooms/${x.id}`)} image={rImg}
+                robots={x.is_gone ? 'noindex, follow' : 'index, follow'} jsonLd={roomJsonLd(x, b, title, per, rCamp)}
+                className="dm-detail-page">
       <Link to={roomsHref()} className="dm-back dm-desk-back"
             onClick={(e) => { if (location.key !== 'default' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); navigate(-1); } }}><ArrowLeft size={16} aria-hidden="true" />ห้องทั้งหมด</Link>
       <div className="dm-detail">

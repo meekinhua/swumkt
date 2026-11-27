@@ -6,6 +6,7 @@ import DormLayout, {
   BuildingCard, ChipRow, Empty, Note, PageHead, RoomsSwitch, SkeletonBuildingCard, lowestPrice, zoneDot, zoneShort,
 } from './DormLayout';
 import { API, labelOf, useDormMeta } from './dormApi';
+import { breadcrumbJsonLd, campusOf, canonicalUrl, collectionJsonLd } from './dormSeo';
 
 const TYPE = { condo: 'คอนโด', apartment: 'อพาร์ตเมนต์', dorm: 'หอพัก' };
 const ART = '/dorm/illustrations';
@@ -98,8 +99,14 @@ export default function DormBuildingsPage() {
     );
   }
 
+  const bCamp = campusOf(meta);
+  const zLabel = zone ? zoneShort(labelOf(meta?.zones, zone)) : '';
+  const bTitle = zLabel ? `รีวิวหอพักและคอนโด โซน${zLabel} ใกล้ ${bCamp.name_th}` : `รีวิวตึก หอพัก และคอนโดรอบ ${bCamp.name_th}`;
+  const bDesc = `เปรียบเทียบรีวิวตึก คอนโด อพาร์ตเมนต์รอบ ${bCamp.name_th} (${bCamp.area_th}) พร้อมเวลาเดินทาง ช่วงราคา และห้องว่างจริง`;
+  const bCanon = canonicalUrl('/dorm/buildings', ['zone']);
+
   return (
-    <DormLayout title="รีวิวตึก">
+    <DormLayout title={bTitle} description={bDesc} canonical={bCanon} jsonLd={[collectionJsonLd(bTitle, bDesc, bCanon), breadcrumbJsonLd([{ name: `หาห้อง หาเมท ${bCamp.short_th}`, path: '/dorm' }, { name: 'รีวิวตึก', path: '/dorm/buildings' }])]}>
       <PageHead title="รีวิวตึก" action={<RoomsSwitch current="buildings" zone={zone} />} className="dm-rooms-head" />
 
       <div ref={sentinel} className="dm-strip-sentinel" aria-hidden="true" />

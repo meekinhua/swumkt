@@ -1,0 +1,190 @@
+{
+  "default_campus": "swu-prasarnmit",
+  "campuses": [
+    {
+      "slug": "swu-prasarnmit",
+      "status": "active",
+      "short_th": "มศว",
+      "name_th": "มศว ประสานมิตร",
+      "full_th": "มหาวิทยาลัยศรีนครินทรวิโรฒ ประสานมิตร",
+      "name_en": "SWU Prasarnmit",
+      "area_th": "อโศก–เพชรบุรี",
+      "city_th": "กรุงเทพฯ",
+      "base_path": "/dorm",
+      "email_domains": ["g.swu.ac.th", "swu.ac.th"],
+      "seo_keywords": [
+        "หอพักรอบ มศว ประสานมิตร",
+        "หอพักใกล้ มศว",
+        "คอนโดใกล้ มศว อโศก",
+        "หารูมเมท มศว",
+        "หาเมท มศว ประสานมิตร",
+        "ส่งต่อสัญญาหอพัก มศว",
+        "SWU Prasarnmit dorm"
+      ]
+    },
+    {
+      "slug": "swu-ongkharak",
+      "status": "planned",
+      "short_th": "มศว องครักษ์",
+      "name_th": "มศว องครักษ์",
+      "full_th": "มหาวิทยาลัยศรีนครินทรวิโรฒ องครักษ์",
+      "name_en": "SWU Ongkharak",
+      "area_th": "องครักษ์–รังสิตคลอง 16",
+      "city_th": "นครนายก",
+      "base_path": "/dorm/c/swu-ongkharak",
+      "email_domains": ["g.swu.ac.th", "swu.ac.th"],
+      "zones": [
+        {"id": "ongkharak-gate", "label": "หน้ามอ องครักษ์"},
+        {"id": "klong16", "label": "คลอง 16 / ตลาดองครักษ์"},
+        {"id": "klong15", "label": "คลอง 15"},
+        {"id": "rangsit-nakornnayok", "label": "เส้นรังสิต–นครนายก"}
+      ],
+      "seo_keywords": [
+        "หอพัก มศว องครักษ์",
+        "หอพักใกล้ มศว องครักษ์ ราคาถูก",
+        "หารูมเมท มศว องครักษ์",
+        "รีวิวหอใน มศว องครักษ์"
+      ]
+    },
+    {
+      "slug": "chula",
+      "status": "planned",
+      "short_th": "จุฬาฯ",
+      "name_th": "จุฬาลงกรณ์มหาวิทยาลัย",
+      "full_th": "จุฬาลงกรณ์มหาวิทยาลัย (สามย่าน–สยาม)",
+      "name_en": "Chulalongkorn University",
+      "area_th": "สามย่าน–บรรทัดทอง–สีลม",
+      "city_th": "กรุงเทพฯ",
+      "base_path": "/dorm/c/chula",
+      "email_domains": ["student.chula.ac.th", "chula.ac.th"],
+      "zones": [
+        {"id": "samyan", "label": "สามย่าน / จุฬาซอย"},
+        {"id": "banthatthong", "label": "บรรทัดทอง / เจริญผล"},
+        {"id": "ratchathewi", "label": "ราชเทวี / พญาไท"},
+        {"id": "silom-sathorn", "label": "สีลม / สาทร / สวนพลู"}
+      ],
+      "seo_keywords": [
+        "หอพักใกล้จุฬา สามย่าน",
+        "คอนโดใกล้จุฬา หารูมเมท",
+        "หาเมท จุฬา บรรทัดทอง",
+        "ส่งต่อสัญญาหอพักจุฬา"
+      ]
+    },
+    {
+      "slug": "ku-bangkhen",
+      "status": "planned",
+      "short_th": "เกษตร บางเขน",
+      "name_th": "ม.เกษตรศาสตร์ บางเขน",
+      "full_th": "มหาวิทยาลัยเกษตรศาสตร์ วิทยาเขตบางเขน",
+      "name_en": "Kasetsart University Bangkhen",
+      "area_th": "เกษตร–พหลโยธิน–เสนานิคม–งามวงศ์วาน",
+      "city_th": "กรุงเทพฯ",
+      "base_path": "/dorm/c/ku-bangkhen",
+      "email_domains": ["ku.th", "live.ku.th"],
+      "zones": [
+        {"id": "phahonyothin", "label": "BTS ม.เกษตร / พหลโยธิน"},
+        {"id": "ngamwongwan", "label": "ประตูงามวงศ์วาน / ชินเขต"},
+        {"id": "sena", "label": "เสนานิคม / เกษตร-นวมินทร์"},
+        {"id": "vibhavadi", "label": "ประตูวิภาวดี"}
+      ],
+      "seo_keywords": [
+        "หอพักใกล้ม.เกษตร บางเขน",
+        "หอพักงามวงศ์วาน พหลโยธิน",
+        "หารูมเมท เกษตร บางเขน",
+        "รีวิวหอพักรอบม.เกษตร"
+      ]
+    },
+    {
+      "slug": "tu-rangsit",
+      "status": "planned",
+      "short_th": "มธ. รังสิต",
+      "name_th": "ม.ธรรมศาสตร์ รังสิต",
+      "full_th": "มหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต",
+      "name_en": "Thammasat University Rangsit",
+      "area_th": "เชียงราก–คลองหลวง–ปทุมธานี",
+      "city_th": "ปทุมธานี",
+      "base_path": "/dorm/c/tu-rangsit",
+      "email_domains": ["dome.tu.ac.th", "tu.ac.th"],
+      "zones": [
+        {"id": "chiangrak", "label": "เชียงราก 1–2"},
+        {"id": "interpark", "label": "Interpark / ทียูโดม"},
+        {"id": "kave-city", "label": "โซนคอนโด Kave / Plum"},
+        {"id": "phahonyothin-rangsit", "label": "พหลโยธิน–คลองหลวง"}
+      ],
+      "seo_keywords": [
+        "หอพัก มธ รังสิต",
+        "คอนโดเชียงราก Kave TU",
+        "หารูมเมท ธรรมศาสตร์ รังสิต",
+        "ส่งต่อสัญญาหอพัก มธ รังสิต"
+      ]
+    },
+    {
+      "slug": "kmitl",
+      "status": "planned",
+      "short_th": "ลาดกระบัง",
+      "name_th": "สจล. ลาดกระบัง",
+      "full_th": "สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง",
+      "name_en": "KMITL Ladkrabang",
+      "area_th": "เกกีงาม–ฉลองกรุง–จินดา",
+      "city_th": "กรุงเทพฯ",
+      "base_path": "/dorm/c/kmitl",
+      "email_domains": ["kmitl.ac.th"],
+      "zones": [
+        {"id": "kekee", "label": "ซอยเกกีงาม 1–4"},
+        {"id": "rnp", "label": "RNP / ซอยฉลองกรุง 1"},
+        {"id": "jinda", "label": "ตลาดจินดา / ลำปลาทิว"},
+        {"id": "arl-latkrabang", "label": "ใกล้ ARL ลาดกระบัง"}
+      ],
+      "seo_keywords": [
+        "หอพักลาดกระบัง เกกีงาม",
+        "หอพักใกล้ สจล ฉลองกรุง",
+        "หารูมเมท ลาดกระบัง KMITL"
+      ]
+    },
+    {
+      "slug": "bu-rangsit",
+      "status": "planned",
+      "short_th": "ม.กรุงเทพ",
+      "name_th": "ม.กรุงเทพ รังสิต",
+      "full_th": "มหาวิทยาลัยกรุงเทพ วิทยาเขตรังสิต",
+      "name_en": "Bangkok University Rangsit",
+      "area_th": "รังสิต–ซอยรังสิตภิรมย์–พหลโยธิน",
+      "city_th": "ปทุมธานี",
+      "base_path": "/dorm/c/bu-rangsit",
+      "email_domains": ["bumail.net", "bu.ac.th"],
+      "zones": [
+        {"id": "rangsit-phirom", "label": "ซอยรังสิตภิรมย์"},
+        {"id": "kave-bu", "label": "Plum / Kave หน้ามอ"},
+        {"id": "future-park", "label": "ฟิวเจอร์พาร์ค–คลองหนึ่ง"}
+      ],
+      "seo_keywords": [
+        "หอพัก ม.กรุงเทพ รังสิต",
+        "หอพักซอยรังสิตภิรมย์",
+        "หารูมเมท ม.กรุงเทพ รังสิต"
+      ]
+    },
+    {
+      "slug": "cmu",
+      "status": "planned",
+      "short_th": "มช.",
+      "name_th": "ม.เชียงใหม่",
+      "full_th": "มหาวิทยาลัยเชียงใหม่ (หลังมอ–หน้ามอ–นิมมาน)",
+      "name_en": "Chiang Mai University",
+      "area_th": "หลังมอ–หน้ามอ–นิมมาน–สันติธรรม",
+      "city_th": "เชียงใหม่",
+      "base_path": "/dorm/c/cmu",
+      "email_domains": ["cmu.ac.th"],
+      "zones": [
+        {"id": "lang-mor", "label": "หลังมอ (สุเทพ/บ้านใหม่หลังมอ)"},
+        {"id": "na-mor", "label": "หน้ามอ / ห้วยแก้ว"},
+        {"id": "nimman", "label": "นิมมาน / เจ็ดยอด"},
+        {"id": "santitham", "label": "สันติธรรม / ช้างเผือก"}
+      ],
+      "seo_keywords": [
+        "หอพักหลังมอ มช เชียงใหม่",
+        "หอพักหน้ามอ มช ราคาถูก",
+        "หารูมเมท มช เชียงใหม่"
+      ]
+    }
+  ]
+}

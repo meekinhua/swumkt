@@ -716,10 +716,10 @@ function MePage() {
 
   if (!user) {
     // still checking a stored token: don't flash the guest view
-    if (authLoading && token) return <DormLayout title="ของฉัน"><Skeleton h={88} r={24} /><div style={{ height: 16 }} /><Skeleton h={160} r={18} /></DormLayout>;
+    if (authLoading && token) return <DormLayout title="ของฉัน" robots="noindex, nofollow"><Skeleton h={88} r={24} /><div style={{ height: 16 }} /><Skeleton h={160} r={18} /></DormLayout>;
     const guestTab = tab === 'mate' ? 'mate' : 'saved';
     return (
-      <DormLayout title="ของฉัน" className={`dm-mepage ${guestTab === 'mate' ? 'dm-has-formbar' : ''}`}>
+      <DormLayout title="ของฉัน" robots="noindex, nofollow" className={`dm-mepage ${guestTab === 'mate' ? 'dm-has-formbar' : ''}`}>
         <PageHead title="ของฉัน" sub={guestTab === 'mate' ? 'กรอกโปรไฟล์ให้เสร็จก่อน ระบบค่อยให้เข้าสู่ระบบตอนกดสร้างโปรไฟล์' : 'ห้องที่เก็บไว้ในเครื่องนี้'} />
         <Tabs.Root value={guestTab} onValueChange={setTab}>
           <Tabs.List className="dm-tabs-list dm-metabs" aria-label="ของฉัน">
@@ -803,7 +803,7 @@ function MePage() {
   const badgeLabel = verification?.status_label || 'ยืนยันนิสิต มศว';
 
   return (
-    <DormLayout title="ของฉัน" className={`dm-mepage ${tab === 'mate' && loaded && showForm ? 'dm-has-formbar' : ''}`}>
+    <DormLayout title="ของฉัน" robots="noindex, nofollow" className={`dm-mepage ${tab === 'mate' && loaded && showForm ? 'dm-has-formbar' : ''}`}>
       <div className="dm-acct dm-rise">
         <Avatar name={user.full_name || user.email} size={56} />
         <div className="dm-acct-id">

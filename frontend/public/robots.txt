@@ -8,6 +8,8 @@ Allow: /showcase/
 Allow: /learn
 Allow: /learn/
 Allow: /about/
+Allow: /dorm
+Allow: /dorm/
 
 # /api — what a crawler may fetch, and why.
 #
@@ -36,10 +38,29 @@ Allow: /api/showcase/index
 Allow: /api/brand-equity/showcase
 Allow: /api/conjoint/showcase
 Allow: /api/conjoint/studies/
+Allow: /api/dorm/meta
+Allow: /api/dorm/campuses
+Allow: /api/dorm/stats
+Allow: /api/dorm/buildings
+Allow: /api/dorm/listings
+Allow: /api/dorm/mates
+Allow: /api/dorm/chat-posts
+Allow: /api/dorm/photos/
+Allow: /api/dorm/og/
+Allow: /api/dorm/sitemap.xml
+Disallow: /api/dorm/listings/*/contact
+Disallow: /api/dorm/mates/*/contact
+Disallow: /api/dorm/admin
+Disallow: /api/dorm/my
+Disallow: /api/dorm/threads
+Disallow: /api/dorm/verify
 Disallow: /api/
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /profile
+Disallow: /dorm/admin
+Disallow: /dorm/me
+Disallow: /dorm/post
 Disallow: /research/
 Disallow: /market-research/
 Disallow: /brand-equity/new
@@ -58,8 +79,8 @@ Allow: /
 User-agent: WhatsApp
 Allow: /
 
-# The static map below lists category pages only. The generated one is built
-# from the database, so articles and showcases published through the CMS
-# appear without a redeploy.
+# The static map below lists category pages only. The generated ones are built
+# from the database, so articles, showcases, buildings and rooms appear without a redeploy.
 Sitemap: https://swumkt.org/api/share/sitemap.xml
+Sitemap: https://swumkt.org/api/dorm/sitemap.xml
 Sitemap: https://swumkt.org/sitemap.xml

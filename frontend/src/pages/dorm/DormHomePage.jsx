@@ -8,6 +8,7 @@ import DormLayout, {
   modeIcon, modeLabel, periodTh, zoneShort,
 } from './DormLayout';
 import { API, BUDGET_PRESETS, authHeaders, baht, budgetPreset, groupLookalikes, perPersonOf, splitDemo, useBuildings, useDormMeta, useMediaQuery, zoneMinutes } from './dormApi';
+import { campusOf, canonicalUrl, homeJsonLd } from './dormSeo';
 
 const ART = '/dorm/illustrations';
 const PATHS = [
@@ -311,8 +312,12 @@ export default function DormHomePage() {
     </section>
   );
 
+  const camp = campusOf(meta);
+  const homeTitle = `หอพักรอบ ${camp.name_th} · หาห้อง หาเมท คอนโดใกล้ ${camp.short_th}`;
+  const homeDesc = `รวมหอพัก คอนโด อพาร์ตเมนต์รอบ ${camp.name_th} (${camp.area_th})${totalRooms ? ` ${totalRooms} ห้อง` : ''}${(buildings || []).length ? ` ${(buildings || []).length} ตึก` : ''} พร้อมราคาต่อคน รีวิวตึก ส่งต่อสัญญา และบอร์ดหารูมเมทฟรี`;
+
   return (
-    <DormLayout className="dm-home">
+    <DormLayout title={homeTitle} description={homeDesc} canonical={canonicalUrl('/dorm')} jsonLd={homeJsonLd(camp, stats)} className="dm-home">
       <section className="dm-hero-wrap" aria-labelledby="dm-hero-h">
         <div className="dm-hero">
           <div className="dm-hero-copy dm-rise">

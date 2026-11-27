@@ -329,9 +329,9 @@ function PostForm({ editId }) {
   const title = titleTouched ? f.title : suggested;
 
   if (editId && !user) {
-    if (authLoading && token) return <DormLayout title="แก้ไขประกาศ"><Skeleton w="50%" h={30} /><div style={{ height: 16 }} /><Skeleton h={320} r={24} /></DormLayout>;
+    if (authLoading && token) return <DormLayout title="แก้ไขประกาศ" robots="noindex, nofollow"><Skeleton w="50%" h={30} /><div style={{ height: 16 }} /><Skeleton h={320} r={24} /></DormLayout>;
     return (
-      <DormLayout title="แก้ไขประกาศ">
+      <DormLayout title="แก้ไขประกาศ" robots="noindex, nofollow">
         <Empty title="เข้าสู่ระบบเพื่อแก้ไขประกาศ" art={coverFor('room')}
                action={<button type="button" className="dm-btn dm-btn-primary" onClick={() => requireLogin('เข้าสู่ระบบด้วยบัญชีที่ลงประกาศนี้')}>เข้าสู่ระบบ</button>}>
           แก้ได้เฉพาะบัญชีที่ลงประกาศนี้
@@ -339,7 +339,7 @@ function PostForm({ editId }) {
       </DormLayout>
     );
   }
-  if (done) return <DormLayout title="ลงประกาศแล้ว"><Done {...done} /></DormLayout>;
+  if (done) return <DormLayout title="ลงประกาศแล้ว" robots="noindex, nofollow"><Done {...done} /></DormLayout>;
 
   const pickBuilding = (slug) => {
     const b = (buildings || []).find((x) => x.slug === slug);
@@ -482,7 +482,7 @@ function PostForm({ editId }) {
   );
 
   return (
-    <DormLayout title={editId ? 'แก้ไขประกาศ' : 'ลงประกาศ'} className="dm-postpage dm-has-formbar">
+    <DormLayout title={editId ? 'แก้ไขประกาศ' : 'ลงประกาศ'} robots="noindex, nofollow" className="dm-postpage dm-has-formbar">
       <PageHead title={editId ? 'แก้ไขประกาศ' : 'ลงประกาศฟรี'}
                 sub={editId ? 'แตะชื่อขั้นเพื่อไปแก้ตรงนั้น แล้วกดบันทึกได้เลย' : user ? 'ใช้เวลา 2 นาที แสดง 30 วัน' : 'กรอกก่อนได้เลย เข้าสู่ระบบตอนกดลงประกาศ'} />
       <Progress step={step} onJump={editId ? (s2) => { setFe({}); goStep(s2); } : undefined} />

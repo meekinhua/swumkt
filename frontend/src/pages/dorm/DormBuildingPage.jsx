@@ -11,6 +11,7 @@ import DormLayout, {
   modeLabel, ppRangeText, ppShape, useShell, zoneShort,
 } from './DormLayout';
 import { API, authHeaders, baht, directionsUrl, errMsg, labelOf, loadBuildings, mapsUrl, thDate, useDormMeta } from './dormApi';
+import { buildingJsonLd, campusOf, canonicalUrl } from './dormSeo';
 
 const TYPE = { condo: 'คอนโด', apartment: 'อพาร์ตเมนต์', dorm: 'หอพัก' };
 const ART = '/dorm/illustrations';
@@ -237,14 +238,14 @@ export default function DormBuildingPage() {
 
   if (err) {
     return (
-      <DormLayout title="ไม่พบตึก">
+      <DormLayout title="ไม่พบตึก" robots="noindex, follow">
         <Empty title={err} art={`${ART}/bldg-condo-3.svg`} action={<Link to="/dorm/buildings" className="dm-btn dm-btn-tint">ดูตึกอื่น</Link>}>
           ลิงก์อาจพิมพ์ผิด หรือตึกนี้ถูกรวมกับชื่ออื่นแล้ว
         </Empty>
       </DormLayout>
     );
   }
-  if (!d) return <DormLayout>{back}<PageSkeleton /></DormLayout>;
+  if (!d) return <DormLayout title="กำลังโหลดตึก">{back}<PageSkeleton /></DormLayout>;
   const b = d.building;
   const aspects = meta?.review_aspects || [];
   const mineR = d.reviews.find((r) => r.is_mine);
@@ -260,6 +261,17 @@ export default function DormBuildingPage() {
   const priceSeen = !chatRange && /\d[\d,]{3,}/.test(b.price_seen || '') ? b.price_seen : '';
   const zoneName = zoneShort(labelOf(meta?.zones, b.zone));
   const typeLabel = TYPE[b.type] || '';
+  const bCamp = campusOf(meta);
+  const bTitle = `${b.name} — รีวิว${typeLabel || 'ที่พัก'}ใกล้ ${bCamp.name_th}`;
+  const bDesc = [
+    b.name,
+    typeLabel && zoneName ? `${typeLabel} โซน${zoneName}` : zoneName,
+    b.minutes_to_swu && `เดินทางไป${bCamp.short_th} ~${b.minutes_to_swu} นาที`,
+    lowest?.n ? `ห้องว่างเริ่มต้น ${baht(lowest.n)} ${lowest.per ? 'บาท/คน/เดือน' : 'บาท/เดือน'}` : (priceSeen || chatRange),
+    b.review_count > 0 && b.overall ? `คะแนน ${b.overall}/5 (${b.review_count} รีวิว)` : '',
+    b.web_review_summary,
+  ].filter(Boolean).join(' · ').slice(0, 160);
+  const bImg = (b.photos || [])[0]?.url;
   // When sign-in happens first, wait for the signed-in copy of the reviews before opening the
   // form, so an existing review is edited instead of overwritten by an empty one.
   const write = () => {
@@ -274,7 +286,8 @@ export default function DormBuildingPage() {
   };
 
   return (
-    <DormLayout title={b.name}>
+    <DormLayout title={bTitle} description={bDesc} canonical={canonicalUrl(`/dorm/buildings/${b.slug}`)} image={bImg}
+                jsonLd={buildingJsonLd(b, bCamp, lowest?.n)}>
       {back}
       <header className="dm-bhead">
         <div className="dm-bbanner">

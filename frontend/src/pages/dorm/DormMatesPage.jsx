@@ -7,6 +7,7 @@ import DormLayout, {
   ArchiveActions, ChatArchive, Empty, ListingCard, MateCard, MyMateStrip, Note, PageHead, SelectBox, Sheet, Skeleton, Swap, informativeRows, zoneShort,
 } from './DormLayout';
 import { API, authHeaders, baht, labelOf, thDate, upcomingMonths, useDormMeta } from './dormApi';
+import { breadcrumbJsonLd, campusOf, canonicalUrl, collectionJsonLd } from './dormSeo';
 
 const ART = '/dorm/illustrations';
 const KEYS = ['gender', 'zone', 'budget', 'move_in', 'has_room', 'tag'];
@@ -171,8 +172,14 @@ export default function DormMatesPage() {
     { k: 'gender', v: 'male', label: 'ผู้ชาย' },
   ];
 
+  const mCamp = campusOf(meta);
+  const mTitle = `หารูมเมท ${mCamp.name_th} — จับคู่เมทตามงบ โซน และนิสัย`;
+  const mDesc = `บอร์ดหารูมเมท มศว (${mCamp.area_th}) เลือกเพศ งบต่อคน โซนที่อยากอยู่ และไลฟ์สไตล์การอยู่ร่วมกัน คุยในเว็บก่อนแลก LINE ได้ฟรี`;
+  const mCanon = canonicalUrl('/dorm/mates');
+
   return (
-    <DormLayout title="หาเมท" className="dm-matespage">
+    <DormLayout title={mTitle} description={mDesc} canonical={mCanon} className="dm-matespage"
+                jsonLd={[collectionJsonLd(mTitle, mDesc, mCanon), breadcrumbJsonLd([{ name: `หาห้อง หาเมท ${mCamp.short_th}`, path: '/dorm' }, { name: 'หาเมท', path: '/dorm/mates' }])]}>
       <PageHead title="หาเมท" sub={others ? <Swap k={headLine}>{headLine}</Swap> : 'คนที่กำลังหาเพื่อนร่วมห้อง'} />
 
       {mine && <MyMateStrip m={mine} />}

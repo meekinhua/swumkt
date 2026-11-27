@@ -8295,7 +8295,14 @@ app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
 # whose pages carry a canonical to the real page (Google advises against
 # pairing that with noindex), and images, which may usefully appear in image
 # search — a lecturer's portrait among them.
-_INDEXABLE_API_PREFIXES = ("/api/share/", "/api/media/", "/api/files/")
+_INDEXABLE_API_PREFIXES = (
+    "/api/share/",
+    "/api/media/",
+    "/api/files/",
+    "/api/dorm/og/",
+    "/api/dorm/photos/",
+    "/api/dorm/sitemap.xml",
+)
 
 
 @app.middleware("http")

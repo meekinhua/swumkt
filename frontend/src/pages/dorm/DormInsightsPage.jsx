@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import DormLayout, { PageHead, SkeletonPage } from './DormLayout';
 import { API, labelOf, useDormMeta } from './dormApi';
+import { breadcrumbJsonLd, campusOf, canonicalUrl } from './dormSeo';
 
 const TH_M = { '06': 'มิ.ย.', '07': 'ก.ค.', '08': 'ส.ค.', '09': 'ก.ย.', '10': 'ต.ค.', '11': 'พ.ย.' };
 
@@ -25,8 +26,14 @@ export default function DormInsightsPage() {
   useEffect(() => { axios.get(`${API}/stats`).then((r) => setS(r.data)).catch(() => setS({})); }, []);
   const ins = s?.insights;
 
+  const iCamp = campusOf(meta);
+  const iTitle = `ราคาหอพักและคอนโดรอบ ${iCamp.name_th} — สถิติตลาดที่พักนิสิต`;
+  const iDesc = `สรุปช่วงราคาที่พักต่อคน โซนยอดนิยม (${iCamp.area_th}) และความต้องการหารูมเมทรอบ ${iCamp.name_th}`;
+  const iCanon = canonicalUrl('/dorm/insights');
+
   return (
-    <DormLayout title="ตลาดที่พักรอบ มศว">
+    <DormLayout title={iTitle} description={iDesc} canonical={iCanon}
+                jsonLd={[{ '@context': 'https://schema.org', '@type': 'Dataset', name: iTitle, description: iDesc, url: iCanon }, breadcrumbJsonLd([{ name: `หาห้อง หาเมท ${iCamp.short_th}`, path: '/dorm' }, { name: 'ตลาดที่พัก', path: '/dorm/insights' }])]}>
       <PageHead title="ตลาดที่พักรอบ มศว ประสานมิตร" sub="สรุปจากแชทกลุ่มหาที่พัก มิ.ย. ถึง พ.ย. 2569" />
       {!s ? <SkeletonPage /> : !ins ? <p className="dm-muted">ยังไม่มีข้อมูล</p> : (
         <>

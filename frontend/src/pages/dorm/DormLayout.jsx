@@ -20,6 +20,7 @@ import {
   API, ISEEN_EVENT, authErrMsg, authHeaders, baht, coverFor, daysLeft, dropDraft, errMsg, hasUnseenInterest, interestText, labelOf, perPersonOf, priceView, splitDemo,
   splitOf, thDate, useBuildings, useDormMeta, useMediaQuery, useSaved, wholeFirst, zoneMinutes,
 } from './dormApi';
+import { campusOf, useDormSeo } from './dormSeo';
 import './dorm.css';
 import './dorm-browse.css';
 import './dorm-flow.css';
@@ -471,11 +472,10 @@ export function DormShell() {
   );
 }
 
-// Each page: sets the tab title and the content column.
-export default function DormLayout({ children, title, className = '' }) {
-  useEffect(() => {
-    document.title = title ? `${title} | หาห้อง หาเมท มศว` : 'หาห้อง หาเมท มศว';
-  }, [title]);
+// Each page: sets the tab title, meta/canonical/OG/JSON-LD SEO tags, and the content column.
+export default function DormLayout({ children, title, description, canonical, image, type, robots, jsonLd, className = '' }) {
+  const meta = useDormMeta();
+  useDormSeo({ title, description, canonical, image, type, robots, jsonLd, campus: campusOf(meta) });
   return <main className={`dm-main dm-page-in ${className}`}>{children}</main>;
 }
 

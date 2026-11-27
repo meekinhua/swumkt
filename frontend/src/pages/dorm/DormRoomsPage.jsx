@@ -8,6 +8,7 @@ import DormLayout, {
   informativeRows, periodTh, useEdgeFade, zoneDot, zoneShort,
 } from './DormLayout';
 import { API, BUDGET_PRESETS, authHeaders, baht, groupLookalikes, labelOf, presetFromRange, rememberRooms, useDormMeta } from './dormApi';
+import { breadcrumbJsonLd, campusOf, canonicalUrl, collectionJsonLd } from './dormSeo';
 
 const FIELDS = ['kind', 'zone', 'min_price', 'max_price', 'gender', 'amenity', 'q', 'interested', 'engaged', 'include_closed', 'sort'];
 // no sort in the URL = "recommended" (featured, then rooms posted here newest first, then external rooms cheapest per person first)
@@ -239,8 +240,15 @@ export default function DormRoomsPage() {
     );
   }
 
+  const rCamp = campusOf(meta);
+  const zLabel = f.zone ? zoneShort(labelOf(meta?.zones, f.zone)) : '';
+  const kLabel = f.kind ? labelOf(meta?.kinds, f.kind) : '';
+  const rTitle = [kLabel || 'ห้องว่างให้เช่า', zLabel && `โซน${zLabel}`, f.max_price && `ไม่เกิน ${baht(f.max_price)} บาท`, `ใกล้ ${rCamp.name_th}`].filter(Boolean).join(' ');
+  const rDesc = `ค้นหา${rTitle} แสดงราคาต่อคน เวลาเดินทางไป${rCamp.short_th} พร้อมเปรียบเทียบตึกและกดสนใจหารูมเมทฟรี`;
+  const rCanon = canonicalUrl('/dorm/rooms', ['zone', 'kind']);
+
   return (
-    <DormLayout title="ห้องว่าง">
+    <DormLayout title={rTitle} description={rDesc} canonical={rCanon} jsonLd={[collectionJsonLd(rTitle, rDesc, rCanon), breadcrumbJsonLd([{ name: `หาห้อง หาเมท ${rCamp.short_th}`, path: '/dorm' }, { name: 'ห้องว่าง', path: '/dorm/rooms' }])]}>
       <PageHead title="ห้องว่าง" action={<RoomsSwitch current="rooms" zone={f.zone} />} className="dm-rooms-head" />
 
       <div className="dm-rooms" onClickCapture={keepSpot}>

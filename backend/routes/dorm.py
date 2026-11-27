@@ -1035,6 +1035,48 @@ def clean_chat_posts(raw: dict) -> dict:
 
 
 _insights_cache = {"mtime": None, "data": None}
+_campuses_cache = {"mtime": None, "data": None}
+DEFAULT_CAMPUS = "swu-prasarnmit"
+
+
+def load_campuses() -> dict:
+    """Load university/campus config once and refresh when dorm_campuses.json changes."""
+    path = DATA_DIR / "dorm_campuses.json"
+    fallback = {
+        "default_campus": DEFAULT_CAMPUS,
+        "campuses": [{
+            "slug": DEFAULT_CAMPUS, "status": "active", "short_th": "มศว",
+            "name_th": "มศว ประสานมิตร", "full_th": "มหาวิทยาลัยศรีนครินทรวิโรฒ ประสานมิตร",
+            "name_en": "SWU Prasarnmit", "area_th": "อโศก–เพชรบุรี", "city_th": "กรุงเทพฯ",
+            "base_path": "/dorm", "email_domains": ["g.swu.ac.th", "swu.ac.th"], "seo_keywords": [],
+        }],
+    }
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return fallback
+    if _campuses_cache["mtime"] != mtime:
+        try:
+            _campuses_cache["data"] = json.loads(path.read_text(encoding="utf-8"))
+            _campuses_cache["mtime"] = mtime
+        except Exception:
+            return _campuses_cache["data"] or fallback
+    return _campuses_cache["data"] or fallback
+
+
+def campus_info(slug: Optional[str] = None) -> dict:
+    cfg = load_campuses()
+    want = slug or cfg.get("default_campus") or DEFAULT_CAMPUS
+    for c in cfg.get("campuses") or []:
+        if c.get("slug") == want:
+            return c
+    return (cfg.get("campuses") or [{}])[0]
+
+
+def _campus_q(campus: Optional[str] = None) -> dict:
+    if not campus or campus == DEFAULT_CAMPUS:
+        return {"$or": [{"campus_slug": DEFAULT_CAMPUS}, {"campus_slug": {"$exists": False}}, {"campus_slug": None}]}
+    return {"campus_slug": campus}
 
 
 def load_insights() -> Optional[dict]:
@@ -1833,11 +1875,22 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         await _log("qr_visit", src, extra={"path": (body.path or "")[:120]})
         return {"ok": True}
 
+    @dorm_router.get("/campuses")
+    async def list_campuses(request: Request):
+        async def _load_campuses():
+            cfg = load_campuses()
+            return {"default": cfg.get("default_campus") or DEFAULT_CAMPUS, "items": cfg.get("campuses") or []}
+        return await _cached_json(("campuses",), 3600, _load_campuses, request)
+
     @dorm_router.get("/meta")
-    async def meta(request: Request):
+    async def meta(request: Request, campus: Optional[str] = None):
+        ckey = ("meta", campus or DEFAULT_CAMPUS)
+
         async def _load_meta():
+            cfg = load_campuses()
+            cobj = campus_info(campus)
             return {
-                "zones": ZONES, "kinds": KINDS, "poster_roles": POSTER_ROLES, "tags": LIFESTYLE_TAGS,
+                "zones": cobj.get("zones") or ZONES, "kinds": KINDS, "poster_roles": POSTER_ROLES, "tags": LIFESTYLE_TAGS,
                 "amenities": AMENITIES, "genders": GENDERS, "gender_prefs": GENDER_PREFS, "years": YEARS,
                 "review_aspects": REVIEW_ASPECTS, "report_reasons": REPORT_REASONS, "expiry_days": EXPIRY_DAYS,
                 "expiry_by_kind": EXPIRY_BY_KIND, "reserved_show_days": RESERVED_SHOW_DAYS,
@@ -1847,8 +1900,11 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 "report_reasons_by_type": REPORT_REASONS_BY_TYPE, "report_note_max": REPORT_NOTE_MAX,
                 "chat_kinds": CHAT_KIND_LABELS, "room_types": ROOM_TYPES,
                 "ext_gone_reason": EXT_GONE_REASON, "max_interests": MAX_ACTIVE_INTERESTS, "share_by_bedrooms": SHARE_BY_BEDROOMS,
+                "campus": cobj,
+                "campuses": [{"slug": c.get("slug"), "short_th": c.get("short_th"), "name_th": c.get("name_th"),
+                              "status": c.get("status"), "base_path": c.get("base_path")} for c in cfg.get("campuses") or []],
             }
-        return await _cached_json(("meta",), 3600, _load_meta, request)
+        return await _cached_json(ckey, 3600, _load_meta, request)
 
     def _chat_overview() -> dict:
         return load_chat_posts()["overview"]
@@ -1868,19 +1924,20 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         return await _load_chat()
 
     @dorm_router.get("/stats")
-    async def stats(request: Request):
+    async def stats(request: Request, campus: Optional[str] = None):
         await _ensure()
 
         async def _load():
-            q_m = _active_q()
-            q_l = _active_listing_q()
+            cf = _campus_q(campus) if campus else {}
+            q_m = {**_active_q(), **cf}
+            q_l = {**_active_listing_q(), **cf}
             listings, waiting_l, peeking_l, mates, n_buildings, n_reviews = await asyncio.gather(
                 db.dorm_listings.find(q_l, {"_id": 0, "id": 1, "kind": 1, "zone": 1, "price_per_person": 1,
                                             "external": 1, "source": 1}).to_list(5000),
                 _waiting_ids(),
                 db.dorm_peeks.distinct("listing_id"),
                 db.dorm_mates.find(q_m, {"_id": 0, "gender": 1, "zones": 1, "budget_max": 1, "has_room": 1}).to_list(5000),
-                db.dorm_buildings.count_documents({}),
+                db.dorm_buildings.count_documents(cf),
                 db.dorm_reviews.count_documents({"hidden": {"$ne": True}}),
             )
             waiting = set(waiting_l)
@@ -1912,7 +1969,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
                 "insights": load_insights(),
             }
 
-        return await _cached_json(("stats",), 20, _load, request)
+        return await _cached_json(("stats", campus) if campus else ("stats",), 20, _load, request)
 
     # ---------- listings
     @dorm_router.get("/listings")
@@ -1923,7 +1980,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         amenity: Optional[str] = None, sort: str = "new", limit: int = Query(30, ge=1, le=300), skip: int = Query(0, ge=0),
         # sort: new (default) | recommended | price | interest | move_in (unknown values fall back to new)
         ids: Optional[str] = None, interested: Optional[int] = None, engaged: Optional[int] = None, external: Optional[int] = None,
-        include_closed: Optional[int] = None,
+        include_closed: Optional[int] = None, campus: Optional[str] = None,
         u=Depends(get_current_user_optional),
     ):
         await _ensure()
@@ -1938,7 +1995,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             found.sort(key=lambda x: pos.get(x["id"], 0))
             return {"total": len(found), "items": await _annotate(found, u)}
         async def _load_listings():
-            base_f = {}
+            base_f = {**_campus_q(campus)} if campus else {}
             if kind:
                 base_f["kind"] = kind
             if zone:
@@ -1993,6 +2050,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         if u is None and q is None:
             ckey = ("listings", kind, zone, building, min_price, max_price, gender, amenity,
                     external, interested, engaged, include_closed, sort, limit, skip)
+            if campus:
+                ckey = ckey + (campus,)
             return await _cached_json(ckey, 20, _load_listings, request)
         return await _load_listings()
 
@@ -2378,12 +2437,13 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         gender: Optional[str] = None, zone: Optional[str] = None, budget: Optional[int] = None,
         move_in: Optional[str] = None, has_room: Optional[bool] = None, tag: Optional[str] = None,
         year: Optional[str] = None, sort: str = "match", limit: int = Query(60, ge=1, le=200), skip: int = Query(0, ge=0),
+        campus: Optional[str] = None,
         u=Depends(get_current_user_optional),
     ):
         await _ensure()
 
         async def _load_mates():
-            f = _active_q()
+            f = {**_active_q(), **(_campus_q(campus) if campus else {})}
             if gender in ("female", "male", "other"):
                 f["gender"] = gender
             if zone:
@@ -2430,6 +2490,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
 
         if u is None:
             ckey = ("mates", gender, zone, budget, move_in, has_room, tag, year, sort, limit, skip)
+            if campus:
+                ckey = ckey + (campus,)
             return await _cached_json(ckey, 20, _load_mates, request)
         return await _load_mates()
 
@@ -3116,11 +3178,11 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         return (await _building_summaries([b]))[0]
 
     @dorm_router.get("/buildings")
-    async def list_buildings(request: Request, zone: Optional[str] = None, q: Optional[str] = None):
+    async def list_buildings(request: Request, zone: Optional[str] = None, q: Optional[str] = None, campus: Optional[str] = None):
         await _ensure()
 
         async def _load_buildings():
-            f = {}
+            f = {**_campus_q(campus)} if campus else {}
             if zone:
                 f["zone"] = zone
             if q:
@@ -3132,7 +3194,8 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
             return {"items": items}
 
         if q is None:
-            return await _cached_json(("buildings", zone), 20, _load_buildings, request)
+            ckey = ("buildings", zone, campus) if campus else ("buildings", zone)
+            return await _cached_json(ckey, 20, _load_buildings, request)
         return await _load_buildings()
 
     @dorm_router.get("/buildings/{slug}")
@@ -3254,11 +3317,88 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         e = lambda v: _html.escape(str(v), quote=True)  # noqa: E731
         img_tags = f'<meta property="og:image" content="{e(img)}"><meta name="twitter:card" content="summary_large_image">' if img else ""
         return HTMLResponse(f"""<!doctype html><html lang="th"><head><meta charset="utf-8">
-<title>{e(title)}</title><meta property="og:type" content="website"><meta property="og:site_name" content="หาห้อง·หาเมท มศว">
+<title>{e(title)}</title><link rel="canonical" href="{e(target)}"><meta property="og:type" content="website"><meta property="og:site_name" content="หาห้อง·หาเมท มศว">
 <meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}">
 <meta property="og:url" content="{e(target)}">{img_tags}
 <meta http-equiv="refresh" content="0;url={e(target)}"></head>
 <body><a href="{e(target)}">{e(title)}</a></body></html>""")
+
+    @dorm_router.get("/og/buildings/{slug}", response_class=HTMLResponse)
+    async def og_building(slug: str, request: Request):
+        await _ensure()
+        b = await db.dorm_buildings.find_one({"slug": slug}, {"_id": 0, "aliases": 0})
+        origin = site_origin(request)
+        target = f"{origin}/dorm/buildings/{slug}"
+        cobj = campus_info(b.get("campus_slug") if b else None)
+        if not b:
+            title = f"รีวิวหอพักใกล้ {cobj.get('name_th', 'มศว ประสานมิตร')}"
+            desc = "เปรียบเทียบรีวิวตึก คอนโด อพาร์ตเมนต์รอบ มศว พร้อมเวลาเดินทางและราคา"
+            img = f"{origin}/dorm/og/default.png"
+        else:
+            b = await _building_summary(b)
+            zone_l = next((z["label"] for z in ZONES if z["id"] == b.get("zone")), "")
+            title = f"{b['name']} — รีวิวที่พักใกล้ {cobj.get('name_th', 'มศว ประสานมิตร')}"
+            parts = [zone_l, b.get("minutes_to_swu") and f"เดินทาง ~{b['minutes_to_swu']} นาทีถึง {cobj.get('short_th', 'มศว')}"]
+            if b.get("review_count") and b.get("overall"):
+                parts.append(f"คะแนน {b['overall']}/5 ({b['review_count']} รีวิว)")
+            if b.get("price_seen"):
+                parts.append(b["price_seen"])
+            desc = " · ".join(p for p in parts if p) or b.get("web_review_summary") or title
+            img = (b.get("photos") or [{}])[0].get("url") or f"{origin}/dorm/og/default.png"
+        e = lambda v: _html.escape(str(v), quote=True)  # noqa: E731
+        return HTMLResponse(f"""<!doctype html><html lang="th"><head><meta charset="utf-8">
+<title>{e(title)}</title><link rel="canonical" href="{e(target)}"><meta property="og:type" content="website"><meta property="og:site_name" content="หาห้อง·หาเมท {e(cobj.get('short_th', 'มศว'))}">
+<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}">
+<meta property="og:url" content="{e(target)}"><meta property="og:image" content="{e(img)}">
+<meta name="twitter:card" content="summary_large_image"><meta http-equiv="refresh" content="0;url={e(target)}"></head>
+<body><a href="{e(target)}">{e(title)}</a></body></html>""")
+
+    @dorm_router.get("/sitemap.xml")
+    async def dorm_sitemap_xml(request: Request, campus: Optional[str] = None):
+        await _ensure()
+        origin = site_origin(request)
+
+        async def _build_xml():
+            cf = _campus_q(campus) if campus else {}
+            cobj = campus_info(campus)
+            base_path = (cobj.get("base_path") or "/dorm").rstrip("/")
+            buildings, listings = await asyncio.gather(
+                db.dorm_buildings.find(cf, {"_id": 0, "slug": 1, "zone": 1}).to_list(1000),
+                db.dorm_listings.find({**_active_listing_q(), **cf}, {"_id": 0, "id": 1, "zone": 1, "renewed_at": 1, "created_at": 1}).to_list(3000),
+            )
+            urls = [
+                (f"{origin}{base_path}", None, "daily", "1.0"),
+                (f"{origin}{base_path}/rooms", None, "daily", "0.9"),
+                (f"{origin}{base_path}/buildings", None, "weekly", "0.9"),
+                (f"{origin}{base_path}/mates", None, "daily", "0.8"),
+                (f"{origin}{base_path}/insights", None, "weekly", "0.7"),
+            ]
+            active_zones = {x.get("zone") for x in listings if x.get("zone")} | {b.get("zone") for b in buildings if b.get("zone")}
+            for z in _ids(ZONES):
+                if z in active_zones and z != "other":
+                    urls.append((f"{origin}{base_path}/rooms?zone={z}", None, "daily", "0.8"))
+            for b in sorted(buildings, key=lambda item: item.get("slug") or ""):
+                if b.get("slug"):
+                    urls.append((f"{origin}{base_path}/buildings/{b['slug']}", None, "weekly", "0.85"))
+            for x in listings:
+                if x.get("id"):
+                    lm = (x.get("renewed_at") or x.get("created_at") or "")[:10] or None
+                    urls.append((f"{origin}{base_path}/rooms/{x['id']}", lm, "daily", "0.7"))
+
+            lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+            for loc, lastmod, cf_val, pri in urls:
+                lines.append("  <url>")
+                lines.append(f"    <loc>{_html.escape(loc)}</loc>")
+                if lastmod:
+                    lines.append(f"    <lastmod>{_html.escape(lastmod)}</lastmod>")
+                lines.append(f"    <changefreq>{cf_val}</changefreq>")
+                lines.append(f"    <priority>{pri}</priority>")
+                lines.append("  </url>")
+            lines.append("</urlset>")
+            return "\n".join(lines)
+
+        xml = await _cached(("sitemap_xml", origin, campus or DEFAULT_CAMPUS), 600, _build_xml)
+        return Response(content=xml, media_type="application/xml; charset=utf-8")
 
     # ---------- reports
     @dorm_router.post("/reports")

@@ -121,7 +121,7 @@ export default function DormAdminPage() {
     return list;
   }, [o, actView]);
 
-  if (user?.role !== 'admin') return <DormLayout title="แอดมิน"><Empty title="หน้านี้สำหรับแอดมินเท่านั้น" /></DormLayout>;
+  if (user?.role !== 'admin') return <DormLayout title="แอดมิน" robots="noindex, nofollow"><Empty title="หน้านี้สำหรับแอดมินเท่านั้น" /></DormLayout>;
 
   const proposals = o?.proposals || [];
   const getPayload = (p) => ({ ...(p.payload || {}), ...(propEdits[p.id] || {}) });
@@ -223,7 +223,7 @@ export default function DormAdminPage() {
   const staleReportCount = (o?.reports || []).filter((r) => r.target_status === 'closed' || r.target_status === 'deleted').length;
 
   return (
-    <DormLayout title="แอดมิน" className="dm-adminpage">
+    <DormLayout title="แอดมิน" robots="noindex, nofollow" className="dm-adminpage">
       <PageHead title="แอดมิน" sub={o ? `เปิดอยู่ ลงในเว็บ ${nNative} จากเว็บภายนอก ${nExt} โปรไฟล์หาเมท ${o.mates_total} กดดูช่องทางติดต่อ 30 วัน ${o.leads_30d} ครั้ง` : undefined} />
       {err && <div className="dm-err" role="alert">{err}</div>}
 

@@ -1412,4 +1412,38 @@ def test_chat_fixes_latest_100_bidirectional_dedup_closed_mate_and_rate_limit(ct
         client.close()
 
 
+def test_seo_sitemap_og_and_multi_campus_support():
+    # 1) Multi-campus registry & meta include swu-prasarnmit + planned universities
+    camp_res = requests.get(f"{BASE}/dorm/campuses")
+    assert camp_res.status_code == 200
+    camp_data = camp_res.json()
+    assert camp_data["default"] == "swu-prasarnmit"
+    slugs = {c["slug"] for c in camp_data["items"]}
+    assert {"swu-prasarnmit", "chula", "ku-bangkhen", "tu-rangsit", "cmu"} <= slugs
+
+    m_res = requests.get(f"{BASE}/dorm/meta").json()
+    assert m_res["campus"]["slug"] == "swu-prasarnmit"
+    assert len(m_res["campuses"]) >= 5
+
+    # Filtering by active campus keeps all SWU data, unknown planned campus cleanly returns 0
+    assert requests.get(f"{BASE}/dorm/buildings", params={"campus": "swu-prasarnmit"}).json()["items"]
+    assert requests.get(f"{BASE}/dorm/buildings", params={"campus": "chula"}).json()["items"] == []
+
+    # 2) Dynamic dorm sitemap.xml is indexable (no noindex header) & lists core pages, buildings, active rooms
+    sm = requests.get(f"{BASE}/dorm/sitemap.xml")
+    assert sm.status_code == 200
+    assert "xml" in (sm.headers.get("content-type") or "").lower()
+    assert "noindex" not in (sm.headers.get("x-robots-tag") or "").lower()
+    assert "<urlset" in sm.text
+    assert "/dorm/buildings/life-asoke</loc>" in sm.text
+    assert "/dorm/rooms/" in sm.text
+
+    # 3) Building & room OG pages carry canonical + indexable headers
+    ob = requests.get(f"{BASE}/dorm/og/buildings/life-asoke")
+    assert ob.status_code == 200
+    assert "noindex" not in (ob.headers.get("x-robots-tag") or "").lower()
+    assert 'rel="canonical"' in ob.text and "/dorm/buildings/life-asoke" in ob.text
+
+
+
 
