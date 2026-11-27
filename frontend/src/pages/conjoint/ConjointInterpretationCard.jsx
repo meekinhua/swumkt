@@ -60,7 +60,7 @@ const ConjointInterpretationCard = ({
   const { systemAllowed } = useLlmPolicy();
   const [error, setError] = useState('');
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const body = { method, compare_all: !!compareAll };
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
