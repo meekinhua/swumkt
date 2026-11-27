@@ -1,0 +1,166 @@
+{
+  "source": "LINE OpenChat \"พี่ มศว พาน้องหาที่พัก หารูมเมท\" (~7,500 members), export 2026-05-29 → 2026-11-25",
+  "method": "880 messages, 633 after removing reposts; keyword coding (one message can fall into several categories). No names or contacts kept.",
+  "messages_total": 880,
+  "messages_unique": 633,
+  "joins_in_period": 819,
+  "monthly": [
+    {
+      "month": "2026-06",
+      "messages": 328,
+      "joins": 202
+    },
+    {
+      "month": "2026-07",
+      "messages": 163,
+      "joins": 128
+    },
+    {
+      "month": "2026-08",
+      "messages": 114,
+      "joins": 99
+    },
+    {
+      "month": "2026-09",
+      "messages": 124,
+      "joins": 119
+    },
+    {
+      "month": "2026-10",
+      "messages": 64,
+      "joins": 116
+    },
+    {
+      "month": "2026-11",
+      "messages": 55,
+      "joins": 135
+    }
+  ],
+  "pains": [
+    {
+      "id": "mate_no_room",
+      "label": "หาเมท แต่ยังไม่มีห้อง",
+      "count": 210,
+      "fix": "บอร์ดหาเมทที่กรองได้และให้คะแนนความเข้ากัน"
+    },
+    {
+      "id": "budget_reco",
+      "label": "ขอแนะนำห้องในงบ",
+      "count": 106,
+      "fix": "ค้นห้องตามงบต่อคนและโซน"
+    },
+    {
+      "id": "building_review",
+      "label": "ขอรีวิวตึก/คอนโด",
+      "count": 83,
+      "fix": "คู่มือตึกและรีวิวจากคนที่อยู่จริง"
+    },
+    {
+      "id": "transfer",
+      "label": "ส่งต่อสัญญา / หาคนอยู่แทน",
+      "count": 55,
+      "fix": "หมวดส่งต่อสัญญา"
+    },
+    {
+      "id": "living_issues",
+      "label": "ปัญหาระหว่างอยู่ (นิติ แอร์ ค่าไฟ ประกัน)",
+      "count": 42,
+      "fix": "คะแนนนิติและความคุ้มในรีวิวตึก"
+    },
+    {
+      "id": "short_term",
+      "label": "เช่าระยะสั้น / ฝึกงาน",
+      "count": 32,
+      "fix": "หมวดห้องระยะสั้น"
+    },
+    {
+      "id": "flake",
+      "label": "โดนเท / ติดต่อไม่ได้",
+      "count": 26,
+      "fix": "ประกาศหมดอายุใน 30 วันและปุ่มรายงาน"
+    },
+    {
+      "id": "move_in_cost",
+      "label": "ค่าแรกเข้า/มัดจำแพง",
+      "count": 20,
+      "fix": "ช่องมัดจำที่แสดงชัดในทุกประกาศ"
+    }
+  ],
+  "repost": {
+    "people_seeking_mates": 133,
+    "posted_3plus_times": 19,
+    "max_posts_one_person": 16
+  },
+  "gender_mentions": {
+    "female": 88,
+    "male": 27
+  },
+  "budget_per_person_hist": [
+    {
+      "band": "2k",
+      "n": 18
+    },
+    {
+      "band": "3k",
+      "n": 22
+    },
+    {
+      "band": "4k",
+      "n": 39
+    },
+    {
+      "band": "5k",
+      "n": 64
+    },
+    {
+      "band": "6k",
+      "n": 44
+    },
+    {
+      "band": "7k",
+      "n": 27
+    },
+    {
+      "band": "8k",
+      "n": 14
+    },
+    {
+      "band": "9k",
+      "n": 16
+    },
+    {
+      "band": "10k+",
+      "n": 86
+    }
+  ],
+  "zone_mentions": [
+    {
+      "zone": "asoke",
+      "n": 79
+    },
+    {
+      "zone": "rama9",
+      "n": 64
+    },
+    {
+      "zone": "ratchada",
+      "n": 36
+    },
+    {
+      "zone": "huaikwang",
+      "n": 34
+    },
+    {
+      "zone": "ramkhamhaeng",
+      "n": 8
+    },
+    {
+      "zone": "dindaeng",
+      "n": 6
+    },
+    {
+      "zone": "ladprao",
+      "n": 5
+    }
+  ]
+}

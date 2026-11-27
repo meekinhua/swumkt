@@ -49,8 +49,17 @@ SCOPES: Dict[str, str] = {
     "cms.posts.write": "create, edit, publish and trash posts",
     "cms.revisions.restore": "roll a document back to an earlier revision",
     "cms.faculty.write": "edit faculty profiles and their publication lists",
+    "dorm.read": "read dorm admin overview, agent brief, listings, buildings, reports, verifications, proposals and action log",
+    "dorm.sync": "execute reversible low-risk dorm maintenance actions (close/reopen/refresh external rooms, update building media, resolve stale reports)",
+    "dorm.propose": "submit admin proposals for human review and confirmation",
+    "dorm.actions.undo": "undo a reversible dorm agent action",
 }
 WILDCARD = "cms.*"
+DORM_WILDCARD = "dorm.*"
+WILDCARDS: Dict[str, str] = {
+    WILDCARD: "cms.",
+    DORM_WILDCARD: "dorm.",
+}
 
 # Checked before anything else. These stay out of reach of every key, however
 # it is scoped, because they are unrecoverable or are not content at all.
@@ -66,6 +75,11 @@ HARD_DENY: Sequence[re.Pattern] = (
     re.compile(r"^/api/cms/sources(/|$)"),
     # One-off bootstrap from /admin/cms/setup: a bulk insert, run by a person.
     re.compile(r"^/api/cms/faculty/seed/?$"),
+    # Dorm admin human-only actions: key management, proposal approval/rejection, direct verification, bulk seed.
+    re.compile(r"^/api/dorm/admin/keys(/|$)"),
+    re.compile(r"^/api/dorm/admin/proposals/[^/]+/(confirm|reject)/?$"),
+    re.compile(r"^/api/dorm/admin/verifications(/|$)"),
+    re.compile(r"^/api/dorm/admin/seed-buildings/?$"),
 )
 
 # (scope, methods, path pattern). First match wins; no match means refused.
@@ -79,8 +93,15 @@ SCOPE_RULES: Sequence[Tuple[str, Set[str], re.Pattern]] = (
     ("cms.posts.write", {"POST"}, re.compile(r"^/api/cms/cache/flush/?$")),
     ("cms.faculty.write", {"POST", "PATCH", "DELETE"},
      re.compile(r"^/api/cms/(faculty|papers)(/.*)?$")),
+    # Dorm agent operations (writes before read catch-all; unlisted mutating paths fail closed).
+    ("dorm.sync", {"POST"}, re.compile(r"^/api/dorm/admin/agent/execute/?$")),
+    ("dorm.sync", {"POST"}, re.compile(r"^/api/dorm/admin/import-external/?$")),
+    ("dorm.sync", {"PUT"}, re.compile(r"^/api/dorm/admin/buildings/?$")),
+    ("dorm.propose", {"POST"}, re.compile(r"^/api/dorm/admin/proposals(/batch)?/?$")),
+    ("dorm.actions.undo", {"POST"}, re.compile(r"^/api/dorm/admin/actions/[^/]+/undo/?$")),
     # Reads last, so a write rule is chosen first for the same path.
     ("cms.read", {"GET", "HEAD"}, re.compile(r"^/api/cms(/.*)?$")),
+    ("dorm.read", {"GET", "HEAD"}, re.compile(r"^/api/dorm(/.*)?$")),
 )
 
 
@@ -114,13 +135,11 @@ def normalise_scopes(scopes: Sequence[str]) -> List[str]:
     out = []
     for s in scopes:
         s = (s or "").strip()
-        if s == WILDCARD:
-            out.append(WILDCARD)
-        elif s in SCOPES:
+        if s in WILDCARDS or s in SCOPES:
             out.append(s)
         else:
             raise ValueError(
-                f"unknown scope {s!r} — valid: {', '.join([WILDCARD] + sorted(SCOPES))}")
+                f"unknown scope {s!r} — valid: {', '.join(sorted(WILDCARDS) + sorted(SCOPES))}")
     if not out:
         raise ValueError("a key with no scopes could do nothing")
     return sorted(set(out))
@@ -159,7 +178,12 @@ def required_scope(method: str, path: str) -> Optional[str]:
 
 
 def scope_allows(granted: Sequence[str], needed: str) -> bool:
-    return WILDCARD in granted or needed in granted
+    if needed in granted:
+        return True
+    for wc, prefix in WILDCARDS.items():
+        if wc in granted and needed.startswith(prefix):
+            return True
+    return False
 
 
 def build_key_document(label: str, scopes: Sequence[str], created_by: str,

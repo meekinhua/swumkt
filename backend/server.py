@@ -8223,6 +8223,11 @@ from routes.media import get_media_routes
 
 api_router.include_router(get_media_routes(db))
 
+# ============ DORM — หาห้อง·หาเมท มศว (roommate + room board) ============
+from routes.dorm import get_dorm_routes
+
+api_router.include_router(get_dorm_routes(db, get_current_user, get_current_user_optional))
+
 app.include_router(api_router)
 
 # ============ YOLO Detect — on-device PWA served as a sub-app at /api/yolo ============

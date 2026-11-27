@@ -20,6 +20,7 @@
     
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>SWUMKT Portal - สาขาการตลาด มศว</title>
+    <script>if (location.pathname.indexOf('/dorm') === 0) { document.title = 'หาห้อง หาเมท มศว'; window.addEventListener('error', function (e) { if (/ResizeObserver loop/i.test(e && e.message || '')) { e.stopImmediatePropagation(); e.preventDefault(); } }, true); }</script>
 
     <!-- Open Graph / Facebook / LINE defaults — overridden per page by useDocumentMeta -->
     <meta property="og:type" content="website" />

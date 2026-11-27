@@ -86,6 +86,19 @@ const AlumniDiscoverPage = lazy(() => import('@/pages/alumni/AlumniDiscoverPage'
 const AlumniFeedPage = lazy(() => import('@/pages/alumni/AlumniFeedPage'));
 const AlumniJobsPage = lazy(() => import('@/pages/alumni/AlumniJobsPage'));
 
+// Dorm — หาห้อง·หาเมท มศว (roommate + room board)
+const DormShell = lazy(() => import('@/pages/dorm/DormLayout').then((m) => ({ default: m.DormShell })));
+const DormHomePage = lazy(() => import('@/pages/dorm/DormHomePage'));
+const DormRoomsPage = lazy(() => import('@/pages/dorm/DormRoomsPage'));
+const DormRoomDetailPage = lazy(() => import('@/pages/dorm/DormRoomDetailPage'));
+const DormPostPage = lazy(() => import('@/pages/dorm/DormPostPage'));
+const DormMatesPage = lazy(() => import('@/pages/dorm/DormMatesPage'));
+const DormMePage = lazy(() => import('@/pages/dorm/DormMePage'));
+const DormBuildingsPage = lazy(() => import('@/pages/dorm/DormBuildingsPage'));
+const DormBuildingPage = lazy(() => import('@/pages/dorm/DormBuildingPage'));
+const DormInsightsPage = lazy(() => import('@/pages/dorm/DormInsightsPage'));
+const DormAdminPage = lazy(() => import('@/pages/dorm/DormAdminPage'));
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
@@ -206,6 +219,20 @@ const RouteFallback = () => (
       animation: 'utb-pulse 1s ease-in-out infinite',
     }}/>
     Loading…
+  </div>
+);
+
+// Dorm — light skeleton while its chunk loads, so /dorm never flashes the portal shim
+const DormFallback = () => (
+  <div style={{ minHeight: '100vh', background: '#F4F8F8' }} data-testid="dorm-fallback" aria-busy="true">
+    <div style={{ height: 56, borderBottom: '1px solid #E3E5DF', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
+      <span style={{ width: 46, height: 26, borderRadius: '10px 10px 10px 3px', background: '#C8102E' }} />
+      <span style={{ width: 110, height: 16, borderRadius: 8, background: '#E3E5DF' }} />
+    </div>
+    <div style={{ maxWidth: 1232, margin: '0 auto', padding: 16 }}>
+      <div style={{ width: '70%', height: 32, borderRadius: 10, background: '#E9EBE5', marginBottom: 14 }} />
+      <div style={{ height: 240, borderRadius: 16, background: '#E9EBE5' }} />
+    </div>
   </div>
 );
 
@@ -508,6 +535,21 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Dorm — หาห้อง·หาเมท มศว. Browsing is public; actions that need an
+                account open DormShell's sign-in sheet in place instead of redirecting. */}
+            <Route path="/dorm" element={<Suspense fallback={<DormFallback />}><DormShell /></Suspense>}>
+              <Route index element={<DormHomePage />} />
+              <Route path="rooms" element={<DormRoomsPage />} />
+              <Route path="rooms/:id" element={<DormRoomDetailPage />} />
+              <Route path="post" element={<DormPostPage />} />
+              <Route path="mates" element={<DormMatesPage />} />
+              <Route path="me" element={<DormMePage />} />
+              <Route path="buildings" element={<DormBuildingsPage />} />
+              <Route path="buildings/:slug" element={<DormBuildingPage />} />
+              <Route path="insights" element={<DormInsightsPage />} />
+              <Route path="admin" element={<ProtectedRoute><DormAdminPage /></ProtectedRoute>} />
+            </Route>
 
             {/* Alumni Network — สายตระกูล MKT SWU */}
             <Route path="/alumni" element={<AlumniLandingPage />} />

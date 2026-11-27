@@ -324,3 +324,44 @@ def test_the_faculty_seed_is_out_of_reach_of_any_key():
     assert api_keys.required_scope("POST", "/api/cms/faculty/seed") is None
     # ...while ordinary faculty edits stay within the faculty scope.
     assert api_keys.required_scope("PATCH", "/api/cms/faculty/fac-x") == "cms.faculty.write"
+
+
+# ---- pure: dorm scopes & domain wildcard isolation ------------------------
+
+def test_dorm_routes_map_to_their_own_scopes():
+    assert api_keys.required_scope("GET", "/api/dorm/admin/overview") == "dorm.read"
+    assert api_keys.required_scope("GET", "/api/dorm/admin/agent/brief") == "dorm.read"
+    assert api_keys.required_scope("GET", "/api/dorm/admin/proposals") == "dorm.read"
+    assert api_keys.required_scope("GET", "/api/dorm/admin/actions") == "dorm.read"
+    assert api_keys.required_scope("POST", "/api/dorm/admin/agent/execute") == "dorm.sync"
+    assert api_keys.required_scope("POST", "/api/dorm/admin/import-external") == "dorm.sync"
+    assert api_keys.required_scope("PUT", "/api/dorm/admin/buildings") == "dorm.sync"
+    assert api_keys.required_scope("POST", "/api/dorm/admin/proposals") == "dorm.propose"
+    assert api_keys.required_scope("POST", "/api/dorm/admin/proposals/batch") == "dorm.propose"
+    assert api_keys.required_scope("POST", "/api/dorm/admin/actions/act_1/undo") == "dorm.actions.undo"
+
+
+def test_dorm_and_cms_wildcards_are_isolated():
+    for s in ("dorm.read", "dorm.sync", "dorm.propose", "dorm.actions.undo"):
+        assert api_keys.scope_allows([api_keys.DORM_WILDCARD], s)
+        assert not api_keys.scope_allows([api_keys.WILDCARD], s)
+    for s in ("cms.read", "cms.posts.write", "cms.landing.write"):
+        assert api_keys.scope_allows([api_keys.WILDCARD], s)
+        assert not api_keys.scope_allows([api_keys.DORM_WILDCARD], s)
+
+
+@pytest.mark.parametrize("method,path", [
+    ("GET", "/api/dorm/admin/keys"),
+    ("POST", "/api/dorm/admin/keys"),
+    ("DELETE", "/api/dorm/admin/keys/k1"),
+    ("POST", "/api/dorm/admin/proposals/p1/confirm"),
+    ("POST", "/api/dorm/admin/proposals/p1/reject"),
+    ("POST", "/api/dorm/admin/verifications/u1"),
+    ("POST", "/api/dorm/admin/seed-buildings"),
+    ("DELETE", "/api/dorm/listings/abc"),
+    ("POST", "/api/dorm/listings/abc/status"),
+    ("POST", "/api/dorm/admin/listings/abc/feature"),
+    ("POST", "/api/dorm/admin/reports/r1/resolve"),
+])
+def test_dorm_human_only_and_unlisted_writes_are_refused(method, path):
+    assert api_keys.required_scope(method, path) is None

@@ -1,0 +1,4149 @@
+{
+  "generated": "2026-11-27",
+  "note": "facts collected from public listing pages; contact via source_url",
+  "listings": [
+    {
+      "ext_id": "propertyscout:2884192",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2884192/",
+      "seen_at": "2026-11-26",
+      "building_slug": "sukhumvit-living-town",
+      "building_name": "Sukhumvit Living Town",
+      "zone": "asoke",
+      "price_total": 25000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 60,
+      "floor": 3,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/-Tj46rS2PDmaBkMdEa2Hi84v1GCCDgzpbSu-jH0Zw_Y/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ0NTYyMzgvODNmMWMwN2VlMmJmYzY1ODYxMTc4MzdhZjQ5ZGM2NTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2884192/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/RohKPZb8O3N5dX_zK1JkEp6nM_SmE2M1MNaEYLtUQ5Q/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ0NTYyMzgvZjJhMzUzNmM2YWIwZTdiOWI2OTQyMDFmY2NhZmVlZDUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2884192/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/QeEcQ3Pahhn8KvtSQBlU_OU7j6HAcMc25PnyzBpPd2A/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ0NTYyMzgvYWM5MjBjNDgxZTBlOWY4MTMzZDllZTZkNjc1MzE2MTEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2884192/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2835882",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2835882/",
+      "seen_at": "2026-11-26",
+      "building_slug": "sukhumvit-living-town",
+      "building_name": "Sukhumvit Living Town",
+      "zone": "asoke",
+      "price_total": 25000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 60,
+      "floor": 10,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/KG-A6HJfP0ICGnWQqKrFR-WrcEPd6Xc1Bq0nnIysDas/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQzMTIxNTEvY2IzZDNmMTdkYjZkOWJhYjI5YjBkZWUxMmQyYzVlOTcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2835882/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/vh9Idkdhh9yJ7NqRu2tPZU9ZRDYaVR6z2j01bL_65WE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQzMTIxNTEvNjc5ZjgyY2NjOTA2NGZhMjJjNjRhZDgwYzZlZDZmZTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2835882/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/hvcGHQpdUYWW23Nvr2ie5Todd3xfE5EsS8m572dUBKY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQzMTIxNTEvMDA0MDM2ZWM4ODc5MjI3MTA3MzUyMjdiMmZiMGM2NmIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-sukhumvit-living-town-near-mrt-phetchaburi-2835882/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2602421",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2602421/",
+      "seen_at": "2026-11-26",
+      "building_slug": "my-resort-bangkok",
+      "building_name": "My Resort Bangkok Condominium",
+      "zone": "asoke",
+      "price_total": 26000,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "size_sqm": 63,
+      "floor": 19,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/6nC8bT0YHDPZPhdZ0EIomkQj2nZhM9be5W79DqYgCPQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNjAyNDIxL2ZjYTczMjNlMWIwYmNkMjQ4N2EyYTBiZDc3NWY1ZDU1LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2602421/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/kq-7riSqpCgzZrBkRicUjDHtC7wZm_NsH-K7hG-qukY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNjAyNDIxLzVjYzMxNWU5ZGY1N2UzMjJhZjE0MzEyYzhkMjNmY2M3LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2602421/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/-WYA9x6PPGU7d-7BGhV9UOGsQNQ420lVgalE-tkv5C4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNjAyNDIxL2I4ZDU0YmY1NTQxYmY5NDQ5MGE2NTRiNDc0MGNkN2JiLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2602421/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2706264",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2706264/",
+      "seen_at": "2026-11-26",
+      "building_slug": "my-resort-bangkok",
+      "building_name": "My Resort Bangkok Condominium",
+      "zone": "asoke",
+      "price_total": 29500,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "size_sqm": 65,
+      "floor": 12,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/8DlR3dObz2VTCKRQJpmGrxRambH7IYlWMjQtv3GUHeQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM5NDEzMDgvYWJkM2U2N2JmYzc5M2M3NGE1NGY5NDBlYmExOTczZjMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2706264/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Jb7gdEN1c48T99M88LjajDTZhnl8IEq1HW-fKtdzZvs/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM5NDEzMDgvOGRmMmZmMjA2NTg4ZWI2ZjQ1OGNiZGFlM2FhMWIwODMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2706264/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/SrZowHJ-I2RQKKKEZXocgMer3iZxjBDmC0lw0x9UY94/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM5NDEzMDgvZTNhNDRhODgyMzFmMTM2MTMzNzNhOWM1ZGY1Nzg5ZTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2706264/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:961760",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-961760/",
+      "seen_at": "2026-11-26",
+      "building_slug": "my-resort-bangkok",
+      "building_name": "My Resort Bangkok Condominium",
+      "zone": "asoke",
+      "price_total": 30000,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "size_sqm": 70,
+      "floor": 35,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/mpg-QAJD-8Z16YxRIFGEKMQEp8jJDfpvvn4_dnPY0H0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC85NjE3NjAvYjA5OTkyMjBiMjY3YmUyZGFhZjAwZDMwYTQzODMzN2IuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-961760/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/BKWcApmN2HgcUGqTE323vfG5SI2bSgHs6izCd9O4DzU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC85NjE3NjAvZGM1NDM1YzM5M2Y3OGYzOTFmMDMzODM4MGY1YzE2MjUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-961760/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/FBB0od5633E-bdPZ4oBvr9Xwap1gFMIcgXxSrq-El5g/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC85NjE3NjAvMDVkMWVmOGY5Yzc0OWZkZGYxNzMyNDE0YzY4NDc5MmYuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-961760/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2578339",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2578339/",
+      "seen_at": "2026-11-26",
+      "building_slug": "my-resort-bangkok",
+      "building_name": "My Resort Bangkok Condominium",
+      "zone": "asoke",
+      "price_total": 30000,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "size_sqm": 65,
+      "floor": 12,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/8FieFc2C1pdKISyVe5lK822WuWD0lbmMzA_PlbtoHj8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM1Mzc4MTUvMmY0ZGI1NzNjZTA3M2ZhNWYyOWZmNzJmMTkyOWYxNDguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2578339/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/OlgsZ4ci9mZ5rbXrnoRrCAVKhOJnAt85u53mGnL9kG0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM1Mzc4MTUvMWRkYTRjMDMyN2E2YjRjNjVlYjdhM2I4NTU3ZmNkZTAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2578339/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/yVPo9GyvOfMGumt2_uPdtvJq7k0ebMBWFAgHpBVH7s0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM1Mzc4MTUvZTUxZTE3Y2U0YmU2YWI4OTI5MGU2ZWFjNWFmNThmN2UuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-my-resort-bangkok-condominium-near-mrt-phetchaburi-2578339/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3302756",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3302756/",
+      "seen_at": "2026-11-26",
+      "building_slug": "life-asoke",
+      "building_name": "Life Asoke - Rama 9",
+      "zone": "asoke",
+      "price_total": 15000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 28,
+      "floor": 8,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/6dbbKdVb6fUy3ynBDe3xo8tgFsQ9AxhLznFABFjjdrs/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU3NTkxMDAvMDkxMWRhYWJjODgwMTcwNWNmOGNjNmJjYjRkZjM3ZDkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3302756/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/XbxjrBRNDlHmhkHVEh1OQRAv6Z8VCWY0RIvViPaqRgM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU3NTkxMDAvYTMyZmI5Y2FmMmFiZTY4MmM4NjlmY2Q4Y2Y5OGRhOTMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3302756/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/s6i-YuV3qFP2WvSvEJFZvtDSvaZBkf3MOyFTOxtC6ts/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU3NTkxMDAvYTk0MTVmYjAzZGRhM2NjNzE1ZGI1NmU2OTVhYTkzZTQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3302756/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3041661",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3041661/",
+      "seen_at": "2026-11-26",
+      "building_slug": "life-asoke",
+      "building_name": "Life Asoke - Rama 9",
+      "zone": "asoke",
+      "price_total": 16000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 15,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/JXIC8F9n3Y563fJHlWPiQLjXuTn7ZMd0YtiQZpyXM9k/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ5NjA0NDYvNjk0NzE4MGM4ZGQwOTdlMjYyMjA1NWQxMzVkZmUzZjIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3041661/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/UPkAuAuk-dkjcDi6we7W7b7_vF1nl5S_PnlZTFub9_s/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ5NjA0NDYvZTYxOWM0NDJiYTFhZGU1MTRkY2FkNmJiNWEyYzlmZGQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3041661/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Ma2_h1cdFjaM9um4PNGI2FzckWpCcfJmmAbg0JBzdE0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ5NjA0NDYvODg1N2M2Njg1MmE1YmVlNGFhMjJlYjYyZmJjMjFjM2EuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3041661/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3361160",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3361160/",
+      "seen_at": "2026-11-26",
+      "building_slug": "life-asoke",
+      "building_name": "Life Asoke - Rama 9",
+      "zone": "asoke",
+      "price_total": 16000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": 27,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/pF2SP7dXKtJA_4b8I74MAqfYghggrFyut38tWeGbxuk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU5MjkxNDQvNjBkYzc2NjM5ZDc3YjI4M2ZhOWQ4MDU1OTFjMjk4NTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3361160/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/fKiQTONOXParpVW25nRvhi7oJy0t2MC88MYfYB768qc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU5MjkxNDQvZDc2N2IxMTYzNzFlMDViNWI1NzI3Yzc1YmE5MDA1NjUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3361160/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/qB2hwKmEpgQ6xa_e9hOnr8ShcRTcQnBQzUwQM51H99o/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU5MjkxNDQvZTZiZDY1NGUyNDNkOGMyN2VmYzZmZTAzYTJjMmQzY2QuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-life-asoke-rama-9-near-mrt-phra-ram-9-3361160/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3528664",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-near-arl-makkasan-3528664/",
+      "seen_at": "2026-11-26",
+      "building_slug": "life-asoke",
+      "building_name": "Life Asoke",
+      "zone": "asoke",
+      "price_total": 16500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 25,
+      "floor": 30,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/boZJs7I6eanwRc-1nv4sVRcVDmAc9JfKARdWQlWSwtw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzMzQ0NzAvYjc1ODI2NGZjN2Q5OTBmN2Y1ZGRjMWY2YzZiMjVmNzQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-near-arl-makkasan-3528664/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/4Rj_6W8gIkfZgWAbolmTOfDt7hFePAmw1BhiailhkEI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzMzQ0NzAvNTUyMTkxOGUwMDM3NTdlNWY4NGRkNTJlNTlmYzJhYmQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-near-arl-makkasan-3528664/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/ehR8hn6jO2WsZU0kTxdOGPwqyc-ooAnTqhZE3ITmre4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzMzQ0NzAvZmIzOWE4YmJmOWEyNGE3ZjE1MTI2OGNlZTdhMTZiMTMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-life-asoke-near-arl-makkasan-3528664/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3306851",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3306851/",
+      "seen_at": "2026-11-26",
+      "building_slug": "supalai-premier-asoke",
+      "building_name": "Supalai Premier Asoke",
+      "zone": "asoke",
+      "price_total": 16000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 33,
+      "floor": 35,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/ytRkGMndnhpmp8eFvyojOGQ4o0YO8aoCJ6IYYE1wu-c/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zMzA2ODUxL2YwNmZmNGZmYzk0N2Q4ODljNjZhZWExZDljMGFiNDM5LnBuZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3306851/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Cn_T1etm1iPrqp6r3XR0ISMghw-EyKkuvrFiOwjhtSM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zMzA2ODUxLzJiMmVmNGI1ODVlNjU4ZWI3ZjZkYzU1ZDBhM2Y3MDM5LnBuZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3306851/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/EvuWNVsp2MvvWCErpkl8zTFcsG7ap3cv01ojurAn4Nw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU3NzEyNTEvZTNiZGYwNTMzMDAyYzBlMDVjMjMwN2I3YTZiM2YxMmQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3306851/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3318628",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3318628/",
+      "seen_at": "2026-11-26",
+      "building_slug": "supalai-premier-asoke",
+      "building_name": "Supalai Premier Asoke",
+      "zone": "asoke",
+      "price_total": 17000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 33.5,
+      "floor": 35,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/G7fUbfFEQqe9sH1GPNt0_YYM6Lo6NQeww6CJdCTCCec/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU4MDYwMTAvY2M1ZDdkNjU3Y2NlMzg0ZmViNjI4N2Y1ZDg1NTM2MDUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3318628/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/P6D5Z4M00M75uZ3g88pkn06DkbUzBEPJwyGmuzkDx0s/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU4MDYwMTAvMTY4YjZmYWMzNjE0NTJkZWY4YTdjMGQyN2YwOTBhNzEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3318628/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Ynk1z-OGUn9FiDHwQ12CcO4s1_Lw8PuehQe51P3BojQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU4MDYwMTAvM2UxNTkxOWM2YmJlM2NjZGRjN2JiYmUxYjhjYzMyMDkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3318628/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3579174",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3579174/",
+      "seen_at": "2026-11-26",
+      "building_slug": "supalai-premier-asoke",
+      "building_name": "Supalai Premier Asoke",
+      "zone": "asoke",
+      "price_total": 18000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 39.5,
+      "floor": 10,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/CkFwBTOj4U3VGh9FvFjrlDUXxWfFaPaPvNKdrPwLjUk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0NDE5NjUvMGU2ODYxZjQ3NWU5Mzk5YTc2M2FhZTI5MDk3YWQ3NDkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3579174/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/0Sl1IS2OycJ90cuLm2d5R_jswqB8mkFqcI_2mEIUYOY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0NDE5NjUvZWY4YTdhNDQzNmUzMThkZTkzYTljZjQxMjY4OTE3NmYuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3579174/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/z9uN0AnWvqUeFBNGZbQIp9uBsBc9Qzfa_aU7nEa5Gyo/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0NDE5NjUvYjRhZjgxNzVhZWMyNzM2NjQ0MjkwN2M4OTJkZjI1ZTcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3579174/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3566205",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3566205/",
+      "seen_at": "2026-11-26",
+      "building_slug": "supalai-premier-asoke",
+      "building_name": "Supalai Premier Asoke",
+      "zone": "asoke",
+      "price_total": 25000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 50.5,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/Nb8iOoybU78QLHjgHLSdC2fm387x0nIDC1VIr6qmgvU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MTUzMzEvN2MwYzg0NTEwMmZiOWYxNGRiOTc4MTBhZjVlYThmODMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3566205/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Mn1Dw8AnNK9-jsHsxRxPOnpjMwbvBOHYDOerF_JcO14/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MTUzMzEvZGQzM2NlZDI4YTZiNGJkMjlkMDI1NGY2ZmEyNjZiZDAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3566205/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/fzLGAR3JpPkdZ3KkMnDUH7x8EKjSWg-tmLoqrtsipgs/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MTUzMzEvYTIxMGNmYThjN2IwNTI5OWNmZTUwZTcxY2Q0NDNmNmQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-premier-asoke-near-mrt-phetchaburi-3566205/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3225666",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3225666/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-mobi-asoke",
+      "building_name": "Ideo Mobi Asoke",
+      "zone": "asoke",
+      "price_total": 17000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 14,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/GKdeGF9kBFErwjSS6xWBd_M0gzNMelLu73GWCo8W7KY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1Mzc3MDMvOTdlNzdjOTNiYjZhNWU0N2EyZjliZjk4ZTAxMjM2MTMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3225666/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/WyQSqUacsN_BzL5gQJRWFCTBeoYotUr7mDVVBM_b5K0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1Mzc3MDMvYTc2ODVjNjQ0NTQzOGE0NDM3ZmJkYjg0MTQ4MzU1YWQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3225666/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/PxdsikLF5AckChSdcvh0h90On2zJURlauTOIL5fPyNw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1Mzc3MDMvYmI1NjI3OTc0ZjE3OTcwNjE1YjhkMzZkODE2MjhlM2EuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3225666/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:607467",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-607467/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-mobi-asoke",
+      "building_name": "Ideo Mobi Asoke",
+      "zone": "asoke",
+      "price_total": 18000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 23,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/OIIm6QKnaZOYqS5JZgXe1Q_QpuGn7nxqLFJ_RXLzUl0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC82MDc0NjcvMy5qcGVn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-607467/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/YzVKA6HLKq_lCP12Ff44hJH6vfV3_1YZEz2ZKX1y15A/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC82MDc0NjcvMC5qcGVn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-607467/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/McI9TsIMpTxvylcmd87q5yG6XFqjoOy3ITgSF6o4edQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC82MDc0NjcvMS5qcGVn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-607467/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3314564",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3314564/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-mobi-asoke",
+      "building_name": "Ideo Mobi Asoke",
+      "zone": "asoke",
+      "price_total": 18000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 28,
+      "floor": 31,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/1zpfo8wC4Ez94IBOSWPqz1nAkuFpOfnWOK4jQfoQSHY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU3OTQyODMvZTkzY2IzZWI0MDkzNjYxOTIxMWFkZjM1MzE0N2ZjYWUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3314564/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/MQ-lDlDeuBrxo3b2Bhzc_YrtIv61LkCwfnW5n844sq8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU3OTQyODMvZmUzMGNlZTM3ODkwNGM2ZTBiMmQxN2VmZTY3MmMyZjAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3314564/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/wDQXQQ32doTclY4olFFrUn8wopmJ8V4ZqrZYtdlWTX0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU3OTQyODMvY2IyN2U3NmE1MjBhZmE3MTE0NDhiYzljMThiMzA2MzkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-mobi-asoke-near-mrt-phetchaburi-3314564/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:824863",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-824863/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-mobi-asoke",
+      "building_name": "Ideo Mobi Asoke",
+      "zone": "asoke",
+      "price_total": 19000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 32.38,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/gO-twbI64_1KZh1OZ_nDE7b_5QT3qFfsq9yZ4qeRXxk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC84MjQ4NjMvMS5qcGVn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-824863/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/2vkyoPSFrHhpMwdNs1Vt1bWDuMneof744p7GvLb4uRI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC84MjQ4NjMvMi5qcGVn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-824863/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/TK6bZeC_n5T1UfLGeZDS9U1jaafsKzjSAFTbctIki5E/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC84MjQ4NjMvMC5qcGVn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-mobi-asoke-near-mrt-phetchaburi-824863/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:438637",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-rhythm-asoke-near-mrt-phra-ram-9-438637/",
+      "seen_at": "2026-11-26",
+      "building_slug": "rhythm-asoke",
+      "building_name": "Rhythm Asoke",
+      "zone": "asoke",
+      "price_total": 13000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 22,
+      "floor": 15,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/2777/d6d111b4a98b43ee154c66489bf9f008.png",
+          "credit": "PropertyScout",
+          "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/rhythm-asoke/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3402484",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-rhythm-asoke-near-mrt-phra-ram-9-3402484/",
+      "seen_at": "2026-11-26",
+      "building_slug": "rhythm-asoke",
+      "building_name": "Rhythm Asoke",
+      "zone": "asoke",
+      "price_total": 13000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 23,
+      "floor": 25,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/RoH10yN67gbhNFJINpHuYMGms9vtNg-gqTbMf6NFHo8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwNDM0NzcvYjllYTQ2NmFjNWFmNjY0ODFlMDZmYTFiMzBmZDgwYzkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-rhythm-asoke-near-mrt-phra-ram-9-3402484/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/HsTjfjWlcAal8Kkl7f3wIIKe69KHibm1RBcw4nn5F8Y/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwNDM0NzcvMjA0ZjA5YzgzYjRlOTk1NmQyN2MyOWFjMjg0YjIxM2YuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-rhythm-asoke-near-mrt-phra-ram-9-3402484/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/JFSjWfp8dWOjd1p6jly9xXPslZaTMmCq2M64wDHrdT4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwNDM0NzcvNjliZjEyYTI5ZjM1NTc2NTg5ODljYTE5Njc1MWI3YzAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-rhythm-asoke-near-mrt-phra-ram-9-3402484/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3434579",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3434579/",
+      "seen_at": "2026-11-26",
+      "building_slug": "rhythm-asoke",
+      "building_name": "Rhythm Asoke",
+      "zone": "asoke",
+      "price_total": 13500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 22,
+      "floor": 36,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/dGhsO3Wcco7ZplqKlFzLnfM2P8UJ4Vv9cVsugjUh9tY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxMTkyNTYvYzJmMzE2ZTAzNThlMWJkY2MyNGIxOTY1N2JlZDRhMWQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3434579/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/_ILsyeRl79d4CbvgVgGWKf2bTLk3e1cgz_MO2hyaUeE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxMTkyNTYvNzNhMjI1YTI2ODAwYTc4YjVlMjMwN2ZiNWFiY2IyNDQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3434579/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/PWnjCnDkJhSnIeGsbrPbnLpCuXyclLdAsoAkNeSBBGk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxMTkyNTYvNWQ0Y2JiMmEzNjRkNWNlYzc2NmM5ODM0ZjBjZWVhYTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3434579/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3079314",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3079314/",
+      "seen_at": "2026-11-26",
+      "building_slug": "rhythm-asoke",
+      "building_name": "Rhythm Asoke",
+      "zone": "asoke",
+      "price_total": 14000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 23,
+      "floor": 28,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/Fs5V4PPl_FbqQp4ApADy-FDNyiOK_yfY_tcEeyXRm5w/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUwNjYyMjQvODI5ZGVjYzcwMGIwYmUyNTRjNTk4ZDIzMDczNjgyY2YuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3079314/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Qao83TT80ey6p6JIz-7XTkw2k7stA65W5PZgzvPbE4c/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUwNjYyMjQvYjM5MzY1ODdjMjk3ZWI0ODY4ZDI0OWJlYjlmOGMyNTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3079314/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Qao83TT80ey6p6JIz-7XTkw2k7stA65W5PZgzvPbE4c/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUwNjYyMjQvYjM5MzY1ODdjMjk3ZWI0ODY4ZDI0OWJlYjlmOGMyNTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-rhythm-asoke-near-mrt-phra-ram-9-3079314/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2462681",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-2462681/",
+      "seen_at": "2026-11-26",
+      "building_slug": "a-space-asoke-ratchada",
+      "building_name": "A Space Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 11000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 25,
+      "floor": 15,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/EiBRWMhdUlydFFCdSSkn_hvwCwVcdUAWBmDmh8HWsmY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMxNTQ4NTEvZWNjYWMzNDA3NGI5NTc2OTNlZTM5YmJiNWQ1YmJkYjkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-2462681/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Vne5LlvdRCbbroVxr1CzASnnWilzGz1i4IaouTRs64Y/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMxNTQ4NTEvYTU1OGQyMGIxN2QxNjYyZDBmNjQ4OGFhMTllYjQ3OTguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-2462681/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/8htqp4s2J3w_jXV4qmbnl52S4N6ML75Jdi0EDzXXwvE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMxNTQ4NTEvMGJkZTBmNGE3MDgxMGYyMGYwNzFkYTgzZjVlYTE4ZTMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-2462681/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3460208",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3460208/",
+      "seen_at": "2026-11-26",
+      "building_slug": "a-space-asoke-ratchada",
+      "building_name": "A Space Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 35,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/VvfnemeQ_V6NjWdefMw8KpX0Mn5Qi60z12CtUltmpXg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zNDYwMjA4LzBlNmY0OWI1YWFlNzZkNmZlOTQ5NTM1ZTYwNTU0NjViLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3460208/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/uSwCki_5S8w-Uktsy_UG6PNRjnNEJ6qEH-S8oaUnugw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zNDYwMjA4LzlmMTVmYjc2OTM3ZTI3YWU3MDYzNzJmZjhlYWFlN2ZhLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3460208/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/HsEcMwV-t2NEOVT3i1xr-_J9m9MLUSsPchwc9m4e-M4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zNDYwMjA4Lzg0NTdiMTliMjdhMWZmZWIyNTlhMWVkMTYxOWFlOWM5LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3460208/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3219449",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3219449/",
+      "seen_at": "2026-11-26",
+      "building_slug": "a-space-asoke-ratchada",
+      "building_name": "A Space Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 35.5,
+      "floor": 5,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/OnW-fPqMHvMxK0yaajt3o347Acc-IgYvK5dBwXvYKFI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1MjAwMDYvOTQxYzgxN2I0NTVkYjEwNDliNTIzZDQ2ZDYyOTM1NDQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3219449/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Af-2S0ESOMV0fyDQfphNjiqgOHjZyKM1d6UI4EqjmJk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1MjAwMDYvM2UwZmU4YmU1ODY0NDk0OTQ2YTA0OWRlNzYxZWNkNTguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3219449/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/usrSddU8W2KDEeJHxQ4476frH3LBZWG5ghPq4PTEVVg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1MjAwMDYvNDNlZDk4ZWJlMGFkMzU3OGJmYWQwODIwYTNkN2I0MTguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3219449/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3168069",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3168069/",
+      "seen_at": "2026-11-26",
+      "building_slug": "a-space-asoke-ratchada",
+      "building_name": "A Space Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 14000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": 7,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/XojomB4VM6KEO_3cUhunSbDrLAFAp0bygNhe1vpqSOU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUzNjYzODMvM2ZhYTY2MTVhYjVjYTY1NDZhMmY3YTI4MzMxOTAwM2MuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3168069/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/swtiEH2bO3Ja8K8L789HqRgrG1lUtv9qcZIc6qLd3t4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUzNjYzODMvOTU5Mjg5NGRlOGY2YzQ5MzljNjY0NmYyZGFhMGM5YTQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3168069/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/WzEsE_0LalFmQXNLbYOhIQKX1Qeuq2HvBwQzqwaaqtg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUzNjYzODMvYmU3NGQyZDZkZjdmZDcxNjk2Y2NlMmRhYzA4NDg3NjIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-a-space-asoke-ratchada-near-mrt-phra-ram-9-3168069/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3240391",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-3240391/",
+      "seen_at": "2026-11-26",
+      "building_slug": "aspire-asoke-ratchada",
+      "building_name": "Aspire Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 25,
+      "floor": 4,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/kZaDaVxlF-y5DIK8-kdZLntYeNLzTFGuVhCl5oe-Nlg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1OTM2OTgvMmY4MTAyYjNiMzkyZDA4MGZiYWMyNTg5OWQxOTdlMWEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-3240391/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/ltKor27dwtJHPMS_eSP_bm1zhos8YRAnxua1Hc-8quc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1OTM2OTgvODlkMWFiNjE2OWIyYjM5ODNkYmRiYzQ2ZDI3YzdmZGQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-3240391/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/3WXHi34dHVS8e-zBLAqKjr7oppSurj4o6JYXDX3gG2U/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU1OTM2OTgvOGY2ZDMzYzMxZmI3N2IyMDJiNTc0NzAwMjMwZmM5MzIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-3240391/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2447132",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2447132/",
+      "seen_at": "2026-11-26",
+      "building_slug": "aspire-asoke-ratchada",
+      "building_name": "Aspire Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 25.26,
+      "floor": 3,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/TVj3PdMOxqh30hyz90KcawmvHY7X9EjCgkAToPACAdw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMwMjcxNDQvODdkMDE4OTIxNWU4YzdlMjYxZjkxNmE1NDljMjQ3YmIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2447132/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/8Wm52-85T_pIhxSDRppJ8oPh6BXdXg-dHN9nm-IOwa4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMwMjcxNDQvMDVjNjk4NDQ3MzEzMTY2NjU4ZTMzNWVjYmQ5NTAyY2IuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2447132/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/UF9HKTPcPblBqJQzNxQMeA_A3kSw3IUhdgW1GyH8rjY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMwMjcxNDQvZjdiZDk0YzdkYzA3YTAwZWU2ZTk1MmMyNDUzZTY4MTcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2447132/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2553270",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2553270/",
+      "seen_at": "2026-11-26",
+      "building_slug": "aspire-asoke-ratchada",
+      "building_name": "Aspire Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 13000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 25.26,
+      "floor": 5,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/hHdcEkaYbiHY6GBaznQ08kLKpE6EfrK-FkbqrtUqizM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM0NjQyMTIvZjBlMDFhYWM3ZmNlNzRiOTg4MGRiYzQxNzNlM2MwZDQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2553270/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/zEvR6Kgf0q5FF_AQ-2dF92mR5xsWEy8YlBPWo4feTBM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM0NjQyMTIvZDNlOTU0MTY4Y2VjZmQ5OGRkZDI5ZTVkY2M4YWRlOGQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2553270/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/yxOeCup6Rk7yKbK_OFeiPwS6v9KQ-5ZSD1qkMRVdaD0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM0NjQyMTIvNjc0Y2Q3MzQ5MjZlNmNhMmE2Y2U2MjM2YzY5ZjIwMDYuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-2553270/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:438299",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-438299/",
+      "seen_at": "2026-11-26",
+      "building_slug": "aspire-asoke-ratchada",
+      "building_name": "Aspire Asoke-Ratchada",
+      "zone": "rama9",
+      "price_total": 13000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": 8,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/jDZeiqbYHjQYxSLajUAbnSzF5wmPL2KrMjXQOyrV0KI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC80MzgyOTkvNS5qcGc.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-438299/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/jjjjuWfBj019lEV5dAR_A9td7UYcUGGFMIrGtiPDt1A/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC80MzgyOTkvNy5qcGc.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-438299/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/_F3lTNUle5-efLrnFnMs0PBcwDH-vtmJTBgfo9nYfmY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC80MzgyOTkvNC5qcGc.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-aspire-asoke-ratchada-near-mrt-phra-ram-9-438299/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3529783",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-pg-rama-9-near-mrt-phra-ram-9-3529783/",
+      "seen_at": "2026-11-26",
+      "building_slug": "pg-rama9",
+      "building_name": "PG Rama 9",
+      "zone": "rama9",
+      "price_total": 10000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/a8UsgkRsK7FHQoq8soem4sVk3UJKSLt28cIBAYj8CtM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzMzY2OTcvOGJiNDM5Yzg1Yjc5NzJmMjJlMmU3YTEwYmQyYTNmNjkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-pg-rama-9-near-mrt-phra-ram-9-3529783/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/mQ5D0EZ2Tp12qSqYiVtdRVvJccYfBQF3mjSiHwal4ow/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzMzY2OTcvOWIzMDkzYzcwMzFkNTQ3YmQ0MmI0ZThiYTNmNjRlZDguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-pg-rama-9-near-mrt-phra-ram-9-3529783/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/F-wCOVkvHTxr57pNx33gRkHhlBjM4paHQnUjJhW1TMg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzMzY2OTcvMjMwOTExZmQ1NjljMTRmNzMwZWVlM2ZjNGZlNjY4OWYuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-pg-rama-9-near-mrt-phra-ram-9-3529783/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2448691",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-2448691/",
+      "seen_at": "2026-11-26",
+      "building_slug": "pg-rama9",
+      "building_name": "PG Rama 9",
+      "zone": "rama9",
+      "price_total": 10000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 31,
+      "floor": 3,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/2qNkLyxFwaJkzo7C8VhcpbUHuRooISK_oOzGatH5DO4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNDQ4NjkxL2U5Njg1NDI1NTIxN2YzYmIyOTMzYjNjNjE3MWQ5ZmI4LnBuZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-2448691/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Rrnx0S3dRE4Q0pW4dGYzTHqwhjvhLnUmDtsttZDyGpI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNDQ4NjkxL2EzMzNhZjRiZDlhZjBlZTJjOGM3MTEzMzJmYjgwNDYxLnBuZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-2448691/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/9v5HxqHAqYSylDkdh3SD7Ma1dHlv55yAJJ1Vxe0tXDw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNDQ4NjkxLzUzNWJmODQ5MmY1YWM4YTM2OGUyNjI5ZDRmMTYxNDcwLnBuZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-2448691/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3077267",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-3077267/",
+      "seen_at": "2026-11-26",
+      "building_slug": "pg-rama9",
+      "building_name": "PG Rama 9",
+      "zone": "rama9",
+      "price_total": 14000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 42,
+      "floor": 19,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/PjzCtAqZ-jfh3z7O9YCq5WSn1bD1jAcqoSRR2mYOhp4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zMDc3MjY3LzVlNTQwNzcyYTZkMzljZWFjNzRkZmZiMjI5ZDk5NGZhLnBuZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-3077267/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/UytuJi8yLmbCcUwRZ8WC6A90-RUW79IM9XS5m1OKjnU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zMDc3MjY3LzkzZjg3YzdhN2MzN2JjZTM0YzdjOTU2N2FmODIzZTJkLnBuZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-3077267/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/bLTy8WVk8n6ZVTMOQd74Z3ngHI29b4HDyh8B0OL8Yww/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUwNjE1MDgvMmI0NTVlMzY5OTkwZWE2OWQ5ZTE3MzQ1OWIzOWVkM2MuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-pg-rama-9-near-mrt-phra-ram-9-3077267/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3549746",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/2-br-condo-pg-rama-9-near-mrt-phra-ram-9-3549746/",
+      "seen_at": "2026-11-26",
+      "building_slug": "pg-rama9",
+      "building_name": "PG Rama 9",
+      "zone": "rama9",
+      "price_total": 20000,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "size_sqm": 60,
+      "floor": 14,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/lnThS4vgebq4HH6YdxsXnQwS4f-zJsSEqR3CmLT2wuo/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zNTQ5NzQ2LzFlNDk3NmEyNGUzODcwODIwZGRjNzRjZDc2ODk5YWEyLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-pg-rama-9-near-mrt-phra-ram-9-3549746/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/4OFdCDiJx_SwEZv7rICTzwm0DRQJMJj_gBpAtjejnFA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zNTQ5NzQ2L2U1OGMwNGFiZTViNmEzNjc4OTJjNzNmMDAxZTlmNjBlLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-pg-rama-9-near-mrt-phra-ram-9-3549746/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/K11AXAxWbPpFpyOY07d1TFvwvcDTfxZg53KqbC8hb8I/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8zNTQ5NzQ2LzBmODRhNzM2ZDEyYzY4YzBhODFkNzUyMjYxODFmMjc0LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/2-br-condo-pg-rama-9-near-mrt-phra-ram-9-3549746/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3541072",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-3541072/",
+      "seen_at": "2026-11-26",
+      "building_slug": "lumpini-park-rama9",
+      "building_name": "Lumpini Park Rama 9 Ratchada",
+      "zone": "rama9",
+      "price_total": 10000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 7,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/N1yIHQ6e2tox1yUhXiATNerpPlF8E1dS2BColatE-tw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzNTUzNjQvNWEyZmM4ZTIyMTNmY2ZmMjE2NWViZDA3NzI0YzNiY2IuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-3541072/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/JfICjSWzqWGYJoXCZqQAh48cEqkBO-jLMs8prNcL-IM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzNTUzNjQvOTFiYzE3MDI5NDVkODVmY2ZhMDczMDFmNGQ1NjM4NzkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-3541072/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/nh2Y0CMSUeqt380lYP5YLjdUvBwCKitTyxRIJphVibI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYzNTUzNjQvOGRhODkzMTQ5NTBiMmFhMGYyZjFjODBiNmEyNTFlYWQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-3541072/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:1589408",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-1589408/",
+      "seen_at": "2026-11-26",
+      "building_slug": "lumpini-park-rama9",
+      "building_name": "Lumpini Park Rama 9 Ratchada",
+      "zone": "rama9",
+      "price_total": 10500,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 7,
+      "furnished": null,
+      "amenities": [
+        "pool",
+        "gym",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/bujOf2SJB81xHOax7t7bKLUlXl-YOt1wO78DrictVlQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xNTg5NDA4LzhjZjE3NjEyMzI2NTkyYzYzMmZhYmZkYzE2YTllNDk1LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-1589408/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/9nXDSYIBMMNigcTJsRDdfpL8JnAzSDIUMu40Ab4jyu8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xNTg5NDA4LzE3NmQzMjBiZGM3Nzc5Nzk0OTAwOTNmZTEzOTk2ZDg0LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-1589408/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/3A_r70wAOB11oms18_jbg8g-mtQZnTskO5SZbLfHQNY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xNTg5NDA4L2I1ZmVjY2M3NjJlMWY0OTZmMTY2ZDY5Y2U3YWMxZjE5LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-1589408/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2816460",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2816460/",
+      "seen_at": "2026-11-26",
+      "building_slug": "lumpini-park-rama9",
+      "building_name": "Lumpini Park Rama 9 Ratchada",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 7,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/Zp7uMuiJGlFG0B8ily1YAzDabO_YfcKLtIk92yJf7Vc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQyNTU3ODEvZjYwMDU2ZTkzMmFhMmY1MTc4OTBlOTM4YmVhYTZmNGYuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2816460/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/ghoXVpVE9pIerr6WC57uYIZfsB29NK2jj3YGzM1YFUc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQyNTU3ODEvYTVjYjhmZGZmZmFlMTFlNjhkNTI5ZGZjNjU1NTM0M2YuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2816460/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/OVrrNOg2A2ZWzf3L_rcDpjkxaDzOmToEJwix6v6HeWw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQyNTU3ODEvZmE5ZDgzZDllMDdmNTZlNjhjMDViOGIzYWU4Zjk2ZWMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2816460/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2529056",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2529056/",
+      "seen_at": "2026-11-26",
+      "building_slug": "lumpini-park-rama9",
+      "building_name": "Lumpini Park Rama 9 Ratchada",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/5WTgs2iPZfMWzxyb2DxLvkUbtJVWmO-WWIXwWo0klEg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzOTEzMjIvZWQ3NThhNWMzNTM5OWRiNTRmMTFkZDdmZmMwNmQwMjMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2529056/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/CAQOFgFA3EiHkgWOOag0q8oh0rXl-e9TMVCbRt_xncE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzOTEzMjIvZDE5ODYzNWUyYmVjMWVhYzFiYzk2OTdlN2Q5MjkyYzguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2529056/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/o9PbzKi-iFpnSP4Bl4A5TxKAl9b-RHxx89X-S_VUIEA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzOTEzMjIvNTEzYWZmZTcyMzE3OTAzOTMzYTE3YWU5NTEwMjA3ZDUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-park-rama-9-ratchada-near-mrt-phra-ram-9-2529056/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3447116",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3447116/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-rama9-asoke",
+      "building_name": "Ideo Rama 9 - Asoke",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 11,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/I957XRt0L1TKDzS267WmSEXh_yA-v8-J_B-QlLIFSjw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxNDc3MDAvYmFiMzI2ODg5Y2I4MzYyNTI1Y2VkMzY3NDFkNzZmYzcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3447116/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/rBUcf5OXkCseHJYwrhkhmsaf-yVItfpL_ImrjJG8d1o/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxNDc3MDAvOTdhZDIxOTVjZjgxMjI1NTJlNDQ3YWUwY2Y2MTFhZjIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3447116/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/ur4Cej6E3GDPQsueXpJ1n1W48Vuc1CZeY2UqnrhMn4M/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxNDc3MDAvZThjNGJiM2NhMWJjZGRkZDY5ODViYTFhNjQyOTk5ZDAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3447116/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3478679",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3478679/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-rama9-asoke",
+      "building_name": "Ideo Rama 9 - Asoke",
+      "zone": "rama9",
+      "price_total": 16000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 26,
+      "floor": 10,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/yXrJ-5cGBLiAyPnUT2gi7pXp-QUIPJJBdRPpTtBXjMI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyMjA3MzYvMjNhY2FjY2ZmMGYxNTczMjU5YTI0N2JjNTNmMDNkZDkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3478679/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/GeogUe81L0Q-JhSKhFD2WXS_22sGmfzRJkFp3WAhaVU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyMjA3MzYvM2E5ZmRkMmFjMmUwMDk4NDgzMmM5OTc0M2YyNDNmZGEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3478679/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/aakgtA3qiAknk1TVV6HB1jiqfM32eB27ljugC4lxgJ8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyMjA3MzYvYWM4MWQ0ODc5NzA0ZjYyNDlhZTYxMTYwZTFiMjAwZWMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3478679/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:1857626",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-1857626/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-rama9-asoke",
+      "building_name": "Ideo Rama 9 - Asoke",
+      "zone": "rama9",
+      "price_total": 16000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 27,
+      "floor": 10,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/aVzwowekUY5VclaPsJSkZnbOfUKS3acBaocV9D-36R0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xODU3NjI2LzkxNjZkNGFjZTkxNGMyY2E5MWIyYjE2OWQ5ZGFlMDIyLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-1857626/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/qgN3rfa7Yt2vRZug5FvFYPLkSfz4FnqymNupY5UTeKw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xODU3NjI2L2NjMmVmMDQwNzI0NWVjZTYxYTBhMzg5MjM3NTI2OWNmLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-1857626/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/rqygYV_WLFGEUag33IP_q2m9bzlFs0mmAaGe4inLg1A/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xODU3NjI2L2JkZmQ4MzFiZTUxOTkxZTBkYTA3ZTVkNjFjOGI5YTJlLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-1857626/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3500530",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3500530/",
+      "seen_at": "2026-11-26",
+      "building_slug": "ideo-rama9-asoke",
+      "building_name": "Ideo Rama 9 - Asoke",
+      "zone": "rama9",
+      "price_total": 16000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 32,
+      "floor": 27,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/E_QD0m8DFjAMg9GGg1WpykFABB9rLmOj1jJxxdK0uVo/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyNzA1OTMvMjE1ODNlZTVkNTI0YTFiZjhmNmU5NTE2MTY1MzhhY2YuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3500530/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/44hmNEbs-0dr_mN9Azk75PZ48oZlS1vR20MSJkAzaN8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyNzA1OTMvYjg5NWQyYTljNDc3MmEyN2Q3MTRkOGRlMTk4MDJmNGUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3500530/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/iaFQZ2TGeePuhTD3DFyKEkN36UvrJ4rKBjLkh3TL7dg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyNzA1OTMvNjI1NzBlYmJjMjBmYTAxMjkyNzBiZjQ5MzQ1MWZjOGUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ideo-rama-9-asoke-near-mrt-phra-ram-9-3500530/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3487445",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3487445/",
+      "seen_at": "2026-11-26",
+      "building_slug": "chapter-one-eco-ratchada",
+      "building_name": "Chapter One Eco (Ratchada-HuaiKhwang)",
+      "zone": "huaikwang",
+      "price_total": 10000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 23,
+      "floor": 16,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/HSrBIuN71ADN9aWA0i8EXb9N2mLi1XkQTXPBYaE-gos/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyNDA0MDYvMmI2MjYzYzc5MTQwYjc2OThlNjZlZDcwMjM5ZDljMzkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3487445/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/_fqJPLa3JGp7SzJeCzKIhbR8wbsXZ1G1VnbpeWfG9Eo/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyNDA0MDYvNjc1NDg5MDMxZGQxZWU5YThlMjQ3MDUzOWRlMTBiZDMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3487445/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/3Zepcpceywtv6v-CYxbsk-O7zZI3JoWaW6_Dk7C6Ad4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYyNDA0MDYvOTU5MDYzOTIyZTI0MzlmMzViOWQ3MzVhYjk3NDYyYTcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3487445/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3435190",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3435190/",
+      "seen_at": "2026-11-26",
+      "building_slug": "chapter-one-eco-ratchada",
+      "building_name": "Chapter One Eco (Ratchada-HuaiKhwang)",
+      "zone": "huaikwang",
+      "price_total": 11000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 23,
+      "floor": 8,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/HM0_ABle8hxaIDkWESYMvviWVGpXhT5jN-W_5Ob16Ys/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxMjAzNzQvYjg3MzkxZmM3MTdhYjFkZjM0NmJjYjc1YjIxNWNmMGUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3435190/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/gdj1cn0ynVy0RTY4gw5cTau7gkLIEakF6IpskoQ0k1o/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxMjAzNzQvYTJiNDE2MjE1YjJkYmFiYmY2MzkwNWNiZmNiZjRhNDUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3435190/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/SB-7wNLqKfGbCb1_xsd67Oz3vtG6n0lxVy1gA5zwew8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYxMjAzNzQvYWZjOTBhNzJhZWU5MDY3ZGU1YzcyZDY2NGZkNDk1NWYuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3435190/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2833033",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-2833033/",
+      "seen_at": "2026-11-26",
+      "building_slug": "chapter-one-eco-ratchada",
+      "building_name": "Chapter One Eco (Ratchada-HuaiKhwang)",
+      "zone": "huaikwang",
+      "price_total": 11000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 23,
+      "floor": 4,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/GdZKVV9mEqwXon7x2Af5KDSs-Pk-QovN1oRZvvaBs0s/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQzMDYwMzYvOTRkMTE1M2ZhNDZhMWNmM2FlMDI2YWQ0NzU1ODMxNTAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-2833033/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/uPqX1rt3NH_A4x3yy0yrUJ5pWtFPK2DuQ97EGNf0QEs/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQzMDYwMzYvMzI3NzJjMzg1OTMxN2YzNTY5MDRiNDNkOWFmZGEwNTMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-2833033/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/U5rgp9E6DbXAMprpjHvPsgk-rPH0gFhdIF_Z4ceNSNk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQzMDYwMzYvM2U3MjgzY2MzMzRlYzYzYTBlYWNhZDYwZjU5Njg0ZjkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-2833033/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3278097",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3278097/",
+      "seen_at": "2026-11-26",
+      "building_slug": "chapter-one-eco-ratchada",
+      "building_name": "Chapter One Eco (Ratchada-HuaiKhwang)",
+      "zone": "huaikwang",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 22,
+      "floor": 11,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/JWRVFinMIWgOQ7tX8R92cbDR9tt-Cf3alW3PtWx81QA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2ODk4MTYvMDMyMDU3M2E1NjliMTIyNTM4ZGIxMzk5NTYxZjM3YmEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3278097/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Z0LNJkxyrooBF4XfrdCdSFL49pHxziENNYN5iYmhJMQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2ODk4MTYvZmZkZDk5MzFhY2M1NzQxM2ZkYTIyNjA1NGZlODM4ZWMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3278097/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/y-NRrkWZLGSMzW-J5p1f48rN87usr-g36R4txuFeN_8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2ODk4MTYvOTZmOWMxOGRjZWE4MDJlNDJjMzJmZjIwN2IwODRkMjAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-eco-ratchada-huaikhwang-near-mrt-huai-khwang-3278097/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2640499",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2640499/",
+      "seen_at": "2026-11-26",
+      "building_slug": "plum-ramkhamhaeng",
+      "building_name": "Plum Condo Ramkhamhaeng Station",
+      "zone": "ramkhamhaeng",
+      "price_total": 10000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 23.09,
+      "floor": 25,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/eQairSEh2ZhgcNJGFLuWJJgtV_vWYYpx8a9DG3Ug8w8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM3MzIzOTYvOTExZGM4Y2I2NGQ4ZmFmZWNkZjM2NDkwZDA2MGY1NGEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2640499/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/tUoaPOirmgFzB000ErpGF_nh2uxebZbWJy_zEojvUUs/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM3MzIzOTYvOGMyMTVmY2YwNTIyMGIwMWZhNDAyZjdhZDQwMWRhYjcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2640499/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/X3VUJe6ChSRBqtj8yIPZMjrse394Si1KgFcX_nMMjys/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM3MzIzOTYvYTJjZmNhY2ViNTU4NmI3MTdkODNhODBmNTQwYjAxN2MuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2640499/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2728421",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2728421/",
+      "seen_at": "2026-11-26",
+      "building_slug": "plum-ramkhamhaeng",
+      "building_name": "Plum Condo Ramkhamhaeng Station",
+      "zone": "ramkhamhaeng",
+      "price_total": 11000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 27,
+      "floor": 14,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/ydVlVNLGcQH8HlmwDAo3qJYW0_8H8gL2P9R7QI9IlYk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQwMDk4MTIvMTAyYzBkMDEyMzFlZWNjM2UxZDkyNDVlMjE5MzlkY2MuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2728421/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Gzto6CqFYMCFRmUb1V3wPpIZqPq_hBs3scpV5yoT6po/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQwMDk4MTIvYzhmYTllMzYxNjUwYWM0MDM3MTVkZDVmMDdlMDJhYWIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2728421/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/MMcOxm7DdqRJ5_LEPbKwokdXQs90Wz8lAUVrdxtjB00/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQwMDk4MTIvZjkzY2Y4OTEwN2MxYjg4M2M4OGZjYjg1MzdhYWE0YzguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2728421/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2929301",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2929301/",
+      "seen_at": "2026-11-26",
+      "building_slug": "plum-ramkhamhaeng",
+      "building_name": "Plum Condo Ramkhamhaeng Station",
+      "zone": "ramkhamhaeng",
+      "price_total": 11500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 24,
+      "floor": 15,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/HaYpEgZ3h8NtRZJ-NbKC93nwpuB6NVy1jvPMKEjjawY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ1ODM3ODgvNDY1MjliMjZiYjQxMmRmZjRjZDY1ZGU4NjI5YTNkMWUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2929301/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/Hb2zgIfF0-aXu4rrxMFBhB2JHBAiyDTuYyw9NuVN_dI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ1ODM3ODgvZjMyOGJiZjdkMTk2MTc0MTdmOGZlYmU4N2M5ZWFiMDkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2929301/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/asb7xlgiWZDAArEZY-txTBGpCdO1Wdlv7d4otCFNJEU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ1ODM3ODgvYTU3MTgxYzJkZThlMDg0NTFhMTc5Y2E1ZjVmOTBiYzguanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-2929301/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3205403",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-3205403/",
+      "seen_at": "2026-11-26",
+      "building_slug": "plum-ramkhamhaeng",
+      "building_name": "Plum Condo Ramkhamhaeng Station",
+      "zone": "ramkhamhaeng",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 28,
+      "floor": 10,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/ziebIpx5MtgMK4f6JQPyimP6Nl11tNlgurK06SahVFg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU0ODAyMzkvZGNiYzg5OTRkNmE5OTZmYTI4YWY4YjliZDBiOWE0MzYuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-3205403/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/dr-MhftJ2D5sYSGTBKyl02We0-TdErX3hs_-s1UD55Q/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU0ODAyMzkvMGJlNjhjOGMyOWM0YWJmMDk3NzY0NWRhNWEyYTk5Y2YuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-3205403/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/uCB9vlT_pxPU0Y_wx751gtu9MlRlPVpAvMVeHDabSJc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU0ODAyMzkvMGIwMzczODQzOWIzMjBjOWRhMTRiZDY4MjkyNDg4NzIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-plum-condo-ramkhamhaeng-station-near-arl-ramkhamhaeng-3205403/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3426047",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-supalai-veranda-rama-9-bang-kapi-3426047/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "Supalai Veranda Rama 9",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": 22,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/WEDHzbm3yppw3XgMR_-Hbv1_2tsW6XPSMohL1RflwKM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwOTg5MjMvMTgwZDFiZDg0NzM5YzlmMDlkZGQ0ZDU1N2VkOWQyNWEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-supalai-veranda-rama-9-bang-kapi-3426047/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/y2aSFqGzQKYwgrZpZ4f4YGX7qQoxKPi3Ir9Hm4BN_E4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwOTg5MjMvZjQyN2NlNzkzMjEzZjc1NjIyMjg5YTVjNjcwZmM4YTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-supalai-veranda-rama-9-bang-kapi-3426047/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/5twFTPq6QkPgnx9XgVPjUyCQsE-XL7nBU1JG_oSXj5A/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwOTg5MjMvZjk0N2NhOTkwNjc4MGE3ZTU4NjZhYjljNDBmMjI0ZWMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-supalai-veranda-rama-9-bang-kapi-3426047/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3572977",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-the-base-garden-rama-9-near-arl-ramkhamhaeng-3572977/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "The Base Garden Rama 9",
+      "zone": "rama9",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 26.5,
+      "floor": 13,
+      "furnished": true,
+      "amenities": [
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/ZqoBdinKuwAPaQtwcuwl4NV052jWS7qD1JGtxw5WLD4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0Mjg5NDMvYjVlZjFlOTBhMTA2NGZlNmNlZGM5MmYyMDYyOWY0ZWUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-the-base-garden-rama-9-near-arl-ramkhamhaeng-3572977/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/PQKPlJifTWp22FJxjQAlHezFagTGnCRREgxc8WN7NOQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0Mjg5NDMvYmZmMGE0NTZjYjNkNGRlOGI0MTE3MmU5ZmFlYjBhNTkuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-the-base-garden-rama-9-near-arl-ramkhamhaeng-3572977/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/FQQ124zgTvlB_v4Fj1qNrPYyziAT3_dqAR3Q_ljd3_A/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0Mjg5NDMvZmE2MWQ1MTFlNjhhOGNkNjk5NGYwYTQ5Yzc1NDcxMzIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-the-base-garden-rama-9-near-arl-ramkhamhaeng-3572977/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2527738",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-2527738/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "Casa Condo Asoke - Dindaeng",
+      "zone": "dindaeng",
+      "price_total": 11000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/WUFmB5xQ3fmwjtP2rQAT4yzDzMalhimgvTQDfRkrtZo/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzODM3ODUvNjRjOTQ1M2M1YmQxYTljODZhZTZhZTE4NWYxOWY1NTIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-2527738/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/vC__rNRGsVCw85Tr2Ta2cb9k0fxIIznCQQXQAMxQ6d8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzODM3ODUvNTc2MzBkNmQ0ZGFiOWNkZmM5OWQyNDQyMzU5YzYxYjcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-2527738/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/rQfX-_6WuCrcxIG0Zt3PIh0SItepdAslMS78XEEMpVQ/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzODM3ODUvNDBiNDJjMGExZWExZGMyNDMzYTI5Nzg1YTc5NDE5ODEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-2527738/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:1880190",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-1880190/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "Casa Condo Asoke - Dindaeng",
+      "zone": "dindaeng",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": 21,
+      "furnished": null,
+      "amenities": [
+        "pool",
+        "gym",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/ZtLaQ3tuGbRnbhcSjfe5NPYp84Xw-BsXrjQ8avpjvzI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xODgwMTkwLzZmYzQyNDllNzU5NTI0YjU5MDdiOTE0OGZhOGZiY2QxLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-1880190/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/QUf-N7lXsTQtXvstyw3clKefEuUl9b70458fyZvC3HE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xODgwMTkwL2JlYmRkZWI0NGI4ODEyYTc1MjU3NzE2OTMzMGM1YzY3LmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-1880190/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/qYaYDZNz--XiOj1klpiabEaqlj1uEJcZ0Xn7NmXkTmc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xODgwMTkwLzg4OTk0OGY5NDlkY2NiOTcyNmI5YzJkODBlN2QyZGNlLmpwZw.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-casa-condo-asoke-dindaeng-near-mrt-phra-ram-9-1880190/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3291523",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-3291523/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "City Home Ratchada",
+      "zone": "ratchada",
+      "price_total": 10000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30,
+      "floor": 6,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/hZVTDAVVK0_Znzej9U1mhOq7y9MRlMGlzx3YD8ENneM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2MjA1NDYvMGMwM2RkMmVlY2ZiNDgxOGE0ZmY5YWMxYmZmMGZhY2QuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-3291523/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/_XtV2KMVodjNs9EbPq_MmtvzQEZDMBJDPH-5Zks7pNI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2MjA1NDYvM2Q2NWU4YzZhMDNhZDc4NGZmNjI3MjEyNTQ0NmJlNDUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-3291523/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/xmdOIe14ZyO7Ff7VKdtlCFGANPc_dRTEK7ZiXVbq1eA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2MjA1NDYvZGY4NjJjYWNjMTM5ZjM4ZTVmOWIzMjNjNTBkNTU2Y2MuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-3291523/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2973649",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-2973649/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "City Home Ratchada",
+      "zone": "ratchada",
+      "price_total": 11500,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 37,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/E-cmCehSa0FLZj9z5VYYZEEgffF8ut9RoDTOJAUOED0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ3NDgxNjQvMzU0ZTAwYTk1ZDAwMmUzN2U3ZDJmYzM2NzRhNzljNzAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-2973649/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/jWUz-cUDlbd076l0Y658FdLHD30R26JRJtN_NwKv5rA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ3NDgxNjQvYTdjM2ZkODEyZDk2NzIzZjVmZmIwMTBiZDgxNWE5NzcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-2973649/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/oeP40ih0YomHmz8cjpqrABAVWJDSj0uYwNXUNx-nIjE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTQ3NDgxNjQvYjVmM2IzYjY5NDM2ZGY3NTI1OTc1ZWJjNTFkZTJmMTAuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-city-home-ratchada-near-mrt-huai-khwang-2973649/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:3562974",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ratchada-city-18-condominium-near-mrt-huai-khwang-3562974/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "Ratchada City 18 Condominium",
+      "zone": "huaikwang",
+      "price_total": 10000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 34,
+      "floor": 7,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/Efc1QLgxN-9MDhNSTv1qpojZofOQyUWHSvKCFkwOyvU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MDgzMDEvMmNmZjlkOTg3MDNlMDYwYjcyNzI3NTY3YjFkOTc1MDcuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ratchada-city-18-condominium-near-mrt-huai-khwang-3562974/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/-yZyoYZlMeTPJxvLieSrJNTLyOxiluBth5rfdYSsaHk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MDgzMDEvOTk0MzEwNmRjMWUyMWQ0N2Y2M2FiYWYwODdkM2MyMmIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ratchada-city-18-condominium-near-mrt-huai-khwang-3562974/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/qbm8cuaaVOCjhp4FGTTqumf3Mdzxt8hviZVlCl7H5dc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MDgzMDEvNDYxZWQ0N2IyYjc0NzQ1NTZiYjMyN2ZlMjhhZmFhODMuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ratchada-city-18-condominium-near-mrt-huai-khwang-3562974/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:392565",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/1-br-condo-ivy-ratchada-near-mrt-sutthisan-392565/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "Ivy Ratchada",
+      "zone": "ratchada",
+      "price_total": 11000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 30.5,
+      "floor": 3,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/PE0RiVuNnTPMrINmna9riNwrVsNiThCKtGS9ImQyGdw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvMzkyNTY1LzEuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/1-br-condo-ivy-ratchada-near-mrt-sutthisan-392565/"
+        }
+      ]
+    },
+    {
+      "ext_id": "propertyscout:2513540",
+      "source": "PropertyScout",
+      "source_url": "https://propertyscout.co.th/en/studio-condo-ivy-ratchada-near-mrt-sutthisan-2513540/",
+      "seen_at": "2026-11-26",
+      "building_slug": null,
+      "building_name": "Ivy Ratchada",
+      "zone": "ratchada",
+      "price_total": 11000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 31,
+      "floor": 3,
+      "furnished": true,
+      "amenities": [
+        "pool",
+        "gym",
+        "security",
+        "furnished",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://img2.propertyscout.co.th/0GZqBA3cfJgla1x6-DG-EwqTj78wLXj8lLL0Om5efwE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzNDAyNzMvMDk4NGRjMzY4NjIxZGQ2NWExYzJiNTBhZTAxNTU1NDUuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ivy-ratchada-near-mrt-sutthisan-2513540/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/7yB0yRVXPgYJT7EWw2F4D1oqRvwe7ManNihEIOBUzIw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzNDAyNzMvYzk4MjU4YTcxNDhiZmZhZGRjYWJhYjU3ZWI4YjE5YjIuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ivy-ratchada-near-mrt-sutthisan-2513540/"
+        },
+        {
+          "url": "https://img2.propertyscout.co.th/2ptiGpq3xlZGFASfXkipwFSjUYN6BXc_7uv8TaCVXyE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTMzNDAyNzMvYjdmZmY4NDY1NGNmZjRjNjQ0NjYyMTczNDZlOTVhMzQuanBn.webp",
+          "credit": "PropertyScout",
+          "source_url": "https://propertyscout.co.th/en/studio-condo-ivy-ratchada-near-mrt-sutthisan-2513540/"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:16752-1br-30-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/16752",
+      "seen_at": "2026-11-26",
+      "building_slug": "witchuwan-apartel-ratchada3",
+      "building_name": "วิชชุวรรณ อพาร์ทเทล (Witchuwan Apartel)",
+      "zone": "ratchada",
+      "price_total": 6500,
+      "bedrooms": 1,
+      "size_sqm": 30,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "pool",
+        "gym",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/jJcHphuwPeemE2bXq52t.jpg",
+          "kind": "exterior",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/16752",
+          "bytes": 418392
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:16752-1br-30-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/16752",
+      "seen_at": "2026-11-26",
+      "building_slug": "witchuwan-apartel-ratchada3",
+      "building_name": "วิชชุวรรณ อพาร์ทเทล (Witchuwan Apartel)",
+      "zone": "ratchada",
+      "price_total": 7000,
+      "bedrooms": 1,
+      "size_sqm": 30,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "pool",
+        "gym",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/jJcHphuwPeemE2bXq52t.jpg",
+          "kind": "exterior",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/16752",
+          "bytes": 418392
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:16752-1br-30-r3",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/16752",
+      "seen_at": "2026-11-26",
+      "building_slug": "witchuwan-apartel-ratchada3",
+      "building_name": "วิชชุวรรณ อพาร์ทเทล (Witchuwan Apartel)",
+      "zone": "ratchada",
+      "price_total": 7500,
+      "bedrooms": 1,
+      "size_sqm": 30,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "pool",
+        "gym",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/jJcHphuwPeemE2bXq52t.jpg",
+          "kind": "exterior",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/16752",
+          "bytes": 418392
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:16752-1br-30-r4",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/16752",
+      "seen_at": "2026-11-26",
+      "building_slug": "witchuwan-apartel-ratchada3",
+      "building_name": "วิชชุวรรณ อพาร์ทเทล (Witchuwan Apartel)",
+      "zone": "ratchada",
+      "price_total": 11500,
+      "bedrooms": 1,
+      "size_sqm": 30,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "pool",
+        "gym",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/jJcHphuwPeemE2bXq52t.jpg",
+          "kind": "exterior",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/16752",
+          "bytes": 418392
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:16752-1br-60-r5",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/16752",
+      "seen_at": "2026-11-26",
+      "building_slug": "witchuwan-apartel-ratchada3",
+      "building_name": "วิชชุวรรณ อพาร์ทเทล (Witchuwan Apartel)",
+      "zone": "ratchada",
+      "price_total": 17000,
+      "bedrooms": 1,
+      "size_sqm": 60,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "pool",
+        "gym",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/jJcHphuwPeemE2bXq52t.jpg",
+          "kind": "exterior",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/16752",
+          "bytes": 418392
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:16752-2br-90-r6",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/16752",
+      "seen_at": "2026-11-26",
+      "building_slug": "witchuwan-apartel-ratchada3",
+      "building_name": "วิชชุวรรณ อพาร์ทเทล (Witchuwan Apartel)",
+      "zone": "ratchada",
+      "price_total": 28000,
+      "bedrooms": 2,
+      "size_sqm": 90,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "pool",
+        "gym",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/jJcHphuwPeemE2bXq52t.jpg",
+          "kind": "exterior",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/16752",
+          "bytes": 418392
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:35185-studio-20-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/35185",
+      "seen_at": "2026-11-26",
+      "building_slug": "summer-house-asok-dindaeng",
+      "building_name": "Summer House (ซัมเมอร์ เฮ้าส์) อโศก-ดินแดง",
+      "zone": "dindaeng",
+      "price_total": 6500,
+      "bedrooms": 0,
+      "size_sqm": 20,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201703/20170320/3XietZd7URB67NNvQ6TP.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/35185",
+          "bytes": 41025
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:48064-studio-19-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/48064",
+      "seen_at": "2026-11-26",
+      "building_slug": "comma-living-dindaeng",
+      "building_name": "คอมม่า ลิฟวิ่ง (Comma Living)",
+      "zone": "dindaeng",
+      "price_total": 8500,
+      "bedrooms": 0,
+      "size_sqm": 19,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201902/20190220/1tnyKKeT9eAUAnBr8tHp.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/48064",
+          "bytes": 67345
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:48064-1br-28-r3",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/48064",
+      "seen_at": "2026-11-26",
+      "building_slug": "comma-living-dindaeng",
+      "building_name": "คอมม่า ลิฟวิ่ง (Comma Living)",
+      "zone": "dindaeng",
+      "price_total": 10000,
+      "bedrooms": 1,
+      "size_sqm": 28,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201902/20190220/1tnyKKeT9eAUAnBr8tHp.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/48064",
+          "bytes": 67345
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:57681-studio-30-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/57681",
+      "seen_at": "2026-11-26",
+      "building_slug": "pk-court-ratchada3",
+      "building_name": "PK Court รัชดา ซอย 3 (พีเค คอร์ท)",
+      "zone": "ratchada",
+      "price_total": 8000,
+      "bedrooms": 0,
+      "size_sqm": 30.4,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210116/dehiRQS9xeDhd1xS8d5m.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/57681",
+          "bytes": 60594
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:57681-1br-52-r3",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/57681",
+      "seen_at": "2026-11-26",
+      "building_slug": "pk-court-ratchada3",
+      "building_name": "PK Court รัชดา ซอย 3 (พีเค คอร์ท)",
+      "zone": "ratchada",
+      "price_total": 12000,
+      "bedrooms": 1,
+      "size_sqm": 52,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210116/dehiRQS9xeDhd1xS8d5m.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/57681",
+          "bytes": 60594
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:51620-studio-25-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/51620",
+      "seen_at": "2026-11-26",
+      "building_slug": "jitrapha-mansion-thonglor25",
+      "building_name": "จิตราภาแมนชั่น ทองหล่อ 25",
+      "zone": "other",
+      "price_total": 6500,
+      "bedrooms": 0,
+      "size_sqm": 25,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210604/1A3aCyTjjXCp68j3pWPs.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/51620",
+          "bytes": 44027
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:51620-studio-30-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/51620",
+      "seen_at": "2026-11-26",
+      "building_slug": "jitrapha-mansion-thonglor25",
+      "building_name": "จิตราภาแมนชั่น ทองหล่อ 25",
+      "zone": "other",
+      "price_total": 8000,
+      "bedrooms": 0,
+      "size_sqm": 30,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210604/1A3aCyTjjXCp68j3pWPs.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/51620",
+          "bytes": 44027
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:51620-studio-40-r3",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/51620",
+      "seen_at": "2026-11-26",
+      "building_slug": "jitrapha-mansion-thonglor25",
+      "building_name": "จิตราภาแมนชั่น ทองหล่อ 25",
+      "zone": "other",
+      "price_total": 10000,
+      "bedrooms": 0,
+      "size_sqm": 40,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210604/1A3aCyTjjXCp68j3pWPs.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/51620",
+          "bytes": 44027
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:63443-1br-26-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/63443",
+      "seen_at": "2026-11-26",
+      "building_slug": "s23-dorm-sukhumvit23",
+      "building_name": "S23 หอพักห้องเช่ารายเดือน (สุขุมวิท 23)",
+      "zone": "asoke",
+      "price_total": 11000,
+      "bedrooms": 1,
+      "size_sqm": 26,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "walk_swu",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202206/20220613/cyWH97qy8Kn6yXQ6UgmS.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63443",
+          "bytes": 47092
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:49837-1br-40-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/49837",
+      "seen_at": "2026-11-26",
+      "building_slug": "sino-19-apartment",
+      "building_name": "Sino 19 Apartment",
+      "zone": "asoke",
+      "price_total": 16000,
+      "bedrooms": 1,
+      "size_sqm": 40,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "walk_swu",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201906/20190618/Y3cM3iA8AUvvC6nvVAKi.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/49837",
+          "bytes": 49381
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:49837-studio-20-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/49837",
+      "seen_at": "2026-11-26",
+      "building_slug": "sino-19-apartment",
+      "building_name": "Sino 19 Apartment",
+      "zone": "asoke",
+      "price_total": 11000,
+      "bedrooms": 0,
+      "size_sqm": 20,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security",
+        "walk_swu",
+        "near_mrt"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201906/20190618/Y3cM3iA8AUvvC6nvVAKi.jpg",
+          "kind": "room",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/49837",
+          "bytes": 49381
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:61002-studio-23-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/61002",
+      "seen_at": "2026-11-27",
+      "building_slug": "summer-place-huaikwang",
+      "building_name": "ซัมเมอร์แมนชั่น / Summer Place",
+      "zone": "huaikwang",
+      "price_total": 6000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 23.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/TX7mqcC9mTPeVx6Qn1pP.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/aGQxC5KYa7i3fX94FVF8.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/rWQVm6aS926Ycw6CqvPH.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/r3rY2pBgHWN26ZxV5GA7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:61002-studio-24-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/61002",
+      "seen_at": "2026-11-27",
+      "building_slug": "summer-place-huaikwang",
+      "building_name": "ซัมเมอร์แมนชั่น / Summer Place",
+      "zone": "huaikwang",
+      "price_total": 6500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 24.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/TX7mqcC9mTPeVx6Qn1pP.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/aGQxC5KYa7i3fX94FVF8.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/rWQVm6aS926Ycw6CqvPH.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/r3rY2pBgHWN26ZxV5GA7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:61002-studio-25-r3",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/61002",
+      "seen_at": "2026-11-27",
+      "building_slug": "summer-place-huaikwang",
+      "building_name": "ซัมเมอร์แมนชั่น / Summer Place",
+      "zone": "huaikwang",
+      "price_total": 7000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 25.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/TX7mqcC9mTPeVx6Qn1pP.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/aGQxC5KYa7i3fX94FVF8.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/rWQVm6aS926Ycw6CqvPH.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/r3rY2pBgHWN26ZxV5GA7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:61002-studio-28-r4",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/61002",
+      "seen_at": "2026-11-27",
+      "building_slug": "summer-place-huaikwang",
+      "building_name": "ซัมเมอร์แมนชั่น / Summer Place",
+      "zone": "huaikwang",
+      "price_total": 7500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 28.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/TX7mqcC9mTPeVx6Qn1pP.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/aGQxC5KYa7i3fX94FVF8.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/rWQVm6aS926Ycw6CqvPH.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/r3rY2pBgHWN26ZxV5GA7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:61002-studio-30-r5",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/61002",
+      "seen_at": "2026-11-27",
+      "building_slug": "summer-place-huaikwang",
+      "building_name": "ซัมเมอร์แมนชั่น / Summer Place",
+      "zone": "huaikwang",
+      "price_total": 7500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 30.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/TX7mqcC9mTPeVx6Qn1pP.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/aGQxC5KYa7i3fX94FVF8.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/rWQVm6aS926Ycw6CqvPH.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/r3rY2pBgHWN26ZxV5GA7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/61002"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:55688-1br-39-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/55688",
+      "seen_at": "2026-11-27",
+      "building_slug": "swu-female-dorm-asoke",
+      "building_name": "หอพักสตรี มศว อโศก (สุขุมวิท 23)",
+      "zone": "asoke",
+      "price_total": 9000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 39.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "walk_swu",
+        "near_mrt",
+        "furnished"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200714/t1yPh6nNQdfcDdMhMrvu.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/55688"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200714/KMsP4zEzWQqqtCFVCcxw.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/55688"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200714/jeQEpLtuLZdqiyc5Ufbn.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/55688"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200714/ZTZNJ578XpeKfXH5YSeq.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/55688"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:67282-studio-30-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/67282",
+      "seen_at": "2026-11-27",
+      "building_slug": "sino-23-apartment",
+      "building_name": "Sino 23 Apartment (สุขุมวิท 23)",
+      "zone": "asoke",
+      "price_total": 13000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 30.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "walk_swu",
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202402/20240219/pRSR5iHc8EeYH2jtaCvD.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/67282"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202402/20240219/EHfRCgQrHQxdHHhbLj6H.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/67282"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202402/20240219/pd5X7zezx5Zi8k5wuAsb.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/67282"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202402/20240219/fgFjHAAk44hVq3x8bhFq.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/67282"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:13919-1br-40-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/13919",
+      "seen_at": "2026-11-27",
+      "building_slug": "my-home22-female-dorm",
+      "building_name": "MY HOME 22 หอพักสตรี (สุขุมวิท 22)",
+      "zone": "asoke",
+      "price_total": 11000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 40.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170919/RhoTBo8FH9v9nS7nhRxD.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/13919"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170919/f7DRHq9F49TU9JZTN6fF.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/13919"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170919/rwhJzUffg2ZZqUFa2DRq.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/13919"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201708/20170822/Mf15bYwr6ux1xCHUYp1h.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/13919"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:70466-studio-20-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/70466",
+      "seen_at": "2026-11-27",
+      "building_slug": "thongcharoen-dorm-phetchaburi40",
+      "building_name": "หอพักทองเจริญ (ซอยเพชรบุรี 40)",
+      "zone": "asoke",
+      "price_total": 3300,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 20.0,
+      "floor": null,
+      "furnished": false,
+      "amenities": [
+        "security"
+      ],
+      "min_contract_months": 6,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202512/20251203/KLWJx15izA2V8uybb8QR.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/70466"
+        },
+        {
+          "url": "https://img-listing.living.horga.app/unsafe/720x480/https%3A%2F%2Fcloud.horganice.in.th%2Fparse%2Ffiles%2FiIJQTo6dIAPlr7QIxJvvnLaHghO9dkzLmwOslUjb%2Fd3f6bd4e1c8f3e3847c44efa80ded8f7_image-5f7088a759843e621880975725c7c930.jpeg",
+          "credit": "Horga",
+          "source_url": "https://find.living.horga.co/p/tDAYQrT19N"
+        },
+        {
+          "url": "https://img-listing.living.horga.app/unsafe/720x480/https%3A%2F%2Fcloud.horganice.in.th%2Fparse%2Ffiles%2FiIJQTo6dIAPlr7QIxJvvnLaHghO9dkzLmwOslUjb%2F735786c09a70c35230e65e7c4c35bbf2_image-ef181a656d0a9e9f597f14ad092b49fe.jpeg",
+          "credit": "Horga",
+          "source_url": "https://find.living.horga.co/p/tDAYQrT19N"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:64379-1br-25-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/64379",
+      "seen_at": "2026-11-27",
+      "building_slug": "chok-residence-rama9",
+      "building_name": "โชคเรสซิเดนท์ (อโศก-พระราม 9)",
+      "zone": "rama9",
+      "price_total": 4500,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 25.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202210/20221004/edxMfgLDZMcvLDAcLFkX.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64379"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201411/20141115/hK99331YG7oknW1vo3N7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64379"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201702/20170227/v8QdEGWcGQvbyAzzC9Ym.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64379"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202210/20221004/7XGxFZ6NSWAYav5PWY1D.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64379"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:43061-1br-20-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/43061",
+      "seen_at": "2026-11-27",
+      "building_slug": "ratchada3-residence",
+      "building_name": "รัชดา 3 เรสซิเด้นท์ (รัชดา ซอย 3)",
+      "zone": "ratchada",
+      "price_total": 6800,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 20.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201804/20180403/aZFeRB51UsvhbMTKW6jU.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/43061"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202405/20240522/v3zyZtFge3XK3kv1KkLr.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/43061"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201804/20180403/AF7fh7zbE7REZGxtMF3p.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/43061"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201804/20180403/eA3ZvrEwGX654Qb6odWG.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/43061"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:60739-studio-28-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/60739",
+      "seen_at": "2026-11-27",
+      "building_slug": "sea-of-love-mansion-ratchada3",
+      "building_name": "ซีออฟเลิฟแมนชั่น (รัชดา ซอย 3)",
+      "zone": "ratchada",
+      "price_total": 5500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 28.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202111/20211101/yr9HCWWqEhwEcXXZoUYN.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60739"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220422/QEYABAutjvBgZx8xjxdg.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60739"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220422/JQnDemufaYTsC12pn4jZ.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60739"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202210/20221026/E8uTSBvX4HC8gocWS7aY.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60739"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:14579-studio-20-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/14579",
+      "seen_at": "2026-11-27",
+      "building_slug": "wimonrat-apartment-ratchada",
+      "building_name": "วิมลรัตน์ อพาร์ทเมนต์ (หลังบิ๊กซีรัชดา)",
+      "zone": "ratchada",
+      "price_total": 3500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 20.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "near_mrt",
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202103/20210309/DivzKRbzozGGUUMLkxGY.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/14579"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202103/20210309/wXdQfPiavBeCzXbLBhQQ.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/14579"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202103/20210309/tTHh2HbddsmTDrgdw1Wx.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/14579"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202103/20210309/xeeyZs9GsU1H9ecD6vmv.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/14579"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:62605-studio-18-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/62605",
+      "seen_at": "2026-11-27",
+      "building_slug": "pk-house-dindaeng",
+      "building_name": "PK House (ดินแดง-รัชดา-พระราม 9)",
+      "zone": "dindaeng",
+      "price_total": 6000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 18.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/3XqWewT6gRQS4xc5Fvio.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/9gmZMBRNxAssbtzSj9j2.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/zNpSkPskB9rDUchqH1MZ.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/NFfut7ginRa34qgvm2Cf.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:62605-studio-19-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/62605",
+      "seen_at": "2026-11-27",
+      "building_slug": "pk-house-dindaeng",
+      "building_name": "PK House (ดินแดง-รัชดา-พระราม 9)",
+      "zone": "dindaeng",
+      "price_total": 6500,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 19.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/3XqWewT6gRQS4xc5Fvio.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/9gmZMBRNxAssbtzSj9j2.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/zNpSkPskB9rDUchqH1MZ.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/NFfut7ginRa34qgvm2Cf.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:62605-studio-23-r3",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/62605",
+      "seen_at": "2026-11-27",
+      "building_slug": "pk-house-dindaeng",
+      "building_name": "PK House (ดินแดง-รัชดา-พระราม 9)",
+      "zone": "dindaeng",
+      "price_total": 7000,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 23.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/3XqWewT6gRQS4xc5Fvio.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/9gmZMBRNxAssbtzSj9j2.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/zNpSkPskB9rDUchqH1MZ.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/NFfut7ginRa34qgvm2Cf.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:62605-1br-29-r4",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/62605",
+      "seen_at": "2026-11-27",
+      "building_slug": "pk-house-dindaeng",
+      "building_name": "PK House (ดินแดง-รัชดา-พระราม 9)",
+      "zone": "dindaeng",
+      "price_total": 7000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 29.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/3XqWewT6gRQS4xc5Fvio.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/9gmZMBRNxAssbtzSj9j2.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/zNpSkPskB9rDUchqH1MZ.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/NFfut7ginRa34qgvm2Cf.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/62605"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:69176-1br-28-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/69176",
+      "seen_at": "2026-11-27",
+      "building_slug": "ngernyuang-apartment-dindaeng",
+      "building_name": "เงินยวงอพาร์ทเม้นท์ (ประชาสงเคราะห์ 10)",
+      "zone": "dindaeng",
+      "price_total": 4500,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 28.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/qKxAN3HJESAW8T3UYXDo.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/yGYCJm3EirkCVQqRbaRD.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/dpq2kWBkBasHSbaGhxLY.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/riurYKU682Wi24p2Lza7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:69176-1br-28-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/69176",
+      "seen_at": "2026-11-27",
+      "building_slug": "ngernyuang-apartment-dindaeng",
+      "building_name": "เงินยวงอพาร์ทเม้นท์ (ประชาสงเคราะห์ 10)",
+      "zone": "dindaeng",
+      "price_total": 5500,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 28.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 2,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/qKxAN3HJESAW8T3UYXDo.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/yGYCJm3EirkCVQqRbaRD.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/dpq2kWBkBasHSbaGhxLY.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/riurYKU682Wi24p2Lza7.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/69176"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:64309-1br-18-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/64309",
+      "seen_at": "2026-11-27",
+      "building_slug": "chumchuen-rooms-dindaeng",
+      "building_name": "ชุ่มชื่น ห้องพัก (อโศก-ดินแดง)",
+      "zone": "dindaeng",
+      "price_total": 2700,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 18.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/qVPiFdCrpcHL1K846waN.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/jcGTv7guxRCzs72yNJMY.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/kvQr3R41TvdQzqpijBC4.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/jXHaufdDm7mQp7abAUFf.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:64309-1br-18-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/64309",
+      "seen_at": "2026-11-27",
+      "building_slug": "chumchuen-rooms-dindaeng",
+      "building_name": "ชุ่มชื่น ห้องพัก (อโศก-ดินแดง)",
+      "zone": "dindaeng",
+      "price_total": 3300,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 18.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": 1,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/qVPiFdCrpcHL1K846waN.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/jcGTv7guxRCzs72yNJMY.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/kvQr3R41TvdQzqpijBC4.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/jXHaufdDm7mQp7abAUFf.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/64309"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:63221-1br-5-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/63221",
+      "seen_at": "2026-11-27",
+      "building_slug": "lek-dorm-dindaeng",
+      "building_name": "เล็กหอพัก (ดินแดง ซอยเหมวงศ์)",
+      "zone": "dindaeng",
+      "price_total": 2900,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 5.0,
+      "floor": null,
+      "furnished": false,
+      "amenities": [
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/NyrqHzUgcR8Nb2FcZ5T9.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/d1D9Aj948NvNhnRU6fMn.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/e5FLy4PAFGef7qAM5v37.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/TvoqXK5u4zZwJCf5ki3k.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:63221-1br-5-r2",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/63221",
+      "seen_at": "2026-11-27",
+      "building_slug": "lek-dorm-dindaeng",
+      "building_name": "เล็กหอพัก (ดินแดง ซอยเหมวงศ์)",
+      "zone": "dindaeng",
+      "price_total": 3000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "size_sqm": 5.0,
+      "floor": null,
+      "furnished": false,
+      "amenities": [
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": 1,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/NyrqHzUgcR8Nb2FcZ5T9.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/d1D9Aj948NvNhnRU6fMn.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/e5FLy4PAFGef7qAM5v37.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/TvoqXK5u4zZwJCf5ki3k.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/63221"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:60072-studio-21-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/60072",
+      "seen_at": "2026-11-27",
+      "building_slug": "orange-place-thonglor",
+      "building_name": "ออเรนจ์เพลส (สุขุมวิท 49/6 ซอยพร้อมพรรค)",
+      "zone": "other",
+      "price_total": 3800,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 21.0,
+      "floor": null,
+      "furnished": false,
+      "amenities": [
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202105/20210521/BcGWndfpoTfLfYBb8jZq.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60072"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202105/20210521/KDPYq7JdbXT2sxTrhesp.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60072"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202105/20210521/Kkev5eBjT6hVgdL1kN46.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60072"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202105/20210521/y6GaWgPSzP7cmpQfvreK.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/60072"
+        }
+      ]
+    },
+    {
+      "ext_id": "renthub:37596-studio-20-r1",
+      "source": "Renthub",
+      "source_url": "https://www.renthub.in.th/37596",
+      "seen_at": "2026-11-27",
+      "building_slug": "ka-apartment-thonglor25",
+      "building_name": "เค แอนด์ เอ อพาร์ตเม้นต์ (ทองหล่อ 25)",
+      "zone": "other",
+      "price_total": 5600,
+      "bedrooms": 0,
+      "bathrooms": 1,
+      "size_sqm": 20.0,
+      "floor": null,
+      "furnished": true,
+      "amenities": [
+        "furnished",
+        "security"
+      ],
+      "min_contract_months": null,
+      "deposit_months": null,
+      "advance_months": null,
+      "available_from": null,
+      "photos": [
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/201811/20181117/1q1mp3fWxeCn9wshEYHr.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/37596"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202502/20250222/CDiQm2GyqximoQqdtQwN.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/37596"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202502/20250222/8fBTGZUgBgoDz8kyvRbM.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/37596"
+        },
+        {
+          "url": "https://bcdn.renthub.in.th/listing_picture/202502/20250222/CtCSpZvEJAMnCd4RZPLp.jpg",
+          "credit": "Renthub",
+          "source_url": "https://www.renthub.in.th/37596"
+        }
+      ]
+    }
+  ]
+}

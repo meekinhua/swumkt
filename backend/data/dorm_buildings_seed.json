@@ -1,0 +1,1917 @@
+[
+  {
+    "slug": "sukhumvit-living-town",
+    "name": "Sukhumvit Living Town",
+    "type": "condo",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "ตรงข้าม มศว ประตู 5, MRT เพชรบุรี",
+    "price_seen": "2 ห้องนอน 20,000/เดือน (หาร 3 = ~5,000–6,700/คน)",
+    "pros": [
+      "เดินข้ามถนนเข้ามอได้",
+      "สระ ฟิตเนส ซาวน่า",
+      "ร้านซักผ้า/ซูเปอร์ใต้ตึก",
+      "ห้องกว้างกว่าคอนโดใหม่ในย่านเดียวกัน",
+      "ที่จอดรถเยอะ (>100%)"
+    ],
+    "cons": [
+      "ตึกอายุเกิน 10 ปี ต้องตรวจสภาพห้องและท่อก่อนเช่า",
+      "ถนนอโศกมนตรีรถติดหนักช่วงเร่งด่วน"
+    ],
+    "aliases": [
+      "sukhumvit living",
+      "สุขุมวิท ลิฟวิ่ง"
+    ],
+    "minutes_to_swu": 3,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/merger-86922/d7242097edf2f1e905b79230d916502c.jpg",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/sukhumvit-living-town/",
+        "bytes": 173365
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "คอนโดรุ่นเก๋าติดถนนอโศกตรงข้าม มศว จุดเด่นคือห้องขนาดใหญ่และราคาต่อตร.ม. คุ้มกว่าคอนโดใหม่ แต่ตึกมีอายุ ควรเช็กสภาพแอร์และระบบน้ำก่อนทำสัญญา",
+    "web_review_sources": [
+      "Pantip",
+      "เว็บรีวิวอสังหาฯ"
+    ]
+  },
+  {
+    "slug": "my-resort-bangkok",
+    "name": "My Resort Bangkok",
+    "type": "condo",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "ติด มศว, MRT เพชรบุรี, ARL มักกะสัน, ท่าเรือคลองแสนแสบ",
+    "price_seen": "หาร 4 คน ~4,750/คน (ไม่รวมน้ำไฟ)",
+    "pros": [
+      "เดินเข้ามอได้",
+      "นักศึกษาอยู่เยอะ",
+      "รปภ. 24 ชม. สแกนนิ้ว",
+      "ห้องใหญ่ 1-2 นอนอยู่สบาย",
+      "ยูนิตต่อชั้นน้อย ค่อนข้างเป็นส่วนตัว",
+      "ใกล้ Singha Complex ของกินเยอะ"
+    ],
+    "cons": [
+      "ตึกสร้างมานาน ส่วนกลางไม่โมเดิร์นเท่าคอนโดใหม่",
+      "แยกอโศก-เพชรบุรีรถติดช่วงเช้า-เย็น"
+    ],
+    "aliases": [
+      "my resort",
+      "มายรีสอร์ท"
+    ],
+    "minutes_to_swu": 5,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://cdn.fazwaz.com/wbr/MGnl0iOl_e6mFc63b74J6S-PpMc/0x0/project/3391/exterior3.jpg",
+        "kind": "exterior",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/my-resort-bangkok",
+        "bytes": 135242
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/TPY3F9W5HvUgrHsnQWe-Uz-bVfs/0x0/project/3391/exterior1.jpg",
+        "kind": "facility",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/my-resort-bangkok",
+        "bytes": 148703
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/IRVgpzFcLLY7jBiYreVNfgjpZBQ/0x0/gallery/141754/my-resort-bangkok-1-bedroom-u626446-08192020-132614.jpg",
+        "kind": "room",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/my-resort-bangkok",
+        "bytes": 291736
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "ยอดนิยมของนิสิต มศว เพราะเดินไปมอและ MRT เพชรบุรีได้สะดวก ห้องกว้างและยูนิตต่อชั้นไม่แออัด แต่ดีไซน์และส่วนกลางจะออกแนวตึกอายุเกิน 10 ปี",
+    "web_review_sources": [
+      "Pantip",
+      "FazWaz"
+    ]
+  },
+  {
+    "slug": "life-asoke",
+    "name": "Life Asoke - Rama 9",
+    "type": "condo",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "MRT เพชรบุรี, ARL มักกะสัน",
+    "price_seen": "2 ห้องนอน หาร 3–4 คน",
+    "pros": [
+      "ตึกใหม่ ปลอดภัย",
+      "มี 7-11 ในโครงการ",
+      "เดินทางสะดวก",
+      "ส่วนกลางและสระว่ายน้ำใหญ่ ทันสมัย",
+      "ใกล้ MRT พระราม 9 และ ARL มักกะสัน"
+    ],
+    "cons": [
+      "ยูนิตเยอะกว่า 2,000 ห้อง ช่วงเร่งด่วนรอลิฟต์นาน",
+      "หน้าโครงการรถติดสะสมช่วงเช้า-เย็น"
+    ],
+    "aliases": [
+      "life asoke",
+      "life asok",
+      "ไลฟ์ อโศก"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://cdn.fazwaz.com/wbr/83tbQtXxbCZeQwpIVDMznXV1HXk/0x0/project/4841/life-ramanine-7_1.jpg",
+        "kind": "exterior",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/ratchathewi/makkasan/life-asoke-rama-9",
+        "bytes": 186480
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/JoG9fe-yTwf9k5qfBfCqxFu-7XQ/0x0/project/4841/life-ramanine-376_1.jpg",
+        "kind": "facility",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/ratchathewi/makkasan/life-asoke-rama-9",
+        "bytes": 72250
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5765/d44d5bc36f0a7f3eaeb147efedf33e27.png",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/life-asoke-rama-9/",
+        "bytes": 2264492
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5765/69e58452797f1adf3a859bbc6c87ff4a.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/life-asoke-rama-9/",
+        "bytes": 2190459
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5765/323530bd11d3d0d98dc905dbe52bd8b0.png",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/life-asoke-rama-9/",
+        "bytes": 2101654
+      }
+    ],
+    "official_url": "https://www.apthai.com/en/condominium/life-asoke-rama-9",
+    "web_review_summary": "ตึกใหญ่ส่วนกลางครบและดูทันสมัย ใกล้รถไฟฟ้าหลายสาย แต่ความหนาแน่นสูงและช่วงเร่งด่วนอาจรอลิฟต์หรือส่วนกลางแน่น",
+    "web_review_sources": [
+      "Pantip",
+      "ThinkOfLiving"
+    ]
+  },
+  {
+    "slug": "supalai-premier-asoke",
+    "name": "Supalai Premier @Asoke",
+    "type": "condo",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "แถว MRT เพชรบุรี",
+    "price_seen": "",
+    "pros": [
+      "ใกล้ MRT เพชรบุรี ~200 ม. เดินเข้า มศว ได้",
+      "ห้องกว้างฝ้าสูง 2.7 ม. คุ้มราคา",
+      "นิติและโครงสร้างตึกดูแลดี"
+    ],
+    "cons": [
+      "ติดแยกอโศก-เพชรบุรี รถติดมากช่วงเร่งด่วน",
+      "ตึกอายุเกิน 10 ปี บางห้องต้องดูสภาพรีโนเวท"
+    ],
+    "aliases": [
+      "supalai",
+      "ศุภาลัย"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/link-6441965/ef8a7a4436e318de93a9cf412689176f.jpg",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/supalai-premier-asoke/",
+        "bytes": 38568
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/link-6441965/b4af8175aec27366442907c892df25e7.jpg",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/supalai-premier-asoke/",
+        "bytes": 39080
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/link-6441965/0a7f60a820b8fdf944af1128dab02ce8.jpg",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/supalai-premier-asoke/",
+        "bytes": 28567
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "ได้ห้องกว้างและนิติบุคคลมาตรฐานศุภาลัยในทำเลติดแยกอโศก-เพชรบุรี เดินไป MRT และ มศว ง่าย แต่ถ้าใช้รถส่วนตัวจะเจอรถติดหน้าแยกหนัก",
+    "web_review_sources": [
+      "Pantip",
+      "ThinkOfLiving"
+    ]
+  },
+  {
+    "slug": "ideo-mobi-asoke",
+    "name": "Ideo Mobi Asoke",
+    "type": "condo",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "แถว MRT เพชรบุรี",
+    "price_seen": "ทั้งห้อง ~14,000",
+    "pros": [
+      "ยูนิตไม่เยอะ (~507 ยูนิต) เป็นส่วนตัว",
+      "ใกล้ MRT เพชรบุรี ~300 ม. และ Singha Complex",
+      "ฝ้าเพดานสูง 2.7 ม. ดีไซน์โมเดิร์น"
+    ],
+    "cons": [
+      "ค่าเช่าต่อตร.ม. ค่อนข้างสูง",
+      "บางฝั่งมีตึกสูงระยะประชิด ต้องเช็กวิวก่อน",
+      "ที่จอดรถประมาณ 48%"
+    ],
+    "aliases": [
+      "ideo mobi",
+      "ไอดีโอ โมบิ"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://cdn.fazwaz.com/wbr/pYIOKTyAGNzd438InZn6jA26DaE/0x0/project/4643/3_1.jpg",
+        "kind": "exterior",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/ideo-mobi-asoke",
+        "bytes": 38598
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5984/7bc0312a91acaf7c654e971ca8a1765a.png",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/ideo-mobi-asoke/",
+        "bytes": 4327515
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/jSzxXEm1z8Pza5AMIUFAJkr9z8M/0x0/project/4643/asoke-mobi-thumb-detail.jpg",
+        "kind": "facility",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/ideo-mobi-asoke",
+        "bytes": 155170
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5984/7e707f1480be90cd748e7c83d0d4f5ff.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/ideo-mobi-asoke/",
+        "bytes": 2084508
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5984/9a8a39b791f105af1bddc20f5a4abe27.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/ideo-mobi-asoke/",
+        "bytes": 3880628
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "คอนโดดีไซน์โมเดิร์นใกล้ มศว และ Singha Complex ยูนิตไม่หนาแน่น เหมาะกับคนใช้ MRT เป็นหลัก แต่ราคาค่อนข้างสูงและบางห้องอาจโดนตึกข้างเคียงบังวิว",
+    "web_review_sources": [
+      "Pantip",
+      "ThinkOfLiving"
+    ]
+  },
+  {
+    "slug": "rhythm-asoke",
+    "name": "Rhythm Asoke",
+    "type": "condo",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "transit": "เดินไป MRT ได้ไม่กี่นาที",
+    "price_seen": "1 ห้องนอน 35 ตร.ม. ~18,000",
+    "pros": [
+      "high rise",
+      "ใกล้ MRT",
+      "ใกล้ MRT พระราม 9 และ ARL มักกะสัน",
+      "ยูนิตไม่หนาแน่นมากเมื่อเทียบกับตึกใหญ่แถวนั้น"
+    ],
+    "cons": [
+      "รอลิฟต์นาน",
+      "ห้องค่อนข้างเล็ก",
+      "ห้องเริ่มต้นขนาดกะทัดรัด",
+      "ติดถนนอโศก-ดินแดง เสียงรถและรถติดช่วงเร่งด่วน"
+    ],
+    "aliases": [
+      "rhythm",
+      "ริทึ่ม",
+      "ริทึม"
+    ],
+    "minutes_to_swu": 15,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/2777/63c4fb21aec90640aef58ca47d94a951.png",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/rhythm-asoke/",
+        "bytes": 375335
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/2777/d6d111b4a98b43ee154c66489bf9f008.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/rhythm-asoke/",
+        "bytes": 336693
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/2777/c6b27b15ed59efb1dca94a19662b26a4.png",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/rhythm-asoke/",
+        "bytes": 379161
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "คอนโดทำเลดีโซนพระราม 9–อโศก เดินทางด้วย MRT สะดวก แต่ห้องไซส์เล็กและควรเช็กทิศห้องเรื่องเสียงจากถนนใหญ่",
+    "web_review_sources": [
+      "Pantip",
+      "เว็บรีวิวอสังหาฯ"
+    ]
+  },
+  {
+    "slug": "a-space-asoke-ratchada",
+    "name": "A Space Asoke-Ratchada",
+    "type": "condo",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "transit": "ห่าง MRT พระราม 9 ~600 ม.",
+    "price_seen": "1 ห้องนอน 11,000 (หาร 3 = ~3,700/คน)",
+    "pros": [
+      "7-11 ในโครงการ",
+      "ฟู้ดทรัค ของกินเยอะ",
+      "สระ ฟิตเนส",
+      "สระว่ายน้ำยาว บรรยากาศร่มรื่น",
+      "ราคาจับต้องได้เมื่อเทียบกับทำเลพระราม 9"
+    ],
+    "cons": [
+      "ตึกค่อนข้างเก่า (มีคนถาม)",
+      "เข้าซอยและต้องเดิน/นั่งวินไป MRT",
+      "ตึกสร้างมานาน ควรตรวจสภาพห้องจริง"
+    ],
+    "aliases": [
+      "a space",
+      "เอสเปซ"
+    ],
+    "minutes_to_swu": 15,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/474/c28a12f13acc401cc5d5a7d7f866f62d.jpg",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/a-space-asoke-ratchada/",
+        "bytes": 196347
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/474/3acf98792a4e11f3e4649be4040f97ac.jpg",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/a-space-asoke-ratchada/",
+        "bytes": 214186
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/474/bf2b4dfc022915a5be5f20f596c5814f.jpg",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/a-space-asoke-ratchada/",
+        "bytes": 287247
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "คอนโดโลว์ไรส์หลายอาคาร บรรยากาศเงียบและค่าเช่าคุ้มค่าในโซนพระราม 9 แต่ต้องเผื่อเวลาเดินหรือต่อวินออกไป MRT",
+    "web_review_sources": [
+      "Pantip",
+      "เว็บรีวิวอสังหาฯ"
+    ]
+  },
+  {
+    "slug": "aspire-asoke-ratchada",
+    "name": "Aspire Asoke-Ratchada",
+    "type": "condo",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "transit": "มีรถชัทเทิล, วินหน้าคอนโดไปมอ ~20 บาท",
+    "price_seen": "",
+    "pros": [
+      "สระ 2 สระ ยิม ซาวน่า",
+      "อาหารในซอยเยอะ",
+      "ใกล้แยกพระราม 9 และเซ็นทรัลพระราม 9",
+      "มีส่วนกลางครบตามมาตรฐาน AP"
+    ],
+    "cons": [
+      "รถชัทเทิลเสียบ่อย รอนาน",
+      "ส่วนกลางเริ่มชำรุด",
+      "นิติชุดปัจจุบันไม่ดีเท่าเดิม",
+      "ซอยเข้า-ออกแคบและรถติดช่วงเร่งด่วน",
+      "ยูนิตเยอะในหลายอาคาร"
+    ],
+    "aliases": [
+      "aspire",
+      "แอสปาย"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/6894/f8dda3812927fae7688b435ed16f57b1.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/aspire-asoke-ratchada/",
+        "bytes": 642858
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/6894/c8220171a3f3039c0a770ee298806b64.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/aspire-asoke-ratchada/",
+        "bytes": 536968
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/6894/00afceae4e534804e11337f3e690a264.png",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/aspire-asoke-ratchada/",
+        "bytes": 468718
+      }
+    ],
+    "official_url": "https://www.apthai.com/en/condominium/aspire-asoke-ratchada",
+    "web_review_summary": "เดินทางเข้าโซนพระราม 9–อโศกง่าย ของกินรอบซอยเยอะ แต่ควรดูเรื่องการเดินทางเข้าซอยและเช็กสภาพห้องแต่ละตึกให้ดี",
+    "web_review_sources": [
+      "Pantip",
+      "เว็บรีวิวอสังหาฯ"
+    ]
+  },
+  {
+    "slug": "pg-rama9",
+    "name": "PG Rama 9",
+    "type": "condo",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "transit": "มอไซค์ไปมอ ~5 นาที",
+    "price_seen": "1 ห้องนอน 42 ตร.ม. ~11,500",
+    "pros": [
+      "ห้องใหญ่",
+      "เดินไป MRT พระราม 9 แค่ ~200 ม.",
+      "ห้องกว้างและค่าเช่าย่อมเยากว่าตึกใหม่รอบแยก",
+      "ใกล้เซ็นทรัลพระราม 9 และฟอร์จูน"
+    ],
+    "cons": [
+      "ตึกมีอายุพอสมควร โถงและส่วนกลางเก่ากว่าตึกใหม่",
+      "ที่จอดรถจำกัด",
+      "ติดถนนใหญ่ อาจมีเสียงรถถ้าหันออกถนน"
+    ],
+    "aliases": [
+      "pg rama",
+      "pg condo",
+      "พีจี"
+    ],
+    "minutes_to_swu": 5,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://cdn.fazwaz.com/wbr/foMkaL2euGlDvEvG6u5jtplZhAI/0x0/project/3397/5b56e1d137497d7f0035ab38.jpg",
+        "kind": "exterior",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/huai-khwang/pg-rama-ix",
+        "bytes": 71905
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/RqE_moIFgknIeiqvv_J_1g1_Ji4/0x0/project/3397/7c1dc5ec36f66cf.jpg",
+        "kind": "facility",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/huai-khwang/pg-rama-ix",
+        "bytes": 67535
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/4nVUpeyLbf89CafexfeMe62XuLk/640x0/unit/1874762/s-34079191.jpg",
+        "kind": "room",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/huai-khwang/pg-rama-ix",
+        "bytes": 44596
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "จุดแข็งคือเดินถึง MRT พระราม 9 ใกล้มากและได้ห้องกว้างในงบประหยัด แต่ตัวตึกเก่ากว่าคอนโดรอบข้าง ควรดูห้องที่รีโนเวทแล้ว",
+    "web_review_sources": [
+      "Pantip",
+      "เว็บรีวิวอสังหาฯ"
+    ]
+  },
+  {
+    "slug": "lumpini-park-rama9",
+    "name": "Lumpini Park Rama 9 - Ratchada",
+    "type": "condo",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "transit": "แถว MRT พระราม 9",
+    "price_seen": "30 ตร.ม. ~13,000",
+    "pros": [
+      "สวนและพื้นที่สีเขียวกว้าง ลมพัดสบาย",
+      "นิติและระบบดูแลความปลอดภัยมาตรฐาน LPN",
+      "ของกินหาง่ายใกล้ย่าน RCA"
+    ],
+    "cons": [
+      "ห่าง MRT ~1.5 กม. ต้องต่อวินมอเตอร์ไซค์",
+      "ห้องบางฝั่งอาจได้ยินเสียงจาก RCA คืนวันหยุด",
+      "ยูนิตเยอะ (~1,500 ยูนิต) ช่วงเร่งด่วนลิฟต์แน่น"
+    ],
+    "aliases": [
+      "lumpini",
+      "ลุมพินี"
+    ],
+    "minutes_to_swu": 15,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://cdn.fazwaz.com/wbr/H1AwDdPdj-LVyQ_MSHSzXvf7BLs/0x0/project/3385/b8ceb665e53822f989f2e74c7c6c28d1.jpg",
+        "kind": "facility",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/lumpini-park-rama-9-ratchada",
+        "bytes": 77802
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/rruZHmsJhx2asRRwPP6GRi13miw/0x0/project/3385/4b8509db914688045fc634beb48b932f.jpg",
+        "kind": "exterior",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/lumpini-park-rama-9-ratchada",
+        "bytes": 50842
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/VUTiMtLIEELX6ZPVfqLXE6sR-jM/640x0/unit/1045868/337901.jpg",
+        "kind": "room",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/bang-kapi/lumpini-park-rama-9-ratchada",
+        "bytes": 26498
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "เด่นเรื่องสวนกว้าง บรรยากาศร่มรื่น และราคาย่อมเยา แต่ไม่ได้อยู่ในระยะเดินถึง MRT ต้องนั่งวินออกถนนใหญ่และเช็กทิศห้องเรื่องเสียงจาก RCA",
+    "web_review_sources": [
+      "Pantip",
+      "ThinkOfLiving"
+    ]
+  },
+  {
+    "slug": "ideo-rama9-asoke",
+    "name": "Ideo Rama 9 - Asoke",
+    "type": "condo",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "transit": "ใกล้ MRT พระราม 9",
+    "price_seen": "หารคนละ ~7,500 (ไม่รวมน้ำไฟ)",
+    "pros": [
+      "ส่วนกลางเยอะ (ห้องดูหนัง สระ ฟิตเนส)",
+      "7-11 ในคอนโด",
+      "ติดถนนใหญ่พระราม 9 เดินทางสะดวก",
+      "มีห้อง Hybrid เพดานสูง พื้นที่ใช้สอยคุ้ม",
+      "ยูนิตน้อยกว่า Life Asoke-Rama 9"
+    ],
+    "cons": [
+      "เดินไป MRT พระราม 9 ค่อนข้างร้อนช่วงกลางวัน",
+      "ช่วงเร่งด่วนถนนพระราม 9 รถติดหนัก"
+    ],
+    "aliases": [
+      "ideo rama 9",
+      "ideo พระราม 9"
+    ],
+    "minutes_to_swu": 15,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/6437/0be500bcc35bdc838c039f6adea2439e.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/ideo-rama-9-asoke/",
+        "bytes": 2343570
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/j6jCIYF2TigV6FleSMLky9Np1z4/0x0/project/11634/screenshot-2023-06-27-095214.jpg",
+        "kind": "exterior",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/huai-khwang/ideo-rama-9-asoke",
+        "bytes": 106054
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/6437/08ef3698ef1b71445f492a81a0dcd27d.png",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/ideo-rama-9-asoke/",
+        "bytes": 3190911
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/6437/31554719b0c5c324be70a53a7f2a911d.png",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/ideo-rama-9-asoke/",
+        "bytes": 2435932
+      },
+      {
+        "url": "https://cdn.fazwaz.com/wbr/KX_lCzX07RB2J2XHZ_OFT4MqbTA/0x0/project/11634/screenshot-2023-06-27-095340.jpg",
+        "kind": "facility",
+        "credit": "FazWaz",
+        "source_url": "https://www.fazwaz.com/projects/thailand/bangkok/huai-khwang/huai-khwang/ideo-rama-9-asoke",
+        "bytes": 76626
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "คอนโดติดถนนใหญ่พระราม 9 เด่นเรื่องห้องเพดานสูง Hybrid และความหนาแน่นน้อยกว่าตึกใหญ่ข้างเคียง แต่ช่วงกลางวันเดินไป MRT ค่อนข้างร้อน",
+    "web_review_sources": [
+      "Pantip",
+      "PropertyScout"
+    ]
+  },
+  {
+    "slug": "summer-place-huaikwang",
+    "name": "ซัมเมอร์แมนชั่น / Summer Place",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "transit": "เดินไป MRT ห้วยขวางได้",
+    "price_seen": "ห้องแอร์ ~6,000–8,000/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "มีครัว + ที่ดูดควัน",
+      "ค่าเช่าประหยัดสำหรับนิสิตโซนห้วยขวาง"
+    ],
+    "cons": [
+      "เตาไฟฟ้าไม่แยกห้อง",
+      "ต้องต่อ MRT หรือวินไป มศว",
+      "ควรนัดดูตึกและสภาพห้องจริงก่อนโอน"
+    ],
+    "aliases": [
+      "summer",
+      "ซัมเมอร์"
+    ],
+    "minutes_to_swu": 20,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/TX7mqcC9mTPeVx6Qn1pP.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/61002",
+        "bytes": 32729
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/aGQxC5KYa7i3fX94FVF8.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/61002",
+        "bytes": 66453
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210820/rWQVm6aS926Ycw6CqvPH.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/61002",
+        "bytes": 51853
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "ที่พักงบประหยัดโซนห้วยขวางที่ถูกพูดถึงในกลุ่มนิสิต แต่ข้อมูลออนไลน์มีน้อย ควรนัดดูสถานที่และตรวจสภาพห้องจริงก่อนวางมัดจำ",
+    "web_review_sources": [
+      "แชทกลุ่มนิสิต",
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "chapter-one-eco-ratchada",
+    "name": "Chapter One Eco Ratchada-Huai Kwang",
+    "type": "condo",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "transit": "แถว MRT ห้วยขวาง",
+    "price_seen": "1 ห้องนอน 30 ตร.ม. ~12,000",
+    "pros": [
+      "ส่วนกลางครบ",
+      "ส่วนกลางใหญ่มากกว่า 4 ไร่ สไตล์รีสอร์ต",
+      "มี Shuttle Bus รับ-ส่ง MRT ห้วยขวาง",
+      "ฝ้าเพดานสูง 2.7 ม. แต่งสไตล์สแกนดิเนเวียน"
+    ],
+    "cons": [
+      "อยู่ในซอยประชาอุทิศ รถติดช่วงเร่งด่วน",
+      "โครงการใหญ่ 8 ตึก (>1,800 ยูนิต) ส่วนกลางบางช่วงคนเยอะ",
+      "ห้องสตูดิโอ 22–23 ตร.ม. ค่อนข้างกะทัดรัด"
+    ],
+    "aliases": [
+      "chapter one",
+      "แชปเตอร์วัน"
+    ],
+    "minutes_to_swu": 20,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5429/daab308eb67ed16aa7316c7b1dd25e4a.jpg",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/chapter-one-eco-ratchada-huaikhwang/",
+        "bytes": 239087
+      },
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/5429/5b059543459d964afd51d9d0c7e631d8.jpg",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/chapter-one-eco-ratchada-huaikhwang/",
+        "bytes": 198673
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "เด่นมากเรื่องพื้นที่ส่วนกลางขนาดใหญ่และบรรยากาศรีสอร์ต มีรถรับส่ง MRT ห้วยขวาง แต่ต้องเผื่อเวลารถติดในซอยและคนใช้ส่วนกลางค่อนข้างเยอะ",
+    "web_review_sources": [
+      "Pantip",
+      "เว็บรีวิวอสังหาฯ"
+    ]
+  },
+  {
+    "slug": "plum-ramkhamhaeng",
+    "name": "Plum Condo Ramkhamhaeng Station",
+    "type": "condo",
+    "zone": "ramkhamhaeng",
+    "walk_to_swu": false,
+    "transit": "ARL รามคำแหง",
+    "price_seen": "",
+    "pros": [
+      "เดินไป ARL รามคำแหง ~250 ม. ต่อเข้ามักกะสัน/มศว ไว",
+      "ค่าเช่าเข้าถึงง่าย คุ้มงบนิสิต"
+    ],
+    "cons": [
+      "การเก็บเสียงระหว่างห้อง/ทางเดินปานกลาง",
+      "รอบตึกช่วงดึกค่อนข้างเงียบ ของกินระยะเดินน้อย"
+    ],
+    "aliases": [
+      "plum",
+      "พลัม"
+    ],
+    "minutes_to_swu": 25,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://flexstay-images.sgp1.cdn.digitaloceanspaces.com/images/prod/link-6395524/52d85fa8471050023ef6882e50702099.jpg",
+        "kind": "facility",
+        "credit": "PropertyScout",
+        "source_url": "https://www.propertyscout.co.th/en/bangkok/condo/plum-condo-ramkhamhaeng-station/",
+        "bytes": 164301
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "ตัวเลือกงบประหยัดที่เดินถึง Airport Rail Link รามคำแหงได้จริง เดินทางเข้าอโศก-มักกะสันเร็ว แต่ผนังเก็บเสียงระดับมาตรฐานและรอบตึกตอนกลางคืนค่อนข้างเงียบ",
+    "web_review_sources": [
+      "Pantip",
+      "เว็บรีวิวอสังหาฯ"
+    ]
+  },
+  {
+    "slug": "witchuwan-apartel-ratchada3",
+    "name": "วิชชุวรรณ อพาร์ทเทล (Witchuwan Apartel)",
+    "type": "apartment",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "transit": "ห่างมศว ราว 2.1 กม., MRT พระราม 9 / ศูนย์วัฒนธรรม",
+    "price_seen": "ห้องแอร์ ~6,500–13,500/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "MRT ศูนย์วัฒนธรรมแห่งประเทศไทย ห่างราว 0.6 กม.",
+      "สระว่ายน้ำดาดฟ้าและฟิตเนสครบเกินราคาหอ",
+      "ห้องกว้าง สะอาด พนักงานดูแลดี"
+    ],
+    "cons": [
+      "อยู่ในซอยรัชดา 3 ต้องต่อวินไป MRT",
+      "บางห้องมีร่องรอยตึกเก่าและการเก็บเสียงทางเดินปานกลาง"
+    ],
+    "aliases": [
+      "witchuwan",
+      "วิชชุวรรณ",
+      "วิชุวรรณ"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/jJcHphuwPeemE2bXq52t.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/16752",
+        "bytes": 418392
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261018/tnPNDJ7nQX94RWVQWoeY.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/16752",
+        "bytes": 412967
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเทลรีโนเวทในซอยรัชดา 3 จุดเด่นคือสระดาดฟ้า ฟิตเนส และห้องกว้างคุ้มราคา แต่เข้าซอยลึกพอสมควร เหมาะกับคนไม่ติดการนั่งวินไป MRT",
+    "web_review_sources": [
+      "Google Maps",
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "summer-house-asok-dindaeng",
+    "name": "Summer House (ซัมเมอร์ เฮ้าส์) อโศก-ดินแดง",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "transit": "ห่างมศว ราว 1.9 กม., MRT พระราม 9",
+    "price_seen": "ห้องแอร์ ~6,500–9,000/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "MRT พระรามเก้า ห่างราว 1.0 กม.",
+      "ห้องกว้าง สะอาด มีระเบียง ตู้เย็นใหญ่และไมโครเวฟ",
+      "ปากซอยมีเซเว่นและของกินเยอะ",
+      "บรรยากาศในห้องค่อนข้างเงียบ"
+    ],
+    "cons": [
+      "ห่าง MRT พระราม 9 ~1.2 กม. ต้องเดิน 10–15 นาทีหรือต่อวิน",
+      "ซอยเป็นทางลัด ต้องระวังรถเวลาเดินเข้า-ออก"
+    ],
+    "aliases": [
+      "summer house",
+      "ซัมเมอร์เฮ้าส์",
+      "ซัมเมอร์ เฮ้าส์"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201703/20170320/3XietZd7URB67NNvQ6TP.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/35185",
+        "bytes": 41025
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201703/20170320/xzNUt89YLxRWvDqXbQZo.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/35185",
+        "bytes": 32384
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201703/20170320/mFpES3puDZrskfVqVkkM.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/35185",
+        "bytes": 37375
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์ซอยตระกูลสุขที่ได้รับคำชมเรื่องห้องกว้าง สะอาด และของกินปากซอยเยอะ แต่ต้องเดินหรือต่อวินไป MRT พระราม 9",
+    "web_review_sources": [
+      "Google Maps",
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "comma-living-dindaeng",
+    "name": "คอมม่า ลิฟวิ่ง (Comma Living)",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "transit": "ห่างมศว ราว 1.9 กม., MRT พระราม 9",
+    "price_seen": "ห้องแอร์ ~7,900–12,000/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "MRT พระรามเก้า ห่างราว 0.9 กม.",
+      "ห้องดีไซน์โมเดิร์นเหมือนคอนโด",
+      "คีย์การ์ด รปภ. 24 ชม. กล้องวงจรปิดครบ",
+      "ใกล้ตลาดและเซเว่น มีเครื่องซัก-อบผ้า"
+    ],
+    "cons": [
+      "ไม่มีที่จอดรถยนต์ (จอดได้เฉพาะมอเตอร์ไซค์)",
+      "ไม่อนุญาตให้เลี้ยงสัตว์",
+      "ห่าง MRT พระราม 9 ต้องเดิน ~15 นาทีหรือนั่งวิน"
+    ],
+    "aliases": [
+      "comma living",
+      "คอมม่า ลิฟวิ่ง"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201902/20190220/1tnyKKeT9eAUAnBr8tHp.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48064",
+        "bytes": 67345
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201902/20190220/qoYHKhCUuaANRmY95Xmx.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48064",
+        "bytes": 69670
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201902/20190220/cKxy1CqUuVWxpHDMPoK8.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48064",
+        "bytes": 88344
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์สไตล์โมเดิร์นในซอยสุทธิพร 1 ยอดนิยมของนิสิตฝึกงานและคนทำงาน ปลอดภัยและของกินหาง่าย แต่ไม่มีที่จอดรถยนต์และห้ามเลี้ยงสัตว์",
+    "web_review_sources": [
+      "Google Maps",
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "pk-court-ratchada3",
+    "name": "PK Court รัชดา ซอย 3 (พีเค คอร์ท)",
+    "type": "apartment",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "transit": "ห่างมศว ราว 2.1 กม., MRT พระราม 9 / ศูนย์วัฒนธรรม",
+    "price_seen": "ห้องแอร์ ~8,000–13,000/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "MRT พระรามเก้า ห่างราว 0.8 กม.",
+      "ห้องกว้าง โปร่ง ตกแต่งดูใหม่สะอาด",
+      "สแกนลายนิ้วมือ รปภ. 24 ชม. เน็ตไฟเบอร์",
+      "มีที่จอดรถใต้อาคาร"
+    ],
+    "cons": [
+      "อยู่ในซอยรัชดา 3 ต้องต่อวินไป MRT พระราม 9",
+      "ค่าน้ำ-ไฟเรทอพาร์ทเมนต์ (ประมาณ 17 / 7 บาท)"
+    ],
+    "aliases": [
+      "pk court",
+      "พีเค คอร์ท"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210116/dehiRQS9xeDhd1xS8d5m.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/57681",
+        "bytes": 60594
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210116/LF7No3Uy4PRh1ak7gB9J.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/57681",
+        "bytes": 58580
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210116/GP9Ltb5PSc1BL4XjC3tM.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/57681",
+        "bytes": 54641
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์ในซอยรัชดา 3 ที่เด่นเรื่องห้องกว้าง สภาพใหม่ สะอาด และระบบความปลอดภัยสแกนนิ้ว แต่ต้องเผื่อค่าวินเข้า-ออกซอยและค่าน้ำไฟเรทหอ",
+    "web_review_sources": [
+      "Renthub",
+      "เว็บที่พัก"
+    ]
+  },
+  {
+    "slug": "jitrapha-mansion-thonglor25",
+    "name": "จิตราภาแมนชั่น ทองหล่อ 25",
+    "type": "apartment",
+    "zone": "other",
+    "walk_to_swu": false,
+    "transit": "ห่างมศว ราว 2.0 กม., BTS พร้อมพงษ์ / ทองหล่อ",
+    "price_seen": "ห้องแอร์ ~6,500–14,000/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "ค่าเช่าหลักพันในย่านทองหล่อ 25 คุ้มมาก",
+      "ใกล้ท่าเรือคลองแสนแสบ นั่งเรือไป มศว สะดวก",
+      "มีที่จอดรถและระเบียงทุกห้อง"
+    ],
+    "cons": [
+      "ตึกสไตล์แมนชั่นเก่า ไม่โมเดิร์น",
+      "ค่าน้ำ-ไฟเรทหอ (ประมาณ 20 / 8 บาท) และบางห้องมีค่าส่วนกลางเพิ่ม"
+    ],
+    "aliases": [
+      "jitrapha mansion",
+      "จิตราภา แมนชั่น"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202011/20201121/yFUdm3TMGXtmT7whbnkR.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/51620",
+        "bytes": 43072
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210604/EixK6HG4PgDepEbrZJSV.jpg",
+        "kind": "facility",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/51620",
+        "bytes": 56407
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210604/1A3aCyTjjXCp68j3pWPs.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/51620",
+        "bytes": 44027
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "แมนชั่นราคาประหยัดใจกลางทองหล่อ 25 เดินทางไป มศว ด้วยเรือคลองแสนแสบได้สะดวก แต่สภาพตึกเป็นสไตล์ดั้งเดิม ควรเช็กค่าส่วนกลางและค่าน้ำไฟให้ชัด",
+    "web_review_sources": [
+      "Renthub",
+      "เว็บที่พัก"
+    ]
+  },
+  {
+    "slug": "phromphan-residence-thonglor25",
+    "name": "พร้อมพรรค เรสซิเดนซ์ ซอยทองหล่อ 25",
+    "type": "apartment",
+    "zone": "other",
+    "walk_to_swu": false,
+    "transit": "ห่างมศว ราว 1.7 กม., BTS พร้อมพงษ์ / ทองหล่อ",
+    "price_seen": "ห้องแอร์ ~5,900–7,900/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "ราคาประหยัดในโซนทองหล่อ-พร้อมพงษ์",
+      "ซอยค่อนข้างสงบ ใกล้ร้านอาหารและคาเฟ่",
+      "เดินทางไป มศว และ BTS ได้หลายทาง"
+    ],
+    "cons": [
+      "อยู่ในซอยลึก ต้องต่อวินหรือรถกะป๊อออกถนนใหญ่",
+      "ข้อมูลรีวิวออนไลน์มีน้อย ควรดูห้องจริงก่อน"
+    ],
+    "aliases": [
+      "phromphan residence",
+      "promphan residence",
+      "พร้อมพรรค เรสซิเดนซ์"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210826/qPQxg9hbNq5xrFKGbexV.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/54303",
+        "bytes": 111219
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210826/u1qrnnEufLBwrjKoTBJv.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/54303",
+        "bytes": 128831
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202108/20210826/esuJ2tC8YMEqSf1WErFt.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/54303",
+        "bytes": 97681
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "ตัวเลือกงบประหยัดในซอยพร้อมพรรค (เชื่อมทองหล่อ 25–สุขุมวิท 49) บรรยากาศซอยสงบ แต่ต้องต่อรถออกถนนใหญ่และควรนัดดูสภาพห้องจริง",
+    "web_review_sources": [
+      "Renthub",
+      "FazWaz"
+    ]
+  },
+  {
+    "slug": "s23-dorm-sukhumvit23",
+    "name": "S23 หอพักห้องเช่ารายเดือน (สุขุมวิท 23)",
+    "type": "dorm",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "ห่างมศว ราว 0.7 กม., MRT สุขุมวิท / BTS อโศก",
+    "price_seen": "ห้องแอร์ ~11,000–12,000/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "MRT สุขุมวิท ห่างราว 0.2 กม.",
+      "ปากซอยสุขุมวิท 23 ใกล้ BTS อโศก/MRT สุขุมวิท ~100–200 ม.",
+      "เดินหรือนั่งวินเข้า มศว ประสานมิตรใกล้นิดเดียว",
+      "มีคีย์การ์ด/สแกนนิ้วและกล้องวงจรปิด"
+    ],
+    "cons": [
+      "ราคาค่อนข้างสูงสำหรับหอพัก (~10,000+ บาท)",
+      "ซอยอโศกคึกคักทั้งวัน อาจมีเสียงรบกวนบ้าง"
+    ],
+    "aliases": [
+      "s23",
+      "เอส 23"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202206/20220613/cyWH97qy8Kn6yXQ6UgmS.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63443",
+        "bytes": 47092
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202206/20220613/RMZEsFLp3c3QjiUhXzUH.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63443",
+        "bytes": 22616
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "ทำเลเทพปากซอยสุขุมวิท 23 ใกล้ทั้ง มศว, Terminal 21 และ BTS/MRT เดินทางแทบไม่ต้องเผื่อรถติด แต่ค่าเช่าสูงตามทำเลใจกลางอโศก",
+    "web_review_sources": [
+      "Renthub",
+      "เว็บที่พัก"
+    ]
+  },
+  {
+    "slug": "sino-19-apartment",
+    "name": "Sino 19 Apartment",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "ห่างมศว ราว 0.9 กม., MRT สุขุมวิท / BTS อโศก",
+    "price_seen": "ห้องแอร์ ~11,000–18,000/เดือน (จากเว็บ Renthub)",
+    "pros": [
+      "MRT สุขุมวิท ห่างราว 0.3 กม.",
+      "ใกล้ BTS อโศก / MRT สุขุมวิท และ Terminal 21",
+      "ห้องสะอาด มีทั้ง Studio และ 1 นอน (25–40 ตร.ม.)",
+      "บรรยากาศดีเป็นที่นิยมของคนทำงานย่านอโศก"
+    ],
+    "cons": [
+      "ค่าเช่าสูง (~11,000–18,000 บาท) เหมาะหาร 2 หรือคนงบสูง",
+      "ต้องเดินข้ามถนนอโศกไปฝั่ง มศว"
+    ],
+    "aliases": [
+      "sino 19",
+      "ซิโน 19"
+    ],
+    "minutes_to_swu": 14,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201906/20190618/Y3cM3iA8AUvvC6nvVAKi.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49837",
+        "bytes": 49381
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201906/20190618/XR6feNtCqh5xzQ3BQWqa.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49837",
+        "bytes": 61646
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201906/20190618/MFNawBBpZdKzyrvhdLJW.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49837",
+        "bytes": 66609
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์สะอาดและทำเลดีมากในซอยสุขุมวิท 17 ใกล้ BTS/MRT อโศก เหมาะกับนิสิตที่มีงบสูงหน่อยหรืออยากหารห้องไซส์ใหญ่ใจกลางอโศก",
+    "web_review_sources": [
+      "Renthub",
+      "เว็บที่พัก"
+    ]
+  },
+  {
+    "slug": "swu-female-dorm-asoke",
+    "name": "หอพักสตรี มศว อโศก (สุขุมวิท 23)",
+    "type": "dorm",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "หน้าประตู 2 มศว (สุขุมวิท 23), MRT เพชรบุรี / สุขุมวิท",
+    "price_seen": "ห้อง 2 เตียง 9,000/เดือน (หาร 2 = ~4,500/คน)",
+    "pros": [
+      "ติดหน้า มศว ประตู 2 เดินเข้ามอ 2 นาที",
+      "หอพักหญิงล้วน เน้นความปลอดภัยสำหรับนิสิต",
+      "ห้องขนาดใหญ่ 39 ตร.ม. แยก 2 เตียง พร้อมเฟอร์ฯ และแอร์"
+    ],
+    "cons": [
+      "ซอยสุขุมวิท 23 ช่วงเย็นค่อนข้างคึกคัก",
+      "รับเฉพาะผู้เช่าหญิงและข้อมูลสิ่งอำนวยความสะดวกพื้นฐาน"
+    ],
+    "aliases": [
+      "หอพักสตรี มศว",
+      "หอพักสตรี มหาวิทยาลัยศรีนครินทรวิโรฒ",
+      "หอสตรีอโศก"
+    ],
+    "minutes_to_swu": 2,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200714/t1yPh6nNQdfcDdMhMrvu.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55688",
+        "bytes": 50848
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200714/KMsP4zEzWQqqtCFVCcxw.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55688",
+        "bytes": 54091
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200714/jeQEpLtuLZdqiyc5Ufbn.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55688",
+        "bytes": 35377
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักหญิงทำเลติดรั้ว มศว ประตู 2 ซอยสุขุมวิท 23 ห้องกว้างอยู่ 2 คนตกคนละประมาณ 4,500 บาท เหมาะกับนิสิตหญิงที่อยากเดินไปเรียนใกล้สุด",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "sino-23-apartment",
+    "name": "Sino 23 Apartment (สุขุมวิท 23)",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "transit": "ซอยสุขุมวิท 23 ห่าง มศว ราว 0.7 กม., BTS อโศก / MRT สุขุมวิท",
+    "price_seen": "สตูดิโอ 30 ตร.ม. ~13,000–14,000/เดือน",
+    "pros": [
+      "เดินเข้า มศว หรือไป MRT สุขุมวิท / BTS อโศกได้",
+      "คีย์การ์ด กล้องวงจรปิด อินเทอร์เน็ตและเฟอร์นิเจอร์ครบ"
+    ],
+    "cons": [
+      "ค่าเช่า ~13,000–14,000/เดือน เหมาะอยู่ 2 คนหารหรือคนงบกลาง-สูง"
+    ],
+    "aliases": [
+      "sino 23",
+      "ซิโน 23"
+    ],
+    "minutes_to_swu": 9,
+    "travel_mode": "walk",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202402/20240219/pRSR5iHc8EeYH2jtaCvD.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/67282",
+        "bytes": 181147
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202402/20240219/EHfRCgQrHQxdHHhbLj6H.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/67282",
+        "bytes": 185090
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202402/20240219/pd5X7zezx5Zi8k5wuAsb.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/67282",
+        "bytes": 201592
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์ในซอยสุขุมวิท 23 ห้องขนาด 30 ตร.ม. เดินไป มศว และรถไฟฟ้าอโศกได้สะดวก เหมาะกับนิสิตที่ต้องการห้องกว้างหรือหาร 2 คน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "my-home22-female-dorm",
+    "name": "MY HOME 22 หอพักสตรี (สุขุมวิท 22)",
+    "type": "dorm",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "transit": "ซอยสุขุมวิท 22, ใกล้ BTS พร้อมพงษ์ / อโศก",
+    "price_seen": "ห้องพักส่วนตัว 40 ตร.ม. ~11,000–12,000/เดือน",
+    "pros": [
+      "หอพักสตรีล้วน ปลอดภัย มีคีย์การ์ดและกล้องวงจรปิด",
+      "ห้องใหญ่ 40 ตร.ม. รองรับนิสิตและนักศึกษาฝึกงาน"
+    ],
+    "cons": [
+      "ต้องนั่งวินหรือต่อ BTS/รถเมล์มา มศว",
+      "ไม่มีที่จอดรถยนต์"
+    ],
+    "aliases": [
+      "my home 22",
+      "my home22",
+      "มายโฮม 22"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170919/RhoTBo8FH9v9nS7nhRxD.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/13919",
+        "bytes": 82226
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170919/f7DRHq9F49TU9JZTN6fF.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/13919",
+        "bytes": 79246
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170919/rwhJzUffg2ZZqUFa2DRq.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/13919",
+        "bytes": 78331
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักหญิงในซอยสุขุมวิท 22 ห้องขนาดใหญ่ถึง 40 ตร.ม. เหมาะสำหรับนิสิตหญิงหรือเพื่อนหาร 2 ที่เน้นความปลอดภัยและมีพื้นที่อ่านหนังสือ",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "thongcharoen-dorm-phetchaburi40",
+    "name": "หอพักทองเจริญ (ซอยเพชรบุรี 40)",
+    "type": "dorm",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "transit": "ปากซอยเพชรบุรี 40, ต่อวิน/รถเมล์ถึง มศว ~10 นาที",
+    "price_seen": "ห้องพัดลม/แอร์ ~3,300–4,300/เดือน",
+    "pros": [
+      "ราคาประหยัดมาก เริ่ม 3,300/เดือน ติดถนนใหญ่เพชรบุรี",
+      "ใกล้ 7-11 เดินทางมา มศว ฝั่งถนนเพชรบุรีสะดวก",
+      "มีคีย์การ์ด กล้องวงจรปิด และเครื่องซักผ้าหยอดเหรียญ"
+    ],
+    "cons": [
+      "อยู่ติดถนนเพชรบุรีอาจมีเสียงรถและต้องนั่งวิน/รถเมล์เข้ามอ",
+      "ห้องเน้นอยู่คนเดียวแบบเรียบง่าย เฟอร์นิเจอร์พื้นฐาน"
+    ],
+    "aliases": [
+      "หอพักทองเจริญ",
+      "ทองเจริญ เพชรบุรี 40"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202512/20251203/KLWJx15izA2V8uybb8QR.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/70466",
+        "bytes": 116497
+      },
+      {
+        "url": "https://img-listing.living.horga.app/unsafe/720x480/https%3A%2F%2Fcloud.horganice.in.th%2Fparse%2Ffiles%2FiIJQTo6dIAPlr7QIxJvvnLaHghO9dkzLmwOslUjb%2Fd3f6bd4e1c8f3e3847c44efa80ded8f7_image-5f7088a759843e621880975725c7c930.jpeg",
+        "kind": "room",
+        "credit": "Horga",
+        "source_url": "https://find.living.horga.co/p/tDAYQrT19N",
+        "bytes": 100929
+      },
+      {
+        "url": "https://img-listing.living.horga.app/unsafe/720x480/https%3A%2F%2Fcloud.horganice.in.th%2Fparse%2Ffiles%2FiIJQTo6dIAPlr7QIxJvvnLaHghO9dkzLmwOslUjb%2F735786c09a70c35230e65e7c4c35bbf2_image-ef181a656d0a9e9f597f14ad092b49fe.jpeg",
+        "kind": "room",
+        "credit": "Horga",
+        "source_url": "https://find.living.horga.co/p/tDAYQrT19N",
+        "bytes": 87906
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักงบประหยัดปากซอยเพชรบุรี 40 ราคาหลักสามพันต้นๆ เหมาะกับนิสิต มศว ที่ต้องการคุมงบไม่เกิน 4,500 บาทและเดินทางสะดวกบนถนนเพชรบุรี",
+    "web_review_sources": [
+      "Renthub",
+      "Horga"
+    ]
+  },
+  {
+    "slug": "chok-residence-rama9",
+    "name": "โชคเรสซิเดนท์ (อโศก-พระราม 9)",
+    "type": "dorm",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "transit": "ซอยหลัง มศว/พระราม 9, ห่าง มศว ~1.4 กม.",
+    "price_seen": "ห้องแอร์ 25 ตร.ม. ~4,500–5,500/เดือน",
+    "pros": [
+      "ค่าเช่าคุ้มค่า 4,500–5,500/เดือน ได้ห้อง 25 ตร.ม.",
+      "มีคีย์การ์ด กล้องวงจรปิด และใกล้โซนพระราม 9"
+    ],
+    "cons": [
+      "ต้องนั่งวินหรือเดินต่อรถไป MRT พระราม 9",
+      "สิ่งอำนวยความสะดวกส่วนกลางมีเท่าที่จำเป็น"
+    ],
+    "aliases": [
+      "โชคเรสซิเดนท์",
+      "chok residence"
+    ],
+    "minutes_to_swu": 8,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202210/20221004/edxMfgLDZMcvLDAcLFkX.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64379",
+        "bytes": 168071
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201411/20141115/hK99331YG7oknW1vo3N7.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64379",
+        "bytes": 52465
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201702/20170227/v8QdEGWcGQvbyAzzC9Ym.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64379",
+        "bytes": 17450
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักราคาประหยัดใกล้ฝั่งพระราม 9–มศว ห้องขนาด 25 ตร.ม. ราคาเข้าถึงง่ายสำหรับนิสิตในงบไม่เกิน 5,500 บาท",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "ratchada3-residence",
+    "name": "รัชดา 3 เรสซิเด้นท์ (รัชดา ซอย 3)",
+    "type": "apartment",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "transit": "ซอยรัชดา 3, ใกล้ MRT พระราม 9 / ศูนย์วัฒนธรรม",
+    "price_seen": "ห้องแอร์ ~6,800–7,500/เดือน",
+    "pros": [
+      "ของกินในซอยรัชดา 3 เยอะ ใกล้ห้างและตลาด",
+      "มีคีย์การ์ด กล้องวงจรปิด อินเทอร์เน็ตและเฟอร์ครบ"
+    ],
+    "cons": [
+      "เข้าซอยรัชดา 3 ช่วงเช้า-เย็นต้องนั่งวินไป MRT",
+      "ขนาดห้อง 20 ตร.ม. กะทัดรัดสำหรับอยู่คนเดียว"
+    ],
+    "aliases": [
+      "รัชดา 3 เรสซิเด้นท์",
+      "รัชดา3เรสซิเด้นท์",
+      "ratchada 3 residence"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201804/20180403/aZFeRB51UsvhbMTKW6jU.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/43061",
+        "bytes": 51074
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202405/20240522/v3zyZtFge3XK3kv1KkLr.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/43061",
+        "bytes": 295675
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201804/20180403/AF7fh7zbE7REZGxtMF3p.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/43061",
+        "bytes": 51389
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์ในซอยรัชดา 3 ทำเลที่นิสิต มศว นิยมอยู่เพราะของกินหาง่ายตลอดคืนและต่อวินหรือ MRT มาเรียนสะดวก",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "sea-of-love-mansion-ratchada3",
+    "name": "ซีออฟเลิฟแมนชั่น (รัชดา ซอย 3)",
+    "type": "apartment",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "transit": "ซอยรัชดา 3 (ซอยสถานทูตจีน), ใกล้ MRT ศูนย์วัฒนธรรม",
+    "price_seen": "สตูดิโอ 28 ตร.ม. ~5,500–7,500/เดือน",
+    "pros": [
+      "ห้องกว้าง 28 ตร.ม. ราคาจับต้องได้ (5,500–7,500/เดือน)",
+      "ซอยรัชดา 3 ใกล้ MRT ศูนย์วัฒนธรรมและเซ็นทรัลพระราม 9"
+    ],
+    "cons": [
+      "ต้องนั่งวินออกปากซอยรัชดา 3 ไป MRT",
+      "บรรยากาศตึกสไตล์แมนชั่นดั้งเดิม"
+    ],
+    "aliases": [
+      "ซีออฟเลิฟแมนชั่น",
+      "ซีออฟเลิฟ",
+      "sea of love"
+    ],
+    "minutes_to_swu": 12,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202111/20211101/yr9HCWWqEhwEcXXZoUYN.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60739",
+        "bytes": 59750
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220422/QEYABAutjvBgZx8xjxdg.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60739",
+        "bytes": 82175
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220422/JQnDemufaYTsC12pn4jZ.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60739",
+        "bytes": 76333
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "แมนชั่นห้องขนาด 28 ตร.ม. ในซอยรัชดา 3 ได้พื้นที่กว้างกว่าราคาเช่าเฉลี่ยในย่านเดียวกัน เหมาะกับนิสิตที่อยากคุมงบ 5–7 พัน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "wimonrat-apartment-ratchada",
+    "name": "วิมลรัตน์ อพาร์ทเมนต์ (หลังบิ๊กซีรัชดา)",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "transit": "หลังบิ๊กซีรัชดา เดินไป MRT ศูนย์วัฒนธรรม ~5 นาที",
+    "price_seen": "ห้องพัดลม/แอร์ ~3,500–4,800/เดือน",
+    "pros": [
+      "ราคาประหยัดมาก (3,500–4,800/เดือน) และมีสัญญาระยะสั้น",
+      "เดินไปบิ๊กซีรัชดาและ MRT ศูนย์วัฒนธรรมได้",
+      "มีคีย์การ์ด กล้องวงจรปิด และเน็ตไฟเบอร์"
+    ],
+    "cons": [
+      "ต้องนั่ง MRT 2 สถานีมาลงเพชรบุรีแล้วเดินเข้า มศว",
+      "หอพักขนาด 20 ตร.ม. เหมาะอยู่คนเดียว"
+    ],
+    "aliases": [
+      "วิมลรัตน์",
+      "wimonrat"
+    ],
+    "minutes_to_swu": 15,
+    "travel_mode": "mrt",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202103/20210309/DivzKRbzozGGUUMLkxGY.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/14579",
+        "bytes": 118203
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202103/20210309/wXdQfPiavBeCzXbLBhQQ.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/14579",
+        "bytes": 93638
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202103/20210309/tTHh2HbddsmTDrgdw1Wx.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/14579",
+        "bytes": 112076
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักราคาย่อมเยาหลังบิ๊กซีรัชดา จุดเด่นคือเดินไป MRT ศูนย์วัฒนธรรมได้และรองรับสัญญาระยะสั้นสำหรับนิสิตฝึกงาน",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "pk-house-dindaeng",
+    "name": "PK House (ดินแดง-รัชดา-พระราม 9)",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "transit": "ซอยดินแดง-รัชดา, ใกล้ MRT พระราม 9",
+    "price_seen": "ห้องใหม่ ~6,000–7,000/เดือน",
+    "pros": [
+      "ห้องตกแต่งใหม่สะอาด มี รปภ. กล้องวงจรปิด และเน็ตครบ",
+      "มีให้เลือกหลายไซส์ตั้งแต่ 18–29 ตร.ม. ในงบ 6–7 พัน"
+    ],
+    "cons": [
+      "ต้องต่อวินหรือรถสาธารณะมาฝั่ง MRT พระราม 9 / มศว",
+      "ห้องเริ่มต้น 18–19 ตร.ม. ขนาดกะทัดรัด"
+    ],
+    "aliases": [
+      "pk house",
+      "พีเค เฮาส์"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/3XqWewT6gRQS4xc5Fvio.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/62605",
+        "bytes": 40951
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/9gmZMBRNxAssbtzSj9j2.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/62605",
+        "bytes": 41885
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202204/20220401/zNpSkPskB9rDUchqH1MZ.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/62605",
+        "bytes": 42846
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์ห้องใหม่โซนดินแดง-พระราม 9 มีห้องหลายขนาดตั้งแต่สตูดิโอถึง 1 ห้องนอนในเรท 6,000–7,000 บาท",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "ngernyuang-apartment-dindaeng",
+    "name": "เงินยวงอพาร์ทเม้นท์ (ประชาสงเคราะห์ 10)",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "transit": "ซอยประชาสงเคราะห์ 10, ใกล้โซนรัชดา-ห้วยขวาง",
+    "price_seen": "ห้องพัดลม/แอร์ 28 ตร.ม. ~4,500–6,500/เดือน",
+    "pros": [
+      "ห้องกว้างถึง 28 ตร.ม. ในราคาประหยัด (4,500–6,500/เดือน)",
+      "ใกล้ตลาดห้วยขวางและของกินซอยประชาสงเคราะห์"
+    ],
+    "cons": [
+      "อยู่ลึกในซอยประชาสงเคราะห์ 10 ต้องนั่งวินมาต่อ MRT/รถเมล์",
+      "ตึกสไตล์หอพักทั่วไป ควรดูห้องจริงก่อน"
+    ],
+    "aliases": [
+      "เงินยวง",
+      "ngernyuang"
+    ],
+    "minutes_to_swu": 15,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/qKxAN3HJESAW8T3UYXDo.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/69176",
+        "bytes": 209371
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/yGYCJm3EirkCVQqRbaRD.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/69176",
+        "bytes": 207960
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250811/dpq2kWBkBasHSbaGhxLY.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/69176",
+        "bytes": 232019
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักในซอยประชาสงเคราะห์ 10 ได้ห้องขนาด 28 ตร.ม. กว้างคุ้มงบ 4–6 พันบาท และใกล้แหล่งของกินตลาดห้วยขวาง",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "chumchuen-rooms-dindaeng",
+    "name": "ชุ่มชื่น ห้องพัก (อโศก-ดินแดง)",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "transit": "ซอยชุ่มชื่น ถ.อโศก-ดินแดง, ใกล้ MRT พระราม 9",
+    "price_seen": "ห้องพัดลม 2,700 / ห้องแอร์ 3,300/เดือน",
+    "pros": [
+      "ราคาประหยัดที่สุดรอบอโศก-ดินแดง (2,700–3,300/เดือน)",
+      "เดินทางมาแยกพระราม 9 และ มศว ได้ใน ~8–10 นาที"
+    ],
+    "cons": [
+      "ห้องขนาด 18 ตร.ม. และสิ่งอำนวยความสะดวกแบบเรียบง่าย",
+      "ต้องนั่งวินหรือรถเมล์มาแยกอโศก-เพชรบุรี"
+    ],
+    "aliases": [
+      "ชุ่มชื่น",
+      "chumchuen"
+    ],
+    "minutes_to_swu": 8,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/qVPiFdCrpcHL1K846waN.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64309",
+        "bytes": 192270
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/jcGTv7guxRCzs72yNJMY.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64309",
+        "bytes": 196657
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202209/20220924/kvQr3R41TvdQzqpijBC4.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64309",
+        "bytes": 208406
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักงบประหยัดพิเศษในซอยชุ่มชื่น (อโศก-ดินแดง) ราคาเริ่มต้นเพียง 2,700–3,300 บาท เหมาะกับนิสิตที่ต้องการประหยัดค่าเช่าสูงสุด",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "lek-dorm-dindaeng",
+    "name": "เล็กหอพัก (ดินแดง ซอยเหมวงศ์)",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "transit": "ซอยเหมวงศ์ ถ.ดินแดง, ต่อวิน/รถเมล์มา มศว",
+    "price_seen": "~2,900–3,500/เดือน",
+    "pros": [
+      "ค่าเช่าหลักสองพันปลาย–สามพัน คุ้มมากสำหรับนิสิตคุมงบ",
+      "มีให้เลือกทั้งห้องมีระเบียงและไม่มีระเบียง"
+    ],
+    "cons": [
+      "ห้องขนาดกะทัดรัดและอยู่ฝั่งดินแดง ต้องต่อรถเข้า มศว"
+    ],
+    "aliases": [
+      "เล็กหอพัก",
+      "ซอยเหมวงศ์"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/NyrqHzUgcR8Nb2FcZ5T9.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63221",
+        "bytes": 29780
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/d1D9Aj948NvNhnRU6fMn.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63221",
+        "bytes": 17128
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220520/e5FLy4PAFGef7qAM5v37.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63221",
+        "bytes": 54638
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักราคาประหยัดย่านดินแดง ซอยเหมวงศ์ เริ่ม 2,900 บาท เหมาะกับนิสิตที่เน้นประหยัดค่าที่พักเป็นหลัก",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "orange-place-thonglor",
+    "name": "ออเรนจ์เพลส (สุขุมวิท 49/6 ซอยพร้อมพรรค)",
+    "type": "dorm",
+    "zone": "other",
+    "walk_to_swu": false,
+    "transit": "ซอยพร้อมพรรค (เชื่อมทองหล่อ 25–สุขุมวิท 49), ใกล้ท่าเรือคลองแสนแสบ",
+    "price_seen": "สตูดิโอ 21 ตร.ม. ~3,800–4,800/เดือน",
+    "pros": [
+      "ราคาประหยัดมากในโซนพร้อมพงษ์-ทองหล่อ (เริ่ม 3,800/เดือน)",
+      "ใกล้ซอยพร้อมพรรค นั่งวินหรือเรือคลองแสนแสบมา มศว สะดวก"
+    ],
+    "cons": [
+      "อยู่ในซอยต้องนั่งวินออกถนนใหญ่",
+      "ข้อมูลส่วนกลางมีจำกัด ควรดูห้องจริงก่อน"
+    ],
+    "aliases": [
+      "ออเรนจ์เพลส",
+      "orange place"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202105/20210521/BcGWndfpoTfLfYBb8jZq.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60072",
+        "bytes": 51675
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202105/20210521/KDPYq7JdbXT2sxTrhesp.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60072",
+        "bytes": 27399
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202105/20210521/Kkev5eBjT6hVgdL1kN46.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60072",
+        "bytes": 20196
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "หอพักงบ 3–4 พันบาทในซอยสุขุมวิท 49/6 (พร้อมพรรค) เดินทางลัดมาท่าเรือคลองแสนแสบและ มศว ได้ไม่ไกล",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  },
+  {
+    "slug": "ka-apartment-thonglor25",
+    "name": "เค แอนด์ เอ อพาร์ตเม้นต์ (ทองหล่อ 25)",
+    "type": "apartment",
+    "zone": "other",
+    "walk_to_swu": false,
+    "transit": "ซอยทองหล่อ 25 (เชื่อมสุขุมวิท 49), ใกล้ท่าเรือคลองแสนแสบ",
+    "price_seen": "สตูดิโอ 20 ตร.ม. ~5,600–5,800/เดือน",
+    "pros": [
+      "ห้องแอร์พร้อมเฟอร์นิเจอร์ในงบ ~5,600–5,800/เดือน",
+      "เชื่อมซอยทองหล่อ 25 เดินทางมาท่าเรือแสนแสบเข้า มศว ได้เร็ว"
+    ],
+    "cons": [
+      "เข้าซอยต้องใช้บริการวินมอเตอร์ไซค์หรือรถกะป๊อ",
+      "ไม่มีสระว่ายน้ำหรือฟิตเนส"
+    ],
+    "aliases": [
+      "เค แอนด์ เอ อพาร์ตเม้นต์",
+      "k&a apartment"
+    ],
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201811/20181117/1q1mp3fWxeCn9wshEYHr.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/37596",
+        "bytes": 47104
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202502/20250222/CDiQm2GyqximoQqdtQwN.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/37596",
+        "bytes": 327970
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202502/20250222/8fBTGZUgBgoDz8kyvRbM.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/37596",
+        "bytes": 139419
+      }
+    ],
+    "official_url": null,
+    "web_review_summary": "อพาร์ทเมนต์ห้องแอร์พร้อมเฟอร์นิเจอร์ในซอยทองหล่อ 25 งบห้าพันกลางๆ เหมาะกับนิสิตที่ใช้เรือคลองแสนแสบหรือวินมา มศว",
+    "web_review_sources": [
+      "Renthub"
+    ]
+  }
+]
