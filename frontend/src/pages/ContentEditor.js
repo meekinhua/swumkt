@@ -15,6 +15,9 @@ import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
 import RichTextEditor from '@/components/RichTextEditor';
 import { copyToClipboard } from '@/lib/clipboard';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { apiErrorText } from '@/lib/apiError';
+import { useAiGate } from '@/components/AiPolicyNote';
 
 const ContentEditor = () => {
   const { id } = useParams();
@@ -42,6 +45,9 @@ const ContentEditor = () => {
   const [addingMember, setAddingMember] = useState(false);
   const [memberDetails, setMemberDetails] = useState([]);
   const [aiRearranging, setAiRearranging] = useState(false);
+  const aiGate = useAiGate('content.ai');
+  // why the prompt panel is open: 'failed' (server error) | 'external' (system AI switched off)
+  const [rearrangeReason, setRearrangeReason] = useState('failed');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [courses, setCourses] = useState([]);
@@ -352,9 +358,15 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
       return;
     }
     
+    // Chat LLMs often wrap HTML in ```html fences — strip them.
+    const cleanedHtml = manualHtmlInput
+      .trim()
+      .replace(/^```(?:html)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim();
     setFormData({
       ...formData,
-      content: manualHtmlInput
+      content: cleanedHtml
     });
     setShowRearrangePrompt(false);
     setManualHtmlInput('');
@@ -369,6 +381,14 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
 
     if (!formData.content || formData.content.trim().length < 50) {
       toast.error('เนื้อหาสั้นเกินไป กรุณาเพิ่มเนื้อหาอย่างน้อย 50 ตัวอักษร');
+      return;
+    }
+
+    // System AI switched off for this feature: go straight to "use my own AI".
+    if (aiGate.blocked) {
+      setRearrangePrompt(buildRearrangePrompt());
+      setRearrangeReason('external');
+      setShowRearrangePrompt(true);
       return;
     }
 
@@ -399,7 +419,13 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
       const prompt = buildRearrangePrompt();
       setRearrangePrompt(prompt);
       setShowRearrangePrompt(true);
-      toast.error('AI Rearrange ล้มเหลว - สามารถใช้ Prompt ไปทำเองได้');
+      if (isLlmExternalOnly(error)) {
+        // Global interceptor already showed the single Thai toast.
+        setRearrangeReason('external');
+      } else {
+        setRearrangeReason('failed');
+        toast.error('AI Rearrange ล้มเหลว - สามารถใช้ Prompt ไปทำเองได้');
+      }
     } finally {
       setAiRearranging(false);
     }
@@ -433,7 +459,7 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
       navigate(`/content/${id}`);
     } catch (error) {
       console.error('Error saving content:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถบันทึกเนื้อหาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถบันทึกเนื้อหาได้'));
     } finally {
       setLoading(false);
     }
@@ -451,7 +477,7 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
       navigate('/content');
     } catch (error) {
       console.error('Error deleting content:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบเนื้อหาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบเนื้อหาได้'));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -542,7 +568,7 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          ✨ AI Rearrange
+                          {aiGate.blocked ? '📋 พรอมต์จัดเรียง (ใช้ AI ของคุณเอง)' : '✨ AI Rearrange'}
                         </span>
                       )}
                     </Button>
@@ -571,10 +597,14 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
                       <div className="flex items-center gap-2 mb-3">
                         <AlertTriangle className="w-5 h-5 text-amber-600" />
                         <h4 className="font-bold text-amber-800">
-                          AI Rearrange ล้มเหลว - นำ Prompt ไปใช้เองได้
+                          {rearrangeReason === 'external'
+                            ? 'ใช้ AI ของคุณเอง - คัดลอกพรอมต์ไปวางใน ChatGPT / Claude / Gemini'
+                            : 'AI Rearrange ล้มเหลว - นำ Prompt ไปใช้เองได้'}
                         </h4>
                         <button
+                          type="button"
                           onClick={() => setShowRearrangePrompt(false)}
+                          aria-label="ปิดแผงพรอมต์"
                           className="ml-auto text-amber-600 hover:text-amber-800"
                         >
                           <X className="w-4 h-4" />
@@ -596,6 +626,7 @@ ${imageContext ? `\n\n**รูปภาพที่มี:**\n${imageContext}` :
                           onClick={handleCopyRearrangePrompt}
                           variant="outline"
                           size="sm"
+                          aria-label="คัดลอกพรอมต์"
                           className="absolute top-2 right-2 border-amber-400 text-amber-700 hover:bg-amber-100"
                         >
                           <Copy className="w-4 h-4" />

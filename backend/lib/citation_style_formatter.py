@@ -7,7 +7,9 @@ academic style standards (APA, IEEE, MLA, Chicago, etc.)
 
 import logging
 from typing import List, Dict, Tuple, Optional
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from lib.llm_policy import SystemLLMDisabled
+# emergentintegrations is imported lazily inside the functions that call the LLM, so this module (and
+# server.py) imports on machines without the package.
 
 logger = logging.getLogger(__name__)
 
@@ -195,6 +197,7 @@ Instructions:
 Output: The complete text with reformatted citations."""
         
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"format-intext-{id(self)}"
@@ -208,6 +211,8 @@ Output: The complete text with reformatted citations."""
                 logger.warning("Empty response from LLM for in-text formatting")
                 return body_text
                 
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"In-text citation formatting error: {e}")
             return body_text
@@ -262,6 +267,7 @@ Text chunk to reformat:
 Return the reformatted text with proper {target_style} in-text citations."""
             
             try:
+                from emergentintegrations.llm.chat import LlmChat, UserMessage
                 chat = LlmChat(
                     api_key=self.api_key,
                     session_id=f"format-chunk-{i}"
@@ -270,6 +276,8 @@ Return the reformatted text with proper {target_style} in-text citations."""
                 response = await chat.send_message(UserMessage(text=prompt))
                 reformatted_chunks.append(response.strip() if response else chunk)
                 
+            except SystemLLMDisabled:
+                raise  # admin switched the system LLM off: never swallow into a fallback
             except Exception as e:
                 logger.error(f"Error formatting chunk {i+1}: {e}")
                 reformatted_chunks.append(chunk)
@@ -301,6 +309,7 @@ Instructions:
 Output: Formatted reference list in {target_style} style."""
         
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"format-refs-{id(self)}"
@@ -314,6 +323,8 @@ Output: Formatted reference list in {target_style} style."""
                 logger.warning("Empty response from LLM for references formatting")
                 return bibtex_content
                 
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"References formatting error: {e}")
             return bibtex_content

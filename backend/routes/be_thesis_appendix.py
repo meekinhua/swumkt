@@ -358,7 +358,8 @@ def enrich_thesis_docx(
         _h_section(doc, "ภาคผนวก ง — Identity vs Image: ตารางเทียบรายลักษณะ", level=0)
         align = ii.get("alignment_score_0_100") or ii.get("alignment_score")
         _para(doc,
-              f"คะแนน Identity-Image Alignment = {_fmt(align)}/100 — "
+              f"ค่า Identity-Image Alignment ตามดุลยพินิจของ LLM = {_fmt(align)}/100 "
+              "(ความเห็นเชิงคุณภาพ ไม่ใช่การวัด และไม่ได้รวมในคะแนนใด) — "
               "ตารางด้านล่างแสดงสถานะของแต่ละ trait: "
               "aligned (ตรง), lost (ตั้งใจแต่ไม่ถูกรับรู้), "
               "unintended (ถูกรับรู้แต่ไม่ได้ตั้งใจ).",

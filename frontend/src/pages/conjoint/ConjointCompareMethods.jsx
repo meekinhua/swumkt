@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid
 } from 'recharts';
 import { Loader2, AlertCircle, CheckCircle2, Info, HelpCircle } from 'lucide-react';
+import { apiErrorText } from '@/lib/apiError';
 
 /**
  * Side-by-side comparison of all four estimation methods on the same study.
@@ -96,7 +97,7 @@ const ConjointCompareMethods = ({ studyId, study, token, countingResults, filter
         })
         .catch(e => {
           if (cancelled) return;
-          setErrors(prev => ({ ...prev, [m.id]: e.response?.data?.detail || e.message }));
+          setErrors(prev => ({ ...prev, [m.id]: apiErrorText(e, e.message) }));
         })
         .finally(() => {
           if (cancelled) return;

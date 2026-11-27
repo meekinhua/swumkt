@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
-import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import { BeTopbar, Icon, CONJOINT_CRUMBS } from '@/pages/brand-equity/be-components';
 import { copyToClipboard } from '@/lib/clipboard';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
@@ -34,13 +34,22 @@ import {
   Network
 } from 'lucide-react';
 import ShareConjointModal from '@/components/ShareConjointModal';
-import ExternalAiWorkflowModal from '@/components/ExternalAiWorkflowModal';
 import ConjointCompareMethods from '@/pages/conjoint/ConjointCompareMethods';
 import ConjointSegmentCompare from '@/pages/conjoint/ConjointSegmentCompare';
 import HBIndividualInsights from '@/pages/conjoint/HBIndividualInsights';
 import { BeFilterBar } from '@/pages/brand-equity/BeFilterBar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
+import AiActionButton from '@/components/AiActionButton';
+import { useLlmPolicy } from '@/hooks/useLlmPolicy';
+import ConjointInterpretationCard from '@/pages/conjoint/ConjointInterpretationCard';
+import ConjointThesisModal from '@/pages/conjoint/ConjointThesisModal';
+import ConjointExportMenu from '@/pages/conjoint/ConjointExportMenu';
+import ConjointDataQualityCard from '@/pages/conjoint/ConjointDataQualityCard';
+import ConjointWtpCard from '@/pages/conjoint/ConjointWtpCard';
+import ConjointSimulatorCard from '@/pages/conjoint/ConjointSimulatorCard';
+import ConjointTopSummary from '@/pages/conjoint/ConjointTopSummary';
+import { ImageFileButton, ImagesOptionalNote } from '@/pages/conjoint/ConjointImageAi';
+import { useConjointFetch } from '@/pages/conjoint/useConjointFetch';
+import { METHOD_INFO, methodName as cjMethodName, fmtCI, fmtP, fmtNum } from '@/pages/conjoint/cjFormat';
 import {
   PieChart,
   Pie,
@@ -52,24 +61,19 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
-  ReferenceLine
+  CartesianGrid
 } from 'recharts';
+import { apiErrorText } from '@/lib/apiError';
 
 const ConjointResultsPage = () => {
   const navigate = useNavigate();
   const { studyId } = useParams();
   const { user, token } = useAuth();
-  const isAdmin = user?.role === 'admin';
   
   const [study, setStudy] = useState(null);
   const [results, setResults] = useState(null);
   const [aiInterpretation, setAiInterpretation] = useState(null);
-  const [generatedPrompt, setGeneratedPrompt] = useState(null);
-  const [loadingPrompt, setLoadingPrompt] = useState(false);
-  const [promptCopied, setPromptCopied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loadingAI, setLoadingAI] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(true);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'academic', or 'advanced'
   const [advancedTechnique, setAdvancedTechnique] = useState('nca'); // 'nca', 'fsqca', or 'ipma'
@@ -81,7 +85,8 @@ const ConjointResultsPage = () => {
   const [loadingStatistical, setLoadingStatistical] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState('mnl'); // counting, mnl, mixed_logit, hierarchical_bayes, linear_regression
   const [currentResults, setCurrentResults] = useState(null); // Results to display (either from counting or statistical)
-  const [aiAnalysisMode, setAiAnalysisMode] = useState('single'); // 'single' or 'compare_all'
+  const [aiCompareAll, setAiCompareAll] = useState(false); // AI interpretation scope: one method or all
+  const [statError, setStatError] = useState(''); // per-request error for the statistical-analysis call
 
   // ---------- Filter state (time + demographic segments) ----------
   // Mirrors the BrandEquity dashboard. Changing this re-fetches all method
@@ -92,19 +97,6 @@ const ConjointResultsPage = () => {
   const [segmentsAvailable, setSegmentsAvailable] = useState({});
   const [demographicsToCapture, setDemographicsToCapture] = useState([]);
   const [totalRespondentCount, setTotalRespondentCount] = useState(0);
-
-  const buildFilterQuery = useCallback(() => {
-    const parts = [];
-    if (filter.from) parts.push(`from=${encodeURIComponent(filter.from)}`);
-    if (filter.to) parts.push(`to=${encodeURIComponent(filter.to)}`);
-    const segs = Object.fromEntries(
-      Object.entries(filter.segments || {}).filter(([, vs]) => Array.isArray(vs) && vs.length > 0)
-    );
-    if (Object.keys(segs).length > 0) {
-      parts.push(`segments=${encodeURIComponent(JSON.stringify(segs))}`);
-    }
-    return parts.length > 0 ? `?${parts.join('&')}` : '';
-  }, [filter.from, filter.to, filter.segments]);
   
   // Product Image Generator states
   const [productImagePrompt, setProductImagePrompt] = useState('');
@@ -135,105 +127,36 @@ const ConjointResultsPage = () => {
   const [deleting, setDeleting] = useState(false);
   
   // Thesis export states
-  const [loadingThesis, setLoadingThesis] = useState(false);
-  const [thesisProgress, setThesisProgress] = useState(''); // '', 'generating', 'downloading'
   const [showThesisModal, setShowThesisModal] = useState(false);
-  const [thesisMethod, setThesisMethod] = useState('mnl');
-  const [thesisMethods, setThesisMethods] = useState(['mnl']);
-  const [thesisChapters, setThesisChapters] = useState([3, 4, 5]);
-  const [extraPrompt, setExtraPrompt] = useState('');
-  const [simProducts, setSimProducts] = useState([]);
-  const [externalAiInterpOpen, setExternalAiInterpOpen] = useState(false);
+  const { systemAllowed } = useLlmPolicy();
+  const imagesSystemOk = systemAllowed('conjoint.images');
 
-  const fetchConjointInterpPrompt = useCallback(async () => {
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await axios.post(
-      `${API}/conjoint/studies/${studyId}/generate-prompt${buildFilterQuery()}`,
-      { method: selectedMethod, compare_all: aiAnalysisMode === 'compare_all' },
-      { headers }
-    );
-    return res.data;
-  }, [studyId, token, selectedMethod, aiAnalysisMode, buildFilterQuery]);
-
-  const validateConjointInterp = useCallback(async (rawText) => {
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await axios.post(
-      `${API}/conjoint/studies/${studyId}/import-ai-interpretation${buildFilterQuery()}`,
-      { raw_text: rawText, method: selectedMethod, compare_all: aiAnalysisMode === 'compare_all', dry_run: true },
-      { headers }
-    );
-    return res.data;
-  }, [studyId, token, selectedMethod, aiAnalysisMode, buildFilterQuery]);
-
-  const applyConjointInterp = useCallback(async (rawText) => {
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await axios.post(
-      `${API}/conjoint/studies/${studyId}/import-ai-interpretation${buildFilterQuery()}`,
-      { raw_text: rawText, method: selectedMethod, compare_all: aiAnalysisMode === 'compare_all', dry_run: false },
-      { headers }
-    );
-    setAiInterpretation(res.data);
-    setGeneratedPrompt(null);
-    toast.success('บันทึกผลวิเคราะห์จาก AI ภายนอกลงระบบเรียบร้อย!');
-  }, [studyId, token, selectedMethod, aiAnalysisMode, buildFilterQuery]);
-
-  const aiPollRef = useRef(null);
-  const thesisPollRef = useRef(null);
-  const filterKey = `${filter.from}|${filter.to}|${JSON.stringify(filter.segments || {})}`;
-  const prevFilterKeyRef = useRef(filterKey);
-  const hasActiveFilter = Boolean(
-    filter.from || filter.to || Object.values(filter.segments || {}).some(vs => (vs || []).length > 0)
+  // Data quality (owner/admin only). Hooks live here, ABOVE the early returns below.
+  const dq = useConjointFetch(
+    `${API}/conjoint/studies/${studyId}/data-quality`,
+    { token, enabled: !!studyId && !!token && isOwnerOrAdmin && (results?.respondent_count ?? 0) > 0 }
   );
+  const filterActive = !!(filter.from || filter.to || Object.values(filter.segments || {}).some((v) => (v || []).length));
 
-  // Clean up any active background job pollers on unmount
   useEffect(() => {
-    return () => {
-      if (aiPollRef.current) clearInterval(aiPollRef.current);
-      if (thesisPollRef.current) clearInterval(thesisPollRef.current);
-    };
-  }, []);
+    // Load results for both authenticated and public access.
+    // Depend ONLY on studyId to avoid re-fetching when auth state hydrates
+    // (which previously overwrote MNL results back to counting).
+    if (studyId) {
+      loadResults();
+    }
+  }, [studyId]); // eslint-disable-line
 
-  // Auto-seed What-If Market Share Simulator once study attributes & part-worths load
-  useEffect(() => {
-    const attrs = study?.attributes || [];
-    const pws = currentResults?.part_worths || {};
-    if (!attrs.length || !Object.keys(pws).length) return;
-    setSimProducts((prev) => {
-      if (prev.length >= 2) {
-        const valid = prev.every((p) => attrs.every((a) => p.choices?.[a.id]));
-        if (valid) return prev;
-      }
-      const best = {};
-      const worst = {};
-      attrs.forEach((a) => {
-        const lvls = Object.entries(pws[a.id]?.levels || {}).map(([lid, d]) => ({
-          id: lid,
-          u: Number(d?.utility ?? 0),
-        }));
-        lvls.sort((x, y) => y.u - x.u);
-        best[a.id] = lvls[0]?.id || a.levels?.[0]?.id || '';
-        worst[a.id] = lvls[lvls.length - 1]?.id || a.levels?.[0]?.id || '';
-      });
-      return [
-        { id: 'sim-a', name: 'สินค้าแนะนำ (Optimal)', choices: best },
-        { id: 'sim-b', name: 'คู่แข่ง / ทางเลือกเปรียบเทียบ', choices: worst },
-      ];
-    });
-  }, [study, currentResults]);
-
-  // Single deduplicated fetch effect on mount & when filter changes
+  // Refetch when filter changes (debounce-free since BeFilterBar already
+  // batches chip toggles into one click each).
   useEffect(() => {
     if (!studyId) return;
-    if (prevFilterKeyRef.current !== filterKey) {
-      prevFilterKeyRef.current = filterKey;
-      setStatisticalData(null);
-      setNcaResults(null);
-      setFsqcaResults(null);
-      setAiInterpretation(null);
-      setGeneratedPrompt(null);
-    }
     loadResults();
-  }, [studyId, filterKey]); // eslint-disable-line
+    // Filter changed → invalidate in-memory MNL, NCA & fsQCA caches so they re-run on the active slice.
+    setStatisticalData(null);
+    setNcaResults(null);
+    setFsqcaResults(null);
+  }, [filter.from, filter.to, JSON.stringify(filter.segments)]); // eslint-disable-line
 
   // Build filter query string used by all analysis endpoints.
   const buildFilterQs = () => {
@@ -287,7 +210,7 @@ const ConjointResultsPage = () => {
       console.error('Error loading results:', error);
       if (error.response?.status === 401) {
         toast.error('กรุณา login เพื่อดูผลการวิจัยนี้');
-        navigate('/login');
+        navigate(`/login?redirect=${encodeURIComponent(`/research/conjoint/${studyId}/results`)}`);
       } else {
         toast.error('ไม่สามารถโหลดผลการวิเคราะห์ได้');
       }
@@ -298,11 +221,11 @@ const ConjointResultsPage = () => {
 
   const loadStatisticalAnalysis = async (method) => {
     setLoadingStatistical(true);
+    setStatError('');
     try {
       if (method === 'counting') {
         setCurrentResults(results);
         setStatisticalData(null);
-        toast.success('แสดงผลแบบ Counting Method');
       } else {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const qs = buildFilterQs();
@@ -310,151 +233,27 @@ const ConjointResultsPage = () => {
           `${API}/conjoint/studies/${studyId}/statistical-analysis?method=${method}${qs}`,
           { headers }
         );
-        setStatisticalData(response.data);
-        setCurrentResults(response.data.results);
-        const wasCached = response.data.cached;
-        toast.success(`${getMethodName(method)} ${wasCached ? '(จาก cache)' : 'คำนวณสำเร็จ!'}`);
+        if (!response.data?.results) {
+          // e.g. fewer respondents than the method needs — say so instead of showing stale numbers
+          const why = response.data?.message || response.data?.results?.message || 'ข้อมูลยังไม่พอสำหรับวิธีนี้';
+          setStatError(`${getMethodName(method)}: ${why}`);
+          setStatisticalData(null);
+          setCurrentResults(results);
+        } else {
+          setStatisticalData(response.data);
+          setCurrentResults(response.data.results);
+        }
       }
     } catch (error) {
       console.error('Error loading statistical analysis:', error);
-      toast.error('ไม่สามารถวิเคราะห์ได้');
+      const d = error.response?.data?.detail;
+      setStatError(typeof d === 'string' ? d : 'คำนวณไม่สำเร็จ ลองใหม่อีกครั้ง หรือเลือกวิธีอื่น');
     } finally {
       setLoadingStatistical(false);
     }
   };
 
-  const getMethodName = (method) => {
-    const names = {
-      'counting': 'Counting Method (นับความถี่)',
-      'mnl': 'Multinomial Logit (MNL)',
-      'mixed_logit': 'Mixed Logit',
-      'hierarchical_bayes': 'Hierarchical Bayes',
-      'linear_regression': 'Linear Regression (OLS)'
-    };
-    return names[method] || method;
-  };
-
-  const loadAIInterpretation = async () => {
-    setLoadingAI(true);
-    try {
-      const requestBody = {
-        method: selectedMethod,
-        compare_all: aiAnalysisMode === 'compare_all'
-      };
-      
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.post(
-        `${API}/conjoint/studies/${studyId}/ai-interpretation`,
-        requestBody,
-        { headers }
-      );
-
-      // If cached, result comes back immediately
-      if (response.data.status === 'ready') {
-        setAiInterpretation(response.data);
-        setGeneratedPrompt(null);
-        const wasCached = response.data.cached;
-        if (aiAnalysisMode === 'compare_all') {
-          toast.success(`วิเคราะห์ทุกวิธีสำเร็จ${wasCached ? ' (จาก cache)' : ''}!`);
-        } else {
-          toast.success(`${getMethodName(selectedMethod)} ${wasCached ? '(จาก cache)' : 'สำเร็จ'}!`);
-        }
-        setLoadingAI(false);
-        return;
-      }
-
-      // Background job started — poll for result
-      const job_id = response.data.job_id;
-      toast.info('AI กำลังวิเคราะห์... รอสักครู่');
-      let attempts = 0;
-      const maxAttempts = 40; // ~2 minutes at 3s intervals
-      let resolved = false;
-
-      if (aiPollRef.current) clearInterval(aiPollRef.current);
-      aiPollRef.current = setInterval(async () => {
-        if (resolved) return;
-        attempts++;
-        try {
-          const pollRes = await axios.get(
-            `${API}/conjoint/studies/${studyId}/ai-interpretation-status/${job_id}`,
-            { headers }
-          );
-
-          if (pollRes.data.status === 'ready' && !resolved) {
-            resolved = true;
-            clearInterval(aiPollRef.current);
-            aiPollRef.current = null;
-            setAiInterpretation(pollRes.data);
-            setGeneratedPrompt(null);
-            setLoadingAI(false);
-            if (aiAnalysisMode === 'compare_all') {
-              toast.success('วิเคราะห์ทุกวิธีสำเร็จ!');
-            } else {
-              toast.success(`${getMethodName(selectedMethod)} สำเร็จ!`);
-            }
-          } else if (pollRes.data.status === 'failed' && !resolved) {
-            resolved = true;
-            clearInterval(aiPollRef.current);
-            aiPollRef.current = null;
-            setLoadingAI(false);
-            toast.error(pollRes.data.error || 'AI วิเคราะห์ไม่สำเร็จ — กำลังสร้าง Prompt ให้คัดลอกไปใช้เอง...');
-            await loadGeneratedPrompt();
-          } else if (attempts >= maxAttempts && !resolved) {
-            resolved = true;
-            clearInterval(aiPollRef.current);
-            aiPollRef.current = null;
-            setLoadingAI(false);
-            toast.error('AI ใช้เวลานานเกินไป — กำลังสร้าง Prompt ให้คัดลอกไปใช้เอง...');
-            await loadGeneratedPrompt();
-          }
-        } catch (pollErr) {
-          console.error('Poll error:', pollErr);
-        }
-      }, 3000);
-
-    } catch (error) {
-      console.error('Error generating AI interpretation:', error);
-      toast.error('AI วิเคราะห์ไม่สำเร็จ — กำลังสร้าง Prompt ให้คัดลอกไปใช้เอง...');
-      // Auto-generate prompt as fallback
-      await loadGeneratedPrompt();
-      setLoadingAI(false);
-    }
-  };
-
-  const loadGeneratedPrompt = async () => {
-    setLoadingPrompt(true);
-    try {
-      const requestBody = {
-        method: selectedMethod,
-        compare_all: aiAnalysisMode === 'compare_all'
-      };
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.post(
-        `${API}/conjoint/studies/${studyId}/generate-prompt${buildFilterQuery()}`,
-        requestBody,
-        { headers }
-      );
-      setGeneratedPrompt(response.data.prompt);
-      setPromptCopied(false);
-    } catch (err) {
-      console.error('Error generating prompt:', err);
-      toast.error('ไม่สามารถสร้าง Prompt ได้');
-    } finally {
-      setLoadingPrompt(false);
-    }
-  };
-
-  const handleCopyPrompt = async () => {
-    if (!generatedPrompt) return;
-    const ok = await copyToClipboard(generatedPrompt, {
-      successMessage: 'คัดลอก Prompt แล้ว! นำไปวางใน ChatGPT / Claude / Gemini ได้เลย',
-    });
-    if (ok) {
-      setPromptCopied(true);
-      setTimeout(() => setPromptCopied(false), 3000);
-    }
-  };
-
+  const getMethodName = (method) => cjMethodName(method);
 
   const handleGenerateProductImage = async () => {
     setLoadingProductImage(true);
@@ -473,7 +272,9 @@ const ConjointResultsPage = () => {
       toast.success('สร้างภาพผลิตภัณฑ์สำเร็จ!');
     } catch (error) {
       console.error('Error generating product image:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพผลิตภัณฑ์ได้');
+      if (error?.response?.status === 409) throw error; // llm_external_only -> AiActionButton opens the prompt dialog
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างภาพผลิตภัณฑ์ได้');
     } finally {
       setLoadingProductImage(false);
     }
@@ -481,7 +282,7 @@ const ConjointResultsPage = () => {
 
   const handleGenerateShelfSimulation = async () => {
     if (!productImage || !productImage.image_url) {
-      toast.error('กรุณาสร้างภาพผลิตภัณฑ์ก่อน');
+      toast.error('กรุณาสร้างหรืออัปโหลดภาพผลิตภัณฑ์ก่อน');
       return;
     }
     
@@ -516,7 +317,9 @@ const ConjointResultsPage = () => {
       toast.success('สร้างภาพจำลองชั้นวางสำเร็จ!');
     } catch (error) {
       console.error('Error generating shelf simulation:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างภาพจำลองได้');
+      if (error?.response?.status === 409) throw error;
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างภาพจำลองได้');
     } finally {
       setLoadingShelfImage(false);
     }
@@ -553,52 +356,11 @@ const ConjointResultsPage = () => {
   const handleShareAsContent = async (formData) => {
     setSharingContent(true);
     try {
-      // Check if AI interpretation exists, if not generate it first
-      let interpretationText = aiInterpretation?.interpretation || null;
-      
-      if (!interpretationText && isAdmin && results?.respondent_count >= 30) {
-        toast.info('⏳ กำลังสร้างการวิเคราะห์ด้วย AI...');
-        
-        try {
-          const headers = token ? { Authorization: `Bearer ${token}` } : {};
-          const aiResponse = await axios.post(
-            `${API}/conjoint/studies/${studyId}/ai-interpretation`,
-            {
-              method: selectedMethod,
-              compare_all: false
-            },
-            { headers }
-          );
-          
-          if (aiResponse.data.status === 'ready') {
-            interpretationText = aiResponse.data.interpretation;
-            setAiInterpretation(aiResponse.data);
-            toast.success('✅ สร้างการวิเคราะห์ด้วย AI สำเร็จ!');
-          } else if (aiResponse.data.job_id) {
-            // Poll and wait for background job
-            const jobId = aiResponse.data.job_id;
-            for (let i = 0; i < 30; i++) {
-              await new Promise(r => setTimeout(r, 3000));
-              const pollRes = await axios.get(
-                `${API}/conjoint/studies/${studyId}/ai-interpretation-status/${jobId}`,
-                { headers }
-              );
-              if (pollRes.data.status === 'ready') {
-                interpretationText = pollRes.data.interpretation;
-                setAiInterpretation(pollRes.data);
-                toast.success('✅ สร้างการวิเคราะห์ด้วย AI สำเร็จ!');
-                break;
-              } else if (pollRes.data.status === 'failed') {
-                throw new Error(pollRes.data.error || 'AI failed');
-              }
-            }
-          }
-        } catch (aiError) {
-          console.error('Error generating AI interpretation:', aiError);
-          toast.warning('⚠️ ไม่สามารถสร้างการวิเคราะห์ AI ได้ แต่จะดำเนินการแชร์ต่อ');
-        }
-      }
-      
+      // Share the interpretation that is already on screen (system- or self-written).
+      // The server no longer calls the system LLM for sharing; without one the content
+      // is published without an AI section.
+      const interpretationText = aiInterpretation?.interpretation || null;
+
       // Prepare data for sharing
       const shareData = {
         title: formData.title,
@@ -624,14 +386,14 @@ const ConjointResultsPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success('✅ แชร์เป็นเนื้อหาสำเร็จ! พร้อมกราฟและการวิเคราะห์ AI');
+      toast.success(interpretationText ? '✅ แชร์เป็นเนื้อหาสำเร็จ พร้อมกราฟและคำตีความ' : '✅ แชร์เป็นเนื้อหาสำเร็จ พร้อมกราฟ (ยังไม่มีคำตีความ AI)');
       setShowShareModal(false);
       
       // Optional: redirect to content page
       // navigate(`/content/${response.data.content_id}`);
     } catch (error) {
       console.error('Error sharing as content:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถแชร์เป็นเนื้อหาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถแชร์เป็นเนื้อหาได้'));
     } finally {
       setSharingContent(false);
     }
@@ -642,8 +404,10 @@ const ConjointResultsPage = () => {
   const handleRunNCA = async () => {
     setLoadingNCA(true);
     try {
+      const q = buildFilterQs();
+      const suffix = q ? `?${q.slice(1)}` : '';
       const response = await axios.post(
-        `${API}/conjoint/studies/${studyId}/nca-analysis${buildFilterQuery()}`,
+        `${API}/conjoint/studies/${studyId}/nca-analysis${suffix}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -652,7 +416,7 @@ const ConjointResultsPage = () => {
       toast.success('✅ วิเคราะห์ NCA เสร็จสมบูรณ์!');
     } catch (error) {
       console.error('Error running NCA:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ NCA ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถวิเคราะห์ NCA ได้'));
     } finally {
       setLoadingNCA(false);
     }
@@ -661,8 +425,10 @@ const ConjointResultsPage = () => {
   const handleRunFsQCA = async () => {
     setLoadingFsQCA(true);
     try {
+      const q = buildFilterQs();
+      const suffix = q ? `?${q.slice(1)}` : '';
       const response = await axios.post(
-        `${API}/conjoint/studies/${studyId}/fsqca-analysis${buildFilterQuery()}`,
+        `${API}/conjoint/studies/${studyId}/fsqca-analysis${suffix}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -671,123 +437,9 @@ const ConjointResultsPage = () => {
       toast.success('✅ วิเคราะห์ fsQCA เสร็จสมบูรณ์!');
     } catch (error) {
       console.error('Error running fsQCA:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถวิเคราะห์ fsQCA ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถวิเคราะห์ fsQCA ได้'));
     } finally {
       setLoadingFsQCA(false);
-    }
-  };
-
-  const escapeCsvCell = (cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`;
-
-  const handleExportCSV = async () => {
-    try {
-      toast.info('กำลังดาวน์โหลดข้อมูล...');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get(`${API}/conjoint/studies/${studyId}/export-responses`, { headers });
-      const responses = res.data?.responses || [];
-
-      if (!responses.length) {
-        toast.error('ไม่มีข้อมูลสำหรับ export');
-        return;
-      }
-
-      const csvHeaders = ['Respondent ID', 'Email', 'Submitted At', 'Demographics', 'Choices'];
-      const rows = responses.map(resp => [
-        resp.respondent_id,
-        resp.respondent_email || 'N/A',
-        resp.submitted_at ? new Date(resp.submitted_at).toLocaleString('th-TH') : '',
-        JSON.stringify(resp.demographics || {}),
-        JSON.stringify(resp.responses || [])
-      ]);
-
-      const csvContent = [
-        csvHeaders.map(escapeCsvCell).join(','),
-        ...rows.map(row => row.map(escapeCsvCell).join(','))
-      ].join('\n');
-
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `conjoint_results_${studyId}.csv`;
-      link.click();
-
-      toast.success('ดาวน์โหลด Wide CSV สำเร็จ');
-    } catch (error) {
-      console.error('Export error:', error);
-      toast.error('ไม่สามารถ export ได้');
-    }
-  };
-
-  const handleExportLongCSV = async () => {
-    try {
-      toast.info('กำลังเตรียมข้อมูล Long Format สำหรับ R / Stata / SPSS...');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get(`${API}/conjoint/studies/${studyId}/export-responses`, { headers });
-      const responses = res.data?.responses || [];
-
-      if (!responses.length) {
-        toast.error('ไม่มีข้อมูลสำหรับ export');
-        return;
-      }
-
-      const attrs = study?.attributes || [];
-      const csMap = Object.fromEntries((study?.choice_sets || []).map(cs => [cs.id, cs]));
-      const levelMaps = {};
-      attrs.forEach(a => {
-        levelMaps[a.id] = Object.fromEntries((a.levels || []).map(l => [l.id, l.value]));
-      });
-      const demoKeys = Array.from(new Set(responses.flatMap(r => Object.keys(r.demographics || {}))));
-
-      const csvHeaders = [
-        'respondent_id',
-        'choice_set_id',
-        'task_number',
-        'profile_id',
-        'chosen',
-        ...attrs.map(a => a.name),
-        ...demoKeys.map(k => `demo_${k}`),
-        'submitted_at'
-      ];
-
-      const rows = [];
-      responses.forEach(resp => {
-        (resp.responses || []).forEach((ch, taskIdx) => {
-          const cs = csMap[ch.choice_set_id];
-          const chosenId = ch.selected_profile_id || ch.chosen_profile_id || ch.profile_id;
-          const profiles = cs?.profiles || [];
-          profiles.forEach(prof => {
-            rows.push([
-              resp.respondent_id,
-              ch.choice_set_id,
-              cs?.set_number ?? (taskIdx + 1),
-              prof.id,
-              prof.id === chosenId ? 1 : 0,
-              ...attrs.map(a => {
-                const lvlId = prof.attribute_levels?.[a.id];
-                return levelMaps[a.id]?.[lvlId] ?? lvlId ?? '';
-              }),
-              ...demoKeys.map(k => resp.demographics?.[k] ?? ''),
-              resp.submitted_at || ''
-            ]);
-          });
-        });
-      });
-
-      const csvContent = [
-        csvHeaders.map(escapeCsvCell).join(','),
-        ...rows.map(row => row.map(escapeCsvCell).join(','))
-      ].join('\n');
-
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `conjoint_long_choice_${studyId}.csv`;
-      link.click();
-
-      toast.success(`ดาวน์โหลด Long-Format CSV (${rows.length} rows) สำเร็จ`);
-    } catch (error) {
-      console.error('Long CSV Export error:', error);
-      toast.error('ไม่สามารถ export Long-Format CSV ได้');
     }
   };
 
@@ -799,140 +451,17 @@ const ConjointResultsPage = () => {
     setShowThesisModal(true);
   };
 
-  const toggleThesisChapter = (ch) => {
-    setThesisChapters(prev => 
-      prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch].sort()
-    );
-  };
-
-  const toggleThesisMethod = (m) => {
-    setThesisMethods(prev => {
-      if (prev.includes(m)) {
-        if (prev.length === 1) return prev; // keep at least 1
-        return prev.filter(x => x !== m);
-      }
-      return [...prev, m];
-    });
-  };
-
-  const handleStartThesisExport = async () => {
-    if (thesisChapters.length === 0) {
-      toast.error('กรุณาเลือกอย่างน้อย 1 บท');
-      return;
-    }
-    setShowThesisModal(false);
-    setLoadingThesis(true);
-    setThesisProgress('generating');
-    const headers = { Authorization: `Bearer ${token}` };
-    
-    try {
-      // Step 1: Start generation
-      const startRes = await axios.post(
-        `${API}/conjoint/studies/${studyId}/export-thesis`,
-        { methods: thesisMethods, chapters: thesisChapters, extra_prompt: extraPrompt || '' },
-        { headers }
-      );
-      
-      const { status, job_id } = startRes.data;
-      const cacheKey = startRes.data.cached ? job_id : null;
-      
-      if (status === 'ready') {
-        // Already cached, download directly
-        setThesisProgress('downloading');
-        await downloadThesisFile(headers, cacheKey);
-        return;
-      }
-      
-      // Step 2: Poll for completion (with download guard)
-      const chapterNames = thesisChapters.map(c => `บทที่ ${c}`).join(', ');
-      toast.info(`AI กำลังสร้าง ${chapterNames}... อาจใช้เวลา 1-3 นาที`);
-      let attempts = 0;
-      const maxAttempts = 60;
-      let downloaded = false;
-      
-      if (thesisPollRef.current) clearInterval(thesisPollRef.current);
-      thesisPollRef.current = setInterval(async () => {
-        if (downloaded) return;
-        attempts++;
-        try {
-          const pollRes = await axios.get(
-            `${API}/conjoint/studies/${studyId}/export-thesis-status/${job_id}`,
-            { headers }
-          );
-          
-          if (pollRes.data.status === 'ready' && !downloaded) {
-            downloaded = true;
-            clearInterval(thesisPollRef.current);
-            thesisPollRef.current = null;
-            setThesisProgress('downloading');
-            await downloadThesisFile(headers);
-          } else if (pollRes.data.status === 'failed') {
-            downloaded = true;
-            clearInterval(thesisPollRef.current);
-            thesisPollRef.current = null;
-            setLoadingThesis(false);
-            setThesisProgress('');
-            toast.error(pollRes.data.error || 'ไม่สามารถสร้างเนื้อหาได้ กรุณาลองใหม่');
-          } else if (attempts >= maxAttempts) {
-            downloaded = true;
-            clearInterval(thesisPollRef.current);
-            thesisPollRef.current = null;
-            setLoadingThesis(false);
-            setThesisProgress('');
-            toast.error('ใช้เวลานานเกินไป กรุณาลองใหม่');
-          }
-        } catch (pollErr) {
-          console.error('Poll error:', pollErr);
-        }
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Thesis export error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้างเอกสารได้');
-      setLoadingThesis(false);
-      setThesisProgress('');
-    }
-  };
-  
-  const downloadThesisFile = async (headers, cacheKey) => {
-    try {
-      const params = cacheKey ? `?cache_key=${encodeURIComponent(cacheKey)}` : '';
-      const dlRes = await axios.get(
-        `${API}/conjoint/studies/${studyId}/export-thesis-download${params}`,
-        { headers, responseType: 'blob' }
-      );
-      
-      const blob = new Blob([dlRes.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
-      });
-      const chStr = thesisChapters.map(c => `Ch${c}`).join('_');
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Conjoint_Thesis_${chStr}_${studyId.slice(0, 8)}.docx`;
-      link.click();
-      URL.revokeObjectURL(link.href);
-      
-      toast.success('ดาวน์โหลดเอกสารวิทยานิพนธ์สำเร็จ!');
-    } catch (dlError) {
-      console.error('Download error:', dlError);
-      toast.error('ดาวน์โหลดไม่สำเร็จ');
-    } finally {
-      setLoadingThesis(false);
-      setThesisProgress('');
-    }
-  };
-
   const handleDeleteStudy = async () => {
     setDeleting(true);
     try {
       await axios.delete(`${API}/conjoint/studies/${studyId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('ย้ายการศึกษาไปที่ถังขยะสำเร็จ');
+      toast.success('ลบการศึกษาสำเร็จ');
       navigate('/market-research/conjoint-analysis');
     } catch (error) {
       console.error('Error deleting study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบการศึกษาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบการศึกษาได้'));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -948,96 +477,30 @@ const ConjointResultsPage = () => {
   }
 
   if (!currentResults || currentResults.status === 'insufficient_data') {
-    const filteredCount = currentResults?.respondent_count || 0;
-    const isFilterEmpty = totalRespondentCount >= 30 && hasActiveFilter;
-    const surveyLink = `${window.location.origin}/survey/conjoint/${studyId}`;
     return (
       <div className="be-root">
         <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
-                  subtitle="CONJOINT ANALYSIS" active="conjoint"/>
+                  subtitle="CONJOINT ANALYSIS" active="conjoint"
+                  crumbs={[...CONJOINT_CRUMBS, { label: 'ผลการวิเคราะห์' }]}/>
         <div className="be-conjoint-page" style={{ maxWidth: 880 }}>
-          <button onClick={() => navigate('/market-research/conjoint-analysis')} className="be-btn" style={{ marginBottom: 18 }}>
-            <Icon name="chevronL" size={11}/>กลับไปรายการโครงการ
+          <button onClick={() => navigate(-1)} className="be-btn" style={{ marginBottom: 18 }}>
+            <Icon name="chevronL" size={11}/>กลับ
           </button>
-
-          {demographicsToCapture.length > 0 && totalRespondentCount >= 30 && (
-            <div className="mb-5">
-              <BeFilterBar
-                mode="conjoint"
-                value={filter}
-                compareValue={compareFilter}
-                segmentsAvailable={segmentsAvailable}
-                responsesTotal={totalRespondentCount}
-                responsesFiltered={filteredCount}
-                onChange={(next) => setFilter(next)}
-                onCompareChange={(next) => setCompareFilter(next)}
-                isShowcase={!isOwnerOrAdmin}
-              />
-            </div>
-          )}
-
-          <div className="be-card" style={{ padding: 36, textAlign: 'center' }}>
+          <div className="be-card" style={{ padding: 40, textAlign: 'center' }}>
             <div className="be-eyebrow" style={{ marginBottom: 14, justifyContent: 'center' }}>
-              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>
-              {isFilterEmpty ? 'FILTERED SLICE TOO SMALL' : 'COLLECTING RESPONSES'}
+              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>DASHBOARD LOCKED
             </div>
             <h2 className="be-h2" style={{ fontSize: 22, marginBottom: 10, fontFamily: 'IBM Plex Serif' }}>
-              {isFilterEmpty
-                ? `กลุ่มที่กรองมีข้อมูล ${filteredCount} คน (ต้องการอย่างน้อย 30 คนเพื่อประมาณค่าสถิติ)`
-                : 'ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์สถิติ'}
+              ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์
             </h2>
-            <p className="be-muted be-small" style={{ marginBottom: 18, maxWidth: 560, marginInline: 'auto' }}>
-              {isFilterEmpty
-                ? `ข้อมูลรวมทั้งหมดของโครงการนี้มี ${totalRespondentCount} คน — ล้างตัวกรองหรือขยายกลุ่มตัวอย่างเพื่อดูผลวิเคราะห์`
-                : 'เกณฑ์ขั้นต่ำของระบบคือ 30 คน (และแนะนำ ≥ 100 คนตามสูตร Orme สำหรับงานวิจัยเชิงลึก)'}
+            <p className="be-muted be-small" style={{ marginBottom: 18 }}>
+              ต้องการอย่างน้อย 30 คำตอบสำหรับการวิเคราะห์ที่เชื่อถือได้
             </p>
             <div className="be-data" style={{ fontSize: 36, color: 'var(--be-blue)' }}>
-              {filteredCount}
+              {currentResults?.respondent_count || 0}
             </div>
-            <div className="be-mono be-tiny be-muted" style={{ marginTop: 4, marginBottom: 22 }}>
-              {isFilterEmpty
-                ? `FROM TOTAL ${totalRespondentCount} RESPONSES`
-                : `CURRENT RESPONSES · ต้องการอีก ${Math.max(0, 30 - filteredCount)} คน`}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {isFilterEmpty ? (
-                <Button
-                  onClick={() => setFilter({ from: '', to: '', segments: {} })}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                  data-testid="conjoint-clear-filter-btn"
-                >
-                  ล้างตัวกรองทั้งหมด
-                </Button>
-              ) : (
-                isOwnerOrAdmin && (
-                  <>
-                    <Button
-                      onClick={async () => {
-                        await copyToClipboard(surveyLink);
-                        toast.success('คัดลอกลิงก์แบบสอบถามแล้ว');
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                      data-testid="conjoint-collect-copy-link"
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      คัดลอกลิงก์แบบสอบถาม
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate(`/research/conjoint/${studyId}/design`)}
-                    >
-                      ไปหน้าออกแบบ / เริ่มสำรวจ
-                    </Button>
-                    {filteredCount > 0 && (
-                      <Button variant="outline" onClick={handleExportCSV}>
-                        <Download className="w-4 h-4 mr-2" />
-                        ดาวน์โหลด Pilot CSV ({filteredCount} คน)
-                      </Button>
-                    )}
-                  </>
-                )
-              )}
+            <div className="be-mono be-tiny be-muted" style={{ marginTop: 4 }}>
+              CURRENT RESPONSES · need {Math.max(0, 30 - (currentResults?.respondent_count || 0))} more
             </div>
           </div>
         </div>
@@ -1137,7 +600,9 @@ const ConjointResultsPage = () => {
   const plainSummary = (() => {
     if (!sortedImportance.length || !currentResults?.part_worths) return null;
     const rows = sortedImportance.map((feat) => {
-      const levels = Object.values(currentResults.part_worths?.[feat.id]?.levels || {});
+      // A level the model could not estimate carries utility 0 — that is NOT "as good as
+      // the reference", so it must never be picked as best/worst.
+      const levels = Object.values(currentResults.part_worths?.[feat.id]?.levels || {}).filter((l) => !l.is_excluded);
       if (!levels.length) return null;
       const best = levels.reduce((a, b) => (b.utility > a.utility ? b : a));
       const worst = levels.reduce((a, b) => (b.utility < a.utility ? b : a));
@@ -1154,6 +619,12 @@ const ConjointResultsPage = () => {
     const fit = statisticalData?.results?.pseudo_r_squared;
     return { rows, top: rows[0], fit };
   })();
+
+  // Honesty flags surfaced at the top of the page and in the statistics tab.
+  const converged = statisticalData?.results?.converged;
+  const hasCI = ['mnl', 'mixed_logit'].includes(statisticalData?.method) && !!statisticalData?.results?.ci_lower;
+  const excludedLevels = Object.values(currentResults?.part_worths || {}).flatMap((a) =>
+    Object.values(a.levels || {}).filter((l) => l.is_excluded).map((l) => `${a.name}: ${l.value}`));
 
   // Prepare data for Pie Chart
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
@@ -1172,134 +643,9 @@ const ConjointResultsPage = () => {
     <div className="be-root">
       <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
                 subtitle="CONJOINT ANALYSIS" active="conjoint"
-                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/market-research/conjoint-analysis')}>
-                         <Icon name="chevronL" size={10}/>Studies
-                       </button>}/>
+                crumbs={[...CONJOINT_CRUMBS, { label: study?.title || study?.name || 'ผลการวิเคราะห์' }]}/>
 
-      {/* Thesis Export Modal */}
-      <Dialog open={showThesisModal} onOpenChange={setShowThesisModal}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col" data-testid="thesis-export-modal">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-emerald-600" />
-              Export วิทยานิพนธ์ (Word)
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6 py-2 overflow-y-auto flex-1 min-h-0 pr-1">
-            {hasActiveFilter && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                ⚠️ การ Export วิทยานิพนธ์จะคำนวณจากข้อมูลทั้งหมดของโครงการ (Full Sample N={totalRespondentCount}) ไม่ใช่เฉพาะกลุ่มที่กรองอยู่
-              </div>
-            )}
-            {/* Method Selection - Multi-select */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                วิธีวิเคราะห์ (เลือกได้หลายวิธี)
-              </label>
-              <div className="space-y-2">
-                {[
-                  { id: 'counting', name: 'Counting Method', desc: 'นับความถี่ Part-worth Utilities' },
-                  { id: 'mnl', name: 'Multinomial Logit (MNL)', desc: 'Maximum Likelihood, Pseudo R², AIC' },
-                  { id: 'linear_regression', name: 'Linear Regression (OLS)', desc: 'R², F-test, t-test' },
-                  { id: 'mixed_logit', name: 'Mixed Logit', desc: 'Random Parameters, Preference Heterogeneity' },
-                  { id: 'hierarchical_bayes', name: 'Hierarchical Bayes (HB)', desc: 'Empirical Bayes (Panel Mixed Logit SMLE)' }
-                ].map(({ id, name, desc }) => (
-                  <label
-                    key={id}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                      thesisMethods.includes(id)
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                    data-testid={`thesis-method-${id}`}
-                  >
-                    <Checkbox
-                      checked={thesisMethods.includes(id)}
-                      onCheckedChange={() => toggleThesisMethod(id)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-sm text-gray-800">{name}</span>
-                      <span className="text-xs text-gray-500 ml-2">{desc}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              <p className="mt-1.5 text-xs text-gray-500">
-                {thesisMethods.length > 1
-                  ? `เลือก ${thesisMethods.length} วิธี — บทที่ 4 จะเปรียบเทียบผลทุกวิธี`
-                  : 'เลือก 1 วิธี — สมการและสถิติจะเขียนตามวิธีนี้'}
-              </p>
-            </div>
-
-            {/* Chapter Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                เลือกบทที่ต้องการ
-              </label>
-              <div className="space-y-3">
-                {[
-                  { ch: 3, title: 'บทที่ 3 — ระเบียบวิธีวิจัย (Methodology)', desc: 'Research design, สูตรสมการ, เกณฑ์ทดสอบ, สมมติฐานของแบบจำลอง' },
-                  { ch: 4, title: 'บทที่ 4 — ผลการศึกษา (Results)', desc: 'Coefficients, Importance Scores, Model Fit, ตาราง, การทดสอบสมมติฐาน' },
-                  { ch: 5, title: 'บทที่ 5 — สรุป อภิปราย ข้อเสนอแนะ (Discussion)', desc: 'สรุปผล, เปรียบเทียบทฤษฎี, ข้อเสนอแนะเชิงกลยุทธ์' }
-                ].map(({ ch, title, desc }) => (
-                  <label
-                    key={ch}
-                    className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                      thesisChapters.includes(ch)
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                    data-testid={`thesis-chapter-${ch}`}
-                  >
-                    <Checkbox
-                      checked={thesisChapters.includes(ch)}
-                      onCheckedChange={() => toggleThesisChapter(ch)}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <div className="font-semibold text-sm text-gray-800">{title}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-          {/* Extra Prompt */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              คำสั่งเพิ่มเติม (Extra Prompt) — ไม่บังคับ
-            </label>
-            <textarea
-              value={extraPrompt}
-              onChange={(e) => setExtraPrompt(e.target.value)}
-              placeholder="เช่น: เน้นเรื่องกลยุทธ์ราคา, เพิ่มรายละเอียดเรื่อง Brand Positioning, ใช้ภาษาทางการมากขึ้น..."
-              className="w-full min-h-[80px] rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-y"
-              data-testid="thesis-extra-prompt"
-            />
-            <p className="mt-1 text-xs text-gray-400">
-              AI จะนำคำสั่งนี้ไปใช้ประกอบการเขียนเนื้อหาวิทยานิพนธ์
-            </p>
-          </div>
-          </div>
-
-          <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0 pt-2 border-t">
-            <Button variant="outline" onClick={() => setShowThesisModal(false)}>
-              ยกเลิก
-            </Button>
-            <Button
-              onClick={handleStartThesisExport}
-              disabled={thesisChapters.length === 0 || thesisMethods.length === 0}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-              data-testid="thesis-confirm-export-btn"
-            >
-              <GraduationCap className="w-4 h-4 mr-2" />
-              สร้างเอกสาร ({thesisMethods.length} วิธี, {thesisChapters.length} บท)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConjointThesisModal open={showThesisModal} onOpenChange={setShowThesisModal} studyId={studyId} token={token} user={user} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Header */}
@@ -1369,32 +715,24 @@ const ConjointResultsPage = () => {
                 </>
               )}
               
+              <Button
+                onClick={() => setShowShareModal(true)}
+                className="w-full sm:w-auto text-sm bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                แชร์เป็นเนื้อหา
+              </Button>
+              
+              {isOwnerOrAdmin && <ConjointExportMenu studyId={studyId} token={token} className="w-full sm:w-auto text-sm" />}
+              
               {isOwnerOrAdmin && (
-                <>
-                  <Button
-                    onClick={() => setShowShareModal(true)}
-                    className="w-full sm:w-auto text-sm bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    แชร์เป็นเนื้อหา
-                  </Button>
-
-                  <Button
-                    onClick={handleExportCSV}
-                    className="w-full sm:w-auto text-sm bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    ดาวน์โหลดข้อมูล (CSV)
-                  </Button>
-
-                  <Button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full sm:w-auto text-sm bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    ลบการศึกษา
-                  </Button>
-                </>
+                <Button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full sm:w-auto text-sm bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  ลบการศึกษา
+                </Button>
               )}
             </div>
           </div>
@@ -1411,17 +749,17 @@ const ConjointResultsPage = () => {
             </div>
             <select
               value={selectedMethod}
+              aria-label="เลือกวิธีการวิเคราะห์"
+              data-testid="method-select"
               onChange={(e) => {
                 setSelectedMethod(e.target.value);
                 loadStatisticalAnalysis(e.target.value);
               }}
               className="w-full sm:w-auto px-3 sm:px-4 py-2 border-2 border-blue-300 rounded-lg bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
             >
-              <option value="mnl">⭐ แนะนำ — ใช้วิธีมาตรฐาน (MNL)</option>
-              <option value="counting">📊 ดูแบบง่ายที่สุด: นับความถี่ (Counting)</option>
-              <option value="mixed_logit">🔀 เมื่อคนแต่ละกลุ่มชอบไม่เหมือนกัน (Mixed Logit)</option>
-              <option value="hierarchical_bayes">🎯 เมื่อต้องการผลรายบุคคล (Hierarchical Bayes)</option>
-              <option value="linear_regression">📈 baseline เชิงพรรณนา (OLS)</option>
+              {['mnl', 'counting', 'mixed_logit', 'hierarchical_bayes', 'linear_regression'].map((m) => (
+                <option key={m} value={m}>{METHOD_INFO[m].label}</option>
+              ))}
             </select>
             {loadingStatistical && (
               <div className="flex items-center gap-2 text-blue-600">
@@ -1431,17 +769,10 @@ const ConjointResultsPage = () => {
             )}
           </div>
           <p className="text-[11px] text-gray-500 mt-2 pl-1">
+            {METHOD_INFO[selectedMethod]?.why}{' '}
             ไม่แน่ใจว่าเลือกอันไหน? ใช้ค่าตั้งต้น <b>MNL</b> ได้เลย — เป็นวิธีที่งานวิจัยส่วนใหญ่รายงาน
             หรือเปิดแท็บ <b>เปรียบเทียบวิธี</b> เพื่อให้ระบบบอกว่าควรใช้อันไหนกับข้อมูลชุดนี้
           </p>
-          {(() => {
-            const activeN = currentResults?.respondent_count ?? currentResults?.n_respondents ?? results?.respondent_count ?? 0;
-            return ['mixed_logit', 'hierarchical_bayes'].includes(selectedMethod) && activeN < 100 && (
-              <div className="mt-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                ⚠️ <strong>หมายเหตุขนาดตัวอย่าง (Small-N Notice):</strong> ปัจจุบันมีผู้ตอบ {activeN} คน (&lt; 100 คน) — ค่าประมาณการความแตกต่างรายบุคคลของ Mixed Logit / HB อาจยังไม่เสถียร แนะนำใช้วิธีมาตรฐาน <strong>MNL</strong> ควบคู่ในการอ้างอิง
-              </div>
-            );
-          })()}
         </div>
 
         {/* Filter Bar — time + demographic segments (shows segment chips
@@ -1449,7 +780,6 @@ const ConjointResultsPage = () => {
         {demographicsToCapture.length > 0 && (
           <div className="mb-4 sm:mb-6" data-testid="conjoint-filter-bar-wrap">
             <BeFilterBar
-              mode="conjoint"
               value={filter}
               compareValue={compareFilter}
               segmentsAvailable={segmentsAvailable}
@@ -1475,12 +805,35 @@ const ConjointResultsPage = () => {
           </div>
         )}
 
+        {/* Statistical-analysis request state (per-request loading / error) */}
+        {statError && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border-2 border-red-300 bg-red-50 p-3 text-sm text-red-900" role="alert" data-testid="stat-error">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            <span className="flex-1">{statError}</span>
+            <button type="button" className="font-semibold underline" onClick={() => loadStatisticalAnalysis(selectedMethod)}>ลองใหม่</button>
+          </div>
+        )}
+
+        <ConjointTopSummary
+          n={currentResults?.respondent_count ?? results?.respondent_count ?? 0}
+          adequacy={sampleAdequacy}
+          plainSummary={plainSummary}
+          method={selectedMethod}
+          converged={converged}
+          excludedLevels={excludedLevels}
+          dqData={dq.data}
+          canSeeQuality={isOwnerOrAdmin}
+          onGoTab={setActiveTab}
+          isOwnerOrAdmin={isOwnerOrAdmin}
+          onOpenThesis={handleExportThesis}
+        />
+
         {/* Tab Navigation */}
-        <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6 bg-white rounded-lg p-2 shadow-sm">
+        <div className="flex flex-row gap-2 mb-4 sm:mb-6 bg-white rounded-lg p-2 shadow-sm overflow-x-auto" role="tablist" data-testid="conjoint-tabs">
           <button
             onClick={() => setActiveTab('overview')}
             data-testid="tab-overview"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'overview'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -1494,7 +847,7 @@ const ConjointResultsPage = () => {
           <button
             onClick={() => setActiveTab('academic')}
             data-testid="tab-academic"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'academic'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -1506,9 +859,25 @@ const ConjointResultsPage = () => {
             </div>
           </button>
           <button
+            onClick={() => setActiveTab('market')}
+            data-testid="tab-market"
+            role="tab"
+            aria-selected={activeTab === 'market'}
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+              activeTab === 'market'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>ราคา &amp; จำลองตลาด</span>
+            </div>
+          </button>
+          <button
             onClick={() => setActiveTab('advanced')}
             data-testid="tab-advanced"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'advanced'
                 ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -1522,7 +891,7 @@ const ConjointResultsPage = () => {
           <button
             onClick={() => setActiveTab('compare')}
             data-testid="tab-compare-methods"
-            className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
+            className={`flex-1 whitespace-nowrap px-3 sm:px-6 py-2 sm:py-3 rounded-md font-bold transition-all text-sm sm:text-base ${
               activeTab === 'compare'
                 ? 'bg-gradient-to-r from-slate-800 to-slate-600 text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -1608,141 +977,6 @@ const ConjointResultsPage = () => {
               </Card>
             )}
 
-            {/* What-If Market Share Simulator (Business & Academic Interactive Tool) */}
-            {study?.attributes?.length >= 2 && simProducts.length >= 2 && currentResults?.part_worths && (() => {
-              const pws = currentResults.part_worths;
-              const rawUtils = simProducts.map((prod) =>
-                study.attributes.reduce((sum, attr) => {
-                  const lvlId = prod.choices?.[attr.id];
-                  return sum + Number(pws[attr.id]?.levels?.[lvlId]?.utility ?? 0);
-                }, 0)
-              );
-              const maxU = Math.max(...rawUtils);
-              const exps = rawUtils.map((u) => Math.exp(u - maxU));
-              const sumExp = exps.reduce((a, b) => a + b, 0) || 1;
-              const shares = exps.map((e) => (e / sumExp) * 100);
-              const barPalette = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-amber-500'];
-
-              return (
-                <Card className="p-4 sm:p-6 mb-6 bg-white border-2 border-emerald-200" data-testid="conjoint-whatif-simulator">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-emerald-600" />
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                          จำลองส่วนแบ่งตลาด (What-If Market Simulator)
-                        </h2>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        ทดลองปรับสเปกและราคาสินค้า 2–4 แบบเพื่อดูโอกาสที่ลูกค้าจะเลือกซื้อ (Logit Share of Preference จากผล {getMethodName(selectedMethod)})
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {simProducts.length < 4 && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            const nextIdx = simProducts.length + 1;
-                            const baseChoices = { ...simProducts[0].choices };
-                            setSimProducts([...simProducts, { id: `sim-${Date.now()}`, name: `ทางเลือกที่ ${nextIdx}`, choices: baseChoices }]);
-                          }}
-                        >
-                          + เพิ่มคู่แข่ง / ทางเลือก
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSimProducts([])}
-                      >
-                        รีเซ็ต (แนะนำ vs คู่แข่ง)
-                      </Button>
-                    </div>
-                  </div>
-
-                  {selectedMethod === 'counting' && (
-                    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                      💡 ขณะนี้ใช้สเกล Counting — แนะนำสลับวิธีวิเคราะห์ด้านบนเป็น <strong>MNL</strong> หรือ <strong>HB</strong> เพื่อคำนวณส่วนแบ่งตลาดตามแบบจำลอง Logit ได้แม่นยำขึ้น
-                    </div>
-                  )}
-
-                  {/* Estimated Share Bars */}
-                  <div className="space-y-3 mb-5 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                    {simProducts.map((prod, pIdx) => (
-                      <div key={prod.id}>
-                        <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mb-1">
-                          <span className="text-gray-800">{prod.name}</span>
-                          <span className="font-mono text-gray-900">
-                            {shares[pIdx].toFixed(1)}% <span className="text-[11px] font-normal text-gray-500">(U = {rawUtils[pIdx].toFixed(2)})</span>
-                          </span>
-                        </div>
-                        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${barPalette[pIdx % barPalette.length]}`}
-                            style={{ width: `${shares[pIdx]}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Scenario Pickers */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {simProducts.map((prod, pIdx) => (
-                      <div key={prod.id} className="p-3 rounded-lg border border-gray-200 bg-white space-y-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <input
-                            type="text"
-                            value={prod.name}
-                            onChange={(e) => {
-                              const next = [...simProducts];
-                              next[pIdx] = { ...next[pIdx], name: e.target.value };
-                              setSimProducts(next);
-                            }}
-                            className="text-xs font-bold text-gray-900 bg-transparent border-b border-gray-300 focus:border-emerald-500 focus:outline-none w-full py-0.5"
-                          />
-                          {simProducts.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => setSimProducts(simProducts.filter((_, idx) => idx !== pIdx))}
-                              className="text-xs text-red-500 hover:text-red-700 px-1"
-                              title="ลบทางเลือกนี้"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                        {study.attributes.map((attr) => (
-                          <div key={attr.id}>
-                            <label className="block text-[11px] text-gray-500 mb-0.5">{attr.name}</label>
-                            <select
-                              value={prod.choices?.[attr.id] || ''}
-                              onChange={(e) => {
-                                const next = [...simProducts];
-                                next[pIdx] = {
-                                  ...next[pIdx],
-                                  choices: { ...next[pIdx].choices, [attr.id]: e.target.value },
-                                };
-                                setSimProducts(next);
-                              }}
-                              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-emerald-500"
-                            >
-                              {(attr.levels || []).map((lvl) => (
-                                <option key={lvl.id} value={lvl.id}>
-                                  {lvl.value}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              );
-            })()}
-
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
@@ -1796,288 +1030,27 @@ const ConjointResultsPage = () => {
           </Card>
         </div>
 
-        {/* AI Interpretation Section */}
-        <Card className="p-4 sm:p-6 mb-6 sm:mb-8 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                AI ตีความผลและข้อเสนอแนะ
-              </h2>
-            </div>
-            
-            {/* AI Analysis Mode Selector */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white px-3 sm:px-4 py-2 rounded-lg border-2 border-indigo-200">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700">โหมดวิเคราะห์:</label>
-              <select
-                value={aiAnalysisMode}
-                onChange={(e) => {
-                  setAiAnalysisMode(e.target.value);
-                  setAiInterpretation(null); // Reset AI interpretation when mode changes
-                }}
-                className="text-xs sm:text-sm border-2 border-indigo-300 rounded px-2 sm:px-3 py-1 font-medium text-gray-800 focus:outline-none focus:border-indigo-500"
-              >
-                <option value="single">วิธีเดียว ({getMethodName(selectedMethod)})</option>
-                <option value="compare_all">เปรียบเทียบทุกวิธี</option>
-              </select>
-            </div>
-          </div>
+        {isOwnerOrAdmin && <ConjointDataQualityCard dq={dq} />}
 
-          <div className="mb-4 space-y-2">
-            {hasActiveFilter && (
-              <p className="text-xs text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded border border-indigo-200">
-                🔍 กำลังวิเคราะห์เฉพาะกลุ่มที่กรองอยู่ (N={results?.respondent_count || 0}) — Prompt และผลจาก AI ภายนอกจะอ้างอิงและบันทึกแยกตามตัวกรองนี้
-              </p>
-            )}
-            {aiAnalysisMode === 'single' ? (
-              <p className="text-sm text-indigo-700 bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200">
-                📊 <strong>วิธีเดียว:</strong> AI จะวิเคราะห์ผลจาก <strong>{getMethodName(selectedMethod)}</strong> ที่กำลังแสดงอยู่บน UI
-              </p>
-            ) : (
-              <p className="text-sm text-purple-700 bg-purple-100 px-4 py-2 rounded-lg border border-purple-200">
-                🔬 <strong>เปรียบเทียบทุกวิธี:</strong> AI จะวิเคราะห์และเปรียบเทียบผลจาก 5 วิธี (Counting, Linear Regression, MNL, Mixed Logit, Hierarchical Bayes) เพื่อให้ข้อมูลที่ครอบคลุมและแม่นยำยิ่งขึ้น
-              </p>
-            )}
-          </div>
-
-          {!aiInterpretation ? (
-            <div className="text-center py-6 sm:py-8">
-              <p className="text-sm sm:text-base text-gray-600 mb-4">
-                ใช้ AI ภายนอกฟรี (ChatGPT / Claude / Gemini) ช่วยวิเคราะห์และแปลผลเชิงธุรกิจโดยอิงจากข้อมูลจริง
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                {isOwnerOrAdmin && (
-                  <Button
-                    onClick={() => setExternalAiInterpOpen(true)}
-                    disabled={loadingAI || loadingPrompt}
-                    className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm sm:text-base"
-                    data-testid="conjoint-interp-external-ai-btn"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    ใช้ AI ภายนอก (ฟรี · Prompt → วางผล)
-                  </Button>
-                )}
-                {isAdmin && (
-                  <Button
-                    onClick={loadAIInterpretation}
-                    disabled={loadingAI || loadingPrompt}
-                    variant="outline"
-                    className="w-full sm:w-auto border-2 border-indigo-400 text-indigo-800 bg-white hover:bg-indigo-50 font-bold text-sm sm:text-base"
-                    data-testid="ai-interpret-btn"
-                  >
-                    {loadingAI ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
-                        กำลังวิเคราะห์...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        {aiAnalysisMode === 'compare_all' ? 'วิเคราะห์ทุกวิธี (Admin)' : 'วิเคราะห์ด้วย AI (Admin)'}
-                      </>
-                    )}
-                  </Button>
-                )}
-                <Button
-                  onClick={loadGeneratedPrompt}
-                  disabled={loadingPrompt || loadingAI}
-                  variant="outline"
-                  className="w-full sm:w-auto border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-bold text-sm sm:text-base"
-                  data-testid="generate-prompt-btn"
-                >
-                  {loadingPrompt ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
-                      กำลังสร้าง Prompt...
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-2" />
-                      ดู Prompt แบบด่วน
-                    </>
-                  )}
-                </Button>
-                {isOwnerOrAdmin && (
-                <Button
-                  onClick={handleExportThesis}
-                  disabled={loadingThesis || loadingAI || loadingPrompt}
-                  className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm sm:text-base"
-                  data-testid="export-thesis-btn"
-                >
-                  {loadingThesis ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      {thesisProgress === 'downloading' ? 'กำลังดาวน์โหลด...' : 'AI กำลังเขียน...'}
-                    </>
-                  ) : (
-                    <>
-                      <GraduationCap className="w-4 h-4 mr-2" />
-                      Export วิทยานิพนธ์ (Word)
-                    </>
-                  )}
-                </Button>
-                )}
-              </div>
-              {generatedPrompt && !aiInterpretation && (
-                <div className="mt-6 text-left" data-testid="generated-prompt-section">
-                  <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Lightbulb className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                      <p className="text-sm font-bold text-amber-800">
-                        Prompt พร้อมข้อมูลจริง — คัดลอกไปใช้กับ AI ของคุณ
-                      </p>
-                    </div>
-                    <p className="text-xs text-amber-700 mb-3">
-                      คัดลอก Prompt ด้านล่างไปวางใน ChatGPT, Claude, Gemini หรือ AI อื่นๆ เพื่อให้วิเคราะห์ผลให้
-                    </p>
-                    <Button
-                      onClick={handleCopyPrompt}
-                      className={`w-full sm:w-auto font-bold text-sm ${
-                        promptCopied
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white'
-                      }`}
-                      data-testid="copy-prompt-btn"
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      {promptCopied ? 'คัดลอกแล้ว!' : 'คัดลอก Prompt'}
-                    </Button>
-                  </div>
-                  <div className="bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
-                      {generatedPrompt}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg p-4 sm:p-6 border-2 border-indigo-200">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
-                  <Sparkles className="w-4 h-4" />
-                  {aiInterpretation.summary_data?.mode === 'compare_all' 
-                    ? `ผลการวิเคราะห์จากทุกวิธี (${Object.keys(aiInterpretation.summary_data?.methods || {}).length} วิธี)`
-                    : `ผลการวิเคราะห์จาก ${getMethodName(aiInterpretation.summary_data?.method || selectedMethod)}`
-                  }
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {isOwnerOrAdmin && (
-                    <Button
-                      onClick={() => setExternalAiInterpOpen(true)}
-                      size="sm"
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold"
-                      data-testid="conjoint-interp-external-ai-after-btn"
-                    >
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      อัปเดตด้วย AI ภายนอก (ฟรี)
-                    </Button>
-                  )}
-                  <Button
-                    onClick={async () => {
-                      await loadGeneratedPrompt();
-                    }}
-                    disabled={loadingPrompt}
-                    variant="outline"
-                    size="sm"
-                    className="border-2 border-amber-300 text-amber-700 hover:bg-amber-50"
-                    data-testid="copy-prompt-after-ai-btn"
-                  >
-                    <Copy className="w-3 h-3 mr-1" />
-                    {loadingPrompt ? 'กำลังสร้าง...' : 'ดู Prompt แบบด่วน'}
-                  </Button>
-                  {isAdmin && (
-                    <Button
-                      onClick={loadAIInterpretation}
-                      disabled={loadingAI}
-                      variant="outline"
-                      size="sm"
-                      className="border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                      data-testid="ai-reanalyze-btn"
-                    >
-                      {loadingAI ? (
-                        <>
-                          <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
-                          กำลังวิเคราะห์...
-                        </>
-                      ) : (
-                        <>
-                          วิเคราะห์ใหม่ (Admin)
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  {isOwnerOrAdmin && (
-                  <Button
-                    onClick={handleExportThesis}
-                    disabled={loadingThesis}
-                    size="sm"
-                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-                    data-testid="export-thesis-after-ai-btn"
-                  >
-                    {loadingThesis ? (
-                      <>
-                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
-                        {thesisProgress === 'downloading' ? 'ดาวน์โหลด...' : 'กำลังสร้าง...'}
-                      </>
-                    ) : (
-                      <>
-                        <GraduationCap className="w-3 h-3 mr-1" />
-                        Export วิทยานิพนธ์
-                      </>
-                    )}
-                  </Button>
-                  )}
-                </div>
-              </div>
-              <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                  {aiInterpretation.interpretation}
-                </div>
-              </div>
-
-              {/* Show prompt section if generated */}
-              {generatedPrompt && (
-                <div className="mt-4 border-t-2 border-amber-200 pt-4" data-testid="prompt-after-ai-section">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-bold text-amber-800 flex items-center gap-2">
-                      <Copy className="w-4 h-4" />
-                      Prompt พร้อมข้อมูลจริง
-                    </p>
-                    <Button
-                      onClick={handleCopyPrompt}
-                      size="sm"
-                      className={`font-bold text-xs ${
-                        promptCopied
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white'
-                      }`}
-                      data-testid="copy-prompt-btn-2"
-                    >
-                      <Copy className="w-3 h-3 mr-1" />
-                      {promptCopied ? 'คัดลอกแล้ว!' : 'คัดลอก Prompt'}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-amber-700 mb-2">
-                    คัดลอกไปวางใน ChatGPT, Claude, Gemini หรือ AI ตัวอื่นได้เลย
-                  </p>
-                  <div className="bg-gray-900 rounded-lg p-3 max-h-64 overflow-y-auto">
-                    <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
-                      {generatedPrompt}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
+        {/* AI interpretation — system path or "use my own AI" (see ConjointInterpretationCard) */}
+        <ConjointInterpretationCard
+          studyId={studyId}
+          token={token}
+          method={selectedMethod}
+          compareAll={aiCompareAll}
+          onCompareAllChange={(v) => { setAiCompareAll(v); setAiInterpretation(null); }}
+          respondentCount={results?.respondent_count ?? 0}
+          filterActive={filterActive}
+          isOwnerOrAdmin={isOwnerOrAdmin}
+          interpretation={aiInterpretation}
+          onInterpretation={setAiInterpretation}
+          onOpenThesis={handleExportThesis}
+        />
 
 
         {/* Product Image Generator - Only show if AI interpretation is available */}
-        {aiInterpretation && (
-          <Card className="p-6 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300">
+        {(aiInterpretation || !imagesSystemOk) && (
+          <Card className="p-6 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300" data-testid="product-image-card">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
@@ -2090,6 +1063,7 @@ const ConjointResultsPage = () => {
             <p className="text-sm text-green-700 mb-4">
               สร้างภาพผลิตภัณฑ์ที่เหมาะสมที่สุดตามผลการวิจัย Conjoint Analysis (คุณสมบัติที่ผู้บริโภคต้องการมากที่สุด)
             </p>
+            <ImagesOptionalNote className="mb-4" />
 
             {!productImage ? (
               <div className="space-y-4">
@@ -2105,7 +1079,7 @@ const ConjointResultsPage = () => {
                   
                   {study?.reference_images && study.reference_images.length > 0 ? (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      <div className="grid grid-cols-5 gap-2">
                         {study.reference_images.map((img, idx) => (
                           <div key={idx} className="relative group">
                             <div
@@ -2128,16 +1102,14 @@ const ConjointResultsPage = () => {
                                 className="w-full h-20 object-cover"
                               />
                               {selectedReferenceIndices.includes(idx) && (
-                                <div className="absolute top-1 left-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow">
+                                <div className="absolute top-1 right-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                                   ✓
                                 </div>
                               )}
                             </div>
                             {isOwnerOrAdmin && (
                               <button
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
+                                onClick={async () => {
                                   try {
                                     await axios.delete(
                                       `${API}/conjoint/studies/${studyId}/reference-images/${idx}`,
@@ -2149,8 +1121,7 @@ const ConjointResultsPage = () => {
                                     toast.error('ไม่สามารถลบรูปได้');
                                   }
                                 }}
-                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs shadow"
-                                title="ลบรูปอ้างอิง"
+                                className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs"
                               >
                                 ✕
                               </button>
@@ -2232,43 +1203,33 @@ const ConjointResultsPage = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
-                    data-testid="conjoint-copy-product-image-prompt"
-                    onClick={async () => {
-                      const optimalSpecs = (topFeatures || []).map((f) => {
-                        const lvls = Object.values(currentResults?.part_worths?.[f.id]?.levels || {}).sort((a, b) => b.utility - a.utility);
-                        return `${f.name}: ${lvls[0]?.value || '-'}`;
-                      }).join(', ');
-                      const prompt = `${productImagePrompt ? `${productImagePrompt.trim()}. ` : ''}Commercial studio product photography for "${study?.title || 'Product'}" (${study?.product_category || 'consumer product'}). Optimal customer-preferred configuration: ${optimalSpecs}. Clean studio lighting, crisp packaging detail, photorealistic 4K advertisement shot.`;
-                      await copyToClipboard(prompt, { successMessage: 'คัดลอก Prompt สร้างภาพสินค้าแล้ว! นำไปวางใน ChatGPT / Gemini / Midjourney ได้เลย' });
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center" data-testid="product-image-actions">
+                  <AiActionButton
+                    feature="conjoint.images"
+                    label={loadingProductImage ? 'กำลังสร้างภาพ...' : 'สร้างภาพผลิตภัณฑ์'}
+                    icon={Sparkles}
+                    onSystem={handleGenerateProductImage}
+                    disabled={loadingProductImage}
+                    external={{
+                      title: 'พรอมต์ภาพผลิตภัณฑ์ — สร้างด้วย AI ของคุณเอง',
+                      promptRequest: {
+                        method: 'POST',
+                        url: `${API}/conjoint/studies/${studyId}/generate-product-from-results/external-prompt`,
+                        data: {
+                          additional_prompt: productImagePrompt || undefined,
+                          reference_image_indices: selectedReferenceIndices.length > 0 ? selectedReferenceIndices : undefined,
+                        },
+                      },
                     }}
-                  >
-                    <Copy className="w-4 h-4 mr-1.5" />
-                    คัดลอก Prompt ไปสร้างภาพเอง (ฟรี)
-                  </Button>
-                  {isAdmin && (
-                    <Button
-                      onClick={handleGenerateProductImage}
-                      disabled={loadingProductImage}
-                      variant="outline"
-                      className="border-2 border-green-400 text-green-800 hover:bg-green-50 font-semibold"
-                    >
-                      {loadingProductImage ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin mr-2" />
-                          กำลังสร้างภาพ...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          สร้างภาพผลิตภัณฑ์ (Admin)
-                        </>
-                      )}
-                    </Button>
-                  )}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold"
+                    data-testid="product-image-ai-btn"
+                  />
+                  <ImageFileButton
+                    label="ใช้ภาพสินค้าที่มีอยู่แล้ว"
+                    size="default"
+                    testId="product-image-upload"
+                    onData={(dataUrl) => { setProductImage({ image_url: dataUrl, prompt_used: null }); toast.success('ใช้ภาพที่อัปโหลด (ไม่ถูกเก็บบนเซิร์ฟเวอร์ — ใช้ต่อกับการจำลองชั้นวางในหน้านี้)'); }}
+                  />
                 </div>
               </div>
             ) : (
@@ -2325,8 +1286,8 @@ const ConjointResultsPage = () => {
         )}
 
         {/* Shelf Simulation - Only show if product image is generated */}
-        {productImage && (
-          <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300">
+        {(productImage || !imagesSystemOk) && (
+          <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300" data-testid="shelf-card">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
@@ -2431,42 +1392,32 @@ const ConjointResultsPage = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold"
-                    data-testid="conjoint-copy-shelf-image-prompt"
-                    onClick={async () => {
-                      const envDesc = environmentType === 'custom' ? customEnvironment : environmentType;
-                      const styleDesc = shelfStyle === 'custom' ? customShelfStyle : shelfStyle;
-                      const prompt = `${shelfPrompt ? `${shelfPrompt.trim()}. ` : ''}Realistic retail shelf photography placing the winning "${study?.title || 'Product'}" product in environment: ${envDesc}, camera angle/placement: ${styleDesc}, surrounded by competing brands, crisp shelf pricing labels, natural retail store lighting.`;
-                      await copyToClipboard(prompt, { successMessage: 'คัดลอก Prompt จำลองชั้นวางแล้ว! นำไปวางใน AI สร้างภาพได้เลย' });
-                    }}
-                  >
-                    <Copy className="w-4 h-4 mr-1.5" />
-                    คัดลอก Prompt ชั้นวาง (ฟรี)
-                  </Button>
-                  {isAdmin && (
-                    <Button
-                      onClick={handleGenerateShelfSimulation}
-                      disabled={loadingShelfImage}
-                      variant="outline"
-                      className="border-2 border-amber-400 text-amber-800 hover:bg-amber-50 font-semibold"
-                    >
-                      {loadingShelfImage ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-2" />
-                          กำลังสร้างภาพจำลอง...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          สร้างภาพจำลองชั้นวาง (Admin)
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
+                <AiActionButton
+                  feature="conjoint.images"
+                  label={loadingShelfImage ? 'กำลังสร้างภาพจำลอง...' : 'สร้างภาพจำลองชั้นวาง'}
+                  icon={Sparkles}
+                  onSystem={handleGenerateShelfSimulation}
+                  disabled={loadingShelfImage}
+                  external={{
+                    title: 'พรอมต์ภาพจำลองชั้นวาง — สร้างด้วย AI ของคุณเอง',
+                    promptRequest: {
+                      method: 'POST',
+                      url: `${API}/conjoint/studies/${studyId}/generate-shelf-simulation/external-prompt`,
+                      data: {
+                        environment_type: environmentType,
+                        custom_environment: environmentType === 'custom' ? customEnvironment : undefined,
+                        shelf_style: shelfStyle,
+                        custom_shelf_style: shelfStyle === 'custom' ? customShelfStyle : undefined,
+                        additional_prompt: shelfPrompt || undefined,
+                      },
+                    },
+                  }}
+                  className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold"
+                  data-testid="shelf-ai-btn"
+                />
+                {!productImage && (
+                  <p className="text-xs text-amber-800">ถ้าสร้างภาพจากพรอมต์ด้วย AI ของคุณเอง ให้แนบภาพสินค้าในเครื่องมือภาพของคุณ — ระบบไม่เก็บภาพผลิตภัณฑ์ไว้บนเซิร์ฟเวอร์</p>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -2556,7 +1507,7 @@ const ConjointResultsPage = () => {
                   cy="50%"
                   labelLine={false}
                   label={renderCustomLabel}
-                  outerRadius="72%"
+                  outerRadius={120}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -2637,35 +1588,26 @@ const ConjointResultsPage = () => {
                 </div>
 
                 {/* Bar Chart for Levels */}
-                {currentResults?.part_worths?.[feature.id] && (() => {
-                  const sortedChartLevels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {})
-                    .sort((a, b) => b.utility - a.utility);
-                  const bestVal = sortedChartLevels[0]?.value;
-                  return (
-                  <div className="mt-4 sm:pl-11">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-gray-600" />
-                        <p className="text-xs text-gray-600 font-semibold">เปรียบเทียบ Utility ของแต่ละระดับ:</p>
-                      </div>
-                      {bestVal && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800">
-                          ⭐ ดีที่สุด: {bestVal}
-                        </span>
-                      )}
+                {currentResults?.part_worths?.[feature.id] && (
+                  <div className="mt-4 pl-11">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-4 h-4 text-gray-600" />
+                      <p className="text-xs text-gray-600 font-semibold">เปรียบเทียบ Utility ของแต่ละระดับ:</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
                       <ResponsiveContainer width="100%" height={200}>
                         <BarChart
-                          data={sortedChartLevels.map(level => ({
-                            name: level.value === bestVal ? `⭐ ${level.value}` : level.value,
-                            utility: parseFloat(level.utility.toFixed(3)),
-                            count: level.selection_count
-                          }))}
+                          data={Object.values(currentResults?.part_worths?.[feature.id]?.levels || {})
+                            .filter(level => !level.is_excluded)
+                            .sort((a, b) => b.utility - a.utility)
+                            .map(level => ({
+                              name: level.is_reference ? `${level.value} (อ้างอิง)` : level.value,
+                              utility: parseFloat(level.utility.toFixed(2)),
+                              count: level.selection_count
+                            }))}
                           margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                          <ReferenceLine y={0} stroke="#64748B" strokeDasharray="3 3" />
                           <XAxis 
                             dataKey="name" 
                             tick={{ fontSize: 12 }}
@@ -2703,12 +1645,16 @@ const ConjointResultsPage = () => {
                         </BarChart>
                       </ResponsiveContainer>
                       <p className="text-xs text-gray-500 text-center mt-2">
-                        💡 แท่งสูง = ผู้บริโภคชอบมากกว่า · เส้นประ 0 = ระดับอ้างอิง (Reference Level)
+                        💡 แท่งสูง = ผู้บริโภคให้คะแนนมากกว่า (ชอบมากกว่า) · “(อ้างอิง)” คือระดับเปรียบเทียบที่กำหนดให้เป็น 0 ไม่ใช่ผลที่ประมาณได้
                       </p>
+                      {Object.values(currentResults?.part_worths?.[feature.id]?.levels || {}).some(l => l.is_excluded) && (
+                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2" data-testid="excluded-levels-note">
+                          ประมาณค่าไม่ได้: {Object.values(currentResults.part_worths[feature.id].levels).filter(l => l.is_excluded).map(l => l.value).join(', ')} — ไม่เคยถูกแสดงให้ผู้ตอบเห็น จึงไม่แสดงในกราฟ
+                        </p>
+                      )}
                     </div>
                   </div>
-                  );
-                })()}
+                )}
               </div>
             ))}
           </div>
@@ -2723,8 +1669,8 @@ const ConjointResultsPage = () => {
               <ul className="text-sm text-gray-700 space-y-2">
                 <li>• <strong>ความสำคัญ (%):</strong> ยิ่งสูง = ผู้บริโภคให้ความสำคัญมากกว่า เช่น 40% หมายถึงคุณลักษณะนี้มีอิทธิพล 40% ต่อการตัดสินใจซื้อ</li>
                 <li>• <strong>ระดับที่ชอบ:</strong> ระดับที่มี ⭐ คือสิ่งที่ผู้บริโภคต้องการมากที่สุด</li>
-                <li>• <strong>ตัวเลข Utility:</strong> ยิ่งสูง = ผู้บริโภคชอบมากกว่า (0 คือระดับอ้างอิงในแบบจำลอง Logit/OLS ใช้เปรียบเทียบภายในปัจจัยเดียวกัน ไม่ใช่ร้อยละ)</li>
-                <li>• <strong>คำแนะนำ:</strong> ใช้ตาราง &quot;จำลองส่วนแบ่งตลาด&quot; ด้านบน หรือปุ่ม &quot;วิเคราะห์ด้วย AI&quot; เพื่อประกอบการตัดสินใจเชิงธุรกิจ</li>
+                <li>• <strong>ตัวเลข Utility:</strong> ยิ่งสูง = ยิ่งถูกเลือกบ่อย (ตัวเลขสัมพันธ์กัน ไม่ใช่ร้อยละ)</li>
+                <li>• <strong>คำแนะนำ:</strong> ใช้ปุ่ม &quot;วิเคราะห์ด้วย AI&quot; เพื่อรับคำแนะนำเชิงธุรกิจที่เข้าใจง่าย</li>
               </ul>
             </div>
           </div>
@@ -2769,7 +1715,7 @@ const ConjointResultsPage = () => {
                   </thead>
                   <tbody>
                     {sortedImportance.map((feature, index) => {
-                      const levels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {});
+                      const levels = Object.values(currentResults?.part_worths?.[feature.id]?.levels || {}).filter(l => !l.is_excluded);
                       const utilities = levels.map(l => l.utility);
                       const range = utilities.length > 0 ? Math.max(...utilities) - Math.min(...utilities) : 0;
                       
@@ -2895,7 +1841,8 @@ const ConjointResultsPage = () => {
                   <tbody>
                     {sortedImportance.map((feature, attrIdx) => {
                       const levels = currentResults?.part_worths?.[feature.id]?.levels || {};
-                      const sortedLevels = Object.values(levels).sort((a, b) => b.utility - a.utility);
+                      const sortedLevels = Object.values(levels).sort((a, b) =>
+                        (a.is_excluded ? 1 : 0) - (b.is_excluded ? 1 : 0) || b.utility - a.utility);
                       
                       return sortedLevels.map((level, levelIdx) => (
                         <tr key={`${feature.id}-${levelIdx}`} className="hover:bg-purple-50">
@@ -2908,23 +1855,23 @@ const ConjointResultsPage = () => {
                             </td>
                           )}
                           <td className="border-2 border-purple-200 px-4 py-3 text-gray-700">
-                            {levelIdx === 0 && '⭐ '}{level.value}
-                            {(level.is_reference || (selectedMethod !== 'counting' && Math.abs(level.utility) < 1e-9)) && (
-                              <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-gray-100 text-gray-600 rounded">
-                                อ้างอิง
-                              </span>
-                            )}
+                            {levelIdx === 0 && !level.is_excluded && '⭐ '}{level.value}
                           </td>
-                          {(() => {
-                            const isRef = level.is_reference || (selectedMethod !== 'counting' && Math.abs(level.utility) < 1e-9);
-                            return (
-                              <td className={`border-2 border-purple-200 px-4 py-3 text-right font-mono font-bold ${
-                                isRef ? 'text-gray-500' : level.utility > 0 ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {isRef ? '0.000' : `${level.utility > 0 ? '+' : ''}${level.utility.toFixed(3)}`}
-                              </td>
-                            );
-                          })()}
+                          {level.is_excluded ? (
+                            <td className="border-2 border-purple-200 px-4 py-3 text-right text-xs font-bold text-amber-800" title="ระดับนี้ไม่เคยถูกแสดงให้ผู้ตอบเห็น — ค่า 0 ไม่ใช่ผลการประมาณ" data-testid="level-excluded">
+                              ประมาณค่าไม่ได้
+                            </td>
+                          ) : level.is_reference ? (
+                            <td className="border-2 border-purple-200 px-4 py-3 text-right font-mono text-gray-500" title="ระดับที่ใช้เป็นเกณฑ์เปรียบเทียบ กำหนดให้เป็น 0" data-testid="level-reference">
+                              0 <span className="text-xs">(ระดับอ้างอิง)</span>
+                            </td>
+                          ) : (
+                            <td className={`border-2 border-purple-200 px-4 py-3 text-right font-mono font-bold ${
+                              level.utility > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {level.utility > 0 ? '+' : ''}{level.utility.toFixed(3)}
+                            </td>
+                          )}
                           <td className="border-2 border-purple-200 px-4 py-3 text-right text-gray-600">
                             {level.selection_count}
                           </td>
@@ -2937,53 +1884,64 @@ const ConjointResultsPage = () => {
 
               <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
                 <p className="text-sm text-gray-700">
-                  {selectedMethod === 'counting' ? (
-                    <>
-                      <strong>💡 คำอธิบาย (Counting Scale):</strong> Utility แสดงส่วนต่างของสัดส่วนการเลือกเทียบกับโอกาสเฉลี่ยต่อตัวเลือก ค่า<strong className="text-green-600"> บวก (+)</strong> = ถูกเลือกบ่อยกว่าค่าเฉลี่ย
-                    </>
-                  ) : (
-                    <>
-                      <strong>💡 คำอธิบาย (Dummy Coding — ระดับอ้างอิง β = 0):</strong> ค่า <strong className="text-gray-700">0.000 (อ้างอิง)</strong> คือระดับฐานที่ใช้เปรียบเทียบ; ค่า<strong className="text-green-600"> บวก (+)</strong> = ผู้บริโภคชอบมากกว่าระดับอ้างอิง และค่า<strong className="text-red-600"> ลบ (-)</strong> = ชอบน้อยกว่าระดับอ้างอิง (สามารถเทียบความแตกต่างระหว่างระดับได้โดยดูผลต่างภายในปัจจัยเดียวกัน)
-                    </>
-                  )}
+                  <strong>💡 คำอธิบาย:</strong> Utility คือคะแนนความพึงพอใจ ค่า<strong className="text-green-600"> บวก (+)</strong> = ผู้บริโภคชอบมากกว่าค่าเฉลี่ย, 
+                  ค่า<strong className="text-red-600"> ลบ (-)</strong> = ชอบน้อยกว่าค่าเฉลี่ย
                 </p>
               </div>
             </Card>
 
-            {/* Statistical Analysis — synced cleanly with top Method Selector */}
+            {/* Statistical Analysis with Method Selection */}
             <Card className="p-6 mb-8">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">การวิเคราะห์ทางสถิติ (Statistical Analysis)</h2>
-                    <p className="text-sm text-gray-600">
-                      กำลังแสดงผลจากวิธี: <strong className="text-indigo-700">{getMethodName(selectedMethod)}</strong>
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {['mnl', 'mixed_logit', 'hierarchical_bayes', 'linear_regression'].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      disabled={loadingStatistical}
-                      onClick={() => {
-                        setSelectedMethod(m);
-                        loadStatisticalAnalysis(m);
-                      }}
-                      data-testid={`academic-method-pill-${m}`}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                        selectedMethod === m
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
-                      }`}
-                    >
-                      {m === 'mnl' ? 'MNL ⭐' : m === 'mixed_logit' ? 'Mixed Logit' : m === 'hierarchical_bayes' ? 'HB (SMLE)' : 'OLS'}
-                    </button>
-                  ))}
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">การวิเคราะห์ทางสถิติ (Statistical Analysis)</h2>
+                  <p className="text-sm text-gray-600">
+                    เลือกวิธีการวิเคราะห์ตามมาตรฐานทางวิชาการ
+                  </p>
+                </div>
+              </div>
+
+              {/* Method Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-2 block">
+                    เลือกวิธีการวิเคราะห์:
+                  </label>
+                  <select
+                    value={selectedMethod}
+                    data-testid="academic-method-select"
+                    onChange={(e) => setSelectedMethod(e.target.value)}
+                    className="w-full p-3 border-2 border-indigo-300 rounded-lg font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  >
+                    <option value="mnl">⭐ Multinomial Logit (MNL) - แนะนำ</option>
+                    <option value="mixed_logit">Mixed Logit (Random Parameters)</option>
+                    <option value="hierarchical_bayes">Hierarchical Bayes (HB)</option>
+                    <option value="linear_regression">Linear Regression (OLS)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    onClick={() => loadStatisticalAnalysis(selectedMethod)}
+                    data-testid="academic-calc-btn"
+                    disabled={loadingStatistical}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold h-12"
+                  >
+                    {loadingStatistical ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        กำลังคำนวณ...
+                      </>
+                    ) : (
+                      <>
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        คำนวณด้วย {getMethodName(selectedMethod)}
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
 
@@ -3184,9 +2142,9 @@ const ConjointResultsPage = () => {
                       <div className="p-4 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-lg border-2 border-teal-200">
                         <p className="text-xs text-gray-600 mb-1">Utility Scale</p>
                         <p className="text-2xl font-black text-teal-600">
-                          Logit (β)
+                          Proportion
                         </p>
-                        <p className="text-[10px] text-gray-500 mt-1">Empirical Bayes (ref β = 0)</p>
+                        <p className="text-[10px] text-gray-500 mt-1">Choice probability (0-1)</p>
                       </div>
                     </div>
                   )}
@@ -3343,6 +2301,17 @@ const ConjointResultsPage = () => {
                     </div>
                   )}
 
+                  {/* ===== CONVERGENCE WARNING ===== */}
+                  {statisticalData.results?.converged === false && (
+                    <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-red-400 bg-red-50 p-4" role="alert" data-testid="not-converged-warning">
+                      <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+                      <div className="text-sm text-red-900">
+                        <p className="font-bold">แบบจำลองนี้ไม่ลู่เข้า (converged = false)</p>
+                        <p className="mt-1">ตัวเลขด้านล่างอาจไม่ใช่ค่าที่ดีที่สุดและไม่ควรนำไปรายงาน — เพิ่มจำนวนผู้ตอบ ลดจำนวนระดับของ attribute หรือใช้วิธีมาตรฐาน (MNL) แทน</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ===== COEFFICIENTS TABLE (adaptive columns) ===== */}
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse" data-testid="statistical-coefficients-table">
@@ -3372,6 +2341,12 @@ const ConjointResultsPage = () => {
                                 p-value
                               </th>
                             </>
+                          )}
+                          {/* 95% Wald CI (MNL / Mixed Logit) */}
+                          {hasCI && (
+                            <th className="border-2 border-indigo-300 px-4 py-3 text-right font-bold text-gray-900" data-testid="ci-header">
+                              ช่วงเชื่อมั่น 95%
+                            </th>
                           )}
                           {/* Mixed Logit: show Std Dev column */}
                           {statisticalData.method === 'mixed_logit' && (
@@ -3429,7 +2404,9 @@ const ConjointResultsPage = () => {
                                 <td className={`border-2 border-indigo-200 px-4 py-3 text-right font-mono font-bold ${
                                   isRef ? 'text-gray-400' : utilVal > 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
-                                  {isRef ? '0.0000 (ref)' : (utilVal > 0 ? '+' : '') + utilVal.toFixed(4)}
+                                  {isExcluded ? <span className="text-xs text-amber-800">ประมาณค่าไม่ได้</span>
+                                    : isRef ? <>0 <span className="text-xs">(ระดับอ้างอิง)</span></>
+                                    : (utilVal > 0 ? '+' : '') + utilVal.toFixed(4)}
                                 </td>
 
                                 {/* MNL extra columns */}
@@ -3461,6 +2438,12 @@ const ConjointResultsPage = () => {
                                   </>
                                 )}
 
+                                {hasCI && (
+                                  <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-xs text-gray-600" data-testid="ci-cell">
+                                    {isRef || isExcluded ? '-' : fmtCI(statisticalData.results.ci_lower[colKey], statisticalData.results.ci_upper[colKey], 3)}
+                                  </td>
+                                )}
+
                                 {/* Mixed Logit: Std Dev */}
                                 {statisticalData.method === 'mixed_logit' && (
                                   <td className="border-2 border-indigo-200 px-4 py-3 text-right font-mono text-sm text-gray-600">
@@ -3484,7 +2467,7 @@ const ConjointResultsPage = () => {
                                       ประมาณค่าไม่ได้
                                     </span>
                                   ) : isRef ? (
-                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">Reference</span>
+                                    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">ระดับอ้างอิง</span>
                                   ) : statisticalData.method === 'mnl' && pVal != null ? (
                                     pVal < 0.05 ? (
                                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Sig.</span>
@@ -3513,7 +2496,7 @@ const ConjointResultsPage = () => {
                         <>
                           <li>• <strong>Logit Coef.:</strong> ค่าสัมประสิทธิ์จาก Conditional Logit — บวก = เพิ่มโอกาสถูกเลือก, ลบ = ลดโอกาส</li>
                           <li>• <strong>p-value:</strong> *** = p{'<'}0.001, ** = p{'<'}0.01, * = p{'<'}0.05 (มีนัยสำคัญทางสถิติ)</li>
-                          <li>• <strong>Pseudo R² (McFadden ρ²):</strong> {(statisticalData.results?.pseudo_r_squared || 0).toFixed(3)} — เกณฑ์แบบจำลองทางเลือก: 0.20–0.40 ถือว่าแม่นยำดีมาก (ไม่ใช่ค่าร้อยละของ R² แบบ OLS)</li>
+                          <li>• <strong>Pseudo R²:</strong> {((statisticalData.results?.pseudo_r_squared || 0) * 100).toFixed(1)}% — McFadden's R² ({'>'}20% = Good fit for choice models)</li>
                           <li>• <strong>AIC:</strong> {(statisticalData.results?.aic || 0).toFixed(1)} — ใช้เปรียบเทียบระหว่างโมเดล (ยิ่งต่ำยิ่งดี)</li>
                         </>
                       )}
@@ -3526,9 +2509,9 @@ const ConjointResultsPage = () => {
                       )}
                       {statisticalData.method === 'hierarchical_bayes' && (
                         <>
-                          <li>• <strong>Utility:</strong> ค่าเฉลี่ยสัมประสิทธิ์ Logit ระดับประชากร (Population Mean β) รอบระดับอ้างอิง = 0</li>
+                          <li>• <strong>Utility:</strong> ค่าเฉลี่ยสัดส่วนการเลือกระดับประชากร (Population Mean)</li>
                           <li>• <strong>Population Std.:</strong> ค่าเบี่ยงเบนระดับประชากร — สะท้อนความหลากหลายของผู้บริโภค</li>
-                          <li>• ประมาณค่าแบบ Empirical Bayes Posterior Shrinkage ต่อเนื่องจาก Panel Mixed Logit</li>
+                          <li>• วิเคราะห์ทั้งระดับบุคคลและภาพรวม (Empirical Bayes approach)</li>
                         </>
                       )}
                       {statisticalData.method === 'linear_regression' && (
@@ -3619,26 +2602,23 @@ const ConjointResultsPage = () => {
               </div>
 
               <div className="mt-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                <h3 className="font-bold text-gray-900 mb-3">📚 ระเบียบวิธีทางสถิติที่กำลังแสดง ({getMethodName(selectedMethod)})</h3>
+                <h3 className="font-bold text-gray-900 mb-3">📚 วิธีการทางสถิติ</h3>
                 <ul className="text-sm text-gray-700 space-y-2">
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600">•</span>
-                    <span>
-                      <strong>แบบจำลองหลัก:</strong>{' '}
-                      {selectedMethod === 'mnl' && 'Conditional / Multinomial Logit (MLE) — มาตรฐานสากลสำหรับ Choice-Based Conjoint (McFadden 1974)'}
-                      {selectedMethod === 'mixed_logit' && 'Panel Mixed Logit (SMLE with Halton draws) — อนุญาตให้ความชอบแตกต่างกันในแต่ละผู้ตอบ'}
-                      {selectedMethod === 'hierarchical_bayes' && 'Empirical Bayes Individual Posteriors — ต่อเนื่องจาก Panel Mixed Logit เพื่อหาค่าความชอบรายบุคคล'}
-                      {selectedMethod === 'linear_regression' && 'OLS Linear Probability Regression — ใช้เป็น baseline เชิงพรรณนา'}
-                      {selectedMethod === 'counting' && 'Counting-based approach — นับความถี่ที่แต่ละระดับถูกเลือก'}
-                    </span>
+                    <span><strong>Counting-based approach:</strong> นับจำนวนครั้งที่แต่ละระดับถูกเลือก</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600">•</span>
-                    <span><strong>การเข้ารหัสระดับ (Coding):</strong> {selectedMethod === 'counting' ? 'เทียบสัดส่วนการเลือกกับโอกาสเฉลี่ยต่อตัวเลือก' : 'Dummy Coding โดยให้ 1 ระดับเป็นฐานอ้างอิง (Reference Level, β = 0)'}</span>
+                    <span><strong>Part-worth calculation:</strong> คำนวณ utility จากความถี่การเลือก</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600">•</span>
-                    <span><strong>Relative importance:</strong> คำนวณจากพิสัย (max − min) ของค่า Part-Worth Utility ในแต่ละปัจจัย แล้วปรับสัดส่วนรวมเป็น 100%</span>
+                    <span><strong>Relative importance:</strong> คำนวณจาก range (max-min) ของ utilities</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600">•</span>
+                    <span><strong>Normalization:</strong> ปรับค่าให้รวมเป็น 100%</span>
                   </li>
                 </ul>
               </div>
@@ -3649,40 +2629,19 @@ const ConjointResultsPage = () => {
               <div className="flex items-start gap-3">
                 <Download className="w-6 h-6 text-indigo-600 flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-2">📥 ดาวน์โหลดข้อมูลดิบ (Raw Data Export)</h3>
+                  <h3 className="font-bold text-gray-900 mb-2">📥 ดาวน์โหลดข้อมูลดิบ — ประมาณซ้ำใน R / Stata ได้</h3>
+                  <p className="text-sm text-gray-700 mb-3">
+                    รูปแบบ long (1 แถวต่อ 1 ทางเลือก) พร้อม codebook, ตารางการออกแบบ และคู่มือคำสั่ง R / Stata / Python —
+                    ประมาณ conditional logit จากไฟล์นี้แล้วได้ค่าตรงกับ MNL ในหน้านี้
+                  </p>
                   {isOwnerOrAdmin ? (
-                    <>
-                      <p className="text-sm text-gray-700 mb-3">
-                        เลือกโหลดไฟล์ CSV แบบ Wide (สรุป 1 แถว/คน) หรือ Long-Format Choice Matrix (1 แถว/ทางเลือก/ข้อ พร้อมใช้งานใน R, Stata, SPSS, Python)
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          onClick={handleExportLongCSV}
-                          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold"
-                          data-testid="conjoint-export-long-csv"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          ดาวน์โหลด Long-Format CSV (งานวิจัย R / SPSS / Stata)
-                        </Button>
-                        <Button
-                          onClick={handleExportCSV}
-                          variant="outline"
-                          className="border-indigo-300 text-indigo-700 hover:bg-indigo-100"
-                          data-testid="conjoint-export-wide-csv"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          ดาวน์โหลด Wide CSV
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Long-Format ประกอบด้วย: respondent_id, choice_set_id, profile_id, chosen (1/0), ชื่อคุณลักษณะทุกคอลัมน์ และข้อมูลประชากร
-                      </p>
-                    </>
+                    <ConjointExportMenu studyId={studyId} token={token} />
                   ) : (
-                    <p className="text-sm text-gray-600">
-                      เฉพาะเจ้าของโครงการหรือผู้ดูแลระบบเท่านั้นที่สามารถดาวน์โหลดข้อมูลรายบุคคล (Raw Responses) ได้ เพื่อคุ้มครองความเป็นส่วนตัวของผู้ตอบ
-                    </p>
+                    <p className="text-xs text-gray-500">เฉพาะเจ้าของการศึกษาหรือ admin ดาวน์โหลดข้อมูลดิบได้</p>
                   )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    คอลัมน์หลัก: respondent_id, situation_id, task, alt, chosen, usable, ระดับของแต่ละ attribute (พร้อมรหัส __code), ข้อมูลประชากร และธงคุณภาพ
+                  </p>
                 </div>
               </div>
             </Card>
@@ -3693,6 +2652,21 @@ const ConjointResultsPage = () => {
             {selectedMethod === 'hierarchical_bayes' && statisticalData?.results?.individual_quantiles && (
               <HBIndividualInsights hbResult={statisticalData.results} study={study}/>
             )}
+          </>
+        )}
+
+        {/* Price & market simulation tab */}
+        {activeTab === 'market' && (
+          <>
+            <ConjointWtpCard studyId={studyId} token={token} study={study} filterQs={buildFilterQs()} />
+            <ConjointSimulatorCard
+              studyId={studyId}
+              token={token}
+              study={study}
+              filterQs={buildFilterQs()}
+              defaultMethod={selectedMethod}
+              respondentCount={results?.respondent_count ?? 0}
+            />
           </>
         )}
 
@@ -3761,7 +2735,7 @@ const ConjointResultsPage = () => {
               </div>
             </Card>
 
-            {hasActiveFilter && (
+            {filterActive && (
               <div className="mb-6 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs text-purple-900">
                 🔍 กำลังวิเคราะห์ขั้นสูง (NCA / fsQCA) เฉพาะกลุ่มที่กรองอยู่ (N={results?.respondent_count || 0}) — เปลี่ยนตัวกรองด้านบนได้ตลอดเวลา
               </div>
@@ -3879,39 +2853,20 @@ const ConjointResultsPage = () => {
                       <div className="space-y-4">
                         {Object.entries(ncaResults.attributes).map(([attrId, attr], idx) => {
                           const attribute = study?.attributes?.find(a => a.id === attrId);
-                          const colorMap = {
-                            red: {
-                              card: 'from-red-50 to-pink-50 border-red-200',
-                              badge: 'bg-red-600',
-                              bar: 'from-red-500 to-red-600',
-                            },
-                            orange: {
-                              card: 'from-orange-50 to-yellow-50 border-orange-200',
-                              badge: 'bg-orange-600',
-                              bar: 'from-orange-500 to-orange-600',
-                            },
-                            blue: {
-                              card: 'from-blue-50 to-cyan-50 border-blue-200',
-                              badge: 'bg-blue-600',
-                              bar: 'from-blue-500 to-blue-600',
-                            },
-                            gray: {
-                              card: 'from-gray-50 to-slate-50 border-gray-200',
-                              badge: 'bg-gray-600',
-                              bar: 'from-gray-500 to-gray-600',
-                            },
-                          };
-                          const palette = colorMap[attr.color] || colorMap.gray;
-
+                          const bgColor = attr.color === 'red' ? 'from-red-50 to-pink-50' :
+                                         attr.color === 'orange' ? 'from-orange-50 to-yellow-50' :
+                                         attr.color === 'blue' ? 'from-blue-50 to-cyan-50' :
+                                         'from-gray-50 to-slate-50';
+                          
                           return (
-                            <Card key={attrId} className={`p-4 bg-gradient-to-r ${palette.card} border-2`}>
+                            <Card key={attrId} className={`p-4 bg-gradient-to-r ${bgColor} border-2 border-${attr.color || 'gray'}-200`}>
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     <span className="text-lg font-bold text-gray-900">
                                       {idx + 1}. {attribute?.name || attrId}
                                     </span>
-                                    <span className={`px-2 py-1 rounded text-xs font-bold ${palette.badge} text-white`}>
+                                    <span className={`px-2 py-1 rounded text-xs font-bold bg-${attr.color || 'gray'}-600 text-white`}>
                                       {attr.level}
                                     </span>
                                   </div>
@@ -3933,7 +2888,7 @@ const ConjointResultsPage = () => {
                               {/* Progress Bar */}
                               <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                                 <div
-                                  className={`h-full bg-gradient-to-r ${palette.bar} transition-all duration-500`}
+                                  className={`h-full bg-gradient-to-r from-${attr.color || 'gray'}-500 to-${attr.color || 'gray'}-600 transition-all duration-500`}
                                   style={{ width: `${attr.effect_size * 100}%` }}
                                 />
                               </div>
@@ -4336,14 +3291,16 @@ const ConjointResultsPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <Card className="p-6 max-w-md w-full mx-4 bg-white">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              ⚠️ ยืนยันการย้ายไปถังขยะ
+              ⚠️ ยืนยันการลบการศึกษา
             </h3>
             <p className="text-gray-700 mb-6">
-              คุณต้องการลบการศึกษา <strong>&quot;{study?.title || study?.name || 'นี้'}&quot;</strong> ({results?.respondent_count || 0} คำตอบ) ใช่หรือไม่?
+              คุณแน่ใจหรือไม่ว่าต้องการลบการศึกษา <strong>&quot;{study?.name}&quot;</strong>?
               <br />
-              <span className="text-sm text-gray-600 mt-1 inline-block">
-                รายการจะถูกย้ายไปยังถังขยะและสามารถกู้คืนได้ภายใน 30 วัน ก่อนถูกลบถาวร
+              <span className="text-red-600 font-semibold">
+                การกระทำนี้จะลบทั้งการศึกษาและข้อมูลการตอบแบบสอบถามทั้งหมด ({results?.respondent_count || 0} คน)
               </span>
+              <br />
+              <span className="text-red-600 font-semibold">ไม่สามารถย้อนกลับได้</span>
             </p>
             <div className="flex gap-4">
               <Button
@@ -4375,22 +3332,6 @@ const ConjointResultsPage = () => {
           </Card>
         </div>
       )}
-
-      <ExternalAiWorkflowModal
-        open={externalAiInterpOpen}
-        onClose={() => setExternalAiInterpOpen(false)}
-        title="ตีความผล Conjoint Analysis ด้วย AI ภายนอก (ฟรี)"
-        subtitle="คัดลอก Prompt ที่มีผลสถิติและ Part-worth Utilities จริงไปวางใน ChatGPT / Gemini / Claude แล้วนำบทวิเคราะห์กลับมาบันทึกในระบบ"
-        fetchPrompt={fetchConjointInterpPrompt}
-        validatePayload={validateConjointInterp}
-        applyPayload={applyConjointInterp}
-        renderPreview={(preview) => (
-          <div className="space-y-1">
-            <div><strong>ความยาวบทวิเคราะห์:</strong> {preview.char_count?.toLocaleString()} ตัวอักษร</div>
-            <div className="text-gray-700 whitespace-pre-wrap">{preview.excerpt}</div>
-          </div>
-        )}
-      />
     </div>
   );
 };

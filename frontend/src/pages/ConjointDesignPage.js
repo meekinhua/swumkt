@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navigation from '@/components/Navigation';
-import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import { BeTopbar, Icon, CONJOINT_CRUMBS } from '@/pages/brand-equity/be-components';
 import { copyToClipboard } from '@/lib/clipboard';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ReferenceImagesSection from '@/components/ReferenceImagesSection';
 import ConjointDemographicsConfig from '@/pages/conjoint/ConjointDemographicsConfig';
+import { ImageAiButton, ImageFileButton, ImagesOptionalNote } from '@/pages/conjoint/ConjointImageAi';
+import { DesignGuidance, PublishChecklistDialog } from '@/pages/conjoint/ConjointDesignGuidance';
 import { API } from '@/App';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -29,6 +31,7 @@ import {
   Image as ImageIcon,
   X
 } from 'lucide-react';
+import { apiErrorText } from '@/lib/apiError';
 
 // Component for managing profile image (composite image)
 const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attributes, token, onImageUpdated, referenceImages = [] }) => {
@@ -93,6 +96,24 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
     }
   };
 
+  const handleUploadFile = async (dataUrl) => {
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-profile-image`,
+        { choice_set_id: choiceSetId, profile_id: profile.id, image_url: dataUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setImageUrl(dataUrl);
+      toast.success('อัพโหลดรูป Profile สำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      toast.error('ไม่สามารถอัพโหลดรูปได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     try {
@@ -129,8 +150,9 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
       }
     } catch (error) {
       console.error('Error generating profile image:', error);
-      const errorMsg = error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้';
-      toast.error(errorMsg);
+      if (error?.response?.status === 409) throw error; // llm_external_only -> prompt dialog opens
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างรูปได้');
     } finally {
       setGenerating(false);
     }
@@ -219,23 +241,25 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
               className="flex-1 text-xs border-2 border-blue-400 text-blue-700"
             >
               <Upload className="w-3 h-3 mr-1" />
-              Upload
+              วาง URL รูป
             </Button>
-            <Button
-              onClick={handleGenerate}
-              size="sm"
+          </div>
+          <div className="flex flex-col gap-2 mb-2">
+            <ImageFileButton onData={handleUploadFile} busy={uploading} label="เลือกไฟล์ภาพจากเครื่อง" className="w-full text-xs" testId={`profile-upload-${profile.id}`} />
+            <ImageAiButton
+              onSystem={handleGenerate}
               disabled={generating}
-              className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {generating ? (
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  AI
-                </>
-              )}
-            </Button>
+              label={generating ? 'กำลังสร้าง…' : 'สร้างภาพด้วย AI'}
+              className="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white"
+              testId={`profile-ai-${profile.id}`}
+              promptRequest={{
+                method: 'POST',
+                url: `${API}/conjoint/studies/${studyId}/generate-profile-image/external-prompt`,
+                data: { choice_set_id: choiceSetId, profile_id: profile.id,
+                  reference_image_indices: selectedRefs.length ? selectedRefs : undefined,
+                  additional_prompt: additionalPrompt.trim() || undefined },
+              }}
+            />
           </div>
           
           {/* Reference Images Selection */}
@@ -244,7 +268,7 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
               <p className="text-xs font-semibold text-blue-700 mb-2">
                 🎨 เลือกรูปอ้างอิง (Optional):
               </p>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {referenceImages.map((refImg, index) => (
                   <div key={index} className="relative">
                     <label className="cursor-pointer block">
@@ -361,7 +385,7 @@ const ProfileImageCard = ({ studyId, choiceSetId, profile, profileIndex, attribu
 };
 
 // Component for managing image for each level
-const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onImageUpdated, referenceImages = [], promptSettings = null }) => {
+const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onImageUpdated, referenceImages = [] }) => {
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState(level.image_url || '');
@@ -370,6 +394,26 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
   const [showPrompt, setShowPrompt] = useState(false);
   const [selectedRefs, setSelectedRefs] = useState([]); // Track selected reference images
   const [additionalPrompt, setAdditionalPrompt] = useState(''); // Additional prompt text
+  const [promptSettings, setPromptSettings] = useState(null);
+  
+  // Load the admin-edited prompt templates (admin-only endpoint; everyone else uses the default
+  // text below — the server builds the real prompt for the external dialog anyway).
+  const { user: authUser } = useAuth();
+  const isAdminUser = authUser?.role === 'admin';
+  useEffect(() => {
+    if (!isAdminUser || !token) return;
+    const loadSettings = async () => {
+      try {
+        const response = await axios.get(`${API}/admin/conjoint-image-settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPromptSettings(response.data);
+      } catch (error) {
+        console.error('Error loading prompt settings:', error);
+      }
+    };
+    loadSettings();
+  }, [token, isAdminUser]);
   
   // Generate prompt for this level - changes based on reference selection
   const generatePrompt = () => {
@@ -429,6 +473,24 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
     }
   };
 
+  const handleUploadFile = async (dataUrl) => {
+    setUploading(true);
+    try {
+      await axios.post(
+        `${API}/conjoint/studies/${studyId}/upload-image`,
+        { attribute_id: attributeId, level_id: level.id, image_url: dataUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setImageUrl(dataUrl);
+      toast.success('อัพโหลดรูปภาพสำเร็จ');
+      onImageUpdated();
+    } catch (error) {
+      toast.error('ไม่สามารถอัพโหลดรูปภาพได้');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     try {
@@ -465,8 +527,9 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
       }
     } catch (error) {
       console.error('Error generating image:', error);
-      const errorMsg = error.response?.data?.detail || 'ไม่สามารถสร้างรูปได้';
-      toast.error(errorMsg);
+      if (error?.response?.status === 409) throw error; // llm_external_only -> prompt dialog opens
+      const d = error.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'ไม่สามารถสร้างรูปได้');
     } finally {
       setGenerating(false);
     }
@@ -543,23 +606,25 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
               className="flex-1 text-xs border-2"
             >
               <Upload className="w-3 h-3 mr-1" />
-              Upload
+              วาง URL รูป
             </Button>
-            <Button
-              onClick={handleGenerate}
-              size="sm"
+          </div>
+          <div className="flex flex-col gap-2 mb-2">
+            <ImageFileButton onData={handleUploadFile} busy={uploading} label="เลือกไฟล์ภาพจากเครื่อง" className="w-full text-xs" testId={`level-upload-${level.id}`} />
+            <ImageAiButton
+              onSystem={handleGenerate}
               disabled={generating}
-              className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {generating ? (
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  AI
-                </>
-              )}
-            </Button>
+              label={generating ? 'กำลังสร้าง…' : 'สร้างภาพด้วย AI'}
+              className="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white"
+              testId={`level-ai-${level.id}`}
+              promptRequest={{
+                method: 'POST',
+                url: `${API}/conjoint/studies/${studyId}/generate-single-image/external-prompt`,
+                data: { attribute_id: attributeId, level_id: level.id,
+                  reference_image_indices: selectedRefs.length ? selectedRefs : undefined,
+                  additional_prompt: additionalPrompt.trim() || undefined },
+              }}
+            />
           </div>
           
           {/* Reference Images Selection */}
@@ -568,7 +633,7 @@ const ImageLevelCard = ({ studyId, attributeId, attributeName, level, token, onI
               <p className="text-xs font-semibold text-gray-700 mb-2">
                 🎨 เลือกรูปอ้างอิง (Optional):
               </p>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {referenceImages.map((refImg, index) => (
                   <div key={index} className="relative">
                     <label className="cursor-pointer block">
@@ -701,38 +766,21 @@ const ConjointDesignPage = () => {
   const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const [surveyStarted, setSurveyStarted] = useState(false); // Track if survey is active
   const [startingSurvey, setStartingSurvey] = useState(false);
+  const [showPublishCheck, setShowPublishCheck] = useState(false);
   const [referenceImages, setReferenceImages] = useState([]); // Reference images for AI
   const [designRec, setDesignRec] = useState(null); // Server-side task/sample recommendation
-  const [promptSettings, setPromptSettings] = useState(null);
-  const [confirmRemoveAttr, setConfirmRemoveAttr] = useState(null);
-  const [confirmStartOpen, setConfirmStartOpen] = useState(false);
-
-  const hasSavedValidAttrs = Boolean(
-    study?.attributes &&
-    study.attributes.length >= 2 &&
-    study.attributes.every(a => (a.levels || []).filter(l => (l.value || '').trim()).length >= 2)
-  );
 
   useEffect(() => {
     if (user && token && studyId) {
       loadStudy();
     }
-    /* eslint-disable-next-line */
   }, [user, token, studyId]);
 
+  // Task count and respondents needed come from the backend so the number shown
+  // before launch is the same rule the Results page's adequacy card checks.
   useEffect(() => {
-    if (!token || user?.role !== 'admin') return;
-    let cancelled = false;
-    axios.get(`${API}/admin/conjoint-image-settings`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then(r => { if (!cancelled) setPromptSettings(r.data); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [token, user?.role]);
-
-  // Task count and respondents needed come from the backend only once saved attributes are valid (>=2 attrs, >=2 levels each).
-  useEffect(() => {
-    if (!token || !studyId || !hasSavedValidAttrs || isDirty) return;
+    // The endpoint reads the SAVED attributes (400 "No attributes defined" before the first save).
+    if (!token || !studyId || !(study?.attributes || []).length) return;
     let cancelled = false;
     const params = { alternatives_per_set: alternativesPerSet };
     if (numberOfSets) params.number_of_sets = numberOfSets;
@@ -744,7 +792,7 @@ const ConjointDesignPage = () => {
       .then((res) => { if (!cancelled) setDesignRec(res.data); })
       .catch(() => { if (!cancelled) setDesignRec(null); });
     return () => { cancelled = true; };
-  }, [token, studyId, alternativesPerSet, numberOfSets, hasSavedValidAttrs, isDirty, study?.updated_at]);
+  }, [token, studyId, alternativesPerSet, numberOfSets, attributes.length, study?.updated_at, (study?.attributes || []).length]);
 
   const loadStudy = async () => {
     try {
@@ -784,24 +832,19 @@ const ConjointDesignPage = () => {
   };
 
   const handleSaveAttributes = async () => {
-    if (attributes.length < 2) {
-      toast.error('Conjoint Analysis ต้องมีอย่างน้อย 2 Attributes เพื่อเปรียบเทียบความสำคัญ');
+    if (attributes.length === 0) {
+      toast.error('กรุณาเพิ่ม attribute อย่างน้อย 1 รายการ');
       return;
     }
 
-    // Validate attributes and levels cleanly (reject blank levels)
+    // Validate attributes
     for (const attr of attributes) {
       if (!attr.name || attr.name.trim() === '') {
-        toast.error('กรุณากรอกชื่อ Attribute ให้ครบทุกข้อ');
+        toast.error('กรุณากรอกชื่อ attribute ให้ครบ');
         return;
       }
-      const nonEmptyLevels = (attr.levels || []).filter(l => (l.value || '').trim() !== '');
-      if (nonEmptyLevels.length < 2) {
-        toast.error(`Attribute "${attr.name}" ต้องมี Level ที่ไม่ว่างอย่างน้อย 2 รายการ`);
-        return;
-      }
-      if ((attr.levels || []).some(l => !(l.value || '').trim())) {
-        toast.error(`Attribute "${attr.name}" ยังมี Level ที่เว้นว่างอยู่ กรุณากรอกหรือลบออกก่อนบันทึก`);
+      if (!attr.levels || attr.levels.length < 2) {
+        toast.error(`Attribute "${attr.name}" ต้องมี level อย่างน้อย 2 รายการ`);
         return;
       }
     }
@@ -821,7 +864,7 @@ const ConjointDesignPage = () => {
       await loadStudy();
     } catch (error) {
       console.error('Error saving attributes:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถบันทึก attributes ได้');
+      toast.error('ไม่สามารถบันทึก attributes ได้');
     }
   };
 
@@ -830,7 +873,7 @@ const ConjointDesignPage = () => {
       toast.error('กรุณาสร้าง D-Optimal Design ก่อนเริ่มสำรวจ');
       return;
     }
-    setConfirmStartOpen(false);
+
     setStartingSurvey(true);
     try {
       await axios.post(
@@ -839,20 +882,20 @@ const ConjointDesignPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success('เริ่มสำรวจสำเร็จ - ลิงก์แบบสอบถามพร้อมแชร์แล้ว!');
+      toast.success('เริ่มสำรวจสำเร็จ - ตอนนี้แก้ไขได้เฉพาะชื่อ คำอธิบาย และรูปภาพ');
       setSurveyStarted(true);
       await loadStudy();
     } catch (error) {
       console.error('Error starting survey:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถเริ่มสำรวจได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถเริ่มสำรวจได้'));
     } finally {
       setStartingSurvey(false);
     }
   };
 
   const handleGenerateDesign = async () => {
-    if (attributes.length < 2) {
-      toast.error('ต้องมีอย่างน้อย 2 Attributes (พร้อม ≥ 2 Levels) ก่อนสร้าง D-Optimal Design');
+    if (attributes.length === 0) {
+      toast.error('กรุณาบันทึก attributes ก่อน');
       return;
     }
 
@@ -874,7 +917,7 @@ const ConjointDesignPage = () => {
       await loadStudy();
     } catch (error) {
       console.error('Error generating design:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้าง design ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถสร้าง design ได้'));
     } finally {
       setGenerating(false);
     }
@@ -897,13 +940,8 @@ const ConjointDesignPage = () => {
   };
 
   const handleRemoveAttribute = (attrId) => {
-    const found = attributes.find(a => a.id === attrId);
-    if (found && ((found.name || '').trim() || found.levels?.some(l => (l.value || '').trim()))) {
-      setConfirmRemoveAttr(found);
-      return;
-    }
     setAttributes(attributes.filter(a => a.id !== attrId));
-    setIsDirty(true);
+    setIsDirty(true); // Mark as changed
   };
 
   const handleUpdateAttribute = (attrId, field, value) => {
@@ -1046,27 +1084,12 @@ const ConjointDesignPage = () => {
   }
 
   const recommendedSets = calculateRecommendedSets();
-  // Live client-side Johnson & Orme calculation so changes reflect immediately before hitting backend
-  const levelCounts = attributes.map(a => Math.max(2, (a.levels || []).filter(l => (l.value || '').trim()).length));
-  const maxLevelsC = levelCounts.length ? Math.max(...levelCounts) : 3;
-  const minLevelsC = levelCounts.length ? Math.min(...levelCounts) : 3;
-  const activeSets = numberOfSets || recommendedSets;
-  const ormeMin = Math.ceil((500 * maxLevelsC) / (Math.max(1, activeSets) * Math.max(1, alternativesPerSet)));
-  const ormeRec = Math.ceil((1000 * maxLevelsC) / (Math.max(1, activeSets) * Math.max(1, alternativesPerSet)));
-  const sampleInfo = (!isDirty && designRec?.sample_size)
-    ? designRec.sample_size
-    : { minimum: ormeMin, recommended: ormeRec, largest_attribute_levels: maxLevelsC, rule: `500 × c / (t × a)` };
-  const hasTooManyAttrs = attributes.length > 6;
-  const hasTooManyLevels = attributes.some(a => (a.levels || []).length > 5);
-  const hasLevelImbalance = attributes.length >= 2 && (maxLevelsC - minLevelsC) >= 3;
 
   return (
     <div className="be-root">
       <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
                 subtitle="CONJOINT ANALYSIS" active="conjoint"
-                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/market-research/conjoint-analysis')}>
-                         <Icon name="chevronL" size={10}/>Studies
-                       </button>}/>
+                crumbs={[...CONJOINT_CRUMBS, { label: study?.title || study?.name || 'ออกแบบการศึกษา' }]}/>
 
       <div className="be-conjoint-page" style={{ maxWidth: 1200 }}>
         {/* Header */}
@@ -1091,38 +1114,29 @@ const ConjointDesignPage = () => {
           </p>
         </div>
 
-        {/* Progress Indicator — Unified 4-step workflow */}
+        {/* Progress Indicator */}
         <div className="mb-6 sm:mb-8 overflow-x-auto">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-max">
-            <button type="button" onClick={() => navigate(`/research/conjoint/${studyId}/qualitative`)}
-                    className="flex items-center gap-1.5 hover:opacity-80">
-              <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs">
-                1
+          <div className="flex items-center gap-2 sm:gap-4 min-w-max">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm sm:text-base">
+                ✓
               </div>
-              <span className="font-bold text-green-700 text-xs sm:text-sm">Qualitative</span>
-            </button>
-            <div className="h-1 w-6 sm:w-10 bg-[#00A9CE]"></div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-8 h-8 rounded-full bg-[#00A9CE] text-white flex items-center justify-center font-bold text-xs">
+              <span className="font-bold text-green-600 text-xs sm:text-base">Qualitative</span>
+            </div>
+            <div className="h-1 w-8 sm:w-16 bg-[#00A9CE]"></div>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#00A9CE] text-white flex items-center justify-center font-bold text-sm sm:text-base">
                 2
               </div>
-              <span className="font-bold text-[#00A9CE] text-xs sm:text-sm">Design &amp; Preview</span>
+              <span className="font-bold text-[#00A9CE] text-xs sm:text-base">Design</span>
             </div>
-            <div className={`h-1 w-6 sm:w-10 ${surveyStarted ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <div className="flex items-center gap-1.5">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${surveyStarted ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+            <div className="h-1 w-8 sm:w-16 bg-gray-300"></div>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm sm:text-base">
                 3
               </div>
-              <span className={`text-xs sm:text-sm ${surveyStarted ? 'font-bold text-green-700' : 'text-gray-600'}`}>เปิดรับคำตอบ</span>
+              <span className="text-gray-600 text-xs sm:text-base">Analysis</span>
             </div>
-            <div className="h-1 w-6 sm:w-10 bg-gray-300"></div>
-            <button type="button" onClick={() => navigate(`/research/conjoint/${studyId}/results`)}
-                    className="flex items-center gap-1.5 hover:opacity-80">
-              <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center font-bold text-xs">
-                4
-              </div>
-              <span className="text-gray-700 text-xs sm:text-sm">วิเคราะห์ผล</span>
-            </button>
           </div>
         </div>
 
@@ -1206,16 +1220,11 @@ const ConjointDesignPage = () => {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h2 className="text-2xl font-black text-gray-900">
-                Attributes &amp; Levels
-              </h2>
-              <p className="text-xs text-gray-600 mt-1">
-                ตั้งอย่างน้อย 2 Attributes (แนะนำ 3–5 ข้อ · ระดับละ 2–5 ตัวเลือก) · หากมีราคาควรแบ่งช่วงห่างเท่ากัน
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-gray-900">
+              Attributes & Levels
+            </h2>
+            <div className="flex gap-2">
               <Button
                 onClick={handleAddAttribute}
                 variant="outline"
@@ -1232,27 +1241,23 @@ const ConjointDesignPage = () => {
                 title={surveyStarted ? 'ไม่สามารถบันทึกได้เมื่อสำรวจเริ่มแล้ว' : ''}
               >
                 <Save className="w-4 h-4 mr-2" />
-                บันทึก Attributes &amp; Levels
+                บันทึก Attributes & Levels
               </Button>
             </div>
           </div>
 
-          {(attributes.length === 1 || hasTooManyAttrs || hasTooManyLevels || hasLevelImbalance) && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-1">
-              {attributes.length === 1 && (
-                <div>• <strong>ต้องมีอย่างน้อย 2 Attributes:</strong> Conjoint ต้องเปรียบเทียบ trade-off ระหว่างคุณสมบัติอย่างน้อย 2 อย่างจึงจะคำนวณความสำคัญได้</div>
-              )}
-              {hasTooManyAttrs && (
-                <div>• <strong>ระวังแบบสอบถามยาวเกินไป ({attributes.length} Attributes):</strong> ผู้ตอบบนมือถืออาจตาลาย แนะนำไม่เกิน 5–6 Attributes</div>
-              )}
-              {hasTooManyLevels && (
-                <div>• <strong>บาง Attribute มีเกิน 5 Levels:</strong> จะทำให้ขนาดตัวอย่างที่ต้องเก็บ (Orme&apos;s rule) พุ่งสูงขึ้นมาก</div>
-              )}
-              {hasLevelImbalance && (
-                <div>• <strong>คำเตือนวิชาการ (Number-of-Levels Effect):</strong> จำนวน Level ของแต่ละ Attribute ต่างกันมาก ({minLevelsC} vs {maxLevelsC}) อาจทำให้อันที่มี Level เยอะกว่าได้ % Importance สูงเกินจริง</div>
-              )}
-            </div>
-          )}
+          {/* Demographic data capture configuration. Editable until the
+              survey starts; saved independently of attributes via its
+              own PUT endpoint so partial config is allowed. */}
+          <div className="mb-6">
+            <ConjointDemographicsConfig
+              studyId={studyId}
+              token={token}
+              initialValue={study?.demographics_to_capture || ['age', 'gender', 'occupation']}
+              disabled={surveyStarted}
+              onChange={(list) => setStudy(prev => prev ? { ...prev, demographics_to_capture: list } : prev)}
+            />
+          </div>
 
           {attributes.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
@@ -1373,17 +1378,6 @@ const ConjointDesignPage = () => {
           )}
         </Card>
 
-        {/* Demographic data capture configuration (separate card below Attributes) */}
-        <div className="mb-6">
-          <ConjointDemographicsConfig
-            studyId={studyId}
-            token={token}
-            initialValue={study?.demographics_to_capture || ['age', 'gender', 'occupation']}
-            disabled={surveyStarted}
-            onChange={(list) => setStudy(prev => prev ? { ...prev, demographics_to_capture: list } : prev)}
-          />
-        </div>
-
         {/* Design Configuration */}
         {attributes.length > 0 && (
           <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
@@ -1398,9 +1392,8 @@ const ConjointDesignPage = () => {
                 </label>
                 <select
                   value={alternativesPerSet}
-                  disabled={surveyStarted}
                   onChange={(e) => setAlternativesPerSet(Number(e.target.value))}
-                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none disabled:opacity-60 disabled:bg-gray-100"
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
                 >
                   <option value={2}>2 (เปรียบเทียบคู่)</option>
                   <option value={3}>3 (แนะนำ)</option>
@@ -1415,12 +1408,11 @@ const ConjointDesignPage = () => {
                 <input
                   type="number"
                   value={numberOfSets || recommendedSets}
-                  disabled={surveyStarted}
                   onChange={(e) => setNumberOfSets(Number(e.target.value) || null)}
                   placeholder={`แนะนำ: ${recommendedSets}`}
                   min={8}
                   max={24}
-                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none disabled:opacity-60 disabled:bg-gray-100"
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#00A9CE] focus:outline-none"
                 />
                 <p className="text-xs text-gray-600 mt-1">
                   แนะนำ: {recommendedSets} sets (auto-calculated)
@@ -1428,34 +1420,47 @@ const ConjointDesignPage = () => {
               </div>
             </div>
 
+            <DesignGuidance
+              attributes={attributes}
+              alternativesPerSet={alternativesPerSet}
+              tasks={numberOfSets || recommendedSets}
+              sample={designRec?.sample_size}
+            />
+
             <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mb-6">
               <h3 className="font-bold text-blue-900 mb-2">Design Summary:</h3>
               <div className="space-y-1 text-sm text-blue-700">
                 <p>• Attributes: {attributes.length}</p>
                 <p>• Total Levels: {attributes.reduce((sum, attr) => sum + attr.levels.length, 0)}</p>
                 <p>• Alternatives per Set: {alternativesPerSet}</p>
-                <p>• Choice Sets: {activeSets}</p>
-                <p>• Total Profiles: {activeSets * alternativesPerSet}</p>
+                <p>• Choice Sets: {numberOfSets || recommendedSets}</p>
+                <p>• Total Profiles: {(numberOfSets || recommendedSets) * alternativesPerSet}</p>
               </div>
             </div>
 
-            {/* Respondents needed — live Johnson & Orme calculation */}
+            {/* Respondents needed — Johnson & Orme, same rule as the Results page */}
             <div className="p-4 bg-emerald-50 rounded-lg border-2 border-emerald-200 mb-6" data-testid="sample-size-recommendation">
               <h3 className="font-bold text-emerald-900 mb-2">ต้องการผู้ตอบกี่คน?</h3>
-              <div className="space-y-1 text-sm text-emerald-800">
-                <p>
-                  • ขั้นต่ำ (รายงานผลรวมได้ — Orme):{' '}
-                  <b className="text-lg" data-testid="sample-size-min">{sampleInfo.minimum}</b> คน
-                  <span className="text-xs text-emerald-700 ml-2">(ระบบเปิดแดชบอร์ดเบื้องต้นได้ตั้งแต่ 30 คนขึ้นไป)</span>
-                </p>
-                <p>
-                  • แนะนำ (วิเคราะห์กลุ่มย่อยได้สบาย):{' '}
-                  <b className="text-lg" data-testid="sample-size-recommended">{sampleInfo.recommended}</b> คน
-                </p>
-                <p className="text-xs text-emerald-700 mt-2 font-mono">
-                  เกณฑ์ {sampleInfo.rule} · c = {sampleInfo.largest_attribute_levels} (attribute ที่มี level มากที่สุด)
-                </p>
-              </div>
+              {designRec?.sample_size ? (
+                <div className="space-y-1 text-sm text-emerald-800">
+                  <p>
+                    • ขั้นต่ำ (รายงานผลรวมได้):{' '}
+                    <b className="text-lg" data-testid="sample-size-min">{designRec.sample_size.minimum}</b> คน
+                  </p>
+                  <p>
+                    • แนะนำ (วิเคราะห์กลุ่มย่อยได้สบาย):{' '}
+                    <b className="text-lg" data-testid="sample-size-recommended">{designRec.sample_size.recommended}</b> คน
+                  </p>
+                  <p className="text-xs text-emerald-700 mt-2 font-mono">
+                    เกณฑ์ {designRec.sample_size.rule} · c = {designRec.sample_size.largest_attribute_levels} (attribute ที่มี level มากที่สุด)
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    ตัวเลขนี้ใช้เกณฑ์เดียวกับการ์ด "ข้อมูลเพียงพอหรือยัง" ในหน้าผลลัพธ์
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-emerald-700">กำลังคำนวณ… (บันทึก attributes ก่อนเพื่อดูตัวเลข)</p>
+              )}
             </div>
 
             {/* Warning if unsaved changes */}
@@ -1470,8 +1475,8 @@ const ConjointDesignPage = () => {
 
             <Button
               onClick={handleGenerateDesign}
-              disabled={generating || designGenerated || isDirty || attributes.length < 2}
-              className={`w-full bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white font-bold ${(isDirty || attributes.length < 2) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={generating || designGenerated || isDirty}
+              className={`w-full bg-gradient-to-r from-[#007B9A] to-[#00A9CE] text-white font-bold ${isDirty ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {generating ? (
                 <>
@@ -1523,10 +1528,10 @@ const ConjointDesignPage = () => {
                     🚀 พร้อมเริ่มเก็บข้อมูลแล้ว? กดปุ่มด้านล่างเพื่อเปิดสำรวจ
                   </p>
                   <Button
-                    onClick={() => setConfirmStartOpen(true)}
+                    onClick={() => setShowPublishCheck(true)}
                     disabled={startingSurvey}
                     className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white font-bold"
-                    data-testid="conjoint-start-survey-btn"
+                    data-testid="start-survey-btn"
                   >
                     {startingSurvey ? (
                       <>
@@ -1540,21 +1545,26 @@ const ConjointDesignPage = () => {
                       </>
                     )}
                   </Button>
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-green-700">
-                      หมายเหตุ: หลังเริ่มแล้วจะล็อกโครงสร้าง Attributes/Levels
-                    </p>
-                    <a href={`/survey/conjoint/${studyId}?preview=1`}
-                       target="_blank" rel="noopener noreferrer"
-                       className="text-xs font-bold text-blue-700 underline">
-                      👁 ดูตัวอย่างแบบสอบถาม (Preview) ↗
-                    </a>
-                  </div>
+                  <p className="text-xs text-green-700 mt-2">
+                    หมายเหตุ: หลังเริ่มแล้วจะแก้ไขได้เฉพาะชื่อ คำอธิบาย และรูปภาพเท่านั้น
+                  </p>
                 </div>
               </div>
             )}
           </Card>
         )}
+
+        <PublishChecklistDialog
+          open={showPublishCheck}
+          onOpenChange={setShowPublishCheck}
+          onConfirm={async () => { await handleStartSurvey(); setShowPublishCheck(false); }}
+          attributes={attributes}
+          alternativesPerSet={alternativesPerSet}
+          tasks={numberOfSets || recommendedSets}
+          sample={designRec?.sample_size}
+          previewUrl={`${window.location.origin}/survey/conjoint/${studyId}`}
+          busy={startingSurvey}
+        />
 
         {/* Reference Images Section */}
         {designGenerated && attributes.length > 0 && (
@@ -1569,17 +1579,18 @@ const ConjointDesignPage = () => {
         {/* Image Management - Individual Level Control */}
         {designGenerated && attributes.length > 0 && (
           <Card className="p-6 mb-6 bg-white border-2 border-gray-300">
-            <h2 className="text-2xl font-black text-gray-900 mb-4">
-              รูปภาพประกอบระดับคุณลักษณะ (ไม่บังคับ)
+            <h2 className="text-2xl font-black text-gray-900 mb-6">
+              Phase 3: จัดการรูปภาพแต่ละ Profile
             </h2>
 
             <p className="text-gray-700 mb-6">
-              เพิ่มรูปภาพให้กับแต่ละ attribute level เพื่อให้ผู้ตอบเห็นภาพชัดเจนขึ้น
+              เพิ่มรูปภาพให้กับแต่ละ attribute level เพื่อให้ respondents เห็นภาพชัดเจนขึ้น
               <br />
               <span className="text-sm text-gray-600">
                 (Optional - สามารถข้ามและดำเนินการต่อได้)
               </span>
             </p>
+            <ImagesOptionalNote className="mb-6" />
 
             {/* Image Management for each attribute */}
             <div className="space-y-6 mb-6">
@@ -1600,7 +1611,6 @@ const ConjointDesignPage = () => {
                         token={token}
                         onImageUpdated={loadStudy}
                         referenceImages={referenceImages}
-                        promptSettings={promptSettings}
                       />
                     ))}
                   </div>
@@ -1608,42 +1618,35 @@ const ConjointDesignPage = () => {
               ))}
             </div>
 
-            {/* Survey Link Section — only show live shareable URL AFTER starting survey */}
-            {surveyStarted ? (
-              <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300 mb-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-blue-900 mb-2">
-                      ลิงก์แบบสอบถาม (พร้อมใช้งาน)
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <input
-                        type="text"
-                        value={`${window.location.origin}/survey/conjoint/${studyId}`}
-                        readOnly
-                        className="flex-1 p-2 border-2 border-blue-300 rounded-lg bg-white font-mono text-xs min-w-0"
-                      />
-                      <Button
-                        onClick={handleCopySurveyLink}
-                        size="sm"
-                        className="bg-blue-600 text-white"
-                      >
-                        คัดลอก
-                      </Button>
-                    </div>
+            {/* Survey Link Section */}
+            <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300 mb-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-blue-900 mb-2">
+                    ลิงก์แบบสอบถาม (พร้อมใช้งาน)
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={`${window.location.origin}/survey/conjoint/${studyId}`}
+                      readOnly
+                      className="flex-1 p-2 border-2 border-blue-300 rounded-lg bg-white font-mono text-xs"
+                    />
+                    <Button
+                      onClick={handleCopySurveyLink}
+                      size="sm"
+                      className="bg-blue-600 text-white"
+                    >
+                      คัดลอก
+                    </Button>
                   </div>
+                  <p className="text-xs text-blue-700 mt-2">
+                    💡 แชร์ลิงก์นี้ให้ผู้ตอบแบบสอบถามได้เลย - survey จะแสดงรูปภาพที่มี หรือข้อความอธิบายถ้าไม่มีรูป
+                  </p>
                 </div>
               </div>
-            ) : (
-              <div className="p-4 bg-amber-50 rounded-lg border border-amber-300 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2">
-                <span>กด <strong>&ldquo;เริ่มสำรวจ&rdquo;</strong> ด้านบนเมื่อพร้อม เพื่อเปิดใช้งานลิงก์เก็บข้อมูลจริง</span>
-                <a href={`/survey/conjoint/${studyId}?preview=1`} target="_blank" rel="noopener noreferrer"
-                   className="font-bold text-blue-700 underline">
-                  ดูตัวอย่างแบบสอบถาม (Preview) ↗
-                </a>
-              </div>
-            )}
+            </div>
           </Card>
         )}
 
@@ -1703,58 +1706,6 @@ const ConjointDesignPage = () => {
           </div>
         )}
       </div>
-
-      {/* Confirm Remove Attribute Modal */}
-      {confirmRemoveAttr && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">ยืนยันการลบปัจจัย (Attribute)?</h3>
-            <p className="text-sm text-gray-600 mb-5">
-              ต้องการลบ <strong>{confirmRemoveAttr.name || 'ปัจจัยนี้'}</strong> และ levels ทั้งหมดใช่หรือไม่? การลบอาจต้องสร้างแบบสอบถาม (D-Optimal Design) ใหม่
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setConfirmRemoveAttr(null)}>
-                ยกเลิก
-              </Button>
-              <Button
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => {
-                  setAttributes(prev => prev.filter(a => a.id !== confirmRemoveAttr.id));
-                  setIsDirty(true);
-                  setConfirmRemoveAttr(null);
-                  toast.success('ลบปัจจัยแล้ว — อย่าลืมบันทึกก่อนสร้างชุดคำถามใหม่');
-                }}
-              >
-                ลบปัจจัยนี้
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Start Survey Modal */}
-      {confirmStartOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">เปิดแบบสอบถามเพื่อเก็บข้อมูลจริง?</h3>
-            <p className="text-sm text-gray-600 mb-5">
-              เมื่อเริ่มสำรวจแล้ว ลิงก์สำหรับผู้ตอบจะเปิดใช้งานทันที และระบบจะล็อกโครงสร้างคำถาม/จำนวนตัวเลือกเพื่อรักษาความเที่ยงตรงของข้อมูลวิจัย
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setConfirmStartOpen(false)}>
-                กลับไปตรวจสอบ
-              </Button>
-              <Button
-                className="bg-green-600 hover:bg-green-700 text-white font-bold"
-                onClick={handleStartSurvey}
-                data-testid="confirm-start-survey-submit"
-              >
-                ยืนยันเปิดสำรวจจริง
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

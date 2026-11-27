@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Save, Users, Info } from 'lucide-react';
+import { apiErrorText } from '@/lib/apiError';
 
 /**
  * Inline config widget for choosing which demographic fields the public
@@ -56,7 +57,7 @@ const ConjointDemographicsConfig = ({ studyId, token, initialValue, disabled, on
       toast.success('บันทึกการตั้งค่าข้อมูลผู้ตอบสำเร็จ');
       if (onChange) onChange(list);
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'ไม่สามารถบันทึกได้');
+      toast.error(apiErrorText(e, 'ไม่สามารถบันทึกได้'));
     } finally {
       setSaving(false);
     }

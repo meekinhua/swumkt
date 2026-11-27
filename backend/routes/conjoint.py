@@ -18,6 +18,7 @@ import re
 import base64
 import uuid
 import logging
+import json
 import asyncio
 from enum import Enum
 from datetime import datetime, timezone
@@ -28,12 +29,6 @@ from pydantic import BaseModel, Field
 from docx.shared import Pt
 
 from lib.ttl_cache import async_ttl_cache
-from utils.external_ai import (
-    START_MARKER,
-    END_MARKER,
-    validate_conjoint_qualitative_payload,
-    validate_conjoint_interpretation_payload,
-)
 
 conjoint_router = APIRouter(tags=["conjoint"])
 
@@ -61,7 +56,12 @@ conjoint_router = APIRouter(tags=["conjoint"])
 #   are humanised before results are cached or returned — one leaked into a
 #   generated thesis coefficient table as a level name. Cached v4 rows still hold
 #   the raw tokens, so they must not be served.
-ANALYSIS_CACHE_VERSION = 5
+# v6 (2026-11): counting method now excludes unusable choice situations (values
+#   move for studies with skipped/stale tasks); logit methods gained `converged`,
+#   95% CIs, `reference_levels`, and per-level `is_reference` / `is_excluded`;
+#   AI-interpretation / thesis caches can now hold externally imported text
+#   (source="external") and must not replay text written from v5 numbers.
+ANALYSIS_CACHE_VERSION = 6
 
 
 _ORPHAN_LABEL_RE = re.compile(r"__ORPHAN_([0-9a-fA-F]{1,12})__")
@@ -228,6 +228,315 @@ class GenerateShelfSimulationRequest(BaseModel):
     custom_shelf_style: Optional[str] = None  # Custom shelf style description if shelf_style is "custom"
     additional_prompt: Optional[str] = None  # User can customize environment
 
+
+# ---- External-LLM workflow (plan §B, 2026-11) ----
+class ExternalImportRequest(BaseModel):
+    part_key: str = "main"
+    content: str = ""
+    model_label: Optional[str] = None
+
+
+class InterpretationExternalImportRequest(ExternalImportRequest):
+    method: Optional[str] = "counting"
+    compare_all: bool = False
+
+
+class QualitativeExternalImportRequest(ExternalImportRequest):
+    qualitative_data: Optional[List[QualitativeInput]] = None
+    target_language: str = "th"
+
+
+class ThesisChapterPart(BaseModel):
+    part_key: str          # "ch3" | "ch4" | "ch5" (or "3"/"4"/"5")
+    content: str
+
+
+class ThesisExternalImportRequest(ThesisExportRequest):
+    part_key: Optional[str] = None          # single-chapter form (uniform convention)
+    content: Optional[str] = None
+    parts: Optional[List[ThesisChapterPart]] = None   # several chapters at once
+    model_label: Optional[str] = None
+
+
+class SimulateProduct(BaseModel):
+    name: str
+    levels: Dict[str, str]  # attribute_id -> level_id
+
+
+class SimulateRequest(BaseModel):
+    method: str = "mnl"
+    rule: str = "logit"     # "logit" (share of preference) | "first_choice"
+    products: List[SimulateProduct]
+
+
+# Feature keys registered in lib/llm_policy (plan §A).
+FEAT_INTERPRETATION = "conjoint.interpretation"
+FEAT_QUALITATIVE = "conjoint.qualitative"
+FEAT_THESIS = "conjoint.thesis"
+FEAT_IMAGES = "conjoint.images"
+
+
+async def _require_system_llm(feature: str, user) -> None:
+    """Gate every system-LLM path. Raises the policy's HTTP 409 (llm_external_only)."""
+    from lib import llm_policy
+    await llm_policy.require_system_llm(feature, user)
+
+
+async def _system_llm_allowed(feature: str, user) -> bool:
+    try:
+        from lib import llm_policy
+        return bool(await llm_policy.is_system_llm_allowed(feature, user))
+    except Exception:
+        return False
+
+
+def _is_policy_error(e: BaseException) -> bool:
+    """True for the policy's refusal, whichever layer raised it — so broad
+    `except Exception` blocks re-raise it instead of turning it into a generic
+    'generation failed' 500."""
+    if isinstance(e, HTTPException) and isinstance(e.detail, dict) \
+            and e.detail.get("code") == "llm_external_only":
+        return True
+    try:
+        from lib import llm_policy
+        return isinstance(e, llm_policy.SystemLLMDisabled)
+    except Exception:
+        return False
+
+
+def _policy_error_message(e: BaseException) -> str:
+    if isinstance(e, HTTPException) and isinstance(e.detail, dict):
+        return str(e.detail.get("message") or e.detail)
+    detail = getattr(e, "detail", None)
+    if isinstance(detail, dict) and detail.get("message"):
+        return str(detail["message"])
+    return getattr(e, "message", None) or str(e) or "ระบบปิดการใช้ AI ของระบบ — กรุณาใช้ AI ของคุณเอง"
+
+
+def _job_error_fields(e: BaseException) -> Dict[str, Any]:
+    if _is_policy_error(e):
+        return {"error": _policy_error_message(e), "error_code": "llm_external_only"}
+    return {"error": str(e)}
+
+
+def _thesis_cache_key(methods: List[str], chapters: List[int], extra_prompt: str = "") -> str:
+    methods_key = "_".join(sorted(methods))
+    chapters_key = "_".join(str(c) for c in sorted(chapters))
+    extra_hash = ""
+    if extra_prompt and extra_prompt.strip():
+        import hashlib
+        extra_hash = hashlib.md5(extra_prompt.strip().encode()).hexdigest()[:8]
+    return f"thesis_{methods_key}_{chapters_key}" + (f"_ep{extra_hash}" if extra_hash else "")
+
+
+JOB_STALE_MESSAGE_TH = ("งานนี้หยุดค้าง (เซิร์ฟเวอร์รีสตาร์ตระหว่างทำงาน) — กรุณาสั่งใหม่อีกครั้ง")
+
+
+def _job_stale(job: Dict, max_age_sec: float) -> bool:
+    """A 'processing' background job older than max_age_sec has lost its worker
+    (BackgroundTasks die with the process); report it instead of polling forever."""
+    if (job or {}).get("status") not in ("processing", "queued", "running"):
+        return False
+    ts = job.get("updated_at") or job.get("created_at")
+    try:
+        when = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return False
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - when).total_seconds() > max_age_sec
+
+
+def _interpretation_cache_key(method: Optional[str], compare_all: bool) -> str:
+    return f"ai_{method}_{'all' if compare_all else 'single'}"
+
+
+DEFAULT_LEVEL_IMAGE_SETTINGS = {
+    "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
+    "level_image_prompt_with_ref": "Based on the reference images provided, create a product visualization for: {attribute_name} - {level_value}. Match the style, lighting, and composition of the reference images.",
+    "level_image_model": "gpt-image-1",
+}
+DEFAULT_PROFILE_IMAGE_SETTINGS = {
+    "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
+    "profile_image_prompt_with_ref": "Using the reference images as style guide, create a product photo showing: {composition}. Match the visual style and aesthetic.",
+    "profile_image_model": "gpt-image-1",
+}
+
+
+def _level_image_prompt(settings: Dict, attr: Optional[Dict], level: Optional[Dict],
+                        custom_prompt: Optional[str] = None, additional_prompt: Optional[str] = None,
+                        using_refs: bool = False, is_test: bool = False) -> str:
+    """Image prompt for one attribute level — system generator and external-prompt share it."""
+    if custom_prompt:
+        image_prompt = custom_prompt
+    elif is_test:
+        image_prompt = "High quality product image"
+    else:
+        tmpl_default = settings.get("level_image_prompt_template") or DEFAULT_LEVEL_IMAGE_SETTINGS["level_image_prompt_template"]
+        template = settings.get("level_image_prompt_with_ref", tmpl_default) if using_refs else tmpl_default
+        image_prompt = template.format(
+            attribute_name=attr["name"], level_value=level["value"],
+            level_description=level.get("description", "") or "",
+        )
+        if level.get("description") and not using_refs:
+            image_prompt += f" {level['description']}"
+    if additional_prompt:
+        image_prompt = f"{additional_prompt} {image_prompt}"
+    return image_prompt
+
+
+def _profile_composition(attributes: List[Dict], profile: Dict) -> str:
+    bits = []
+    for attr_id, level_id in (profile.get("attribute_levels") or {}).items():
+        attr = next((a for a in attributes if a["id"] == attr_id), None)
+        if attr:
+            level = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
+            if level:
+                bits.append(f"{attr['name']}: {level['value']}")
+    return ", ".join(bits)
+
+
+def _profile_image_prompt(settings: Dict, attributes: List[Dict], profile: Dict,
+                          custom_prompt: Optional[str] = None, additional_prompt: Optional[str] = None,
+                          using_refs: bool = False) -> str:
+    if custom_prompt:
+        image_prompt = custom_prompt
+    else:
+        tmpl_default = settings.get("profile_image_prompt_template") or DEFAULT_PROFILE_IMAGE_SETTINGS["profile_image_prompt_template"]
+        template = settings.get("profile_image_prompt_with_ref", tmpl_default) if using_refs else tmpl_default
+        image_prompt = template.format(composition=_profile_composition(attributes, profile))
+    if additional_prompt:
+        image_prompt = f"{additional_prompt} {image_prompt}"
+    return image_prompt
+
+
+def _bulk_level_image_prompt(attr: Dict, level: Dict) -> str:
+    p = f"Professional product visualization: {attr['name']} - {level['value']}. Clean, minimalist style on white background."
+    if level.get("description"):
+        p += f" {level['description']}"
+    return p
+
+
+def _optimal_product_features(study: Dict, responses: List[Dict]) -> List[str]:
+    """Best level per attribute by the counting method (what the product-image
+    generator has always used)."""
+    part_worths = calculate_part_worths(study, responses)
+    importance_scores = calculate_importance_scores(part_worths, study)
+    feats = []
+    for attr_id, scores in importance_scores.items():
+        if attr_id in part_worths and part_worths[attr_id]["levels"]:
+            best = max(part_worths[attr_id]["levels"].items(), key=lambda x: x[1]["utility"])
+            feats.append(f"{scores['name']}: {best[1]['value']}")
+    return feats
+
+
+PRODUCT_PROMPT_SYSTEM = (
+    "You are an expert product designer and image generation prompt engineer.\n"
+    "    Create detailed, professional prompts for generating product visualization images."
+)
+
+
+def _product_prompt_writer(study: Dict, product_features: List[str], additional_prompt: Optional[str]) -> str:
+    features_text = "\n".join(f"- {f}" for f in product_features)
+    prompt = f"""Based on conjoint analysis results, create an image generation prompt for the optimal product configuration:
+
+    Study: {study.get("title", "Product")}
+    Product Category: {study.get("product_category", "product")}
+
+    Optimal Product Features (from research):
+    {features_text}
+
+    Create a detailed image generation prompt that:
+    1. Describes the product with all key features mentioned
+    2. Specifies professional product photography style
+    3. Includes clean white background for product-focused composition
+    4. Mentions high quality, sharp details, and good lighting
+    5. Keeps the prompt concise but descriptive (2-3 sentences max)
+
+    Return ONLY the image generation prompt, no explanation."""
+    if additional_prompt:
+        prompt += f"\n\nUser's additional requirements (to be placed at the BEGINNING of the final prompt): {additional_prompt}"
+    return prompt
+
+
+def _product_direct_image_prompt(study: Dict, product_features: List[str], additional_prompt: Optional[str]) -> str:
+    """A ready-to-use image prompt with no LLM step (external path)."""
+    p = (f"Professional product photograph of a {study.get('product_category') or 'product'} "
+         f"(\"{study.get('title', 'Product')}\") with these features: {'; '.join(product_features)}. "
+         "Clean white background, product-focused composition, soft studio lighting, high detail, sharp focus.")
+    return f"{additional_prompt.strip()}. {p}" if additional_prompt else p
+
+
+SHELF_PROMPT_SYSTEM = (
+    "You are an expert in retail merchandising and product photography.\n"
+    "    Create realistic prompts for on-shelf product visualization in competitive retail environments."
+)
+
+
+def _shelf_context(study: Dict, request) -> Dict[str, str]:
+    product_category = (study.get("product_category") or "").lower()
+    environment_type = request.environment_type
+    if environment_type == "auto":
+        if any(w in product_category for w in ["cream", "cosmetic", "skincare", "makeup", "beauty"]):
+            environment_type = "cosmetics_store"
+        elif any(w in product_category for w in ["drink", "beverage", "snack", "food", "water"]):
+            environment_type = "convenience_store"
+        elif any(w in product_category for w in ["grocery", "supermarket"]):
+            environment_type = "supermarket"
+        elif any(w in product_category for w in ["fashion", "clothing", "apparel"]):
+            environment_type = "mall"
+        else:
+            environment_type = "supermarket"
+    envs = {
+        "cosmetics_store": "Boots or Watson cosmetics store shelf, bright lighting, organized beauty products display, premium retail environment",
+        "convenience_store": "7-Eleven refrigerator or shelf display, convenience store setting, consumer products in organized rows",
+        "supermarket": "Lotus's or Big C supermarket aisle, retail shelf display, organized product arrangement",
+        "mall": "Shopping mall retail display, premium store environment, attractive product presentation",
+        "custom": request.custom_environment or "retail environment",
+    }
+    shelves = {
+        "eye_level": "at eye level position, centered in frame, prominent placement",
+        "shelf_view": "on retail shelf with other competing products, realistic shelf arrangement",
+        "aisle_view": "in store aisle perspective, showing product context in retail environment",
+        "custom": request.custom_shelf_style or "product display",
+    }
+    environment_desc = envs.get(environment_type, envs["supermarket"])
+    shelf_desc = shelves.get(request.shelf_style, shelves["eye_level"])
+    if environment_type == "custom" or request.shelf_style == "custom":
+        ctx = []
+        if environment_type == "custom":
+            ctx.append(f"Environment: {request.custom_environment}")
+        if request.shelf_style == "custom":
+            ctx.append(f"Display style: {request.custom_shelf_style}")
+        environment_desc = ", ".join(ctx) if ctx else environment_desc
+    return {"environment_type": environment_type, "environment_desc": environment_desc, "shelf_desc": shelf_desc}
+
+
+def _shelf_prompt_writer(study: Dict, ctx: Dict[str, str], additional_prompt: Optional[str]) -> str:
+    base_prompt = f"""Create a photorealistic on-shelf visualization for: {study.get("title", "Product")}
+
+    Environment Setting: {ctx['environment_desc']}
+    Shelf Position: {ctx['shelf_desc']}
+
+    Requirements:
+    1. Show the product {ctx['shelf_desc']}
+    2. Include competing products from the same category (blurred or generic if needed)
+    3. Realistic retail lighting and atmosphere
+    4. Professional product photography quality
+    5. Show authentic {ctx['environment_type'].replace('_', ' ')} environment
+    6. Make the featured product stand out while maintaining realistic context
+
+    Keep the prompt concise (2-3 sentences max). Return ONLY the image generation prompt."""
+    if additional_prompt:
+        base_prompt += f"\n\nAdditional requirements (to be placed at the BEGINNING of the final prompt): {additional_prompt}"
+    return base_prompt
+
+
+def _shelf_direct_image_prompt(study: Dict, ctx: Dict[str, str], additional_prompt: Optional[str]) -> str:
+    p = (f"Using the attached product image as the reference product, create a photorealistic photo of it "
+         f"{ctx['shelf_desc']} in a {ctx['environment_desc']}, with generic competing products from the same "
+         "category around it, realistic retail lighting, the featured product clearly standing out.")
+    return f"{additional_prompt.strip()}. {p}" if additional_prompt else p
 
 
 # ===================== FILTER HELPERS (time + demographic segments) =====================
@@ -877,6 +1186,7 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             if name in selected_rows.columns:
                 level_counts_all[name] = selected_rows[name].value_counts().to_dict()
 
+        ref_cols = X.attrs.get("reference_cols", {})
         part_worths = {}
         for attr in attributes:
             attr_id = attr["id"]
@@ -892,8 +1202,17 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
                     "value": level_value,
                     "utility": utility,
                     "selection_count": int(counts_for_attr.get(level_value, 0)),
+                    **_logit_level_flags(attr, level, X.columns, ref_cols),
                 }
             part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
+
+        # Convergence and Wald 95% CIs (2026-11). An unconverged L-BFGS run used
+        # to be reported exactly like a converged one.
+        try:
+            converged = bool((getattr(result, "mle_retvals", None) or {}).get("converged", True))
+        except Exception:
+            converged = None
+        ci = result.conf_int(alpha=0.05)
 
         importance_scores = _calc_importance_from_part_worths(part_worths)
 
@@ -931,6 +1250,12 @@ def calculate_mnl_analysis(study: Dict, responses: List[Dict]) -> Dict:
             "std_errors": {name: float(se) for name, se in result.bse.items()},
             "z_values": {name: float(z) for name, z in result.tvalues.items()},
             "p_values": {name: float(p) for name, p in result.pvalues.items()},
+            "ci_lower": {name: float(ci.loc[name].iloc[0]) for name in result.params.index},
+            "ci_upper": {name: float(ci.loc[name].iloc[1]) for name in result.params.index},
+            "ci_level": 0.95,
+            "converged": converged,
+            "reference_levels": _logit_reference_levels(attributes, ref_cols),
+            "coding": "dummy (reference = last declared level that was shown; reference utility = 0)",
             "log_likelihood": float(llf),
             "log_likelihood_null": float(llnull) if llnull is not None else None,
             "pseudo_r_squared": float(pseudo_r2),
@@ -1146,11 +1471,19 @@ def calculate_mixed_logit_analysis(study: Dict, responses: List[Dict]) -> Dict:
                 "utility": utility,
                 "std_deviation": level_sd,
                 "selection_count": int(counts_for_attr.get(level["value"], 0)),
+                **_logit_level_flags(attr, level, X.columns, X.attrs.get("reference_cols", {})),
             }
         part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
 
+    _se = fit["std_errors"]
     return {
         "method": "Mixed Logit (Random Parameters)",
+        "ci_lower": {v: float(fit["means"][v] - 1.959964 * _se.get(v, 0.0)) for v in varnames},
+        "ci_upper": {v: float(fit["means"][v] + 1.959964 * _se.get(v, 0.0)) for v in varnames},
+        "ci_level": 0.95,
+        "converged": (bool(getattr(model, "convergence", True))
+                      if getattr(model, "convergence", None) is not None else None),
+        "reference_levels": _logit_reference_levels(attributes, X.attrs.get("reference_cols", {})),
         "part_worths": part_worths,
         "importance_scores": _calc_importance_from_part_worths(part_worths),
         "mean_coefficients": mean_coefficients,
@@ -1312,7 +1645,33 @@ def _dummy_encode_consistent_reference(df, attributes, feature_cols, groups=None
         else:
             full = full.loc[:, full.nunique() > 1]
 
+    # Expose which column each attribute is measured against so callers can
+    # flag the reference level (utility pinned to 0) separately from a level
+    # that could not be estimated (also reported as 0) — 2026-11.
+    full.attrs["reference_cols"] = dict(ref_by_name)
     return full
+
+
+def _logit_level_flags(attr: Dict, level: Dict, X_columns, ref_cols: Dict) -> Dict:
+    """`is_reference` / `is_excluded` for one level of a logit-family result.
+
+    Before 2026-11 only OLS carried these flags; MNL / Mixed Logit / HB reported
+    an unestimable level (never shown, or no within-set variation) as utility 0
+    — indistinguishable from the reference level in tables and in the thesis.
+    """
+    col = f"{attr['name']}_{level['value']}"
+    is_ref = ref_cols.get(attr["name"]) == col
+    return {"is_reference": bool(is_ref), "is_excluded": bool(not is_ref and col not in X_columns)}
+
+
+def _logit_reference_levels(attributes: List[Dict], ref_cols: Dict) -> Dict[str, str]:
+    out = {}
+    for attr in attributes:
+        col = ref_cols.get(attr.get("name"))
+        for lvl in attr.get("levels", []) or []:
+            if col == f"{attr['name']}_{lvl['value']}":
+                out[attr["id"]] = lvl["id"]
+    return out
 
 
 def _individual_posteriors(df, X_values, varnames, pop_means, pop_sds,
@@ -1515,6 +1874,7 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
                 "utility": float(pop_mean_dict.get(col_name, 0.0)),
                 "std_deviation": float(pop_sd_dict.get(col_name, 0.0)),
                 "selection_count": int(counts_for_attr.get(level["value"], 0)),
+                **_logit_level_flags(attr, level, X.columns, X.attrs.get("reference_cols", {})),
             }
         part_worths[attr_id] = {"name": attr_name, "levels": levels_dict}
 
@@ -1566,6 +1926,9 @@ def calculate_hierarchical_bayes_analysis(study: Dict, responses: List[Dict]) ->
     return {
         "method": "Hierarchical Bayes (Panel Mixed Logit + Individual Posteriors)",
         "part_worths": part_worths,
+        "converged": (bool(getattr(model, "convergence", True))
+                      if getattr(model, "convergence", None) is not None else None),
+        "reference_levels": _logit_reference_levels(attributes, X.attrs.get("reference_cols", {})),
         "importance_scores": importance_individual or importance_population,
         # Kept alongside so the two definitions can be compared. They diverge
         # exactly when respondents disagree on an attribute's DIRECTION.
@@ -1906,6 +2269,13 @@ def calculate_part_worths(study: Dict, responses: List[Dict]) -> Dict[str, Dict[
             if not profile_map:
                 continue
             sel_pid = choice.get("selected_profile_id")
+            # Same admissibility rule as `_build_conjoint_data_rows` (2026-11):
+            # a skipped task, or one whose selected_profile_id no longer matches
+            # any profile, used to add APPEARANCES with no selection, deflating
+            # every rate in that set — and the counting method is the one the
+            # Results page shows first. Now all five methods share one sample.
+            if len(profile_map) < 2 or sel_pid not in profile_map:
+                continue
             for prof in profile_map.values():
                 is_selected = (prof["id"] == sel_pid)
                 for attr_id, level_id in prof.get("attribute_levels", {}).items():
@@ -1994,6 +2364,69 @@ async def get_method_results(study, responses, method):
         return None
 
     return result
+
+QUALITATIVE_JSON_EXAMPLE = """{
+  "attributes": [
+    {
+      "name": "ชื่อคุณลักษณะ",
+      "description": "คำอธิบายสั้น ๆ",
+      "rationale": "เหตุผลที่คุณลักษณะนี้สำคัญ",
+      "levels": [
+        {"value": "ระดับที่ 1", "description": "คำอธิบาย"},
+        {"value": "ระดับที่ 2", "description": "คำอธิบาย"}
+      ]
+    }
+  ],
+  "recommendations": "ข้อเสนอแนะภาพรวมสำหรับการออกแบบการศึกษา"
+}"""
+
+DEFAULT_QUALITATIVE_SYSTEM = "You are an expert marketing researcher."
+
+
+def _qualitative_combined_data(items) -> str:
+    def _get(it, k):
+        return getattr(it, k, None) if not isinstance(it, dict) else it.get(k)
+    return "\n\n".join(
+        f"=== {str(_get(it, 'type') or '').upper()} ===\n{_get(it, 'content') or ''}" for it in (items or [])
+    )
+
+
+def _build_qualitative_prompt(prompt_config: Dict, qualitative_data, target_language: str = "th") -> Dict:
+    """(system_message, prompt, provider, model) for qualitative → attributes.
+
+    Single source for the system-LLM call and the external-prompt endpoint.
+    """
+    model_name = prompt_config.get("model_name") or "claude-sonnet-4-6"
+    # Retired dated aliases still sit in saved prompt configs (provider 404s).
+    if model_name.startswith("claude-sonnet-4-2025"):
+        model_name = "claude-sonnet-4-6"
+    return {
+        "system_message": prompt_config.get("system_message") or DEFAULT_QUALITATIVE_SYSTEM,
+        "prompt": prompt_config["prompt_template"].format(
+            combined_data=_qualitative_combined_data(qualitative_data),
+            target_language=target_language,
+        ),
+        "model_provider": prompt_config.get("model_provider", "anthropic"),
+        "model_name": model_name,
+    }
+
+
+def _qualitative_suggestions(analysis_result: Dict) -> List["ConjointAttribute"]:
+    """LLM JSON → suggested ConjointAttribute list (system and external paths)."""
+    out = []
+    for i, attr_data in enumerate((analysis_result or {}).get("attributes", []) or []):
+        if not isinstance(attr_data, dict):
+            continue
+        levels = [AttributeLevel(value=str(l.get("value", "")), description=l.get("description"))
+                  for l in (attr_data.get("levels") or []) if isinstance(l, dict) and l.get("value") not in (None, "")]
+        out.append(ConjointAttribute(
+            name=str(attr_data.get("name", "")),
+            description=attr_data.get("description"),
+            levels=levels,
+            order=i,
+        ))
+    return out
+
 
 def _build_interpretation_prompt(analysis_summary: dict) -> tuple:
     """Build (system_message, prompt) for conjoint AI interpretation.
@@ -2153,13 +2586,21 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
                     levels = attr_data.get('levels', {})
                     for lvl_id, lvl_data in levels.items():
                         if isinstance(lvl_data, dict):
-                            lines.append(f"  {attr_name}/{lvl_data.get('value','?')}: utility={lvl_data.get('utility',0):.2f}")
+                            tag = (" (ระดับอ้างอิง)" if lvl_data.get('is_reference') else
+                                   " (ประมาณค่าไม่ได้ — ห้ามตีความเป็น 0)" if lvl_data.get('is_excluded') else "")
+                            lines.append(f"  {attr_name}/{lvl_data.get('value','?')}: utility={lvl_data.get('utility',0):.2f}{tag}")
                         else:
                             lines.append(f"  {attr_name}/{lvl_id}: {lvl_data}")
 
         # MNL-specific stats
         if method == 'mnl':
-            for key in ['pseudo_r_squared', 'log_likelihood', 'aic', 'n_observations', 'utility_scale']:
+            # 2026-11: the MNL equations block tells the writer to report the LR
+            # test against the null model, adjusted ρ² and BIC, but only ρ², LL
+            # and AIC were supplied — so complying meant inventing them.
+            for key in ['pseudo_r_squared', 'pseudo_r_squared_adj', 'log_likelihood',
+                        'log_likelihood_null', 'lr_statistic', 'lr_df', 'lr_p_value',
+                        'aic', 'bic', 'n_observations', 'n_choice_situations',
+                        'n_respondents', 'n_parameters', 'converged', 'utility_scale']:
                 val = data.get(key)
                 if val is not None:
                     lines.append(f"{key}: {val}")
@@ -2167,6 +2608,8 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
             std_errs = data.get('std_errors', {})
             z_vals = data.get('z_values', {})
             p_vals = data.get('p_values', {})
+            ci_lo = data.get('ci_lower', {}) or {}
+            ci_hi = data.get('ci_upper', {}) or {}
             if coeffs:
                 lines.append("Coefficients:")
                 for name in list(coeffs.keys()):
@@ -2178,7 +2621,10 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
                     se_f = f"{se:.4f}" if isinstance(se, (int, float)) else str(se)
                     z_f = f"{z:.4f}" if isinstance(z, (int, float)) else str(z)
                     p_f = f"{p:.6f}" if isinstance(p, (int, float)) else str(p)
-                    lines.append(f"  {name}: β={c_f}, SE={se_f}, z={z_f}, p={p_f}")
+                    ci_f = (f", 95% CI=[{ci_lo[name]:.4f}, {ci_hi[name]:.4f}]"
+                            if isinstance(ci_lo.get(name), (int, float)) and isinstance(ci_hi.get(name), (int, float))
+                            else "")
+                    lines.append(f"  {name}: β={c_f}, SE={se_f}, z={z_f}, p={p_f}{ci_f}")
 
         # Linear regression-specific
         if method == 'linear_regression':
@@ -2275,6 +2721,37 @@ def _summarize_results_for_thesis(all_method_results: dict) -> str:
 
     return "\n".join(lines)
 
+def _wtp_summary_text(wtp: Optional[Dict]) -> str:
+    """WTP lines for the AI writer — only what `lib.conjoint_wtp` computed."""
+    if not wtp or wtp.get("status") in (None, "not_applicable"):
+        return ""
+    if wtp.get("status") == "refused":
+        return f"\n=== WILLINGNESS TO PAY ===\nWTP: ไม่คำนวณ — {wtp.get('reason_th', '')}"
+    lin = wtp.get("linearity_test") or {}
+    lines = ["\n=== WILLINGNESS TO PAY (conditional logit, price linear) ===",
+             f"price attribute: {wtp.get('price_attribute_name')} levels={wtp.get('price_levels')}",
+             f"price coefficient: β={wtp.get('price_coefficient'):.6f}, SE={wtp.get('price_se'):.6f}, "
+             f"p={wtp.get('price_p_value'):.6f}"]
+    if lin.get("tested"):
+        lines.append(f"price linearity LR test: χ²({lin.get('df')})={lin.get('lr_statistic'):.4f}, "
+                     f"p={lin.get('p_value'):.6f}, rejected={lin.get('rejected')}")
+    else:
+        lines.append("price linearity: not testable (only 2 price levels)")
+    lines.append(f"CI method: {wtp.get('ci_method')}")
+    for l in wtp.get("levels", []):
+        if l.get("wtp") is None:
+            continue
+        if l.get("is_reference"):
+            lines.append(f"  {l['attribute']}/{l['level']}: reference (WTP = 0)")
+        else:
+            lines.append(f"  {l['attribute']}/{l['level']}: WTP={l['wtp']:.2f}, SE_delta={l['se_delta']:.2f}, "
+                         f"95% CI=[{l['ci_low']:.2f}, {l['ci_high']:.2f}]"
+                         + (" (extrapolated beyond tested price range)" if l.get("extrapolated") else ""))
+    for w in wtp.get("warnings_th", []) or []:
+        lines.append(f"warning: {w}")
+    return "\n".join(lines)
+
+
 def _get_method_equations(method: str) -> str:
     """Equations for the method — describing ONLY what this module actually runs.
 
@@ -2358,7 +2835,8 @@ def _get_method_equations(method: str) -> str:
 - การเลือกพารามิเตอร์แบบสุ่ม: ระบบทดสอบนัยสำคัญของ σ̂_k แล้วตรึงตัวที่ไม่มีนัยสำคัญ
   ให้เป็นค่าคงที่ (fixed) เพื่อไม่ให้แบบจำลองมีพารามิเตอร์เกินจำเป็น
 - Mixed Logit ผ่อนคลายข้อสมมติ IIA ของ MNL
-- หมายเหตุ: รายงานนี้**ไม่ได้คำนวณ** willingness-to-pay (WTP)""",
+- หมายเหตุ: Mixed Logit ในรายงานนี้**ไม่ได้ใช้คำนวณ** willingness-to-pay (WTP)
+  (หากมีตาราง WTP แสดงว่ามาจาก conditional logit ที่ใส่ราคาเป็นตัวแปรเชิงเส้น ซึ่งรายงานแยกต่างหาก)""",
 
         "hierarchical_bayes": """
 สูตรและสมการทางสถิติ (Hierarchical Bayes — Empirical Bayes ผ่าน SMLE):
@@ -2379,9 +2857,18 @@ def _get_method_equations(method: str) -> str:
     return equations.get(method, equations["counting"])
 
 def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_results: dict,
-                         methods: list = None, chapters: list = None, extra_prompt: str = "") -> tuple:
+                         methods: list = None, chapters: list = None, extra_prompt: str = "",
+                         facts_block: str = "", extra_results_text: str = "") -> tuple:
     """Build per-chapter prompts with detailed method-specific equations.
     Returns (system_msg, dict_of_chapter_prompts)
+
+    `facts_block` (2026-11) is the computed design/sample description from
+    `lib.conjoint_thesis.facts_text`. Without it Chapter 3 instructed the writer
+    to describe a "Full-profile, random assignment" design — the platform fields
+    ONE fixed D-efficient version in a fixed order — and Chapter 4 §4.1 asked
+    for respondent demographics the writer was never given. Used by both the
+    system-LLM job and the external-prompt / external-pack endpoints, so the two
+    paths cannot drift.
     """
     if chapters is None:
         chapters = [3, 4, 5]
@@ -2427,6 +2914,11 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
     methods_display = ", ".join(METHOD_NAMES.get(m, m) for m in methods)
     all_equations = "\n".join(_get_method_equations(m) for m in methods)
     summary = _summarize_results_for_thesis(all_method_results)
+    if extra_results_text:
+        summary += "\n" + extra_results_text
+    facts_section = (facts_block.strip() + "\n") if facts_block else (
+        "ข้อเท็จจริงของแผนการทดลอง: ไม่ได้ให้มา — ห้ามระบุจำนวนชุดคำถาม วิธีสร้างแผนการทดลอง "
+        "หรือข้อมูลประชากรของผู้ตอบ ให้เขียนว่า 'ไม่ได้ระบุในรายงานนี้'\n")
 
     # Build per-method result sections for Ch4.
     #
@@ -2490,19 +2982,21 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ชื่อการศึกษา: {study_title} | ผู้ตอบ: {respondent_count} คน
 วิธีวิเคราะห์: {methods_display}
 
+{facts_section}
 {all_equations}
 
 โครงสร้างบทที่ 3:
 ## บทที่ 3 ระเบียบวิธีวิจัย
 ### 3.1 รูปแบบการวิจัย
-- อธิบาย Choice-Based Conjoint (CBC) design
-- Experimental design: Full-profile, random assignment
+- อธิบาย Choice-Based Conjoint (CBC) design ตาม "ข้อเท็จจริงของแผนการทดลอง" ข้างต้นเท่านั้น
+  (จำนวนคุณลักษณะ/ระดับ จำนวนชุดคำถาม จำนวนทางเลือกต่อชุด วิธีสร้างแผนการทดลอง การสุ่มหรือไม่สุ่ม และการไม่มี none option)
+- ห้ามอ้างว่ามีการสุ่มแบบสอบถาม (random assignment) หรือมีหลาย version หากข้อเท็จจริงไม่ได้ระบุ
 
 ### 3.2 ประชากรและกลุ่มตัวอย่าง
-- วิธีการกำหนดขนาดตัวอย่าง (n={respondent_count})
+- วิธีการกำหนดขนาดตัวอย่าง (n={respondent_count}) โดยอ้างเกณฑ์ Johnson & Orme และค่าที่คำนวณให้
 
 ### 3.3 เครื่องมือที่ใช้ในการวิจัย
-- แบบสอบถาม Conjoint Analysis
+- แบบสอบถาม Conjoint Analysis (แสดงตารางคุณลักษณะและระดับ)
 {method_sections_ch3}
 ### 3.{len(methods)+4} สมมติฐานของแบบจำลอง
 - สมมติฐานทางทฤษฎี (Random Utility Theory, IIA, etc.)
@@ -2525,6 +3019,7 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
 วิธีวิเคราะห์: {methods_display}
 
+{facts_section}
 {all_equations}
 
 ผลวิเคราะห์สรุป:
@@ -2533,6 +3028,7 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 โครงสร้างบทที่ 4:
 ## บทที่ 4 ผลการศึกษา
 ### 4.1 ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม
+- ใช้ความถี่และร้อยละจาก "ข้อมูลทั่วไปของผู้ตอบ" ในข้อเท็จจริงข้างต้นเท่านั้น (ถ้าไม่ได้เก็บ ให้ระบุว่าไม่ได้เก็บ)
 {method_sections_ch4}
 {compare_section}
 ### 4.{next_section} สรุปผลบทที่ 4
@@ -2545,6 +3041,7 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ชื่อ: {study_title} | ผู้ตอบ: {respondent_count} คน
 วิธีวิเคราะห์: {methods_display}
 
+{facts_section}
 ผลวิเคราะห์สรุป:
 {summary}
 
@@ -2553,15 +3050,22 @@ def _build_thesis_prompt(study_title: str, respondent_count: int, all_method_res
 ### 5.1 สรุปผลการวิจัย (ตอบวัตถุประสงค์, สรุปผลหลัก, อ้างสถิติ)
 ### 5.2 อภิปรายผล (เปรียบเทียบทฤษฎี, งานวิจัยที่เกี่ยวข้อง)
 ### 5.3 ข้อเสนอแนะเชิงกลยุทธ์ (5-7 ข้อ: ผลิตภัณฑ์, ราคา, การตลาด, positioning)
-### 5.4 ข้อจำกัดของการวิจัย
+### 5.4 ข้อจำกัดของการวิจัย (รวมข้อจำกัดจากแผนการทดลองตามข้อเท็จจริงในบล็อกข้อเท็จจริง เช่น การสุ่ม/ไม่สุ่มลำดับและตำแหน่ง (ตามที่ระบุ) ไม่มี none option ไม่มี holdout)
 ### 5.5 ข้อเสนอแนะสำหรับการวิจัยในอนาคต (3-5 ข้อ)
 
 ข้อกำหนด: ภาษาไทยวิชาการ, อ้างค่าสถิติจริง, ทุกหัวข้อ 2-3 ย่อหน้า"""
 
     return system_msg, chapter_prompts
 
-def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str) -> bytes:
-    """Create a .docx file with thesis formatting from AI content, including native Word equations."""
+def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str,
+                        disclosure: Optional[str] = None,
+                        figures: Optional[Dict[str, bytes]] = None) -> bytes:
+    """Create a .docx file with thesis formatting from AI content, including native Word equations.
+
+    2026-11: `disclosure` (AI-use statement, rendered first) and `figures`
+    ({marker: png_bytes}; a line `[[FIGURE:<marker>]]` becomes that picture) so
+    the same renderer serves system-LLM, external-LLM and no-AI documents.
+    """
     from docx import Document
     from docx.shared import Pt, Inches, Cm, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -2650,12 +3154,26 @@ def _create_thesis_docx(study_title: str, respondent_count: int, ai_content: str
         processed_lines.append(raw_lines[i])
         i += 1
 
+    if disclosure:
+        p = doc.add_paragraph()
+        run = p.add_run(disclosure)
+        _set_run_font(run, size=14, italic=True)
+        p.paragraph_format.space_after = Pt(12)
+
     # Parse AI content into sections
     current_table_data = []
     in_table = False
 
     for line in processed_lines:
         stripped = line.strip()
+        fig = re.match(r"^\[\[FIGURE:(.+?)\]\]$", stripped)
+        if fig:
+            png = (figures or {}).get(fig.group(1))
+            if png:
+                p = doc.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.add_run().add_picture(io.BytesIO(png), width=Cm(14))
+            continue
         if not stripped:
             if in_table and current_table_data:
                 _add_table_to_doc(doc, current_table_data)
@@ -2814,7 +3332,15 @@ def _add_table_to_doc(doc, table_data):
 
 
 def get_conjoint_routes(db, get_current_user, get_current_user_optional):
-    """Factory — register conjoint routes with DB + auth deps."""
+    """Factory — register conjoint routes with DB + auth deps.
+
+    Each call registers on a FRESH router (WP9a): the module-level router used
+    to keep the routes of every earlier call, so a second app built in the same
+    process (tests importing server.py twice, a reload) served the FIRST call's
+    routes — bound to that call's db and auth — in front of its own.
+    """
+    global conjoint_router
+    conjoint_router = APIRouter(tags=["conjoint"])
     # Late imports: server is fully initialized by the time this factory is
     # called (end of server.py). Keeps shared symbols single-sourced.
     import server as _server
@@ -2870,6 +3396,49 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         return {"study_id": study_id, "message": "Study created successfully"}
 
+    async def _load_owned_study(study_id: str, current_user, projection=None):
+        study = await db.conjoint_studies.find_one({"id": study_id}, projection or {"_id": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        return study
+
+    async def _load_qualitative_prompt_config() -> Dict:
+        await initialize_default_prompts()
+        prompt_config = await db.llm_prompts.find_one({"id": "conjoint-qualitative-analysis"}, {"_id": 0})
+        if not prompt_config:
+            raise HTTPException(status_code=500, detail="Prompt configuration not found")
+        return prompt_config
+
+    async def _store_qualitative_result(study_id: str, qualitative_data, analysis_result: Dict,
+                                        stamp: Optional[Dict] = None) -> Dict:
+        suggested = _qualitative_suggestions(analysis_result)
+        if not suggested:
+            raise HTTPException(status_code=422, detail={
+                "code": "external_import_invalid",
+                "message": "ไม่พบรายการคุณลักษณะ (attributes) ในผลลัพธ์ — ต้องเป็น JSON ที่มีคีย์ \"attributes\" ตามตัวอย่าง",
+            })
+        llm_analysis = dict(analysis_result)
+        if stamp:
+            llm_analysis.update(stamp)
+        update = {
+            "suggested_attributes": [a.dict() for a in suggested],
+            "llm_analysis": llm_analysis,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if qualitative_data is not None:
+            update["qualitative_data"] = [q.dict() if hasattr(q, "dict") else q for q in qualitative_data]
+        await db.conjoint_studies.update_one({"id": study_id}, {"$set": update})
+        out = {
+            "suggested_attributes": [a.dict() for a in suggested],
+            "recommendations": analysis_result.get("recommendations", ""),
+            "raw_analysis": analysis_result,
+        }
+        if stamp:
+            out.update(stamp)
+        return out
+
     @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-analysis")
     async def analyze_qualitative_data(
         study_id: str,
@@ -2880,237 +3449,86 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
-    
+
         if study["creator_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
-    
-        # Get API key
+
+        # System-LLM path — refused (409 llm_external_only) when the admin
+        # switch forces users to their own LLM. See external-prompt below.
+        await _require_system_llm(FEAT_QUALITATIVE, current_user)
+
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="LLM service not configured")
-    
-        # Combine all qualitative inputs
-        combined_data = "\n\n".join([
-            f"=== {str(item.type).upper()} ===\n{item.content}"
-            for item in request.qualitative_data
-        ])
-    
-        # Get prompt template from database
-        await initialize_default_prompts()
-        prompt_config = await db.llm_prompts.find_one(
-            {"id": "conjoint-qualitative-analysis"},
-            {"_id": 0}
-        )
-    
-        if not prompt_config:
-            raise HTTPException(status_code=500, detail="Prompt configuration not found")
-    
-        # Format the prompt with actual data
-        analysis_prompt = prompt_config["prompt_template"].format(
-            combined_data=combined_data,
-            target_language=request.target_language
-        )
-    
-        # Call LLM with configured model
+
+        prompt_config = await _load_qualitative_prompt_config()
+        built = _build_qualitative_prompt(prompt_config, request.qualitative_data, request.target_language)
+
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-            # Retired dated aliases (e.g. claude-sonnet-4-20250514) still sit in
-            # saved prompt configs and make the provider return 404 not_found.
-            model_name = prompt_config.get("model_name") or "claude-sonnet-4-6"
-            if model_name.startswith("claude-sonnet-4-2025"):
-                model_name = "claude-sonnet-4-6"
+            from lib.conjoint_external import parse_json_object
 
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"conjoint-qual-{study_id}",
-                system_message=prompt_config.get("system_message", "You are an expert marketing researcher.")
-            ).with_model(
-                prompt_config.get("model_provider", "anthropic"),
-                model_name
-            )
-        
-            response_text = await chat.send_message(UserMessage(text=analysis_prompt))
-        
-            # Parse JSON response
-            import json
-            import re
-        
-            # Extract JSON from response (in case there's extra text)
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                analysis_result = json.loads(json_match.group())
-            else:
-                raise Exception("Failed to parse LLM response")
-        
-            # Convert to our attribute format
-            suggested_attributes = []
-            for i, attr_data in enumerate(analysis_result.get("attributes", [])):
-                attr_levels = []
-                for level_data in attr_data.get("levels", []):
-                    attr_levels.append(AttributeLevel(
-                        value=level_data.get("value", ""),
-                        description=level_data.get("description")
-                    ))
-            
-                suggested_attributes.append(ConjointAttribute(
-                    name=attr_data.get("name", ""),
-                    description=attr_data.get("description"),
-                    levels=attr_levels,
-                    order=i
-                ))
-        
-            # Update study
-            await db.conjoint_studies.update_one(
-                {"id": study_id},
-                {
-                    "$set": {
-                        "qualitative_data": [item.dict() for item in request.qualitative_data],
-                        "suggested_attributes": [attr.dict() for attr in suggested_attributes],
-                        "llm_analysis": analysis_result,
-                        "updated_at": datetime.now(timezone.utc)
-                    }
-                }
-            )
-        
-            return {
-                "suggested_attributes": [attr.dict() for attr in suggested_attributes],
-                "recommendations": analysis_result.get("recommendations", ""),
-                "raw_analysis": analysis_result
-            }
-        
+                system_message=built["system_message"],
+            ).with_model(built["model_provider"], built["model_name"])
+
+            response_text = await chat.send_message(UserMessage(text=built["prompt"]))
+            analysis_result = parse_json_object(response_text)
+            return await _store_qualitative_result(study_id, request.qualitative_data, analysis_result)
+
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             import traceback
             logging.error(f"Qualitative analysis error: {e}")
             logging.error(traceback.format_exc())
             raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
-    class ExternalQualitativeImportReq(BaseModel):
-        raw_text: str
-        qualitative_data: Optional[List[QualitativeInput]] = None
-        dry_run: bool = False
-
-    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-prompt")
-    async def generate_qualitative_prompt(
+    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-analysis/external-prompt")
+    async def qualitative_external_prompt(
         study_id: str,
         request: QualitativeAnalysisRequest,
         current_user: User = Depends(get_current_user)
     ):
-        """Generate a ready-to-copy prompt for external AI to extract Conjoint attributes & levels."""
-        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
-        if not study:
-            raise HTTPException(status_code=404, detail="Study not found")
-        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-            raise HTTPException(status_code=403, detail="Not authorized")
+        """Same prompt the system LLM receives, for the user's own LLM (no policy check)."""
+        from lib.conjoint_external import build_prompt_payload, GENERIC_STEPS_TH, slugify
+        study = await _load_owned_study(study_id, current_user)
+        if not request.qualitative_data or not any((q.content or "").strip() for q in request.qualitative_data):
+            raise HTTPException(status_code=400, detail="กรุณาใส่ข้อมูลเชิงคุณภาพอย่างน้อย 1 รายการ")
+        built = _build_qualitative_prompt(await _load_qualitative_prompt_config(),
+                                          request.qualitative_data, request.target_language)
+        return build_prompt_payload(
+            feature=FEAT_QUALITATIVE,
+            title="วิเคราะห์ข้อมูลเชิงคุณภาพเพื่อเสนอคุณลักษณะและระดับ (Conjoint)",
+            instructions_th=GENERIC_STEPS_TH + "\n\nคำตอบต้องเป็น JSON ตามตัวอย่างเท่านั้น ระบบจะแปลงเป็นรายการคุณลักษณะให้แก้ไขต่อได้",
+            expected_format="json",
+            parts=[{"key": "main", "title": "เสนอคุณลักษณะและระดับ",
+                    "system_prompt": built["system_message"], "prompt": built["prompt"],
+                    "json_example": QUALITATIVE_JSON_EXAMPLE}],
+            filename=f"conjoint-{slugify(study.get('title'))}-qualitative-prompt.md",
+        )
 
-        combined_data = "\n\n".join([
-            f"=== {str(item.type).upper()} ===\n{item.content}"
-            for item in (request.qualitative_data or [])
-        ])
-        lang_hint = "ภาษาไทย (Thai)" if (request.target_language or "th").startswith("th") else "English"
-        prompt = f"""คุณคือ Senior Marketing Researcher ผู้เชี่ยวชาญด้าน Choice-Based Conjoint Analysis (CBC)
-วิเคราะห์ข้อมูลเชิงคุณภาพด้านล่าง เพื่อสกัดคุณลักษณะ (Attributes) และระดับตัวเลือก (Levels) สำหรับนำไปสร้างแบบสอบถาม Conjoint Analysis
-
-ชื่อการศึกษา: {study.get('title', '')}
-หมวดสินค้า/บริการ: {study.get('product_category', '')}
-ภาษาที่ต้องการในผลลัพธ์: {lang_hint}
-
-ข้อมูลเชิงคุณภาพ:
-\"\"\"{combined_data[:16000]}\"\"\"
-
-ข้อกำหนดในการตอบ (สำคัญมาก):
-1. ตอบกลับเป็น JSON ที่ถูกต้องตามโครงสร้างด้านล่างเท่านั้น และครอบด้วย {START_MARKER} และ {END_MARKER}
-2. ห้ามมี text อื่นนอกเหนือ marker · ห้ามใส่ trailing comma · ห้ามเว้นระดับว่าง
-3. สร้าง 3–6 ปัจจัยหลักที่ผู้บริโภคใช้ตัดสินใจเลือกซื้อจริง โดยแต่ละปัจจัยต้องมี 2–5 levels ที่แยกกันชัดเจนและเทียบกันได้ (mutually exclusive & actionable)
-
-{START_MARKER}
-{{
-  "summary": "สรุปปัจจัยสำคัญจากข้อมูลสัมภาษณ์ 2-3 ประโยค",
-  "attributes": [
-    {{
-      "name": "ชื่อปัจจัย 1",
-      "description": "คำอธิบายปัจจัย",
-      "rationale": "เหตุผลที่สกัดจากบทสัมภาษณ์",
-      "levels": [
-        {{"value": "ระดับที่ 1", "description": "รายละเอียดสั้นๆ"}},
-        {{"value": "ระดับที่ 2", "description": "รายละเอียดสั้นๆ"}},
-        {{"value": "ระดับที่ 3", "description": "รายละเอียดสั้นๆ"}}
-      ]
-    }}
-  ]
-}}
-{END_MARKER}"""
-        return {"schema_version": "conjoint_qual_v1", "prompt": prompt}
-
-    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-import")
-    async def import_external_qualitative(
+    @conjoint_router.post("/conjoint/studies/{study_id}/qualitative-analysis/external-import")
+    async def qualitative_external_import(
         study_id: str,
-        request: ExternalQualitativeImportReq,
+        request: QualitativeExternalImportRequest,
         current_user: User = Depends(get_current_user)
     ):
-        """Validate and apply pasted external AI JSON into suggested_attributes + attributes."""
-        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
-        if not study:
-            raise HTTPException(status_code=404, detail="Study not found")
-        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-            raise HTTPException(status_code=403, detail="Not authorized")
-
-        res = validate_conjoint_qualitative_payload(request.raw_text)
-        if request.dry_run or not res["valid"]:
-            return {
-                "valid": res["valid"],
-                "applied": False,
-                "errors": res["errors"],
-                "warnings": res["warnings"],
-                "preview": res["preview"],
-                "repair_prompt": res["repair_prompt"],
-            }
-
-        data = res["data"]
-        suggested_attributes = []
-        for i, attr_data in enumerate(data["attributes"]):
-            attr_levels = [
-                AttributeLevel(value=lvl["value"], description=lvl.get("description"))
-                for lvl in attr_data["levels"]
-            ]
-            suggested_attributes.append(ConjointAttribute(
-                name=attr_data["name"],
-                description=attr_data.get("description"),
-                levels=attr_levels,
-                order=i,
-            ))
-
-        attrs_dicts = [attr.model_dump() if hasattr(attr, "model_dump") else attr.dict() for attr in suggested_attributes]
-        update_doc = {
-            "suggested_attributes": attrs_dicts,
-            "llm_analysis": {
-                "summary": data.get("summary") or "",
-                "attributes": data["attributes"],
-                "source": "external_ai",
-            },
-            "updated_at": datetime.now(timezone.utc),
-        }
-        # Populate editable attributes too when study has none or hasn't started survey yet
-        if not study.get("survey_started") and not (study.get("choice_sets")):
-            update_doc["attributes"] = attrs_dicts
-        if request.qualitative_data is not None:
-            update_doc["qualitative_data"] = [
-                item.model_dump() if hasattr(item, "model_dump") else item.dict()
-                for item in request.qualitative_data
-            ]
-
-        await db.conjoint_studies.update_one({"id": study_id}, {"$set": update_doc})
-        return {
-            "valid": True,
-            "applied": True,
-            "errors": [],
-            "warnings": res["warnings"],
-            "preview": res["preview"],
-            "repair_prompt": None,
-            "suggested_attributes": attrs_dicts,
-            "recommendations": data.get("summary") or "",
-            "raw_analysis": update_doc["llm_analysis"],
-        }
+        """Store attributes suggested by the user's own LLM exactly where the system result goes."""
+        from lib.conjoint_external import parse_json_object, external_stamp, ExternalImportError
+        await _load_owned_study(study_id, current_user)
+        try:
+            analysis_result = parse_json_object(request.content)
+        except ExternalImportError as e:
+            raise HTTPException(status_code=422, detail={"code": "external_import_invalid", "message": str(e)})
+        return await _store_qualitative_result(
+            study_id, request.qualitative_data, analysis_result,
+            stamp=external_stamp(request.model_label, current_user),
+        )
 
     @conjoint_router.put("/conjoint/studies/{study_id}/attributes")
     async def update_study_attributes(
@@ -3137,13 +3555,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         # Build the new (attr_id, level_id) universe from the incoming request.
         new_universe = set()
         for attr in request.attributes:
-            if not (attr.name or "").strip():
-                raise HTTPException(status_code=400, detail="Attribute name cannot be blank")
-            if len(attr.levels or []) < 1:
-                raise HTTPException(status_code=400, detail=f"Attribute '{attr.name}' must have at least 1 level")
             for lvl in (attr.levels or []):
-                if not (lvl.value or "").strip():
-                    raise HTTPException(status_code=400, detail=f"ระดับคุณลักษณะ (Level) ของ '{attr.name}' ห้ามเว้นว่าง")
                 new_universe.add((attr.id, lvl.id))
 
         # Check whether existing choice_sets reference any (attr_id, level_id)
@@ -3200,15 +3612,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if study["creator_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     
-        if not study.get("attributes") or len(study["attributes"]) < 2:
-            raise HTTPException(status_code=400, detail="Conjoint study requires at least 2 attributes (with >= 2 levels each) to create choice trade-offs.")
+        if not study.get("attributes"):
+            raise HTTPException(status_code=400, detail="No attributes defined. Please complete Phase 1 first.")
     
         # Parse attributes
         attributes = [ConjointAttribute(**attr) for attr in study["attributes"]]
-        for attr in attributes:
-            non_empty = [lvl for lvl in (attr.levels or []) if (lvl.value or "").strip()]
-            if len(non_empty) < 2:
-                raise HTTPException(status_code=400, detail=f"Attribute '{attr.name}' must have at least 2 non-empty levels.")
     
         # Calculate optimal number of choice sets if not provided
         num_sets = request.number_of_sets
@@ -3620,7 +4028,9 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
     
         if not study.get("attributes"):
             raise HTTPException(status_code=400, detail="No attributes defined")
-    
+
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
         # Image generation is optional - if not available, just mark as skipped
         try:
             # Try to import image generation (may not be available)
@@ -3662,12 +4072,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             for attr in study["attributes"]:
                 updated_levels = []
                 for level in attr.get("levels", []):
-                    # Generate image for each level
-                    image_prompt = f"Professional product visualization: {attr['name']} - {level['value']}. Clean, minimalist style on white background."
-                
-                    if level.get("description"):
-                        image_prompt += f" {level['description']}"
-                
+                    image_prompt = _bulk_level_image_prompt(attr, level)
+
                     try:
                         # Attempt to generate image
                         image_url = await generate_image(
@@ -3679,6 +4085,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                         level["image_prompt"] = image_prompt
                         generated_count += 1
                     except Exception as img_error:
+                        if _is_policy_error(img_error):
+                            raise
                         logging.error(f"Failed to generate image for {level['value']}: {img_error}")
                         level["image_url"] = None
                         failed_count += 1
@@ -3709,6 +4117,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             }
         
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Image generation error: {e}")
             # Don't fail the entire request - just mark as skipped
             await db.conjoint_studies.update_one(
@@ -3764,45 +4174,15 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if not attr_found or not level_found:
                 raise HTTPException(status_code=404, detail="Attribute or level not found")
     
-        # Get image generation settings
-        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
-        if not settings:
-            settings = {
-                "level_image_prompt_template": "Professional product visualization: {attribute_name} - {level_value}. Clean, minimalist style on white background.",
-                "level_image_prompt_with_ref": "Based on the reference images provided, create a product visualization for: {attribute_name} - {level_value}. Match the style, lighting, and composition of the reference images.",
-                "level_image_model": "gpt-image-1"
-            }
-    
-        # Check if using reference images
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0}) \
+            or dict(DEFAULT_LEVEL_IMAGE_SETTINGS)
         reference_images = study.get("reference_images", [])
-        using_refs = request.reference_image_indices and len(request.reference_image_indices) > 0 and len(reference_images) > 0
-    
-        # Use custom prompt or generate from template
-        if request.prompt:
-            image_prompt = request.prompt
-        elif is_test_generation:
-            # For test generation, use a default prompt
-            image_prompt = "High quality product image"
-        else:
-            # Select appropriate template based on reference usage
-            if using_refs:
-                template = settings.get("level_image_prompt_with_ref", settings["level_image_prompt_template"])
-            else:
-                template = settings["level_image_prompt_template"]
-        
-            # Use template and replace variables
-            image_prompt = template.format(
-                attribute_name=attr_found['name'],
-                level_value=level_found['value'],
-                level_description=level_found.get("description", "")
-            )
-            if level_found.get("description") and not using_refs:
-                image_prompt += f" {level_found['description']}"
-    
-        # Prepend additional prompt if provided (put it at the front)
-        if request.additional_prompt:
-            image_prompt = f"{request.additional_prompt} {image_prompt}"
-    
+        using_refs = bool(request.reference_image_indices and len(reference_images) > 0)
+        image_prompt = _level_image_prompt(settings, attr_found, level_found, request.prompt,
+                                           request.additional_prompt, using_refs, is_test_generation)
+
         # Generate image using configured model
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
@@ -3916,7 +4296,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "is_test": is_test_generation
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Single image generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
@@ -4003,51 +4387,15 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if not profile_found or not choice_set_found:
             raise HTTPException(status_code=404, detail="Profile not found")
     
-        # Get image generation settings
-        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0})
-        if not settings:
-            settings = {
-                "profile_image_prompt_template": "Professional product photo showing: {composition}. High quality, clean background, product-focused composition.",
-                "profile_image_prompt_with_ref": "Using the reference images as style guide, create a product photo showing: {composition}. Match the visual style and aesthetic.",
-                "profile_image_model": "gpt-image-1"
-            }
-    
-        # Check if using reference images
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0}) \
+            or dict(DEFAULT_PROFILE_IMAGE_SETTINGS)
         reference_images = study.get("reference_images", [])
-        using_refs = request.reference_image_indices and len(request.reference_image_indices) > 0 and len(reference_images) > 0
-    
-        # Build prompt from profile attributes
-        if request.prompt:
-            image_prompt = request.prompt
-        else:
-            # Get all attribute values for this profile
-            attributes = study.get("attributes", [])
-            profile_description = []
-        
-            for attr_id, level_id in profile_found["attribute_levels"].items():
-                attr = next((a for a in attributes if a["id"] == attr_id), None)
-                if attr:
-                    level = next((l for l in attr.get("levels", []) if l["id"] == level_id), None)
-                    if level:
-                        profile_description.append(f"{attr['name']}: {level['value']}")
-        
-            composition = ", ".join(profile_description)
-        
-            # Select appropriate template based on reference usage
-            if using_refs:
-                template = settings.get("profile_image_prompt_with_ref", settings["profile_image_prompt_template"])
-            else:
-                template = settings["profile_image_prompt_template"]
-        
-            # Use template and replace variables
-            image_prompt = template.format(
-                composition=composition
-            )
-    
-        # Prepend additional prompt if provided (put it at the front)
-        if request.additional_prompt:
-            image_prompt = f"{request.additional_prompt} {image_prompt}"
-    
+        using_refs = bool(request.reference_image_indices and len(reference_images) > 0)
+        image_prompt = _profile_image_prompt(settings, study.get("attributes", []), profile_found,
+                                             request.prompt, request.additional_prompt, using_refs)
+
         # Generate image using configured model
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
@@ -4165,7 +4513,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "prompt_used": image_prompt
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Profile image generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
@@ -4386,12 +4738,12 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         Run Necessary Condition Analysis (NCA) on conjoint study results (supports time & segment filters)
         """
         from lib.nca_analysis import analyze_nca_for_conjoint
-
+    
         # Get study
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
-
+    
         # Get all responses
         all_responses = await db.conjoint_responses.find(
             {"study_id": study_id},
@@ -4401,18 +4753,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         seg_filter = _parse_segments_param(segments)
         has_filter = bool(from_ or to or seg_filter)
         responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
-
+    
         if len(responses) == 0:
-            raise HTTPException(status_code=400, detail="ไม่มีคำตอบในกลุ่มที่กรองอยู่สำหรับการวิเคราะห์ NCA")
-
+            raise HTTPException(status_code=400, detail="No responses available for analysis in this filter")
+    
         # Calculate part-worths and importance using existing functions
         try:
             part_worths = calculate_part_worths(study, responses)
             importance_scores = calculate_importance_scores(part_worths, study)
-
+        
             if not part_worths or not importance_scores:
                 raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
-
+        
             # Run NCA analysis
             nca_results = analyze_nca_for_conjoint(
                 part_worths=part_worths,
@@ -4421,20 +4773,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             )
             nca_results["respondent_count"] = len(responses)
             nca_results["filtered"] = has_filter
-
-            # Store full-study NCA results in database for caching only when unfiltered
+        
+            # Store NCA results in database for caching only when unfiltered
             if not has_filter:
                 await db.conjoint_studies.update_one(
                     {"id": study_id},
                     {"$set": {"nca_results": nca_results, "nca_updated_at": datetime.now(timezone.utc).isoformat()}}
                 )
-
+        
             logging.info(f"[NCA] Analysis completed for study {study_id} (n={len(responses)}, filtered={has_filter})")
-
+        
             return nca_results
-
-        except HTTPException:
-            raise
+        
         except Exception as e:
             logging.error(f"[NCA] Error: {str(e)}")
             import traceback
@@ -4452,15 +4802,15 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         current_user: User = Depends(get_current_user)
     ):
         """
-        Run Fuzzy-Set Qualitative Comparative Analysis (fsQCA) on conjoint study results (supports filters)
+        Run Fuzzy-Set Qualitative Comparative Analysis (fsQCA) on conjoint study results (supports time & segment filters)
         """
         from lib.fsqca_analysis import analyze_fsqca_for_conjoint
-
+    
         # Get study
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
-
+    
         # Get all responses
         all_responses = await db.conjoint_responses.find(
             {"study_id": study_id},
@@ -4470,18 +4820,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         seg_filter = _parse_segments_param(segments)
         has_filter = bool(from_ or to or seg_filter)
         responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
-
+    
         if len(responses) == 0:
-            raise HTTPException(status_code=400, detail="ไม่มีคำตอบในกลุ่มที่กรองอยู่สำหรับการวิเคราะห์ fsQCA")
-
+            raise HTTPException(status_code=400, detail="No responses available for analysis in this filter")
+    
         # Calculate part-worths and importance
         try:
             part_worths = calculate_part_worths(study, responses)
             importance_scores = calculate_importance_scores(part_worths, study)
-
+        
             if not part_worths or not importance_scores:
                 raise HTTPException(status_code=400, detail="Unable to calculate conjoint results")
-
+        
             # Run fsQCA analysis
             fsqca_results = analyze_fsqca_for_conjoint(
                 part_worths=part_worths,
@@ -4490,23 +4840,23 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 consistency_threshold=consistency_threshold,
                 coverage_threshold=coverage_threshold
             )
-
+        
             # Check for errors
             if 'error' in fsqca_results:
                 raise HTTPException(status_code=400, detail=fsqca_results['error'])
 
             fsqca_results["respondent_count"] = len(responses)
             fsqca_results["filtered"] = has_filter
-
-            # Store full-study results in database for caching only when unfiltered
+        
+            # Store results in database only when unfiltered
             if not has_filter:
                 await db.conjoint_studies.update_one(
                     {"id": study_id},
                     {"$set": {"fsqca_results": fsqca_results, "fsqca_updated_at": datetime.now(timezone.utc).isoformat()}}
                 )
-
+        
             logging.info(f"[fsQCA] Analysis completed for study {study_id} (n={len(responses)}, filtered={has_filter})")
-
+        
             return fsqca_results
         
         except HTTPException:
@@ -4737,8 +5087,6 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             "study_id": study["id"],
             "title": study["title"],
             "description": study.get("description"),
-            "status": current_status,
-            "survey_started": bool(study.get("survey_started")),
             "attributes": study.get("attributes", []),
             "choice_sets": choice_sets,
             "alternatives_per_set": study.get("alternatives_per_set", 3),
@@ -5124,57 +5472,21 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if len(responses) < 10:
             raise HTTPException(status_code=400, detail="Need at least 10 responses for product generation")
     
-        # Calculate part-worths to get optimal product configuration
-        part_worths = calculate_part_worths(study, responses)
-        importance_scores = calculate_importance_scores(part_worths, study)
-    
-        # Build optimal product description from top utilities
-        product_features = []
-        for attr_id, scores in importance_scores.items():
-            attr_name = scores["name"]
-        
-            # Find level with highest utility
-            if attr_id in part_worths:
-                levels = part_worths[attr_id]["levels"]
-                best_level = max(levels.items(), key=lambda x: x[1]["utility"])
-                level_value = best_level[1]["value"]
-                product_features.append(f"{attr_name}: {level_value}")
-    
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
+        product_features = _optimal_product_features(study, responses)
+
         # Use AI to create image generation prompt
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="AI service not configured")
-    
+
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-            system_message = """You are an expert product designer and image generation prompt engineer.
-    Create detailed, professional prompts for generating product visualization images."""
-        
-            product_category = study.get("product_category", "product")
-            study_title = study.get("title", "Product")
-            features_text = "\n".join([f"- {feat}" for feat in product_features])
-        
-            prompt = f"""Based on conjoint analysis results, create an image generation prompt for the optimal product configuration:
 
-    Study: {study_title}
-    Product Category: {product_category}
+            system_message = PRODUCT_PROMPT_SYSTEM
+            prompt = _product_prompt_writer(study, product_features, request.additional_prompt)
 
-    Optimal Product Features (from research):
-    {features_text}
-
-    Create a detailed image generation prompt that:
-    1. Describes the product with all key features mentioned
-    2. Specifies professional product photography style
-    3. Includes clean white background for product-focused composition
-    4. Mentions high quality, sharp details, and good lighting
-    5. Keeps the prompt concise but descriptive (2-3 sentences max)
-
-    Return ONLY the image generation prompt, no explanation."""
-
-            if request.additional_prompt:
-                prompt += f"\n\nUser's additional requirements (to be placed at the BEGINNING of the final prompt): {request.additional_prompt}"
-        
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"product-gen-{study_id}",
@@ -5258,7 +5570,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "message": "Product image generated successfully based on research insights"
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Product image generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to generate product image: {str(e)}")
 
@@ -5281,84 +5597,20 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
                 raise HTTPException(status_code=403, detail="Not authorized")
     
+        await _require_system_llm(FEAT_IMAGES, current_user)
+
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="AI service not configured")
-    
+
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
-            from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-        
-            # Determine environment based on product category
-            product_category = study.get("product_category", "").lower()
-            environment_type = request.environment_type
-        
-            # Auto-detect environment if set to "auto"
-            if environment_type == "auto":
-                if any(word in product_category for word in ["cream", "cosmetic", "skincare", "makeup", "beauty"]):
-                    environment_type = "cosmetics_store"
-                elif any(word in product_category for word in ["drink", "beverage", "snack", "food", "water"]):
-                    environment_type = "convenience_store"
-                elif any(word in product_category for word in ["grocery", "supermarket"]):
-                    environment_type = "supermarket"
-                elif any(word in product_category for word in ["fashion", "clothing", "apparel"]):
-                    environment_type = "mall"
-                else:
-                    environment_type = "supermarket"  # Default
-        
-            # Build environment-specific descriptions
-            environment_descriptions = {
-                "cosmetics_store": "Boots or Watson cosmetics store shelf, bright lighting, organized beauty products display, premium retail environment",
-                "convenience_store": "7-Eleven refrigerator or shelf display, convenience store setting, consumer products in organized rows",
-                "supermarket": "Lotus's or Big C supermarket aisle, retail shelf display, organized product arrangement",
-                "mall": "Shopping mall retail display, premium store environment, attractive product presentation",
-                "custom": request.custom_environment or "retail environment"
-            }
-        
-            shelf_style_descriptions = {
-                "eye_level": "at eye level position, centered in frame, prominent placement",
-                "shelf_view": "on retail shelf with other competing products, realistic shelf arrangement",
-                "aisle_view": "in store aisle perspective, showing product context in retail environment",
-                "custom": request.custom_shelf_style or "product display"
-            }
-        
-            environment_desc = environment_descriptions.get(environment_type, environment_descriptions["supermarket"])
-            shelf_desc = shelf_style_descriptions.get(request.shelf_style, shelf_style_descriptions["eye_level"])
-        
-            # If custom, use AI to interpret and enhance the description
-            if environment_type == "custom" or request.shelf_style == "custom":
-                custom_context = []
-                if environment_type == "custom":
-                    custom_context.append(f"Environment: {request.custom_environment}")
-                if request.shelf_style == "custom":
-                    custom_context.append(f"Display style: {request.custom_shelf_style}")
-            
-                environment_desc = ", ".join(custom_context) if custom_context else environment_desc
-        
-            # Use AI to create detailed environment prompt
-            system_message = """You are an expert in retail merchandising and product photography.
-    Create realistic prompts for on-shelf product visualization in competitive retail environments."""
-        
-            study_title = study.get("title", "Product")
-        
-            base_prompt = f"""Create a photorealistic on-shelf visualization for: {study_title}
 
-    Environment Setting: {environment_desc}
-    Shelf Position: {shelf_desc}
+            ctx = _shelf_context(study, request)
+            environment_type = ctx["environment_type"]
+            system_message = SHELF_PROMPT_SYSTEM
+            base_prompt = _shelf_prompt_writer(study, ctx, request.additional_prompt)
 
-    Requirements:
-    1. Show the product {shelf_desc}
-    2. Include competing products from the same category (blurred or generic if needed)
-    3. Realistic retail lighting and atmosphere
-    4. Professional product photography quality
-    5. Show authentic {environment_type.replace('_', ' ')} environment
-    6. Make the featured product stand out while maintaining realistic context
-
-    Keep the prompt concise (2-3 sentences max). Return ONLY the image generation prompt."""
-
-            if request.additional_prompt:
-                base_prompt += f"\n\nAdditional requirements (to be placed at the BEGINNING of the final prompt): {request.additional_prompt}"
-        
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"shelf-sim-{study_id}",
@@ -5416,7 +5668,11 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "message": "Shelf simulation generated successfully"
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
+            if _is_policy_error(e):
+                raise
             logging.error(f"Shelf simulation generation error: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to generate shelf simulation: {str(e)}")
 
@@ -5445,10 +5701,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
             if not study:
                 raise HTTPException(status_code=404, detail="Study not found")
-        
-            # Generate AI interpretation if not provided
+            # 2026-11: any logged-in user could publish ANY study (including a
+            # private one) as site content under their own name.
+            if study.get("creator_id") != current_user.id and current_user.role != UserRole.ADMIN:
+                raise HTTPException(status_code=403, detail="Not authorized")
+
+            # Generate AI interpretation if not provided — only when the system
+            # LLM is allowed for this user; otherwise publish without it (the
+            # user can paste one produced by their own LLM in `ai_interpretation`).
             ai_interpretation = data.ai_interpretation
-            if not ai_interpretation:
+            if not ai_interpretation and not await _system_llm_allowed(FEAT_INTERPRETATION, current_user):
+                logging.info("[SHARE_CONTENT] system LLM not allowed — sharing without AI interpretation")
+            elif not ai_interpretation:
                 logging.info(f"[SHARE_CONTENT] No AI interpretation provided. Generating automatically for study {study_id}...")
                 try:
                     # Get responses for AI analysis
@@ -5516,11 +5780,18 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
 
     ใช้ภาษาไทยที่เข้าใจง่าย ชัดเจน และเป็นมืออาชีพ"""
                     
-                        # Call AI
-                        from emergentintegrations.llm.chat import LlmChat, UserMessage
-                        chat = LlmChat()
+                        # Call AI. This used `LlmChat()` (no api_key/session/system
+                        # message → TypeError) and `send_message_async`, which the
+                        # library does not offer — the broad except below swallowed
+                        # it, so auto-interpretation never worked (WP9a). Same
+                        # helper as every other conjoint text call.
+                        await _require_system_llm(FEAT_INTERPRETATION, current_user)  # grant for the guard
                         logging.info(f"[SHARE_CONTENT] Calling AI with prompt length: {len(prompt)} characters")
-                        ai_interpretation = await chat.send_message_async(UserMessage(prompt))
+                        ai_interpretation = await _call_gemini_with_retry(
+                            system_msg="คุณเป็นนักวิเคราะห์การวิจัยตลาด ตอบเป็นภาษาไทย",
+                            prompt=prompt,
+                            session_id=f"conjoint-share-{study_id}-{uuid.uuid4().hex[:8]}",
+                        )
                         logging.info(f"[SHARE_CONTENT] AI interpretation generated successfully. Length: {len(ai_interpretation)} characters")
                     else:
                         logging.warning(f"[SHARE_CONTENT] Insufficient responses ({len(responses)}/30 required) - skipping AI analysis")
@@ -5715,6 +5986,13 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             results_link = f"{frontend_base_url}/conjoint/results/{study_id}"
             content_body += f"\n## 🔗 ดูผลการวิจัยแบบเต็ม\n\n[คลิกที่นี่เพื่อดูผลการวิจัยแบบโต้ตอบ]({results_link})\n"
         
+            # db.contents is rendered as raw HTML by ContentDetail.js
+            # (dangerouslySetInnerHTML) and published to everyone; the body
+            # carries user-supplied text (title, notes, a pasted AI
+            # interpretation) — escape it so no markup/script survives (WP9a).
+            import html as _html
+            content_body = _html.escape(content_body, quote=False)
+
             # Create content document
             content_dict = {
                 "id": str(uuid.uuid4()),
@@ -5758,9 +6036,74 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 "chart_count": len(chart_images)
             }
         
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error sharing conjoint as content: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to share content: {str(e)}")
+
+    # ======================================================================
+    # AI INTERPRETATION — system LLM + external-LLM workflow (plan §B)
+    # ======================================================================
+    async def _study_for_viewer(study_id: str, current_user, projection=None):
+        """Public results allow anonymous viewers; otherwise owner/admin."""
+        study = await db.conjoint_studies.find_one({"id": study_id}, projection or {"_id": 0, "choice_sets": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if not study.get("is_public_result", False):
+            if not current_user:
+                raise HTTPException(status_code=401, detail="Authentication required")
+            if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+                raise HTTPException(status_code=403, detail="Not authorized")
+        return study
+
+    # The interpretation (system or external) is always written from ALL
+    # respondents (`_prepare_analysis_summary` ignores the Results-page
+    # filters), while the numbers on that page respect from/to/segments. Rather
+    # than key the cache per filter (each filter would need its own paid or
+    # pasted interpretation), every response states which sample it describes
+    # so the UI can label it when a filter is active.
+    INTERP_SAMPLE_TH = "เขียนจากผู้ตอบทั้งหมด (ไม่ใช้ตัวกรองช่วงวันที่/กลุ่มย่อยของหน้าผลลัพธ์)"
+
+    def _interp_response(results: Dict, cached: bool, filter_active: bool = False) -> Dict:
+        summary = results.get("summary_data") or {}
+        return {
+            "status": "ready",
+            "interpretation": results.get("interpretation", ""),
+            "summary_data": results.get("summary_data"),
+            "cached": cached,
+            "source": results.get("source", "system"),
+            "model_label": results.get("model_label"),
+            "imported_at": results.get("imported_at"),
+            "sample_scope": "all",
+            "sample_note_th": INTERP_SAMPLE_TH,
+            "sample_respondent_count": summary.get("respondent_count") if isinstance(summary, dict) else None,
+            # True when the caller passed a Results-page filter: the text does
+            # NOT describe the filtered numbers on screen.
+            "filter_mismatch": bool(filter_active),
+        }
+
+    def _filter_active(date_from: Optional[str], date_to: Optional[str], segments: Optional[str]) -> bool:
+        if date_from or date_to:
+            return True
+        if segments:
+            try:
+                seg = json.loads(segments)
+            except (ValueError, TypeError):
+                return True
+            return bool(seg) and any(bool(v) for v in (seg.values() if isinstance(seg, dict) else [seg]))
+        return False
+
+    async def _interp_prompt_parts(study_id: str, current_user, method: Optional[str], compare_all: bool):
+        """ONE builder for the system job, generate-prompt and external-prompt/import."""
+        study = await _study_for_viewer(study_id, current_user, {"_id": 0})
+        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        if len(responses) < 10:
+            raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
+        analysis_summary = await _prepare_analysis_summary(study, responses, method, compare_all)
+        analysis_summary = _humanize_internal_labels(analysis_summary)
+        system_message, prompt = _build_interpretation_prompt(analysis_summary)
+        return study, analysis_summary, system_message, prompt
 
     @conjoint_router.post("/conjoint/studies/{study_id}/ai-interpretation")
     async def get_ai_interpretation(
@@ -5769,24 +6112,17 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         background_tasks: BackgroundTasks,
         current_user: Optional[User] = Depends(get_current_user_optional)
     ):
-        """Generate AI interpretation — cached in DB. Uses background task to avoid proxy timeout."""
-        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
-        if not study:
-            raise HTTPException(status_code=404, detail="Study not found")
+        """Generate AI interpretation — cached in DB. Uses background task to avoid proxy timeout.
 
-        is_public = study.get("is_public_result", False)
-        if not is_public:
-            if not current_user:
-                raise HTTPException(status_code=401, detail="Authentication required")
-            if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-                raise HTTPException(status_code=403, detail="Not authorized")
-
+        A cached interpretation (system- OR externally-written) is returned even
+        when the system LLM is switched off; only NEW generation is refused.
+        """
+        study = await _study_for_viewer(study_id, current_user)
         respondent_count = study.get("respondent_count", 0)
-        cache_key = f"ai_{request.method}_{'all' if request.compare_all else 'single'}"
+        cache_key = _interpretation_cache_key(request.method, request.compare_all)
 
-        # Check cache first — return immediately if exists. Same stale-schema
-        # guard as the numeric endpoint: an interpretation written from pre-audit
-        # statistics must not be replayed after those statistics changed.
+        # Same stale-schema guard as the numeric endpoint: an interpretation
+        # written from superseded statistics must not be replayed.
         cached = await db.analysis_cache.find_one(
             {"study_id": study_id, "method": cache_key,
              "respondent_count": respondent_count,
@@ -5794,18 +6130,19 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             {"_id": 0}
         )
         if cached and cached.get("results"):
-            return {
-                "status": "ready",
-                "interpretation": cached["results"]["interpretation"],
-                "summary_data": cached["results"].get("summary_data"),
-                "cached": True
-            }
+            return _interp_response(cached["results"], cached=True)
 
-        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
-        if len(responses) < 10:
+        resp_count = await db.conjoint_responses.count_documents({"study_id": study_id})
+        if resp_count < 10:
             raise HTTPException(status_code=400, detail="Need at least 10 responses for interpretation")
 
-        # Create job record and run in background
+        # A NEW system-LLM interpretation costs money: never let an anonymous
+        # visitor of a public study start one (owner decision 2026-11-26).
+        # Cached results above and the external-prompt path stay public.
+        if current_user is None:
+            raise HTTPException(status_code=401, detail="กรุณาเข้าสู่ระบบก่อนสั่งให้ AI ของระบบตีความผล")
+        await _require_system_llm(FEAT_INTERPRETATION, current_user)
+
         job_id = f"ai_interp_{study_id}_{uuid.uuid4().hex[:8]}"
         await db.ai_interp_jobs.update_one(
             {"job_id": job_id},
@@ -5818,14 +6155,39 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             }},
             upsert=True
         )
-
         background_tasks.add_task(
             _run_ai_interpretation,
             study_id, cache_key, job_id, respondent_count,
-            request.method, request.compare_all
+            request.method, request.compare_all, current_user,
         )
-
         return {"status": "processing", "job_id": job_id}
+
+    @conjoint_router.get("/conjoint/studies/{study_id}/ai-interpretation")
+    async def get_cached_ai_interpretation(
+        study_id: str,
+        method: Optional[str] = "counting",
+        compare_all: bool = False,
+        date_from: Optional[str] = Query(None, alias="from"),
+        date_to: Optional[str] = Query(None, alias="to"),
+        segments: Optional[str] = None,
+        current_user: Optional[User] = Depends(get_current_user_optional)
+    ):
+        """Read-only twin of POST ai-interpretation: the cached interpretation
+        exactly as the POST returns it when a valid cache exists, else
+        ``{"cached": false}``. Never calls an LLM, never 409, never starts a job.
+        Same viewer rule and the same cache guards (respondent_count +
+        schema_version) as the POST."""
+        study = await _study_for_viewer(study_id, current_user)
+        cached = await db.analysis_cache.find_one(
+            {"study_id": study_id, "method": _interpretation_cache_key(method, compare_all),
+             "respondent_count": study.get("respondent_count", 0),
+             "schema_version": ANALYSIS_CACHE_VERSION},
+            {"_id": 0}
+        )
+        if cached and cached.get("results"):
+            return _interp_response(cached["results"], cached=True,
+                                    filter_active=_filter_active(date_from, date_to, segments))
+        return {"cached": False}
 
     @conjoint_router.get("/conjoint/studies/{study_id}/ai-interpretation-status/{job_id}")
     async def get_ai_interpretation_status(
@@ -5834,36 +6196,43 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         current_user: Optional[User] = Depends(get_current_user_optional)
     ):
         """Poll AI interpretation job status. Returns result when ready."""
-        job = await db.ai_interp_jobs.find_one({"job_id": job_id}, {"_id": 0})
+        # The job must belong to THIS study and the caller must be allowed to
+        # view it: the result is read by (path study_id, job cache_key), so a
+        # caller's own ready job id used to unlock any other study's cached
+        # interpretation (WP9a).
+        await _study_for_viewer(study_id, current_user)
+        job = await db.ai_interp_jobs.find_one({"job_id": job_id, "study_id": study_id}, {"_id": 0})
         if not job:
             return {"status": "not_found"}
 
         if job.get("status") == "ready":
-            # Fetch the cached result
             cached = await db.analysis_cache.find_one(
                 {"study_id": study_id, "method": job["cache_key"]},
                 {"_id": 0}
             )
             if cached and cached.get("results"):
-                return {
-                    "status": "ready",
-                    "interpretation": cached["results"]["interpretation"],
-                    "summary_data": cached["results"].get("summary_data"),
-                    "cached": False
-                }
+                return _interp_response(cached["results"], cached=False)
             return {"status": "ready", "interpretation": "", "summary_data": None}
 
-        return {"status": job.get("status", "unknown"), "error": job.get("error")}
+        if _job_stale(job, 15 * 60):
+            return {"status": "failed", "error": JOB_STALE_MESSAGE_TH, "error_code": "stale_job"}
+        return {"status": job.get("status", "unknown"), "error": job.get("error"),
+                "error_code": job.get("error_code")}
 
     async def _run_ai_interpretation(study_id: str, cache_key: str, job_id: str,
-                                      respondent_count: int, method: str, compare_all: bool):
+                                     respondent_count: int, method: str, compare_all: bool,
+                                     user=None):
         """Background task: generate AI interpretation and cache result."""
         import asyncio
         try:
+            # Re-assert the grant inside the background context (defence in
+            # depth: the admin may have switched the LLM off meanwhile).
+            await _require_system_llm(FEAT_INTERPRETATION, user)
             full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
             responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
 
-            analysis_summary = await _prepare_analysis_summary(full_study, responses, method, compare_all)
+            analysis_summary = _humanize_internal_labels(
+                await _prepare_analysis_summary(full_study, responses, method, compare_all))
             system_message, prompt = _build_interpretation_prompt(analysis_summary)
 
             response = await _call_gemini_with_retry(
@@ -5871,21 +6240,19 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 prompt=prompt,
                 session_id=f"conjoint-interpret-{study_id}-{job_id}"
             )
-
+            from lib.conjoint_external import SYSTEM_LLM_LABEL, utcnow_iso
             result_data = {
                 "interpretation": response,
-                "summary_data": analysis_summary
+                "summary_data": analysis_summary,
+                "source": "system",
+                "model_label": SYSTEM_LLM_LABEL,
+                "generated_at": utcnow_iso(),
             }
-
             await db.analysis_cache.update_one(
                 {"study_id": study_id, "method": cache_key},
                 {"$set": {
                     "study_id": study_id,
                     "method": cache_key,
-                    # The interpretation TEXT quotes the statistics it was given,
-                    # so it goes stale whenever those numbers change — same guard
-                    # as the numeric cache, otherwise a study keeps being narrated
-                    # from its pre-audit BIC and importance figures.
                     "schema_version": ANALYSIS_CACHE_VERSION,
                     "respondent_count": respondent_count,
                     "results": result_data,
@@ -5893,11 +6260,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
                 }},
                 upsert=True
             )
-
-            await db.ai_interp_jobs.update_one(
-                {"job_id": job_id},
-                {"$set": {"status": "ready"}}
-            )
+            await db.ai_interp_jobs.update_one({"job_id": job_id}, {"$set": {"status": "ready"}})
             logging.info(f"AI interpretation completed for job {job_id}")
 
         except asyncio.TimeoutError:
@@ -5910,7 +6273,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             logging.error(f"AI interpretation failed for job {job_id}: {e}")
             await db.ai_interp_jobs.update_one(
                 {"job_id": job_id},
-                {"$set": {"status": "failed", "error": str(e)}}
+                {"$set": {"status": "failed", **_job_error_fields(e)}}
             )
 
     @conjoint_router.post("/conjoint/studies/{study_id}/generate-prompt")
@@ -5922,129 +6285,162 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         segments: Optional[str] = None,
         current_user: Optional[User] = Depends(get_current_user_optional)
     ):
-        """Generate the prompt text with real (optionally filtered) data for external AI."""
-        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
-        if not study:
-            raise HTTPException(status_code=404, detail="Study not found")
-
-        is_public = study.get("is_public_result", False)
-        if not is_public:
-            if not current_user:
-                raise HTTPException(status_code=401, detail="Authentication required")
-            if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-                raise HTTPException(status_code=403, detail="Not authorized")
-
-        all_responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        """Single-string prompt (kept for UI/CLI). Supports optional time & segment filters."""
         seg_filter = _parse_segments_param(segments)
         has_filter = bool(from_ or to or seg_filter)
-        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
-        if len(responses) < 10:
-            raise HTTPException(status_code=400, detail="Need at least 10 responses in this view")
+        if not has_filter:
+            _study, analysis_summary, system_message, prompt = await _interp_prompt_parts(
+                study_id, current_user, request.method, request.compare_all)
+            n_resp = (analysis_summary or {}).get("respondent_count")
+            full_prompt = f"""[System Instructions]\n{system_message}\n\n[Analysis Request]\n{prompt}"""
+            return {"prompt": full_prompt, "summary_data": analysis_summary, "filtered": False, "respondent_count": n_resp}
 
+        study = await _study_for_viewer(study_id, current_user, {"_id": 0})
+        all_responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter)
+        if len(responses) < 10:
+            raise HTTPException(status_code=400, detail="Need at least 10 responses in this filter for interpretation")
         analysis_summary = await _prepare_analysis_summary(study, responses, request.method, request.compare_all)
+        analysis_summary = _humanize_internal_labels(analysis_summary)
         system_message, prompt = _build_interpretation_prompt(analysis_summary)
         filter_line = (
-            f"\n[Filter Scope]: วิเคราะห์เฉพาะกลุ่มตัวอย่างที่กรอง (N = {len(responses)} จากทั้งหมด {len(all_responses)} คน · filter={segments or f'{from_}..{to}'})\n"
-            if has_filter else ""
+            f"\n[Filter Scope]: วิเคราะห์เฉพาะกลุ่มตัวอย่างที่กรอง "
+            f"(N = {len(responses)} จากทั้งหมด {len(all_responses)} คน · filter={segments or f'{from_}..{to}'})\n"
+        )
+        full_prompt = f"""[System Instructions]\n{system_message}{filter_line}\n\n[Analysis Request]\n{prompt}"""
+        return {"prompt": full_prompt, "summary_data": analysis_summary, "filtered": True, "respondent_count": len(responses)}
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/ai-interpretation/external-prompt")
+    async def interpretation_external_prompt(
+        study_id: str,
+        request: AIInterpretationRequest,
+        current_user: Optional[User] = Depends(get_current_user_optional)
+    ):
+        from lib.conjoint_external import build_prompt_payload, GENERIC_STEPS_TH, slugify
+        study, _summary, system_message, prompt = await _interp_prompt_parts(
+            study_id, current_user, request.method, request.compare_all)
+        label = "เปรียบเทียบทุกวิธี" if request.compare_all else (request.method or "counting")
+        return build_prompt_payload(
+            feature=FEAT_INTERPRETATION,
+            title=f"ตีความผล Conjoint ด้วย AI ของคุณเอง ({label})",
+            instructions_th=GENERIC_STEPS_TH,
+            expected_format="markdown",
+            parts=[{"key": "main", "title": "การตีความผลการวิเคราะห์",
+                    "system_prompt": system_message, "prompt": prompt}],
+            filename=f"conjoint-{slugify(study.get('title'))}-interpretation-prompt.md",
+            method=request.method,
+            compare_all=request.compare_all,
         )
 
-        full_prompt = f"""[System Instructions]
-{system_message}{filter_line}
-
-[Analysis Request]
-{prompt}
-
-[Output Format Requirements]
-- ตอบกลับเป็นภาษาไทย (อ่านง่ายเชิงธุรกิจ + อ้างอิงตัวเลขสถิติจริงสำหรับงานวิชาการ)
-- อ้างเฉพาะตัวเลขที่มีในข้อมูลด้านบนเท่านั้น ห้ามสมมติค่าสถิติหรือ p-value เอง
-- สรุปให้ครบ 4 ส่วน: 1) สรุปผู้บริหารและปัจจัยสำคัญสุด 2) วิเคราะห์ระดับตัวเลือกและ Trade-off/ราคา 3) สเปกสินค้าที่ชนะตลาด (Optimal Configuration) 4) ข้อเสนอแนะเชิงกลยุทธ์และข้อจำกัดทางสถิติ"""
-
-        return {
-            "prompt": full_prompt,
-            "summary_data": analysis_summary,
-            "filtered": has_filter,
-            "respondent_count": len(responses),
-        }
-
-    class ExternalInterpretationImportReq(BaseModel):
-        raw_text: str
-        method: str = "mnl"
-        compare_all: bool = False
-        dry_run: bool = False
-
-    @conjoint_router.post("/conjoint/studies/{study_id}/import-ai-interpretation")
-    async def import_external_interpretation(
+    @conjoint_router.post("/conjoint/studies/{study_id}/ai-interpretation/external-import")
+    async def interpretation_external_import(
         study_id: str,
-        request: ExternalInterpretationImportReq,
-        from_: Optional[str] = Query(None, alias="from"),
-        to: Optional[str] = None,
-        segments: Optional[str] = None,
+        request: InterpretationExternalImportRequest,
         current_user: User = Depends(get_current_user)
     ):
-        """Validate & save external AI interpretation into analysis_cache (isolated per filter)."""
-        import hashlib
-        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
-        if not study:
-            raise HTTPException(status_code=404, detail="Study not found")
-        if study["creator_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-            raise HTTPException(status_code=403, detail="Not authorized")
-
-        res = validate_conjoint_interpretation_payload(request.raw_text)
-        if request.dry_run or not res["valid"]:
-            return {
-                "valid": res["valid"],
-                "applied": False,
-                "errors": res["errors"],
-                "warnings": res["warnings"],
-                "preview": res["preview"],
-                "repair_prompt": res["repair_prompt"],
-            }
-
-        all_responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
-        seg_filter = _parse_segments_param(segments)
-        has_filter = bool(from_ or to or seg_filter)
-        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to, segments=seg_filter) if has_filter else all_responses
-        if len(responses) < 10:
-            raise HTTPException(status_code=400, detail="Need at least 10 responses in this view before saving interpretation")
-
-        analysis_summary = await _prepare_analysis_summary(study, responses, request.method, request.compare_all)
-        cache_key = f"ai_{request.method}_{'all' if request.compare_all else 'single'}"
-        if has_filter:
-            sig_src = f"{from_ or ''}|{to or ''}|{segments or ''}"
-            cache_key = f"{cache_key}_f_{hashlib.md5(sig_src.encode()).hexdigest()[:10]}"
-        respondent_count = len(responses)
-        interp_text = res["data"]["interpretation"]
-        result_data = {
-            "interpretation": interp_text,
-            "summary_data": analysis_summary,
-            "source": "external_ai",
-            "filtered": has_filter,
-        }
+        """Store an interpretation written by the user's own LLM in the SAME cache
+        row the system job writes (same key, respondent_count and schema_version
+        guard), so it is served and invalidated exactly like a system result."""
+        from lib.conjoint_external import clean_markdown_import, external_stamp, ExternalImportError
+        study = await _load_owned_study(study_id, current_user, {"_id": 0, "choice_sets": 0})
+        try:
+            text = clean_markdown_import(request.content)
+        except ExternalImportError as e:
+            raise HTTPException(status_code=422, detail={"code": "external_import_invalid", "message": str(e)})
+        _s, analysis_summary, _sys, _p = await _interp_prompt_parts(
+            study_id, current_user, request.method, request.compare_all)
+        cache_key = _interpretation_cache_key(request.method, request.compare_all)
+        result_data = {"interpretation": text, "summary_data": analysis_summary,
+                       **external_stamp(request.model_label, current_user)}
         await db.analysis_cache.update_one(
             {"study_id": study_id, "method": cache_key},
             {"$set": {
                 "study_id": study_id,
                 "method": cache_key,
                 "schema_version": ANALYSIS_CACHE_VERSION,
-                "respondent_count": respondent_count,
+                "respondent_count": study.get("respondent_count", 0),
                 "results": result_data,
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }},
             upsert=True,
         )
+        return _interp_response(result_data, cached=False)
+
+    # ======================================================================
+    # THESIS EXPORT — system LLM, external pack/import, and no-AI document
+    # ======================================================================
+    async def _thesis_access(study_id: str, current_user, no_ai: bool = False):
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        is_owner = study["creator_id"] == current_user.id
+        is_admin = current_user.role == UserRole.ADMIN
+        is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
+        # Rule: (owner AND whitelisted) OR admin for the SYSTEM-LLM thesis job only.
+        # Paths that cost the platform nothing - the no-AI document and the
+        # external prompt / pack / import - are open to any owner; callers pass
+        # no_ai=True for those (owner decisions 2026-11-26).
+        if is_admin or (is_owner and (is_whitelisted or no_ai)):
+            return study
+        if is_owner:
+            raise HTTPException(status_code=403, detail="คุณเป็นเจ้าของ study แต่ยังไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin")
+        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ study (ที่ได้รับสิทธิ์แล้ว) หรือ admin เท่านั้น")
+
+    def _clean_methods(methods: List[str]) -> List[str]:
+        valid = ["counting", "mnl", "linear_regression", "mixed_logit", "hierarchical_bayes"]
+        out = [m for m in dict.fromkeys(methods or []) if m in valid]
+        if not out:
+            raise HTTPException(status_code=400, detail="กรุณาเลือกวิธีวิเคราะห์อย่างน้อย 1 วิธี")
+        return out
+
+    async def _thesis_inputs(study_id: str, methods: List[str], chapters: List[int], extra_prompt: str = ""):
+        """Everything every thesis path needs, computed ONCE, the same way."""
+        from lib import conjoint_thesis as T
+        from lib.conjoint_quality import data_quality_report
+        from lib.conjoint_wtp import calculate_wtp
+
+        full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        if len(responses) < 10:
+            raise HTTPException(status_code=400, detail="ต้องมีผู้ตอบอย่างน้อย 10 คน")
+        respondent_count = full_study.get("respondent_count", 0)
+
+        all_results = {}
+        for m in dict.fromkeys(["counting"] + list(methods)):
+            try:
+                # Only the UNFILTERED cache row computed from exactly these
+                # responses may stand in for a fresh fit (a segment slice must
+                # never be quoted as the whole sample).
+                cached_method = await db.analysis_cache.find_one(
+                    {"study_id": study_id, "method": m, "filter_sig": "all",
+                     "respondent_count": len(responses), "schema_version": ANALYSIS_CACHE_VERSION},
+                    {"_id": 0}
+                )
+                if cached_method and cached_method.get("results"):
+                    all_results[m] = cached_method["results"]
+                else:
+                    all_results[m] = await get_method_results(full_study, responses, m)
+            except Exception as e:
+                logging.warning(f"Thesis inputs - method {m} failed: {e}")
+        all_results = _humanize_internal_labels(all_results)
+
+        facts = T.design_facts(full_study, responses)
+        demo = T.demographics_summary(full_study, responses)
+        quality = data_quality_report(full_study, responses)
+        try:
+            wtp = await asyncio.to_thread(calculate_wtp, full_study, responses)
+        except Exception as e:
+            logging.warning(f"Thesis inputs - WTP failed: {e}")
+            wtp = None
+        system_msg, chapter_prompts = _build_thesis_prompt(
+            full_study.get("title", ""), respondent_count, all_results, methods, chapters, extra_prompt,
+            facts_block=T.facts_text(facts, demo, quality),
+            extra_results_text=_wtp_summary_text(wtp),
+        )
         return {
-            "valid": True,
-            "applied": True,
-            "errors": [],
-            "warnings": res["warnings"],
-            "preview": res["preview"],
-            "repair_prompt": None,
-            "status": "ready",
-            "interpretation": interp_text,
-            "summary_data": analysis_summary,
-            "source": "external_ai",
-            "filtered": has_filter,
-            "respondent_count": respondent_count,
+            "study": full_study, "responses": responses, "respondent_count": respondent_count,
+            "all_results": all_results, "facts": facts, "demo": demo, "quality": quality, "wtp": wtp,
+            "system_msg": system_msg, "chapter_prompts": chapter_prompts,
         }
 
     @conjoint_router.post("/conjoint/studies/{study_id}/export-thesis")
@@ -6054,38 +6450,15 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         background_tasks: BackgroundTasks,
         current_user: User = Depends(get_current_user)
     ):
-        """Start thesis generation as background job. Returns job_id for polling."""
-        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
-        if not study:
-            raise HTTPException(status_code=404, detail="Study not found")
-        is_owner = study["creator_id"] == current_user.id
-        is_admin = current_user.role == UserRole.ADMIN
-        is_whitelisted = bool(getattr(current_user, "can_export_thesis", False))
-        # Rule: (owner AND whitelisted) OR admin
-        if is_admin:
-            pass
-        elif is_owner and is_whitelisted:
-            pass
-        elif is_owner and not is_whitelisted:
-            raise HTTPException(status_code=403, detail="คุณเป็นเจ้าของ study แต่ยังไม่ได้รับสิทธิ์ Export Thesis — ติดต่อ admin")
-        else:
-            raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ study (ที่ได้รับสิทธิ์แล้ว) หรือ admin เท่านั้น")
+        """Start thesis generation as background job. Returns job_id for polling.
 
+        An existing cached document is returned even when the system LLM is
+        off; only new generation is refused (409 llm_external_only)."""
+        study = await _thesis_access(study_id, current_user)
+        methods = _clean_methods(request.methods)
         respondent_count = study.get("respondent_count", 0)
-        methods_key = "_".join(sorted(request.methods))
-        chapters_key = "_".join(str(c) for c in sorted(request.chapters))
-        extra_hash = ""
-        if request.extra_prompt and request.extra_prompt.strip():
-            import hashlib
-            extra_hash = hashlib.md5(request.extra_prompt.strip().encode()).hexdigest()[:8]
-        cache_key = f"thesis_{methods_key}_{chapters_key}" + (f"_ep{extra_hash}" if extra_hash else "")
+        cache_key = _thesis_cache_key(methods, request.chapters, request.extra_prompt or "")
 
-        # Check cache — if AI content already exists, return ready immediately.
-        # The schema_version guard matters more here than anywhere else: the
-        # generated thesis text EMBEDS the statistics, `_create_thesis_docx`
-        # re-renders that stored text verbatim, and there is no force/regenerate
-        # path in the UI. Without the guard a study would keep emitting a
-        # document quoting its pre-audit BIC and importance figures forever.
         cached = await db.analysis_cache.find_one(
             {"study_id": study_id, "method": cache_key,
              "respondent_count": respondent_count,
@@ -6093,14 +6466,16 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             {"_id": 0}
         )
         if cached and cached.get("results", {}).get("ai_content"):
-            return {"status": "ready", "job_id": cache_key, "cached": True}
+            r = cached["results"]
+            return {"status": "ready", "job_id": cache_key, "cache_key": cache_key, "cached": True,
+                    "source": r.get("source", "system"), "model_label": r.get("model_label")}
 
-        # Check minimum responses
         resp_count = await db.conjoint_responses.count_documents({"study_id": study_id})
         if resp_count < 10:
             raise HTTPException(status_code=400, detail="ต้องมีผู้ตอบอย่างน้อย 10 คน")
 
-        # Create job record
+        await _require_system_llm(FEAT_THESIS, current_user)
+
         job_id = f"thesis_{study_id}_{uuid.uuid4().hex[:8]}"
         await db.thesis_jobs.update_one(
             {"job_id": job_id},
@@ -6113,85 +6488,54 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             }},
             upsert=True
         )
-
-        # Run generation in background
         background_tasks.add_task(
             _run_thesis_generation,
             study_id, cache_key, job_id, respondent_count, study.get("title", ""),
-            request.methods, request.chapters, request.extra_prompt.strip() if request.extra_prompt else ""
+            methods, request.chapters, request.extra_prompt.strip() if request.extra_prompt else "",
+            current_user,
         )
-
-        return {"status": "processing", "job_id": job_id}
+        return {"status": "processing", "job_id": job_id, "cache_key": cache_key}
 
     async def _run_thesis_generation(study_id: str, cache_key: str, job_id: str,
-                                    respondent_count: int, study_title: str,
-                                    methods: list = None, chapters: list = None,
-                                    extra_prompt: str = ""):
+                                     respondent_count: int, study_title: str,
+                                     methods: list = None, chapters: list = None,
+                                     extra_prompt: str = "", user=None):
         """Background task to generate thesis content via AI and cache it."""
         import asyncio
-        if chapters is None:
-            chapters = [3, 4, 5]
-        if methods is None:
-            methods = ["mnl"]
+        chapters = chapters or [3, 4, 5]
+        methods = methods or ["mnl"]
         try:
-            full_study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
-            responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+            await _require_system_llm(FEAT_THESIS, user)
+            inputs = await _thesis_inputs(study_id, methods, chapters, extra_prompt)
+            system_msg, chapter_prompts = inputs["system_msg"], inputs["chapter_prompts"]
 
-            # Always include counting as baseline + selected methods
-            methods_to_compute = list(set(["counting"] + methods))
-
-            all_results = {}
-            for m in methods_to_compute:
-                try:
-                    cached_method = await db.analysis_cache.find_one(
-                        {"study_id": study_id, "method": m, "respondent_count": respondent_count},
-                        {"_id": 0}
-                    )
-                    if (cached_method and cached_method.get("results")
-                            and cached_method.get("schema_version") == ANALYSIS_CACHE_VERSION):
-                        all_results[m] = cached_method["results"]
-                    else:
-                        all_results[m] = await get_method_results(full_study, responses, m)
-                except Exception as e:
-                    logging.warning(f"Thesis bg - method {m} failed: {e}")
-
-            system_msg, chapter_prompts = _build_thesis_prompt(
-                study_title, respondent_count, all_results, methods, chapters, extra_prompt
-            )
-
-            # Generate each chapter separately (to stay within proxy timeout)
             chapter_contents = {}
             for ch_num in sorted(chapter_prompts.keys()):
                 logging.info(f"Thesis job {job_id}: Generating Chapter {ch_num}...")
-                ch_content = await _call_gemini_with_retry(
+                chapter_contents[ch_num] = await _call_gemini_with_retry(
                     system_msg=system_msg,
                     prompt=chapter_prompts[ch_num],
                     session_id=f"thesis-ch{ch_num}-{study_id}-{job_id}"
                 )
-                chapter_contents[ch_num] = ch_content
-
             ai_content = "\n\n---\n\n".join(chapter_contents[ch] for ch in sorted(chapter_contents.keys()))
 
-            # Cache AI content
+            from lib.conjoint_external import SYSTEM_LLM_LABEL, utcnow_iso
             await db.analysis_cache.update_one(
                 {"study_id": study_id, "method": cache_key},
                 {"$set": {
                     "study_id": study_id,
                     "method": cache_key,
-                    # Stamp the schema so the reads above/below can reject a
-                    # document generated from superseded statistics.
                     "schema_version": ANALYSIS_CACHE_VERSION,
                     "respondent_count": respondent_count,
-                    "results": {"ai_content": ai_content},
+                    "results": {"ai_content": ai_content,
+                                "chapters": {str(k): v for k, v in chapter_contents.items()},
+                                "source": "system", "model_label": SYSTEM_LLM_LABEL,
+                                "generated_at": utcnow_iso()},
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }},
                 upsert=True
             )
-
-            await db.thesis_jobs.update_one(
-                {"job_id": job_id},
-                {"$set": {"status": "ready"}}
-            )
+            await db.thesis_jobs.update_one({"job_id": job_id}, {"$set": {"status": "ready"}})
             logging.info(f"Thesis generation completed for job {job_id}")
 
         except asyncio.TimeoutError:
@@ -6204,7 +6548,7 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             logging.error(f"Thesis generation failed for job {job_id}: {e}")
             await db.thesis_jobs.update_one(
                 {"job_id": job_id},
-                {"$set": {"status": "failed", "error": str(e)}}
+                {"$set": {"status": "failed", **_job_error_fields(e)}}
             )
 
     @conjoint_router.get("/conjoint/studies/{study_id}/export-thesis-status/{job_id}")
@@ -6214,10 +6558,29 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         current_user: User = Depends(get_current_user)
     ):
         """Poll thesis generation status."""
-        job = await db.thesis_jobs.find_one({"job_id": job_id}, {"_id": 0})
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "creator_id": 1})
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+        if study.get("creator_id") != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        job = await db.thesis_jobs.find_one({"job_id": job_id, "study_id": study_id}, {"_id": 0})
         if not job:
             return {"status": "not_found"}
-        return {"status": job.get("status", "unknown"), "error": job.get("error")}
+        if _job_stale(job, 45 * 60):
+            return {"status": "failed", "error": JOB_STALE_MESSAGE_TH, "error_code": "stale_job",
+                    "cache_key": job.get("cache_key")}
+        return {"status": job.get("status", "unknown"), "error": job.get("error"),
+                "error_code": job.get("error_code"), "cache_key": job.get("cache_key")}
+
+    def _docx_response(docx_bytes: bytes, filename: str):
+        from fastapi.responses import Response
+        from urllib.parse import quote
+        ascii_name = re.sub(r"[^A-Za-z0-9._-]+", "_", filename) or "thesis.docx"
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename={ascii_name}; filename*=UTF-8''{quote(filename)}"},
+        )
 
     @conjoint_router.get("/conjoint/studies/{study_id}/export-thesis-download")
     async def export_thesis_download(
@@ -6225,8 +6588,9 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         cache_key: str = None,
         current_user: User = Depends(get_current_user)
     ):
-        """Download the generated thesis .docx from cached AI content."""
-        from fastapi.responses import Response
+        """Download the generated thesis .docx from cached AI content (system or
+        external). Never needs the system LLM. Carries an AI-use disclosure."""
+        from lib.conjoint_external import ai_disclosure_line
 
         study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
         if not study:
@@ -6235,11 +6599,8 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
             raise HTTPException(status_code=403, detail="Not authorized")
 
         respondent_count = study.get("respondent_count", 0)
-
-        # Find thesis cache (specific or any). Both branches carry the
-        # schema_version guard — the frontend polls and then downloads WITHOUT a
-        # cache_key, so the regex branch is the one it actually hits; guarding
-        # only the keyed branch would leave the real path serving stale content.
+        # Both branches carry the schema_version guard — the frontend downloads
+        # WITHOUT a cache_key, so the regex branch is the one it actually hits.
         if cache_key:
             cached = await db.analysis_cache.find_one(
                 {"study_id": study_id, "method": cache_key,
@@ -6258,25 +6619,401 @@ def get_conjoint_routes(db, get_current_user, get_current_user_optional):
         if not cached or not cached.get("results", {}).get("ai_content"):
             raise HTTPException(status_code=404, detail="ยังไม่มีเนื้อหาวิทยานิพนธ์ กรุณาสร้างก่อน")
 
-        ai_content = cached["results"]["ai_content"]
-        # Run CPU-heavy DOCX generation in a worker thread so the event loop
-        # stays free for other requests (login, list, etc.) while we render.
-        import asyncio
+        res = cached["results"]
+        disclosure = ai_disclosure_line(res.get("source", "system"), res.get("model_label"))
         docx_bytes = await asyncio.to_thread(
-            _create_thesis_docx, study.get("title", ""), respondent_count, ai_content
+            _create_thesis_docx, study.get("title", ""), respondent_count, res["ai_content"], disclosure
+        )
+        key = cache_key or cached.get("method", "")
+        chapters_str = ""
+        if key and "thesis_" in key:
+            parts = key.replace("thesis_", "").split("_")
+            if len(parts) > 1:
+                chapters_str = "_Ch" + "_Ch".join(p for p in parts[1:] if p.isdigit())
+        return _docx_response(docx_bytes, f"Conjoint_Thesis{chapters_str}_{study_id[:8]}.docx")
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/export-thesis/external-prompt")
+    async def thesis_external_prompt(
+        study_id: str,
+        request: ThesisExportRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        """One prompt per chapter — identical to what the system job sends."""
+        from lib.conjoint_external import build_prompt_payload, GENERIC_STEPS_TH, slugify
+        study = await _thesis_access(study_id, current_user, no_ai=True)
+        methods = _clean_methods(request.methods)
+        inputs = await _thesis_inputs(study_id, methods, request.chapters, (request.extra_prompt or "").strip())
+        titles = {3: "บทที่ 3 ระเบียบวิธีวิจัย", 4: "บทที่ 4 ผลการศึกษา", 5: "บทที่ 5 สรุป อภิปรายผล ข้อเสนอแนะ"}
+        return build_prompt_payload(
+            feature=FEAT_THESIS,
+            title="เขียนวิทยานิพนธ์ Conjoint ด้วย AI ของคุณเอง",
+            instructions_th=GENERIC_STEPS_TH + "\n\nใช้หนึ่งแชตต่อหนึ่งบท แล้วนำแต่ละบทกลับมาวาง (part_key = ch3 / ch4 / ch5)",
+            expected_format="markdown",
+            parts=[{"key": f"ch{ch}", "title": titles.get(ch, f"บทที่ {ch}"),
+                    "system_prompt": inputs["system_msg"], "prompt": p}
+                   for ch, p in sorted(inputs["chapter_prompts"].items())],
+            filename=f"conjoint-{slugify(study.get('title'))}-thesis-prompts.md",
+            cache_key=_thesis_cache_key(methods, request.chapters, request.extra_prompt or ""),
         )
 
-        # Build filename from cache_key
-        chapters_str = ""
-        if cache_key and "thesis_" in cache_key:
-            parts = cache_key.replace("thesis_", "").split("_")
-            if len(parts) > 1:
-                chapters_str = "_Ch" + "_Ch".join(parts[1:])
-        filename = f"Conjoint_Thesis{chapters_str}_{study_id[:8]}.docx"
-        return Response(
-            content=docx_bytes,
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+    @conjoint_router.post("/conjoint/studies/{study_id}/export-thesis/external-pack")
+    async def thesis_external_pack(
+        study_id: str,
+        request: ThesisExportRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Markdown pack: study facts, design, every computed table, equations,
+        one ready-to-paste prompt per chapter, and Thai step-by-step guidance."""
+        from fastapi.responses import Response
+        from urllib.parse import quote
+        from lib import conjoint_thesis as T
+        from lib.conjoint_external import slugify, utcnow_iso
+        study = await _thesis_access(study_id, current_user, no_ai=True)
+        methods = _clean_methods(request.methods)
+        inputs = await _thesis_inputs(study_id, methods, request.chapters, (request.extra_prompt or "").strip())
+        md = T.external_pack_markdown(
+            facts=inputs["facts"], demo=inputs["demo"], quality=inputs["quality"], methods=methods,
+            all_results=inputs["all_results"], equations={m: _get_method_equations(m) for m in methods},
+            wtp=inputs["wtp"], system_prompt=inputs["system_msg"], chapter_prompts=inputs["chapter_prompts"],
+            generated_at=utcnow_iso()[:16].replace("T", " ") + " UTC",
         )
+        filename = f"conjoint-{slugify(study.get('title'))}-thesis-pack.md"
+        return Response(
+            content=md.encode("utf-8"),
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition":
+                     f"attachment; filename=conjoint-thesis-pack.md; filename*=UTF-8''{quote(filename)}"},
+        )
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/export-thesis/external-import")
+    async def thesis_external_import(
+        study_id: str,
+        request: ThesisExternalImportRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Bring chapters written by the user's own LLM back; stored under the same
+        cache key the system job uses, then rendered by the existing .docx renderer
+        via export-thesis-download (with an AI-use disclosure naming the tool)."""
+        from lib.conjoint_external import clean_markdown_import, external_stamp, ExternalImportError
+        study = await _thesis_access(study_id, current_user, no_ai=True)
+        methods = _clean_methods(request.methods)
+        cache_key = _thesis_cache_key(methods, request.chapters, request.extra_prompt or "")
+
+        raw_parts = list(request.parts or [])
+        if request.content:
+            raw_parts.append(ThesisChapterPart(part_key=request.part_key or "", content=request.content))
+        if not raw_parts:
+            raise HTTPException(status_code=422, detail={"code": "external_import_invalid",
+                                                         "message": "ยังไม่ได้วางเนื้อหาบทใดเลย"})
+        incoming = {}
+        for p in raw_parts:
+            m = re.search(r"(\d+)", p.part_key or "")
+            ch = int(m.group(1)) if m else (request.chapters[0] if len(request.chapters) == 1 else None)
+            if ch not in (3, 4, 5):
+                raise HTTPException(status_code=422, detail={
+                    "code": "external_import_invalid",
+                    "message": f"part_key '{p.part_key}' ไม่ถูกต้อง — ใช้ ch3, ch4 หรือ ch5"})
+            try:
+                incoming[str(ch)] = clean_markdown_import(p.content, min_chars=100)
+            except ExternalImportError as e:
+                raise HTTPException(status_code=422, detail={"code": "external_import_invalid",
+                                                             "message": f"บทที่ {ch}: {e}"})
+
+        existing = await db.analysis_cache.find_one(
+            {"study_id": study_id, "method": cache_key,
+             "respondent_count": study.get("respondent_count", 0),
+             "schema_version": ANALYSIS_CACHE_VERSION}, {"_id": 0})
+        chapters = {}
+        if existing and existing.get("results", {}).get("source") == "external":
+            chapters = dict(existing["results"].get("chapters") or {})
+        chapters.update(incoming)
+        ai_content = "\n\n---\n\n".join(chapters[k] for k in sorted(chapters, key=int))
+        stamp = external_stamp(request.model_label, current_user)
+        await db.analysis_cache.update_one(
+            {"study_id": study_id, "method": cache_key},
+            {"$set": {
+                "study_id": study_id,
+                "method": cache_key,
+                "schema_version": ANALYSIS_CACHE_VERSION,
+                "respondent_count": study.get("respondent_count", 0),
+                "results": {"ai_content": ai_content, "chapters": chapters, **stamp},
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+        expected = sorted(int(c) for c in request.chapters)
+        present = sorted(int(c) for c in chapters)
+        missing = [c for c in expected if c not in present]
+        return {
+            "status": "partial" if missing else "ready",
+            "job_id": cache_key,
+            "cache_key": cache_key,
+            "chapters_present": present,
+            "chapters_missing": missing,
+            "download_url": f"/api/conjoint/studies/{study_id}/export-thesis-download?cache_key={cache_key}",
+            **stamp,
+        }
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/export-thesis/no-ai")
+    async def thesis_no_ai(
+        study_id: str,
+        request: ThesisExportRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Thesis Chapter 3 (methods, from the actual design) and Chapter 4 (APA-style
+        tables + importance figure) generated from code alone — no LLM, no cost."""
+        from lib import conjoint_thesis as T
+        study = await _thesis_access(study_id, current_user, no_ai=True)
+        methods = _clean_methods(request.methods)
+        chapters = [c for c in request.chapters if c in (3, 4)] or [3, 4]
+        inputs = await _thesis_inputs(study_id, methods, chapters, "")
+        md = T.no_ai_thesis_markdown(
+            facts=inputs["facts"], demo=inputs["demo"], methods=methods,
+            all_results=inputs["all_results"], equations={m: _get_method_equations(m) for m in methods},
+            wtp=inputs["wtp"], quality=inputs["quality"], chapters=chapters, include_figure=True,
+        )
+        fig = await asyncio.to_thread(T.importance_chart_png, inputs["all_results"].get(methods[0]))
+        figures = {f"importance:{methods[0]}": fig} if fig else {}
+        disclosure = ("เอกสารนี้สร้างจากผลการคำนวณของระบบ SWUMKT โดยตรง ไม่มีการใช้ปัญญาประดิษฐ์เขียนเนื้อหา "
+                      "— ตาราง สูตร และข้อความบรรยายวิธีวิจัยสร้างจากแผนการทดลองและผลการประมาณค่าจริง "
+                      "ผู้วิจัยต้องเขียนการอภิปรายผลและบทที่ 5 เอง")
+        docx_bytes = await asyncio.to_thread(
+            _create_thesis_docx, study.get("title", ""), inputs["respondent_count"], md, disclosure, figures)
+        return _docx_response(docx_bytes, f"Conjoint_Thesis_NoAI_{study_id[:8]}.docx")
+
+    # ======================================================================
+    # IMAGES — external prompts (the result is an image the user uploads to
+    # the existing upload endpoint for the same slot)
+    # ======================================================================
+    IMAGE_STEPS_TH = (
+        "1. คัดลอกพรอมต์ภาพ (ภาษาอังกฤษให้ผลดีที่สุด)\n"
+        "2. เปิดเครื่องมือสร้างภาพที่คุณใช้ เช่น ChatGPT (สร้างภาพ), Gemini, Microsoft Designer, Midjourney\n"
+        "3. ถ้ามีภาพอ้างอิง (reference) ให้แนบไปพร้อมพรอมต์\n"
+        "4. ดาวน์โหลดภาพที่ได้ แล้วกด \"อัปโหลดภาพ\" ในช่องเดิมของระบบ (ไม่ต้องวางข้อความกลับ)"
+    )
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/generate-single-image/external-prompt")
+    async def single_image_external_prompt(
+        study_id: str,
+        request: GenerateSingleImageRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        from lib.conjoint_external import build_prompt_payload, slugify
+        study = await _load_owned_study(study_id, current_user)
+        attr = next((a for a in study.get("attributes", []) if a["id"] == request.attribute_id), None)
+        level = next((l for l in (attr or {}).get("levels", []) if l["id"] == request.level_id), None)
+        if not attr or not level:
+            raise HTTPException(status_code=404, detail="Attribute or level not found")
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0}) \
+            or dict(DEFAULT_LEVEL_IMAGE_SETTINGS)
+        using_refs = bool(request.reference_image_indices and study.get("reference_images"))
+        prompt = _level_image_prompt(settings, attr, level, request.prompt, request.additional_prompt, using_refs)
+        return build_prompt_payload(
+            feature=FEAT_IMAGES, title=f"ภาพสำหรับ {attr['name']}: {level['value']}",
+            instructions_th=IMAGE_STEPS_TH, expected_format="image",
+            parts=[{"key": f"{attr['id']}:{level['id']}", "title": f"{attr['name']} — {level['value']}",
+                    "prompt": prompt}],
+            filename=f"conjoint-{slugify(study.get('title'))}-level-image-prompt.md",
+            upload={"method": "POST", "url": f"/api/conjoint/studies/{study_id}/upload-image",
+                    "body": {"attribute_id": attr["id"], "level_id": level["id"], "image_url": "<data:image/...;base64,...>"}},
+        )
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/generate-images/external-prompt")
+    async def all_level_images_external_prompt(
+        study_id: str,
+        current_user: User = Depends(get_current_user)
+    ):
+        from lib.conjoint_external import build_prompt_payload, slugify
+        study = await _load_owned_study(study_id, current_user)
+        if not study.get("attributes"):
+            raise HTTPException(status_code=400, detail="No attributes defined")
+        parts = [{"key": f"{a['id']}:{l['id']}", "title": f"{a['name']} — {l['value']}",
+                  "prompt": _bulk_level_image_prompt(a, l)}
+                 for a in study["attributes"] for l in a.get("levels", [])]
+        return build_prompt_payload(
+            feature=FEAT_IMAGES, title="ภาพสำหรับทุกระดับของคุณลักษณะ",
+            instructions_th=IMAGE_STEPS_TH, expected_format="image", parts=parts,
+            filename=f"conjoint-{slugify(study.get('title'))}-level-images-prompts.md",
+            upload={"method": "POST", "url": f"/api/conjoint/studies/{study_id}/upload-image",
+                    "body": {"attribute_id": "<attribute_id>", "level_id": "<level_id>", "image_url": "<data URL>"}},
+        )
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/generate-profile-image/external-prompt")
+    async def profile_image_external_prompt(
+        study_id: str,
+        request: GenerateProfileImageRequest,
+        current_user: User = Depends(get_current_user)
+    ):
+        from lib.conjoint_external import build_prompt_payload, slugify
+        study = await _load_owned_study(study_id, current_user)
+        cs = next((c for c in study.get("choice_sets", []) if c["id"] == request.choice_set_id), None)
+        prof = next((p for p in (cs or {}).get("profiles", []) if p["id"] == request.profile_id), None)
+        if not prof:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        settings = await db.conjoint_image_settings.find_one({"id": "default"}, {"_id": 0}) \
+            or dict(DEFAULT_PROFILE_IMAGE_SETTINGS)
+        using_refs = bool(request.reference_image_indices and study.get("reference_images"))
+        prompt = _profile_image_prompt(settings, study.get("attributes", []), prof,
+                                       request.prompt, request.additional_prompt, using_refs)
+        return build_prompt_payload(
+            feature=FEAT_IMAGES, title=f"ภาพโปรไฟล์ (ชุดที่ {cs.get('set_number', '?')})",
+            instructions_th=IMAGE_STEPS_TH, expected_format="image",
+            parts=[{"key": f"{cs['id']}:{prof['id']}", "title": _profile_composition(study.get('attributes', []), prof),
+                    "prompt": prompt}],
+            filename=f"conjoint-{slugify(study.get('title'))}-profile-image-prompt.md",
+            upload={"method": "POST", "url": f"/api/conjoint/studies/{study_id}/upload-profile-image",
+                    "body": {"choice_set_id": cs["id"], "profile_id": prof["id"], "image_url": "<data URL>"}},
+        )
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/generate-product-from-results/external-prompt")
+    async def product_image_external_prompt(
+        study_id: str,
+        request: GenerateProductImageFromResultsRequest,
+        current_user: Optional[User] = Depends(get_current_user_optional)
+    ):
+        from lib.conjoint_external import build_prompt_payload, slugify
+        study = await _study_for_viewer(study_id, current_user, {"_id": 0})
+        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        if len(responses) < 10:
+            raise HTTPException(status_code=400, detail="Need at least 10 responses for product generation")
+        feats = _optimal_product_features(study, responses)
+        return build_prompt_payload(
+            feature=FEAT_IMAGES, title="ภาพสินค้าที่เหมาะสมที่สุดจากผลวิจัย",
+            instructions_th=IMAGE_STEPS_TH.replace(
+                "4. ดาวน์โหลดภาพที่ได้ แล้วกด \"อัปโหลดภาพ\" ในช่องเดิมของระบบ (ไม่ต้องวางข้อความกลับ)",
+                "4. ดาวน์โหลดภาพที่ได้ แล้วเลือกไฟล์นั้นเป็น \"ภาพสินค้า\" ในหน้าผลลัพธ์ (ใช้ต่อในขั้นจำลองบนชั้นวางได้)")
+            + "\n\nพรอมต์ที่ 2 (prompt_writer) คือคำสั่งเดียวกับที่ระบบใช้ให้ AI ข้อความเขียนพรอมต์ภาพ — ใช้เมื่ออยากให้ AI ช่วยเกลาพรอมต์",
+            expected_format="image",
+            parts=[
+                {"key": "image_prompt", "title": "พรอมต์ภาพ (ใช้ได้ทันที)",
+                 "prompt": _product_direct_image_prompt(study, feats, request.additional_prompt)},
+                {"key": "prompt_writer", "title": "ให้ AI เขียนพรอมต์ภาพให้ (แบบเดียวกับระบบ)",
+                 "system_prompt": PRODUCT_PROMPT_SYSTEM,
+                 "prompt": _product_prompt_writer(study, feats, request.additional_prompt)},
+            ],
+            filename=f"conjoint-{slugify(study.get('title'))}-product-image-prompt.md",
+            optimal_features=feats,
+            upload=None,
+        )
+
+    class ShelfPromptRequest(BaseModel):
+        environment_type: str = "auto"
+        custom_environment: Optional[str] = None
+        shelf_style: str = "eye_level"
+        custom_shelf_style: Optional[str] = None
+        additional_prompt: Optional[str] = None
+        product_image_url: Optional[str] = None
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/generate-shelf-simulation/external-prompt")
+    async def shelf_image_external_prompt(
+        study_id: str,
+        request: ShelfPromptRequest,
+        current_user: Optional[User] = Depends(get_current_user_optional)
+    ):
+        from lib.conjoint_external import build_prompt_payload, slugify
+        study = await _study_for_viewer(study_id, current_user)
+        ctx = _shelf_context(study, request)
+        return build_prompt_payload(
+            feature=FEAT_IMAGES, title="ภาพจำลองสินค้าบนชั้นวาง",
+            instructions_th=IMAGE_STEPS_TH.replace(
+                "3. ถ้ามีภาพอ้างอิง (reference) ให้แนบไปพร้อมพรอมต์",
+                "3. แนบภาพสินค้าของคุณ (จากขั้นตอนก่อนหน้า) ไปพร้อมพรอมต์ — จำเป็น"),
+            expected_format="image",
+            parts=[
+                {"key": "image_prompt", "title": "พรอมต์ภาพ (แนบภาพสินค้า)",
+                 "prompt": _shelf_direct_image_prompt(study, ctx, request.additional_prompt)},
+                {"key": "prompt_writer", "title": "ให้ AI เขียนพรอมต์ภาพให้ (แบบเดียวกับระบบ)",
+                 "system_prompt": SHELF_PROMPT_SYSTEM,
+                 "prompt": _shelf_prompt_writer(study, ctx, request.additional_prompt)},
+            ],
+            filename=f"conjoint-{slugify(study.get('title'))}-shelf-prompt.md",
+            environment_type=ctx["environment_type"],
+            upload=None,
+        )
+
+    # ======================================================================
+    # PRACTITIONER / ACADEMIC TOOLS (2026-11 audit)
+    # ======================================================================
+    @conjoint_router.get("/conjoint/studies/{study_id}/export-long")
+    async def export_long_format(
+        study_id: str,
+        format: str = "xlsx",
+        current_user: User = Depends(get_current_user)
+    ):
+        """Long-format choice data (one row per alternative) + codebook + README,
+        ready for R / Stata / Python / Sawtooth. `format=xlsx|csv`."""
+        from fastapi.responses import Response
+        from lib.conjoint_export import export_csv, export_xlsx
+        study = await _load_owned_study(study_id, current_user)
+        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        if format == "csv":
+            body = await asyncio.to_thread(export_csv, study, responses)
+            return Response(content=body.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                            headers={"Content-Disposition": f"attachment; filename=conjoint_long_{study_id[:8]}.csv"})
+        body = await asyncio.to_thread(export_xlsx, study, responses)
+        return Response(content=body,
+                        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": f"attachment; filename=conjoint_long_{study_id[:8]}.xlsx"})
+
+    @conjoint_router.get("/conjoint/studies/{study_id}/data-quality")
+    async def get_data_quality(
+        study_id: str,
+        current_user: User = Depends(get_current_user)
+    ):
+        """Speeders, straight-liners, duplicates, incomplete responses (report only)."""
+        from lib.conjoint_quality import data_quality_report
+        study = await _load_owned_study(study_id, current_user)
+        responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        return data_quality_report(study, responses)
+
+    @conjoint_router.get("/conjoint/studies/{study_id}/wtp")
+    async def get_wtp(
+        study_id: str,
+        price_attribute_id: Optional[str] = None,
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
+        current_user: Optional[User] = Depends(get_current_user_optional)
+    ):
+        """Willingness-to-pay from a linear-price conditional logit (see lib/conjoint_wtp.py)."""
+        from lib.conjoint_wtp import calculate_wtp
+        await _study_for_viewer(study_id, current_user)
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0})
+        all_responses = await db.conjoint_responses.find({"study_id": study_id}, {"_id": 0}).to_list(10000)
+        responses = _apply_response_filter(all_responses, from_iso=from_, to_iso=to,
+                                           segments=_parse_segments_param(segments))
+        if len(responses) < 30:
+            return {"status": "insufficient_data", "respondent_count": len(responses),
+                    "reason_th": "ต้องมีผู้ตอบอย่างน้อย 30 คน"}
+        out = await asyncio.to_thread(calculate_wtp, study, responses, price_attribute_id)
+        out["respondent_count"] = len(responses)
+        return _humanize_internal_labels(out)
+
+    @conjoint_router.post("/conjoint/studies/{study_id}/simulate")
+    async def simulate_market(
+        study_id: str,
+        request: SimulateRequest,
+        from_: Optional[str] = Query(None, alias="from"),
+        to: Optional[str] = None,
+        segments: Optional[str] = None,
+        current_user: Optional[User] = Depends(get_current_user_optional)
+    ):
+        """Share-of-preference simulator on the (cached) estimated model."""
+        from lib.conjoint_simulator import simulate_shares, SimulationError
+        await _study_for_viewer(study_id, current_user)
+        analysis = await get_statistical_analysis(
+            study_id=study_id, method=request.method, force=False,
+            from_=from_, to=to, segments=segments, current_user=current_user)
+        if analysis.get("status") != "success":
+            return analysis
+        study = await db.conjoint_studies.find_one({"id": study_id}, {"_id": 0, "choice_sets": 0})
+        try:
+            out = simulate_shares(study, request.method, analysis["results"],
+                                  [p.dict() for p in request.products], request.rule)
+        except SimulationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        out["respondent_count"] = analysis.get("respondent_count")
+        return out
 
     return conjoint_router
+

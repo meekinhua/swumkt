@@ -12,7 +12,9 @@ Example:
 import re
 import logging
 from typing import List, Dict, Tuple, Optional
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from lib.llm_policy import SystemLLMDisabled
+# emergentintegrations is imported lazily inside the functions that call the LLM, so this module (and
+# server.py) imports on machines without the package.
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +105,7 @@ Instructions:
 Output format: Just the key (e.g., "Smith2020" or "NONE")"""
         
         try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"citation-match-{id(self)}"
@@ -117,6 +120,8 @@ Output format: Just the key (e.g., "Smith2020" or "NONE")"""
             
             return None
             
+        except SystemLLMDisabled:
+            raise  # admin switched the system LLM off: never swallow into a fallback
         except Exception as e:
             logger.error(f"AI matching error: {e}")
             # Fallback to simple matching

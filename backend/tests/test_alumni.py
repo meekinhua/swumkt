@@ -138,10 +138,16 @@ class TestTree:
         distances_up = sorted([a["distance"] for a in ancestors])
         assert distances_up == [1, 2, 3, 4, 5], f"Expected [1..5], got {distances_up}; ancestors={ancestors}"
 
-        # Check labels
-        label_by_dist = {1: "พี่ take", 2: "ปู่", 3: "ทวด", 4: "เทียด", 5: "เทียดทวด"}
+        # Check labels — สายเทค vocabulary (2026-11): พี่เทค / ลุง·ป้าเทค / ปู่·ย่าเทค /
+        # ทวดเทค / เทียดเทค, gendered, combined form when gender is unknown. The
+        # old labels ("พี่ take", "ปู่" = 2 steps …) were wrong (see
+        # memory/ALUMNI_CONTRACT_2026_11.md). Default vocabulary assumed (no
+        # per-line override seeded on the server).
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+        from lib import alumni_kinship as K
         for a in ancestors:
-            assert a["relation"] == label_by_dist[a["distance"]]
+            assert a["relation"] == K.term_for(a["distance"], a.get("gender")), a
 
         # Check nicknames
         nick_by_dist = {a["distance"]: a["nickname"] for a in ancestors}
@@ -271,11 +277,15 @@ class TestInvites:
         assert isinstance(data["invites"], list)
         assert data["total"] >= 1
 
-    def test_invite_requires_identifier(self, student1_auth):
+    def test_invite_without_identifier_is_allowed(self, student1_auth):
+        # 2026-11 (สายเทค, memory/ALUMNI_CONTRACT_2026_11.md §3.1): an invite no
+        # longer needs the invitee's email/student id — share-to-LINE links and the
+        # reveal game are anonymous by design. It used to be a 400.
         r = requests.post(
             f"{API}/alumni/invites",
             headers=student1_auth["headers"],
             json={},
             timeout=20,
         )
-        assert r.status_code == 400
+        assert r.status_code == 200, r.text
+        assert r.json().get("code")

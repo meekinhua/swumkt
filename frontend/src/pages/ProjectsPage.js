@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
+import { apiErrorText } from '@/lib/apiError';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -91,7 +92,7 @@ const ProjectsPage = () => {
       navigate(`/projects/${response.data.id}`);
     } catch (error) {
       console.error('Create project error:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถสร้าง Project ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถสร้าง Project ได้'));
     } finally {
       setCreating(false);
     }
@@ -108,7 +109,7 @@ const ProjectsPage = () => {
       toast.success('ลบ Project สำเร็จ');
       fetchProjects();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบ Project ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบ Project ได้'));
     }
   };
 

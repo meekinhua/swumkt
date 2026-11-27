@@ -15,16 +15,18 @@ import React, { useState, useMemo } from 'react';
  */
 export const BeFilterBar = ({
   value, compareValue, segmentsAvailable, responsesTotal, responsesFiltered,
-  onChange, onCompareChange, isShowcase = false, mode = 'brand',
+  onChange, onCompareChange, isShowcase = false,
 }) => {
   const [open, setOpen] = useState(false);
   const compareOn = !!compareValue;
 
   const hasActiveFilter = useMemo(() => {
-    return !!(value?.from || value?.to || (value?.wave && value.wave !== 'all') || Object.values(value?.segments || {}).some(v => (v || []).length));
+    return !!(value?.from || value?.to || Object.values(value?.segments || {}).some(v => (v || []).length));
   }, [value]);
 
   // Only render fields that actually have ≥1 value collected from responses.
+  // Studies with 0 responses (or with `segments_to_capture: []`) get an empty
+  // state message instead of empty section headers.
   const segFieldsWithData = useMemo(() => {
     const out = [];
     for (const [k, v] of Object.entries(segmentsAvailable || {})) {
@@ -39,11 +41,10 @@ export const BeFilterBar = ({
   );
 
   const applyPreset = (days) => {
-    if (!days) return onChange({ ...(value || {}), from: '', to: '', segments: value?.segments || {} });
+    if (!days) return onChange({ from: '', to: '', segments: value?.segments || {} });
     const now = new Date();
     const from = new Date(now.getTime() - days * 86400 * 1000);
     onChange({
-      ...(value || {}),
       from: from.toISOString(),
       to: now.toISOString(),
       segments: value?.segments || {},
@@ -74,12 +75,12 @@ export const BeFilterBar = ({
   };
 
   const reset = () => {
-    onChange({ from: '', to: '', wave: 'all', segments: {} });
+    onChange({ from: '', to: '', segments: {} });
     if (compareOn) onCompareChange(null);
   };
 
   return (
-    <div className={`be-filter-bar ${open ? 'is-open' : ''}`} data-testid="be-filter-bar">
+    <div className="be-filter-bar" data-testid="be-filter-bar">
       <div className="be-filter-summary" onClick={() => setOpen(!open)}>
         <div className="be-filter-summary-left">
           <span className="be-filter-icon">⌕</span>
@@ -123,7 +124,7 @@ export const BeFilterBar = ({
                      applyPreset={applyPreset} isoToDateInput={isoToDateInput}
                      segFields={segFieldsWithData} segmentsAvailable={segmentsAvailable}
                      totalSegmentValues={totalSegmentValues}
-                     toggleSeg={toggleSeg} mode={mode} testidPrefix="be-filter-a"/>
+                     toggleSeg={toggleSeg} testidPrefix="be-filter-a"/>
 
           <div className="be-filter-divider"/>
 
@@ -136,9 +137,7 @@ export const BeFilterBar = ({
                          ? { from: '', to: '', segments: {} }
                          : null)}/>
                 <span className="be-mono be-tiny" style={{ letterSpacing: '0.12em' }}>
-                  {mode === 'conjoint'
-                    ? 'COMPARE WAVES — เปรียบเทียบช่วงเวลา/กลุ่ม Wave A vs Wave B'
-                    : 'COMPARE WAVES — เปรียบเทียบ Wave A vs Wave B (สำหรับ tracking brand health)'}
+                  COMPARE WAVES — เปรียบเทียบ Wave A vs Wave B (สำหรับ tracking health)
                 </span>
               </label>
             </div>
@@ -171,15 +170,14 @@ export const BeFilterBar = ({
                            segments: { ...(compareValue?.segments || {}), [field]: next },
                          });
                        }}
-                       mode={mode}
                        testidPrefix="be-filter-b"/>
           )}
 
           {!isShowcase && hasActiveFilter && (
             <div className="be-filter-ai-hint" data-testid="be-filter-ai-hint">
-              {mode === 'conjoint'
-                ? '💡 ตัวกรองนี้มีผลกับ Overview, ตารางผลลัพธ์ และ Segment Compare ส่วน AI / NCA / fsQCA / Thesis ยังอ้างอิงข้อมูลผู้ตอบทั้งหมด'
-                : '💡 ตัวเลขด้านบนคำนวณเฉพาะชุดข้อมูลที่กรองแล้ว — กดปุ่ม "Run AI analysis" ด้านบนเพื่อให้ AI วิเคราะห์เฉพาะ slice นี้'}
+              💡 AI insights (themes / identity-image / master insights) ที่แสดงอยู่ตอนนี้คำนวณจากชุดข้อมูลนี้
+              — กดปุ่ม <strong>"Run AI for this filter"</strong> ที่ topbar เพื่อให้ AI วิเคราะห์เฉพาะ slice นี้
+              (ผลถูก cache ตาม filter signature)
             </div>
           )}
         </div>
@@ -189,27 +187,12 @@ export const BeFilterBar = ({
 };
 
 const SEGMENT_LABELS = {
-  age: 'อายุ',
-  gender: 'เพศ',
-  region: 'ภูมิภาค',
-  occupation: 'อาชีพ',
-  education: 'การศึกษา',
-  income: 'รายได้/เดือน',
-  usage_frequency: 'ความถี่การใช้',
-};
-
-const VALUE_LABELS = {
-  female: 'หญิง', male: 'ชาย', nonbinary: 'อื่นๆ', other: 'อื่นๆ', prefer_not_to_say: 'ไม่ระบุ',
-  bangkok: 'กรุงเทพฯ', central: 'กลาง', north: 'เหนือ', northeast: 'อีสาน', south: 'ใต้', east: 'ตะวันออก',
-  student: 'นักศึกษา', employee: 'พนักงานบริษัท', freelancer: 'ฟรีแลนซ์', business_owner: 'เจ้าของกิจการ',
-  employed: 'ทำงานประจำ', self_employed: 'ธุรกิจส่วนตัว/ฟรีแลนซ์', unemployed: 'ว่างงาน/อื่นๆ',
-  high_school: 'ม.ปลาย/ปวช.', bachelor: 'ปริญญาตรี', master: 'ปริญญาโท', doctorate: 'ปริญญาเอก',
-  daily: 'ทุกวัน', weekly: 'รายสัปดาห์', monthly: 'รายเดือน', rarely: 'นานๆ ครั้ง', never: 'ไม่เคย',
+  age: 'อายุ', gender: 'เพศ', region: 'ภูมิภาค', usage_frequency: 'ความถี่การใช้',
 };
 
 const WaveBlock = ({ label, value, setRange, applyPreset, isoToDateInput,
                     segFields, segmentsAvailable, totalSegmentValues = 0,
-                    toggleSeg, mode = 'brand', testidPrefix }) => (
+                    toggleSeg, testidPrefix }) => (
   <div className="be-filter-wave" data-testid={testidPrefix}>
     <div className="be-mono be-tiny be-filter-wave-label">{label}</div>
 
@@ -247,10 +230,7 @@ const WaveBlock = ({ label, value, setRange, applyPreset, isoToDateInput,
               <strong>ยังไม่มี segment data ให้กรอง</strong>
               <p>ตอนนี้ยังไม่มี responses ที่มีข้อมูลส่วนบุคคล (อายุ / เพศ / ภูมิภาค ฯลฯ)
                 — เมื่อมีคนตอบและเลือก demographic แล้ว ตัวเลือกจะปรากฏที่นี่อัตโนมัติ
-                <br/>
-                {mode === 'conjoint'
-                  ? 'หรือเปิดเลือกข้อมูลผู้ตอบที่หน้า Design ก่อนเปิดรับคำตอบ'
-                  : 'หรือถ้า study นี้ไม่ได้ตั้งค่าเก็บ segment ใน Wizard ขั้นตอนที่ 3 (กลุ่มผู้ตอบ) → กลับไปแก้ study เพื่อเปิด'}</p>
+                <br/>หรือถ้า study นี้ไม่ได้ตั้งค่าเก็บ segment ใน Wizard step 2 → กลับไปแก้ study เพื่อเปิด</p>
             </>
           ) : (
             <strong>ไม่มี segment data ใหม่ในช่วงเวลานี้</strong>
@@ -272,7 +252,7 @@ const WaveBlock = ({ label, value, setRange, applyPreset, isoToDateInput,
                           data-testid={`${testidPrefix}-seg-${field}-${opt}`}
                           onClick={() => toggleSeg(field, opt)}
                           className={`be-filter-chip ${sel.includes(opt) ? 'on' : ''}`}>
-                    {VALUE_LABELS[opt] || opt}
+                    {opt}
                   </button>
                 ))}
                 {opts.length === 1 && (

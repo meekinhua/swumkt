@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { BeTopbar, Icon } from '@/pages/brand-equity/be-components';
+import { BeTopbar, Icon, HUB_CRUMB } from '@/pages/brand-equity/be-components';
 import '@/pages/brand-equity/brand-equity-styles.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -38,56 +38,7 @@ import {
   RotateCcw,
   XCircle
 } from 'lucide-react';
-
-const CONJOINT_TEMPLATES = [
-  {
-    key: 'coffee_sub',
-    badge: 'Business · F&B / Subscription',
-    name: 'แพ็กเกจกาแฟรายเดือน (Subscription)',
-    description: 'ศึกษาการตั้งราคา จำนวนแก้ว และสิทธิ์ส่งฟรีสำหรับสมาชิกรายเดือน',
-    product_category: 'F&B / Subscription',
-    attributes: [
-      { id: 'attr_price', name: 'ราคาแพ็กเกจต่อเดือน', description: 'ใส่ราคาคงที่เพื่อดูความไวต่อราคา', order: 0,
-        levels: [{ id: 'p1', value: '299 บาท', description: '' }, { id: 'p2', value: '499 บาท', description: '' }, { id: 'p3', value: '699 บาท', description: '' }] },
-      { id: 'attr_cups', name: 'จำนวนแก้วที่รับได้', description: '', order: 1,
-        levels: [{ id: 'c1', value: '5 แก้ว/เดือน', description: '' }, { id: 'c2', value: '10 แก้ว/เดือน', description: '' }, { id: 'c3', value: '15 แก้ว/เดือน', description: '' }] },
-      { id: 'attr_perk', name: 'สิทธิประโยชน์เสริม', description: '', order: 2,
-        levels: [{ id: 'k1', value: 'ส่งฟรีเฉพาะสาขาใกล้บ้าน', description: '' }, { id: 'k2', value: 'ฟรีอัปเกรดนมทางเลือก', description: '' }, { id: 'k3', value: 'ซื้อเพิ่มลด 15%', description: '' }] },
-    ],
-  },
-  {
-    key: 'saas_plan',
-    badge: 'Business · SaaS / Software',
-    name: 'แพ็กเกจซอฟต์แวร์ (SaaS Pricing)',
-    description: 'เปรียบเทียบระดับราคา โควตาผู้ใช้ และฟีเจอร์ AI เพื่อจัดแพ็กเกจขาย',
-    product_category: 'SaaS / Technology',
-    attributes: [
-      { id: 'attr_tier_price', name: 'ค่าบริการรายเดือน', description: '', order: 0,
-        levels: [{ id: 'sp1', value: '490 บาท/เดือน', description: '' }, { id: 'sp2', value: '990 บาท/เดือน', description: '' }, { id: 'sp3', value: '1,990 บาท/เดือน', description: '' }] },
-      { id: 'attr_seats', name: 'จำนวนผู้ใช้งานในทีม', description: '', order: 1,
-        levels: [{ id: 'ss1', value: '1 คน', description: '' }, { id: 'ss2', value: '5 คน', description: '' }, { id: 'ss3', value: 'ไม่จำกัด', description: '' }] },
-      { id: 'attr_support', name: 'การซัพพอร์ตและ AI', description: '', order: 2,
-        levels: [{ id: 'su1', value: 'อีเมลมาตรฐาน', description: '' }, { id: 'su2', value: 'Live Chat + AI ผู้ช่วย', description: '' }, { id: 'su3', value: 'ผู้ดูแลส่วนตัว 24 ชม.', description: '' }] },
-    ],
-  },
-  {
-    key: 'consumer_gadget',
-    badge: 'Academic / Product Research',
-    name: 'หูฟังไร้สาย (Consumer Electronics)',
-    description: 'ตัวอย่างงานวิจัยมาตรฐาน 4 คุณลักษณะ สำหรับทดสอบ Choice-Based Conjoint',
-    product_category: 'Consumer Electronics',
-    attributes: [
-      { id: 'attr_brand', name: 'แบรนด์', description: '', order: 0,
-        levels: [{ id: 'b1', value: 'แบรนด์ดังระดับโลก', description: '' }, { id: 'b2', value: 'แบรนด์ไทยรุ่นใหม่', description: '' }, { id: 'b3', value: 'ไม่มียี่ห้อ/OEM', description: '' }] },
-      { id: 'attr_battery', name: 'แบตเตอรี่รวมเคส', description: '', order: 1,
-        levels: [{ id: 'bat1', value: '20 ชั่วโมง', description: '' }, { id: 'bat2', value: '35 ชั่วโมง', description: '' }, { id: 'bat3', value: '50 ชั่วโมง', description: '' }] },
-      { id: 'attr_anc', name: 'ระบบตัดเสียงรบกวน (ANC)', description: '', order: 2,
-        levels: [{ id: 'anc1', value: 'ไม่มี ANC', description: '' }, { id: 'anc2', value: 'ANC มาตรฐาน', description: '' }, { id: 'anc3', value: 'ANC ปรับอัตโนมัติ', description: '' }] },
-      { id: 'attr_gprice', name: 'ราคาจำหน่าย', description: '', order: 3,
-        levels: [{ id: 'gp1', value: '1,490 บาท', description: '' }, { id: 'gp2', value: '2,490 บาท', description: '' }, { id: 'gp3', value: '3,990 บาท', description: '' }] },
-    ],
-  },
-];
+import { apiErrorText } from '@/lib/apiError';
 
 const ConjointAnalysisTool = () => {
   const navigate = useNavigate();
@@ -115,14 +66,10 @@ const ConjointAnalysisTool = () => {
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   const [studyToPurge, setStudyToPurge] = useState(null);
 
-  const [creatingStudy, setCreatingStudy] = useState(false);
-
   useEffect(() => {
     if (user && token) {
       loadStudies();
-      loadTrashedStudies();
     }
-    /* eslint-disable-next-line */
   }, [user, token, statusFilter]);
 
   useEffect(() => {
@@ -156,7 +103,7 @@ const ConjointAnalysisTool = () => {
       loadTrashedStudies();
     } catch (error) {
       console.error('Error restoring study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถกู้คืนได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถกู้คืนได้'));
     } finally {
       setRestoringId(null);
     }
@@ -175,7 +122,7 @@ const ConjointAnalysisTool = () => {
       loadTrashedStudies();
     } catch (error) {
       console.error('Error purging study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบถาวรได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบถาวรได้'));
     } finally {
       setPurgingId(null);
     }
@@ -202,7 +149,7 @@ const ConjointAnalysisTool = () => {
       toast.error('กรุณากรอกชื่อการศึกษา');
       return;
     }
-    setCreatingStudy(true);
+
     try {
       const response = await axios.post(
         `${API}/conjoint/studies`,
@@ -213,42 +160,12 @@ const ConjointAnalysisTool = () => {
       toast.success('สร้างการศึกษาใหม่สำเร็จ!');
       setShowCreateModal(false);
       setNewStudy({ title: '', description: '', product_category: '', demographics_to_capture: ['age', 'gender', 'occupation'] });
+      
+      // Navigate to qualitative phase
       navigate(`/research/conjoint/${response.data.study_id}/qualitative`);
     } catch (error) {
       console.error('Error creating study:', error);
       toast.error('ไม่สามารถสร้างการศึกษาได้');
-    } finally {
-      setCreatingStudy(false);
-    }
-  };
-
-  const handleCreateFromTemplate = async (tpl) => {
-    setCreatingStudy(true);
-    try {
-      const res = await axios.post(
-        `${API}/conjoint/studies`,
-        {
-          title: tpl.name,
-          description: tpl.description,
-          product_category: tpl.product_category,
-          demographics_to_capture: ['age', 'gender', 'occupation'],
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const sid = res.data.study_id;
-      await axios.put(
-        `${API}/conjoint/studies/${sid}/attributes`,
-        { study_id: sid, attributes: tpl.attributes },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(`สร้างจากเทมเพลต "${tpl.name}" พร้อม ${tpl.attributes.length} คุณลักษณะแล้ว!`);
-      setShowCreateModal(false);
-      navigate(`/research/conjoint/${sid}/design`);
-    } catch (error) {
-      console.error('Error creating from template:', error);
-      toast.error('ไม่สามารถสร้างจากเทมเพลตได้');
-    } finally {
-      setCreatingStudy(false);
     }
   };
 
@@ -264,7 +181,7 @@ const ConjointAnalysisTool = () => {
       loadStudies(); // Reload list
     } catch (error) {
       console.error('Error deleting study:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบการศึกษาได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบการศึกษาได้'));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -284,7 +201,7 @@ const ConjointAnalysisTool = () => {
       loadStudies();
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error(error.response?.data?.detail || 'ไม่สามารถอัปเดตสถานะได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถอัปเดตสถานะได้'));
     }
   };
 
@@ -333,6 +250,18 @@ const ConjointAnalysisTool = () => {
     setShowStatusHistoryModal(true);
   };
 
+  // One plain sentence on what to do next with a study, from what the list already knows.
+  const nextStepText = (study) => {
+    const n = study.respondent_count || 0;
+    if (study.status === 'draft') return 'ไปที่ “แก้ไข” เพื่อกำหนด attribute และสร้างแผนการทดลอง แล้วเปิดเก็บข้อมูล';
+    if (study.status === 'active') {
+      if (n < 30) return `กำลังเก็บข้อมูล (${n} คน) — ต้องมีอย่างน้อย 30 คนจึงจะวิเคราะห์ได้ แชร์ลิงก์แบบสอบถามเพิ่ม`;
+      return `มีผู้ตอบ ${n} คน — ดูรายงานได้ และเก็บเพิ่มต่อได้ (ตรวจ “ข้อมูลพอหรือยัง” ในรายงาน)`;
+    }
+    if (study.status === 'completed') return 'ปิดเก็บข้อมูลแล้ว — ดูรายงาน ดาวน์โหลดข้อมูล หรือ Export วิทยานิพนธ์';
+    return 'เก็บเข้าคลังแล้ว — ดูรายงานย้อนหลังได้';
+  };
+
   const handleStudyAction = (study, action) => {
     if (action === 'edit') {
       navigate(`/research/conjoint/${study.id}/design`);
@@ -353,9 +282,7 @@ const ConjointAnalysisTool = () => {
     <div className="be-root">
       <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
                 subtitle="CONJOINT ANALYSIS" active="conjoint"
-                right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/dashboard')}>
-                         <Icon name="chevronL" size={10}/>Dashboard
-                       </button>}/>
+                crumbs={[HUB_CRUMB, { label: 'Conjoint Analysis' }]}/>
 
       <div className="be-conjoint-page">
         {/* Header */}
@@ -369,11 +296,8 @@ const ConjointAnalysisTool = () => {
               <h1 className="be-h1" style={{ fontSize: 38, marginBottom: 6 }}>
                 Conjoint Analysis
               </h1>
-              <p className="be-muted" style={{ fontSize: 15, maxWidth: 680 }}>
-                ช่วยหาว่าลูกค้าให้คุณค่ากับคุณสมบัติไหนมากที่สุด และลองจำลองส่วนแบ่งตลาดเมื่อปรับสเปคหรือราคา
-                <span className="block text-xs text-gray-500 mt-1">
-                  วิธีที่ใช้: Full-Profile Choice-Based Conjoint (CBC · forced-choice main effects) เหมาะทั้งงานตั้งราคาผลิตภัณฑ์และงานวิจัยเชิงวิชาการ
-                </span>
+              <p className="be-muted" style={{ fontSize: 15, maxWidth: 640 }}>
+                วิเคราะห์ความสำคัญของคุณสมบัติผลิตภัณฑ์ และจำลองส่วนแบ่งตลาด
               </p>
             </div>
             <button
@@ -385,73 +309,40 @@ const ConjointAnalysisTool = () => {
           </div>
         </div>
 
-        {/* Starter Templates & Quick Guide */}
-        <details className="mb-6 bg-slate-50 border border-slate-200 rounded-lg p-4">
-          <summary className="cursor-pointer font-bold text-sm text-gray-800 flex items-center justify-between">
-            <span>💡 มือใหม่? ดูวิธีเริ่มต้น 4 ขั้นตอน (สำหรับทั้งงานธุรกิจและงานวิจัย) หรือเลือกใช้เทมเพลตเริ่มต้น</span>
-          </summary>
-          <div className="mt-3 grid md:grid-cols-2 gap-4 text-xs text-gray-700 leading-relaxed">
-            <div className="bg-white p-3 rounded border border-gray-200">
-              <strong className="text-blue-800 block mb-1">สำหรับใช้ทำงาน / ตั้งราคาสินค้า</strong>
-              1) สร้างจากเทมเพลตหรือตั้ง 3–5 คุณลักษณะ (เช่น ราคา, ฟีเจอร์, ขนาด)<br/>
-              2) กดสร้าง Choice Sets แล้วพรีวิวดูหน้าตาแบบสอบถามจริง<br/>
-              3) แชร์ลิงก์เก็บคำตอบ แล้วดูผล &ldquo;สรุปอ่านง่าย&rdquo; + ลองจำลองส่วนแบ่งตลาด (Simulator)
-            </div>
-            <div className="bg-white p-3 rounded border border-gray-200">
-              <strong className="text-purple-800 block mb-1">สำหรับทำวิจัย / วิทยานิพนธ์ (Academic)</strong>
-              1) รักษาจำนวนระดับ (Levels) ต่อ Attribute ให้ใกล้เคียงกันเพื่อลด Number-of-Levels Effect<br/>
-              2) ใช้ตัวคำนวณขนาดตัวอย่าง (Johnson &amp; Orme) หน้า Design<br/>
-              3) วิเคราะห์ด้วย MNL / Mixed Logit / Empirical Bayes พร้อมส่งออก CSV (Long-format) และเอกสารผล
-            </div>
-          </div>
-        </details>
-
-        {/* Info Cards — 4-step overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 sm:mb-8">
-          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-500 rounded-lg flex-shrink-0">
-                <FileText className="w-4 h-4 text-white" />
+        {/* Info Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-blue-500 rounded-lg flex-shrink-0">
+                <FileText className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-blue-900 mb-1 text-sm">1. Qualitative (ไม่บังคับ)</h3>
-                <p className="text-xs text-blue-700">สกัดคุณลักษณะจากบทสัมภาษณ์ด้วย AI</p>
+                <h3 className="font-bold text-blue-900 mb-1 text-sm sm:text-base">Phase 1: Qualitative</h3>
+                <p className="text-xs sm:text-sm text-blue-700">สรุป Attributes และ Levels จากข้อมูลสัมภาษณ์ — ไม่บังคับ ใช้ AI ของคุณเองได้ หรือข้ามไปกรอกเอง</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-purple-500 rounded-lg flex-shrink-0">
-                <Settings className="w-4 h-4 text-white" />
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-purple-500 rounded-lg flex-shrink-0">
+                <Settings className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-purple-900 mb-1 text-sm">2. Design &amp; Preview</h3>
-                <p className="text-xs text-purple-700">ตั้ง Attributes · สร้าง D-Optimal Choice Sets</p>
+                <h3 className="font-bold text-purple-900 mb-1 text-sm sm:text-base">Phase 2: Design</h3>
+                <p className="text-xs sm:text-sm text-purple-700">ออกแบบชุดคำถามแบบ D-efficient พร้อมคำแนะนำจำนวนคำถามและผู้ตอบ · รูปภาพไม่บังคับ</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-500 rounded-lg flex-shrink-0">
-                <Users className="w-4 h-4 text-white" />
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-green-500 rounded-lg flex-shrink-0">
+                <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-amber-900 mb-1 text-sm">3. เปิดรับคำตอบ</h3>
-                <p className="text-xs text-amber-800">แชร์ลิงก์เก็บกลุ่มตัวอย่าง (ขั้นต่ำ 30 คน)</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-green-500 rounded-lg flex-shrink-0">
-                <BarChart3 className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-green-900 mb-1 text-sm">4. วิเคราะห์และจำลอง</h3>
-                <p className="text-xs text-green-700">Part-Worth Utilities + What-If Simulator</p>
+                <h3 className="font-bold text-green-900 mb-1 text-sm sm:text-base">Phase 3: Analysis</h3>
+                <p className="text-xs sm:text-sm text-green-700">ความสำคัญ-ค่า utility พร้อมช่วงเชื่อมั่น · ราคาที่ยอมจ่าย · จำลองตลาด · ส่งออกข้อมูลไปประมาณซ้ำใน R/Stata</p>
               </div>
             </div>
           </Card>
@@ -543,46 +434,20 @@ const ConjointAnalysisTool = () => {
           </div>
 
           {studies.length === 0 ? (
-            <div className="py-10 px-4">
-              <div className="text-center mb-6">
-                <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-700 font-bold mb-1">
-                  {statusFilter === 'all' ? 'ยังไม่มีการศึกษา — เริ่มจากศูนย์หรือเลือกเทมเพลตด้านล่างได้ทันที' : 'ไม่พบการศึกษาที่มีสถานะนี้'}
-                </p>
-                {statusFilter === 'all' && (
-                  <Button
-                    onClick={() => setShowCreateModal(true)}
-                    className="mt-3 bg-[#00A9CE] hover:bg-[#007B9A] text-white"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    สร้างการศึกษาเอง
-                  </Button>
-                )}
-              </div>
+            <div className="text-center py-12">
+              <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 font-semibold mb-4">
+                {statusFilter === 'all' ? 'ยังไม่มีการศึกษา' : 'ไม่พบการศึกษาที่มีสถานะนี้'}
+              </p>
               {statusFilter === 'all' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-                  {CONJOINT_TEMPLATES.map(tpl => (
-                    <div key={tpl.key} className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex flex-col justify-between">
-                      <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                          {tpl.badge}
-                        </span>
-                        <h4 className="font-bold text-sm text-gray-900 mt-2">{tpl.name}</h4>
-                        <p className="text-xs text-gray-600 mt-1">{tpl.description}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={creatingStudy}
-                        onClick={() => handleCreateFromTemplate(tpl)}
-                        className="mt-3 w-full border-[#00A9CE] text-[#007B9A]"
-                        data-testid={`conjoint-tpl-${tpl.key}`}
-                      >
-                        ใช้เทมเพลตนี้ →
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  variant="outline"
+                  className="border-2 border-[#00A9CE] text-[#005A73] hover:bg-[#00A9CE]/10"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  สร้างการศึกษาแรก
+                </Button>
               )}
             </div>
           ) : (
@@ -623,14 +488,19 @@ const ConjointAnalysisTool = () => {
                           <span>{new Date(study.created_at).toLocaleDateString('th-TH')}</span>
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                          <span>{study.respondent_count || 0} ผู้ตอบ</span>
-                        </div>
+                        {(study.respondent_count > 0 || study.respondent_count === undefined) && (
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span>{study.respondent_count || 0} ผู้ตอบ</span>
+                          </div>
+                        )}
                       </div>
+                      <p className="mt-2 text-xs text-gray-600" data-testid={`conjoint-next-step-${study.id}`}>
+                        <b>ขั้นต่อไป:</b> {nextStepText(study)}
+                      </p>
                     </div>
 
-                    {/* Action Menu — status-aware CTA labels */}
+                    {/* Action Menu */}
                     <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
                       <Button
                         onClick={() => handleStudyAction(study, 'edit')}
@@ -639,23 +509,16 @@ const ConjointAnalysisTool = () => {
                         className="w-full sm:w-auto border-2 border-blue-500 text-blue-700 hover:bg-blue-50 text-xs sm:text-sm"
                       >
                         <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                        {study.status === 'draft' ? 'ออกแบบต่อ' : 'จัดการ / แชร์ลิงก์'}
+                        แก้ไข
                       </Button>
                       
                       <Button
                         onClick={() => handleStudyAction(study, 'view')}
                         size="sm"
-                        variant={study.status === 'draft' && (study.respondent_count || 0) === 0 ? 'outline' : 'default'}
-                        className={`w-full sm:w-auto text-xs sm:text-sm ${
-                          study.status === 'draft' && (study.respondent_count || 0) === 0
-                            ? 'border-gray-300 text-gray-600'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
+                        className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
                       >
                         <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                        {(study.respondent_count || 0) < 30
-                          ? `ผลวิเคราะห์ (${study.respondent_count || 0}/30)`
-                          : 'ดูรายงาน'}
+                        ดูรายงาน
                       </Button>
 
                       <DropdownMenu>
@@ -849,26 +712,8 @@ const ConjointAnalysisTool = () => {
       {/* Create Study Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-2xl w-full p-6 bg-white max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-black text-gray-900 mb-3">สร้างการศึกษา Conjoint Analysis ใหม่</h2>
-            <div className="mb-5 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="text-xs font-bold text-blue-900 mb-2">⚡ เริ่มเร็วจากเทมเพลต (พร้อม Attributes &amp; Levels ทันที):</div>
-              <div className="grid sm:grid-cols-3 gap-2">
-                {CONJOINT_TEMPLATES.map(tpl => (
-                  <button
-                    key={tpl.key}
-                    type="button"
-                    disabled={creatingStudy}
-                    onClick={() => handleCreateFromTemplate(tpl)}
-                    className="text-left p-2 bg-white border border-blue-200 hover:border-blue-500 rounded text-xs transition"
-                    data-testid={`conjoint-modal-tpl-${tpl.key}`}
-                  >
-                    <div className="font-bold text-gray-900">{tpl.name}</div>
-                    <div className="text-[11px] text-gray-500">{tpl.attributes.length} attributes</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+          <Card className="max-w-2xl w-full p-6 bg-white">
+            <h2 className="text-2xl font-black text-gray-900 mb-6">สร้างการศึกษา Conjoint Analysis ใหม่</h2>
 
             <div className="space-y-4 mb-6">
               <div>

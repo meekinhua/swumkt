@@ -11,6 +11,7 @@ import { ProvenanceBanner, ProvenanceLine, QualitativeAuditCard,
          SaturationCard, ReliabilityCard } from './JourneyProvenance';
 import JourneyBackCoding from './JourneyBackCoding';
 import { copyToClipboard } from '@/lib/clipboard';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -66,7 +67,7 @@ const JourneyDashboardPage = () => {
         setData(a.data);
           setCodebook(cb.data?.active || null);
       } catch (e) {
-        setError(e?.response?.data?.detail || 'โหลดผลวิเคราะห์ไม่ได้');
+        setError(apiErrorText(e, 'โหลดผลวิเคราะห์ไม่ได้'));
       }
       setLoading(false);
     })();
@@ -94,7 +95,7 @@ const JourneyDashboardPage = () => {
 
   return (
     <div className="be-root jy-root">
-      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" />
+      <BeTopbar subtitle="CUSTOMER JOURNEY" active="customer_journey" crumbs={[{ label: 'เครื่องมือวิจัย', to: '/market-research' }, { label: 'Customer Journey', to: '/market-research/customer-journey' }, { label: 'ผลการศึกษา' }]} />
       <div className="be-page" data-testid="journey-dashboard">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
                       gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>

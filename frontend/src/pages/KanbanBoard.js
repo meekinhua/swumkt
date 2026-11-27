@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
+import { apiErrorText } from '@/lib/apiError';
 
 const KanbanBoard = () => {
   const { projectId } = useParams();
@@ -204,7 +205,7 @@ const KanbanBoard = () => {
       fetchProject();
       toast.success('ลบ Column สำเร็จ');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบ Column ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบ Column ได้'));
     }
   };
 
@@ -602,7 +603,7 @@ const KanbanBoard = () => {
       setMemberSearch('');
       setAvailableUsers([]);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'ไม่สามารถเพิ่มสมาชิกได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถเพิ่มสมาชิกได้'));
     }
   };
 
@@ -616,7 +617,7 @@ const KanbanBoard = () => {
       toast.success('อัพเดท Role สำเร็จ!');
       fetchMembers();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'ไม่สามารถอัพเดท Role ได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถอัพเดท Role ได้'));
     }
   };
 
@@ -631,7 +632,7 @@ const KanbanBoard = () => {
       toast.success('ลบสมาชิกสำเร็จ');
       fetchMembers();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'ไม่สามารถลบสมาชิกได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถลบสมาชิกได้'));
     }
   };
 
@@ -727,7 +728,7 @@ const KanbanBoard = () => {
       setAssigneeResults([]);
       toast.success('เพิ่มผู้รับผิดชอบสำเร็จ!');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'ไม่สามารถเพิ่มผู้รับผิดชอบได้');
+      toast.error(apiErrorText(error, 'ไม่สามารถเพิ่มผู้รับผิดชอบได้'));
     }
   };
 

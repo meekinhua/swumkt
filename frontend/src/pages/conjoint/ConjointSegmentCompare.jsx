@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid
 } from 'recharts';
 import { Loader2, AlertCircle, GitCompare } from 'lucide-react';
+import { apiErrorText } from '@/lib/apiError';
 
 /**
  * Wave A vs Wave B segment comparison panel.
@@ -35,23 +36,12 @@ const buildQs = (f) => {
   return parts.length ? `&${parts.join('&')}` : '';
 };
 
-const FIELD_TH = {
-  age: 'อายุ', gender: 'เพศ', income: 'รายได้',
-  education: 'การศึกษา', occupation: 'อาชีพ', region: 'ภูมิภาค', usage_frequency: 'ความถี่การใช้',
-};
-const VAL_TH = {
-  female: 'หญิง', male: 'ชาย', nonbinary: 'อื่นๆ', other: 'อื่นๆ', prefer_not_to_say: 'ไม่ระบุ',
-  employed: 'ทำงานประจำ', self_employed: 'ธุรกิจส่วนตัว', student: 'นักศึกษา', unemployed: 'ว่างงาน',
-  high_school: 'ม.ปลาย/ปวช.', bachelor: 'ปริญญาตรี', master: 'ปริญญาโท', doctorate: 'ปริญญาเอก',
-  bangkok: 'กรุงเทพฯ', central: 'กลาง', north: 'เหนือ', northeast: 'อีสาน', south: 'ใต้', east: 'ตะวันออก',
-};
-
 const summariseFilter = (f) => {
   if (!f) return '—';
   const segs = Object.entries(f.segments || {})
     .filter(([, vs]) => (vs || []).length)
-    .map(([k, vs]) => `${FIELD_TH[k] || k}: ${vs.map(v => VAL_TH[v] || v).join('/')}`);
-  const time = f.from || f.to ? `${f.from ? f.from.slice(0, 10) : '∞'}…${f.to ? f.to.slice(0, 10) : '∞'}` : null;
+    .map(([k, vs]) => `${k}: ${vs.join('/')}`);
+  const time = f.from || f.to ? `${f.from || '∞'}…${f.to || '∞'}` : null;
   const bits = [...(time ? [time] : []), ...segs];
   return bits.length ? bits.join(' · ') : 'ทั้งหมด (ไม่กรอง)';
 };
@@ -70,9 +60,9 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
   const keyB = useMemo(() => JSON.stringify(filterB || {}), [filterB]);
 
   useEffect(() => {
-    if (!studyId) return;
+    if (!studyId || !token) return;
     let cancelled = false;
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const headers = { Authorization: `Bearer ${token}` };
 
     setLoadingA(true); setLoadingB(true);
     setResultA(null);  setResultB(null);
@@ -85,7 +75,7 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
         if (r.data?.status === 'success') setResultA({ ...r.data.results, _n: r.data.respondent_count });
         else setErrorA(r.data?.message || 'ข้อมูลไม่พอ');
       }})
-      .catch(e => { if (!cancelled) setErrorA(e.response?.data?.detail || e.message); })
+      .catch(e => { if (!cancelled) setErrorA(apiErrorText(e, e.message)); })
       .finally(() => { if (!cancelled) setLoadingA(false); });
 
     axios.get(url(filterB), { headers })
@@ -93,7 +83,7 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
         if (r.data?.status === 'success') setResultB({ ...r.data.results, _n: r.data.respondent_count });
         else setErrorB(r.data?.message || 'ข้อมูลไม่พอ');
       }})
-      .catch(e => { if (!cancelled) setErrorB(e.response?.data?.detail || e.message); })
+      .catch(e => { if (!cancelled) setErrorB(apiErrorText(e, e.message)); })
       .finally(() => { if (!cancelled) setLoadingB(false); });
 
     return () => { cancelled = true; };
@@ -182,7 +172,7 @@ const ConjointSegmentCompare = ({ studyId, study, token, filterA, filterB }) => 
               <div className="text-sm text-gray-800 font-medium">{summariseFilter(f)}</div>
               {!loading && !err && r && (
                 <div className="mt-3 text-[11px] text-gray-600 font-mono">
-                  McFadden ρ² = {r.pseudo_r_squared != null ? Number(r.pseudo_r_squared).toFixed(3) : '—'}
+                  Pseudo R² = {r.pseudo_r_squared != null ? (r.pseudo_r_squared * 100).toFixed(2) + '%' : '—'}
                   {r.log_likelihood != null && <> · LL = {r.log_likelihood.toFixed(2)}</>}
                 </div>
               )}

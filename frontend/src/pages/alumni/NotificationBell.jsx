@@ -50,11 +50,20 @@ const NotificationBell = ({ token }) => {
   const handleClickItem = (n) => {
     if (!n.read) handleMarkRead(n.id);
     // Route by kind
-    if (n.kind === 'mark_request' || n.kind === 'relation_confirmed') {
+    // Claims to answer (incl. "confirm the person who joined via your invite") live in the
+    // tree's "ยืนยัน" tab; there is no separate invites page.
+    if (['ghost_claim', 'mark_request', 'invite_accepted'].includes(n.kind)) {
+      navigate('/alumni/tree?tab=confirm');
+    } else if (n.kind === 'meetup') {
+      navigate('/alumni/tree?tab=meetup');
+    } else if (['relation_confirmed', 'line_new_level', 'ghost_claim_approved', 'ghost_claim_rejected',
+      'chain_nudge', 'welcome'].includes(n.kind)) {
       navigate('/alumni/tree');
-    } else if (n.kind === 'invite_accepted') {
-      navigate('/alumni/invites');
-    } else if (n.kind === 'badge' || n.kind === 'level_up' || n.kind === 'streak') {
+    } else if (n.kind === 'post_reaction' || n.kind === 'post_comment') {
+      navigate('/alumni/feed');
+    } else if (n.kind === 'job_interest') {
+      navigate('/alumni/jobs');
+    } else if (n.kind === 'badge' || n.kind === 'level_up' || n.kind === 'streak' || n.kind === 'review_received') {
       navigate('/alumni/profile');
     }
     setOpen(false);
@@ -73,7 +82,7 @@ const NotificationBell = ({ token }) => {
 
   return (
     <div style={{ position: 'relative' }}>
-      <button className="al-iconbtn" title="แจ้งเตือน" onClick={() => setOpen(!open)} data-testid="notif-bell-btn">
+      <button className="al-iconbtn" title="แจ้งเตือน" aria-label={`แจ้งเตือน${unread ? ` ${unread} ใหม่` : ''}`} aria-expanded={open} onClick={() => setOpen(!open)} data-testid="notif-bell-btn">
         <Icon name="bell" />
         {unread > 0 && <span className="al-badge">{unread > 9 ? '9+' : unread}</span>}
       </button>
@@ -81,7 +90,7 @@ const NotificationBell = ({ token }) => {
         <>
           <div onClick={() => setOpen(false)} data-testid="notif-dropdown-backdrop"
             style={{ position: 'fixed', inset: 0, zIndex: 41 }} />
-          <div data-testid="notif-dropdown" role="menu" style={{
+          <div data-testid="notif-dropdown" role="menu" className="al-notif-dd" style={{
             position: 'absolute', top: '100%', right: 0, marginTop: 8,
             width: 340, maxHeight: 440, overflowY: 'auto',
             background: 'var(--al-card)', border: '1px solid var(--al-line)',
@@ -106,6 +115,9 @@ const NotificationBell = ({ token }) => {
                     background: n.read ? 'transparent' : 'var(--al-red-soft)',
                     display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
                   }}>
+                  {n.kind === 'line_new_level' && (
+                    <span className="al-tag blue" style={{ marginBottom: 6 }} data-testid={`notif-line-level-${n.id}`}>🌳 สายเราต่อถึงรุ่นใหม่แล้ว</span>
+                  )}
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
                     {n.title}
                     {!n.read && <span style={{ marginLeft: 6, width: 6, height: 6, borderRadius: '50%', background: 'var(--al-red)', display: 'inline-block' }} />}

@@ -1,22 +1,33 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { copyToClipboard } from '@/lib/clipboard';
-import ExternalAiWorkflowModal from '@/components/ExternalAiWorkflowModal';
 import './brand-equity-styles.css';
 import {
-  BeTopbar, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
+  BeTopbar, BE_CRUMBS, Icon, ScoreRing, RadarChart, HBar, Histogram, NPSBar, Matrix2x2,
   IdentityImageMap, AIInsightCard, WordCloud, PerceptualMap, BeLoading, StatusPill, DIMENSIONS,
   BrandLogo, SWU_LOGO_URL, AIProgressCard, BeWaveSelector, MigrationOrphanBanner
 } from './be-components';
 import { BeFilterBar } from './BeFilterBar';
 import { BeMethodology } from './BeMethodology';
+import {
+  useBeAiAnalysis, BeAiAnalysisPanel, BeExternalAiDialog, Provenance, CodingBadge, StaleAiNote,
+  aiStatusLabel,
+} from './BeAiAnalysis';
+import { BeCodingPanel } from './BeCoding';
+import { BeThesisExport } from './BeThesisExport';
+import { BeSummary } from './BeSummary';
+import {
+  BeDisclosure, BeReliabilityDetail, BePairedComparisons, BeSensitivity, BeDataQuality,
+  BeQualityToggle, BeItemTable, BeMethodsParagraph, BeRawExport,
+} from './BeStats';
+import { buildFilterQS as buildQS, isFilterActive, fmt1, fmt2, fmtPct, fmtCI, hash01, errText } from './beUtils';
 import { BeWeightEditor } from './BeWeightEditor';
 import { BeScoreHistory, BeUnfinishedCard } from './BeScoreHistory';
 import { BeSegmentSignificance } from './BeSegmentSignificance';
-import { getBrandHealthTier, getWeakestDimension } from '@/lib/brandHealthVerdict';
+import { getBrandHealthTier } from '@/lib/brandHealthVerdict';
 import useDocumentMeta from '@/hooks/useDocumentMeta';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -150,9 +161,20 @@ const ShowcaseHead = ({ study, score, tier, responseCount }) => {
   return null;
 };
 
+const GLOSSARY = [
+                ['t2b', 'TOP-2-BOX (T2B)', 'สัดส่วนคนที่ตอบ 2 ระดับบนสุดของมาตรวัด (เช่น 6-7 จาก 7) = "กลุ่มที่เห็นด้วยชัดเจน"'],
+                ['b2b', 'BOTTOM-2-BOX (B2B)', 'สัดส่วนคนที่ตอบ 2 ระดับล่างสุด (1-2) = "กลุ่มที่ไม่เห็นด้วยชัดเจน"'],
+                ['netq', 'NET Q-SCORE', 'T2B − B2B · บวก = คนชมมากกว่าคนติ, ลบ = คนติมากกว่าคนชม (ช่วง −100 ถึง +100)'],
+                ['sd', 'σ (SD)', 'ส่วนเบี่ยงเบนมาตรฐาน — ยิ่งสูง ความเห็นยิ่งกระจาย (คนเห็นต่างกันมาก) แม้ค่าเฉลี่ยจะเท่ากัน'],
+                ['pomp', 'คะแนน 0-100 (POMP)', '(ค่าเฉลี่ย − 1) / (สูงสุด − 1) × 100 — แปลงทุกมาตรวัดให้เทียบกันได้ ต่ำสุด = 0 สูงสุด = 100'],
+                ['ci', '95% CI', 'ช่วงที่ค่าจริงของประชากรน่าจะอยู่ · ยิ่งผู้ตอบน้อย ช่วงยิ่งกว้าง = ตัวเลขยังไม่นิ่ง'],
+                ['alpha', 'α (Cronbach\u2019s alpha)', 'วัดว่าคำถามในมิติเดียวกันวัดเรื่องเดียวกันไหม · ที่ยอมรับกันคือ ≥ 0.70'],
+                ['nps', 'NPS', '% ผู้แนะนำ (9-10) − % ผู้ไม่แนะนำ (0-6) · ช่วง −100 ถึง +100 · แสดงเป็น 0-100 ด้วยสูตร (NPS+100)/2'],
+                ['n', 'n', 'จำนวนคนที่ตอบคำถามนั้นจริง — ไม่ใช่จำนวนผู้ตอบทั้ง study เพราะบางข้อไม่บังคับตอบ'],
+              ];
+
 const BrandEquityDashboardPage = () => {
   const { user, token } = useAuth();
-  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -163,51 +185,28 @@ const BrandEquityDashboardPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [aiRunning, setAiRunning] = useState(false);
-  const [externalAiOpen, setExternalAiOpen] = useState(false);
-  const [exportingCsv, setExportingCsv] = useState(false);
-  const [viewMode, setViewMode] = useState(() => {
-    try { return localStorage.getItem('be_dash_view') || 'business'; } catch { return 'business'; }
-  });
-  const setViewModePersist = (m) => {
-    setViewMode(m);
-    try { localStorage.setItem('be_dash_view', m); } catch { /* ignore */ }
-  };
+  const [reloading, setReloading] = useState(false);
+  const [activeSegment, setActiveSegment] = useState('all');
   const [togglingShowcase, setTogglingShowcase] = useState(false);
-  const pollRef = useRef(null);
 
   // ---------- Filter state (time + segments + wave) ----------
   // wave-A is the "active" filter applied to all stats/charts/AI.
   const [filter, setFilter] = useState({ from: '', to: '', segments: {}, wave: 'all' });
+  const [excludeFlagged, setExcludeFlagged] = useState(false);
   const [compareFilter, setCompareFilter] = useState(null); // null = compare off
   const [compareData, setCompareData] = useState(null);
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
-  // Build query string from filter — empty values are skipped
-  const buildFilterQS = (f) => {
-    if (!f) return '';
-    const parts = [];
-    if (f.from) parts.push(`from=${encodeURIComponent(f.from)}`);
-    if (f.to)   parts.push(`to=${encodeURIComponent(f.to)}`);
-    if (f.wave && f.wave !== 'all') {
-      parts.push(`wave=${encodeURIComponent(f.wave)}`);
-    }
-    const segs = Object.fromEntries(
-      Object.entries(f.segments || {}).filter(([, vs]) => (vs || []).length)
-    );
-    if (Object.keys(segs).length) {
-      parts.push(`segments=${encodeURIComponent(JSON.stringify(segs))}`);
-    }
-    return parts.length ? `?${parts.join('&')}` : '';
-  };
+  // Same params the AI / export endpoints receive (no exclude_flagged: AI results
+  // are keyed by the time/segment/wave slice only).
+  const buildFilterQS = (f) => buildQS(f);
 
   // Fetch dashboard data — refetches whenever the active filter changes
   useEffect(() => {
     load();
-    return () => clearInterval(pollRef.current);
     /* eslint-disable-next-line */
-  }, [studyId, shareToken, filter.from, filter.to, filter.wave, JSON.stringify(filter.segments)]);
+  }, [studyId, shareToken, filter.from, filter.to, filter.wave, JSON.stringify(filter.segments), excludeFlagged]);
 
   // Wave compare: fetch when compareFilter set (owner only)
   useEffect(() => {
@@ -224,32 +223,35 @@ const BrandEquityDashboardPage = () => {
         );
         setCompareData(r.data);
       } catch (e) {
-        toast.error('โหลด wave comparison ไม่สำเร็จ');
+        toast.error('โหลดการเปรียบเทียบ wave ไม่สำเร็จ');
         setCompareData(null);
       }
     })();
     /* eslint-disable-next-line */
-  }, [compareFilter, filter.from, filter.to, filter.wave, JSON.stringify(filter.segments)]);
+  }, [compareFilter, filter.from, filter.to, JSON.stringify(filter.segments)]);
 
-  const load = async () => {
-    setLoading(true);
+  // `silent` = refresh in place (after an import / coding change) without blanking the page.
+  const load = async (silent) => {
+    if (silent === true || data) setReloading(true); else setLoading(true);
     setLoadError('');
     try {
-      const qs = buildFilterQS(filter);
+      const qs = buildQS(filter, [excludeFlagged ? 'exclude_flagged=true' : '']);
       if (isShowcase) {
         // PUBLIC fetch — no auth header
         const r = await axios.get(`${API}/brand-equity/showcase/${shareToken}${qs}`);
+        // Normalize the showcase payload to the same { study, aggregate, ai_cache, ready_for_dashboard }
+        // shape the rest of this component already understands.
         const sd = r.data;
         setData({
           study: {
             id: sd.id,
             share_token: sd.share_token,
             status: sd.status,
-            is_simulated: Boolean(sd.is_simulated),
-            weights: sd.weights || null,
-            created_at: sd.created_at || null,
-            updated_at: sd.updated_at || null,
             brand: sd.brand,
+            // Use server-sanitized identity (traits, brand_promise, archetype, ai_summary,
+            // visual_palette, visual_keywords, visual_assets) so the Identity-vs-Image
+            // section renders the brand's intended identity properly. Falls back to a
+            // logo-only object for older payloads that don't return identity yet.
             identity: sd.identity || (sd.logo_asset ? { visual_assets: [sd.logo_asset] } : { visual_assets: [] }),
             target_responses: sd.target_responses,
             is_public_showcase: true,
@@ -265,141 +267,23 @@ const BrandEquityDashboardPage = () => {
       } else {
         const r = await axios.get(`${API}/brand-equity/studies/${studyId}/dashboard${qs}`, authH);
         setData(r.data);
-        if (r.data.ai_cache?.status === 'running' || r.data.ai_cache?.status === 'queued') {
-          startPolling();
-        }
+        ai.resumeIfRunning(r.data.ai_cache);
       }
     } catch (e) {
-      const detail = e?.response?.data?.detail || (e?.response?.status === 404 ? 'ไม่พบ Study หรือ Showcase นี้' : 'โหลด dashboard ไม่สำเร็จ');
-      setLoadError(detail);
-      setData(null);
-      toast.error(isShowcase ? 'Showcase ไม่พร้อม' : 'โหลด dashboard ไม่สำเร็จ');
+      const msg = isShowcase ? 'Showcase ไม่พร้อมใช้งาน' : errText(e, 'โหลด dashboard ไม่สำเร็จ');
+      setLoadError(msg);
+      if (data) toast.error(msg);
     }
     setLoading(false);
+    setReloading(false);
   };
 
-  const exportRawCsv = async () => {
-    if (!studyId || isShowcase) return;
-    setExportingCsv(true);
-    try {
-      const r = await axios.get(`${API}/brand-equity/studies/${studyId}/responses`, {
-        params: { limit: 5000 },
-        ...authH,
-      });
-      const rows = r.data?.responses || [];
-      if (!rows.length) {
-        toast.info('ยังไม่มีข้อมูลคำตอบสำหรับ export');
-        setExportingCsv(false);
-        return;
-      }
-      const qList = data?.study?.questions || [];
-      const qIds = qList.map(q => q.id);
-      const qHeaders = qList.map(q => q.template_id || q.id);
-      const demoKeys = Array.from(new Set(rows.flatMap(resp => Object.keys(resp.demographics || {}))));
-      const esc = (val) => {
-        const s = val == null ? '' : (Array.isArray(val) ? val.join(' | ') : String(val));
-        return `"${s.replace(/"/g, '""')}"`;
-      };
-      const header = ['response_id', 'submitted_at', 'duration_sec', ...demoKeys, ...qHeaders];
-      const lines = [header.map(esc).join(',')];
-      rows.forEach(resp => {
-        const ansMap = {};
-        (resp.answers || []).forEach(a => { ansMap[a.question_id] = a.value; });
-        const line = [
-          resp.id || '',
-          resp.submitted_at || '',
-          resp.duration_sec ?? '',
-          ...demoKeys.map(k => (resp.demographics || {})[k] ?? ''),
-          ...qIds.map(qid => ansMap[qid] ?? ''),
-        ];
-        lines.push(line.map(esc).join(','));
-      });
-      const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `brand-equity-${(data?.study?.brand?.name || studyId).replace(/[^a-zA-Z0-9ก-๙_-]+/g, '_')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success(`Exported ${rows.length} rows (UTF-8 CSV)`);
-    } catch (e) {
-      toast.error('Export CSV ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
-    }
-    setExportingCsv(false);
-  };
+  // ---------- AI analysis (system or the user's own AI), same filter as the view ----------
+  const ai = useBeAiAnalysis({
+    studyId, token, filter, reload: () => load(true), enabled: !isShowcase,
+  });
 
-  const [aiProgress, setAiProgress] = useState(null);
-
-  const startPolling = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    setAiRunning(true);
-    pollRef.current = setInterval(async () => {
-      try {
-        const qs = buildFilterQS(filter);
-        const r = await axios.get(`${API}/brand-equity/studies/${studyId}/ai-status${qs}`, authH);
-        if (r.data?.progress) setAiProgress(r.data.progress);
-        if (r.data.status === 'ready' || r.data.status === 'error' || r.data.status === 'no_data') {
-          clearInterval(pollRef.current);
-          setAiRunning(false);
-          // keep final progress visible for 2s so user sees "100% เสร็จสมบูรณ์" pulse
-          setTimeout(() => setAiProgress(null), 2200);
-          load();
-        }
-      } catch (e) {/* keep polling */}
-    }, 2500);
-  };
-
-  const runAI = async () => {
-    try {
-      const qs = buildFilterQS(filter);
-      await axios.post(`${API}/brand-equity/studies/${studyId}/ai-analyze${qs}`, {}, authH);
-      const sigNote = (filter.from || filter.to || Object.values(filter.segments || {}).some(v => v.length))
-        ? ' (สำหรับ filter นี้)' : '';
-      toast.success(`AI analysis queued${sigNote}`);
-      // seed progress so the bar appears instantly even before first poll lands
-      setAiProgress({ step: 0, total: 4, phase: 'รอเริ่ม…', pct: 0, elapsed_sec: 0 });
-      startPolling();
-    } catch (e) {
-      toast.error('AI ภายในไม่พร้อมใช้งาน — กด "ใช้ AI ภายนอก (ฟรี)" เพื่อคัดลอก Prompt ไปใช้กับ ChatGPT/Gemini/Claude ได้เลย');
-    }
-  };
-
-  const fetchBeExternalPrompt = useCallback(async () => {
-    const qs = buildFilterQS(filter);
-    const r = await axios.post(`${API}/brand-equity/studies/${studyId}/external-ai-prompt${qs}`, {}, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-    return r.data;
-  }, [studyId, filter, token]);
-
-  const validateBeExternal = useCallback(async (rawText) => {
-    const qs = buildFilterQS(filter);
-    const r = await axios.post(
-      `${API}/brand-equity/studies/${studyId}/external-ai-import${qs}`,
-      { raw_text: rawText, dry_run: true },
-      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-    );
-    return r.data;
-  }, [studyId, filter, token]);
-
-  const applyBeExternal = useCallback(async (rawText) => {
-    const qs = buildFilterQS(filter);
-    const r = await axios.post(
-      `${API}/brand-equity/studies/${studyId}/external-ai-import${qs}`,
-      { raw_text: rawText, dry_run: false },
-      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-    );
-    if (!r.data?.applied) {
-      throw new Error((r.data?.errors || []).join(', ') || 'ไม่สามารถนำเข้าข้อมูลได้');
-    }
-    toast.success('นำเข้าผลวิเคราะห์และ Positioning Map จาก AI ภายนอกเรียบร้อย!');
-    await load();
-  }, [studyId, filter, token]); // eslint-disable-line
-
-  // ---------- Thesis Export — feature-flagged off until backend whitelist is enabled ----------
-  // The button is rendered by BeMethodology but DISABLED unless the current user is on the
-  // server-side whitelist (admin / อาจารย์ / นิสิต). Server stub at /api/brand-equity/thesis-eligible
-  // returns {eligible: false} for everyone today; flip when ready to roll out.
+  // ---------- Thesis export eligibility (non-AI DOCX needs admin / whitelist) ----------
   const [canExportThesis, setCanExportThesis] = useState(false);
   const [weightEditorOpen, setWeightEditorOpen] = useState(false);
   useEffect(() => {
@@ -413,136 +297,11 @@ const BrandEquityDashboardPage = () => {
     /* eslint-disable-next-line */
   }, [studyId, isShowcase]);
 
-  // ---------- AI-powered thesis (chapters 1-5 + extra prompt + Gemini) ----------
-  const [thesisChapters, setThesisChapters] = useState([3, 4, 5]);
-  const [thesisExtraPrompt, setThesisExtraPrompt] = useState('');
-  const [thesisProgress, setThesisProgress] = useState('idle');
-  const [thesisError, setThesisError] = useState(null);
-  const thesisPollRef = useRef(null);
-  // Guards against double-downloads when multiple poll requests are in-flight
-  // simultaneously (each request takes >4s to come back, but interval fires every 4s,
-  // so 2-5 polls can each independently see status='ready' and trigger a download).
-  const thesisDownloadStartedRef = useRef(false);
-
-  // Cleanup poll on unmount
-  useEffect(() => () => { if (thesisPollRef.current) clearInterval(thesisPollRef.current); }, []);
-
-  const downloadThesisDocx = async (cacheKey) => {
-    setThesisProgress('downloading');
-    try {
-      const r = await axios.get(
-        `${API}/brand-equity/studies/${studyId}/thesis-ai-download?cache_key=${encodeURIComponent(cacheKey)}`,
-        { ...authH, responseType: 'blob' },
-      );
-      const url = window.URL.createObjectURL(new Blob([r.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      const brandSafe = (data?.study?.brand?.name || 'brand').replace(/\s+/g, '_');
-      const chSuffix = thesisChapters.map(c => `Ch${c}`).join('_');
-      a.download = `BE_Thesis_${brandSafe}_${chSuffix}.docx`;
-      document.body.appendChild(a); a.click();
-      window.URL.revokeObjectURL(url); a.remove();
-      toast.success('ดาวน์โหลดเรียบร้อย');
-    } catch (e) {
-      setThesisError('ดาวน์โหลดไม่สำเร็จ');
-      toast.error('ดาวน์โหลดไม่สำเร็จ');
-    } finally {
-      setThesisProgress('idle');
-    }
-  };
-
-  const handleStartThesisAI = async () => {
-    if (!thesisChapters || thesisChapters.length === 0) {
-      toast.error('กรุณาเลือกอย่างน้อย 1 บท');
-      return;
-    }
-    // Guard against double-clicks
-    if (thesisProgress && thesisProgress !== 'idle' && thesisProgress !== 'failed') {
-      return;
-    }
-    setThesisError(null);
-    setThesisProgress('starting');
-    // Reset download guard for this fresh attempt
-    thesisDownloadStartedRef.current = false;
-    // Clear any stale interval from a previous failed attempt
-    if (thesisPollRef.current) {
-      clearInterval(thesisPollRef.current);
-      thesisPollRef.current = null;
-    }
-    try {
-      const qs = buildFilterQS(filter);
-      const startRes = await axios.post(
-        `${API}/brand-equity/studies/${studyId}/thesis-ai-start${qs}`,
-        { chapters: thesisChapters, extra_prompt: thesisExtraPrompt || '' },
-        authH,
-      );
-      const { status, job_id, cache_key, cached } = startRes.data || {};
-
-      if (status === 'ready' || cached) {
-        // Cache hit — download immediately (set guard so any racing path can't re-trigger)
-        if (!thesisDownloadStartedRef.current) {
-          thesisDownloadStartedRef.current = true;
-          toast.info('พบ cache — ดาวน์โหลดทันที');
-          await downloadThesisDocx(cache_key);
-        }
-        return;
-      }
-
-      // Poll status
-      setThesisProgress('queued');
-      thesisPollRef.current = setInterval(async () => {
-        // If a download already started (e.g. previous in-flight poll just saw ready),
-        // skip this poll entirely. Also clear our interval in case clearInterval
-        // didn't propagate before this callback fired.
-        if (thesisDownloadStartedRef.current) {
-          if (thesisPollRef.current) {
-            clearInterval(thesisPollRef.current);
-            thesisPollRef.current = null;
-          }
-          return;
-        }
-        try {
-          const s = await axios.get(
-            `${API}/brand-equity/studies/${studyId}/thesis-ai-status/${job_id}`,
-            authH,
-          );
-          // Re-check guard AFTER await — another in-flight poll may have just won the race
-          if (thesisDownloadStartedRef.current) return;
-          const st = s.data || {};
-          if (st.progress) setThesisProgress(st.progress);
-          if (st.status === 'ready') {
-            // Win the race: claim the download slot atomically, THEN clearInterval.
-            thesisDownloadStartedRef.current = true;
-            if (thesisPollRef.current) {
-              clearInterval(thesisPollRef.current);
-              thesisPollRef.current = null;
-            }
-            await downloadThesisDocx(st.cache_key || cache_key);
-          } else if (st.status === 'failed') {
-            thesisDownloadStartedRef.current = true;  // prevent any other path
-            if (thesisPollRef.current) {
-              clearInterval(thesisPollRef.current);
-              thesisPollRef.current = null;
-            }
-            setThesisError(st.error || 'AI generation failed');
-            setThesisProgress('failed');
-            toast.error('สร้างเอกสารไม่สำเร็จ');
-          }
-        } catch (e) { /* keep polling */ }
-      }, 4000);
-    } catch (e) {
-      const msg = e?.response?.data?.detail || 'เริ่มงานไม่สำเร็จ';
-      setThesisError(msg);
-      setThesisProgress('failed');
-      toast.error(msg);
-    }
-  };
-
   const launch = async () => {
     try {
       await axios.put(`${API}/brand-equity/studies/${studyId}`, { status: 'collecting' }, authH);
       toast.success('Study เปิดรับคำตอบแล้ว');
-      load();
+      load(true);
     } catch (e) { toast.error('ไม่สำเร็จ'); }
   };
 
@@ -574,29 +333,18 @@ const BrandEquityDashboardPage = () => {
     setTogglingShowcase(false);
   };
 
-  if (loading) return <div className="be-root"><BeLoading text="กำลังโหลด dashboard…"/></div>;
+  if (loading && !data) return <div className="be-root"><BeLoading text="กำลังโหลด dashboard…"/></div>;
   if (!data) {
     return (
       <div className="be-root" data-testid="be-dashboard-error">
-        {!isShowcase && (
-          <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
-                    right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/brand-equity')}>
-                             <Icon name="chevronL" size={10}/>Studies
-                           </button>}/>
-        )}
         <div className="be-page">
-          <div className="be-card" style={{ padding: 48, textAlign: 'center', maxWidth: 520, margin: '48px auto' }}>
-            <div className="be-eyebrow" style={{ color: 'var(--be-red)', justifyContent: 'center', marginBottom: 10 }}>
-              UNAVAILABLE
+          <div className="be-error-state" role="alert" style={{ marginTop: 40 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>{loadError || 'โหลดข้อมูลไม่สำเร็จ'}</div>
+            <div className="be-small be-muted" style={{ marginBottom: 12 }}>
+              {isShowcase ? 'ลิงก์ showcase อาจถูกปิดหรือหมดอายุ' : 'ตรวจการเชื่อมต่อแล้วลองอีกครั้ง หรือกลับไปหน้ารายการ'}
             </div>
-            <h2 className="be-h2" style={{ marginBottom: 10 }}>{loadError || 'ไม่พบข้อมูล study นี้'}</h2>
-            <div className="be-small be-muted" style={{ marginBottom: 20 }}>
-              study นี้อาจถูกลบ ย้ายไปถังขยะ หรือคุณไม่มีสิทธิ์เข้าถึง
-            </div>
-            <button className="be-btn be-btn-primary"
-                    onClick={() => navigate(isShowcase ? '/showcase/brand-equity' : '/brand-equity')}>
-              <Icon name="chevronL" size={11}/>{isShowcase ? 'กลับหน้า Public Showcase' : 'กลับหน้ารายการ Brand Equity'}
-            </button>
+            <button type="button" className="be-btn" onClick={() => load()}><Icon name="refresh" size={11}/>ลองอีกครั้ง</button>
+            {!isShowcase && <button type="button" className="be-btn be-btn-ghost" style={{ marginLeft: 8 }} onClick={() => navigate('/brand-equity')}>กลับไปรายการ</button>}
           </div>
         </div>
       </div>
@@ -605,22 +353,26 @@ const BrandEquityDashboardPage = () => {
 
   const { study, aggregate, ai_cache, ready_for_dashboard } = data;
   const composite = aggregate?.composite || {};
-  const hasRealScore = Boolean(ready_for_dashboard && composite.overall != null && (aggregate?.total_responses || 0) >= 10);
-  const score = hasRealScore ? Math.round(composite.overall || 0) : 0;
+  const score = Math.round(composite.overall || 0);
   const tier = tierFor(score);
   const agg = aggregate;
+  // Lowest per-dimension coverage the backend reported. `composite_meta[d].coverage`
+  // was already computed server-side as the incomplete-data flag but nothing
+  // rendered it, so a headline resting on a third of its designed signals looked
+  // exactly like one resting on all of them.
   const coverages = Object.values(aggregate?.composite_meta || {})
     .map(m => (typeof m?.coverage === 'number' ? m.coverage : null))
     .filter(v => v !== null);
   const minCoverage = coverages.length ? Math.min(...coverages) : null;
   const responseCount = aggregate?.total_responses || 0;
-  const totalUnfiltered = data.responses_total ?? responseCount;
-  const isFilteredSlice = Boolean(filter.from || filter.to || (filter.wave && filter.wave !== 'all') || Object.values(filter.segments || {}).some(v => (v || []).length));
   const targetN = study.target_responses || 100;
-  const shareActive = study.status === 'collecting' || study.status === 'analyzing';
-  const rawWeights = { awareness: 25, quality: 25, identity: 25, loyalty: 25, ...(study.weights || {}) };
-  const weightSum = Object.values(rawWeights).reduce((s, v) => s + (Number(v) || 0), 0) || 100;
-  const weakestDim = hasRealScore ? getWeakestDimension(composite) : null;
+  const isOwner = !isShowcase;
+  const filterActive = isFilterActive(filter);
+  const nFiltered = data.responses_filtered ?? responseCount;
+  const nTotal = data.responses_total ?? responseCount;
+  const quality = data.quality_filter;
+  const aiRunning = ai.running;
+  const schemaV = agg?.schema_version;
 
   return (
     <div className="be-root" data-testid={isShowcase ? 'be-showcase-page' : 'be-dashboard-page'}>
@@ -642,10 +394,7 @@ const BrandEquityDashboardPage = () => {
           </a>
         </div>
       ) : (
-        <BeTopbar user={user} onLogo={() => navigate('/dashboard')}
-                  right={<button className="be-btn be-btn-ghost be-btn-sm" onClick={() => navigate('/brand-equity')}>
-                           <Icon name="chevronL" size={10}/>Studies
-                         </button>}/>
+        <BeTopbar crumbs={[...BE_CRUMBS, { label: study?.brand?.name || study?.title || 'ผลการศึกษา' }]}/>
       )}
 
       <div className="be-page">
@@ -667,10 +416,7 @@ const BrandEquityDashboardPage = () => {
                                  fontFamily: 'IBM Plex Sans Thai' }}>Brand Health Check</span>
                 </h1>
                 <div className="be-mono be-tiny be-muted" style={{ marginTop: 6 }}>
-                  {study.brand?.category} ·{' '}
-                  {isFilteredSlice
-                    ? `${responseCount} / ${totalUnfiltered} responses (กรองอยู่)`
-                    : `${responseCount} / ${targetN} respondents`}
+                  {study.brand?.category} · n = {responseCount} / เป้า {targetN} ({fmtPct(responseCount / targetN * 100)})
                 </div>
                 {study.is_simulated && (
                   <div className="be-mono be-tiny" data-testid="be-simulated-badge"
@@ -685,20 +431,6 @@ const BrandEquityDashboardPage = () => {
             {!isShowcase ? (
               <div className="be-hero-actions">
                 <StatusPill status={study.status}/>
-                <div className="be-mono be-tiny" style={{ display: 'inline-flex', border: '1px solid var(--rule-strong)' }}
-                     data-testid="be-view-mode-toggle">
-                  {[
-                    ['business', 'โหมดผู้บริหาร'],
-                    ['academic', 'โหมดงานวิจัย'],
-                  ].map(([m, lbl]) => (
-                    <button key={m} type="button" onClick={() => setViewModePersist(m)}
-                            style={{ padding: '5px 10px', fontSize: 10.5, border: 0, cursor: 'pointer',
-                                     background: viewMode === m ? 'var(--ink)' : 'transparent',
-                                     color: viewMode === m ? 'var(--paper)' : 'var(--ink)' }}>
-                      {lbl}
-                    </button>
-                  ))}
-                </div>
                 <button className="be-btn" onClick={() => navigate(`/brand-equity/studies/${study.id}/edit`)}
                         data-testid="be-dashboard-edit">
                   <Icon name="edit" size={11}/>Edit study
@@ -708,20 +440,9 @@ const BrandEquityDashboardPage = () => {
                     <Icon name="arrowR" size={11}/>เปิดรับคำตอบ
                   </button>
                 )}
-                <button className="be-btn"
-                        onClick={copyShareLink}
-                        disabled={!shareActive}
-                        title={shareActive ? 'คัดลอกลิงก์แบบสอบถาม' : 'กรุณากด "เปิดรับคำตอบ" ก่อน เพื่อให้ลิงก์แบบสอบถามใช้งานได้'}
-                        data-testid="be-dashboard-share">
+                <button className="be-btn" onClick={copyShareLink} data-testid="be-dashboard-share">
                   <Icon name="share" size={11}/>Copy share link
                 </button>
-                {totalUnfiltered > 0 && (
-                  <button className="be-btn" onClick={exportRawCsv} disabled={exportingCsv}
-                          title="ดาวน์โหลดคำตอบดิบทั้งหมดเป็น CSV (เหมาะสำหรับ SPSS / R / Excel)"
-                          data-testid="be-dashboard-export-csv">
-                    {exportingCsv ? 'Exporting…' : 'Export Raw CSV'}
-                  </button>
-                )}
                 <button className={'be-btn ' + (study.is_public_showcase ? 'be-btn-primary' : '')}
                         onClick={toggleShowcase}
                         disabled={togglingShowcase || !ready_for_dashboard}
@@ -741,23 +462,13 @@ const BrandEquityDashboardPage = () => {
                         data-testid="be-dashboard-weights">
                   <Icon name="edit" size={11}/>น้ำหนักมิติ
                 </button>
-                <button className="be-btn" onClick={load} data-testid="be-dashboard-refresh">
-                  <Icon name="refresh" size={11}/>Refresh
+                <button className="be-btn" onClick={() => load(true)} disabled={reloading} data-testid="be-dashboard-refresh">
+                  <Icon name="refresh" size={11}/>{reloading ? 'กำลังโหลด…' : 'Refresh'}
                 </button>
-                <button className="be-btn be-btn-primary"
-                        type="button"
-                        onClick={() => setExternalAiOpen(true)}
-                        disabled={!ready_for_dashboard}
-                        title={!ready_for_dashboard ? 'ต้องมีอย่างน้อย 10 คำตอบก่อนวิเคราะห์' : 'คัดลอก Prompt ไปใช้กับ ChatGPT / Gemini / Claude ฟรี'}
-                        data-testid="be-dashboard-external-ai">
-                  <Icon name="copy" size={11}/>ใช้ AI ภายนอก (ฟรี)
+                <button type="button" className="be-btn be-btn-primary" data-testid="be-dashboard-run-ai-jump"
+                        onClick={() => document.getElementById('be-ai-panel')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <Icon name="sparkle" size={11}/>{aiRunning ? 'AI กำลังทำงาน…' : 'วิเคราะห์ด้วย AI ↓'}
                 </button>
-                {isAdmin && (
-                  <button className="be-btn" onClick={runAI}
-                          disabled={!ready_for_dashboard || aiRunning} data-testid="be-dashboard-run-ai">
-                    <Icon name="sparkle" size={11}/>{aiRunning ? 'AI working…' : 'Run AI (Admin)'}
-                  </button>
-                )}
               </div>
             ) : (
               <div className="be-hero-actions">
@@ -778,93 +489,50 @@ const BrandEquityDashboardPage = () => {
               <div className="be-ring">
                 <ScoreRing value={score} size={148} stroke={9}/>
                 <div className="be-ring-inner">
-                  <div className="be-data" style={{ fontSize: 44 }}>{hasRealScore ? score : '—'}</div>
+                  <div className="be-data" style={{ fontSize: 44 }}>{score}</div>
                   <div className="be-mono be-tiny be-muted">/ 100</div>
                 </div>
               </div>
               <div className="be-score-meta">
                 <div className="be-eyebrow">BRAND EQUITY SCORE</div>
-                {hasRealScore ? (
-                  <>
-                    <div className="be-tier-line">
-                      <span className="be-tier" style={{ color: tier.color }}>{tier.name}</span>
-                      <span className="be-mono be-tiny be-muted">{tier.th}</span>
-                    </div>
-                    <div className="be-muted be-small" style={{ maxWidth: 320, lineHeight: 1.55, marginTop: 4 }}>
-                      {getBrandHealthTier(score).note}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="be-tier-line">
-                      <span className="be-tier" style={{ color: 'var(--be-gold)' }}>Pending</span>
-                      <span className="be-mono be-tiny be-muted">รอเก็บข้อมูล</span>
-                    </div>
-                    <div className="be-muted be-small" style={{ maxWidth: 320, lineHeight: 1.55, marginTop: 4 }}>
-                      {isFilteredSlice
-                        ? `ตัวกรองนี้มี ${responseCount} คำตอบ (ต้องการ ≥ 10 เพื่อแสดงคะแนน)`
-                        : `เก็บแล้ว ${responseCount} / 10 คำตอบขั้นต่ำ — เมื่อครบแล้วระบบจะคำนวณ BES ให้อัตโนมัติ`}
-                    </div>
-                  </>
-                )}
-                {agg?.sample_adequacy && hasRealScore && (
-                  <div
-                    className="be-small"
-                    data-testid="be-sample-adequacy"
-                    style={{
-                      marginTop: 8, lineHeight: 1.5, maxWidth: 340,
-                      color: agg.sample_adequacy.level === 'insufficient' ? 'var(--be-red)'
-                           : agg.sample_adequacy.level === 'provisional' ? 'var(--be-gold)'
-                           : 'var(--be-muted)',
-                    }}
-                  >
-                    {agg.sample_adequacy.level === 'insufficient' || agg.sample_adequacy.level === 'provisional'
-                      ? '⚠ ' : ''}
-                    {agg.sample_adequacy.message}
+                <div className="be-tier-line">
+                  <span className="be-tier" style={{ color: tier.color }}>{tier.name}</span>
+                  <span className="be-mono be-tiny be-muted">{tier.th}</span>
+                </div>
+                {/* Note comes from the same canonical tier as the label above,
+                    so the headline and its explanation cannot disagree. */}
+                <div className="be-muted be-small" style={{ maxWidth: 320, lineHeight: 1.55, marginTop: 4 }}>
+                  {getBrandHealthTier(score).note}
+                </div>
+                {agg?.sample_adequacy && (
+                  <div className="be-small" data-testid="be-sample-adequacy"
+                       style={{ marginTop: 8, lineHeight: 1.5, maxWidth: 340,
+                                color: agg.sample_adequacy.level === 'insufficient' ? 'var(--be-red)'
+                                     : agg.sample_adequacy.level === 'provisional' ? 'var(--be-gold)' : 'var(--ink-3)' }}>
+                    {(agg.sample_adequacy.level === 'insufficient' || agg.sample_adequacy.level === 'provisional') ? '⚠ ' : ''}
+                    n = {nFiltered}{agg.sample_adequacy.moe_95_pct != null ? ` · ±${fmt1(agg.sample_adequacy.moe_95_pct)} จุด (95%)` : ''}
                   </div>
                 )}
-                {hasRealScore && minCoverage != null && minCoverage < 1 && (
+                {minCoverage != null && minCoverage < 1 && (
                   <div className="be-small" data-testid="be-coverage-warning"
                        style={{ marginTop: 6, color: 'var(--be-gold)', maxWidth: 340, lineHeight: 1.5 }}>
-                    ⚠ คะแนนนี้ยังไม่ครบทุกสัญญาณ (ครบ {Math.round(minCoverage * 100)}% ของที่ออกแบบไว้)
-                    — ถือเป็นตัวเลขเบื้องต้น
-                  </div>
-                )}
-                {hasRealScore && viewMode === 'academic' && (
-                  <div className="be-tiny be-muted" data-testid="be-method-update-note"
-                       style={{ marginTop: 8, maxWidth: 360, lineHeight: 1.5 }}>
-                    หมายเหตุ: คำนวณด้วย POMP (0–100) + ถ่วงน้ำหนัก 4 มิติ · ดูสูตรและข้อจำกัดได้ที่ภาคผนวกวิธีวิจัยด้านล่าง
-                  </div>
-                )}
-                {hasRealScore && agg?.normalization?.basis && agg.normalization.basis !== 'none' && (
-                  <div className="be-tiny be-muted" data-testid="be-normalization-basis"
-                       style={{ marginTop: 6, maxWidth: 360, lineHeight: 1.5 }}>
-                    การนับชื่อแบรนด์จากคำถามปลายเปิด:{' '}
-                    <b>{agg.normalization.basis === 'ai' ? 'ผ่าน AI แล้ว (แม่นกับคำสะกดผิด/ชื่อเล่น)'
-                                                          : 'นับตรงจากข้อความ (ยังไม่ได้รัน AI)'}</b>
-                    {agg.normalization.basis === 'deterministic' && !isShowcase
-                      ? ' — กด "ใช้ AI ภายนอก (ฟรี)" จะช่วยจัดกลุ่มคำพ้องได้แม่นขึ้น'
-                      : ''}
+                    ⚠ คะแนนนี้ยังไม่ครบทุกสัญญาณ (ครบ {Math.round(minCoverage * 100)}% ของที่ออกแบบไว้) — ถือเป็นตัวเลขเบื้องต้น
                   </div>
                 )}
               </div>
             </div>
             <div className="be-dim-grid" data-testid="be-dim-grid">
               {Object.values(DIMENSIONS).map(d => {
-                const v = hasRealScore ? Math.round(composite[d.key] || 0) : 0;
-                const wPct = Math.round(((Number(rawWeights[d.key]) || 0) / weightSum) * 100);
+                const v = Math.round(composite[d.key] || 0);
                 return (
                   <div key={d.key} className="be-dim-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div className="be-mono be-tiny" style={{ color: 'var(--ink-4)', letterSpacing: '0.10em' }}>{d.num}</div>
-                      <span className="be-mono be-tiny be-muted" title="น้ำหนักของมิตินี้ใน BES">w={wPct}%</span>
-                    </div>
-                    <div className="be-dim-num" style={{ color: hasRealScore && v > 0 ? d.color : 'var(--ink-4)' }}>
-                      {hasRealScore && v > 0 ? v : '—'}
+                    <div className="be-mono be-tiny" style={{ color: 'var(--ink-4)', letterSpacing: '0.10em' }}>{d.num}</div>
+                    <div className="be-dim-num" style={{ color: v > 0 ? d.color : 'var(--ink-4)' }}>
+                      {v > 0 ? v : '—'}
                     </div>
                     <div className="be-dim-name">{d.label}</div>
                     <div className="be-dim-bar">
-                      <div className="be-dim-bar-fill" style={{ width: (hasRealScore ? v : 0) + '%', background: d.color }}/>
+                      <div className="be-dim-bar-fill" style={{ width: v + '%', background: d.color }}/>
                     </div>
                     <div className="be-mono be-tiny be-muted">{d.th}</div>
                   </div>
@@ -874,103 +542,27 @@ const BrandEquityDashboardPage = () => {
           </div>
         </div>
 
-        {/* ===== EXECUTIVE PRIORITY STRIP (Business mode) ===== */}
-        {ready_for_dashboard && viewMode === 'business' && weakestDim && (
-          <div className="be-card" style={{ padding: 18, marginTop: 18, borderLeft: '4px solid var(--be-red)',
-                                          background: '#FFFAF0' }}
-               data-testid="be-executive-priority">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div>
-                <div className="be-eyebrow" style={{ color: 'var(--be-red)', marginBottom: 4 }}>
-                  EXECUTIVE PRIORITY · จุดที่ควรโฟกัสก่อน
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>
-                  มิติที่คะแนนต่ำสุดตอนนี้คือ <strong>{weakestDim.labelTh} ({weakestDim.label})</strong> ·{' '}
-                  <span style={{ color: 'var(--be-red)' }}>{Math.round(weakestDim.value)}/100</span>
-                </div>
-                {(ai_cache?.master_insights || [])[0] && (
-                  <div className="be-small be-muted" style={{ marginTop: 4 }}>
-                    คำแนะนำอันดับ 1: {ai_cache.master_insights[0].recommendation || ai_cache.master_insights[0].headline}
-                  </div>
-                )}
-              </div>
-              <button className="be-btn be-btn-ghost be-tiny" onClick={() => setViewModePersist('academic')}>
-                สลับดูค่าสถิติวิชาการ (α / CI / POMP) →
-              </button>
-            </div>
-          </div>
+        {/* v2 method note — shown whenever the backend reports the new scoring version */}
+        {schemaV >= 2 && (
+          <details className="be-card" data-testid="be-method-update-note" style={{ padding: '10px 16px', marginTop: 14, background: 'rgba(212,160,23,0.07)', borderColor: 'rgba(212,160,23,0.5)' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 13.5, lineHeight: 1.6 }}>
+              <b>วิธีคำนวณปรับปรุง (v2 · พ.ย. 2026)</b> — ตัวเลขของ Identity, Awareness และ α อาจต่างจากที่เคยเห็น <u>โดยที่แบรนด์ไม่ได้เปลี่ยน</u> (กดดูเหตุผล)
+            </summary>
+            <ul className="be-small" style={{ margin: '8px 0 0 18px', lineHeight: 1.7 }}>
+              <li><b>Identity:</b> คะแนน "ความสอดคล้อง" ที่ AI ให้ไม่เข้าสูตรอีกแล้ว (เป็นความเห็นของ AI ไม่ใช่การวัด)</li>
+              <li><b>Awareness:</b> unaided recall = ผู้ที่เอ่ยชื่อแบรนด์เองทั้งเป็นแบรนด์แรกหรือที่นึกถึงทีหลัง (เดิมนับเฉพาะ "แบรนด์อื่น" ทำให้แบรนด์ที่ทุกคนนึกถึงเป็นอันดับแรกถูกประเมินต่ำ)</li>
+              <li><b>Cronbach's α:</b> กลับคะแนนข้อเชิงลบก่อนคำนวณ และไม่รวมข้อที่ยังไม่ยืนยันทิศทาง</li>
+              <li>ประวัติคะแนนด้านล่างและคะแนนในหน้ารายการ<b>คำนวณใหม่ด้วยสูตร v2 ทั้งหมด</b> จึงเทียบกันเองได้ — แต่ตัวเลขที่เคยส่งออก/บันทึก/อ้างไว้ก่อนหน้านี้ไม่ได้ถูกแก้ย้อนหลัง ห้ามนำมาเทียบกับตัวเลขชุดนี้เป็น "การเปลี่ยนแปลงของแบรนด์"</li>
+              <li>ข้อความจาก AI ที่เขียนก่อนปรับสูตรอาจอ้างตัวเลขเดิม (มีป้ายเตือนกำกับ)</li>
+            </ul>
+          </details>
         )}
 
-        {/* ===== ความน่าเชื่อถือของการวัด (shown automatically in Academic mode) ===== */}
-        {agg?.reliability && viewMode === 'academic' && (
-          <div className="be-card" style={{ padding: 20, marginTop: 18 }} data-testid="be-reliability-card">
-            <div className="be-eyebrow" style={{ marginBottom: 6 }}>
-              <span className="be-dot-sm" style={{ background: 'var(--be-blue)' }}/>
-              ความน่าเชื่อถือของการวัด (RELIABILITY)
-            </div>
-            <p className="be-muted be-small" style={{ marginBottom: 12, lineHeight: 1.6 }}>
-              ค่านี้บอกว่า <b>ข้อคำถามในมิติเดียวกันวัดเรื่องเดียวกันจริงไหม</b> —
-              ถ้าต่ำ แปลว่าคำถามในมิตินั้นกระจัดกระจาย คะแนนรวมของมิติจึงตีความยาก
-              (เกณฑ์ที่ยอมรับกันคือ α ≥ 0.70)
-            </p>
-            <div className="be-dim-grid">
-              {Object.values(DIMENSIONS).map(d => {
-                const r = agg.reliability[d.key] || {};
-                const a = r.alpha;
-                const col = a == null ? 'var(--ink-4)'
-                          : a >= 0.70 ? 'var(--be-green)'
-                          : a >= 0.60 ? 'var(--be-gold)' : 'var(--be-red)';
-                return (
-                  <div key={d.key} className="be-dim-card" data-testid={`be-reliability-${d.key}`}>
-                    <div className="be-dim-name">{d.label}</div>
-                    <div className="be-dim-num" style={{ color: col, fontSize: 26 }}>
-                      {a == null ? '—' : a.toFixed(2)}
-                    </div>
-                    <div className="be-mono be-tiny be-muted">
-                      {a == null ? 'ประเมินไม่ได้' : `α · ${r.k_items} ข้อ · n=${r.n_complete}`}
-                    </div>
-                    <div className="be-small be-muted" style={{ marginTop: 6, lineHeight: 1.45 }}>
-                      {r.interpretation || '—'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="be-muted be-tiny" style={{ marginTop: 10, lineHeight: 1.55 }}>
-              มิติที่ขึ้นว่า &quot;ประเมินไม่ได้&quot; ส่วนใหญ่เพราะมีข้อคำถามแบบมาตรวัดน้อยกว่า 2 ข้อ
-              (เช่น Awareness ที่ใช้คำถามปลายเปิด/เลือกตอบเป็นหลัก) ซึ่งไม่ได้แปลว่าผลไม่ดี
-              แต่แปลว่ายังคำนวณค่านี้ไม่ได้ · ระบบจะไม่เดาค่าให้
-            </p>
-          </div>
-        )}
-
-        {/* ===== อ่านค่าตัวเลขบนหน้านี้ยังไง (GLOSSARY, Academic mode) ===== */}
-        {ready_for_dashboard && viewMode === 'academic' && (
-          <div className="be-card" style={{ padding: 20, marginTop: 18 }} data-testid="be-glossary-card">
-            <div className="be-eyebrow" style={{ marginBottom: 10 }}>
-              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>
-              อ่านค่าตัวเลขบนหน้านี้ยังไง
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-              {[
-                ['t2b', 'TOP-2-BOX (T2B)', 'สัดส่วนคนที่ตอบ 2 ระดับบนสุดของมาตรวัด (เช่น 6-7 จาก 7) = "กลุ่มที่เห็นด้วยชัดเจน"'],
-                ['b2b', 'BOTTOM-2-BOX (B2B)', 'สัดส่วนคนที่ตอบ 2 ระดับล่างสุด (1-2) = "กลุ่มที่ไม่เห็นด้วยชัดเจน"'],
-                ['netq', 'NET Q-SCORE', 'T2B − B2B · บวก = คนชมมากกว่าคนติ, ลบ = คนติมากกว่าคนชม (ช่วง −100 ถึง +100)'],
-                ['sd', 'σ (SD)', 'ส่วนเบี่ยงเบนมาตรฐาน — ยิ่งสูง ความเห็นยิ่งกระจาย (คนเห็นต่างกันมาก) แม้ค่าเฉลี่ยจะเท่ากัน'],
-                ['pomp', 'คะแนน 0-100 (POMP)', '(ค่าเฉลี่ย − 1) / (สูงสุด − 1) × 100 — แปลงทุกมาตรวัดให้เทียบกันได้ ต่ำสุด = 0 สูงสุด = 100'],
-                ['ci', '95% CI', 'ช่วงที่ค่าจริงของประชากรน่าจะอยู่ · ยิ่งผู้ตอบน้อย ช่วงยิ่งกว้าง = ตัวเลขยังไม่นิ่ง'],
-                ['alpha', 'α (Cronbach\u2019s alpha)', 'วัดว่าคำถามในมิติเดียวกันวัดเรื่องเดียวกันไหม · ที่ยอมรับกันคือ ≥ 0.70'],
-                ['nps', 'NPS', '% ผู้แนะนำ (9-10) − % ผู้ไม่แนะนำ (0-6) · ช่วง −100 ถึง +100 · แสดงเป็น 0-100 ด้วยสูตร (NPS+100)/2'],
-                ['n', 'n', 'จำนวนคนที่ตอบคำถามนั้นจริง — ไม่ใช่จำนวนผู้ตอบทั้ง study เพราะบางข้อไม่บังคับตอบ'],
-              ].map(([key, term, desc]) => (
-                <div key={key} data-testid={`be-glossary-term-${key}`}
-                     style={{ padding: 12, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
-                  <div className="be-mono be-tiny" style={{ letterSpacing: '0.08em', color: 'var(--ink)' }}>{term}</div>
-                  <div className="be-small be-muted" style={{ marginTop: 6, lineHeight: 1.5 }}>{desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* TOP SUMMARY — what the score is, how solid the sample is, what to do next */}
+        {ready_for_dashboard && (
+          <BeSummary aggregate={agg} tier={tier} nFiltered={nFiltered} nTotal={nTotal} targetN={targetN}
+                     quality={quality} excludeFlagged={excludeFlagged} aiCache={ai_cache} isOwner={isOwner}
+                     filterActive={filterActive}/>
         )}
 
         {/* FILTER BAR — time + segments + wave compare (sticky) */}
@@ -993,16 +585,21 @@ const BrandEquityDashboardPage = () => {
           isShowcase={isShowcase}
         />
 
-        {/* AI PROGRESS CARD — live status while background job is running */}
-        {aiProgress && (
-          <AIProgressCard
-            step={aiProgress.step}
-            total={aiProgress.total}
-            phase={aiProgress.phase}
-            elapsed={aiProgress.elapsed_sec}
-            pct={aiProgress.pct}
-            done={!aiRunning}
-          />
+        {/* Data-quality toggle — changes the whole view, so it sits next to the filters */}
+        <div id="be-quality-toggle-anchor"/>
+        {ready_for_dashboard && agg?.data_quality && isOwner && (
+          <BeQualityToggle dq={agg.data_quality} quality={quality} exclude={excludeFlagged}
+                           onToggle={setExcludeFlagged} busy={reloading} nFiltered={nFiltered}/>
+        )}
+
+        {/* AI ANALYSIS (system or the user's own AI) + CODING without any LLM */}
+        {isOwner && (
+          <BeAiAnalysisPanel ai={ai} aiCache={ai_cache} filter={filter} nFiltered={nFiltered} ready={ready_for_dashboard}/>
+        )}
+        {isOwner && ready_for_dashboard && (
+          <BeCodingPanel studyId={studyId} token={token} openCoding={agg?.open_coding} ai={ai}
+                         onChanged={() => load(true)}
+                         defaultOpen={(agg?.open_coding?.by_status?.uncoded || 0) > 0}/>
         )}
         {/* WAVE COMPARE — side-by-side BES + 4 Aaker dims with delta */}
         {compareData && !isShowcase && (
@@ -1015,7 +612,6 @@ const BrandEquityDashboardPage = () => {
             <BeScoreHistory studyId={studyId} token={token}/>
             <BeSegmentSignificance
               studyId={studyId} token={token}
-              filter={filter}
               fields={Object.keys(data.segments_available || {})}/>
             <BeUnfinishedCard studyId={studyId} token={token}
                               shareToken={study?.share_token}/>
@@ -1026,72 +622,57 @@ const BrandEquityDashboardPage = () => {
         {!ready_for_dashboard && (
           <div className="be-card" style={{ padding: 40, textAlign: 'center', marginTop: 20 }}
                data-testid="be-dashboard-locked">
-            {isFilteredSlice && totalUnfiltered >= 10 ? (
-              <>
-                <div className="be-eyebrow" style={{ marginBottom: 12, justifyContent: 'center' }}>
-                  <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>FILTER SLICE TOO SMALL
-                </div>
-                <div className="be-h2" style={{ fontSize: 22, marginBottom: 12 }}>
-                  ตัวกรองนี้มีเพียง {responseCount} คำตอบ (ต้องการ ≥ 10)
-                </div>
-                <div className="be-muted be-small" style={{ marginBottom: 22, maxWidth: 480, margin: '0 auto 22px' }}>
-                  ข้อมูลทั้ง study มีทั้งหมด {totalUnfiltered} คำตอบ — ลองขยายช่วงเวลาหรือล้างตัวกรองเพื่อดูผลรวม
-                </div>
-                <button className="be-btn be-btn-primary"
-                        onClick={() => setFilter({ from: '', to: '', wave: 'all', segments: {} })}
-                        data-testid="be-dashboard-clear-filter">
-                  ล้างตัวกรองทั้งหมด
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="be-eyebrow" style={{ marginBottom: 12, justifyContent: 'center' }}>
-                  <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>DASHBOARD LOCKED
-                </div>
-                <div className="be-h2" style={{ fontSize: 22, marginBottom: 12 }}>
-                  ต้องการอีก {Math.max(0, 10 - responseCount)} คำตอบเพื่อปลดล็อก
-                </div>
-                <div className="be-muted be-small" style={{ marginBottom: 22, maxWidth: 480, margin: '0 auto 22px' }}>
-                  ต้องมีอย่างน้อย 10 คำตอบจึงจะคำนวณผลคะแนน 4 มิติและรัน AI analysis ได้อย่างน่าเชื่อถือ
-                  · ปัจจุบัน{isFilteredSlice ? `ในตัวกรองมี ${responseCount} / ${totalUnfiltered}` : `เก็บแล้ว ${responseCount} / 10`} คำตอบ
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {isFilteredSlice && (
-                    <button className="be-btn be-btn-primary"
-                            onClick={() => setFilter({ from: '', to: '', wave: 'all', segments: {} })}
-                            data-testid="be-dashboard-clear-filter">
-                      ล้างตัวกรองทั้งหมด
-                    </button>
-                  )}
-                  {shareActive ? (
-                    <button className="be-btn be-btn-red" onClick={copyShareLink}>
-                      <Icon name="share" size={11}/>คัดลอกลิงก์เชิญตอบแบบสอบถาม
-                    </button>
-                  ) : !isShowcase && study.status === 'draft' ? (
-                    <button className="be-btn be-btn-red" onClick={launch}>
-                      <Icon name="arrowR" size={11}/>เปิดรับคำตอบตอนนี้
-                    </button>
-                  ) : null}
-                </div>
-              </>
-            )}
+            <div className="be-eyebrow" style={{ marginBottom: 12, justifyContent: 'center' }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-gold)' }}/>DASHBOARD LOCKED
+            </div>
+            <div className="be-h2" style={{ fontSize: 22, marginBottom: 12 }}>
+              ต้องการ {Math.max(0, 10 - responseCount)} responses เพิ่ม
+            </div>
+            <div className="be-muted be-small" style={{ marginBottom: 22, maxWidth: 480, margin: '0 auto 22px' }}>
+              ต้องมีอย่างน้อย 10 responses เพื่อ unlock dashboard และ AI analysis
+              · ปัจจุบัน {responseCount} responses
+            </div>
+            <button className="be-btn" onClick={copyShareLink}>
+              <Icon name="share" size={11}/>คัดลอก link เชิญตอบ
+            </button>
           </div>
         )}
 
-        {/* DASH BODY — 2 columns: full-width Main + Right AI Insights rail */}
+        {/* DASH BODY */}
         {ready_for_dashboard && (
           <div className="be-dash-body">
+            {/* LEFT RAIL */}
+            <div className="be-dash-rail" data-testid="be-dashboard-rail">
+              <div className="be-rail-section">
+                <h5>ชุดข้อมูลที่แสดง</h5>
+                <div className={'be-rail-item ' + (activeSegment === 'all' ? 'on' : '')}
+                     onClick={() => setActiveSegment('all')}>
+                  <span>{filterActive ? 'ตามตัวกรอง' : 'ผู้ตอบทั้งหมด'}</span>
+                  <span className="pct">n = {responseCount}</span>
+                </div>
+              </div>
+              <div className="be-rail-section">
+                <h5>Study info</h5>
+                <div className="be-mono be-tiny" style={{ lineHeight: 1.7, color: 'var(--ink-2)' }}>
+                  Created · {new Date(study.created_at).toLocaleDateString()}<br/>
+                  Updated · {new Date(study.updated_at).toLocaleDateString()}<br/>
+                  Token · /{study.share_token?.slice(0, 6)}
+                </div>
+              </div>
+              <div className="be-rail-section">
+                <h5>สถานะ AI</h5>
+                <div className="be-small" style={{ color: 'var(--ink-2)', lineHeight: 1.6 }} data-testid="be-rail-ai-status">
+                  {aiStatusLabel(ai_cache?.status)}
+                  {ai_cache?.updated_at && <div className="be-mono be-tiny be-muted">{new Date(ai_cache.updated_at).toLocaleString('th-TH')}</div>}
+                </div>
+              </div>
+            </div>
+
             {/* MAIN */}
             <div className="be-dash-main">
               <SectionAwareness study={study} aggregate={aggregate} ai={ai_cache}/>
               <SectionQuality study={study} aggregate={aggregate} ai={ai_cache}/>
-              <SectionIdentity
-                study={study}
-                aggregate={aggregate}
-                ai={ai_cache}
-                isShowcase={isShowcase}
-                onOpenExternalAi={!isShowcase ? () => setExternalAiOpen(true) : null}
-              />
+              <SectionIdentity study={study} aggregate={aggregate} ai={ai_cache}/>
               <SectionLoyalty study={study} aggregate={aggregate} ai={ai_cache}/>
             </div>
 
@@ -1099,15 +680,6 @@ const BrandEquityDashboardPage = () => {
             <div className="be-dash-ai" data-testid="be-dashboard-ai-rail">
               <div className="be-eyebrow" style={{ marginBottom: 8 }}>
                 MASTER AI INSIGHTS
-                {ai_cache?.source === 'external_ai' && (
-                  <span style={{
-                    marginLeft: 8, padding: '2px 7px', fontSize: 9,
-                    background: 'rgba(27,117,188,0.12)', color: '#1B75BC',
-                    borderRadius: 3, letterSpacing: '0.04em',
-                  }}>
-                    EXTERNAL AI
-                  </span>
-                )}
                 {filter.wave && filter.wave !== 'all' && (
                   <span style={{
                     marginLeft: 8, padding: '2px 8px', fontSize: 9,
@@ -1121,11 +693,15 @@ const BrandEquityDashboardPage = () => {
               <div style={{ fontFamily: 'IBM Plex Serif', fontSize: 18, fontWeight: 600, marginBottom: 4,
                             display: 'flex', gap: 8, alignItems: 'center' }}>
                 <Icon name="sparkle" size={14} stroke="#C8102E"/>
-                {(ai_cache?.master_insights?.length || 0) > 0 ? `${ai_cache.master_insights.length} actions for the brand team` : 'AI analysis pending'}
+                {(ai_cache?.master_insights?.length || 0) > 0 ? `${ai_cache.master_insights.length} ข้อเสนอแนะสำหรับทีมแบรนด์` : 'ยังไม่มีผลวิเคราะห์ AI'}
               </div>
+              {(ai_cache?.master_insights?.length || 0) > 0 && (
+                <div style={{ marginBottom: 8 }}><Provenance ai={ai_cache} section="insights"/></div>
+              )}
+              <StaleAiNote ai={ai_cache}/>
               <div className="be-tiny be-muted" style={{ marginBottom: 16, lineHeight: 1.5,
                      paddingBottom: 14, borderBottom: '1px dashed var(--rule)' }}>
-                Generated from {responseCount} responses + 4 dimension stats · cited to specific questions.
+                สร้างจากผู้ตอบ n = {responseCount} + สถิติ 4 มิติ — เป็นข้อเสนอแนะเชิงคุณภาพของ AI ตรวจก่อนนำไปใช้
                 {filter.wave && filter.wave !== 'all' && (
                   <> · <strong>Insights scoped to {filter.wave === 'latest' ? 'the latest wave' : `wave ${filter.wave}`}</strong> — switch wave above to refresh.</>
                 )}
@@ -1133,9 +709,9 @@ const BrandEquityDashboardPage = () => {
 
               {(ai_cache?.master_insights || []).length === 0 ? (
                 <div className="be-muted be-small" style={{ padding: '20px 0', textAlign: 'center' }}>
-                  {isShowcase
-                    ? <>ยังไม่มี master insights —<br/>เจ้าของ study ต้องวิเคราะห์ด้วย AI ก่อน</>
-                    : <>ยังไม่มี master insights —<br/>กดปุ่ม <strong>ใช้ AI ภายนอก (ฟรี)</strong> ด้านล่างเพื่อนำเข้าผลวิเคราะห์</>
+                  {study.is_public_showcase
+                    ? <>ยังไม่มีข้อเสนอแนะจาก AI —<br/>เจ้าของ study ต้องวิเคราะห์ก่อน</>
+                    : <>ยังไม่มีข้อเสนอแนะจาก AI —<br/>ใช้ปุ่ม <strong>วิเคราะห์ด้วย AI</strong> (ใช้ AI ของคุณเองได้)</>
                   }
                 </div>
               ) : (ai_cache.master_insights || []).map((rec, i) => (
@@ -1160,44 +736,93 @@ const BrandEquityDashboardPage = () => {
               ))}
 
               {!isShowcase && (
-                <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
-                  <button className="be-btn be-btn-primary" style={{ width: '100%', justifyContent: 'center' }}
-                          type="button"
-                          onClick={() => setExternalAiOpen(true)}
-                          data-testid="be-dashboard-rail-external-ai">
-                    <Icon name="copy" size={11}/>ใช้ AI ภายนอก (ฟรี · Copy Prompt → วางผล)
-                  </button>
-                  {isAdmin && (
-                    <button className="be-btn" style={{ width: '100%', justifyContent: 'center' }}
-                            onClick={runAI} disabled={aiRunning} data-testid="be-dashboard-regen-insights">
-                      <Icon name="refresh" size={11}/>{aiRunning ? 'Regenerating…' : 'Generate new insights (Admin)'}
-                    </button>
-                  )}
-                </div>
+                <button className="be-btn" style={{ width: '100%', marginTop: 16, justifyContent: 'center' }}
+                        onClick={() => document.getElementById('be-ai-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                        data-testid="be-dashboard-regen-insights">
+                  <Icon name="refresh" size={11}/>{aiRunning ? 'AI กำลังทำงาน…' : 'สร้างข้อเสนอแนะใหม่ (ไปที่ AI analysis)'}
+                </button>
               )}
             </div>
           </div>
         )}
 
+        {/* DEEP STATISTICS — progressive disclosure, collapsed by default */}
+        {ready_for_dashboard && (
+          <div data-testid="be-deep-stats" style={{ marginTop: 26 }}>
+            <div className="be-eyebrow" style={{ marginBottom: 4 }}>
+              <span className="be-dot-sm" style={{ background: 'var(--be-blue)' }}/>สถิติเชิงลึกสำหรับงานวิจัย
+            </div>
+            <div className="be-small be-muted" style={{ lineHeight: 1.6 }}>
+              ช่วงเชื่อมั่น ความเที่ยง การทดสอบเทียบคู่แข่ง และคุณภาพข้อมูล — เปิดดูเมื่อต้องการตรวจสอบหรืออ้างอิงในรายงาน
+            </div>
+            <BeDisclosure id="be-stats-methods" testid="be-stats-methods" eyebrow="METHODS" title="ย่อหน้าวิธีการวิจัย (สร้างอัตโนมัติ)"
+                          summary="ต้นร่างสำหรับบทที่ 3 จากข้อเท็จจริงของ study นี้ — ตรวจก่อนนำไปใช้">
+              {data.methods_paragraph_th
+                ? <BeMethodsParagraph text={data.methods_paragraph_th}/>
+                : <div className="be-empty-state be-small be-muted">ยังสร้างย่อหน้าไม่ได้ในชุดข้อมูลนี้</div>}
+            </BeDisclosure>
+            <BeDisclosure id="be-stats-items" testid="be-stats-items" eyebrow="CONFIDENCE INTERVALS" title="คะแนนรายข้อพร้อมช่วงเชื่อมั่น 95%"
+                          summary={`n ของแต่ละข้ออาจน้อยกว่า ${nFiltered} เพราะบางข้อไม่บังคับตอบ`}>
+              <BeItemTable questions={agg?.questions || []}/>
+            </BeDisclosure>
+            <BeDisclosure id="be-stats-reliability" testid="be-stats-reliability" eyebrow="RELIABILITY" title="ความเที่ยงของการวัด (Cronbach's α) รายมิติและรายข้อ"
+                          summary="α พร้อม n และ k · item-total r · α ถ้าตัดข้อ · สิ่งที่ไม่ได้คำนวณ (ω / CR / AVE / CFA)">
+              <BeReliabilityDetail reliability={agg?.reliability} notComputed={agg?.reliability_not_computed} questions={agg?.questions || []}/>
+            </BeDisclosure>
+            <BeDisclosure id="be-stats-competitors" testid="be-stats-competitors" eyebrow="BRAND vs COMPETITORS" title="เปรียบเทียบแบรนด์กับคู่แข่งแบบจับคู่ (paired)"
+                          summary="ผลต่าง ช่วงเชื่อมั่น t · p (ปรับ Holm) · effect size พร้อมคำอ่านภาษาไทย และข้อควรระวังเรื่องทดสอบหลายครั้ง">
+              <BePairedComparisons cc={agg?.competitor_comparison}/>
+            </BeDisclosure>
+            <BeDisclosure id="be-stats-sensitivity" testid="be-stats-sensitivity" eyebrow="SENSITIVITY" title="BES ไวต่อน้ำหนักมิติแค่ไหน"
+                          summary={agg?.bes_sensitivity ? `ช่วง ${fmt1(agg.bes_sensitivity.range_one_weight_halved_or_doubled?.[0])}–${fmt1(agg.bes_sensitivity.range_one_weight_halved_or_doubled?.[1])} · ${agg.bes_sensitivity.tier_stable ? 'tier คงเดิม' : 'tier เปลี่ยนได้'}` : undefined}>
+              <BeSensitivity s={agg?.bes_sensitivity} bes={composite.overall}/>
+            </BeDisclosure>
+            {agg?.data_quality && isOwner && (
+              <BeDisclosure id="be-stats-dq" testid="be-stats-dq" eyebrow="DATA QUALITY" title="คุณภาพข้อมูลและผู้ตอบที่น่าสงสัย"
+                            summary={`พบ ${agg.data_quality.n_flagged_excludable} คนที่ตัดได้จาก ${agg.data_quality.n_total}`}>
+                <BeDataQuality dq={agg.data_quality} quality={quality} exclude={excludeFlagged} onToggle={setExcludeFlagged}
+                               nFiltered={nFiltered} busy={reloading}/>
+              </BeDisclosure>
+            )}
+            <BeDisclosure id="be-stats-glossary" testid="be-glossary-card" eyebrow="GLOSSARY" title="อ่านค่าตัวเลขบนหน้านี้ยังไง"
+                          summary="T2B · B2B · NET · σ · POMP · 95% CI · α · NPS · n" accent="var(--be-gold)">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                {GLOSSARY.map(([key, term, desc]) => (
+                  <div key={key} data-testid={`be-glossary-term-${key}`}
+                       style={{ padding: 12, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
+                    <div className="be-mono be-tiny" style={{ letterSpacing: '0.08em', color: 'var(--ink)' }}>{term}</div>
+                    <div className="be-small be-muted" style={{ marginTop: 6, lineHeight: 1.5 }}>{desc}</div>
+                  </div>
+                ))}
+              </div>
+            </BeDisclosure>
+          </div>
+        )}
+
+        {/* EXPORT — raw data (SPSS / R / JASP) + thesis */}
+        {ready_for_dashboard && isOwner && (
+          <>
+            <div className="be-card" id="be-raw-export-card" style={{ padding: 20, marginTop: 26 }} data-testid="be-raw-export-card">
+              <div className="be-eyebrow" style={{ marginBottom: 8 }}>
+                <span className="be-dot-sm" style={{ background: 'var(--be-green)' }}/>ส่งออกข้อมูลดิบ · สำหรับ SPSS / R / JASP
+              </div>
+              <BeRawExport studyId={studyId} token={token} filter={filter} excludeFlagged={excludeFlagged} nFiltered={nFiltered}/>
+            </div>
+            <BeThesisExport studyId={studyId} token={token} filter={filter} brandName={study.brand?.name}
+                            canExportNonAi={canExportThesis}/>
+          </>
+        )}
+
         {/* METHODOLOGY · Appendix at bottom of report — explains every score */}
         {ready_for_dashboard && (
-          <BeMethodology
-            canExportThesis={canExportThesis}
-            showExport={!isShowcase}
-            onOpenWeights={isShowcase ? null : () => setWeightEditorOpen(true)}
-            thesisProgress={thesisProgress}
-            thesisError={thesisError}
-            selectedChapters={thesisChapters}
-            onSelectedChaptersChange={setThesisChapters}
-            extraPrompt={thesisExtraPrompt}
-            onExtraPromptChange={setThesisExtraPrompt}
-            onStartThesisExport={handleStartThesisAI}
-          />
+          <BeMethodology onOpenWeights={isShowcase ? null : () => setWeightEditorOpen(true)}/>
         )}
       </div>
 
+      {isOwner && <BeExternalAiDialog ai={ai}/>}
+
       {weightEditorOpen && !isShowcase && (
-        <BeWeightEditor study={study} composite={composite} token={token}
+        <BeWeightEditor study={study} token={token}
                         onClose={() => setWeightEditorOpen(false)}
                         onSaved={load}/>
       )}
@@ -1236,41 +861,25 @@ const BrandEquityDashboardPage = () => {
           </div>
         </div>
       )}
-
-      <ExternalAiWorkflowModal
-        open={externalAiOpen}
-        onClose={() => setExternalAiOpen(false)}
-        title="วิเคราะห์ Brand Equity & Positioning Map ด้วย AI ภายนอก (ฟรี)"
-        subtitle="คัดลอก Prompt ที่มีผลสำรวจ คำตอบปลายเปิด และคะแนนเทียบคู่แข่งทั้งหมดไปวางใน ChatGPT / Gemini / Claude แล้วนำ JSON กลับมาตรวจสอบและบันทึก"
-        fetchPrompt={fetchBeExternalPrompt}
-        validatePayload={validateBeExternal}
-        applyPayload={applyBeExternal}
-        renderPreview={(preview) => (
-          <div className="space-y-1.5">
-            <div>
-              <strong>จัดกลุ่มคำตอบปลายเปิด:</strong> {preview.normalized_questions} ข้อ ·{' '}
-              <strong>Themes:</strong> {preview.theme_questions} ข้อ ·{' '}
-              <strong>Identity Alignment:</strong> {preview.alignment_score_0_100}/100 ({preview.aligned_count} aligned)
-            </div>
-            <div>
-              <strong>Master Insights:</strong> {preview.insights_count} ข้อ
-              {preview.has_positioning && preview.recommended_axes?.x && (
-                <> · <strong>Perceptual Map AI แนะนำ:</strong> {preview.recommended_axes.x} × {preview.recommended_axes.y}</>
-              )}
-            </div>
-            {preview.insights_headlines?.length > 0 && (
-              <ul className="list-disc pl-5 text-gray-700">
-                {preview.insights_headlines.slice(0, 3).map((h, i) => <li key={i}>{h}</li>)}
-              </ul>
-            )}
-          </div>
-        )}
-      />
     </div>
   );
 };
 
 // ============ Section components ============
+
+// Shown instead of an empty chart / zeros when an open-ended question has not been coded.
+const UncodedNotice = ({ q }) => (
+  <div className="be-uncoded" data-testid={`be-uncoded-${q?.id}`} role="note">
+    <b>{q?.coding_status_th || 'ยังไม่ได้เข้ารหัส'}</b>
+    <div className="be-muted" style={{ marginTop: 4 }}>
+      คำตอบปลายเปิดข้อนี้ยังไม่ถูกจัดกลุ่ม จึงยังไม่แสดงกราฟ (ไม่ใช่ศูนย์) · เข้ารหัสได้ที่กล่อง "เข้ารหัสคำตอบปลายเปิด" ด้านบน
+      ด้วย AI ของคุณเอง สเปรดชีต หรือ AI ของระบบ (n = {q?.stats?.n ?? '—'} คำตอบ)
+    </div>
+  </div>
+);
+const statusChip = (q) => (q?.coding_status === 'partial' || q?.coding_status === 'deterministic') && q?.coding_status_th ? (
+  <div className="be-tiny be-muted" style={{ marginTop: 4 }} data-testid={`be-coding-status-${q.id}`}>{q.coding_status_th}</div>
+) : null;
 
 const SectionAwareness = ({ study, aggregate, ai }) => {
   const qs = aggregate?.questions || [];
@@ -1279,19 +888,16 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
   const aided = qs.find(q => q.kind === 'aided_recognition');
   const score = Math.round(aggregate?.composite?.awareness || 0);
 
-  // Top-of-mind word cloud (deterministic jitter so unrelated UI clicks don't jump words)
+  // Top-of-mind word cloud
   const tomCounts = tom?.stats?.counts || [];
   const target = study.brand?.name;
-  const cloudWords = tomCounts.slice(0, 12).map((c, i) => {
-    const h = (String(c.label || '').split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) + i * 17) % 10;
-    return {
-      text: c.label,
-      size: Math.max(11, 14 + Math.round(c.pct * 0.5)),
-      target: c.label?.toLowerCase().includes(target?.toLowerCase() || '___'),
-      x: 10 + (i % 4) * 22 + h * 0.8,
-      y: 16 + Math.floor(i / 4) * 27 + (h % 5) * 1.4,
-    };
-  });
+  const cloudWords = tomCounts.slice(0, 12).map((c, i) => ({
+    text: c.label,
+    size: Math.max(11, 14 + Math.round(c.pct * 0.5)),
+    target: c.label?.toLowerCase().includes(target?.toLowerCase() || '___'),
+    x: 12 + (i % 4) * 22 + hash01(c.label + 'x') * 10,
+    y: 18 + Math.floor(i / 4) * 26 + hash01(c.label + 'y') * 8,
+  }));
 
   // Unaided recall — AI normalized counts (each response may list multiple brands)
   const recallRows = (recall?.stats?.counts || []).slice(0, 8).map(c => ({
@@ -1307,7 +913,10 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
     target: c.label === target,
   }));
 
-  const targetTomPct = tomCounts.find(c => c.label?.toLowerCase().includes(target?.toLowerCase() || '___'))?.pct || 0;
+  const tomTarget = tomCounts.find(c => c.label?.toLowerCase().includes(target?.toLowerCase() || '___'));
+  const targetTomPct = tomTarget?.pct || 0;
+  const tomTargetCI = tomTarget?.pct_ci95;
+  const totalUnaided = recall?.stats?.total_unaided_pct;
 
   const missingKinds = getMissingKinds(qs, 'awareness');
 
@@ -1333,34 +942,33 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
       <PartialDataWarning missing={missingKinds} dimLabel="Awareness"/>
 
       <div className="be-stack-2">
-        {tomCounts.length > 0 && (
+        {tom?.coding_status === 'uncoded' && (
+          <div className="be-card be-span-2"><UncodedNotice q={tom}/></div>
+        )}
+        {tomCounts.length > 0 && tom?.coding_status !== 'uncoded' && (
           <div className="be-card be-span-2">
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Top-of-Mind brand cloud</h3>
                 <div className="be-card-d">
-                  "แบรนด์แรกที่นึกถึง?" · n={tom?.stats?.n} · target highlighted
-                  {tom?.stats?.ai_normalized && (
-                    <span className="be-chip-dim be-mono"
-                          style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
-                                   border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
-                                   fontSize: 9.5, letterSpacing: '0.06em' }}>
-                      AI · NORMALIZED
-                    </span>
-                  )}
+                  "แบรนด์แรกที่นึกถึง?" · n = {tom?.stats?.n} · แบรนด์หลักเน้นสี
                 </div>
+                <div style={{ marginTop: 6 }}><CodingBadge stats={tom?.stats} ai={ai}/></div>
+                {statusChip(tom)}
               </div>
               <div className="be-card-stat">
-                <span className="be-big be-num">{Math.round(targetTomPct)}</span>
+                <span className="be-big be-num">{fmt1(targetTomPct)}</span>
                 <span className="be-unit">% top-of-mind</span>
+                <span className="be-mono be-tiny be-muted" style={{ textTransform: 'none', display: 'block' }}>n = {tom?.stats?.n}</span>
+                {tomTargetCI && <span className="be-mono be-tiny be-muted" style={{ textTransform: 'none', display: 'block' }} data-testid="be-tom-ci">95% CI {fmtCI(tomTargetCI)}%</span>}
               </div>
             </div>
             <WordCloud words={cloudWords}/>
             {tom?.stats?.ai_normalized && tomCounts.some(c => (c.variants || []).length > 1) && (
               <details style={{ marginTop: 12, fontSize: 11, color: 'var(--ink-3)' }}>
                 <summary style={{ cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace',
-                                   textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  ดู variants ที่ AI รวมเข้าด้วยกัน
+                                   letterSpacing: '0.04em' }}>
+                  ดูคำสะกดที่ถูกรวมเข้าด้วยกัน
                 </summary>
                 <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
                   {tomCounts.filter(c => (c.variants || []).length > 1).slice(0, 8).map((c, i) => (
@@ -1377,25 +985,33 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
           </div>
         )}
 
-        {recallRows.length > 0 && (
-          <div className="be-card">
+        {recall?.coding_status === 'uncoded' && <div className="be-card"><UncodedNotice q={recall}/></div>}
+        {(recallRows.length > 0 || totalUnaided != null) && recall?.coding_status !== 'uncoded' && (
+          <div className="be-card" data-testid="be-unaided-card">
             <div className="be-card-h">
               <div>
-                <h3 className="be-card-t">Unaided recall</h3>
+                <h3 className="be-card-t">Unaided recall (รวม)</h3>
                 <div className="be-card-d">
-                  "นึกถึงแบรนด์อะไรอีกบ้าง?" · n={recall?.stats?.n}
-                  {recall?.stats?.ai_normalized && (
-                    <span className="be-chip-dim be-mono"
-                          style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
-                                   border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
-                                   fontSize: 9.5, letterSpacing: '0.06em' }}>
-                      AI · NORMALIZED
-                    </span>
-                  )}
+                  เอ่ยชื่อแบรนด์เองทั้งเป็นแบรนด์แรกหรือนึกถึงทีหลัง · AW-2 n = {recall?.stats?.n}
                 </div>
+                <div style={{ marginTop: 6 }}><CodingBadge stats={recall?.stats} ai={ai}/></div>
+                {statusChip(recall)}
               </div>
+              {totalUnaided != null && (
+                <div className="be-card-stat">
+                  <span className="be-big be-num">{fmt1(totalUnaided)}</span>
+                  <span className="be-unit">%</span>
+                  <span className="be-mono be-tiny be-muted" style={{ textTransform: 'none', display: 'block' }}>n = {recall.stats.total_unaided_base ?? recall.stats.n}</span>
+                  {recall.stats.total_unaided_ci95 && <span className="be-mono be-tiny be-muted" style={{ textTransform: 'none', display: 'block' }} data-testid="be-unaided-ci">95% CI {fmtCI(recall.stats.total_unaided_ci95)}%</span>}
+                </div>
+              )}
             </div>
-            <HBar rows={recallRows} color={DIMENSIONS.awareness.color}/>
+            {recallRows.length > 0 && (
+              <>
+                <div className="be-tiny be-muted" style={{ marginBottom: 6 }}>แบรนด์ที่ถูกนึกถึงเพิ่ม (% ของผู้ตอบ AW-2, n = {recall?.stats?.n})</div>
+                <HBar rows={recallRows} color={DIMENSIONS.awareness.color}/>
+              </>
+            )}
           </div>
         )}
 
@@ -1404,7 +1020,7 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Aided recognition</h3>
-                <div className="be-card-d">"แบรนด์ใดที่คุณรู้จัก?" · n={aided?.stats?.n}</div>
+                <div className="be-card-d">"แบรนด์ใดที่คุณรู้จัก?" · n = {aided?.stats?.n}</div>
               </div>
             </div>
             <HBar rows={aidedRows} color={DIMENSIONS.awareness.color}/>
@@ -1419,10 +1035,10 @@ const SectionAwareness = ({ study, aggregate, ai }) => {
               <div className="be-card-h">
                 <div>
                   <h3 className="be-card-t">Familiarity score</h3>
-                  <div className="be-card-d">5-pt scale · n={fam?.stats?.n}</div>
+                  <div className="be-card-d">มาตร 5 ระดับ · n = {fam?.stats?.n}{fam?.stats?.score_100_ci95 ? ` · 95% CI ${fmtCI(fam.stats.score_100_ci95)} (0-100)` : ''}</div>
                 </div>
                 <div className="be-card-stat">
-                  <span className="be-big be-num">{fam?.stats?.mean}</span>
+                  <span className="be-big be-num">{fmt1(fam?.stats?.mean)}</span>
                   <span className="be-unit">/ 5</span>
                 </div>
               </div>
@@ -1458,11 +1074,11 @@ const SectionQuality = ({ study, aggregate, ai }) => {
   const radarAxesData = attrQs.slice(0, 8).map(q => ({
     axis: ((q.axis_label || sluggify(q.kind)) + '').toUpperCase(),
     slug: sluggify(q.kind),
-    brandValue: q.stats?.score_100 != null ? Math.round(q.stats.score_100) : Math.round((q.stats?.mean || 0) / 7 * 100),
+    brandValue: Math.round(q.stats?.score_100 ?? ((q.stats?.mean || 1) - 1) / 6 * 100),
   }));
   const radarAxes = radarAxesData.map(a => a.axis);
 
-  // Competitor parallels (kind=competitor_<slug>) — gather POMP score_100 per (compare_brand, slug)
+  // Competitor parallels (kind=competitor_<slug>) — gather mean per (compare_brand, slug)
   const compMap = {}; // { brandName: { slug: pct } }
   qs.filter(q =>
     q.dimension === 'quality'
@@ -1473,7 +1089,7 @@ const SectionQuality = ({ study, aggregate, ai }) => {
     const cb = q.compare_brand || 'Competitor';
     const slug = sluggify(q.kind);
     if (!compMap[cb]) compMap[cb] = {};
-    compMap[cb][slug] = q.stats?.score_100 != null ? Math.round(q.stats.score_100) : Math.round((q.stats.mean || 0) / 7 * 100);
+    compMap[cb][slug] = Math.round(q.stats.score_100 ?? ((q.stats.mean || 1) - 1) / 6 * 100);
   });
   const competitorNames = Object.keys(compMap);
   const hasCompetitorRadar = competitorNames.length > 0 && radarAxesData.length >= 3;
@@ -1525,7 +1141,7 @@ const SectionQuality = ({ study, aggregate, ai }) => {
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Quality attributes · radar</h3>
-                <div className="be-card-d">Mean Likert (1-7) scaled to 0-100</div>
+                <div className="be-card-d">คะแนน 0-100 แบบ POMP · (ค่าเฉลี่ย−1)/6×100 · n ต่อข้อ {Math.min(...attrQs.map(q => q.stats?.n || 0))}–{Math.max(...attrQs.map(q => q.stats?.n || 0))}</div>
               </div>
               {hasCompetitorRadar && (
                 <div className="be-radar-toggle" data-testid="be-quality-radar-toggle">
@@ -1570,16 +1186,16 @@ const SectionQuality = ({ study, aggregate, ai }) => {
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Overall quality · distribution</h3>
-                <div className="be-card-d">"คุณภาพระดับใด?" · 1-7 scale · n={overall.stats?.n}</div>
+                <div className="be-card-d">"คุณภาพระดับใด?" · มาตร 1-7 · n = {overall.stats?.n}</div>
+                <div className="be-mono be-tiny be-muted" style={{ marginTop: 4, lineHeight: 1.6 }} data-testid="be-quality-ci95">
+                  {overall.stats?.mean_ci95 && <>ค่าเฉลี่ย 95% CI {fmtCI(overall.stats.mean_ci95, 2)}<br/></>}
+                  {overall.stats?.score_100_ci95 && <>คะแนน 0-100: 95% CI {fmtCI(overall.stats.score_100_ci95)}</>}
+                </div>
               </div>
               <div className="be-card-stat">
-                <span className="be-big be-num">{overall.stats?.mean}</span>
-                <span className="be-unit">mean · σ {overall.stats?.std}</span>
-                {overall.stats?.score_100_ci95 && (
-                  <span className="be-mono be-tiny be-muted" data-testid="be-quality-ci95">
-                    95% CI {overall.stats.score_100_ci95[0]}–{overall.stats.score_100_ci95[1]} (0-100)
-                  </span>
-                )}
+                <span className="be-big be-num">{fmt2(overall.stats?.mean)}</span>
+                <span className="be-unit">ค่าเฉลี่ย · σ {fmt2(overall.stats?.std)}</span>
+
               </div>
             </div>
             <Histogram values={overall.stats.distribution} color={DIMENSIONS.quality.color}
@@ -1587,11 +1203,11 @@ const SectionQuality = ({ study, aggregate, ai }) => {
             <div className="be-grid-3" style={{ marginTop: 14 }}>
               <div style={{ padding: '8px 10px', background: 'var(--paper-2)' }}>
                 <div className="be-mono be-tiny be-muted">TOP-2-BOX</div>
-                <div className="be-num" style={{ fontSize: 18, fontWeight: 500 }}>{overall.stats?.t2b}%</div>
+                <div className="be-num" style={{ fontSize: 18, fontWeight: 500 }}>{fmtPct(overall.stats?.t2b)}</div>
               </div>
               <div style={{ padding: '8px 10px', background: 'var(--paper-2)' }}>
                 <div className="be-mono be-tiny be-muted">BOTTOM-2-BOX</div>
-                <div className="be-num" style={{ fontSize: 18, fontWeight: 500 }}>{overall.stats?.b2b}%</div>
+                <div className="be-num" style={{ fontSize: 18, fontWeight: 500 }}>{fmtPct(overall.stats?.b2b)}</div>
               </div>
               <div style={{ padding: '8px 10px', background: 'rgba(212,160,23,0.1)' }}>
                 <div className="be-mono be-tiny be-muted">NET Q-SCORE</div>
@@ -1603,21 +1219,26 @@ const SectionQuality = ({ study, aggregate, ai }) => {
           </div>
         )}
 
+        {qualityOpen && qualityOpen.coding_status === 'uncoded' && themes.length === 0 && (
+          <div className="be-card be-span-2"><UncodedNotice q={{ ...qualityOpen, coding_status_th: 'ยังไม่ได้สกัดประเด็น' }}/></div>
+        )}
         {themes.length > 0 && (
           <div className="be-card be-span-2">
             <div className="be-card-h">
               <div>
-                <h3 className="be-card-t">Voice of respondent · quality reasons</h3>
-                <div className="be-card-d">Open-end clustered into themes by AI</div>
+                <h3 className="be-card-t">เสียงผู้ตอบ · เหตุผลด้านคุณภาพ</h3>
+                <div className="be-card-d">คำตอบปลายเปิดที่จัดเป็นประเด็นโดย AI · จำนวนนับโดยระบบ</div>
+                <div style={{ marginTop: 6 }}><Provenance ai={ai} section="themes"/></div>
               </div>
             </div>
+            {themes.some(t => t.sampled) && <div className="be-tiny be-muted" style={{ marginBottom: 8 }}>ประเด็นสกัดจากตัวอย่างคำตอบ ไม่ใช่ทั้งหมด (base n = {themes[0]?.base_n ?? '—'} จาก {themes[0]?.total_n ?? '—'})</div>}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
               {themes.map((th, i) => (
                 <div key={i} style={{ padding: 14, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{th.name}</div>
                     <div className="be-num be-tiny" style={{ color: th.sentiment > 0 ? 'var(--be-green)' : th.sentiment < 0 ? 'var(--be-red)' : 'var(--ink-3)' }}>
-                      {th.count} · {th.sentiment > 0 ? '+' : ''}{th.sentiment?.toFixed(1) ?? '0'}
+                      n = {th.count}{th.pct != null ? ` (${fmt1(th.pct)}%)` : ''} · {th.sentiment > 0 ? '+' : ''}{th.sentiment?.toFixed(1) ?? '0'}
                     </div>
                   </div>
                   <div className="be-small be-muted" style={{ marginBottom: 8, lineHeight: 1.5 }}>{th.description}</div>
@@ -1634,17 +1255,15 @@ const SectionQuality = ({ study, aggregate, ai }) => {
   );
 };
 
-const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExternalAi = null }) => {
+const SectionIdentity = ({ study, aggregate, ai }) => {
   const score = Math.round(aggregate?.composite?.identity || 0);
   const qs = aggregate?.questions || [];
   const ii = ai?.identity_image || {};
-  const aiPos = ai?.positioning_analysis || {};
   const association = aggregate?.association || {};
   const imageRadar = aggregate?.image_radar || { axes: [], series: [] };
 
-  // Perceptual map state — auto-defaults to first 2 available axes and supports dropdown or radar click
+  // Perceptual map state — pick 2 axes from radar
   const [pmAxes, setPmAxes] = React.useState([]);
-  const [pmScale, setPmScale] = React.useState('auto'); // 'auto' | 'full' (0-100)
   const [radarMode, setRadarMode] = React.useState('common'); // 'common' = intersection, 'all' = union
   const togglePmAxis = (ax) => {
     setPmAxes(prev => {
@@ -1667,11 +1286,6 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
     };
   }, [imageRadar, radarMode]);
 
-  const COMP_DOT_COLORS = ['#1B75BC', '#D4A017', '#10B981', '#7C3AED', '#EA580C', '#06B6D4'];
-  const effectivePmAxes = pmAxes.length === 2
-    ? pmAxes
-    : (displayedRadar.axes?.length >= 2 ? [displayedRadar.axes[0], displayedRadar.axes[1]] : pmAxes);
-
   const intended = study.identity?.traits || [];
   const aligned = ii.aligned || [];
   const unintended = ii.unintended || [];
@@ -1693,19 +1307,16 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
     kind: aligned.includes(p.trait) ? 'aligned' : unintended.includes(p.trait) ? 'unintended' : 'lost',
   }));
 
-  // 1-word identity cloud (deterministic coordinates)
+  // 1-word identity cloud (BI-3 word_cloud question)
   const oneWord = qs.find(q => q.kind === 'image_one_word');
   const oneWordCounts = oneWord?.stats?.counts || [];
-  const oneWordCloudWords = oneWordCounts.slice(0, 14).map((c, i) => {
-    const h = (String(c.label || '').split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) + i * 19) % 10;
-    return {
-      text: c.label,
-      size: Math.max(12, 14 + Math.round(c.pct * 0.6)),
-      target: aligned.includes(c.label),
-      x: 10 + (i % 5) * 18 + h * 0.7,
-      y: 16 + Math.floor(i / 5) * 28 + (h % 5) * 1.1,
-    };
-  });
+  const oneWordCloudWords = oneWordCounts.slice(0, 14).map((c, i) => ({
+    text: c.label,
+    size: Math.max(12, 14 + Math.round(c.pct * 0.6)),
+    target: aligned.includes(c.label),
+    x: 10 + (i % 5) * 18 + hash01(c.label + 'x') * 8,
+    y: 18 + Math.floor(i / 5) * 28 + hash01(c.label + 'y') * 6,
+  }));
 
   return (
     <div className="be-section be-section-centerpiece"
@@ -1722,11 +1333,10 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
           </div>
         </div>
         <div className="be-section-meta">
-          <div>Alignment <strong style={{ color: ii.alignment_score_0_100 >= 60 ? 'var(--be-green)' : 'var(--be-red)' }}>
-            {ii.alignment_score_0_100 != null ? `${ii.alignment_score_0_100}%` : '—'}
-          </strong></div>
-          <div><strong>{aligned.length}</strong>/{intended.length} aligned</div>
-          <div><strong>{score}</strong>/100</div>
+          <div><strong>{score}</strong>/100 <span className="be-tiny be-muted">(คะแนนจากผู้ตอบ)</span></div>
+          <div className="be-tiny be-muted" data-testid="be-ai-opinion-meta">
+            ความเห็นของ AI (ไม่ใช่คะแนน): {intended.length ? `${aligned.length}/${intended.length} ตรงกับที่ตั้งใจ` : '—'}
+          </div>
         </div>
       </div>
 
@@ -1739,13 +1349,24 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
              data-testid="be-visual-identity-panel">
           <div className="be-eyebrow" style={{ marginBottom: 10 }}>
             <span className="be-dot-sm" style={{ background: 'var(--be-red)' }}/>
-            BRAND VISUAL IDENTITY · what the brand intended
+            อัตลักษณ์ที่แบรนด์ตั้งใจ · BRAND VISUAL IDENTITY
             {study.identity?.archetype && (
               <span className="be-chip" style={{ marginLeft: 10, background: 'var(--ink)', color: 'var(--paper)' }}>
                 {study.identity.archetype}
               </span>
             )}
           </div>
+          {study.identity?.ai_source && (
+            <div style={{ marginBottom: 10 }}>
+              <span className="be-prov be-mono" data-testid="be-visual-identity-prov">
+                <span className="be-prov-dot" style={{ background: study.identity.ai_source.source === 'external' ? 'var(--be-blue)' : 'var(--be-red)' }}/>
+                {study.identity.ai_source.source === 'external'
+                  ? `นำเข้าจาก ${study.identity.ai_source.model_label || 'AI ภายนอก'}`
+                  : 'วิเคราะห์โดย AI ของระบบ'}
+                {study.identity.ai_source.at ? ` เมื่อ ${new Date(study.identity.ai_source.at).toLocaleString('th-TH')}` : ''}
+              </span>
+            </div>
+          )}
           {study.identity?.ai_summary && (
             <div className="be-serif" style={{ fontSize: 14, fontStyle: 'italic',
                    color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 14 }}>
@@ -1903,13 +1524,13 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
               <RadarChart axes={displayedRadar.axes}
                           series={displayedRadar.series.map((s, i) => ({
                             ...s,
-                            color: s.kind === 'brand' ? '#C8102E' : COMP_DOT_COLORS[(i - 1) % COMP_DOT_COLORS.length],
+                            color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
                             dash: s.kind === 'brand' ? '0' : '4 3',
                             fill: s.kind === 'brand' ? 0.18 : 0.06,
                           }))}
                           size={Math.min(360, displayedRadar.axes.length * 36 + 200)}
                           onAxisClick={togglePmAxis}
-                          selectedAxes={effectivePmAxes}
+                          selectedAxes={pmAxes}
                           testidPrefix="be-image-radar-axis"/>
             </div>
             <div>
@@ -1920,7 +1541,7 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12,
                               flexWrap: 'wrap' }}>
                   <span style={{ width: 16, height: 3,
-                          background: s.kind === 'brand' ? '#C8102E' : COMP_DOT_COLORS[(i - 1) % COMP_DOT_COLORS.length],
+                          background: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
                           borderTop: s.kind !== 'brand' ? '1px dashed' : 'none' }}/>
                   <span style={{ fontWeight: s.kind === 'brand' ? 600 : 400 }}>{s.name}</span>
                   {s.kind === 'brand' && <span className="be-mono be-tiny be-muted">· focal</span>}
@@ -1956,9 +1577,9 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
         </div>
       )}
 
-      {/* === 2D Perceptual Map (auto-displayed with dropdown X/Y selectors, AUTO-NORMALIZED) === */}
-      {effectivePmAxes.length === 2 && displayedRadar.series.length > 0 && (() => {
-        const [xAx, yAx] = effectivePmAxes;
+      {/* === 2D Perceptual Map (interactive — pick 2 axes from radar, AUTO-NORMALIZED) === */}
+      {pmAxes.length === 2 && displayedRadar.series.length > 0 && (() => {
+        const [xAx, yAx] = pmAxes;
         const xIdx = displayedRadar.axes.indexOf(xAx);
         const yIdx = displayedRadar.axes.indexOf(yAx);
         if (xIdx < 0 || yIdx < 0) return null;
@@ -1970,13 +1591,13 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
           if (xv == null || yv == null) return null;
           return {
             name: s.name, rawX: xv, rawY: yv, kind: s.kind,
-            color: s.kind === 'brand' ? '#C8102E' : COMP_DOT_COLORS[(i - 1) % COMP_DOT_COLORS.length],
+            color: s.kind === 'brand' ? '#C8102E' : ['#1B75BC', '#D4A017', '#5C5F66'][i - 1] || '#5C5F66',
           };
         }).filter(Boolean);
 
         if (raw.length === 0) return null;
 
-        // Compute min/max with 18% padding (auto-zoom) OR fixed 0..100 scale
+        // Compute min/max with 12% padding so dots aren't on the edge
         const xs = raw.map(d => d.rawX);
         const ys = raw.map(d => d.rawY);
         const xMinR = Math.min(...xs), xMaxR = Math.max(...xs);
@@ -1984,205 +1605,69 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
         const padPct = 0.18;
         const xRange = xMaxR - xMinR;
         const yRange = yMaxR - yMinR;
-        const useAuto = pmScale === 'auto';
-        const xMin = useAuto ? Math.max(0, xMinR - (xRange || 5) * padPct) : 0;
-        const xMax = useAuto ? Math.min(100, xMaxR + (xRange || 5) * padPct) : 100;
-        const yMin = useAuto ? Math.max(0, yMinR - (yRange || 5) * padPct) : 0;
-        const yMax = useAuto ? Math.min(100, yMaxR + (yRange || 5) * padPct) : 100;
+        const xMin = Math.max(0, xMinR - (xRange || 5) * padPct);
+        const xMax = Math.min(100, xMaxR + (xRange || 5) * padPct);
+        const yMin = Math.max(0, yMinR - (yRange || 5) * padPct);
+        const yMax = Math.min(100, yMaxR + (yRange || 5) * padPct);
         const dots = raw.map(d => ({
           ...d,
           x: ((d.rawX - xMin) / Math.max(0.001, xMax - xMin)) * 100,
           y: ((d.rawY - yMin) / Math.max(0.001, yMax - yMin)) * 100,
         }));
-        const focalDot = raw.find(d => d.kind === 'brand');
-        const hasAiRecAxes = Boolean(
-          aiPos?.recommended_axes?.x &&
-          aiPos?.recommended_axes?.y &&
-          (displayedRadar.axes || []).includes(aiPos.recommended_axes.x) &&
-          (displayedRadar.axes || []).includes(aiPos.recommended_axes.y)
-        );
 
         return (
           <div className="be-card" style={{ padding: 22, marginBottom: 16 }}
                data-testid="be-perceptual-map-card">
-            <div className="be-card-h" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Perceptual Map · {xAx} × {yAx}</h3>
                 <div className="be-card-d">
                   Positioning ของ {study.brand?.name} เทียบกับคู่แข่ง
-                  · {useAuto ? 'auto-zoom' : 'สเกล 0-100'} · {dots.length} brand{dots.length > 1 ? 's' : ''} plotted
+                  · auto-zoom · {dots.length} brand{dots.length > 1 ? 's' : ''} plotted
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div className="be-mono be-tiny" style={{ display: 'flex', border: '1px solid var(--rule-strong)' }}>
-                  <button
-                    type="button"
-                    onClick={() => setPmScale('auto')}
-                    data-testid="be-pm-scale-auto"
-                    style={{
-                      padding: '4px 8px',
-                      background: useAuto ? 'var(--ink)' : 'transparent',
-                      color: useAuto ? 'var(--paper)' : 'var(--ink)',
-                      border: 0, cursor: 'pointer', fontSize: 10,
-                    }}
-                  >
-                    AUTO-ZOOM
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPmScale('full')}
-                    data-testid="be-pm-scale-full"
-                    style={{
-                      padding: '4px 8px',
-                      background: !useAuto ? 'var(--ink)' : 'transparent',
-                      color: !useAuto ? 'var(--paper)' : 'var(--ink)',
-                      border: 0, borderLeft: '1px solid var(--rule-strong)', cursor: 'pointer', fontSize: 10,
-                    }}
-                  >
-                    0–100
-                  </button>
-                </div>
-                <label className="be-mono be-tiny be-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  X:
-                  <select className="be-input" style={{ padding: '4px 6px', fontSize: 11, width: 'auto' }}
-                          value={xAx} onChange={e => setPmAxes([e.target.value, yAx])}
-                          data-testid="be-pm-x-select">
-                    {(displayedRadar.axes || []).map(ax => <option key={ax} value={ax}>{ax}</option>)}
-                  </select>
-                </label>
-                <label className="be-mono be-tiny be-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  Y:
-                  <select className="be-input" style={{ padding: '4px 6px', fontSize: 11, width: 'auto' }}
-                          value={yAx} onChange={e => setPmAxes([xAx, e.target.value])}
-                          data-testid="be-pm-y-select">
-                    {(displayedRadar.axes || []).map(ax => <option key={ax} value={ax}>{ax}</option>)}
-                  </select>
-                </label>
+              <div className="be-mono be-tiny be-muted" style={{ textAlign: 'right', lineHeight: 1.6 }}>
+                X · {xAx}<br/>
+                Y · {yAx}
               </div>
             </div>
-
-            {dots.length === 1 && (
-              <div style={{ marginTop: 8, padding: '8px 12px', background: '#FFFAF0', border: '1px solid var(--be-gold)', fontSize: 12, color: 'var(--ink-2)' }}>
-                💡 ตอนนี้มีข้อมูลเฉพาะแบรนด์ของคุณ — หากต้องการแผนที่เทียบคู่แข่ง เพิ่มรายชื่อคู่แข่งในหน้าแก้ไข Study แล้วเก็บข้อมูลเพิ่มเติม
-              </div>
-            )}
-
             <div style={{ display: 'grid', placeItems: 'center', padding: '14px 0' }}>
               <PerceptualMap xAxis={xAx} yAxis={yAx} dots={dots}
                              xRange={[xMin, xMax]} yRange={[yMin, yMax]}
-                             normalized={useAuto} size={460}/>
+                             normalized={true} size={460}/>
             </div>
             <div className="be-tiny be-muted" style={{ textAlign: 'center', marginTop: 4, lineHeight: 1.5 }}>
-              ค่าตัวเลขใต้แต่ละจุด = score 0-100 จริง · กรอบแสดง {Math.round(xMin)}-{Math.round(xMax)} บนแกน X และ {Math.round(yMin)}-{Math.round(yMax)} บนแกน Y
+              ค่าตัวเลขใต้แต่ละจุด = score 0-100 จริง · กรอบแสดง {Math.round(xMin)}-{Math.round(xMax)}
+              บนแกน X และ {Math.round(yMin)}-{Math.round(yMax)} บนแกน Y เพื่อขยายความต่างให้เห็นชัด
             </div>
-
-            {/* Brand & Competitor Coordinates + Gap Table */}
-            {dots.length > 0 && (
-              <div style={{ marginTop: 14, overflowX: 'auto' }} data-testid="be-pm-table">
-                <table className="be-table" style={{ width: '100%', fontSize: 12 }}>
-                  <thead>
-                    <tr>
-                      <th>แบรนด์</th>
-                      <th style={{ textAlign: 'right' }}>{xAx} (0-100)</th>
-                      <th style={{ textAlign: 'right' }}>{yAx} (0-100)</th>
-                      {focalDot && dots.length > 1 && <th style={{ textAlign: 'right' }}>ส่วนต่างเทียบ {focalDot.name}</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {raw.map((row) => {
-                      const isFocal = row.kind === 'brand';
-                      const dx = focalDot ? (row.rawX - focalDot.rawX) : 0;
-                      const dy = focalDot ? (row.rawY - focalDot.rawY) : 0;
-                      return (
-                        <tr key={row.name}>
-                          <td style={{ fontWeight: isFocal ? 700 : 400, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: row.color, display: 'inline-block' }}/>
-                            {row.name}
-                            {isFocal && <span className="be-mono be-tiny be-muted">· focal</span>}
-                          </td>
-                          <td className="be-mono" style={{ textAlign: 'right' }}>{row.rawX.toFixed(1)}</td>
-                          <td className="be-mono" style={{ textAlign: 'right' }}>{row.rawY.toFixed(1)}</td>
-                          {focalDot && dots.length > 1 && (
-                            <td className="be-mono be-tiny" style={{ textAlign: 'right', color: isFocal ? 'var(--ink-4)' : 'var(--ink-2)' }}>
-                              {isFocal ? '—' : `X ${dx >= 0 ? '+' : ''}${dx.toFixed(1)} · Y ${dy >= 0 ? '+' : ''}${dy.toFixed(1)}`}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* AI Positioning Analysis & White Space */}
-            {(aiPos?.summary || aiPos?.white_space || (aiPos?.competitor_positions || []).length > 0 || hasAiRecAxes) && (
-              <div style={{ marginTop: 16, padding: 14, background: 'var(--paper-2)', border: '1px solid var(--rule-strong)' }}
-                   data-testid="be-ai-positioning-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                  <div className="be-eyebrow" style={{ color: 'var(--be-red)' }}>
-                    <Icon name="sparkle" size={11}/>AI COMPETITIVE POSITIONING ANALYSIS
-                  </div>
-                  {hasAiRecAxes && (
-                    <button
-                      type="button"
-                      className="be-btn be-btn-sm be-btn-primary"
-                      data-testid="be-pm-apply-ai-axes"
-                      onClick={() => setPmAxes([aiPos.recommended_axes.x, aiPos.recommended_axes.y])}
-                    >
-                      ใช้แกนที่ AI แนะนำ ({aiPos.recommended_axes.x} × {aiPos.recommended_axes.y})
-                    </button>
-                  )}
-                </div>
-                {aiPos.summary && (
-                  <p className="be-small" style={{ marginBottom: 8, lineHeight: 1.6, color: 'var(--ink)' }}>{aiPos.summary}</p>
-                )}
-                {aiPos.recommended_axes?.reason && (
-                  <div className="be-tiny be-muted" style={{ marginBottom: 8 }}>
-                    <strong>เหตุผลเลือกแกน:</strong> {aiPos.recommended_axes.reason}
-                  </div>
-                )}
-                {aiPos.white_space && (
-                  <div className="be-small" style={{ padding: '8px 10px', background: '#fff', borderLeft: '3px solid var(--be-green)', marginBottom: 10 }}>
-                    <strong>ช่องว่างทางการตลาด (White Space):</strong> {aiPos.white_space}
-                  </div>
-                )}
-                {(aiPos.competitor_positions || []).length > 0 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 8 }}>
-                    {aiPos.competitor_positions.map((cp, idx) => (
-                      <div key={idx} style={{ background: '#fff', border: '1px solid var(--rule)', padding: '8px 10px', fontSize: 12 }}>
-                        <div style={{ fontWeight: 700, marginBottom: 2 }}>{cp.brand}</div>
-                        {cp.position_label && <div className="be-mono be-tiny" style={{ color: 'var(--be-blue)', marginBottom: 4 }}>{cp.position_label}</div>}
-                        {cp.strength && <div className="be-tiny">✅ {cp.strength}</div>}
-                        {cp.weakness && <div className="be-tiny be-muted">⚠ {cp.weakness}</div>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         );
       })()}
 
       {/* === Identity vs Image map (AI-required) === */}
       {!ai?.identity_image || Object.keys(ii).length === 0 ? (
-        <div className="be-card" style={{ padding: 30, textAlign: 'center', marginBottom: 16 }}>
-          <div className="be-eyebrow" style={{ marginBottom: 10, justifyContent: 'center' }}>AI ANALYSIS PENDING</div>
-          <div className="be-muted be-small" style={{ marginBottom: onOpenExternalAi ? 12 : 0 }}>
-            {isShowcase
-              ? 'Identity-Image map ยังไม่พร้อม · เจ้าของ study ต้องวิเคราะห์ด้วย AI ก่อน'
-              : <>Identity-Image map ต้องการการวิเคราะห์ข้อความจาก AI · กดปุ่ม <strong>ใช้ AI ภายนอก (ฟรี)</strong> ด้านล่างเพื่อ Copy Prompt ไปใช้ได้เลย</>
+        <div className="be-card" style={{ padding: 30, textAlign: 'center', marginBottom: 16 }} data-testid="be-identity-ai-pending">
+          <div className="be-eyebrow" style={{ marginBottom: 10, justifyContent: 'center' }}>ยังไม่มีผลวิเคราะห์ identity vs image จาก AI</div>
+          <div className="be-muted be-small">
+            {study.is_public_showcase
+              ? 'เจ้าของ study ยังไม่ได้วิเคราะห์ด้วย AI · ส่วนนี้เป็นความเห็นของ AI ไม่เกี่ยวกับคะแนน Identity'
+              : <>กล่อง <strong>AI analysis</strong> ด้านบน (ใช้ AI ของคุณเองได้) · ส่วนนี้เป็นความเห็นของ AI ไม่เกี่ยวกับคะแนน Identity ซึ่งคำนวณจากคำตอบผู้ตอบแล้ว</>
             }
           </div>
-          {!isShowcase && onOpenExternalAi && (
-            <button type="button" className="be-btn be-btn-primary" onClick={onOpenExternalAi} data-testid="be-identity-pending-external-ai">
-              <Icon name="copy" size={11}/>ใช้ AI ภายนอก (ฟรี · Copy Prompt → วางผล)
-            </button>
-          )}
         </div>
       ) : (
-        <div className="be-card" style={{ padding: 24, marginBottom: 16 }}>
+        <div className="be-card" style={{ padding: 24, marginBottom: 16 }} data-testid="be-identity-ai-card">
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
+            <span className="be-chip" data-testid="be-ai-opinion-label"
+                  style={{ background: 'var(--ink)', color: 'var(--paper)' }}>ความเห็นของ AI (ไม่ใช่คะแนน)</span>
+            <Provenance ai={ai} section="identity"/>
+            {ii.alignment_score_0_100 != null && (
+              <span className="be-small be-muted" data-testid="be-ai-alignment-opinion">
+                AI เห็นว่าสอดคล้องประมาณ {ii.alignment_score_0_100}/100 — เป็นการประเมินเชิงคุณภาพ ไม่ได้เข้าคะแนน Identity
+              </span>
+            )}
+          </div>
+          <StaleAiNote ai={ai}/>
           <IdentityImageMap intended={intended} image={imageCol} statusMap={statusMap}/>
           {ii.narrative && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--rule)',
@@ -2194,22 +1679,17 @@ const SectionIdentity = ({ study, aggregate, ai, isShowcase = false, onOpenExter
         </div>
       )}
 
-      {oneWordCloudWords.length > 0 && (
+      {oneWord?.coding_status === 'uncoded' && (
+        <div className="be-card" style={{ padding: 24 }}><UncodedNotice q={oneWord}/></div>
+      )}
+      {oneWordCloudWords.length > 0 && oneWord?.coding_status !== 'uncoded' && (
         <div className="be-card" style={{ padding: 24 }}>
           <div className="be-card-h">
             <div>
               <h3 className="be-card-t">One-word identity cloud</h3>
               <div className="be-card-d">
-                "อธิบาย {study.brand?.name} ในคำเดียว" · n={oneWord?.stats?.n}
-                {oneWord?.stats?.ai_normalized && (
-                  <span className="be-chip-dim be-mono"
-                        style={{ marginLeft: 8, color: 'var(--be-red)', background: 'rgba(200,16,46,0.06)',
-                                 border: '1px solid rgba(200,16,46,0.2)', padding: '2px 6px',
-                                 fontSize: 9.5, letterSpacing: '0.06em' }}>
-                    AI · NORMALIZED
-                  </span>
-                )}
-                {' '}· aligned highlighted in red
+                "อธิบาย {study.brand?.name} ในคำเดียว" · n = {oneWord?.stats?.n} · คำที่ตรงกับอัตลักษณ์ที่ตั้งใจเน้นสีแดง
+                <div style={{ marginTop: 6 }}><CodingBadge stats={oneWord?.stats} ai={ai}/></div>
               </div>
             </div>
           </div>
@@ -2274,18 +1754,19 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Net Promoter Score</h3>
-                <div className="be-card-d">"จะแนะนำ?" · scale 0-10 · n={nps.stats?.n}</div>
+                <div className="be-card-d">"จะแนะนำ?" · มาตร 0-10 · n = {nps.stats?.n}</div>
               </div>
             </div>
             <NPSBar detractors={nps.stats?.detractors} passives={nps.stats?.passives} promoters={nps.stats?.promoters}/>
             <div className="be-grid-3" style={{ marginTop: 14 }}>
               <div><div className="be-mono be-tiny be-muted">NPS</div>
                    <div className="be-data" style={{ fontSize: 24, color: nps.stats?.score >= 0 ? 'var(--be-green)' : 'var(--be-red)' }}>
-                     {nps.stats?.score > 0 ? '+' : ''}{nps.stats?.score}</div></div>
+                     {nps.stats?.score > 0 ? '+' : ''}{fmt1(nps.stats?.score)}</div>
+                   {nps.stats?.score_ci95 && <div className="be-mono be-tiny be-muted" style={{ textTransform: 'none' }} data-testid="be-nps-ci">95% CI {fmtCI(nps.stats.score_ci95)}</div>}</div>
               <div><div className="be-mono be-tiny be-muted">PROMOTERS</div>
-                   <div className="be-data" style={{ fontSize: 24 }}>{nps.stats?.promoters_pct}%</div></div>
+                   <div className="be-data" style={{ fontSize: 24 }}>{fmtPct(nps.stats?.promoters_pct)}</div></div>
               <div><div className="be-mono be-tiny be-muted">DETRACTORS</div>
-                   <div className="be-data" style={{ fontSize: 24 }}>{nps.stats?.detractors_pct}%</div></div>
+                   <div className="be-data" style={{ fontSize: 24 }}>{fmtPct(nps.stats?.detractors_pct)}</div></div>
             </div>
           </div>
         )}
@@ -2295,7 +1776,7 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
             <div className="be-card-h">
               <div>
                 <h3 className="be-card-t">Repeat intent & switching resistance</h3>
-                <div className="be-card-d">7-pt Likert</div>
+                <div className="be-card-d">มาตร 7 ระดับ · คะแนน 0-100 (POMP)</div>
               </div>
             </div>
             <div style={{ padding: '10px 0' }}>
@@ -2303,10 +1784,10 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
                     <span>Repeat intent</span>
-                    <span className="be-num">{repeat.stats?.mean} / 7 ({Math.round(repeat.stats?.score_100 ?? ((repeat.stats?.mean || 0) / 7 * 100))}/100)</span>
+                    <span className="be-num">{fmt1(repeat.stats?.score_100)} <span className="be-tiny be-muted">(CI {fmtCI(repeat.stats?.score_100_ci95)} · n = {repeat.stats?.n})</span></span>
                   </div>
                   <div className="be-hbar" style={{ height: 14 }}>
-                    <div className="be-hbar-fill" style={{ width: (repeat.stats?.score_100 ?? ((repeat.stats?.mean || 0) / 7 * 100)) + '%', background: DIMENSIONS.loyalty.color }}/>
+                    <div className="be-hbar-fill" style={{ width: (repeat.stats?.score_100 ?? 0) + '%', background: DIMENSIONS.loyalty.color }}/>
                   </div>
                 </div>
               )}
@@ -2314,10 +1795,10 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
                     <span>Switching resistance (vs 20% discount)</span>
-                    <span className="be-num">{switching.stats?.mean} / 7 ({Math.round(switching.stats?.score_100 ?? ((switching.stats?.mean || 0) / 7 * 100))}/100)</span>
+                    <span className="be-num">{fmt1(switching.stats?.score_100)} <span className="be-tiny be-muted">(CI {fmtCI(switching.stats?.score_100_ci95)} · n = {switching.stats?.n})</span></span>
                   </div>
                   <div className="be-hbar" style={{ height: 14 }}>
-                    <div className="be-hbar-fill" style={{ width: (switching.stats?.score_100 ?? ((switching.stats?.mean || 0) / 7 * 100)) + '%', background: DIMENSIONS.quality.color }}/>
+                    <div className="be-hbar-fill" style={{ width: (switching.stats?.score_100 ?? 0) + '%', background: DIMENSIONS.quality.color }}/>
                   </div>
                 </div>
               )}
@@ -2325,12 +1806,16 @@ const SectionLoyalty = ({ study, aggregate, ai }) => {
           </div>
         )}
 
+        {loyOpen && loyOpen.coding_status === 'uncoded' && loyThemes.length === 0 && (
+          <div className="be-card be-span-2"><UncodedNotice q={{ ...loyOpen, coding_status_th: 'ยังไม่ได้สกัดประเด็น' }}/></div>
+        )}
         {loyThemes.length > 0 && (
           <div className="be-card be-span-2">
             <div className="be-card-h">
               <div>
-                <h3 className="be-card-t">Why customers stay</h3>
-                <div className="be-card-d">Open-end clustered by AI · top themes</div>
+                <h3 className="be-card-t">ทำไมลูกค้ายังอยู่</h3>
+                <div className="be-card-d">คำตอบปลายเปิดที่จัดเป็นประเด็นโดย AI · จำนวนนับโดยระบบ</div>
+                <div style={{ marginTop: 6 }}><Provenance ai={ai} section="themes"/></div>
               </div>
             </div>
             {loyThemes.map((t, i) => {
@@ -2401,7 +1886,7 @@ const WaveCompareCard = ({ data }) => {
         ))}
       </div>
 
-      <div className="be-wave-compare-deltas" style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 36 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 36 }}>
         {rows.map(r => {
           const d = deltas?.[r.key];
           const dir = d == null ? 'flat' : (d > 0.1 ? 'up' : (d < -0.1 ? 'down' : 'flat'));
@@ -2409,11 +1894,10 @@ const WaveCompareCard = ({ data }) => {
           return (
             <div key={r.key} className={`be-wave-compare-delta ${dir}`}
                  data-testid={`be-wave-delta-${r.key}`}>
-              <span className="be-mono be-tiny be-muted" style={{ fontSize: 10 }}>{r.label}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span className="arrow">{dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'}</span>
-                <span className="be-mono be-tiny" style={{ fontWeight: 600 }}>{fmtDelta(d)}</span>
-              </span>
+              <span className="arrow">{dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'}</span>
+              <span className="be-mono be-tiny" style={{ fontWeight: 600 }}>{fmtDelta(d)}</span>
+              {/* Significance marker: a delta alone cannot tell a real shift from
+                  sampling noise. ns = not significant after Holm adjustment. */}
               {t?.testable && (
                 <span className="be-mono" data-testid={`be-wave-sig-${r.key}`}
                       title={t.interpretation}

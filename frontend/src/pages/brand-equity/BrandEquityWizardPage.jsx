@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import AiActionButton from '@/components/AiActionButton';
+import { isLlmExternalOnly } from '@/lib/llmErrors';
+import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import './brand-equity-styles.css';
-import { BeTopbar, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
-import ExternalAiWorkflowModal from '@/components/ExternalAiWorkflowModal';
+import { BeTopbar, BE_CRUMBS, Icon, Stepper, BeLoading, DIMENSIONS, BrandLogo } from './be-components';
+import { apiErrorText } from '@/lib/apiError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -49,20 +52,11 @@ const PRICING = [
 ];
 
 const SEGMENTS = ['age', 'gender', 'region', 'occupation', 'income', 'usage_frequency'];
-const SEGMENT_LABELS = {
-  age: 'ช่วงอายุ',
-  gender: 'เพศ',
-  region: 'ภูมิภาค',
-  occupation: 'อาชีพ',
-  income: 'รายได้ต่อเดือน',
-  usage_frequency: 'ความถี่การใช้งาน',
-};
 
-const STEP_LABELS = ['ข้อมูลพื้นฐาน', 'อัตลักษณ์แบรนด์', 'กลุ่มผู้ตอบ', 'ตรวจสอบคำถาม'];
+const STEP_LABELS = ['Brand basics', 'Brand identity', 'Segments', 'Question review'];
 
 const BrandEquityWizardPage = () => {
   const { user, token } = useAuth();
-  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const { studyId } = useParams();
   const isEdit = Boolean(studyId);
@@ -72,27 +66,20 @@ const BrandEquityWizardPage = () => {
   const [creating, setCreating] = useState(false);
   const [previewLang, setPreviewLang] = useState('th');
 
-  const [brand, setBrand] = useState({
-    name: '', logo_url: '', category: '', competitors: [], industry_context: '',
-    custom_quality_attributes: [], custom_quality_attributes_reverse: [],
-  });
+  const [brand, setBrand] = useState({ name: '', logo_url: '', category: '', competitors: [], industry_context: '', custom_quality_attributes: [] });
   const [identity, setIdentity] = useState({
     traits: [], description: '', visual_assets: [],
     brand_promise: '', pricing_tier: 'mid', archetype: '',
     derived_traits: [], visual_palette: [], visual_keywords: [], ai_summary: '',
   });
   const [segments, setSegments] = useState(['age', 'gender']);
-  const [target, setTarget] = useState('100');
+  const [target, setTarget] = useState(100);
   const [questions, setQuestions] = useState([]);
   const [study, setStudy] = useState(null);
   const [expanded, setExpanded] = useState({ awareness: true, quality: false, identity: true, loyalty: false });
   const [competitorInput, setCompetitorInput] = useState('');
   const [qualityAttrInput, setQualityAttrInput] = useState('');
   const [extractingIdentity, setExtractingIdentity] = useState(false);
-  const [externalIdentityOpen, setExternalIdentityOpen] = useState(false);
-  const [pendingDeleteQ, setPendingDeleteQ] = useState(null);
-  const [confirmRegenOpen, setConfirmRegenOpen] = useState(false);
-  const [launchedModal, setLaunchedModal] = useState(null);
 
   const authH = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -104,18 +91,14 @@ const BrandEquityWizardPage = () => {
       const r = await axios.get(`${API}/brand-equity/studies/${studyId}`, authH);
       const s = r.data;
       setStudy(s);
-      setBrand({
-        custom_quality_attributes: [],
-        custom_quality_attributes_reverse: [],
-        ...(s.brand || {}),
-      });
+      setBrand(s.brand);
       setIdentity({
         traits: [], description: '', visual_assets: [],
         derived_traits: [], visual_palette: [], visual_keywords: [], ai_summary: '',
         ...s.identity,
       });
       setSegments(s.segments_to_capture || []);
-      setTarget(String(s.target_responses || 100));
+      setTarget(s.target_responses || 100);
       setQuestions(s.questions || []);
       // Edit mode: start at Brand basics so user can adjust everything; Stepper is clickable to jump
       setStep(0);
@@ -125,81 +108,19 @@ const BrandEquityWizardPage = () => {
     setLoading(false);
   };
 
-  const validStep0 = Boolean(brand.name?.trim() && brand.category?.trim() && brand.competitors.length >= 1);
-  // Enforce >= 3 traits so BI-1 Trait Pickup & Identity-vs-Image comparison always work cleanly
-  const validStep1 = (identity.traits || []).length >= 3;
+  const validStep0 = brand.name?.trim() && brand.category?.trim() && brand.competitors.length >= 1;
+  // Step 1 valid if EITHER user picked >=3 traits OR provided description OR uploaded an image
+  const validStep1 = (identity.traits || []).length >= 3
+                  || (identity.description || '').trim().length >= 20
+                  || (identity.visual_assets || []).length >= 1;
   const validStep2 = segments.length >= 1;
-  const parsedTarget = Math.max(10, parseInt(target, 10) || 100);
-
-  const step0MissingReason = !brand.name?.trim()
-    ? 'กรุณากรอกชื่อแบรนด์'
-    : !brand.category?.trim()
-      ? 'กรุณากรอกหมวดสินค้า / category'
-      : brand.competitors.length < 1
-        ? (competitorInput.trim() ? `กดปุ่ม "+ เพิ่ม" เพื่อยืนยันคู่แข่ง "${competitorInput.trim()}"` : 'กรุณาเพิ่มคู่แข่งหลักอย่างน้อย 1 แบรนด์')
-        : '';
-  const step1MissingReason = (identity.traits || []).length < 3
-    ? `เลือก Identity traits อย่างน้อย 3 ข้อ (เลือกแล้ว ${(identity.traits || []).length}/3)`
-    : '';
-
-  // Live question estimate for fatigue guardrail
-  const compCount = (brand.competitors || []).length;
-  const customCount = (brand.custom_quality_attributes || []).length;
-  const estTotalQuestions = 22 + compCount * 5 + customCount * (1 + compCount);
-  const estMinLo = Math.max(1, Math.ceil((questions.length || estTotalQuestions) * 15 / 60));
-  const estMinHi = Math.max(estMinLo + 1, Math.ceil((questions.length || estTotalQuestions) * 25 / 60));
 
   const addCompetitor = () => {
     const v = competitorInput.trim();
-    if (!v) return;
-    if (brand.name?.trim() && v.toLowerCase() === brand.name.trim().toLowerCase()) {
-      toast.error(`"${v}" เป็นชื่อแบรนด์ของคุณเอง กรุณาใส่ชื่อคู่แข่ง`);
-      return;
+    if (v && !brand.competitors.includes(v)) {
+      setBrand({ ...brand, competitors: [...brand.competitors, v] });
+      setCompetitorInput('');
     }
-    if (brand.competitors.some(c => c.toLowerCase() === v.toLowerCase())) {
-      toast.info(`มี "${v}" อยู่ในรายการคู่แข่งแล้ว`);
-      return;
-    }
-    setBrand({ ...brand, competitors: [...brand.competitors, v] });
-    setCompetitorInput('');
-  };
-
-  const addCustomQualityAttr = () => {
-    const v = qualityAttrInput.trim();
-    const attrs = brand.custom_quality_attributes || [];
-    const revs = brand.custom_quality_attributes_reverse || [];
-    if (!v) return;
-    if (attrs.some(a => a.toLowerCase() === v.toLowerCase())) {
-      toast.info(`มี "${v}" อยู่แล้ว`);
-      return;
-    }
-    if (attrs.length >= 5) {
-      toast.info('เพิ่ม Custom Attribute ได้สูงสุด 5 ข้อ เพื่อไม่ให้แบบสอบถามยาวเกินไป');
-      return;
-    }
-    setBrand({
-      ...brand,
-      custom_quality_attributes: [...attrs, v],
-      custom_quality_attributes_reverse: [...revs, false],
-    });
-    setQualityAttrInput('');
-  };
-
-  const toggleCustomAttrPolarity = (idx) => {
-    const attrs = brand.custom_quality_attributes || [];
-    const revs = attrs.map((_, i) => Boolean((brand.custom_quality_attributes_reverse || [])[i]));
-    revs[idx] = !revs[idx];
-    setBrand({ ...brand, custom_quality_attributes_reverse: revs });
-  };
-
-  const removeCustomAttr = (idx) => {
-    const attrs = brand.custom_quality_attributes || [];
-    const revs = attrs.map((_, i) => Boolean((brand.custom_quality_attributes_reverse || [])[i]));
-    setBrand({
-      ...brand,
-      custom_quality_attributes: attrs.filter((_, j) => j !== idx),
-      custom_quality_attributes_reverse: revs.filter((_, j) => j !== idx),
-    });
   };
 
   const toggleTrait = (t) => {
@@ -247,6 +168,19 @@ const BrandEquityWizardPage = () => {
     }));
   };
 
+  const errMsg = (e) => {
+    const d = e?.response?.data?.detail;
+    return typeof d === 'string' ? d : (d && d.message) || e.message;
+  };
+  const extractBody = {
+    brand_name: brand.name || 'Brand',
+    category: brand.category,
+    description: identity.description || '',
+    traits: identity.traits || [],
+    brand_promise: identity.brand_promise,
+    pricing_tier: identity.pricing_tier,
+    visual_assets: identity.visual_assets || [],
+  };
   const runAIExtract = async () => {
     if (!identity.description?.trim() && !(identity.visual_assets || []).length && !identity.traits.length) {
       toast.error('กรอก description หรืออัปโหลดภาพอย่างน้อย 1 รายการก่อน');
@@ -254,19 +188,24 @@ const BrandEquityWizardPage = () => {
     }
     setExtractingIdentity(true);
     try {
-      const r = await axios.post(`${API}/brand-equity/extract-identity`, {
-        brand_name: brand.name || 'Brand',
-        category: brand.category,
-        description: identity.description || '',
-        traits: identity.traits || [],
-        brand_promise: identity.brand_promise,
-        pricing_tier: identity.pricing_tier,
-        visual_assets: identity.visual_assets || [],
-      }, authH);
-      const d = r.data;
-      // Merge derived into local identity capped cleanly at 8 (matching manual toggle cap)
-      const mergedTraits = Array.from(new Set([...(identity.traits || []), ...(d.derived_traits || [])])).slice(0, 8);
-      setIdentity(prev => ({
+      const r = await axios.post(`${API}/brand-equity/extract-identity`, extractBody, authH);
+      applyDerived(r.data, { source: 'system' });
+    } catch (e) {
+      setExtractingIdentity(false);
+      // Policy errors go back to <AiActionButton>, which opens the "my own AI" dialog.
+      if (isLlmExternalOnly(e)) throw e;
+      toast.error('AI วิเคราะห์ไม่สำเร็จ: ' + errMsg(e));
+      return;
+    }
+    setExtractingIdentity(false);
+  };
+
+  // Merge a derived-identity object (system OR pasted back from the user's own AI).
+  const applyDerived = (d, { source, model_label } = {}) => {
+    // Merge derived into local identity (don't blow away user's chosen traits)
+    setIdentity(prev => {
+      const mergedTraits = Array.from(new Set([...(prev.traits || []), ...(d.derived_traits || [])])).slice(0, 12);
+      return {
         ...prev,
         traits: mergedTraits,
         derived_traits: d.derived_traits || [],
@@ -274,12 +213,10 @@ const BrandEquityWizardPage = () => {
         visual_keywords: d.visual_keywords || [],
         ai_summary: d.summary || '',
         archetype: d.archetype || prev.archetype,
-      }));
-      toast.success(`AI สร้าง ${(d.derived_traits || []).length} traits + palette + keywords`);
-    } catch (e) {
-      toast.error('AI ภายในไม่พร้อมใช้งาน — แนะนำกด "ใช้ AI ภายนอก (ฟรี)" ข้างๆ เพื่อ Copy Prompt ไปใช้กับ ChatGPT/Gemini/Claude ได้เลย');
-    }
-    setExtractingIdentity(false);
+        ai_source: { source: d.source || source || 'system', model_label: d.model_label || model_label, at: new Date().toISOString() },
+      };
+    });
+    toast.success(`ได้ ${(d.derived_traits || []).length} traits + palette + keywords${(d.source || source) === 'external' ? ' (จาก AI ของคุณ)' : ''}`);
   };
 
   const toggleSegment = (s) => {
@@ -310,53 +247,36 @@ const BrandEquityWizardPage = () => {
       setStep(3);
       toast.success((study?.id ? 'อัปเดต' : 'สร้าง') + ' · ' + (saved.questions?.length || 0) + ' คำถาม');
     } catch (e) {
-      toast.error((study?.id ? 'อัปเดต' : 'สร้าง') + ' study ไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error((study?.id ? 'อัปเดต' : 'สร้าง') + ' study ไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setCreating(false);
   };
 
-  const executeRegenerate = async () => {
+  const regenerate = async () => {
     if (!study?.id) return;
-    setConfirmRegenOpen(false);
     setCreating(true);
     try {
       const r = await axios.post(`${API}/brand-equity/studies/${study.id}/regenerate-questions`, {}, authH);
       setQuestions(r.data.questions || []);
-      toast.success('สร้างคำถามใหม่ ' + (r.data.questions?.length || 0) + ' ข้อเรียบร้อย');
+      toast.success('Regenerated ' + (r.data.questions?.length || 0) + ' คำถาม');
     } catch (e) {
-      toast.error('สร้างคำถามใหม่ไม่สำเร็จ');
+      toast.error('Regenerate ไม่สำเร็จ');
     }
     setCreating(false);
-  };
-
-  const regenerate = () => {
-    if (!study?.id) return;
-    if (study.status === 'collecting' && (study.response_count || 0) > 0) {
-      setConfirmRegenOpen(true);
-      return;
-    }
-    executeRegenerate();
   };
 
   const launchStudy = async () => {
     if (!study?.id) return;
     setCreating(true);
     try {
-      const cleanBrand = { ...brand, target_responses: undefined };
-      const r = await axios.put(`${API}/brand-equity/studies/${study.id}`,
+      // Persist any final edits to brand/identity/segments along with status + edited questions
+      await axios.put(`${API}/brand-equity/studies/${study.id}`,
         { status: 'collecting', questions,
-          brand: cleanBrand, identity, segments_to_capture: segments, target_responses: parsedTarget }, authH);
-      const updated = r.data || { ...study, status: 'collecting' };
-      setStudy(updated);
+          brand, identity, segments_to_capture: segments, target_responses: target }, authH);
       toast.success('Study เปิดรับคำตอบแล้ว');
-      setLaunchedModal({
-        studyId: study.id,
-        shareToken: updated.share_token || study.share_token,
-        brandName: brand.name,
-        estMin: `${estMinLo}–${estMinHi}`,
-      });
+      navigate(`/brand-equity/studies/${study.id}`);
     } catch (e) {
-      toast.error('เปิดรับคำตอบไม่สำเร็จ');
+      toast.error('Launch ไม่สำเร็จ');
     }
     setCreating(false);
   };
@@ -367,30 +287,17 @@ const BrandEquityWizardPage = () => {
     setCreating(true);
     try {
       await axios.put(`${API}/brand-equity/studies/${study.id}`,
-        { brand, identity, segments_to_capture: segments, target_responses: parsedTarget,
+        { brand, identity, segments_to_capture: segments, target_responses: target,
           questions }, authH);
       toast.success('บันทึกการแก้ไขเรียบร้อย');
       navigate(`/brand-equity/studies/${study.id}`);
     } catch (e) {
-      toast.error('บันทึกไม่สำเร็จ: ' + (e.response?.data?.detail || e.message));
+      toast.error('บันทึกไม่สำเร็จ: ' + (apiErrorText(e, e.message)));
     }
     setCreating(false);
   };
 
-  const isCoreQuestion = (q) => !['open_short', 'open_long'].includes(q.type) && q.required !== false;
-  const deleteQuestion = (q) => {
-    if (isCoreQuestion(q)) {
-      setPendingDeleteQ(q);
-      return;
-    }
-    setQuestions(questions.filter(x => x.id !== q.id));
-  };
-  const confirmDeleteQuestion = () => {
-    if (!pendingDeleteQ) return;
-    setQuestions(questions.filter(x => x.id !== pendingDeleteQ.id));
-    setPendingDeleteQ(null);
-    toast.info('ลบคำถามแล้ว (กด Regenerate เพื่อดึงกลับมาได้)');
-  };
+  const deleteQuestion = (qid) => setQuestions(questions.filter(q => q.id !== qid));
 
   if (loading) {
     return <div className="be-root"><BeLoading text="Loading…"/></div>;
@@ -403,22 +310,22 @@ const BrandEquityWizardPage = () => {
     loyalty:   questions.filter(q => q.dimension === 'loyalty'),
   };
   const totalQ = questions.length;
-  const estMin = estMinLo;
+  const estMin = Math.max(5, Math.ceil(totalQ / 4));
 
   return (
     <div className="be-root" data-testid="be-wizard-page">
-      <BeTopbar user={user} onLogo={() => navigate('/dashboard')}/>
+      <BeTopbar crumbs={[...BE_CRUMBS, { label: 'ตั้งค่าการศึกษา' }]}/>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '14px 32px',
-                    borderBottom: '1px solid var(--rule)', background: 'var(--paper)', flexWrap: 'wrap' }}>
+                    borderBottom: '1px solid var(--rule)', background: 'var(--paper)' }}>
         <button className="be-btn be-btn-ghost" onClick={() => navigate('/brand-equity')}
                 data-testid="be-wizard-back">
-          <Icon name="chevronL" size={11}/>รายการ Studies
+          <Icon name="chevronL" size={11}/>My Studies
         </button>
         <span style={{ fontSize: 13, fontWeight: 600 }}>
-          {isEdit ? 'แก้ไข · ' : 'สร้าง study ใหม่ · '}{brand.name || 'ยังไม่ตั้งชื่อ'}
+          {isEdit ? 'Edit · ' : 'New study · '}{brand.name || 'Untitled'}
         </span>
-        <span className="be-chip be-mono">{(study?.status || 'draft').toUpperCase()}</span>
+        <span className="be-chip be-mono">DRAFT</span>
       </div>
 
       <Stepper steps={STEP_LABELS} current={step}
@@ -532,73 +439,62 @@ const BrandEquityWizardPage = () => {
               </div>
 
               <div className="be-card" style={{ marginTop: 14 }}>
-                <label className="be-label">Custom Quality Attributes (คุณลักษณะคุณภาพเฉพาะแบรนด์ — สูงสุด 5 ข้อ)</label>
+                <label className="be-label">Custom Quality Attributes (เพิ่ม attribute เฉพาะแบรนด์นี้ — สูงสุด 5)</label>
                 <div className="be-help" style={{ marginBottom: 10 }}>
-                  ระบบใส่ attributes มาตรฐานให้แล้ว (ความน่าเชื่อถือ · ความคุ้มค่า · ดีไซน์)
-                  · หากเป็นคุณลักษณะเชิงลบ (เช่น &ldquo;รอนาน&rdquo;, &ldquo;ราคาแพงเกินไป&rdquo;) ให้กดสลับเป็น <strong>เชิงลบ (Reverse)</strong> เพื่อไม่ให้คะแนนรวมผิดพลาด
+                  ระบบใส่ attributes มาตรฐานให้แล้ว (Reliability · Value · Design)
+                  · เพิ่ม attributes ที่สำคัญกับแบรนด์ของคุณเอง — จะใช้ทั้งบน radar และ perceptual map
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="be-input" value={qualityAttrInput}
                          onChange={e => setQualityAttrInput(e.target.value)}
-                         onKeyDown={e => { if (e.key === 'Enter') addCustomQualityAttr(); }}
-                         placeholder="เช่น ความยั่งยืน (Sustainability), รสชาติสม่ำเสมอ"
+                         onKeyDown={e => {
+                           if (e.key === 'Enter') {
+                             const v = qualityAttrInput.trim();
+                             if (v && !(brand.custom_quality_attributes || []).includes(v) && (brand.custom_quality_attributes || []).length < 5) {
+                               setBrand({ ...brand, custom_quality_attributes: [...(brand.custom_quality_attributes || []), v] });
+                               setQualityAttrInput('');
+                             }
+                           }
+                         }}
+                         placeholder="เช่น Sustainability, Local sourcing, Origin transparency"
                          data-testid="be-wizard-qattr-input"/>
                   <button className="be-btn" data-testid="be-wizard-qattr-add"
-                          onClick={addCustomQualityAttr}>
+                          onClick={() => {
+                            const v = qualityAttrInput.trim();
+                            if (v && !(brand.custom_quality_attributes || []).includes(v) && (brand.custom_quality_attributes || []).length < 5) {
+                              setBrand({ ...brand, custom_quality_attributes: [...(brand.custom_quality_attributes || []), v] });
+                              setQualityAttrInput('');
+                            }
+                          }}>
                     <Icon name="plus" size={11}/>เพิ่ม
                   </button>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}
                      data-testid="be-wizard-qattr-list">
-                  {(brand.custom_quality_attributes || []).map((c, i) => {
-                    const isRev = Boolean((brand.custom_quality_attributes_reverse || [])[i]);
-                    return (
-                      <span key={i} className="be-chip"
-                            style={{ borderColor: isRev ? 'var(--be-red)' : 'var(--be-gold)',
-                                     color: isRev ? 'var(--be-red)' : 'var(--be-gold)',
-                                     display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <span>{c}</span>
-                        <button type="button"
-                                onClick={() => toggleCustomAttrPolarity(i)}
-                                title="สลับขั้วคะแนน: เชิงบวก vs เชิงลบ (Reverse score)"
-                                data-testid={`be-wizard-qattr-polarity-${i}`}
-                                style={{ background: isRev ? 'rgba(200,16,46,0.1)' : 'rgba(212,160,23,0.12)',
-                                         border: '1px solid currentColor', padding: '1px 5px',
-                                         fontSize: 9.5, cursor: 'pointer', color: 'inherit' }}>
-                          {isRev ? '− เชิงลบ (Reverse)' : '+ เชิงบวก'}
-                        </button>
-                        <button onClick={() => removeCustomAttr(i)}
-                                style={{ background: 'transparent', border: 0, cursor: 'pointer', color: 'inherit' }}>
-                          <Icon name="close" size={9}/>
-                        </button>
-                      </span>
-                    );
-                  })}
+                  {(brand.custom_quality_attributes || []).map((c, i) => (
+                    <span key={i} className="be-chip" style={{ borderColor: 'var(--be-gold)', color: 'var(--be-gold)' }}>
+                      {c}
+                      <button onClick={() => setBrand({
+                                ...brand,
+                                custom_quality_attributes: brand.custom_quality_attributes.filter((_, j) => j !== i)
+                              })}
+                              style={{ background: 'transparent', border: 0, marginLeft: 4 }}>
+                        <Icon name="close" size={9}/>
+                      </button>
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
             <div className="be-wiz-side">
-              <h4>ทำไมส่วนนี้สำคัญ</h4>
+              <h4>Why this matters</h4>
               <div className="be-small be-muted" style={{ lineHeight: 1.6 }}>
-                ระบบจะนำชื่อแบรนด์ หมวดสินค้า และคู่แข่งไปสร้างแบบสอบถามมาตรฐาน (Aaker 4 มิติ)
-                เช่น &ldquo;เทียบ <strong>{brand.name || 'แบรนด์'}</strong> กับ <strong>{brand.competitors[0] || 'คู่แข่ง'}</strong>...&rdquo;
+                AI ใช้ category และ competitor names ในการสร้าง prompt template
+                เช่น "เทียบ <strong>Mali</strong> กับ <strong>Starbucks</strong> คุณคิดว่า..."
               </div>
               <div className="be-small be-muted" style={{ lineHeight: 1.6, marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--rule)' }}>
-                <strong>จำนวนคำถามโดยประมาณ:</strong> ~<strong>{estTotalQuestions} ข้อ</strong> (ใช้เวลา ~{estMinLo}–{estMinHi} นาที)
-                <div className="be-tiny" style={{ marginTop: 4 }}>
-                  คู่แข่ง {compCount} แบรนด์ (+{compCount * 5} ข้อ) · คุณลักษณะเสริม {customCount} ข้อ (+{customCount * (1 + compCount)} ข้อ)
-                </div>
-                {estTotalQuestions > 55 ? (
-                  <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(200,16,46,0.08)',
-                                border: '1px solid var(--be-red)', color: 'var(--be-red)', fontSize: 12 }}>
-                    แบบสอบถามค่อนข้างยาว (&gt;55 ข้อ) ผู้ตอบบนมือถืออาจตอบไม่จบ แนะนำเลือกคู่แข่งหลัก 2–3 เจ้าครับ
-                  </div>
-                ) : estTotalQuestions > 40 ? (
-                  <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(212,160,23,0.1)',
-                                border: '1px solid var(--be-gold)', color: '#8A6300', fontSize: 12 }}>
-                    คำถามประมาณ {estTotalQuestions} ข้อ — อยู่ในระดับพอดี แนะนำเก็บเฉพาะคู่แข่งหลัก 2–3 แบรนด์เพื่อลดอาการล้า
-                  </div>
-                ) : null}
+                <strong>Heads-up:</strong> ทุกคู่แข่งจะมีคำถามเปรียบเทียบใน radar/perceptual map
+                · <strong>{(brand.competitors || []).length} แบรนด์</strong> = +{(brand.competitors || []).length * 5} คำถาม โดยประมาณ
               </div>
             </div>
           </div>
@@ -630,18 +526,13 @@ const BrandEquityWizardPage = () => {
 
               {/* VISUAL ASSETS UPLOAD */}
               <div className="be-card" style={{ marginBottom: 14 }}>
-                <label className="be-label">Visual identity · อัปโหลดรูปภาพ (logo, palette, design — สูงสุด 5 รูป)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                  <label className="be-btn" style={{ cursor: 'pointer' }}>
-                    <Icon name="plus" size={11}/>อัปโหลดรูปภาพ (PNG / JPG / WEBP)
-                    <input type="file" multiple accept="image/png,image/jpeg,image/webp"
-                           onChange={e => { onUploadImages(e.target.files, 'design'); e.target.value = ''; }}
-                           style={{ display: 'none' }}
-                           data-testid="be-wizard-identity-upload"/>
-                  </label>
-                  <span className="be-help" style={{ margin: 0 }}>
-                    &lt; 1MB ต่อไฟล์ · ระบุประเภทแต่ละภาพหลังอัปโหลด
-                  </span>
+                <label className="be-label">Visual identity · อัปโหลดรูป (logo, palette, design — สูงสุด 5)</label>
+                <input type="file" multiple accept="image/png,image/jpeg,image/webp"
+                       onChange={e => onUploadImages(e.target.files, 'design')}
+                       style={{ display: 'block', marginBottom: 12 }}
+                       data-testid="be-wizard-identity-upload"/>
+                <div className="be-help" style={{ marginBottom: 12 }}>
+                  PNG / JPEG / WEBP · &lt; 1MB ต่อไฟล์ · ระบุประเภทแต่ละภาพหลังอัปโหลด
                 </div>
                 {(identity.visual_assets || []).length > 0 && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}
@@ -681,35 +572,47 @@ const BrandEquityWizardPage = () => {
 
               {/* AI EXTRACT BUTTON */}
               <div className="be-card" style={{ marginBottom: 14, background: '#FFFAF0', borderColor: 'var(--be-red)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                   <div>
                     <div className="be-eyebrow"><span className="be-dot-sm be-pulse" style={{ background: 'var(--be-red)' }}/>AI VISUAL IDENTITY EXTRACT</div>
                     <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.55 }}>
                       ให้ AI วิเคราะห์ description + ภาพที่อัปโหลด → คืน traits, palette, keywords, archetype
                     </div>
+                    <div className="be-tiny be-muted" style={{ marginTop: 4, lineHeight: 1.55 }} data-testid="be-wizard-ai-optional-note">
+                      ขั้นตอนนี้ไม่บังคับ — ข้ามได้และสร้าง study ต่อได้ ไม่ว่า AI ของระบบจะเปิดหรือปิด · ถ้าใช้ AI ของคุณเอง (ChatGPT / Claude / Gemini)
+                      ให้แนบรูปที่อัปโหลดไว้ ({(identity.visual_assets || []).length} รูป ตามลำดับที่แสดง) ในแชตเอง
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button className="be-btn be-btn-red"
-                            type="button"
-                            onClick={() => setExternalIdentityOpen(true)}
-                            disabled={!identity.description?.trim() && !(identity.visual_assets || []).length && !identity.traits.length}
-                            data-testid="be-wizard-identity-external-ai">
-                      <Icon name="copy" size={11}/>ใช้ AI ภายนอก (ฟรี)
-                    </button>
-                    {isAdmin && (
-                      <button className="be-btn" onClick={runAIExtract}
-                              disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length)}
-                              data-testid="be-wizard-identity-ai-run">
-                        <Icon name="sparkle" size={11}/>{extractingIdentity ? 'กำลังวิเคราะห์…' : 'AI วิเคราะห์ (Admin)'}
-                      </button>
-                    )}
-                  </div>
+                  <AiActionButton
+                    feature="be.visual_identity"
+                    label={extractingIdentity ? 'กำลังวิเคราะห์…' : 'AI วิเคราะห์'}
+                    icon={Sparkles}
+                    onSystem={runAIExtract}
+                    disabled={extractingIdentity || (!identity.description?.trim() && !(identity.visual_assets || []).length && !(identity.traits || []).length)}
+                    variant="plain"
+                    className="be-btn be-btn-red"
+                    external={{
+                      title: 'วิเคราะห์ identity ด้วย AI ของฉันเอง',
+                      promptRequest: { method: 'POST', url: `${API}/brand-equity/extract-identity/external-prompt`, data: extractBody },
+                      importUrl: `${API}/brand-equity/extract-identity/external-import`,
+                      onImported: (d) => applyDerived(d, { source: 'external' }),
+                    }}
+                    data-testid="be-wizard-identity-ai-run"
+                  />
                 </div>
 
                 {/* Show derived results */}
                 {(identity.derived_traits?.length > 0 || identity.visual_palette?.length > 0) && (
                   <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed var(--rule)' }}
                        data-testid="be-wizard-identity-ai-result">
+                    {identity.ai_source && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span className="be-prov be-mono" data-testid="be-wizard-ai-prov">
+                          {identity.ai_source.source === 'external'
+                            ? `นำเข้าจาก ${identity.ai_source.model_label || 'AI ภายนอก'}` : 'วิเคราะห์โดย AI ของระบบ'}
+                        </span>
+                      </div>
+                    )}
                     {identity.ai_summary && (
                       <div className="be-serif" style={{ fontSize: 13.5, fontStyle: 'italic',
                               color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 12 }}>
@@ -816,9 +719,10 @@ const BrandEquityWizardPage = () => {
                 ใน dashboard เราจะ <strong>match</strong> traits ที่คุณตั้งใจ (รวม AI derived) กับ open-end
                 responses ของผู้ตอบ → หา <strong>aligned · lost · unintended</strong> traits
               </div>
-              <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>การวิเคราะห์ภาพด้วย AI</h4>
+              <h4 style={{ paddingTop: 14, borderTop: '1px dashed var(--rule)' }}>How AI uses visuals</h4>
               <div className="be-small be-muted" style={{ lineHeight: 1.6 }}>
-                ระบบวิเคราะห์ภาพ + คำอธิบาย → ช่วยสกัดโทนสี, mood, สไตล์ดีไซน์ และ brand archetype ให้โดยอัตโนมัติ
+                AI (ของระบบ หรือของคุณเองที่รับภาพได้) อ่านภาพ + ข้อความ → สรุปสี, mood, design style, archetype
+                ที่คุณอาจไม่ได้พิมพ์ตรงๆ — ผลเป็นข้อเสนอ ตรวจและแก้ traits ได้เสมอ
               </div>
             </div>
           </div>
@@ -832,12 +736,12 @@ const BrandEquityWizardPage = () => {
                 <div className="be-eyebrow" style={{ marginBottom: 10 }}>STEP · 03 / 04</div>
                 <h1 className="be-h1">เก็บข้อมูล demographic อะไรบ้าง?</h1>
                 <div className="be-muted be-small" style={{ marginTop: 8, maxWidth: 580 }}>
-                  Dashboard จะให้คุณเปรียบเทียบคะแนนแยกตามกลุ่มผู้ตอบเหล่านี้
+                  Dashboard จะให้คุณ slice ข้อมูลตาม segment เหล่านี้
                 </div>
               </div>
 
               <div className="be-card" style={{ marginBottom: 16 }}>
-                <label className="be-label">กลุ่มข้อมูลผู้ตอบ (Segments * — เลือกอย่างน้อย 1)</label>
+                <label className="be-label">Segments * (อย่างน้อย 1)</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}
                      data-testid="be-wizard-segments">
                   {SEGMENTS.map(s => (
@@ -846,26 +750,25 @@ const BrandEquityWizardPage = () => {
                           onClick={() => toggleSegment(s)}
                           data-testid={`be-wizard-seg-${s}`}>
                       {segments.includes(s) && <Icon name="check" size={10}/>}
-                      {SEGMENT_LABELS[s] || s}
+                      {s}
                     </span>
                   ))}
                 </div>
               </div>
 
               <div className="be-card">
-                <label className="be-label">จำนวนผู้ตอบเป้าหมาย (Target responses)</label>
+                <label className="be-label">Target responses</label>
                 <input type="number" className="be-input" value={target} min={10}
-                       onChange={e => setTarget(e.target.value)}
-                       onBlur={() => setTarget(String(parsedTarget))}
+                       onChange={e => setTarget(parseInt(e.target.value) || 100)}
                        data-testid="be-wizard-target"/>
-                <div className="be-help">ต้องมีอย่างน้อย 10 คน เพื่อปลดล็อก Dashboard (แนะนำ 100+ คนสำหรับงานวิจัย)</div>
+                <div className="be-help">ต้องมีอย่างน้อย 10 responses เพื่อปลดล็อก dashboard</div>
               </div>
             </div>
             <div className="be-wiz-side">
-              <h4>เคล็ดลับกลุ่มตัวอย่าง</h4>
+              <h4>เคล็ดลับ</h4>
               <div className="be-small be-muted" style={{ lineHeight: 1.6 }}>
-                100–200 คนขึ้นไปให้ความน่าเชื่อถือสูงสำหรับ Brand Health Check
-                · สำหรับงานวิจัยวิชาการ ควรเก็บ <strong>30+ คนต่อกลุ่ม</strong> เพื่อให้ทดสอบนัยสำคัญทางสถิติ (Welch&apos;s t / ANOVA) ได้แม่นยำ
+                100-200 responses ให้ result ที่เชื่อถือได้สำหรับ brand health
+                · 30+ จุดต่อ segment สำหรับ statistical significance
               </div>
             </div>
           </div>
@@ -920,6 +823,7 @@ const BrandEquityWizardPage = () => {
                     </div>
                   </div>
                   <button className="be-btn" onClick={regenerate} disabled={creating}
+                          title="สร้างคำถามจากแม่แบบใหม่ (การแปลคุณลักษณะเป็นอังกฤษจะข้ามถ้า AI ของระบบปิด — ข้อความไทยคงเดิม)"
                           data-testid="be-wizard-regenerate">
                     <Icon name="refresh" size={11}/>{creating ? '…' : 'Regenerate'}
                   </button>
@@ -945,22 +849,12 @@ const BrandEquityWizardPage = () => {
                     </div>
                     {isOpen && (
                       <div>
-                        {dq.map(q => {
-                          const isCore = isCoreQuestion(q);
-                          return (
+                        {dq.map(q => (
                           <div key={q.id} className="be-qrow" data-testid={`be-wizard-q-${q.id}`}>
                             <div className="be-qid">{q.template_id || q.id.slice(0, 5)}</div>
                             <div className="be-qprompt">
                               {(previewLang === 'en' ? q.prompt_en : q.prompt_th) || q.prompt}
                               {q.required && <span style={{ color: 'var(--be-red)', marginLeft: 6 }}>*</span>}
-                              <span className="be-mono be-tiny" style={{
-                                marginLeft: 8,
-                                color: isCore ? 'var(--ink-2)' : 'var(--ink-4)',
-                                border: '1px solid var(--rule)',
-                                padding: '1px 5px', fontSize: 9,
-                              }}>
-                                {isCore ? 'CORE SCORED' : 'OPTIONAL'}
-                              </span>
                               {q.display_image && (
                                 <span className="be-mono be-tiny" style={{ marginLeft: 8, color: 'var(--be-gold)',
                                        background: 'rgba(212,160,23,0.10)', border: '1px solid rgba(212,160,23,0.35)',
@@ -985,14 +879,13 @@ const BrandEquityWizardPage = () => {
                             </div>
                             <div className="be-qtype">{q.type}</div>
                             <div className="be-qact">
-                              <button title={isCore ? 'ลบคำถามหลัก (ต้องยืนยัน)' : 'ลบคำถาม'} onClick={() => deleteQuestion(q)}
+                              <button title="Delete" onClick={() => deleteQuestion(q.id)}
                                       data-testid={`be-wizard-q-delete-${q.id}`}>
                                 <Icon name="trash" size={11}/>
                               </button>
                             </div>
                           </div>
-                          );
-                        })}
+                        ))}
                         {dq.length === 0 && (
                           <div className="be-qadd" style={{ borderTop: 0 }}>ไม่มีคำถาม dimension นี้</div>
                         )}
@@ -1035,28 +928,17 @@ const BrandEquityWizardPage = () => {
       <div className="be-wiz-foot">
         <button className="be-btn" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
                 data-testid="be-wizard-prev">
-          <Icon name="chevronL" size={11}/>ย้อนกลับ
+          <Icon name="chevronL" size={11}/>{step === 0 ? 'Back' : 'Prev'}
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {step === 0 && step0MissingReason && (
-            <span className="be-tiny" style={{ color: 'var(--be-red)' }} data-testid="be-wizard-step0-hint">
-              {step0MissingReason}
-            </span>
-          )}
-          {step === 1 && step1MissingReason && (
-            <span className="be-tiny" style={{ color: 'var(--be-red)' }} data-testid="be-wizard-step1-hint">
-              {step1MissingReason}
-            </span>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="be-mono be-tiny be-muted">
-            {step === 3 ? `${totalQ} ข้อ · 4 มิติ · ~${estMinLo}–${estMinHi} นาที` : `ขั้นตอน ${step + 1} / 4`}
+            {step === 3 ? `${totalQ} questions · 4 dimensions · est ${estMin} min` : `Step ${step + 1} of 4`}
           </span>
           {/* Quick "Save changes" — visible on steps 0/1/2 when editing an existing study */}
           {study?.id && step < 3 && (
             <button className="be-btn" onClick={saveEdits} disabled={creating}
-                    title="บันทึกเมตาข้อมูลเดิมโดยไม่สร้างคำถามใหม่ (หากเปลี่ยนคู่แข่ง/คุณลักษณะ ให้กดอัปเดตและสร้างคำถามใหม่)"
                     data-testid="be-wizard-save">
-              <Icon name="check" size={11}/>{creating ? '…' : 'บันทึกค่าที่แก้'}
+              <Icon name="check" size={11}/>{creating ? '…' : 'Save changes'}
             </button>
           )}
           {step < 2 && (
@@ -1072,7 +954,7 @@ const BrandEquityWizardPage = () => {
                     onClick={proceedToReview} data-testid="be-wizard-generate">
               <Icon name="sparkle" size={11}/>
               {creating ? 'กำลังประมวลผล…'
-                        : (study?.id ? 'อัปเดตและสร้างคำถามใหม่ →' : 'สร้างชุดคำถามมาตรฐาน (Aaker) →')}
+                        : (study?.id ? 'อัปเดตและสร้างคำถามใหม่ →' : 'สร้างแบบสอบถาม →')}
             </button>
           )}
           {step === 3 && (
@@ -1080,153 +962,19 @@ const BrandEquityWizardPage = () => {
               {study?.id && study?.status && study.status !== 'draft' && (
                 <button className="be-btn" onClick={saveEdits} disabled={creating}
                         data-testid="be-wizard-save-questions">
-                  <Icon name="check" size={11}/>{creating ? '…' : 'บันทึกการแก้ไข'}
+                  <Icon name="check" size={11}/>{creating ? '…' : 'Save changes'}
                 </button>
               )}
               <button className="be-btn be-btn-red" onClick={launchStudy} disabled={creating || !study?.id}
                       data-testid="be-wizard-launch">
                 {creating ? '…'
-                          : (study?.status === 'collecting' ? 'บันทึกและเปิดรับต่อ' : 'เปิดรับคำตอบ')}
+                          : (study?.status === 'collecting' ? 'Save & re-publish' : 'เปิดรับคำตอบ')}
                 <Icon name="arrowR" size={11}/>
               </button>
             </>
           )}
         </div>
       </div>
-
-      {/* Confirm deleting a core scored question */}
-      {pendingDeleteQ && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,10,0.45)', zIndex: 1000,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div className="be-card" style={{ maxWidth: 440, width: '100%' }}>
-            <div className="be-eyebrow" style={{ color: 'var(--be-red)', marginBottom: 8 }}>CONFIRM DELETE CORE ITEM</div>
-            <div className="be-h3" style={{ marginBottom: 10 }}>ลบคำถามหลัก ({pendingDeleteQ.template_id})?</div>
-            <div className="be-small be-muted" style={{ lineHeight: 1.6, marginBottom: 16 }}>
-              ข้อนี้ถูกใช้คำนวณคะแนนมาตรฐาน Aaker หากลบออกจะแสดงคำเตือน Partial Data บน Dashboard (สามารถกด Regenerate กลับมาใหม่ได้ก่อนเปิดรับจริง)
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="be-btn be-btn-ghost" onClick={() => setPendingDeleteQ(null)}>ยกเลิก</button>
-              <button className="be-btn be-btn-red" onClick={confirmDeleteQuestion}>ยืนยันลบข้อนี้</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm regenerating questions on a live collecting study */}
-      {confirmRegenOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,10,0.45)', zIndex: 1000,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div className="be-card" style={{ maxWidth: 460, width: '100%' }}>
-            <div className="be-eyebrow" style={{ color: 'var(--be-gold)', marginBottom: 8 }}>LIVE STUDY WARNING</div>
-            <div className="be-h3" style={{ marginBottom: 10 }}>สร้างชุดคำถามใหม่ระหว่างเก็บข้อมูล?</div>
-            <div className="be-small be-muted" style={{ lineHeight: 1.6, marginBottom: 16 }}>
-              Study นี้กำลังเปิดรับคำตอบอยู่ (มีแล้ว {study?.response_count || 0} คำตอบ) การสร้างคำถามใหม่จะเริ่ม Wave ใหม่และรีเซ็ตคำถามที่เคยลบไว้ด้วยตัวเอง
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="be-btn be-btn-ghost" onClick={() => setConfirmRegenOpen(false)}>ยกเลิก</button>
-              <button className="be-btn be-btn-red" onClick={executeRegenerate}>ยืนยันสร้างคำถามใหม่</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Post-Launch Collect & Share Hub Modal */}
-      {launchedModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,10,0.5)', zIndex: 1000,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-             data-testid="be-wizard-launched-modal">
-          <div className="be-card" style={{ maxWidth: 520, width: '100%' }}>
-            <div className="be-eyebrow" style={{ color: 'var(--be-green)', marginBottom: 8 }}>SURVEY IS LIVE</div>
-            <h2 className="be-h2" style={{ marginBottom: 8 }}>เปิดรับคำตอบสำหรับ {launchedModal.brandName} แล้ว</h2>
-            <div className="be-small be-muted" style={{ lineHeight: 1.6, marginBottom: 14 }}>
-              แชร์ลิงก์ด้านล่างให้กลุ่มตัวอย่าง (เวลาตอบโดยประมาณ {launchedModal.estMin} นาที) เมื่อได้ครบ 10 คำตอบ Dashboard จะเปิดผลคะแนนอัตโนมัติ
-            </div>
-            <div style={{ padding: '10px 12px', background: 'var(--paper-2)', border: '1px solid var(--rule-strong)',
-                          fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, wordBreak: 'break-all', marginBottom: 12 }}>
-              {`${window.location.origin}/brand-equity/respond/${launchedModal.shareToken}`}
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button className="be-btn be-btn-primary" onClick={() => {
-                  navigator.clipboard?.writeText(`${window.location.origin}/brand-equity/respond/${launchedModal.shareToken}`);
-                  toast.success('คัดลอกลิงก์แบบสอบถามแล้ว');
-                }} data-testid="be-wizard-launched-copy">
-                  <Icon name="copy" size={11}/>คัดลอกลิงก์แบบสอบถาม
-                </button>
-                <a className="be-btn"
-                   href={`/brand-equity/respond/${launchedModal.shareToken}`}
-                   target="_blank" rel="noreferrer">
-                  ทดลองเปิดดูหน้าแบบสอบถาม ↗
-                </a>
-              </div>
-              <button className="be-btn be-btn-red"
-                      onClick={() => navigate(`/brand-equity/studies/${launchedModal.studyId}`)}
-                      data-testid="be-wizard-launched-dashboard">
-                ไปที่ Dashboard <Icon name="arrowR" size={11}/>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <ExternalAiWorkflowModal
-        open={externalIdentityOpen}
-        onClose={() => setExternalIdentityOpen(false)}
-        title="สกัดอัตลักษณ์แบรนด์ด้วย AI ภายนอก (ฟรี)"
-        subtitle="คัดลอก Prompt ที่มีข้อมูลแบรนด์ของคุณไปรันใน ChatGPT / Gemini / Claude แล้วนำ JSON กลับมาวาง"
-        extraHint={(identity.visual_assets || []).length > 0
-          ? `คุณอัปโหลดภาพไว้ ${identity.visual_assets.length} ภาพ — แนะนำให้แนบภาพโลโก้/พาเลตต์สีเดียวกันในแชท AI พร้อม Prompt เพื่อสกัดรหัสสี hex ได้แม่นที่สุด`
-          : ''}
-        fetchPrompt={async () => {
-          const r = await axios.post(`${API}/brand-equity/external-ai/identity-prompt`, {
-            brand_name: brand.name || 'Brand',
-            category: brand.category || '',
-            description: identity.description || '',
-            traits: identity.traits || [],
-            brand_promise: identity.brand_promise,
-            pricing_tier: identity.pricing_tier,
-            image_notes: (identity.visual_assets || []).map(a => a.kind || 'design'),
-          }, authH);
-          return r.data;
-        }}
-        validatePayload={async (rawText) => {
-          const r = await axios.post(`${API}/brand-equity/external-ai/identity-import`, {
-            raw_text: rawText,
-          }, authH);
-          return r.data;
-        }}
-        applyPayload={async (_rawText, validation) => {
-          const d = validation?.data || {};
-          const mergedTraits = Array.from(new Set([...(identity.traits || []), ...(d.derived_traits || [])])).slice(0, 8);
-          setIdentity(prev => ({
-            ...prev,
-            traits: mergedTraits,
-            derived_traits: d.derived_traits || [],
-            visual_palette: d.visual_palette || [],
-            visual_keywords: d.visual_keywords || [],
-            ai_summary: d.summary || '',
-            archetype: d.archetype || prev.archetype,
-          }));
-          toast.success(`นำเข้าผลอัตลักษณ์แบรนด์สำเร็จ (${(d.derived_traits || []).length} traits)`);
-        }}
-        renderPreview={(preview) => (
-          <div className="space-y-1.5">
-            <div><strong>Archetype:</strong> {preview.archetype} · <strong>Traits ({preview.trait_count}):</strong> {(preview.derived_traits || []).join(', ')}</div>
-            {preview.visual_palette?.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <strong>Palette:</strong>
-                {preview.visual_palette.map(hex => (
-                  <span key={hex} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 rounded border text-[11px] font-mono">
-                    <span className="w-3 h-3 rounded-sm inline-block border" style={{ background: hex }} />
-                    {hex}
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="text-gray-700 italic">&ldquo;{preview.summary}&rdquo;</div>
-          </div>
-        )}
-      />
     </div>
   );
 };

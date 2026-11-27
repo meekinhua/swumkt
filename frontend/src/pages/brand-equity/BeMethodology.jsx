@@ -5,8 +5,9 @@ import React, { useState } from 'react';
  * score on this dashboard is computed (Aaker-aligned). Sits at the bottom of
  * BrandEquityDashboardPage so curious / academic users can audit the math.
  *
- * Includes a placeholder for the future "Export as thesis report" feature
- * (currently disabled — to be unlocked for ADMIN / อาจารย์ / นิสิต).
+ * Every formula here must match backend/routes/brand_equity.py
+ * (DIMENSION_WEIGHTS, _compute_dim_composite, _question_signal_100,
+ * BE_ANALYSIS_SCHEMA_VERSION = 2). The thesis export UI lives in BeThesisExport.jsx.
  */
 
 const SECTIONS = [
@@ -33,7 +34,7 @@ const SECTIONS = [
     id: 'awareness',
     eyebrow: 'METHOD · 01',
     title: 'Awareness · Aaker Awareness Pyramid',
-    short: 'TOM 40% · Spontaneous 25% · Aided 20% · Familiarity 15%',
+    short: 'TOM 40% · Unaided recall (รวม) 25% · Aided 20% · Familiarity 15%',
     body: (
       <>
         <p>Awareness ถูกวัดตามลำดับชั้น "Aaker Awareness Pyramid" — ยิ่งระดับสูงยิ่งสะท้อน
@@ -43,8 +44,9 @@ const SECTIONS = [
             <br/>คำถาม: <em>"นึกถึงแบรนด์ {`{category}`} แรกที่นึกถึง"</em> (open_short, ai_processing=extract_brand)
             <br/>Score = % ของ respondent ที่พิมพ์ชื่อ target brand เป็นชื่อแรก (AI-normalized)</li>
           <li><strong>Spontaneous / Unaided Recall — 0.25</strong>
-            <br/>คำถาม: <em>"นึกถึงแบรนด์อื่นใน {`{category}`} อีกบ้าง"</em> (open_long, extract_brands)
-            <br/>Score = share ของ target brand ใน mentions ทั้งหมด</li>
+            <br/>คำถาม AW-2: <em>"นอกจากแบรนด์ข้างต้น นึกถึงแบรนด์อะไรอีกบ้าง"</em> (open_long)
+            <br/>Score = % ของผู้ตอบที่<strong>เอ่ยชื่อ target brand โดยไม่มีตัวช่วย ไม่ว่าจะเป็นแบรนด์แรก (TOM) หรือที่นึกถึงทีหลัง (AW-2)</strong>
+              (<code>total_unaided_pct</code>) — เดิมนับเฉพาะ AW-2 ซึ่งถามหา "แบรนด์อื่น" จึงทำให้แบรนด์ที่ทุกคนนึกถึงเป็นอันดับแรกได้คะแนนใกล้ 0</li>
           <li><strong>Aided Recognition — 0.20</strong>
             <br/>คำถาม: <em>"แบรนด์ใดต่อไปนี้ที่คุณรู้จัก"</em> (mcq_multi)
             <br/>Score = % ของ respondent ที่ติ๊ก target brand</li>
@@ -55,8 +57,9 @@ const SECTIONS = [
           dimension <em>identity</em> จึงไม่ได้เข้าสูตร Awareness (ก่อนหน้านี้ตารางน้ำหนักระบุไว้ 0.25
           แต่จับคู่กับคำถามไม่ได้เลย ทำให้น้ำหนักรวมเป็น 1.25)</p>
         <p>TOM และ Unaided Recall เป็นคำถามปลายเปิด — ระบบ<strong>นับชื่อแบรนด์จากข้อความได้เองโดยไม่ต้องรอ AI</strong>
-          (จับคู่ชื่อแบบตรงตัวก่อน แล้วจึงใช้ token ที่ไม่กำกวม) การรัน AI เป็นการเพิ่มความแม่นกับคำสะกดผิด
-          ชื่อเล่น และคำทับศัพท์ · หน้า dashboard แสดงว่าใช้ฐานไหนอยู่</p>
+          (จับคู่ชื่อแบบตรงตัวก่อน แล้วจึงใช้ token ที่ไม่กำกวม) การเข้ารหัสคำตอบ (ด้วย AI ของระบบ, AI ที่คุณใช้เองแล้ววางผลกลับ หรือด้วยมือผ่านสเปรดชีต)
+          เพิ่มความแม่นกับคำสะกดผิด ชื่อเล่น และคำทับศัพท์ · รหัสนับต่อ "ข้อความคำตอบที่ไม่ซ้ำ" จึงใช้กับทุก filter / segment / wave ·
+          หน้า dashboard แสดงว่าแต่ละข้อนับด้วยฐานไหน (AI / ด้วยมือ / อัตโนมัติ) และข้อที่ยังไม่เข้ารหัสจะแจ้งว่า "ยังไม่ได้เข้ารหัส" แทนการแสดงเลขศูนย์</p>
         <p>น้ำหนักจะ <strong>renormalize</strong> เมื่อ signal บางตัวไม่มี — เช่น study ที่ไม่ใส่
           AW-4 likert ก็ยังได้ Awareness composite จาก 3 signal ที่เหลือ</p>
       </>
@@ -93,7 +96,7 @@ const SECTIONS = [
     id: 'identity',
     eyebrow: 'METHOD · 03',
     title: 'Identity vs Image · อัตลักษณ์ vs ภาพลักษณ์',
-    short: 'Trait Overlap 20% · Brand Promise 15% · Aaker 4 Perspectives ~50% · AI Alignment 10%',
+    short: 'Trait Overlap 20% · Brand Promise 15% · Aaker 4 Perspectives 61% (น้ำหนักสัมพัทธ์ ปรับสัดส่วนใหม่ตามข้อที่มีข้อมูล)',
     body: (
       <>
         <p>มิติที่ <strong>เปรียบเทียบ</strong> "Identity (ที่แบรนด์ตั้งใจสื่อ)" กับ "Image
@@ -119,12 +122,13 @@ const SECTIONS = [
               <li><em>as Symbol</em> (Recognizability, Distinctiveness) — 0.06+0.06</li>
               <li><em>as Product</em> (Premium, Variety, Quality) — 0.06+0.05+0.04</li>
             </ul>
-            รวม ~50% — ทุก likert_7 score = (mean−1)/6 × 100
+            รวม 0.61 ของน้ำหนักมิตินี้ (0.96 รวมทุกข้อ — ระบบหารด้วยผลรวมน้ำหนักของข้อที่มีข้อมูลจริง) — ทุก likert_7 score = (mean−1)/6 × 100
           </li>
-          <li><strong>AI Identity-Image Alignment — 0.10</strong>
-            <br/>AI วิเคราะห์ open-ended (image_personality, image_one_word) แล้ว match กับ
-              intended traits → alignment score 0-100 (ถ้ารัน AI แล้ว)</li>
         </ul>
+        <p><strong>การเปลี่ยนแปลง (schema v2, พ.ย. 2026):</strong> "คะแนนความสอดคล้อง Identity–Image ที่ AI ให้" <strong>ไม่ได้เข้าสูตร Identity อีกแล้ว</strong>
+          (เดิมถ่วง 10%) เพราะเป็นความเห็นของโมเดลภาษา ไม่ใช่การวัด — ตอบไม่เหมือนกันทุกครั้ง และผลจาก AI ภายนอกที่นำเข้ามาก็แก้ตัวเลขนี้ได้เอง
+          ตอนนี้แสดงเป็น <em>"ความเห็นของ AI (ไม่ใช่คะแนน)"</em> เคียงกับกราฟ aligned / lost / unintended traits เท่านั้น
+          ส่วนที่วัดจริงคือ Trait Pickup (BI-1) ซึ่งนับจากการเลือกของผู้ตอบ</p>
       </>
     ),
   },
@@ -153,23 +157,29 @@ const SECTIONS = [
     id: 'data',
     eyebrow: 'METHOD · 05',
     title: 'Data Pipeline · การประมวลผลข้อมูล',
-    short: 'AI normalize → frequency stats → likert/NPS scoring → weighted composite',
+    short: 'เข้ารหัสคำตอบปลายเปิด → สถิติรายข้อ → คะแนน 0-100 → composite ถ่วงน้ำหนัก',
     body: (
       <>
         <ol>
-          <li><strong>Open-ended normalization</strong> (Gemini): canonicalize brand mentions
-            (e.g. "starbuck", "Star Bucks" → "Starbucks") + group concept synonyms.
-            ผลเก็บใน <code>ai_cache.normalized_by_question</code></li>
-          <li><strong>Theme extraction</strong>: open_long → top 5 themes พร้อม sentiment + sample quote</li>
-          <li><strong>Identity-Image AI</strong>: extract perceived traits จาก open-ended →
-            จับคู่กับ Intended Identity → alignment score 0-100</li>
+          <li><strong>Open-ended coding</strong>: รวมชื่อแบรนด์ที่สะกดต่างกัน
+            (เช่น "starbuck", "Star Bucks" → "Starbucks") และจัดคำสำคัญที่ความหมายเดียวกัน — ทำได้ 3 ทาง:
+            AI ของระบบ · AI ของผู้ใช้เอง (คัดลอกพรอมต์ → วางผล JSON กลับ) · ด้วยมือผ่านสเปรดชีต (codeframe.csv)
+            ทุกทางใช้ตัวตรวจรูปแบบเดียวกัน และหน้าจอระบุที่มาของรหัส (ชื่อโมเดลที่ผู้ใช้ระบุ) · ถ้ายังไม่เข้ารหัส ชื่อแบรนด์จะถูกนับด้วยการจับคู่อัตโนมัติ</li>
+          <li><strong>Theme extraction</strong>: open_long → ประเด็นพร้อม sentiment + คำพูดตัวอย่าง · จำนวนต่อประเด็น<strong>ระบบนับเองจากรหัสคำตอบ</strong> ไม่รับตัวเลขจาก AI</li>
+          <li><strong>Identity-Image (AI)</strong>: สกัดภาพลักษณ์ที่รับรู้จากคำตอบปลายเปิดแล้วเทียบกับ Intended Identity
+            — เป็นความเห็นเชิงคุณภาพ ไม่เข้าคะแนน</li>
           <li><strong>Aggregate engine</strong> (`_aggregate_responses`):
             สร้าง stats ต่อ question (counts, mean, score_100) + composite ต่อ dimension</li>
           <li><strong>Filter / Wave compare</strong>: re-aggregate ตาม slice ของ time + segment;
-            AI cache แยกตาม signature (SHA1 12-char) เพื่อ cache ผลลัพธ์ AI ต่อ filter</li>
+            ผล AI แยกตาม filter signature (SHA1 12-char) ส่วนรหัสคำตอบนับใหม่ทุก slice</li>
+          <li><strong>Data quality</strong>: ตั้งธง speeder (&lt; 40% ของเวลามัธยฐาน), straight-liner (ตอบค่าเดียวซ้ำ ≥ 8 ข้อมาตรวัด), คำตอบซ้ำ —
+            รายงานเท่านั้น ผู้วิจัยเลือกตัดเองด้วย "ตัดผู้ตอบที่น่าสงสัย"</li>
         </ol>
-        <p className="be-muted-line">References: Aaker (1991, 1996), Keller's CBBE (1993),
-          Reichheld NPS (2003), Ehrenberg-Bass mental & physical availability</p>
+        <p><strong>เวอร์ชันของวิธีคำนวณ:</strong> schema v2 (พ.ย. 2026) เปลี่ยนตัวเลขที่แสดงของ Identity, Awareness และ α
+          (ดูหัวข้อ Identity / Awareness / ความน่าเชื่อถือ) — ตัวเลขที่เคยเห็นหรือส่งออกไว้ก่อนหน้านี้อาจต่างจากปัจจุบัน
+          <strong>โดยที่แบรนด์ไม่ได้เปลี่ยน</strong> ประวัติคะแนนบน dashboard คำนวณใหม่ด้วยสูตรปัจจุบันทั้งหมด จึงเทียบกันเองได้</p>
+        <p className="be-muted-line">References: Aaker (1991, 1996), Keller (1993, 2001),
+          Reichheld (2003), Ehrenberg-Bass mental & physical availability</p>
       </>
     ),
   },
@@ -177,93 +187,55 @@ const SECTIONS = [
     id: 'validity',
     eyebrow: 'METHOD · 06',
     title: 'ความน่าเชื่อถือและข้อจำกัด · Reliability & Limitations',
-    short: 'Cronbach\u2019s α ต่อมิติ · 95% CI · สิ่งที่เครื่องมือนี้ยังไม่ได้ทำ',
+    short: 'Cronbach\u2019s α · 95% CI · paired test เทียบคู่แข่ง · สิ่งที่เครื่องมือนี้ไม่ได้ทำ',
     body: (
       <>
         <p><strong>สิ่งที่รายงานจริง</strong></p>
         <ul>
           <li><strong>Cronbach's α ต่อมิติ</strong> (Cronbach, 1951) — คำนวณจากข้อ Likert ในมิติเดียวกัน
-            พร้อม mean inter-item r, จำนวนข้อ (k) และ n · ถ้า k &lt; 2 หรือ n &lt; 30 หรือความแปรปรวนเป็น 0
-            ระบบจะ<strong>แจ้งว่าประเมินไม่ได้ ไม่ใส่ค่าเดา</strong></li>
-          <li><strong>95% Confidence Interval</strong> ของทุกคะแนน Likert (t-distribution)</li>
+            พร้อม mean inter-item r, จำนวนข้อ (k), n, <strong>corrected item-total r และ α-if-item-deleted</strong> รายข้อ ·
+            ข้อที่เป็นข้อความเชิงลบถูกกลับคะแนนก่อน (ข้อที่ยังไม่ยืนยันทิศทางถูกตัดออก) · ใช้เฉพาะผู้ตอบที่ตอบครบทุกข้อ (listwise) ·
+            ถ้า k &lt; 2 หรือ n &lt; 30 หรือความแปรปรวนเป็น 0 ระบบจะ<strong>แจ้งว่าประเมินไม่ได้ ไม่ใส่ค่าเดา</strong></li>
+          <li><strong>95% Confidence Interval</strong>: ค่าเฉลี่ยข้อมาตรวัด (t-distribution), สัดส่วนของตัวเลือก/แบรนด์ (Wilson),
+            NPS (ความแปรปรวนแบบ trinomial), unaided recall รวม</li>
+          <li><strong>Margin of error</strong> สูงสุดของสัดส่วนที่ 95% (p = .5, สมมติการสุ่มอย่างง่าย)</li>
+          <li><strong>Paired t-test แบรนด์ vs คู่แข่ง</strong> (ผู้ตอบคนเดียวกันให้คะแนนทั้งสองแบรนด์, คะแนน POMP 0-100) พร้อมผลต่าง 95% CI,
+            Cohen&apos;s d<sub>z</sub> (Cohen, 1988) และ<strong>ปรับ p ด้วย Holm (1979)</strong> ข้ามทุกการเปรียบเทียบ ·
+            ข้อเปรียบเทียบตรง 7 ระดับทดสอบเทียบจุดกึ่งกลาง (one-sample t)</li>
+          <li><strong>Wave vs wave / segment</strong>: Welch t-test (wave) และ Welch ANOVA + post-hoc ปรับ Holm (segment) ต่อมิติ — BES เป็นดัชนี จึงไม่ถูกทดสอบโดยตรง</li>
+          <li><strong>ความไวของ BES ต่อน้ำหนัก</strong>: BES เมื่อถ่วงเท่ากัน และช่วงเมื่อปรับน้ำหนักมิติใดมิติหนึ่ง ×½/×2 พร้อมบอกว่า tier คงเดิมหรือไม่</li>
           <li><strong>Sample adequacy</strong> 4 ระดับ (&lt;10 / &lt;30 / &lt;100 / ≥100) แสดงคู่กับคะแนนรวมเสมอ</li>
           <li><strong>POMP transform</strong> (ค่าเฉลี่ย−1)/(สูงสุด−1)×100 ตาม Cohen, Cohen, Aiken &amp; West (1999)</li>
         </ul>
         <p><strong>ข้อจำกัดที่ต้องเขียนในรายงาน</strong></p>
         <ul>
-          <li>ยัง<strong>ไม่มี EFA / CFA</strong> — ไม่ได้ยืนยันโครงสร้างองค์ประกอบด้วยข้อมูลจริง</li>
-          <li>ยัง<strong>ไม่มี AVE / Composite Reliability</strong> (Fornell &amp; Larcker, 1981) จึงไม่ได้ตรวจ convergent /
-            discriminant validity</li>
+          <li><strong>ไม่ได้คำนวณ McDonald&apos;s ω, Composite Reliability (CR), AVE และ EFA / CFA</strong>
+            (Fornell &amp; Larcker, 1981) — จึงไม่ได้ยืนยันโครงสร้างองค์ประกอบ convergent / discriminant validity ·
+            ถ้าต้องใช้ ให้ส่งออกข้อมูลดิบ (xlsx/csv + codebook) ไปวิเคราะห์ใน SPSS / R / JASP</li>
           <li>BES เป็น <strong>weighted composite index</strong> ไม่ใช่ latent variable — น้ำหนักมาจากกรอบทฤษฎี
             ไม่ได้ประมาณค่าจากข้อมูล</li>
-          <li>การเปรียบเทียบ <strong>แบรนด์ vs คู่แข่ง</strong> เป็นเชิงพรรณนา (descriptive) — ส่วน <strong>Wave vs Wave</strong> และ <strong>Segment vs Segment</strong> ระบบทดสอบด้วย Welch&apos;s t / Welch&apos;s ANOVA + Holm correction (แสดง p-value บน Dashboard เมื่อกลุ่มตัวอย่างเพียงพอ)</li>
+          <li>การทดสอบนัยสำคัญบอกว่าความต่าง<strong>ไม่น่าเกิดจากความบังเอิญของการสุ่มในกลุ่มตัวอย่างนี้</strong> ไม่ได้รับรองว่าเป็นตัวแทนประชากร
+            และเมื่อทดสอบหลายครั้ง "ยังไม่มีนัยสำคัญ" ไม่ได้แปลว่าไม่ต่าง · ยัง<strong>ไม่มีการทดสอบความต่างของ BES ระหว่าง wave</strong></li>
+          <li>ผู้ตอบบางส่วนให้คะแนนคุณภาพ/ความภักดีทั้งที่ไม่ได้ติ๊กว่ารู้จักแบรนด์ (ธง "unaware rater") — แบบสอบถามยังไม่ได้คัดกรองผู้ไม่รู้จักแบรนด์ออก</li>
+          <li>ความภักดีวัดเชิงทัศนคติ (NPS, ความตั้งใจซื้อซ้ำ) ไม่ได้วัดพฤติกรรมซื้อจริง · ข้อ "คุ้มค่ากับราคา" ใกล้เคียง perceived value (Zeithaml, 1988) มากกว่า perceived quality</li>
           <li>ผู้ตอบมาจาก<strong>การเลือกแบบสะดวก (convenience sampling)</strong> ผ่านลิงก์ที่แชร์
             ไม่ใช่ตัวแทนประชากรแบบสุ่ม</li>
         </ul>
         <p className="be-muted-line">References: Cronbach (1951); Nunnally &amp; Bernstein (1994);
-          Cohen, Cohen, Aiken &amp; West (1999); Fornell &amp; Larcker (1981); J. L. Aaker (1997)
-          Dimensions of Brand Personality</p>
+          Cohen (1988); Cohen, Cohen, Aiken &amp; West (1999); Holm (1979); Fornell &amp; Larcker (1981);
+          Zeithaml (1988); J. L. Aaker (1997) Dimensions of Brand Personality</p>
       </>
     ),
   },
 ];
 
 
-const CHAPTERS_META = [
-  { ch: 1, title: 'บทที่ 1 — บทนำ',
-    desc: 'ที่มา, วัตถุประสงค์, สมมติฐาน, ขอบเขต, ประโยชน์',
-    draft: true },
-  { ch: 2, title: 'บทที่ 2 — ทบทวนวรรณกรรม',
-    desc: 'ทฤษฎี Aaker · Keller · Kapferer + งานวิจัยที่เกี่ยวข้อง + กรอบแนวคิด',
-    draft: true },
-  { ch: 3, title: 'บทที่ 3 — ระเบียบวิธีวิจัย',
-    desc: 'Research design, สูตรการคำนวณทุกตัว, น้ำหนักของ signal, sampling',
-    draft: false },
-  { ch: 4, title: 'บทที่ 4 — ผลการศึกษา',
-    desc: 'BES + 4 มิติ พร้อมตารางสถิติจริง, Identity vs Image, NPS',
-    draft: false },
-  { ch: 5, title: 'บทที่ 5 — สรุป อภิปราย ข้อเสนอแนะ',
-    desc: 'อภิปรายผลกับทฤษฎี + ข้อเสนอแนะเชิงกลยุทธ์ 5-7 ข้อ + limitations',
-    draft: false },
-];
-
 export const BeMethodology = ({
-  canExportThesis = false,
-  showExport = true,         // hide the export card entirely (e.g. on /showcase)
-  thesisProgress,            // 'idle' | 'starting' | 'chapter_X' | 'rendering' | 'failed'
-  thesisError,               // optional error string
-  selectedChapters,          // array of int
-  onSelectedChaptersChange,  // (arr) => void
-  extraPrompt,               // string
-  onExtraPromptChange,       // (str) => void
-  onStartThesisExport,       // () => void
   onOpenWeights,             // () => void — opens the dimension-weight editor (owner only)
 }) => {
   const [openId, setOpenId] = useState(null);
   // Outer panels default closed — like the filter bar — to keep the report clean.
   const [methodOpen, setMethodOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
-
-  const isWorking = thesisProgress && thesisProgress !== 'idle' && thesisProgress !== 'failed';
-  const progressLabel = (() => {
-    if (!thesisProgress || thesisProgress === 'idle') return '';
-    if (thesisProgress === 'starting') return 'กำลังเริ่มงาน...';
-    if (thesisProgress === 'queued')   return 'อยู่ในคิว...';
-    if (thesisProgress === 'rendering') return 'กำลังสร้างไฟล์ DOCX...';
-    if (thesisProgress === 'downloading') return 'กำลังดาวน์โหลด...';
-    if ((thesisProgress || '').startsWith('chapter_')) {
-      const ch = thesisProgress.replace('chapter_', '');
-      return `AI กำลังเขียนบทที่ ${ch}...`;
-    }
-    return thesisProgress;
-  })();
-
-  const toggleChapter = (ch) => {
-    if (!onSelectedChaptersChange) return;
-    const set = new Set(selectedChapters || []);
-    if (set.has(ch)) set.delete(ch); else set.add(ch);
-    onSelectedChaptersChange(Array.from(set).sort((a, b) => a - b));
-  };
 
   return (
     <section className="be-method-wrap" data-testid="be-methodology">
@@ -272,6 +244,7 @@ export const BeMethodology = ({
         <button type="button"
                 className="be-appendix-toggle"
                 data-testid="be-methodology-toggle"
+                aria-expanded={methodOpen}
                 onClick={() => setMethodOpen(!methodOpen)}>
           <div className="be-appendix-toggle-text">
             <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--be-red)' }}>
@@ -279,7 +252,7 @@ export const BeMethodology = ({
             </span>
             <span className="be-appendix-title">วิธีคำนวณคะแนนทุกตัวบน dashboard นี้</span>
             <span className="be-appendix-short">
-              Aaker-aligned weighted composite · 6 sections — สูตร น้ำหนัก และเหตุผลที่ใช้
+              Aaker-aligned weighted composite · schema v2 — สูตร น้ำหนัก และเหตุผลที่ใช้
             </span>
           </div>
           <span className="be-appendix-arrow">{methodOpen ? 'COLLAPSE ▲' : 'EXPAND ▼'}</span>
@@ -289,7 +262,7 @@ export const BeMethodology = ({
           <div className="be-appendix-body" data-testid="be-methodology-body">
             <p className="be-method-lede">
               เราใช้สูตร <strong>Aaker-aligned weighted composite</strong> ที่ trace กลับไปงานวิจัย
-              Aaker (1991, 1996) + Keller (1993) + Reichheld (2003) ได้ครบ
+              Aaker (1991, 1996) + Keller (1993) + Reichheld (2003) ได้
               — กดที่หัวข้อด้านล่างเพื่อดูสูตร น้ำหนัก และเหตุผลที่ใช้
             </p>
             {onOpenWeights && (
@@ -326,136 +299,6 @@ export const BeMethodology = ({
         )}
       </div>
 
-      {/* ============ Thesis Export — collapsed by default, role-gated, hidden on /showcase ============ */}
-      {showExport && (
-      <div className={`be-appendix-card be-appendix-card--export ${exportOpen ? 'open' : ''}`}
-           data-testid="be-thesis-export-card">
-        <button type="button"
-                className="be-appendix-toggle"
-                data-testid="be-thesis-export-toggle"
-                onClick={() => setExportOpen(!exportOpen)}>
-          <div className="be-appendix-toggle-text">
-            <span className="be-mono be-tiny" style={{ letterSpacing: '0.16em', color: 'var(--logo-blue)' }}>
-              ◆ ACADEMIC EXPORT {canExportThesis ? '· AI-POWERED' : '· LOCKED'}
-            </span>
-            <span className="be-appendix-title">สร้างวิทยานิพนธ์ด้วย AI (DOCX, บทที่ 1-5)</span>
-            <span className="be-appendix-short">
-              {canExportThesis
-                ? 'เลือกบทที่ต้องการ · ใส่ Extra Prompt · AI Gemini เขียนเนื้อหาทุกบท + APA 7 references'
-                : 'เฉพาะ admin · อาจารย์ · นิสิต ที่ลงทะเบียนแล้ว'}
-            </span>
-          </div>
-          <span className="be-appendix-arrow">{exportOpen ? 'COLLAPSE ▲' : 'EXPAND ▼'}</span>
-        </button>
-
-        {exportOpen && (
-          <div className="be-appendix-body be-thesis-body" data-testid="be-thesis-export-body">
-            {!canExportThesis && (
-              <p className="be-thesis-lede">
-                ฟีเจอร์นี้เปิดใช้สำหรับบัญชี <strong>admin · อาจารย์ · นิสิตที่ได้รับสิทธิ์ Export Thesis</strong>
-                <br/>
-                <span className="be-tiny be-muted">
-                  หากคุณ login แล้วแต่ยังกดใช้งานไม่ได้ — กรุณาติดต่อผู้ดูแลระบบ (admin) เพื่อเปิดสิทธิ์ Export ให้บัญชีของคุณ (สามารถกด Export Raw CSV ด้านบนไปวิเคราะห์ต่อใน SPSS/R ได้ทันที)
-                </span>
-              </p>
-            )}
-
-            {canExportThesis && (
-              <>
-                <p className="be-thesis-lede">
-                  AI Gemini จะเขียนเนื้อหาวิทยานิพนธ์ตามบทที่เลือก โดยใช้ <strong>ข้อมูลจริง</strong> จาก
-                  study นี้ + อ้างอิงทฤษฎี <em>Aaker · Keller · Kapferer · Reichheld · Kotler</em>
-                  ในรูปแบบ APA 7
-                  <br/>
-                  <span className="be-tiny be-muted">
-                    หากเปิด filter อยู่ — รายงานจะ snapshot เฉพาะ slice นั้น
-                  </span>
-                </p>
-
-                {/* ===== Chapter selection ===== */}
-                <div className="be-thesis-block">
-                  <div className="be-thesis-block-label">เลือกบทที่ต้องการ</div>
-                  <div className="be-thesis-chapters">
-                    {CHAPTERS_META.map(({ ch, title, desc, draft }) => {
-                      const checked = (selectedChapters || []).includes(ch);
-                      return (
-                        <label key={ch}
-                               className={`be-thesis-chapter ${checked ? 'on' : ''} ${draft ? 'draft' : ''}`}
-                               data-testid={`be-thesis-chapter-${ch}`}>
-                          <input type="checkbox"
-                                 checked={checked}
-                                 disabled={isWorking}
-                                 onChange={() => toggleChapter(ch)}
-                                 data-testid={`be-thesis-chapter-cb-${ch}`}/>
-                          <div className="be-thesis-chapter-text">
-                            <div className="be-thesis-chapter-title">
-                              {title}
-                              {draft && (
-                                <span className="be-thesis-draft-tag" title="AI ร่างให้เท่านั้น — ผู้เขียนต้องไป fine-tune / revise เอง">
-                                  ร่าง · DRAFT
-                                </span>
-                              )}
-                            </div>
-                            <div className="be-thesis-chapter-desc">{desc}</div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="be-tiny be-muted" style={{ marginTop: 6 }}>
-                    บทที่ 1-2 เป็น <strong>ร่าง</strong> ไม่ได้อ้างจากข้อมูลจริง — ต้องนำไป fine-tune /
-                    revise เองให้ตรงกับบริบทมหาวิทยาลัยและขอบเขตงาน
-                  </div>
-                </div>
-
-                {/* ===== Extra prompt ===== */}
-                <div className="be-thesis-block">
-                  <div className="be-thesis-block-label">
-                    คำสั่งเพิ่มเติม (Extra Prompt) — ไม่บังคับ
-                  </div>
-                  <textarea
-                    className="be-thesis-textarea"
-                    value={extraPrompt || ''}
-                    disabled={isWorking}
-                    onChange={(e) => onExtraPromptChange && onExtraPromptChange(e.target.value)}
-                    placeholder="เช่น: เน้น positioning ระดับพรีเมียม, อ้างอิง Kotler มากขึ้น, เพิ่มมุมมอง Gen Z, ใช้ภาษาทางการมากขึ้น..."
-                    data-testid="be-thesis-extra-prompt"/>
-                  <div className="be-tiny be-muted" style={{ marginTop: 4 }}>
-                    AI จะนำคำสั่งนี้ไปประกอบทุกบทที่เลือก
-                  </div>
-                </div>
-
-                {/* ===== Generate button + progress ===== */}
-                <div className="be-thesis-actions">
-                  <button type="button"
-                          className="be-thesis-btn"
-                          disabled={!canExportThesis || isWorking || (selectedChapters || []).length === 0}
-                          data-testid="be-thesis-export-btn"
-                          onClick={onStartThesisExport}>
-                    {isWorking
-                      ? '⏳ ' + progressLabel
-                      : `สร้างวิทยานิพนธ์ ${(selectedChapters || []).length} บท →`}
-                  </button>
-                  {isWorking && (
-                    <div className="be-thesis-progress" data-testid="be-thesis-progress">
-                      <div className="be-thesis-progress-bar"/>
-                      <div className="be-tiny be-muted" style={{ marginTop: 6 }}>
-                        {progressLabel} · ใช้เวลาประมาณ 30-90 วินาทีต่อบท
-                      </div>
-                    </div>
-                  )}
-                  {thesisProgress === 'failed' && thesisError && (
-                    <div className="be-thesis-error" data-testid="be-thesis-error">
-                      ✕ {thesisError}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-      )}
     </section>
   );
 };

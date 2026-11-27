@@ -1,0 +1,9 @@
+# Development / test-only dependencies — NOT needed in production.
+# Install on top of the production set:
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# mongomock-motor: in-memory MongoDB used by the TestClient test suites
+#   (tests/test_*_2026_11*.py, test_llm_policy.py, …) and by
+#   scripts/dev_sim.py (local run without MongoDB). Pulls in mongomock.
+mongomock-motor==0.0.36
+mongomock==4.3.0

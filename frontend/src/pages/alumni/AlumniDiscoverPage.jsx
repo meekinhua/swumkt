@@ -53,10 +53,10 @@ const AlumniDiscoverPage = () => {
     if (!match) return;
     try {
       await axios.post(`${API}/alumni/relations`, { to_user_id: match.user_id, kind: 'take' }, authH);
-      toast.show(`ส่งคำขอ mark ${match.nickname || match.name} แล้ว`);
+      toast.show(`ส่งเรื่องให้ ${match.nickname || match.name} ยืนยันเป็นพี่เทคแล้ว`);
       setTimeout(loadMatch, 800);
     } catch (e) {
-      toast.show(e.response?.data?.detail || 'ไม่สำเร็จ');
+      { const d = e.response?.data?.detail; toast.show(typeof d === 'string' ? d : (d && d.message) || 'ไม่สำเร็จ'); }
     }
   };
 

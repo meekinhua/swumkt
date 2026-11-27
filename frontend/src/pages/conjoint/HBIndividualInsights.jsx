@@ -14,10 +14,10 @@ import { Info } from 'lucide-react';
  */
 const HBIndividualInsights = ({ hbResult, study }) => {
   const quantiles = hbResult?.individual_quantiles;
+  if (!quantiles || !study?.attributes) return null;
 
   // Reshape into a per-attribute table where reference level is highlighted.
   const tables = useMemo(() => {
-    if (!quantiles || !study?.attributes) return [];
     return study.attributes.map(attr => {
       const rows = (attr.levels || []).map(lvl => {
         const key = `${attr.name}_${lvl.value}`;
@@ -40,8 +40,6 @@ const HBIndividualInsights = ({ hbResult, study }) => {
       return { id: attr.id, name: attr.name, rows };
     });
   }, [study, quantiles]);
-
-  if (!quantiles || !study?.attributes) return null;
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden" data-testid="hb-individual-insights">

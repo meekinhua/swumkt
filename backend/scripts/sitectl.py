@@ -15,6 +15,14 @@ confirms rather than assuming.
     sitectl undo list
     sitectl undo restore <rev-id>
 
+    sitectl health                             # is the deploy up? (no credential)
+    sitectl llm status                         # may the platform's paid LLM be used?
+    sitectl llm off | on | set <key> on|off|default | bypass on|off | hint "<text>"
+    sitectl research list [--tool conjoint|brand-equity]
+    sitectl research show conjoint <study-id>
+    sitectl research prompt brand-equity <study-id> analyze -o prompt.md
+    sitectl research import brand-equity <study-id> analyze --file answer.md
+
 Design notes, each of which is load-bearing:
 
 * **Partial writes only.** `PUT /api/cms/landing` replaces the whole document
@@ -126,6 +134,63 @@ PAPER_FIELDS = (
     "doi", "url", "pdf_url", "open_access", "cited_by", "cited_by_as_of",
     "status", "confidence", "review_note", "slug",
 )
+
+
+# ── research tools: the ONLY place that knows conjoint / brand-equity paths ──
+# Table-driven so a path that moves on the server is a one-line fix here.
+# Source of truth is memory/LLM_EXTERNAL_CONTRACT.md ("## Conjoint", "## Brand Equity");
+# `{id}` is the study id. Each feature may define:
+#   prompt : (method, path[, default_body_or_query])   -> the external prompt pack
+#   import : (method, path)                            -> bring the pasted answer back
+#   pack   : True when `prompt` returns a ready-made Markdown file (not the JSON parts shape)
+RESEARCH_TOOLS: Dict[str, Dict[str, Any]] = {
+    "conjoint": {
+        "list": "/conjoint/studies",
+        "study": "/conjoint/studies/{id}",
+        "results": "/conjoint/studies/{id}/results",
+        "n_field": "respondent_count",
+    },
+    "brand-equity": {
+        "list": "/brand-equity/studies",
+        "study": "/brand-equity/studies/{id}",
+        "results": "/brand-equity/studies/{id}/dashboard",
+        "n_field": "response_count",
+    },
+}
+RESEARCH_FEATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
+    "conjoint": {
+        "interpretation": {   # --body '{"method":"mnl"}' or '{"compare_all":true}'
+            "prompt": ("POST", "/conjoint/studies/{id}/ai-interpretation/external-prompt", {}),
+            "import": ("POST", "/conjoint/studies/{id}/ai-interpretation/external-import"),
+            "default_part": "main"},
+        "thesis": {           # one part per chapter: ch3 / ch4 / ch5
+            "prompt": ("POST", "/conjoint/studies/{id}/export-thesis/external-prompt",
+                       {"methods": ["mnl"], "chapters": [3, 4, 5]}),
+            "import": ("POST", "/conjoint/studies/{id}/export-thesis/external-import"),
+            "default_part": None},
+    },
+    "brand-equity": {
+        "analyze": {
+            "prompt": ("GET", "/brand-equity/studies/{id}/ai-analyze/external-prompt"),
+            "import": ("POST", "/brand-equity/studies/{id}/ai-analyze/external-import"),
+            "default_part": None},     # part keys come from `research prompt`
+        "visual-identity": {
+            "prompt": ("GET", "/brand-equity/studies/{id}/extract-visual-identity/external-prompt"),
+            "import": ("POST", "/brand-equity/studies/{id}/extract-visual-identity/external-import"),
+            "default_part": "main"},
+        "questions": {
+            "prompt": ("GET", "/brand-equity/studies/{id}/regenerate-questions/external-prompt"),
+            "import": ("POST", "/brand-equity/studies/{id}/regenerate-questions/external-import"),
+            "default_part": "main"},
+        "thesis": {
+            "prompt": ("GET", "/brand-equity/studies/{id}/thesis-ai/external-pack", {"format": "json"}),
+            "import": ("POST", "/brand-equity/studies/{id}/thesis-ai/external-import"),
+            "default_part": None},     # ch1 … ch5
+    },
+}
+LLM_POLICY_PATH = "/platform/llm-policy"
+HEALTH_PATH = "/health"
+MAX_IMPORT_BYTES = 1_000_000
 
 
 # ── plumbing ────────────────────────────────────────────────────────────────
@@ -853,6 +918,474 @@ def cmd_paper_add(api: Api, a) -> int:
     return 0
 
 
+# ── health ──────────────────────────────────────────────────────────────────
+
+def cmd_health(api: Api, a) -> int:
+    """GET /api/health — no credential. Exit 0 only when the deploy says ok."""
+    try:
+        r = api.s.request("GET", f"{api.base}/api{HEALTH_PATH}", timeout=30)
+    except Exception as e:
+        print(f"{api.base} unreachable: {e}")
+        return 1
+    try:
+        body = r.json()
+    except Exception:
+        body = {}
+    if a.json:
+        print(json.dumps(body, ensure_ascii=False, indent=2))
+    else:
+        print(f"{api.base} · {body.get('status', r.status_code)} · version {body.get('version', '?')} "
+              f"· {body.get('time', '')}")
+    return 0 if r.status_code == 200 and body.get("status") == "ok" else 1
+
+
+# ── system-LLM policy ───────────────────────────────────────────────────────
+
+def _json_or_text(r: requests.Response) -> Any:
+    try:
+        return r.json()
+    except Exception:
+        return r.text[:400]
+
+
+def _err_text(r: requests.Response) -> str:
+    """One readable line out of the server's error body (string or {code,message,errors})."""
+    body = _json_or_text(r)
+    d = body.get("detail", body) if isinstance(body, dict) else body
+    if isinstance(d, dict):
+        msg = d.get("message") or d.get("code") or json.dumps(d, ensure_ascii=False)
+        errs = d.get("errors")
+        if errs:
+            msg += "\n      - " + "\n      - ".join(str(e) for e in (errs[:8] if isinstance(errs, list) else [errs]))
+        return str(msg)
+    if isinstance(d, list):
+        return "; ".join(str(x.get("msg", x)) if isinstance(x, dict) else str(x) for x in d[:5])
+    return str(d)[:400]
+
+
+def llm_view(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """The editable part of the policy, from the admin view of GET /platform/llm-policy."""
+    if "overrides" not in doc:
+        raise SystemExit("this credential gets the user view of the policy, not the admin view — "
+                         "use an admin login or a key with the platform.settings scope")
+    return {"system_llm_enabled": bool(doc.get("system_llm_enabled")),
+            "admin_bypass": bool(doc.get("admin_bypass")),
+            "external_hint": doc.get("external_hint") or "",
+            "overrides": {k: bool(v) for k, v in (doc.get("overrides") or {}).items()}}
+
+
+def _registry(doc: Dict[str, Any]) -> Tuple[Dict[str, str], Dict[str, str]]:
+    reg = doc.get("registry") or {}
+    groups = {g["key"]: g.get("label", g["key"]) for g in reg.get("groups", [])}
+    feats = {f["key"]: f.get("group") for f in reg.get("features", [])}
+    return groups, feats
+
+
+def llm_effective(view: Dict[str, Any], feature: str, feats: Dict[str, str]) -> bool:
+    """features[feature] ?? features[group] ?? master (admin_bypass is per-caller, not here)."""
+    ov = view["overrides"]
+    if feature in ov:
+        return ov[feature]
+    g = feats.get(feature)
+    if g in ov:
+        return ov[g]
+    return view["system_llm_enabled"]
+
+
+def llm_spend_risk(before: Dict[str, Any], after: Dict[str, Any], feats: Dict[str, str]) -> Optional[str]:
+    """Turning the system LLM ON costs the owner money, so that direction needs a deliberate yes.
+    Turning things off, or editing the hint, never does."""
+    newly = [f for f in feats if not llm_effective(before, f, feats) and llm_effective(after, f, feats)]
+    if newly:
+        what = "EVERY AI feature" if len(newly) >= len(feats) else \
+            f"{len(newly)} AI feature(s), e.g. {newly[0]}"
+        return f"allows the platform's PAID system LLM for {what}"
+    if after["admin_bypass"] and not before["admin_bypass"]:
+        return "lets admins use the PAID system LLM even where it is switched off"
+    return None
+
+
+def _llm_state_lines(doc: Dict[str, Any]) -> List[str]:
+    groups, feats = _registry(doc)
+    eff = doc.get("features") or {}
+    lines = []
+    for g, label in groups.items():
+        members = [f for f, gg in feats.items() if gg == g]
+        on = [f for f in members if eff.get(f)]
+        mark = "on " if len(on) == len(members) else ("off" if not on else "mix")
+        lines.append(f"  {mark}  {g:10} {label}")
+        if 0 < len(on) < len(members):
+            lines.append(f"        on: {', '.join(on)}")
+            lines.append(f"        off: {', '.join(f for f in members if f not in on)}")
+    return lines
+
+
+def cmd_llm_status(api: Api, a) -> int:
+    doc = api.get(LLM_POLICY_PATH)
+    if a.json:
+        print(json.dumps(doc, ensure_ascii=False, indent=2))
+        return 0
+    master = "ON  (the platform pays for AI)" if doc.get("system_llm_enabled") else "OFF (users bring their own LLM)"
+    print(f"{api.base} · system LLM policy")
+    print(f"  master switch : {master}")
+    if "admin_bypass" in doc:
+        print(f"  admin bypass  : {'ON' if doc.get('admin_bypass') else 'off'}")
+    print(f"  hint to users : {doc.get('external_hint') or '—'}")
+    ov = doc.get("overrides")
+    if ov is not None:
+        print("  overrides     : " + (", ".join(f"{k}={'on' if v else 'off'}" for k, v in sorted(ov.items())) or "none"))
+    if doc.get("updated_at"):
+        print(f"  last change   : {str(doc['updated_at'])[:19]} by {doc.get('updated_by') or '?'}")
+    print("  effective per group:")
+    for line in _llm_state_lines(doc):
+        print(line)
+    return 0
+
+
+def _llm_apply(api: Api, a, patch: Dict[str, Any], describe: str) -> int:
+    """Shared flow: read -> diff -> (dry-run) -> confirm if it spends money -> PUT -> read back."""
+    doc = api.get(LLM_POLICY_PATH)
+    before = llm_view(doc)
+    _groups, feats = _registry(doc)
+    after = json.loads(json.dumps(before))
+    for k in ("system_llm_enabled", "admin_bypass", "external_hint"):
+        if k in patch:
+            after[k] = patch[k]
+    for k, v in (patch.get("features") or {}).items():
+        if v is None:
+            after["overrides"].pop(k, None)
+        else:
+            after["overrides"][k] = bool(v)
+
+    print(f"{api.base} · system LLM policy — {describe}")
+    if show_diff(before, after) == 0:
+        print("nothing to do."); return 0
+    if a.dry_run:
+        print("(--dry-run — nothing sent)"); return 0
+    warn = llm_spend_risk(before, after, feats)
+    if warn and not confirm(f"this {warn}. continue?", a.yes):
+        return 1
+    r = api.req("PUT", LLM_POLICY_PATH, json=patch)
+    if r.status_code >= 400:
+        print(f"failed ({r.status_code}): {_err_text(r)}"); return 1
+    got = llm_view(api.get(LLM_POLICY_PATH))
+    if got == after:
+        print("  ✓ written and read back")
+        return 0
+    print("  ✗ the server's policy differs from what was written:")
+    show_diff(after, got)
+    return 2
+
+
+def _onoff(word: str) -> bool:
+    return {"on": True, "off": False}[word]
+
+
+def cmd_llm_master(api: Api, a, value: bool) -> int:
+    return _llm_apply(api, a, {"system_llm_enabled": value},
+                      f"master switch {'ON' if value else 'OFF'}")
+
+
+def cmd_llm_set(api: Api, a) -> int:
+    doc = api.get(LLM_POLICY_PATH)
+    groups, feats = _registry(doc)
+    valid = sorted(set(groups) | set(feats))
+    if a.key not in valid:
+        near = [k for k in valid if a.key.lower() in k.lower()][:6]
+        raise SystemExit(f"'{a.key}' is not a feature or group. "
+                         + (f"did you mean: {', '.join(near)}? " if near else "")
+                         + f"valid groups: {', '.join(groups)}; features: {', '.join(feats)}")
+    value = None if a.state == "default" else _onoff(a.state)
+    return _llm_apply(api, a, {"features": {a.key: value}}, f"{a.key} -> {a.state}")
+
+
+def cmd_llm_bypass(api: Api, a) -> int:
+    return _llm_apply(api, a, {"admin_bypass": _onoff(a.state)}, f"admin bypass {a.state}")
+
+
+def cmd_llm_hint(api: Api, a) -> int:
+    return _llm_apply(api, a, {"external_hint": a.text}, "hint text")
+
+
+# ── research: conjoint / brand-equity studies ───────────────────────────────
+
+def _tool(name: str) -> Dict[str, Any]:
+    if name not in RESEARCH_TOOLS:
+        raise SystemExit(f"unknown tool '{name}' — choose {' | '.join(RESEARCH_TOOLS)}")
+    return RESEARCH_TOOLS[name]
+
+
+def _feature(tool: str, name: str) -> Dict[str, Any]:
+    feats = RESEARCH_FEATURES.get(tool, {})
+    if name not in feats:
+        raise SystemExit(f"'{name}' is not an external-LLM feature of {tool}. valid: {', '.join(feats)}")
+    return feats[name]
+
+
+def _rows(body: Any, key: str = "studies") -> List[dict]:
+    if isinstance(body, list):
+        return body
+    if isinstance(body, dict):
+        for k in (key, "items", "studies"):
+            if isinstance(body.get(k), list):
+                return body[k]
+    return []
+
+
+def cmd_research_list(api: Api, a) -> int:
+    tools = [a.tool] if a.tool else list(RESEARCH_TOOLS)
+    out = []
+    for t in tools:
+        cfg = _tool(t)
+        r = api.req("GET", cfg["list"])
+        if r.status_code >= 400:
+            raise SystemExit(f"could not list {t} studies ({r.status_code}): {_err_text(r)}")
+        for s in _rows(_json_or_text(r)):
+            title = s.get("title") or ((s.get("brand") or {}).get("name")) or ""
+            out.append({"tool": t, "id": s.get("id"), "title": title, "status": s.get("status", ""),
+                        "n": s.get(cfg["n_field"], s.get("respondent_count", s.get("response_count"))),
+                        "created_at": str(s.get("created_at", ""))[:10]})
+    if a.json:
+        print(json.dumps(out, ensure_ascii=False, indent=2)); return 0
+    if not out:
+        print("(no studies)"); return 0
+    print(f"{'tool':13} {'id':38} {'status':11} {'n':>5} {'created':10} title")
+    for o in out:
+        print(f"{o['tool']:13} {str(o['id']):38} {str(o['status']):11} {str(o['n'] if o['n'] is not None else '-'):>5} "
+              f"{o['created_at']:10} {str(o['title'])[:56]}")
+    return 0
+
+
+def _get_soft(api: Api, path: str) -> Tuple[int, Any]:
+    r = api.req("GET", path)
+    return r.status_code, (_json_or_text(r) if r.status_code != 204 else None)
+
+
+def summarize_study(tool: str, study: dict, results: Any) -> Dict[str, Any]:
+    """Compact, stable summary of a study — pure so it can be tested without a server."""
+    cfg = RESEARCH_TOOLS[tool]
+    out: Dict[str, Any] = {
+        "tool": tool, "id": study.get("id"), "title": study.get("title") or (study.get("brand") or {}).get("name"),
+        "status": study.get("status"), "n_responses": study.get(cfg["n_field"]),
+    }
+    res = results if isinstance(results, dict) else {}
+    if tool == "conjoint":
+        attrs = {a.get("id"): a for a in (study.get("attributes") or [])}
+        out["attributes"] = len(attrs)
+        imp = res.get("importance_scores") or {}
+        rows = sorted(({"attribute": v.get("name") or k, "importance_pct": v.get("importance")}
+                       for k, v in imp.items() if isinstance(v, dict)),
+                      key=lambda x: -(x["importance_pct"] or 0))
+        out["importance"] = rows
+        best = {}
+        for aid, pw in (res.get("part_worths") or {}).items():
+            lv = [(l.get("value"), l.get("utility")) for l in (pw.get("levels") or {}).values()
+                  if l.get("utility") is not None]
+            if lv:
+                best[pw.get("name") or aid] = max(lv, key=lambda x: x[1])[0]
+        out["best_level"] = best
+        out["respondents_in_results"] = res.get("respondent_count")
+    else:
+        agg = res.get("aggregate") or {}
+        out["composite"] = {k: v for k, v in (agg.get("composite") or {}).items() if not k.startswith("_")}
+        rel = {}
+        for dim, r in (agg.get("reliability") or {}).items():
+            if isinstance(r, dict) and r.get("alpha") is not None:
+                rel[dim] = r["alpha"]
+        out["reliability_alpha"] = rel
+        out["sample"] = (agg.get("sample_adequacy") or {}).get("message")
+        out["responses_filtered"] = res.get("responses_filtered")
+        out["waves"] = res.get("waves")
+        out["ai_cache"] = sorted((res.get("ai_cache") or {}).keys()) if isinstance(res.get("ai_cache"), dict) else None
+    return out
+
+
+def cmd_research_show(api: Api, a) -> int:
+    cfg = _tool(a.tool)
+    sid = _safe_id(a.study_id, "study id")
+    code, study = _get_soft(api, cfg["study"].format(id=sid))
+    if code == 404:
+        raise SystemExit(f"no {a.tool} study '{sid}' — `sitectl research list` shows the ids")
+    if code >= 400:
+        raise SystemExit(f"could not read the study ({code}): {study if isinstance(study, str) else study.get('detail')}")
+    rcode, results = _get_soft(api, cfg["results"].format(id=sid))
+    note = None if rcode == 200 else f"results not available yet ({rcode})"
+    summ = summarize_study(a.tool, study, results if rcode == 200 else {})
+    if note:
+        summ["note"] = note
+    if a.json:
+        print(json.dumps(summ, ensure_ascii=False, indent=2)); return 0
+    print(f"{api.base} · {a.tool} · {summ['title']}")
+    print(f"  id        : {summ['id']}\n  status    : {summ['status']}\n  responses : {summ['n_responses']}")
+    if a.tool == "conjoint":
+        print(f"  attributes: {summ.get('attributes')}")
+        if summ.get("importance"):
+            print("  importance (%):")
+            for r in summ["importance"]:
+                print(f"    {str(r['attribute'])[:30]:30} {r['importance_pct']}")
+            print("  best level per attribute: " + "; ".join(f"{k} = {v}" for k, v in summ["best_level"].items()))
+    else:
+        if summ.get("composite"):
+            print("  composite (0-100): " + ", ".join(f"{k} {v}" for k, v in summ["composite"].items()))
+        if summ.get("reliability_alpha"):
+            print("  Cronbach alpha   : " + ", ".join(f"{k} {v}" for k, v in summ["reliability_alpha"].items()))
+        if summ.get("sample"):
+            print(f"  sample           : {summ['sample']}")
+        if summ.get("ai_cache"):
+            print(f"  AI results cached: {', '.join(summ['ai_cache'])}")
+    if note:
+        print(f"  ({note})")
+    return 0
+
+
+def _fence(text: str) -> str:
+    n = 3
+    while "`" * n in text:
+        n += 1
+    return "`" * n
+
+
+def render_prompt_pack(payload: Dict[str, Any]) -> str:
+    """The JSON external-prompt payload as one Markdown file a person can read and paste from."""
+    L = [f"# {payload.get('title') or payload.get('feature')}", ""]
+    meta = f"feature: `{payload.get('feature')}` · expected answer: {payload.get('expected_format')}"
+    L += [f"> {meta}", ""]
+    if payload.get("instructions_th"):
+        L += ["## วิธีใช้", "", payload["instructions_th"], ""]
+    parts = payload.get("parts") or []
+    for i, part in enumerate(parts, 1):
+        L += [f"## Part {i}/{len(parts)} — {part.get('title') or part.get('key')}  (part key: `{part.get('key')}`)", ""]
+        for label, key in (("System prompt", "system_prompt"), ("Prompt", "prompt"), ("JSON example", "json_example")):
+            txt = part.get(key)
+            if txt:
+                f = _fence(txt)
+                L += [f"### {label}", "", f"{f}text", txt, f, ""]
+    return "\n".join(L).rstrip() + "\n"
+
+
+def _safe_filename(name: str, fallback: str) -> str:
+    base = os.path.basename(str(name or "").replace("\\", "/"))
+    base = re.sub(r"[^\w\u0e00-\u0e7f.\-]+", "-", base, flags=re.UNICODE).strip("-.")  # keep Thai marks
+    return base or fallback
+
+
+def _query_pairs(items: Optional[List[str]]) -> Dict[str, str]:
+    out = {}
+    for it in items or []:
+        if "=" not in it:
+            raise SystemExit(f"--query expects key=value, got '{it}'")
+        k, v = it.split("=", 1)
+        out[k] = v
+    return out
+
+
+def _body_arg(raw: Optional[str]) -> Dict[str, Any]:
+    if not raw:
+        return {}
+    txt = Path(raw[1:]).read_text(encoding="utf-8") if raw.startswith("@") else raw
+    try:
+        v = json.loads(txt)
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"--body is not JSON: {e}")
+    if not isinstance(v, dict):
+        raise SystemExit("--body must be a JSON object")
+    return v
+
+
+def cmd_research_prompt(api: Api, a) -> int:
+    _tool(a.tool)
+    spec = _feature(a.tool, a.feature)["prompt"]
+    method, path = spec[0], spec[1].format(id=_safe_id(a.study_id, "study id"))
+    default = dict(spec[2]) if len(spec) > 2 else {}
+    extra = _body_arg(a.body)
+    kw: Dict[str, Any] = {}
+    query = _query_pairs(a.query)
+    if method == "GET":
+        kw["params"] = {**default, **query, **extra}
+    else:
+        kw["json"] = {**default, **extra}
+        if query:
+            kw["params"] = query
+    r = api.req(method, path, **kw)
+    if r.status_code >= 400:
+        print(f"failed ({r.status_code}): {_err_text(r)}")
+        return 1
+    ctype = r.headers.get("content-type", "") if getattr(r, "headers", None) else ""
+    payload = None
+    if "json" in ctype or r.text.lstrip().startswith("{"):
+        try:
+            payload = r.json()
+        except Exception:
+            payload = None
+    if isinstance(payload, dict) and "parts" in payload:
+        text = render_prompt_pack(payload)
+        fname = payload.get("filename")
+        parts = [p.get("key") for p in payload["parts"]]
+    else:
+        text = r.text
+        fname, parts = None, []
+    if a.out == "-":
+        sys.stdout.write(text)
+        return 0
+    out = Path(a.out) if a.out else Path(_safe_filename(fname, f"{a.tool}-{a.study_id[:8]}-{a.feature}-prompt.md"))
+    if out.exists() and not confirm(f"{out} exists — overwrite?", a.yes):
+        return 1
+    out.write_text(text, encoding="utf-8")
+    print(f"{api.base} · {a.tool} {a.feature}")
+    print(f"  wrote {out} ({len(text):,} chars" + (f", {len(parts)} part(s): {', '.join(map(str, parts))}" if parts else "") + ")")
+    print("  next: paste each part into your own LLM, save its answer to a file, then")
+    print(f"        sitectl research import {a.tool} {a.study_id} {a.feature} --file answer.md"
+          + (f" --part {parts[0]}" if parts else ""))
+    return 0
+
+
+def cmd_research_import(api: Api, a) -> int:
+    _tool(a.tool)
+    feat = _feature(a.tool, a.feature)
+    method, path = feat["import"][0], feat["import"][1].format(id=_safe_id(a.study_id, "study id"))
+    f = Path(a.file)
+    if not f.is_file():
+        raise SystemExit(f"no such file: {f}")
+    raw = f.read_bytes()
+    if len(raw) > MAX_IMPORT_BYTES:
+        raise SystemExit(f"{f} is {len(raw):,} bytes — an answer should be well under {MAX_IMPORT_BYTES:,}")
+    try:
+        content = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise SystemExit(f"{f} is not UTF-8 text")
+    if not content.strip():
+        raise SystemExit(f"{f} is empty")
+    part = a.part or feat.get("default_part")
+    if not part:
+        raise SystemExit("this feature needs --part <key> (the part keys are listed by `research prompt`, "
+                         "e.g. ch3 for a thesis chapter)")
+    body = {**_body_arg(a.body), "part_key": part, "content": content}
+    if a.model_label:
+        body["model_label"] = a.model_label
+    query = _query_pairs(a.query)
+    print(f"{api.base} · {a.tool} {a.feature} — import part '{part}'")
+    print(f"  from {f} ({len(content):,} chars){' · model: ' + a.model_label if a.model_label else ''}")
+    first = next((ln.strip() for ln in content.splitlines() if ln.strip()), "")
+    print(f"  starts: {shorten(first, 80)}")
+    if a.dry_run:
+        print(f"(--dry-run — would {method} {path}; nothing sent)"); return 0
+    if not confirm("this replaces the AI result stored for the study. import it?", a.yes):
+        return 1
+    r = api.req(method, path, json=body, **({"params": query} if query else {}))
+    if r.status_code >= 400:
+        print(f"failed ({r.status_code}): {_err_text(r)}")
+        return 1
+    resp = _json_or_text(r)
+    if a.json:
+        print(json.dumps(resp, ensure_ascii=False, indent=2)); return 0
+    print("  imported")
+    if isinstance(resp, dict):
+        for k in ("source", "model_label", "imported_at", "signature", "chapters", "warnings", "ok", "message"):
+            if k in resp:
+                print(f"    {k}: {shorten(resp[k], 100)}")
+    return 0
+
+
 # ── helpers used by commands ────────────────────────────────────────────────
 
 def parse_value(raw: str, force_json: bool) -> Any:
@@ -882,15 +1415,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     # before OR after the subcommand. argparse does not pass them down the
     # chain, and `sitectl text set k v --yes` reads far more naturally than
     # having to remember the flag goes first.
-    common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--api", default=saved_api,
-                        help=f"target instance (default {saved_api})")
-    common.add_argument("--dry-run", action="store_true",
-                        help="show the diff, send nothing")
-    common.add_argument("--yes", action="store_true", help="skip confirmation prompts")
-    common.add_argument("--json", action="store_true", help="parse VALUE as JSON")
+    def _common(leaf: bool) -> argparse.ArgumentParser:
+        # Leaf copies default to SUPPRESS: otherwise a subparser's default silently
+        # overwrites a value given BEFORE the subcommand (`--api X health` hit the
+        # default host, `--yes llm on` lost its --yes).
+        c = argparse.ArgumentParser(add_help=False)
+        sup = argparse.SUPPRESS
+        c.add_argument("--api", default=sup if leaf else saved_api,
+                       help=f"target instance (default {saved_api})")
+        c.add_argument("--dry-run", action="store_true", default=sup if leaf else False,
+                       help="show the diff, send nothing")
+        c.add_argument("--yes", action="store_true", default=sup if leaf else False,
+                       help="skip confirmation prompts")
+        c.add_argument("--json", action="store_true", default=sup if leaf else False,
+                       help="write commands: parse VALUE as JSON; read commands "
+                            "(llm status, research list/show, health): print raw JSON")
+        return c
+    common, top = _common(True), _common(False)
 
-    p = argparse.ArgumentParser(prog="sitectl", parents=[common],
+    p = argparse.ArgumentParser(prog="sitectl", parents=[top],
                                 description=__doc__.split("\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -981,6 +1524,53 @@ def main(argv: Optional[List[str]] = None) -> int:
     x.add_argument("--year", type=int)
     x.add_argument("--authors", help="'A. Name; B. Name' in published order")
     x.set_defaults(fn=cmd_paper_add, needs_auth=True)
+
+    hl = sub.add_parser("health", parents=[common], help="is the deploy up? (/api/health, no credential)")
+    hl.set_defaults(fn=cmd_health, needs_auth=False)
+
+    llm = sub.add_parser("llm", help="the platform's paid system LLM: on / off / per feature").add_subparsers(
+        dest="sub", required=True)
+    x = llm.add_parser("status", parents=[common], help="show the policy (--json for raw)")
+    x.set_defaults(fn=cmd_llm_status, needs_auth=True)
+    x = llm.add_parser("on", parents=[common], help="master switch ON — costs money, asks first")
+    x.set_defaults(fn=lambda api, a: cmd_llm_master(api, a, True), needs_auth=True)
+    x = llm.add_parser("off", parents=[common], help="master switch OFF — users bring their own LLM")
+    x.set_defaults(fn=lambda api, a: cmd_llm_master(api, a, False), needs_auth=True)
+    x = llm.add_parser("set", parents=[common], help="e.g. set images off · set translate on · set cv.ai default")
+    x.add_argument("key", help="a group (research, thesis, images, content, documents) or a feature key")
+    x.add_argument("state", choices=("on", "off", "default"))
+    x.set_defaults(fn=cmd_llm_set, needs_auth=True)
+    x = llm.add_parser("bypass", parents=[common], help="let admins use the system LLM even when it is off")
+    x.add_argument("state", choices=("on", "off"))
+    x.set_defaults(fn=cmd_llm_bypass, needs_auth=True)
+    x = llm.add_parser("hint", parents=[common], help="the sentence users see next to 'use your own AI'")
+    x.add_argument("text")
+    x.set_defaults(fn=cmd_llm_hint, needs_auth=True)
+
+    res = sub.add_parser("research", help="conjoint / brand-equity studies and their external-LLM prompts").add_subparsers(
+        dest="sub", required=True)
+    x = res.add_parser("list", parents=[common])
+    x.add_argument("--tool", choices=tuple(RESEARCH_TOOLS))
+    x.set_defaults(fn=cmd_research_list, needs_auth=True)
+    x = res.add_parser("show", parents=[common], help="status, n responses, key results (--json for raw)")
+    x.add_argument("tool", choices=tuple(RESEARCH_TOOLS)); x.add_argument("study_id")
+    x.set_defaults(fn=cmd_research_show, needs_auth=True)
+    x = res.add_parser("prompt", parents=[common], help="fetch the external prompt pack into a file")
+    x.add_argument("tool", choices=tuple(RESEARCH_TOOLS)); x.add_argument("study_id")
+    x.add_argument("feature", help="conjoint: " + "|".join(RESEARCH_FEATURES["conjoint"])
+                   + " · brand-equity: " + "|".join(RESEARCH_FEATURES["brand-equity"]))
+    x.add_argument("-o", "--out", help="file to write ('-' = stdout); default: the server's suggested name")
+    x.add_argument("--body", help="extra JSON (or @file), e.g. '{\"method\":\"mnl\"}'")
+    x.add_argument("--query", action="append", help="key=value (repeatable), e.g. wave=2")
+    x.set_defaults(fn=cmd_research_prompt, needs_auth=True)
+    x = res.add_parser("import", parents=[common], help="bring an AI answer (a file) back into the study")
+    x.add_argument("tool", choices=tuple(RESEARCH_TOOLS)); x.add_argument("study_id"); x.add_argument("feature")
+    x.add_argument("--file", required=True, help="the answer, as text/markdown/json")
+    x.add_argument("--model-label", help="which AI wrote it, e.g. 'ChatGPT-5' (recorded + disclosed)")
+    x.add_argument("--part", help="part key (default: the feature's, e.g. main; thesis needs ch3…)")
+    x.add_argument("--body", help="extra JSON (or @file), e.g. '{\"method\":\"mnl\"}'")
+    x.add_argument("--query", action="append", help="key=value (repeatable)")
+    x.set_defaults(fn=cmd_research_import, needs_auth=True)
 
     a = p.parse_args(argv)
     api = Api(a.api, token)

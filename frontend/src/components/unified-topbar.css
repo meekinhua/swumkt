@@ -317,12 +317,36 @@
   width: fit-content;
 }
 
+/* --------- Skip link + keyboard focus --------- */
+.utb-skip {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 60;
+  background: var(--utb-ink);
+  color: #fff;
+  padding: 10px 16px;
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 120ms ease;
+}
+.utb-skip:focus { top: 8px; }
+.utb-root a:focus-visible,
+.utb-root button:focus-visible {
+  outline: 2px solid var(--utb-ink);
+  outline-offset: 2px;
+}
+
 /* --------- Hamburger (mobile only) --------- */
 .utb-hamburger {
   display: none;
   flex-direction: column;
   gap: 5px;
   padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--utb-line);
   border-radius: 8px;
@@ -343,6 +367,11 @@
   background: var(--utb-bg);
   padding: 16px 24px 24px;
   animation: utb-dd-in 160ms ease;
+  /* A long menu (tools + admin) must scroll inside the drawer, not run off-screen */
+  max-height: calc(100vh - 64px);
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .utb-mobile-section {
   padding: 12px 0;
@@ -363,6 +392,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
+  min-height: 44px;
   font-size: 15px;
   color: var(--utb-ink);
   text-decoration: none;
@@ -394,31 +424,31 @@
 }
 
 /* --------- Responsive breakpoints --------- */
+@media (max-width: 1400px) {
+  /* nine nav items + tools menu: tighten so the right cluster never leaves the viewport */
+  .utb-inner { gap: 12px; padding-left: 20px; padding-right: 20px; }
+  .utb-link, .utb-dd-trigger { padding: 8px 8px; }
+  .utb-logo-sub { display: none; }
+  .utb-avatar-label .utb-avatar-name { display: none; }
+}
 @media (max-width: 1100px) {
   .utb-logo-sub { display: none; }
   .utb-avatar-label { display: none; }
 }
 @media (max-width: 900px) {
   .utb-nav { display: none; }
-  .utb-hamburger { display: flex; flex-shrink: 0; }
+  .utb-hamburger { display: flex; }
   .utb-mobile { display: flex; }
-  .utb-inner { justify-content: space-between; gap: 10px; padding: 10px 14px; }
+  .utb-inner { padding: 10px 20px; }
   /* Hide login/register buttons on mobile when not logged in — accessible via hamburger */
   .utb-right .utb-btn { display: none; }
 }
 @media (max-width: 480px) {
-  .utb-logo { min-width: 0; flex-shrink: 1; gap: 8px; }
-  .utb-logo-text { min-width: 0; }
-  .utb-logo-name {
-    font-size: 11.5px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .utb-logo-img { height: 30px; }
-  .utb-right { gap: 6px; }
-  .utb-right .utb-dd-trigger { padding: 4px 6px; }
-  .utb-right .utb-lang-trigger { padding: 5px 8px; }
+  .utb-logo { min-width: 0; flex-shrink: 1; }
+  .utb-inner { gap: 8px; padding-left: 12px; padding-right: 12px; }
+  .utb-logo-text { min-width: 0; overflow: hidden; }
+  .utb-logo-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .utb-logo-img { height: 36px; }
   /* Compact lang switcher: hide the code text, keep the flag */
   .utb-right .utb-lang-code { display: none; }
 }

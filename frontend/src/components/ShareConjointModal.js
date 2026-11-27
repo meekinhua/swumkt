@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Share2 } from 'lucide-react';
-import { toast } from 'sonner';
 
 const ShareConjointModal = ({ 
   isOpen, 
@@ -53,7 +52,7 @@ const ShareConjointModal = ({
     
     // Validate required fields
     if (!formData.title.trim() || !formData.dataSource.trim() || !formData.collectionMethod.trim()) {
-      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
+      alert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
       return;
     }
     

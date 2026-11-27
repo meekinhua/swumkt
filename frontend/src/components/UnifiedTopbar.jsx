@@ -15,9 +15,11 @@ import '@/components/unified-topbar.css';
  * - Sticky white with editorial/swiss style matching HomePage
  *
  * Props:
- * - active?: string  — highlight key ('home' | 'learn' | 'announcements' | 'showcase'
- *                                   | 'tools' | 'projects' | 'admin' | 'brand_equity'
- *                                   | 'conjoint' | 'surveys')
+ * - active?: string  — highlight key ('home' | 'learn' | 'people' | 'announcements' | 'showcase'
+ *                                   | 'alumni' | 'tools' | 'projects' | 'admin' | 'brand_equity'
+ *                                   | 'conjoint' | 'surveys' | ...). When empty or not recognised the
+ *                                   highlight is derived from the URL, so a page that forgets the prop
+ *                                   still shows where the user is.
  * - subtitle?: string — small line under logo (e.g. "BRAND HEALTH CHECK")
  * - publicMode?: boolean — force guest-style nav even if logged in (e.g. shared public dashboard).
  *                          Default false. When true, hides Tools/Projects/Admin sections.
@@ -29,16 +31,36 @@ const PUBLIC_LINKS = [
   { key: 'people',        to: '/people',        label: 'คณาจารย์' },
   { key: 'announcements', to: '/announcements', label: 'ประชาสัมพันธ์' },
   { key: 'showcase',      to: '/showcase',      label: 'Showcase' },
+  { key: 'alumni',        to: '/alumni',        label: 'ศิษย์เก่า' },
 ];
 
+// Which URL prefixes belong to which top-level nav item (used when `active` is not given).
+const PATH_SECTIONS = [
+  ['/learn', 'learn'], ['/people', 'people'], ['/publications', 'people'],
+  ['/announcements', 'announcements'], ['/showcase', 'showcase'], ['/alumni', 'alumni'],
+  ['/market-research', 'tools'], ['/brand-equity', 'tools'], ['/surveys', 'tools'],
+  ['/research/conjoint', 'tools'], ['/conjoint', 'tools'],
+  ['/projects', 'projects'], ['/admin', 'admin'],
+];
+const sectionForPath = (pathname) => {
+  if (pathname === '/') return 'home';
+  const hit = PATH_SECTIONS.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return hit ? hit[1] : '';
+};
+// 'active' keys that mean "somewhere inside the Tools menu"
+const TOOL_KEYS = ['tools', 'brand_equity', 'conjoint', 'surveys', 'customer_journey', 'customer_value', 'customer_behavior'];
+
+// Labels match the research hub (/market-research) cards and the page titles.
 const TOOLS_LINKS = [
-  { to: '/brand-equity',                          label: 'Brand Equity',     hint: 'BE' },
+  { to: '/market-research',                       label: 'ภาพรวมเครื่องมือทั้งหมด', hint: 'ALL' },
+  { to: '/brand-equity',                          label: 'Brand Health Check', hint: 'BE' },
   { to: '/market-research/conjoint-analysis',     label: 'Conjoint Analysis', hint: 'CJ' },
   { to: '/market-research/customer-value',         label: 'Customer Value Lab', hint: 'CV' },
   { to: '/market-research/customer-journey',      label: 'Customer Journey',  hint: 'CX' },
   { to: '/market-research/customer-behavior',     label: 'Customer Behavior', hint: 'CB' },
-  { to: '/market-research/journal-finder',        label: 'Journal Finder',    hint: 'JF' },
+  { to: '/market-research/customer-perception',   label: 'Customer Perception', hint: 'CP' },
   { to: '/surveys',                               label: 'Survey Builder',    hint: 'SV' },
+  { to: '/market-research/journal-finder',        label: 'Journal Finder',    hint: 'JF' },
 ];
 
 const ADMIN_LINKS = [
@@ -180,6 +202,30 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
   // Close mobile menu on route change
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
+  // Highlight: explicit prop wins when it names a known item, otherwise derive from the URL.
+  const KNOWN_KEYS = [...PUBLIC_LINKS.map(l => l.key), 'projects', 'admin', ...TOOL_KEYS];
+  const current = KNOWN_KEYS.includes(active) ? active : sectionForPath(location.pathname);
+  const inTools = TOOL_KEYS.includes(current);
+
+  // Keyboard "skip to content": focus <main> (or the first <h1>) of whatever page is showing.
+  const skipToContent = (e) => {
+    e.preventDefault();
+    const target = document.querySelector('main, [role="main"], h1');
+    if (target) {
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      target.focus();
+      target.scrollIntoView({ block: 'start' });
+    }
+  };
+
+  // Escape closes the mobile drawer
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const onEsc = (e) => { if (e.key === 'Escape') setMobileOpen(false); };
+    document.addEventListener('keydown', onEsc);
+    return () => document.removeEventListener('keydown', onEsc);
+  }, [mobileOpen]);
+
   const isAdmin = !!user && String(user.role || '').toLowerCase() === 'admin';
   const isLoggedIn = !!user;
   const showInternal = isLoggedIn && !publicMode;
@@ -194,6 +240,7 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
 
   return (
     <header className="utb-root" data-testid="unified-topbar">
+      <a href="#main" className="utb-skip" onClick={skipToContent} data-testid="utb-skip">ข้ามไปยังเนื้อหา</a>
       <div className="utb-inner">
         {/* Logo + subtitle */}
         <Link to="/" className="utb-logo" data-testid="utb-logo" aria-label="SWU Marketing Research — home">
@@ -209,7 +256,8 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
           {PUBLIC_LINKS.map(l => (
             <Link key={l.key}
                   to={l.to}
-                  className={`utb-link ${active === l.key ? 'is-active' : ''}`}
+                  className={`utb-link ${current === l.key ? 'is-active' : ''}`}
+                  aria-current={current === l.key ? 'page' : undefined}
                   data-testid={`utb-nav-${l.key}`}>
               {l.label}
             </Link>
@@ -217,7 +265,7 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
 
           {showInternal && (
             <Dropdown testid="utb-tools-dd"
-                      trigger={<span className={active === 'tools' || ['brand_equity', 'conjoint', 'surveys', 'customer_journey'].includes(active) ? 'is-active' : ''}>เครื่องมือ</span>}>
+                      trigger={<span className={inTools ? 'is-active' : ''}>เครื่องมือ</span>}>
               {TOOLS_LINKS.map(t => (
                 <Link key={t.to} to={t.to} className="utb-dd-item" data-testid={`utb-tools-${t.hint.toLowerCase()}`}>
                   <span className="utb-dd-label">{t.label}</span>
@@ -229,7 +277,8 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
 
           {showInternal && (
             <Link to="/projects"
-                  className={`utb-link ${active === 'projects' ? 'is-active' : ''}`}
+                  className={`utb-link ${current === 'projects' ? 'is-active' : ''}`}
+                  aria-current={current === 'projects' ? 'page' : undefined}
                   data-testid="utb-nav-projects">
               โปรเจกต์
             </Link>
@@ -237,7 +286,7 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
 
           {showInternal && isAdmin && (
             <Dropdown testid="utb-admin-dd"
-                      trigger={<span className={active === 'admin' ? 'is-active' : ''}>ผู้ดูแล</span>}>
+                      trigger={<span className={current === 'admin' ? 'is-active' : ''}>ผู้ดูแล</span>}>
               {ADMIN_LINKS.map(a => (
                 <Link key={a.to} to={a.to} className="utb-dd-item" data-testid={`utb-admin-${a.to.split('/').pop()}`}>
                   <span className="utb-dd-label">{a.label}</span>
@@ -299,8 +348,10 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
           <button type="button"
                   className="utb-hamburger"
                   onClick={() => setMobileOpen(v => !v)}
-                  aria-label="เปิดเมนู"
+                  aria-label={mobileOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
                   aria-expanded={mobileOpen}
+                  aria-controls="utb-mobile-drawer"
+
                   data-testid="utb-hamburger">
             <span/><span/><span/>
           </button>
@@ -309,12 +360,13 @@ const UnifiedTopbar = ({ active = '', subtitle = '', publicMode = false }) => {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="utb-mobile" data-testid="utb-mobile-drawer">
+        <div className="utb-mobile" id="utb-mobile-drawer" data-testid="utb-mobile-drawer">
           <div className="utb-mobile-section">
             <div className="utb-mobile-label">หน้าหลัก</div>
             {PUBLIC_LINKS.map(l => (
               <Link key={l.key} to={l.to}
-                    className={`utb-mobile-link ${active === l.key ? 'is-active' : ''}`}
+                    className={`utb-mobile-link ${current === l.key ? 'is-active' : ''}`}
+                    aria-current={current === l.key ? 'page' : undefined}
                     data-testid={`utb-mobile-${l.key}`}>
                 {l.label}
               </Link>

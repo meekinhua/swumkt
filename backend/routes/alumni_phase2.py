@@ -79,6 +79,8 @@ def get_phase2_routes(db, get_current_user, get_optional_user, alumni_helpers):
       - _push_notification(user_id, kind, title, body, meta)
     """
     H = alumni_helpers
+    # Fresh router per factory call (the module-level one is kept for compatibility).
+    phase2_router = APIRouter(prefix="/alumni", tags=["Alumni Phase 2"])
 
     # ============ DISCOVER (Mystery Match) ============
 
@@ -151,7 +153,11 @@ def get_phase2_routes(db, get_current_user, get_optional_user, alumni_helpers):
         # "Why interesting" — simple algorithmic reason
         reasons = []
         if picked_distance:
-            label = ("ปู่ของปู่" if picked_distance >= 4 else "ปู่ของคุณ") if picked_direction == "up" else "เหลนของเหลน"
+            signed = picked_distance if picked_direction == "up" else -picked_distance
+            if "_term_for_viewer" in H:
+                label = await H["_term_for_viewer"](current_user.id, signed, picked.get("kinship_gender"))
+            else:  # pragma: no cover - old helper dict
+                label = "รุ่นพี่ในสาย" if picked_direction == "up" else "รุ่นน้องในสาย"
             reasons.append(f"ห่างจากคุณ {picked_distance} ทอด · {label}")
         if picked.get("company"):
             reasons.append(f"ทำงานที่ {picked['company']}")

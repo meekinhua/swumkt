@@ -136,16 +136,17 @@ export const useToast = () => {
     const t = setTimeout(() => setMsg(null), 2600);
     return () => clearTimeout(t);
   }, [msg]);
+  const show = React.useCallback((m) => setMsg(m), []);
   return {
-    show: (m) => setMsg(m),
+    show,
     node: msg ? (
       <div style={{
-        position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+        position: 'fixed', bottom: 84, left: '50%', maxWidth: 'calc(100vw - 32px)', transform: 'translateX(-50%)',
         background: 'var(--al-ink)', color: 'white', padding: '12px 18px', borderRadius: 12,
         boxShadow: 'var(--al-shadow-lg)', zIndex: 100,
         fontSize: 14, display: 'flex', alignItems: 'center', gap: 10,
         animation: 'al-fade .2s ease-out both',
-      }} data-testid="alumni-toast">
+      }} data-testid="alumni-toast" role="status" aria-live="polite">
         <Icon name="check" size={16} /> {msg}
       </div>
     ) : null,

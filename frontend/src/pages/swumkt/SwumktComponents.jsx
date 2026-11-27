@@ -44,16 +44,20 @@ export const Footer = () => (
             <li><Link to="/learn">Knowledge Hub</Link></li>
             <li><Link to="/people">Faculty · คณาจารย์</Link></li>
             <li><Link to="/publications">Publications</Link></li>
+            <li><Link to="/announcements">ประชาสัมพันธ์</Link></li>
+            <li><Link to="/alumni">Alumni · ศิษย์เก่า</Link></li>
             <li><Link to="/about/swu-marketing">About SWU MKT</Link></li>
           </ul>
         </div>
         <div className="footer__col">
           <h5>Tools</h5>
           <ul>
+            <li><Link to="/market-research">เครื่องมือวิจัยทั้งหมด</Link></li>
             <li><Link to="/brand-equity">Brand Health Check</Link></li>
             <li><Link to="/market-research/conjoint-analysis">Conjoint Analysis</Link></li>
-            <li><Link to="/market-research">Customer Journey</Link></li>
-            <li><Link to="/market-research">Survey Builder</Link></li>
+            <li><Link to="/market-research/customer-value">Customer Value Lab</Link></li>
+            <li><Link to="/market-research/customer-journey">Customer Journey</Link></li>
+            <li><Link to="/surveys">Survey Builder</Link></li>
             <li><Link to="/projects">Kanban Projects</Link></li>
           </ul>
         </div>
@@ -72,8 +76,9 @@ export const Footer = () => (
           <ul>
             <li><Link to="/login">Sign in</Link></li>
             <li><Link to="/register">Register</Link></li>
-            <li><a href="#privacy">Privacy</a></li>
-            <li><a href="#contact">Contact</a></li>
+            <li><Link to="/dashboard">Dashboard · งานของฉัน</Link></li>
+            <li><Link to="/people">Contact · ติดต่อคณาจารย์</Link></li>
+            <li><Link to="/privacy" data-testid="footer-privacy-link">Privacy · ข้อมูลส่วนบุคคล</Link></li>
           </ul>
         </div>
       </div>

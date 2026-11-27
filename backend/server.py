@@ -32,6 +32,8 @@ from lib.citation_replacer import CitationReplacer
 from lib.doc_formatter import DocFormatter
 from lib.ttl_cache import async_ttl_cache
 from lib import api_keys
+from lib import llm_policy
+from lib import external_prompts as ext_prompts
 from PIL import Image
 from io import BytesIO
 
@@ -61,18 +63,30 @@ _LLM_GLOBAL_SEM = asyncio.Semaphore(3)
 _LLM_CALL_TIMEOUT = 90.0  # seconds per call
 
 def _install_llm_concurrency_patch() -> None:
+    """Patch emergentintegrations: (a) the policy guard (llm_policy) on every
+    billed entry point, (b) thread offload + global throttle on LlmChat.
+
+    Idempotent. Safe when emergentintegrations is missing (tests / dev) — a
+    fake module injected into sys.modules is patched the same way.
+    """
     try:
         import emergentintegrations.llm.chat as _ec
     except Exception as e:
         logging.error(f"[LLM-PATCH] emergentintegrations not importable: {e}")
-        return
-    if getattr(_ec.LlmChat, "_emrg_patched", False):
-        return  # idempotent — already patched (e.g., on hot-reload)
-    _orig_send = _ec.LlmChat.send_message
-    _orig_send_mm = getattr(_ec.LlmChat, "send_message_multimodal_response", None)
+        _ec = None
+    if _ec is not None and not getattr(_ec.LlmChat, "_emrg_patched", False):
+        _patch_llm_chat(_ec.LlmChat)
+    _install_image_guards()
+
+
+def _patch_llm_chat(LlmChat) -> None:
+    _orig_send = LlmChat.send_message
+    _orig_send_mm = getattr(LlmChat, "send_message_multimodal_response", None)
+    _orig_send_async = getattr(LlmChat, "send_message_async", None)
 
     async def _wrapped_send(self, user_message):
-        """Thread-offloaded send_message with global throttle + 90s timeout."""
+        """Policy guard, then thread-offloaded send_message with global throttle + 90s timeout."""
+        await llm_policy.check_billed_call("chat")
         def _run():
             loop = asyncio.new_event_loop()
             try:
@@ -83,7 +97,8 @@ def _install_llm_concurrency_patch() -> None:
             return await asyncio.wait_for(asyncio.to_thread(_run), timeout=_LLM_CALL_TIMEOUT)
 
     async def _wrapped_send_mm(self, user_message):
-        """Thread-offloaded send_message_multimodal_response (image gen etc.)."""
+        """Policy guard (image kind), then thread-offloaded multimodal send (image gen etc.)."""
+        await llm_policy.check_billed_call("image")
         def _run():
             loop = asyncio.new_event_loop()
             try:
@@ -94,12 +109,54 @@ def _install_llm_concurrency_patch() -> None:
             # Image generation can be slower; allow 2x the normal cap.
             return await asyncio.wait_for(asyncio.to_thread(_run), timeout=_LLM_CALL_TIMEOUT * 2)
 
-    _ec.LlmChat.send_message = _wrapped_send
+    async def _wrapped_send_async(self, *a, **kw):
+        await llm_policy.check_billed_call("chat")
+        return await _orig_send_async(self, *a, **kw)
+
+    LlmChat.send_message = _wrapped_send
     if _orig_send_mm:
-        _ec.LlmChat.send_message_multimodal_response = _wrapped_send_mm
-    _ec.LlmChat._emrg_patched = True
-    logging.info("[LLM-PATCH] Installed asyncio.to_thread + Semaphore(3) "
+        LlmChat.send_message_multimodal_response = _wrapped_send_mm
+    if _orig_send_async and asyncio.iscoroutinefunction(_orig_send_async):
+        LlmChat.send_message_async = _wrapped_send_async
+    LlmChat._emrg_patched = True
+    logging.info("[LLM-PATCH] Installed llm_policy guard + asyncio.to_thread + Semaphore(3) "
                  "wrappers on LlmChat.send_message{,_multimodal_response}")
+
+
+def _guard_callable(fn, kind: str):
+    """Wrap a sync or async callable with the llm_policy guard."""
+    if getattr(fn, "_llm_policy_guarded", False):
+        return fn
+    import functools
+    if asyncio.iscoroutinefunction(fn):
+        @functools.wraps(fn)
+        async def _g(*a, **kw):
+            await llm_policy.check_billed_call(kind)
+            return await fn(*a, **kw)
+    else:
+        @functools.wraps(fn)
+        def _g(*a, **kw):
+            llm_policy.check_billed_call_sync(kind)
+            return fn(*a, **kw)
+    _g._llm_policy_guarded = True
+    return _g
+
+
+def _install_image_guards() -> None:
+    """Guard the image-generation entry points that bypass LlmChat."""
+    try:
+        from emergentintegrations.llm.openai import image_generation as _ig
+        cls = getattr(_ig, "OpenAIImageGeneration", None)
+        if cls is not None and hasattr(cls, "generate_images"):
+            cls.generate_images = _guard_callable(cls.generate_images, "image")
+    except Exception as e:
+        logging.info(f"[LLM-PATCH] OpenAIImageGeneration not available: {e}")
+    try:
+        import emergentintegrations.image as _img
+        if hasattr(_img, "generate_image"):
+            _img.generate_image = _guard_callable(_img.generate_image, "image")
+    except Exception:
+        pass  # optional module (absent in most installs)
 
 _install_llm_concurrency_patch()
 # ============================================================================
@@ -308,6 +365,7 @@ client = AsyncIOMotorClient(
     socketTimeoutMS=30000,    # Timeout for socket operations
 )
 db = client[os.environ['DB_NAME']]
+llm_policy.init(db)
 
 # Create indexes on startup for better performance
 async def create_indexes():
@@ -506,6 +564,19 @@ GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://mnl-results
 # Create the main app
 app = FastAPI(title="SWUMKT API")
 api_router = APIRouter(prefix="/api")
+
+# System-LLM policy: tag each request with the feature its path maps to (the
+# guard's fallback for call sites without an explicit require_system_llm), and
+# turn a guard refusal anywhere into the documented 409 body.
+app.add_middleware(llm_policy.RouteFeatureMiddleware)
+# Cap pasted AI answers / code-frame CSVs (2 MB) — see lib/body_limit.py.
+from lib.body_limit import BodySizeLimitMiddleware
+app.add_middleware(BodySizeLimitMiddleware)
+
+
+@app.exception_handler(llm_policy.SystemLLMDisabled)
+async def _system_llm_disabled_handler(request: Request, exc: llm_policy.SystemLLMDisabled):
+    return JSONResponse(status_code=409, content={"detail": exc.detail})
 
 # Session middleware for OAuth (needed for state management)
 from starlette.middleware.sessions import SessionMiddleware
@@ -1180,6 +1251,14 @@ async def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
+    user = await _resolve_current_user(request, credentials)
+    # The LLM policy guard needs the caller (admin_bypass) even at call sites
+    # that do not pass the user explicitly.
+    llm_policy.set_current_user(user)
+    return user
+
+
+async def _resolve_current_user(request: Request, credentials: HTTPAuthorizationCredentials):
     token = credentials.credentials
 
     # An API key travels in the same Authorization header and is recognisable
@@ -1803,8 +1882,37 @@ async def close_survey(
     
     return {"message": "Survey closed successfully"}
 
-async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
-    """Get current user if authenticated, None if not"""
+async def get_current_user_optional(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+):
+    """Get current user if authenticated, None if not.
+
+    A scoped API key goes through the same scope gate as in get_current_user
+    (WP9a): before, a key on an optional-auth route was silently treated as
+    anonymous, so `research.read` could not reach e.g. the conjoint
+    interpretation prompt / WTP / simulator of a private study, and a key with
+    no scope for a route still got the anonymous view of it. A key that is
+    presented but not allowed is refused (401/403), never downgraded.
+    """
+    if credentials and api_keys.looks_like_api_key(credentials.credentials):
+        try:
+            key_doc = await api_keys.authorize(
+                db, credentials.credentials, request.method, request.url.path)
+        except api_keys.KeyRejected as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
+        await api_keys.touch(db, key_doc["id"])
+        request.state.api_key_scopes = key_doc.get("scopes") or []
+        user = _principal_for_key(key_doc)
+        llm_policy.set_current_user(user)
+        return user
+    user = await _resolve_current_user_optional(credentials)
+    if user is not None:
+        llm_policy.set_current_user(user)
+    return user
+
+
+async def _resolve_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials]):
     if not credentials:
         return None
     
@@ -2204,155 +2312,96 @@ class AIGenerateSurveyRequest(BaseModel):
     num_questions: Optional[int] = 10
     target_language: str = "en"
 
+async def _survey_from_sdl(sdl_text: str, current_user: User, *, error_status: int = 500,
+                           stamp: Optional[Dict[str, Any]] = None) -> "Survey":
+    """Parse + validate the SDL YAML an LLM (ours or the user's own) produced and store the survey.
+    Shared by /surveys/ai-generate and /surveys/ai-generate/external-import."""
+    from survey_dsl import SurveyDSLParser, SurveyDSLValidator
+
+    # Clean response - remove markdown code blocks
+    sdl_text = (sdl_text or "").strip()
+    sdl_text = re.sub(r'^```(?:yaml|yml)?\s*', '', sdl_text, flags=re.MULTILINE)
+    sdl_text = re.sub(r'\s*```$', '', sdl_text, flags=re.MULTILINE)
+    sdl_text = sdl_text.strip()
+
+    print(f"AI Generated SDL:\n{sdl_text[:500]}...")
+
+    # Parse SDL to survey object
+    try:
+        parser = SurveyDSLParser()
+        survey_data = parser.parse(sdl_text)
+    except Exception as e:
+        print(f"SDL Parsing Error: {str(e)}")
+        print(f"Problematic SDL: {sdl_text[:1000]}")
+        raise HTTPException(
+            status_code=error_status,
+            detail=("อ่านรูปแบบแบบสอบถามที่ AI สร้างไม่ได้ — ตรวจว่าวาง YAML ครบทั้งหมด หรือลองสร้างใหม่"
+                    if error_status != 500 else
+                    "Failed to parse AI-generated survey format. Please try again or use templates instead.")
+        )
+
+    # Validate survey
+    validator = SurveyDSLValidator()
+    is_valid, errors = validator.validate_survey(survey_data)
+
+    if not is_valid:
+        print(f"Validation errors: {errors}")
+        raise HTTPException(
+            status_code=error_status,
+            detail=(f"แบบสอบถามที่ได้ยังไม่สมบูรณ์: {'; '.join(str(x) for x in (errors or [])[:5])}"
+                    if error_status != 500 else
+                    "AI-generated survey is incomplete. Please try again or use templates.")
+        )
+
+    # Add user info
+    survey_data['created_by'] = current_user.id
+
+    # Create Survey object for response
+    survey = Survey(**survey_data)
+
+    survey_dict = survey.model_dump()
+    survey_dict['created_at'] = survey_dict['created_at'].isoformat()
+    survey_dict['updated_at'] = survey_dict['updated_at'].isoformat()
+    if stamp:
+        survey_dict.update(stamp)
+
+    await db.surveys.insert_one(survey_dict)
+    return survey
+
 @api_router.post("/surveys/ai-generate", response_model=Survey)
 async def ai_generate_survey(
     request: AIGenerateSurveyRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Generate a survey using AI based on description using Survey Definition Language (SDL)"""
-    from survey_dsl import SurveyDSLParser, SurveyDSLValidator
+    # Policy gate FIRST (before any work); outside the try so the 409 is not turned into a 500.
+    await llm_policy.require_system_llm("survey.ai", current_user)
     from emergentintegrations.llm.chat import LlmChat, UserMessage
-    import re
-    
+
     try:
         # Get Emergent LLM key
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="AI Survey generation service not configured")
-        
-        # Determine language instructions
-        lang_instruction = "English" if request.target_language == "en" else "Thai (ไทย)"
-        
-        # Build prompt using SDL format
-        prompt = f"""You are a professional survey designer. Create a survey using the Survey Definition Language (SDL) YAML format.
 
-**Task:** Create a survey in {lang_instruction} language
+        # Same builder as /surveys/ai-generate/external-prompt
+        system_msg, prompt = ext_prompts.survey_sdl_prompts(
+            request.description, request.survey_type, request.num_questions, request.target_language)
 
-**Topic:** {request.description}
-**Survey Type:** {request.survey_type.value if hasattr(request.survey_type, 'value') else request.survey_type}
-**Target Number of Questions:** {request.num_questions}
-
-**Requirements:**
-- Create 2-3 well-organized sections
-- Use diverse question types
-- Write all text in {lang_instruction}
-- Return ONLY valid YAML (no markdown, no explanations)
-- IMPORTANT: Use simple strings for 'type', not enum names (e.g., 'perception' not 'SurveyType.PERCEPTION')
-
-**SDL Format Example:**
-```yaml
-survey: "Survey Title in {lang_instruction}"
-type: perception
-description: "Brief description in {lang_instruction}"
-
-demographics:
-  collect: true
-  auto_fill: true
-  fields:
-    - birth_sex
-    - age_group
-    - education
-
-sections:
-  - name: "Section Name in {lang_instruction}"
-    description: "Section description"
-    questions:
-      - text: "Question in {lang_instruction}?"
-        type: multiple_choice_single
-        required: yes
-        data_type: nominal
-        options:
-          - "Option 1"
-          - "Option 2"
-          - "Option 3"
-      
-      - text: "Rate this..."
-        type: rating_scale
-        scale: "1-5"
-        labels:
-          "1": "Very Poor"
-          "5": "Excellent"
-        required: yes
-        data_type: scale
-      
-      - text: "Your thoughts?"
-        type: open_ended
-        required: no
-        data_type: nominal
-```
-
-**Available Question Types:**
-- multiple_choice_single: Single selection from options
-- multiple_choice_multiple: Multiple selections allowed
-- rating_scale: Numeric scale (use scale: "1-5" or "1-10")
-- likert_scale: Use likert: agreement-5 or satisfaction-5
-- open_ended: Free text response
-
-**Data Types:**
-- nominal: Categories without order
-- ordinal: Ordered categories
-- scale: Numeric scale with intervals
-
-**Now create the survey. Return ONLY the YAML, no markdown blocks, no explanations:**"""
-        
         # Create LLM chat using emergentintegrations
         chat = LlmChat(
             api_key=api_key,
             session_id=f"survey-gen-{uuid.uuid4()}",
-            system_message="You are a professional survey designer. You create surveys using YAML format. Return only valid YAML without markdown code blocks or explanations."
+            system_message=system_msg
         ).with_model("openai", "gpt-4o-mini")
-        
-        # Create user message
-        user_message = UserMessage(text=prompt)
-        
+
         # Get response from LLM
-        sdl_text = await chat.send_message(user_message)
-        
-        # Clean response - remove markdown code blocks
-        sdl_text = sdl_text.strip()
-        sdl_text = re.sub(r'^```(?:yaml|yml)?\s*', '', sdl_text, flags=re.MULTILINE)
-        sdl_text = re.sub(r'\s*```$', '', sdl_text, flags=re.MULTILINE)
-        sdl_text = sdl_text.strip()
-        
-        print(f"AI Generated SDL:\n{sdl_text[:500]}...")
-        
-        # Parse SDL to survey object
-        try:
-            parser = SurveyDSLParser()
-            survey_data = parser.parse(sdl_text)
-        except Exception as e:
-            print(f"SDL Parsing Error: {str(e)}")
-            print(f"Problematic SDL: {sdl_text[:1000]}")
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to parse AI-generated survey format. Please try again or use templates instead."
-            )
-        
-        # Validate survey
-        validator = SurveyDSLValidator()
-        is_valid, errors = validator.validate_survey(survey_data)
-        
-        if not is_valid:
-            print(f"Validation errors: {errors}")
-            raise HTTPException(
-                status_code=500,
-                detail="AI-generated survey is incomplete. Please try again or use templates."
-            )
-        
-        # Add user info
-        survey_data['created_by'] = current_user.id
-        
-        # Create Survey object for response
-        survey = Survey(**survey_data)
-        
-        survey_dict = survey.model_dump()
-        survey_dict['created_at'] = survey_dict['created_at'].isoformat()
-        survey_dict['updated_at'] = survey_dict['updated_at'].isoformat()
-        
-        await db.surveys.insert_one(survey_dict)
-        return survey
-        
+        sdl_text = await chat.send_message(UserMessage(text=prompt))
+        return await _survey_from_sdl(sdl_text, current_user)
+
     except HTTPException:
+        raise
+    except llm_policy.SystemLLMDisabled:
         raise
     except Exception as e:
         # Log full error for debugging
@@ -2360,9 +2409,47 @@ sections:
         import traceback
         traceback.print_exc()
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"AI generation failed. Please try using templates instead. Error: {str(e)[:100]}"
         )
+
+class ExternalImportRequest(BaseModel):
+    """Body of the ``…/external-import`` endpoints of the misc tools: the text the user got
+    back from their own LLM."""
+    content: str
+    part_key: Optional[str] = "main"
+    model_label: Optional[str] = None
+
+
+@api_router.post("/surveys/ai-generate/external-prompt")
+async def ai_generate_survey_external_prompt(
+    request: AIGenerateSurveyRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """The prompt /surveys/ai-generate would send — for the user's own LLM (always available)."""
+    system_msg, prompt = ext_prompts.survey_sdl_prompts(
+        request.description, request.survey_type, request.num_questions, request.target_language)
+    return ext_prompts.single_part_payload(
+        feature="survey.ai", title="สร้างแบบสอบถามด้วย AI (SDL YAML)",
+        system_prompt=system_msg, prompt=prompt, expected_format="yaml",
+        filename="survey-generate-prompt.md",
+        instructions_th=ext_prompts.GENERIC_STEPS_TH + "\n6. ผลลัพธ์ต้องเป็น YAML ล้วน (ไม่ต้องมีคำอธิบาย) — วางทั้งหมดในช่อง \"นำผลลัพธ์เข้า\" ระบบจะตรวจและสร้างแบบสอบถามให้")
+
+
+@api_router.post("/surveys/ai-generate/external-import", response_model=Survey)
+async def ai_generate_survey_external_import(
+    body: ExternalImportRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Import the SDL YAML produced by the user's own LLM: same parser, validator and storage as
+    /surveys/ai-generate. Returns the created Survey. 422 with a Thai message if unusable."""
+    try:
+        text = ext_prompts.clean_text_import(body.content, min_chars=30)
+    except ext_prompts.ExternalImportError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return await _survey_from_sdl(
+        text, current_user, error_status=422,
+        stamp=ext_prompts.external_stamp(body.model_label, current_user))
 
 # ============ COURSE ROUTES ============
 @api_router.post("/admin/courses", response_model=Course)
@@ -3003,6 +3090,8 @@ async def ai_rearrange_content(
     current_user: User = Depends(get_current_user)
 ):
     """Use AI to rearrange and beautify content with rich text formatting"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("content.ai", current_user)
     try:
         # Get content
         content = await db.contents.find_one({"id": content_id}, {"_id": 0})
@@ -3274,6 +3363,8 @@ async def ai_rearrange_content(
             "images_included": len(image_attachments)
         }
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"[AI_REARRANGE] Error: {str(e)}")
         import traceback
@@ -3482,54 +3573,56 @@ class TranslationResponse(BaseModel):
 
 # Translation endpoint
 @api_router.post("/translate", response_model=TranslationResponse)
-async def translate_text(request: TranslationRequest):
+async def translate_text(request: TranslationRequest,
+                         current_user: Optional[User] = Depends(get_current_user_optional)):
     """Translate text using Emergent LLM (GPT-5)"""
+    # Policy gate FIRST. The endpoint may be anonymous (current_user None); a logged-in admin
+    # still benefits from admin_bypass.
+    await llm_policy.require_system_llm("translate", current_user)
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-        # Language mapping
-        language_names = {
-            'th': 'Thai',
-            'en': 'English',
-            'zh': 'Chinese',
-            'ja': 'Japanese',
-            'ko': 'Korean',
-            'my': 'Burmese',
-            'lo': 'Lao',
-            'vi': 'Vietnamese'
-        }
-        
-        target_lang_name = language_names.get(request.target_language, request.target_language)
-        
+
         # Get API key
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="Translation service not configured")
-        
+
+        # Same builder as /translate/external-prompt
+        system_msg, user_text = ext_prompts.translate_prompts(request.text, request.target_language)
+
         # Create LLM chat
         chat = LlmChat(
             api_key=api_key,
             session_id=f"translation-{uuid.uuid4()}",
-            system_message=f"You are a professional translator. Translate the given text to {target_lang_name}. Only return the translated text without any explanations or additional comments."
+            system_message=system_msg
         ).with_model("openai", "gpt-4o-mini")
-        
-        # Create translation prompt
-        user_message = UserMessage(
-            text=f"Translate this text to {target_lang_name}:\n\n{request.text}"
-        )
-        
+
         # Get translation
-        translated_text = await chat.send_message(user_message)
-        
+        translated_text = await chat.send_message(UserMessage(text=user_text))
+
         return TranslationResponse(
             translated_text=translated_text.strip(),
             source_language=request.source_language or 'auto',
             target_language=request.target_language
         )
-        
+
+    except HTTPException:
+        raise
+    except llm_policy.SystemLLMDisabled:
+        raise
     except Exception as e:
         logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
+
+
+@api_router.post("/translate/external-prompt")
+async def translate_external_prompt(request: TranslationRequest):
+    """The prompt /translate would send, for the user's own LLM (always available, no login needed
+    — same as /translate). The translated text is shown/edited client-side, so there is no import."""
+    system_msg, user_text = ext_prompts.translate_prompts(request.text, request.target_language)
+    return ext_prompts.single_part_payload(
+        feature="translate", title="แปลข้อความ", system_prompt=system_msg, prompt=user_text,
+        expected_format="markdown", filename="translate-prompt.md")
 
 # Customer Journey Map Models
 class JourneyMapRequest(BaseModel):
@@ -3676,9 +3769,42 @@ MERMAID:
 """
 
 # Customer Journey Map endpoint
+async def _journey_system_prompt() -> str:
+    """Admin-editable journey-map system prompt (or the built-in default)."""
+    settings = await db.admin_settings.find_one({"setting_type": "journey_map_prompt"})
+    if settings and settings.get("journey_map_prompt"):
+        return settings["journey_map_prompt"]
+    return get_default_journey_map_prompt()
+
+
+async def _persist_qualitative_run(current_user, raw_data, research_context, mermaid_code,
+                                   analysis_summary, extra: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """Persist the run so the quantitative module can seed a study from it."""
+    run_id = str(uuid.uuid4())
+    try:
+        doc = {
+            "id": run_id,
+            "owner_id": current_user.id,
+            "raw_text": (raw_data or "")[:20000],
+            "context": research_context or "",
+            "mermaid_code": mermaid_code,
+            "analysis": analysis_summary,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if extra:
+            doc.update(extra)
+        await db.qualitative_runs.insert_one(doc)
+        return run_id
+    except Exception as persist_err:
+        logging.warning(f"[Journey] qualitative_runs persist failed: {persist_err}")
+        return None
+
+
 @api_router.post("/generate-journey-map", response_model=JourneyMapResponse)
 async def generate_journey_map(request: JourneyMapRequest, current_user: User = Depends(get_current_user)):
     """Generate Customer Journey Map using Emergent LLM"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("journey.ai", current_user)
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -3687,13 +3813,9 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
         if not api_key:
             raise HTTPException(status_code=500, detail="Journey Map service not configured")
         
-        # Get custom prompt from database or use default
-        settings = await db.admin_settings.find_one({"setting_type": "journey_map_prompt"})
-        if settings and settings.get("journey_map_prompt"):
-            system_prompt = settings["journey_map_prompt"]
-        else:
-            system_prompt = get_default_journey_map_prompt()
-        
+        # Same builders as /generate-journey-map/external-prompt
+        system_prompt = await _journey_system_prompt()
+
         # Create LLM chat
         chat = LlmChat(
             api_key=api_key,
@@ -3701,82 +3823,20 @@ async def generate_journey_map(request: JourneyMapRequest, current_user: User = 
             system_message=system_prompt
         ).with_model("anthropic", "claude-sonnet-4-6")
         
-        # Determine language instruction
-        language_name = "Thai" if request.target_language == "th" else "English"
-        
-        # Determine journey type description
-        type_desc = "simple and straightforward" if request.journey_type == "A" else "detailed and comprehensive"
-        
-        # Determine journey style description
-        style_desc = "linear sequential path" if request.journey_style == "linear" else "nonlinear with multiple paths and decision points"
-        
-        # Create user prompt
-        user_prompt = f"""Please analyze the following qualitative research data and create a Customer Journey Map:
+        user_prompt = ext_prompts.journey_user_prompt(
+            request.raw_data, request.research_context, request.target_language,
+            request.journey_type, request.journey_style)
 
-Research Data:
-{request.raw_data}
-
-{f"Additional Context: {request.research_context}" if request.research_context else ""}
-
-Journey Requirements:
-- Type: {request.journey_type} ({type_desc})
-- Style: {request.journey_style} ({style_desc})
-- Output Language: {language_name}
-
-Please provide:
-1. Analysis summary of the customer journey in {language_name}
-2. Mermaid diagram code for visualization with labels in {language_name}
-
-IMPORTANT: All text in both the analysis summary and the mermaid diagram must be written in {language_name}.
-"""
-        
         user_message = UserMessage(text=user_prompt)
         
         # Get response from LLM
         response_text = await chat.send_message(user_message)
         
-        # Parse response
-        analysis_summary = ""
-        mermaid_code = ""
-        
-        if "ANALYSIS:" in response_text and "MERMAID:" in response_text:
-            parts = response_text.split("MERMAID:")
-            analysis_part = parts[0].replace("ANALYSIS:", "").strip()
-            mermaid_part = parts[1].strip()
-            
-            # Extract mermaid code
-            if "```mermaid" in mermaid_part:
-                mermaid_code = mermaid_part.split("```mermaid")[1].split("```")[0].strip()
-            elif "```" in mermaid_part:
-                mermaid_code = mermaid_part.split("```")[1].split("```")[0].strip()
-            else:
-                mermaid_code = mermaid_part.strip()
-            
-            analysis_summary = analysis_part
-        else:
-            # Fallback: try to extract any mermaid code
-            if "```mermaid" in response_text:
-                mermaid_code = response_text.split("```mermaid")[1].split("```")[0].strip()
-                analysis_summary = response_text.split("```mermaid")[0].strip()
-            else:
-                analysis_summary = response_text
-                mermaid_code = "graph TD\n    A[Start] --> B[Process Data]\n    B --> C[End]"
-        
+        analysis_summary, mermaid_code = ext_prompts.parse_journey_response(response_text)
+
         # Persist the run so the quantitative module can seed a study from it.
-        run_id = str(uuid.uuid4())
-        try:
-            await db.qualitative_runs.insert_one({
-                "id": run_id,
-                "owner_id": current_user.id,
-                "raw_text": (request.raw_data or "")[:20000],
-                "context": request.research_context or "",
-                "mermaid_code": mermaid_code,
-                "analysis": analysis_summary,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            })
-        except Exception as persist_err:
-            logging.warning(f"[Journey] qualitative_runs persist failed: {persist_err}")
-            run_id = None
+        run_id = await _persist_qualitative_run(
+            current_user, request.raw_data, request.research_context, mermaid_code, analysis_summary)
 
         return JourneyMapResponse(
             mermaid_code=mermaid_code,
@@ -3784,9 +3844,51 @@ IMPORTANT: All text in both the analysis summary and the mermaid diagram must be
             qualitative_run_id=run_id,
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Journey Map generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate journey map: {str(e)}")
+
+@api_router.post("/generate-journey-map/external-prompt")
+async def generate_journey_map_external_prompt(request: JourneyMapRequest,
+                                               current_user: User = Depends(get_current_user)):
+    """The prompt /generate-journey-map would send (system prompt = the admin-editable one),
+    for the user's own LLM. Always available."""
+    system_prompt = await _journey_system_prompt()
+    user_prompt = ext_prompts.journey_user_prompt(
+        request.raw_data, request.research_context, request.target_language,
+        request.journey_type, request.journey_style)
+    return ext_prompts.single_part_payload(
+        feature="journey.ai", title="Customer Journey Map", system_prompt=system_prompt,
+        prompt=user_prompt, expected_format="markdown", filename="journey-map-prompt.md",
+        instructions_th=ext_prompts.GENERIC_STEPS_TH + "\n6. คำตอบต้องมีหัวข้อ ANALYSIS: และ MERMAID: ตามรูปแบบที่พรอมต์กำหนด")
+
+
+class JourneyMapExternalImport(ExternalImportRequest):
+    raw_data: str = ""
+    research_context: Optional[str] = None
+
+
+@api_router.post("/generate-journey-map/external-import", response_model=JourneyMapResponse)
+async def generate_journey_map_external_import(body: JourneyMapExternalImport,
+                                               current_user: User = Depends(get_current_user)):
+    """Store a journey map written by the user's own LLM exactly where /generate-journey-map stores
+    its result (qualitative_runs) and return the same body. Send the original ``raw_data`` too."""
+    try:
+        text = ext_prompts.clean_text_import(body.content, min_chars=30)
+    except ext_prompts.ExternalImportError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not ("MERMAID:" in text or "```mermaid" in text
+            or re.search(r"^\s*(graph|flowchart)\s", text, re.MULTILINE)):
+        raise HTTPException(status_code=422, detail="ไม่พบแผนภาพ Mermaid ในคำตอบ — กรุณาวางคำตอบทั้งหมดที่มีส่วน ANALYSIS: และ MERMAID:")
+    analysis_summary, mermaid_code = ext_prompts.parse_journey_response(text)
+    run_id = await _persist_qualitative_run(
+        current_user, body.raw_data, body.research_context, mermaid_code, analysis_summary,
+        extra=ext_prompts.external_stamp(body.model_label, current_user))
+    return JourneyMapResponse(mermaid_code=mermaid_code, analysis_summary=analysis_summary,
+                              qualitative_run_id=run_id)
+
 
 # AI Settings (Admin Only)
 @api_router.get("/admin/ai-settings")
@@ -4369,12 +4471,21 @@ async def update_format_editor_model(
         raise HTTPException(status_code=500, detail=f"Failed to update model: {str(e)}")
 
 # Generate Behavior Analysis (Text only)
+async def _behavior_system_prompt() -> str:
+    settings = await db.admin_settings.find_one({"setting_type": "behavior_prompt"})
+    if settings and settings.get("behavior_prompt"):
+        return settings["behavior_prompt"]
+    return get_default_behavior_prompt()
+
+
 @api_router.post("/generate-behavior-analysis", response_model=BehaviorAnalysisResponse)
 async def generate_behavior_analysis(
     request: BehaviorAnalysisRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Generate Customer Behavior Analysis using Emergent LLM"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("behavior.ai", current_user)
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -4383,13 +4494,9 @@ async def generate_behavior_analysis(
         if not api_key:
             raise HTTPException(status_code=500, detail="Behavior Analysis service not configured")
         
-        # Get custom prompt from database or use default
-        settings = await db.admin_settings.find_one({"setting_type": "behavior_prompt"})
-        if settings and settings.get("behavior_prompt"):
-            system_prompt = settings["behavior_prompt"]
-        else:
-            system_prompt = get_default_behavior_prompt()
-        
+        # Same builders as /generate-behavior-analysis/external-prompt
+        system_prompt = await _behavior_system_prompt()
+
         # Create LLM chat
         chat = LlmChat(
             api_key=api_key,
@@ -4397,22 +4504,9 @@ async def generate_behavior_analysis(
             system_message=system_prompt
         ).with_model("anthropic", "claude-sonnet-4-6")
         
-        # Determine language
-        language_name = "Thai" if request.target_language == "th" else "English"
-        
-        # Create user prompt
-        user_prompt = f"""Please analyze the following customer behavior research data:
+        user_prompt = ext_prompts.behavior_user_prompt(
+            request.raw_data, request.research_context, request.target_language)
 
-Research Data:
-{request.raw_data}
-
-{f"Additional Context: {request.research_context}" if request.research_context else ""}
-
-Output Language: {language_name}
-
-Please provide a comprehensive analysis with key findings and actionable recommendations in {language_name}.
-"""
-        
         user_message = UserMessage(text=user_prompt)
         
         # Get response from LLM
@@ -4452,9 +4546,23 @@ Please provide a comprehensive analysis with key findings and actionable recomme
             recommendations=recommendations
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Behavior Analysis generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate behavior analysis: {str(e)}")
+
+@api_router.post("/generate-behavior-analysis/external-prompt")
+async def generate_behavior_analysis_external_prompt(request: BehaviorAnalysisRequest,
+                                                     current_user: User = Depends(get_current_user)):
+    """The prompt /generate-behavior-analysis would send, for the user's own LLM (always available).
+    The answer is shown/edited client-side, so there is no import endpoint."""
+    return ext_prompts.single_part_payload(
+        feature="behavior.ai", title="วิเคราะห์พฤติกรรมผู้บริโภค",
+        system_prompt=await _behavior_system_prompt(),
+        prompt=ext_prompts.behavior_user_prompt(request.raw_data, request.research_context, request.target_language),
+        expected_format="markdown", filename="behavior-analysis-prompt.md")
+
 
 # Generate Illustration for Behavior Analysis
 @api_router.post("/generate-behavior-image", response_model=BehaviorImageResponse)
@@ -4463,6 +4571,8 @@ async def generate_behavior_image(
     current_user: User = Depends(get_current_user)
 ):
     """Generate illustration/diagram for behavior analysis using AI Image Generation"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("behavior.image", current_user)
     try:
         import base64
         
@@ -5442,12 +5552,19 @@ Guidelines:
 
 Output only the questions as a numbered list, nothing else."""
 
+async def _perception_system_prompt(setting_key: str, default_fn) -> str:
+    settings = await db.admin_settings.find_one({}) or {}
+    return settings.get(setting_key, default_fn())
+
+
 @api_router.post("/perception/generate-questions", response_model=PerceptionQuestionResponse)
 async def generate_perception_questions(
     request: PerceptionQuestionRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Generate interview questions for customer perception research"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("perception.ai", current_user)
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -5456,17 +5573,10 @@ async def generate_perception_questions(
         if not api_key:
             raise HTTPException(status_code=500, detail="Perception Question service not configured")
         
-        # Get admin settings or use default
-        settings = await db.admin_settings.find_one({}) or {}
-        system_prompt = settings.get("perception_question_prompt", get_default_perception_question_prompt())
-        
-        # Build user prompt
-        user_prompt = f"""Research Topic: {request.topic}"""
-        
-        if request.perspective:
-            user_prompt += f"\n\nResearch Perspective/Focus Areas:\n{request.perspective}"
-        
-        user_prompt += f"\n\nGenerate interview questions in {request.target_language} language."
+        # Same builders as /perception/generate-questions/external-prompt
+        system_prompt = await _perception_system_prompt("perception_question_prompt", get_default_perception_question_prompt)
+        user_prompt = ext_prompts.perception_questions_user_prompt(
+            request.topic, request.perspective, request.target_language)
         
         # Create LLM chat
         chat = LlmChat(
@@ -5495,6 +5605,8 @@ async def generate_perception_questions(
         
         return PerceptionQuestionResponse(questions=questions[:12])
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Error generating perception questions: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
@@ -5505,6 +5617,8 @@ async def generate_perception_analysis(
     current_user: User = Depends(get_current_user)
 ):
     """Generate customer perception analysis from interview data"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("perception.ai", current_user)
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -5513,18 +5627,10 @@ async def generate_perception_analysis(
         if not api_key:
             raise HTTPException(status_code=500, detail="Perception Analysis service not configured")
         
-        # Get admin settings or use default
-        settings = await db.admin_settings.find_one({}) or {}
-        system_prompt = settings.get("perception_prompt", get_default_perception_prompt())
-        
-        # Build user prompt
-        user_prompt = f"""Interview Data:
-{request.interview_data}"""
-        
-        if request.analysis_context:
-            user_prompt += f"\n\nAdditional Context:\n{request.analysis_context}"
-        
-        user_prompt += f"\n\nProvide analysis in {request.target_language} language."
+        # Same builders as /perception/generate-analysis/external-prompt
+        system_prompt = await _perception_system_prompt("perception_prompt", get_default_perception_prompt)
+        user_prompt = ext_prompts.perception_analysis_user_prompt(
+            request.interview_data, request.analysis_context, request.target_language)
         
         # Create LLM chat
         chat = LlmChat(
@@ -5575,9 +5681,34 @@ async def generate_perception_analysis(
             recommendations=recommendations
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Error generating perception analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate analysis: {str(e)}")
+
+@api_router.post("/perception/generate-questions/external-prompt")
+async def perception_questions_external_prompt(request: PerceptionQuestionRequest,
+                                               current_user: User = Depends(get_current_user)):
+    """The prompt /perception/generate-questions would send, for the user's own LLM (always available).
+    The questions are shown/edited client-side, so there is no import endpoint."""
+    return ext_prompts.single_part_payload(
+        feature="perception.ai", title="คำถามสัมภาษณ์ (Perception)",
+        system_prompt=await _perception_system_prompt("perception_question_prompt", get_default_perception_question_prompt),
+        prompt=ext_prompts.perception_questions_user_prompt(request.topic, request.perspective, request.target_language),
+        expected_format="markdown", filename="perception-questions-prompt.md")
+
+
+@api_router.post("/perception/generate-analysis/external-prompt")
+async def perception_analysis_external_prompt(request: PerceptionAnalysisRequest,
+                                              current_user: User = Depends(get_current_user)):
+    """The prompt /perception/generate-analysis would send, for the user's own LLM (always available)."""
+    return ext_prompts.single_part_payload(
+        feature="perception.ai", title="วิเคราะห์การรับรู้ (Perception)",
+        system_prompt=await _perception_system_prompt("perception_prompt", get_default_perception_prompt),
+        prompt=ext_prompts.perception_analysis_user_prompt(request.interview_data, request.analysis_context, request.target_language),
+        expected_format="markdown", filename="perception-analysis-prompt.md")
+
 
 @api_router.post("/perception/generate-illustration")
 async def generate_perception_illustration(
@@ -5585,6 +5716,8 @@ async def generate_perception_illustration(
     current_user: User = Depends(get_current_user)
 ):
     """Generate illustration for customer perception analysis"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("perception.image", current_user)
     try:
         # Get API key
         api_key = os.environ.get('EMERGENT_LLM_KEY')
@@ -5648,6 +5781,8 @@ async def generate_perception_illustration(
         
         return {"image_url": image_url}
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Error generating perception illustration: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
@@ -5770,9 +5905,11 @@ async def test_image_generation(
     current_user: User = Depends(get_current_user)
 ):
     """Test image generation in admin playground"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("content.image", current_user)
     try:
-        if current_user.role != "admin":
-            raise HTTPException(status_code=403, detail="Admin access required")
         
         image_url = None
         
@@ -5893,6 +6030,8 @@ async def find_journals(
     current_user: User = Depends(get_current_user)
 ):
     """Find suitable academic journals based on research topic, abstract, and keywords"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("docs.journal_finder", current_user)
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -6063,6 +6202,8 @@ Please verify Impact Factor, Quartile, and Scopus indexing from **SCImago Journa
             disclaimer=disclaimer
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Journal Finder error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to find journals: {str(e)}")
@@ -6203,6 +6344,8 @@ async def fetch_author_guidelines(
     current_user: User = Depends(get_current_user)
 ):
     """Fetch author guidelines for a journal using AI"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("docs.format", current_user)
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -6303,6 +6446,8 @@ If you're not certain about specific details, indicate that with "Note: Please v
             formatting_specs=extracted_specs
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Fetch Guidelines error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch guidelines: {str(e)}")
@@ -6607,7 +6752,7 @@ async def analyze_uploaded_file(
             temp_bib_path = temp_bib_file.name
             temp_bib_file.close()
             
-            if await extract_references_to_bib(temp_path, temp_bib_path):
+            if await ext_prompts.llm_if_allowed("docs.ref_extract") and await extract_references_to_bib(temp_path, temp_bib_path):
                 # Read .bib content
                 with open(temp_bib_path, 'r', encoding='utf-8') as f:
                     bib_content = f.read()
@@ -6652,6 +6797,8 @@ async def replace_citations_with_keys(
     current_user: User = Depends(get_current_user)
 ):
     """Replace in-text citations with BibTeX citation keys"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("docs.citation", current_user)
     try:
         import base64
         from docx import Document
@@ -6739,6 +6886,8 @@ async def replace_citations_with_keys(
             message=f"Successfully replaced {replaced_count} out of {total_citations} citations with BibTeX keys"
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"Citation replacement error: {str(e)}")
         import traceback
@@ -6751,6 +6900,8 @@ async def reformat_document_with_ai(
     current_user: User = Depends(get_current_user)
 ):
     """Reformat document using AI (replaces Pandoc) - supports multiple citation styles"""
+    # Policy gate first (outside the try: its 409 must not become a 500)
+    await llm_policy.require_system_llm("docs.format", current_user)
     try:
         import base64
         from docx import Document
@@ -6843,6 +6994,8 @@ async def reformat_document_with_ai(
             message=f"Successfully reformatted document using AI ({request.format_style} style)"
         )
         
+    except (HTTPException, llm_policy.SystemLLMDisabled):
+        raise
     except Exception as e:
         logging.error(f"AI reformatting error: {str(e)}")
         import traceback
@@ -6858,7 +7011,8 @@ async def format_academic_text(
     try:
         # Detect citation style if journal name provided
         format_style = request.format_style
-        if request.journal_name:
+        # System LLM off -> keep the style the user chose (graceful, no 409 for a free feature)
+        if request.journal_name and await ext_prompts.llm_if_allowed("docs.format", current_user):
             detected_style = await detect_citation_style_from_journal(request.journal_name)
             format_style = detected_style
             logging.info(f"Detected style for {request.journal_name}: {format_style}")
@@ -6920,7 +7074,7 @@ async def format_academic_text(
                     temp_bib_path = temp_bib_file.name
                     temp_bib_file.close()
                     
-                    if await extract_references_to_bib(temp_input_path, temp_bib_path):
+                    if await ext_prompts.llm_if_allowed("docs.ref_extract") and await extract_references_to_bib(temp_input_path, temp_bib_path):
                         bib_file = temp_bib_path
                         logging.info("Created bibliography file for citation processing")
                     else:
@@ -7046,7 +7200,7 @@ async def format_academic_text(
                     temp_bib_path = temp_bib_file.name
                     temp_bib_file.close()
                     
-                    if await extract_references_to_bib(temp_input.name, temp_bib_path):
+                    if await ext_prompts.llm_if_allowed("docs.ref_extract") and await extract_references_to_bib(temp_input.name, temp_bib_path):
                         bib_file = temp_bib_path
                         logging.info("Created bibliography file for citation processing")
                     else:
@@ -8155,6 +8309,42 @@ async def update_llm_prompt(
 # ============ THESIS EXPORT (Word .docx) ============
 
 
+# ============ PLATFORM — system-LLM policy + health ============
+APP_VERSION = os.environ.get("APP_VERSION", "2026.11")
+
+
+@api_router.get("/health")
+async def health():
+    """Liveness probe. No auth, no db round-trip."""
+    return {"status": "ok", "version": APP_VERSION,
+            "time": datetime.now(timezone.utc).isoformat()}
+
+
+@api_router.get("/platform/llm-policy")
+async def get_llm_policy(current_user: User = Depends(get_current_user)):
+    """Effective system-LLM policy for the caller (see memory/LLM_EXTERNAL_CONTRACT.md)."""
+    pol = await llm_policy.get_policy()
+    return llm_policy.public_view(pol, current_user)
+
+
+@api_router.put("/platform/llm-policy")
+async def put_llm_policy(
+    payload: Dict[str, Any] = Body(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Partial update (admin, or API key with scope platform.settings).
+    `features: {key: null}` removes an override."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        pol = await llm_policy.update_policy(
+            payload, updated_by=current_user.email or current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    logging.info(f"[LLM-POLICY] updated by {current_user.email}: {payload}")
+    return llm_policy.public_view(pol, current_user)
+
+
 # ============ PROJECT MANAGEMENT (KANBAN) ============
 from routes.projects import get_project_routes, project_router
 
@@ -8273,6 +8463,14 @@ _MEEK_DIR = ROOT_DIR / "meekintube_static"
 if _MEEK_DIR.exists():
     app.mount("/api/meekintube", _StaticFiles(directory=str(_MEEK_DIR), html=True), name="meekintube")
 
+
+# ============ Co-hosted sub-apps registry (lib/subapps.py, SUBAPPS.md) ============
+# A future sub-app registered there is mounted from its own folder without
+# editing this file; the main platform must never define a route under a
+# reserved sub-app prefix.
+from lib import subapps as _subapps
+_subapps.assert_no_route_collisions(getattr(r, "path", "") for r in api_router.routes)
+_subapps.mount_auto_subapps(app, ROOT_DIR)
 
 app.add_middleware(
     CORSMiddleware,

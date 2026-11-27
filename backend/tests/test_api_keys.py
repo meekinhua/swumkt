@@ -57,7 +57,9 @@ def test_hard_denied_paths_have_no_scope_at_all(method, path):
 
 
 @pytest.mark.parametrize("path", [
-    "/api/brand-equity/studies", "/api/surveys", "/api/conjoint/studies",
+    # (study lists are now reachable with the research.read scope — plan
+    # 2026-11; see tests/test_llm_policy.py — so the showcase stands in here)
+    "/api/brand-equity/showcase", "/api/surveys", "/api/conjoint/showcase",
     "/api/journey/studies", "/api/projects", "/api/notifications",
     "/api/health", "/api/some/route/invented/next/year",
 ])
@@ -347,6 +349,8 @@ def test_dorm_and_cms_wildcards_are_isolated():
         assert not api_keys.scope_allows([api_keys.WILDCARD], s)
     for s in ("cms.read", "cms.posts.write", "cms.landing.write"):
         assert api_keys.scope_allows([api_keys.WILDCARD], s)
+        assert not api_keys.scope_allows([api_keys.DORM_WILDCARD], s)
+    for s in ("platform.settings", "research.read", "research.ai"):
         assert not api_keys.scope_allows([api_keys.DORM_WILDCARD], s)
 
 
