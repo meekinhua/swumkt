@@ -2207,5 +2207,4763 @@
     "web_review_sources": [
       "Renthub"
     ]
+  },
+  {
+    "slug": "rh-71147-the-box-residence-airport-ling",
+    "name": "THE BOX Residence (อนุสาวรีย์ชัยฯ)",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "moto",
+    "transit": "รัชฎภัณฑ์ รัชฎภัณฑ์ · ห่าง มศว ~2.6 กม.",
+    "price_seen": "6,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~14 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตราชเทวี ห่าง มศว ประสานมิตร ~2.6 กม. ราคาเริ่ม 6,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202606/20260606/N21ZSndoWsZG8KzPTMH1.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/71147",
+        "bytes": 254244
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202605/20260529/Lj6anHdt6qfvhUyzbP41.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/71147",
+        "bytes": 276386
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202605/20260529/iJC6uvHxnFXJXWqBMwpX.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/71147",
+        "bytes": 194779
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-10888-3bb-bts-airport-link",
+    "name": "ราชปรารภ ทาวเวอร์ แมนชั่น",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "ราชปรารภ 14 ราชปรารถ · ห่าง มศว ~2.8 กม.",
+    "price_seen": "8,550–8,730 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตราชเทวี ห่าง มศว ประสานมิตร ~2.8 กม. ราคาเริ่ม 8,550 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202409/20240920/EkLajsTTFa6EicPwuvNJ.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/10888",
+        "bytes": 109834
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202610/20261016/HEE69y4tx6uzbgKyAPku.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/10888",
+        "bytes": 131515
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202506/20250627/HYmNR4Xin5cMwBNAMTed.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/10888",
+        "bytes": 265427
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-40251",
+    "name": "เอส.เค.แกรนด์ลุมพินี อพาร์ทเม้นท์",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "mrt",
+    "transit": "ศรีอักษร เชื้อเพลิง · ห่าง มศว ~3.1 กม.",
+    "price_seen": "9,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~10 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตสาทร ห่าง มศว ประสานมิตร ~3.1 กม. ราคาเริ่ม 9,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201711/20171113/QWSWPnS51o5b8Re4ucaE.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/40251",
+        "bytes": 89895
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201711/20171113/XxNFJjjCuqv8oRmaascP.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/40251",
+        "bytes": 99027
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201711/20171113/L3kiMKR6asmz2jFYK6e2.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/40251",
+        "bytes": 48196
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-39276",
+    "name": "รุ่งอรุณแมนชั่น",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "mrt",
+    "transit": "นภาศัพท์ 2 สุขุมวิท 36 · ห่าง มศว ~2.8 กม.",
+    "price_seen": "11,000–13,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~10 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตคลองเตย ห่าง มศว ประสานมิตร ~2.8 กม. ราคาเริ่ม 11,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201708/20170801/Jvhr8uhx8Hw7G25P2osx.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/39276",
+        "bytes": 67288
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201708/20170801/iv1R28F5J8xCUc1WMwvT.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/39276",
+        "bytes": 80528
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201708/20170801/5sPAYHifSUaPLchgrLkr.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/39276",
+        "bytes": 49102
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-22413-k-j-s-mansion",
+    "name": "เคเจเอส แมนชั่น ( K.J.S. Mansion)",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "moto",
+    "transit": "หมอเหล็ง ราชปรารภ · ห่าง มศว ~2.5 กม.",
+    "price_seen": "6,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~14 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตราชเทวี ห่าง มศว ประสานมิตร ~2.5 กม. ราคาเริ่ม 6,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201710/20171003/vMVx9ZC5DEWizrGnEzdy.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22413",
+        "bytes": 47981
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201710/20171003/8iBwaRdEdYC17FN7PY19.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22413",
+        "bytes": 45588
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201710/20171003/4VXrLi2kGtkTpvdc3jhs.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22413",
+        "bytes": 50069
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-32408",
+    "name": "ยูโฮม สุขุมวิท อพาร์ทเม้นท์",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "moto",
+    "transit": "สายน้ำทิพย์ 2 สุขุมวิท 22 · ห่าง มศว ~2.2 กม.",
+    "price_seen": "15,000–18,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตคลองเตย ห่าง มศว ประสานมิตร ~2.2 กม. ราคาเริ่ม 15,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201705/20170522/7XPsawkjRj7dwjS4zchF.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/32408",
+        "bytes": 139998
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201705/20170522/Xpidx48qqNsZ3t4C1XYS.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/32408",
+        "bytes": 176474
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201705/20170522/uiFxQgvW79qnqbVPzmzu.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/32408",
+        "bytes": 156498
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-49673-young-place-23",
+    "name": "Young Place ซอย ประสานมิตร (สุขุมวิท 23)",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "minutes_to_swu": 8,
+    "travel_mode": "walk",
+    "transit": "ประสานมิตร สุขุมวิท 23 · ห่าง มศว ~0.6 กม.",
+    "price_seen": "18,000 บ./ด. (Renthub)",
+    "pros": [
+      "เดินถึง มศว ~8 นาที",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตวัฒนา ห่าง มศว ประสานมิตร ~0.6 กม. ราคาเริ่ม 18,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202608/20260812/xhbtzfsC2azMLpH58agg.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49673",
+        "bytes": 39596
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202608/20260812/peT28MUd3ZJDmsBSMWKT.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49673",
+        "bytes": 119685
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202608/20260812/9jgjeAfoWiFmfqoU6ZaA.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49673",
+        "bytes": 93473
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-49460-ts-house",
+    "name": "TS HOUSE",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "minutes_to_swu": 8,
+    "travel_mode": "walk",
+    "transit": "ทวีสุข สุขุมวิท31 · ห่าง มศว ~0.6 กม.",
+    "price_seen": "16,000 บ./ด. (Renthub)",
+    "pros": [
+      "เดินถึง มศว ~8 นาที",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตวัฒนา ห่าง มศว ประสานมิตร ~0.6 กม. ราคาเริ่ม 16,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201905/20190525/TA8oqnuZhJYY6rLnuHZT.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49460",
+        "bytes": 34591
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201905/20190525/YoE1AJHePAx6QvzfMrKe.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49460",
+        "bytes": 29889
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201905/20190525/Lp5Kn6hw6BF93zx4VwyE.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/49460",
+        "bytes": 27054
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-63323-3u-apartment",
+    "name": "3U Apartment",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 11,
+    "travel_mode": "moto",
+    "transit": "เหมวงศ์ อโศก-ดินแดง · ห่าง มศว ~1.7 กม.",
+    "price_seen": "3,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~11 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~1.7 กม. ราคาเริ่ม 3,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220530/nrXGkumkWqrkiPfJLFhW.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63323",
+        "bytes": 28081
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220530/Fkcvb1JBFNGeN9menw7A.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63323",
+        "bytes": 15105
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202205/20220530/DMb6fSq3GdxPBuNQjd99.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/63323",
+        "bytes": 16442
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-55468",
+    "name": "ประภาสุข อพาร์ทเม้นท์",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "minutes_to_swu": 6,
+    "travel_mode": "walk",
+    "transit": "สุขุมวิท 31 · ห่าง มศว ~0.5 กม.",
+    "price_seen": "23,000 บ./ด. (Renthub)",
+    "pros": [
+      "เดินถึง มศว ~6 นาที",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตวัฒนา ห่าง มศว ประสานมิตร ~0.5 กม. ราคาเริ่ม 23,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202006/20200630/AZL2hgZbE6CuRqYNkf7Z.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55468",
+        "bytes": 14277
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202006/20200630/JzJ6gtSii5mhjP6o9rjK.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55468",
+        "bytes": 25870
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202006/20200630/M3XVoftYfr56zWSfy4pe.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55468",
+        "bytes": 29814
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-40170",
+    "name": "เฟิร์ส วัน บูทรีก โฮสเทล สุขุมวิท 1",
+    "type": "apartment",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "transit": "Sukhumvit1 Sukhumvit 1 · ห่าง มศว ~1.5 กม.",
+    "price_seen": "8,900–12,900 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~10 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตวัฒนา ห่าง มศว ประสานมิตร ~1.5 กม. ราคาเริ่ม 8,900 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201910/20191001/UPvhjLFnFdW8THtk6wu3.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/40170",
+        "bytes": 74486
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170921/k9Nsm3WVEyyoGQHhkbre.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/40170",
+        "bytes": 83130
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201709/20170921/bbbnN8LEprT9RpycPQxS.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/40170",
+        "bytes": 96864
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-43053",
+    "name": "เอ็ม เอ็ม คอร์ท",
+    "type": "apartment",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "minutes_to_swu": 8,
+    "travel_mode": "moto",
+    "transit": "สุขุมวิทซอย 7 สุขุมวิท  · ห่าง มศว ~1.1 กม.",
+    "price_seen": "19,000–23,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~8 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตวัฒนา ห่าง มศว ประสานมิตร ~1.1 กม. ราคาเริ่ม 19,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201803/20180330/fdfFc4He2nWa3CkrrBJc.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/43053",
+        "bytes": 33503
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201803/20180330/xQU1jET9gXubwaaAhrUu.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/43053",
+        "bytes": 46438
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201803/20180330/78i4pMwGa9QtWJb1De5W.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/43053",
+        "bytes": 40943
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-22393",
+    "name": "อิมพีเรียล การ์เด้นส์",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": true,
+    "minutes_to_swu": 5,
+    "travel_mode": "walk",
+    "transit": "จุรินทร์ สุขุมวิท21(อโศก) · ห่าง มศว ~0.4 กม.",
+    "price_seen": "21,000–22,000 บ./ด. (Renthub)",
+    "pros": [
+      "เดินถึง มศว ~5 นาที",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตวัฒนา ห่าง มศว ประสานมิตร ~0.4 กม. ราคาเริ่ม 21,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201603/20160318/43mA8zMwZT3CCU1uuBQ4.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22393",
+        "bytes": 134117
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201603/20160318/bk5YTTTY1kwXeAoV4B3w.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22393",
+        "bytes": 35326
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201603/20160318/g9Y8Ef7WNndRtdCrws4R.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22393",
+        "bytes": 75210
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-51017-tyst-residence",
+    "name": "ทิสท์ เรสซิเดนซ์ (TYST Residence)",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "เนียมอุทิศ รัชดาภิเษก · ห่าง มศว ~3.5 กม.",
+    "price_seen": "10,500–18,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.5 กม. ราคาเริ่ม 10,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201909/20190907/PhPB69kQNSpe4kiJ5grH.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/51017",
+        "bytes": 74694
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201909/20190907/LKhAq6mECtEWSU8DQbmz.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/51017",
+        "bytes": 70287
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201909/20190907/AueJL7Jv1Hq6XUyFrhPn.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/51017",
+        "bytes": 70206
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-61680",
+    "name": "อาร์ดี อพาร์ทเม้นท์ (รัชดา)",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "เปรมสมบัติ 6 ประชาสงเคราะห์ · ห่าง มศว ~3.0 กม.",
+    "price_seen": "3,500–4,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.0 กม. ราคาเริ่ม 3,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230116/qbmMWvSoZQF2CAqnsNKh.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/61680",
+        "bytes": 234490
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230116/vE5QWdwoqMVHZAWjjFFa.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/61680",
+        "bytes": 205596
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230116/LFUdcKgG1BS2jQYP9cGk.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/61680",
+        "bytes": 217633
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-6456-vbs-mansion",
+    "name": "VBS MANSION",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "พร้อมพรรณ(ตรงข้ามเซเว่น)  ประชาสงเคราะห์ 14 · ห่าง มศว ~2.6 กม.",
+    "price_seen": "3,300 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~2.6 กม. ราคาเริ่ม 3,300 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202609/20260901/JjGDa9AG249i6aFaPjRH.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/6456",
+        "bytes": 219802
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202601/20260124/pFZo2n2CBGzoAf6QHbbW.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/6456",
+        "bytes": 181182
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202508/20250827/m1UkJj85ZGZK8vqcvgfo.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/6456",
+        "bytes": 339529
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-71681-the-calypzo-bangkok",
+    "name": "The Calypzo Bangkok",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอยสุขร่วมกัน รัชดาภิเษก · ห่าง มศว ~3.4 กม.",
+    "price_seen": "8,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.4 กม. ราคาเริ่ม 8,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202609/20260928/2HMT8nkNesgYkv3X6UFd.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/71681",
+        "bytes": 418756
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202609/20260928/oypNsXvZq4QBm9PCqWMB.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/71681",
+        "bytes": 434373
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202609/20260928/UvKLoGY7gS87cfeBinaY.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/71681",
+        "bytes": 595554
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-48274",
+    "name": "อันดามัน สวีท อพาร์ทเมนท์",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "รัชดาภิเษก10 รัชดาภิเษก · ห่าง มศว ~2.8 กม.",
+    "price_seen": "5,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~2.8 กม. ราคาเริ่ม 5,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230111/EsnKXqRy5eJmWUwRByxd.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48274",
+        "bytes": 217183
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230111/fAeE75dqi2az55qVNVYw.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48274",
+        "bytes": 217613
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230111/JBKueAXiZKzCi2oVZiA4.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48274",
+        "bytes": 253588
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-68725",
+    "name": "พฤษาโฮม",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "เปรมสมบัติ รัชดาซอย 7 · ห่าง มศว ~3.2 กม.",
+    "price_seen": "6,900 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.2 กม. ราคาเริ่ม 6,900 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202501/20250124/ZyUY6AujpXMFSfe58Aqt.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/68725",
+        "bytes": 433384
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202509/20250908/bdLGoxzTmdd6W4SD28aF.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/68725",
+        "bytes": 135119
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202509/20250908/iDW9ibmmcRoxMTFXDdR5.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/68725",
+        "bytes": 239138
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-65602-3cd4050f",
+    "name": "มายด์เพลส",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "นาทอง 1 รัชดาภิเษก · ห่าง มศว ~3.1 กม.",
+    "price_seen": "4,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.1 กม. ราคาเริ่ม 4,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202304/20230423/peepuHG3nu544N6jxb3n.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/65602",
+        "bytes": 216349
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202304/20230423/bjDEv2UveJe5vXQMfS34.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/65602",
+        "bytes": 398097
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202304/20230423/fG8YsjGop3hYmJ71ngSu.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/65602",
+        "bytes": 391357
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-56215",
+    "name": "บ้านไออุ่นอพาร์ทเม้นท์",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "moto",
+    "transit": "รัชดาภิเษก3 แยก8 รัชดาภิเษก · ห่าง มศว ~2.2 กม.",
+    "price_seen": "5,600 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~2.2 กม. ราคาเริ่ม 5,600 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202008/20200816/A2UQZmoEXZjmMPB2wcrr.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/56215",
+        "bytes": 77628
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202008/20200816/Bpib2EBCwCKTnHFM3DUm.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/56215",
+        "bytes": 66899
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202008/20200816/YnfgefbDeQvXU1XWaRRM.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/56215",
+        "bytes": 30420
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-54250",
+    "name": "อพาร์ทเม้น โรสิเอ็ทรัชดา",
+    "type": "apartment",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "minutes_to_swu": 11,
+    "travel_mode": "moto",
+    "transit": "รัชดาภิเษก3 อโศก-ดินแดง · ห่าง มศว ~1.7 กม.",
+    "price_seen": "6,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~11 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~1.7 กม. ราคาเริ่ม 6,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202009/20200909/CF2HEg5uGhhw4xWfWaPZ.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/54250",
+        "bytes": 52845
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202609/20260917/wSwmidLEgGmsrz6u6j1P.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/54250",
+        "bytes": 202052
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202511/20251113/1xWCaobZ5Mrq5hmkFnsa.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/54250",
+        "bytes": 106631
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-58606",
+    "name": "โรงแรม ซาวด์ แอท สลีพ",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ประชาสงเคราะห์ · ห่าง มศว ~3.4 กม.",
+    "price_seen": "6,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.4 กม. ราคาเริ่ม 6,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210126/LxouBzyzSCpG4FgQveMw.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/58606",
+        "bytes": 101205
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210126/ZYpRV7TDDPacnemss7q6.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/58606",
+        "bytes": 74500
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210126/c1a7AqLxzb2WJ6LM8NRh.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/58606",
+        "bytes": 111281
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-50515",
+    "name": "เอ็ม เค คอร์ต",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "เปรมสมบัติ ประชาสงเคราะห์ · ห่าง มศว ~3.1 กม.",
+    "price_seen": "3,300–4,200 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.1 กม. ราคาเริ่ม 3,300 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202006/20200611/VSrq88531UcDGjUBAZwT.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/50515",
+        "bytes": 29367
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201908/20190805/UEkCAMjuYeLxyPHocNq3.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/50515",
+        "bytes": 24021
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201908/20190805/nKbzHHhgj6CtrQgsWZb7.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/50515",
+        "bytes": 24462
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-60273-mrt",
+    "name": "บ้านสวนนาทอง (ย่านMRTห้วยขวาง)",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "นาทอง9 (รัชดาซอย7) ประชาสงเคราะห์ · ห่าง มศว ~3.3 กม.",
+    "price_seen": "5,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.3 กม. ราคาเริ่ม 5,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210607/cnnr2s54zU434933Nfqf.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60273",
+        "bytes": 22288
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210607/fZRcVpr8VW1HncjppqSu.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60273",
+        "bytes": 24356
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210607/PhUvEYfMzuYsEF38vk3K.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/60273",
+        "bytes": 23498
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-64386",
+    "name": "พร้อมศิริ แมนชั่น",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "รัชดาภอเษก 12 รัชดาภิเษก · ห่าง มศว ~3.4 กม.",
+    "price_seen": "9,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~3.4 กม. ราคาเริ่ม 9,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202210/20221005/ifxkVmmmvRVDkK2kr3S9.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64386",
+        "bytes": 143059
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202210/20221005/P4kjqvejBAUud3DzAXim.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64386",
+        "bytes": 109534
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202210/20221005/zUL9BNEPMzmBS4YyVP8G.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/64386",
+        "bytes": 151604
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-48806",
+    "name": "ศิธารา เพลส",
+    "type": "apartment",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "moto",
+    "transit": "อยู่เจริญซอย11 อโศก-ดินแดง · ห่าง มศว ~2.1 กม.",
+    "price_seen": "18,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~2.1 กม. ราคาเริ่ม 18,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201904/20190415/vFW6mjkuBvhLcdShkBdT.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48806",
+        "bytes": 86637
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201904/20190415/CUF1Fifnz1DHETUoiC1S.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48806",
+        "bytes": 85388
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201904/20190415/NHQHWVXrbjL5h5oomSVJ.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/48806",
+        "bytes": 50330
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-38401-viboonsuk-mansion",
+    "name": "Viboonsuk Mansion",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "ประชาสงเคราะห์ · ห่าง มศว ~2.7 กม.",
+    "price_seen": "3,200 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~2.7 กม. ราคาเริ่ม 3,200 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202207/20220719/mvH8fvziZ8tdZ5AeTySK.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/38401",
+        "bytes": 185528
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202207/20220719/bvFK4TjzQLf8ydCXFwrW.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/38401",
+        "bytes": 171490
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202207/20220719/NWvtYw9r1TorEMyFuUtD.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/38401",
+        "bytes": 167213
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-68419",
+    "name": "ต้น สเปส รัชดา7",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "นาทอง8 รัชดาภิเษก · ห่าง มศว ~3.0 กม.",
+    "price_seen": "4,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.0 กม. ราคาเริ่ม 4,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202410/20241009/1uUdepViz1Bto4EqgZp9.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/68419",
+        "bytes": 75504
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202410/20241009/SNXa9sdm4HNknqQfmxca.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/68419",
+        "bytes": 231742
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202410/20241009/WVUJyK9s1SvpJWEMTu3u.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/68419",
+        "bytes": 533032
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-55907-789",
+    "name": "อพาร์ทเม้นท์ยิ้ม ยิ้ม 789 (รัชดา)",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "moto",
+    "transit": "ชานเมือง4 · ห่าง มศว ~2.5 กม.",
+    "price_seen": "5,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~14 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~2.5 กม. ราคาเริ่ม 5,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210105/xr3SqupgAJY6Ke71t8Q9.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55907",
+        "bytes": 47424
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202101/20210105/Kde6vtAZUmQbqg35oF1a.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55907",
+        "bytes": 48102
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202110/20211029/5sQh1Npxp6KeV8fmFNps.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55907",
+        "bytes": 105237
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-56427",
+    "name": "บ้านแสนสุข",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "แสนสุข ประชาสงเคราะห์24 · ห่าง มศว ~3.3 กม.",
+    "price_seen": "4,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.3 กม. ราคาเริ่ม 4,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210617/gRMgg3bu2nrKQf2veNVL.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/56427",
+        "bytes": 56349
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210617/9VxQs3twf27NuFL6wrgB.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/56427",
+        "bytes": 49521
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202106/20210617/kJRrTB62t55zu9HrRbhc.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/56427",
+        "bytes": 52142
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-38792-vtn-apartment",
+    "name": "VTN apartment",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ประชาราษฎร์บำเพ็ญ 6 แยก 6 ประชาราษฎร์บำเพ็ญ · ห่าง มศว ~3.6 กม.",
+    "price_seen": "6,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~3.6 กม. ราคาเริ่ม 6,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230124/9K4FRD7KUxMjw3WGFq9S.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/38792",
+        "bytes": 151899
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230124/6Mk7zN51uoQ1NDJay13M.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/38792",
+        "bytes": 148526
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202301/20230124/nxMnf6KwPqAJjBLVhKwL.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/38792",
+        "bytes": 166920
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-57508",
+    "name": "หอพักหญิงใกล้ ม.ศรีนครินทรวิโรฒ ประสานมิตร",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "ซอย นาทอง แยก 4 รัชดาภิเษก · ห่าง มศว ~3.1 กม.",
+    "price_seen": "4,300 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.1 กม. ราคาเริ่ม 4,300 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202011/20201107/XpPmQtAL32fEeLELMaMG.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/57508",
+        "bytes": 49162
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-55448-196",
+    "name": "196 อพาร์ทเมนท์",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ประชาราษฎร์บำเพ็ญ 6 ประชาราษฎร์บำเพ็ญ · ห่าง มศว ~3.5 กม.",
+    "price_seen": "5,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~3.5 กม. ราคาเริ่ม 5,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202006/20200630/NQ3SSvDrHBs2Kyq9pqeQ.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55448",
+        "bytes": 41067
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202006/20200630/hv3NxXmfZUJj7XTAEbVP.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55448",
+        "bytes": 35919
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202006/20200630/zWq5kDQcfn5wxkHbMQmS.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/55448",
+        "bytes": 20787
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-11077",
+    "name": "พงศ์จุฑาแมนชั่น",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "เปรมสมบัติ แยก5 รัชดา · ห่าง มศว ~3.0 กม.",
+    "price_seen": "4,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.0 กม. ราคาเริ่ม 4,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201409/20140915/gQ5DrcYJ929EwhXjEekV.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/11077",
+        "bytes": 26735
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201409/20140915/ps1Zg4GgG71AYS7G7KBY.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/11077",
+        "bytes": 34149
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201409/20140915/m3NFFus94gBjknayXRjj.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/11077",
+        "bytes": 34999
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-29712",
+    "name": "เดอะ เนตรา เรสซิเด้น",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "เปรมสมบัติ แยก4 รัชดา · ห่าง มศว ~3.0 กม.",
+    "price_seen": "4,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~13 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~3.0 กม. ราคาเริ่ม 4,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201704/20170420/BJwVuWnFUJSW45ys6AKY.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/29712",
+        "bytes": 55034
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201704/20170420/3dwE3SHc9fyxW9CQTdEP.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/29712",
+        "bytes": 49350
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201704/20170420/ADGv1TvAdqyHLeRkajMU.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/29712",
+        "bytes": 33186
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-18576-mrt-300",
+    "name": "แกเลอเรีย รัชดาภิเษก",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ประชาราษฏร์บำเพ็ญ1 รัชดาภิเษก · ห่าง มศว ~3.9 กม.",
+    "price_seen": "6,500–7,300 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~3.9 กม. ราคาเริ่ม 6,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202206/20220606/QTy1fL9UtTMX9zNECQZv.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/18576",
+        "bytes": 47322
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202206/20220606/ZueEh3HN6b26F83uaRTF.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/18576",
+        "bytes": 49311
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202206/20220606/cVRDKmXJ9aZU2Tbu4WY9.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/18576",
+        "bytes": 36718
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-16706-winner-residence",
+    "name": "Winner Residence (วินเนอร์ เรสซิเดนซ์ ห้วยขวาง-เหม่งจ๋าย)",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ประชาราษฏ์บำเพ็ญ 24 ประชาราษฏ์บำเพ็ญ 24 · ห่าง มศว ~4.3 กม.",
+    "price_seen": "5,200–6,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~4.3 กม. ราคาเริ่ม 5,200 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200701/WoobDgCuK5WXbzheFu5N.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/16706",
+        "bytes": 57175
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200701/cDs7Bkf8cLZehHBgF9ub.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/16706",
+        "bytes": 64192
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202007/20200701/gXSbEFXhqHNP3duu1gr4.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/16706",
+        "bytes": 45126
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-11962-arsa-place-huaykhwang",
+    "name": "อาษาเพลส ห้วยขวาง (ARSA PLACE Huaykhwang)",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ประชาราษฎร์บำเพ็ญ 15 · ห่าง มศว ~4.2 กม.",
+    "price_seen": "5,000 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~4.2 กม. ราคาเริ่ม 5,000 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201903/20190313/gpZmJMcqehFhhFruNPrr.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/11962",
+        "bytes": 52139
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201903/20190313/DNe7HWP8fZT5yYuyFg2e.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/11962",
+        "bytes": 39646
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201903/20190313/HHmze27SubA4iPjdKwVr.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/11962",
+        "bytes": 57253
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-26985",
+    "name": "กรองทองแมนชั่นรัชดา",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "อินทามระ47 ประชาสุข · ห่าง มศว ~4.5 กม.",
+    "price_seen": "6,500–7,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตดินแดง ห่าง มศว ประสานมิตร ~4.5 กม. ราคาเริ่ม 6,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202605/20260529/Rmqe7Kpu2uJYEcTjv7km.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/26985",
+        "bytes": 120017
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202606/20260604/rdGpjLHvcDNRcmMi85p6.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/26985",
+        "bytes": 143222
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/202606/20260604/g273MxsQPm9Gz7JQLXpP.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/26985",
+        "bytes": 196343
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "rh-22270-the-24th-residence-loft-style",
+    "name": "The 24th-RESIDENCE (LOFT STYLE)",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ประชาอุทิศ 24 ประชาอุทิศ · ห่าง มศว ~3.3 กม.",
+    "price_seen": "5,500–6,500 บ./ด. (Renthub)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีคีย์การ์ด/CCTV"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์/หอพักเขตห้วยขวาง ห่าง มศว ประสานมิตร ~3.3 กม. ราคาเริ่ม 5,500 บ./ด. (ข้อมูลประกาศ Renthub 2026-11-28)",
+    "web_review_sources": [
+      "Renthub"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201603/20160315/pw3Hxqkz3KEtkyWe1tWU.jpg",
+        "kind": "exterior",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22270",
+        "bytes": 74802
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201603/20160315/eKsRfejjSpXjRKW9KTQg.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22270",
+        "bytes": 62976
+      },
+      {
+        "url": "https://bcdn.renthub.in.th/listing_picture/201603/20160315/mXLpu8LNnXqWR3KBpD7N.jpg",
+        "kind": "room",
+        "credit": "Renthub",
+        "source_url": "https://www.renthub.in.th/22270",
+        "bytes": 67497
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-5107-s-apartment-toyota-tsusho-108-shop",
+    "name": "โชค เอส เรสซิเดนซ์",
+    "type": "dorm",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "minutes_to_swu": 9,
+    "travel_mode": "moto",
+    "transit": "79/1 ซ.ริมคลองสามเสน ถ.อโศก-ดินแดง แขวงดินแดง · ห่าง มศว ~1.4 กม.",
+    "price_seen": "4,500–5,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~9 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~1.4 กม. ราคา 4,500–5,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/22/1011/6344a5a917dbd.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/5107-s-apartment-toyota-tsusho-108-shop",
+        "bytes": 52885
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-56021-bb-guesthouse",
+    "name": "หอพัก บีบี (BB Guesthouse)",
+    "type": "dorm",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "minutes_to_swu": 11,
+    "travel_mode": "moto",
+    "transit": "797/164 ซ.ประชาสงเคราะห์ 2 แยก 17 มารวย 2 ถ.ประชาสงเคราะห์ แขวงดินแดง · ห่าง มศว ~1.9 กม.",
+    "price_seen": "4,200–4,800 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~11 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด."
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~1.9 กม. ราคา 4,200–4,800 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/26/0925/6ab5cda91cd31.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/56021-bb-guesthouse",
+        "bytes": 70537
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/22/1213/6398aab27e3fe.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/56021-bb-guesthouse",
+        "bytes": 90505
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/22/1213/6398aa93d9e10.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/56021-bb-guesthouse",
+        "bytes": 92511
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-35163-rajparop-place-apartment",
+    "name": "ราชปรารภ เพลส อพาร์ทเม้นท์",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "82/2 ถ.ราชปรารภ แขวงถนนพญาไท · ห่าง มศว ~2.8 กม.",
+    "price_seen": "6,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตราชเทวี ห่าง มศว ประสานมิตร ~2.8 กม. ราคา 6,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/19/0623/102230_7972.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/35163-rajparop-place-apartment",
+        "bytes": 142164
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/19/0623/102416_2488.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/35163-rajparop-place-apartment",
+        "bytes": 47665
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/19/0623/102416_1299.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/35163-rajparop-place-apartment",
+        "bytes": 45864
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-10604-praso-3",
+    "name": "Praso รัชดาซอย 3",
+    "type": "apartment",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "transit": "502/59 ซ.อยู่เจริญ ถ.รัชดา แขวงดินแดง · ห่าง มศว ~1.6 กม.",
+    "price_seen": "7,500–12,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~10 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~1.6 กม. ราคา 7,500–12,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/1123/619ca68814f6b.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/10604-praso-3",
+        "bytes": 92322
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/15/0417/024821_4081.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/10604-praso-3",
+        "bytes": 241600
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/15/0417/024821_6029.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/10604-praso-3",
+        "bytes": 176145
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-26821",
+    "name": "บ้านสุขใจ ลุมพินี",
+    "type": "dorm",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "mrt",
+    "transit": "1018/9 ถ.พระรามที่4 แขวงสีลม · ห่าง มศว ~3.2 กม.",
+    "price_seen": "5,000–7,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~10 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตบางรัก ห่าง มศว ประสานมิตร ~3.2 กม. ราคา 5,000–7,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0920/6148752e1126e-1.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/26821",
+        "bytes": 81587
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-44809-room-rent-at-saranjai-mansion",
+    "name": "สราญใจแมนชั่น",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "moto",
+    "transit": "17/290 ซ.สุขุมวิท 6 ถ.สุขุมวิท แขวงคลองเตย · ห่าง มศว ~1.6 กม.",
+    "price_seen": "20,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~10 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตคลองเตย ห่าง มศว ประสานมิตร ~1.6 กม. ราคา 20,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/25/1019/68f45cbd0be80.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/44809-room-rent-at-saranjai-mansion",
+        "bytes": 76849
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-18827",
+    "name": "นัยนาแมนชั่น ซ. ราชวิถี 4",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "- ซ.ราชวิถี 4 ถ.ราชวิถี (อนุสาวรีชัยสมรภูมิ) แขวงสามเสนใน · ห่าง มศว ~3.2 กม.",
+    "price_seen": "5,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตพญาไท ห่าง มศว ประสานมิตร ~3.2 กม. ราคา 5,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/17/0207/4_9173.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/18827",
+        "bytes": 124679
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-43350",
+    "name": "ร่มรื่นอพาร์ตเม้นต์",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "5009/1 ซ.ประชาสงเคราะห์23 แขวงรัชดาภิเษก · ห่าง มศว ~3.2 กม.",
+    "price_seen": "4,800–5,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~3.2 กม. ราคา 4,800–5,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/20/1001/115918_9332.jpeg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/43350",
+        "bytes": 191737
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-9436-v-p-tower",
+    "name": "วีพี ทาวเวอร์",
+    "type": "apartment",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "21/45 ซ.ชวกุล ถ.รางน้ำ แขวงถนนพญาไท · ห่าง มศว ~3.3 กม.",
+    "price_seen": "14,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตราชเทวี ห่าง มศว ประสานมิตร ~3.3 กม. ราคา 14,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/14/0912/20140912150844-944.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/9436-v-p-tower",
+        "bytes": 42431
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/22/0801/62e72c9619311_7361.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/9436-v-p-tower",
+        "bytes": 801923
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-17239-wansiri-mansion",
+    "name": "วันศิริแมนชั่น รัชดาซอย 3",
+    "type": "apartment",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "moto",
+    "transit": "322/191 ถ.อโศก-ดินแดง แขวงดินแดง · ห่าง มศว ~2.3 กม.",
+    "price_seen": "7,000–8,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~13 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~2.3 กม. ราคา 7,000–8,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0104/3-wifi-mrt_4518.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/17239-wansiri-mansion",
+        "bytes": 73501
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/26/0729/6a696b6f810bd.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/17239-wansiri-mansion",
+        "bytes": 57662
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/26/0729/6a696b6fb2cb9.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/17239-wansiri-mansion",
+        "bytes": 63923
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-60416-101",
+    "name": "ห้องพัก พี.เค.101",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "moto",
+    "transit": "101 ซ.ประชาสงเคราะห์6 ถ.ประชาสงเคราะห์ แขวงดินแดง · ห่าง มศว ~2.4 กม.",
+    "price_seen": "3,000–4,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~2.4 กม. ราคา 3,000–4,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/26/0328/69c7a88015903.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/60416",
+        "bytes": 93519
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/25/1007/68e479d315b53.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/60416",
+        "bytes": 53906
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/25/1007/68e479cc1d800.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/60416",
+        "bytes": 61419
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-57560",
+    "name": "บ้านอ้อม (ใกล้ ม.หอการค้า)",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "26 ซ.ประชาสงเคราะห์ 29 ถ.ประชาสงเคราะห์ แขวงดินแดง · ห่าง มศว ~3.4 กม.",
+    "price_seen": "4,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~3.4 กม. ราคา 4,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/23/0709/64aa956aa37e0.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/57560",
+        "bytes": 84252
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-36269-bts",
+    "name": "บ้านทองเอก หอพักใหม่",
+    "type": "dorm",
+    "zone": "other",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "moto",
+    "transit": "75 ซ.เอกมัย 23 (ทองหล่อ 20) ถ.เอกมัย แขวงคลองตันเหนือ · ห่าง มศว ~2.5 กม.",
+    "price_seen": "6,000–6,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตวัฒนา ห่าง มศว ประสานมิตร ~2.5 กม. ราคา 6,000–6,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/19/0831/bts_1038.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/36269-bts",
+        "bytes": 106168
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/19/0831/120543_1912.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/36269-bts",
+        "bytes": 681299
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/19/0831/120543_1854.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/36269-bts",
+        "bytes": 628025
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-2322-suanson-place",
+    "name": "สวนสนเพลส อนุสาวรีย์ชัย",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "000 ซ.ราชวิถี4 แขวงสามเสนใน · ห่าง มศว ~3.2 กม.",
+    "price_seen": "5,200 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตพญาไท ห่าง มศว ประสานมิตร ~3.2 กม. ราคา 5,200 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/2011/0526/20110526175655-529.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/2322-suanson-place",
+        "bytes": 90433
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-23029",
+    "name": "ห้องพัก เอกมัย 23",
+    "type": "dorm",
+    "zone": "other",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "moto",
+    "transit": "67 ซ.เอกมัย 23 ถ.สุขุมวิท 63 แขวงคลองตันเหนือ · ห่าง มศว ~2.5 กม.",
+    "price_seen": "6,000–6,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (วินมอเตอร์ไซค์/รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตวัฒนา ห่าง มศว ประสานมิตร ~2.5 กม. ราคา 6,000–6,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/17/0616/23_512.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/23029",
+        "bytes": 105367
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-22153-mrt-100",
+    "name": "อพาร์ทเม้นท์ห้วยขวาง",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "54 ซ.ประชาราษฎร์บำเพ็ญ 6 ถ.ประชาราษฎร์บำเพ็ญ แขวงห้วยขวาง · ห่าง มศว ~3.7 กม.",
+    "price_seen": "4,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตห้วยขวาง ห่าง มศว ประสานมิตร ~3.7 กม. ราคา 4,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/17/0516/mrt-100_2418.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/22153-mrt-100",
+        "bytes": 16522
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/23/0308/64082a76a450b.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/22153-mrt-100",
+        "bytes": 69202
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-41302",
+    "name": "สุนทรอพาร์ทเมนท์ ซอยประชาสงเคราะห์27 ห้วยขวาง",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "444 แขวงดินแดง · ห่าง มศว ~3.5 กม.",
+    "price_seen": "3,500–3,800 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~3.5 กม. ราคา 3,500–3,800 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/20/0720/27_3373.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/41302",
+        "bytes": 106469
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-46408-148mantion",
+    "name": "148แมนชั่น",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "880/1 ซ.ประชาอุทิศ5 ถ.ประชาอุทิศ แขวงห้วยขวาง · ห่าง มศว ~3.4 กม.",
+    "price_seen": "2,800–3,800 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตห้วยขวาง ห่าง มศว ประสานมิตร ~3.4 กม. ราคา 2,800–3,800 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/1026/6177d194d913c-2.jpeg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/46408-148mantion",
+        "bytes": 126873
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0122/101718_5884.jpeg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/46408-148mantion",
+        "bytes": 75228
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0122/101718_3551.jpeg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/46408-148mantion",
+        "bytes": 68200
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-48085-thaweesuk-mansion",
+    "name": "ทวีสุข แมนชั่น",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "8 ซ.อินทามระ 51 ถ.สุทธิสาร แขวงรัชดาภิเษก · ห่าง มศว ~5.0 กม.",
+    "price_seen": "4,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด."
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~5.0 กม. ราคา 4,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0427/6087b3ad579aa_1751.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/48085-thaweesuk-mansion",
+        "bytes": 29485
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-10365-ama-place",
+    "name": "เอม่า เพลส",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "24/7 ซ.อินทามระ 29 ถ.สุทธิสารวินิจฉัย แขวงสามเสนใน · ห่าง มศว ~5.0 กม.",
+    "price_seen": "5,600 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด."
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตพญาไท ห่าง มศว ประสานมิตร ~5.0 กม. ราคา 5,600 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/16/0328/16032803_4583.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/10365-ama-place",
+        "bytes": 138565
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-56339-be-k-k-place",
+    "name": "บี.เค.เค. เพลส",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "79 ซ.สุทธิพงศ์1/3 ถ.สุทธิสารวินิจฉัย แขวงรัชดาภิเษก · ห่าง มศว ~5.3 กม.",
+    "price_seen": "4,900–5,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~5.3 กม. ราคา 4,900–5,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/23/0126/63d2616b0d718.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/56339-be-k-k-place",
+        "bytes": 107102
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-15371-the-lin",
+    "name": "THE LIN (เดอะ ลิน)",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "139/2 ซ.สวรรค์วิถี ถ.สุทธิสาร แขวงสามเสนนอก · ห่าง มศว ~5.4 กม.",
+    "price_seen": "5,500–5,700 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตห้วยขวาง ห่าง มศว ประสานมิตร ~5.4 กม. ราคา 5,500–5,700 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/20/1031/the-lin_9989.jpeg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/15371-the-lin",
+        "bytes": 236764
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/16/0816/the-lin_6245.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/15371-the-lin",
+        "bytes": 142985
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/16/0816/the-lin_5592.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/15371-the-lin",
+        "bytes": 185877
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-50097-srivara-mansion-near-mrt",
+    "name": "ศรีวราแมนชั่น",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "217 ซ.นาทอง 7 ถ.รัชดาภิเษก แขวงดินแดง · ห่าง มศว ~3.1 กม.",
+    "price_seen": "8,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~3.1 กม. ราคา 8,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/26/0622/6a395ac5bbf35.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/50097-srivara-mansion-near-mrt",
+        "bytes": 73908
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0820/611f3986baf25_6035.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/50097-srivara-mansion-near-mrt",
+        "bytes": 863881
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0820/611f3986baf25_1479.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/50097-srivara-mansion-near-mrt",
+        "bytes": 596748
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-39095-kl-apartment-9",
+    "name": "KL Apartment",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "96 แขวงดินแดง · ห่าง มศว ~3.7 กม.",
+    "price_seen": "3,700 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตดินแดง ห่าง มศว ประสานมิตร ~3.7 กม. ราคา 3,700 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/22/0213/kl-apartment-1.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/39095-kl-apartment-9",
+        "bytes": 233273
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-61108-pc-privacy",
+    "name": "PC Privacy",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "18 ซ.อินทามระ 17 ถ.สุทธิสาร แขวงสามเสนใน · ห่าง มศว ~5.4 กม.",
+    "price_seen": "5,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตพญาไท ห่าง มศว ประสานมิตร ~5.4 กม. ราคา 5,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/26/1103/6ae977ae211af.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/61108-pc-privacy",
+        "bytes": 107710
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-51616-s-one-apartment",
+    "name": "เอสวัน อพาร์ทเม้นท์",
+    "type": "dorm",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "42/30 ซ.อินทามระ 1/1 ถ.พหลโยธิน แขวงสามเสนใน · ห่าง มศว ~5.1 กม.",
+    "price_seen": "4,500–5,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตพญาไท ห่าง มศว ประสานมิตร ~5.1 กม. ราคา 4,500–5,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/1116/6193867583300-1.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/51616-s-one-apartment",
+        "bytes": 263752
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-171-baansupar-apartment",
+    "name": "บ้านสุภา อพาร์ทเมนท์",
+    "type": "dorm",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "55 ซ.35 ถ.ลาดพร้าว แขวงจันทรเกษม · ห่าง มศว ~6.7 กม.",
+    "price_seen": "5,500–9,900 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตจตุจักร ห่าง มศว ประสานมิตร ~6.7 กม. ราคา 5,500–9,900 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/22/0706/62c503f56c585-1.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/171-baansupar-apartment",
+        "bytes": 116254
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/19/0301/30_5476.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/171-baansupar-apartment",
+        "bytes": 1001920
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/2009/0214/cNOo5XUq.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/171-baansupar-apartment",
+        "bytes": 146732
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-60070-in-17-residence",
+    "name": "IN 17 Residence",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "24 ซ.อินทามระ 17 ถ.สุทธิสารวินิจฉัย แขวงสามเสนใน · ห่าง มศว ~5.4 กม.",
+    "price_seen": "5,500 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตพญาไท ห่าง มศว ประสานมิตร ~5.4 กม. ราคา 5,500 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/25/0221/67b828d0d6fb5.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/60070-in-17-residence",
+        "bytes": 75386
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-17045-polpat-apartment",
+    "name": "พลภัทร อพาร์ทเมนต์",
+    "type": "dorm",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "51/29 ซ.40 ถ.ลาดพร้าว แขวงจันทรเกษม · ห่าง มศว ~6.4 กม.",
+    "price_seen": "3,500–4,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตจตุจักร ห่าง มศว ประสานมิตร ~6.4 กม. ราคา 3,500–4,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/21/0422/60811d8f55b37_8302.jpeg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/17045-polpat-apartment",
+        "bytes": 74017
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/16/1105/050745_455.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/17045-polpat-apartment",
+        "bytes": 75630
+      },
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/16/1105/050745_5787.jpg",
+        "kind": "room",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/17045-polpat-apartment",
+        "bytes": 77183
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "hp-52714-ko-home",
+    "name": "KO Home เคโอ โฮม",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "16/8 ซ.อินทามระ15 ถ.สุทธิสาร แขวงสามเสนใน · ห่าง มศว ~5.2 กม.",
+    "price_seen": "4,500–5,000 บ./ด. (Hongpak)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีเครื่องซักผ้าในอาคาร"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "ที่พักรายเดือนเขตพญาไท ห่าง มศว ประสานมิตร ~5.2 กม. ราคา 4,500–5,000 บ./ด. (ข้อมูลประกาศ Hongpak 2026-11-28)",
+    "web_review_sources": [
+      "Hongpak"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://c2.hongpak.in.th/media/rooms/photos/22/0204/61fcda8e6c3dc-7.jpg",
+        "kind": "exterior",
+        "credit": "Hongpak",
+        "source_url": "https://www.hongpak.in.th/rooms/52714-ko-home",
+        "bytes": 190321
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-7031",
+    "name": "เตยหอม เพลส",
+    "type": "dorm",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "mrt",
+    "transit": "ซอย เศรษฐีทวีทรัพย์ 2 สุขุมวิท 22 ถนนสุขุมวิท, คลองเตย, คลองเตย",
+    "price_seen": "5,500 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~10 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย เศรษฐีทวีทรัพย์ 2 สุขุมวิท 22 ถนนสุขุมวิท, คลองเตย, คลองเตย ราคา 5,500 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7031/7031_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%95%E0%B8%A2%E0%B8%AB%E0%B8%AD%E0%B8%A1-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-7031",
+        "bytes": 130252
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7031/7031_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%95%E0%B8%A2%E0%B8%AB%E0%B8%AD%E0%B8%A1-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-7031",
+        "bytes": 130722
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7031/7031_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%95%E0%B8%A2%E0%B8%AB%E0%B8%AD%E0%B8%A1-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-7031",
+        "bytes": 105855
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-5173",
+    "name": "บีบี บูติค แมนชั่น",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "mrt",
+    "transit": "ซอย สุขุมวิท 20 ถนนสุขุมวิท, คลองเตย, คลองเตย",
+    "price_seen": "20,000–24,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~10 นาที (รถไฟฟ้า)",
+      "ห้องใหญ่ เหมาะอยู่ 2 คน",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย สุขุมวิท 20 ถนนสุขุมวิท, คลองเตย, คลองเตย ราคา 20,000–24,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/5173/5173_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9A%E0%B8%B5%E0%B8%9A%E0%B8%B5-%E0%B8%9A%E0%B8%B9%E0%B8%95%E0%B8%B4%E0%B8%84-%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-5173",
+        "bytes": 136639
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/5173/5173_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9A%E0%B8%B5%E0%B8%9A%E0%B8%B5-%E0%B8%9A%E0%B8%B9%E0%B8%95%E0%B8%B4%E0%B8%84-%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-5173",
+        "bytes": 155271
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/5173/5173_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9A%E0%B8%B5%E0%B8%9A%E0%B8%B5-%E0%B8%9A%E0%B8%B9%E0%B8%95%E0%B8%B4%E0%B8%84-%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-5173",
+        "bytes": 190158
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-11966-i-studio-asoke",
+    "name": "Studio Asoke",
+    "type": "apartment",
+    "zone": "asoke",
+    "walk_to_swu": false,
+    "minutes_to_swu": 10,
+    "travel_mode": "mrt",
+    "transit": "ซอย สุขุมวิท 21 ถนนสุขุมวิท, คลองตัน, คลองเตย",
+    "price_seen": "11,999 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~10 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย สุขุมวิท 21 ถนนสุขุมวิท, คลองตัน, คลองเตย ราคา 11,999 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11966/i-studio-asoke_ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/studio-asoke-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%9E%E0%B8%B1%E0%B8%81%E0%B8%95%E0%B8%B4%E0%B8%94-bts-%E0%B8%AD%E0%B9%82%E0%B8%A8%E0%B8%81-mrt-%E0%B8%AA%E0%B8%B8%E0%B8%82%E0%B8%B8%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%97-terminal-21-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-11966",
+        "bytes": 123599
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11966/i-studio-asoke_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/studio-asoke-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%9E%E0%B8%B1%E0%B8%81%E0%B8%95%E0%B8%B4%E0%B8%94-bts-%E0%B8%AD%E0%B9%82%E0%B8%A8%E0%B8%81-mrt-%E0%B8%AA%E0%B8%B8%E0%B8%82%E0%B8%B8%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%97-terminal-21-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-11966",
+        "bytes": 87701
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11966/i-studio-asoke_ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/studio-asoke-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%9E%E0%B8%B1%E0%B8%81%E0%B8%95%E0%B8%B4%E0%B8%94-bts-%E0%B8%AD%E0%B9%82%E0%B8%A8%E0%B8%81-mrt-%E0%B8%AA%E0%B8%B8%E0%B8%82%E0%B8%B8%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%97-terminal-21-%E0%B8%84%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%95%E0%B8%A2-11966",
+        "bytes": 74703
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-7381",
+    "name": "ฟลอเรนซ์แมนชั่น",
+    "type": "apartment",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "ซอย นาทอง 3 ถนนรัชดาภิเษก 7, ดินแดง, ดินแดง",
+    "price_seen": "6,500 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย นาทอง 3 ถนนรัชดาภิเษก 7, ดินแดง, ดินแดง ราคา 6,500 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7381/7381_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9F%E0%B8%A5%E0%B8%AD%E0%B9%80%E0%B8%A3%E0%B8%99%E0%B8%8B%E0%B9%8C%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-7381",
+        "bytes": 192170
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7381/7381_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9F%E0%B8%A5%E0%B8%AD%E0%B9%80%E0%B8%A3%E0%B8%99%E0%B8%8B%E0%B9%8C%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-7381",
+        "bytes": 145940
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7381/7381_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9F%E0%B8%A5%E0%B8%AD%E0%B9%80%E0%B8%A3%E0%B8%99%E0%B8%8B%E0%B9%8C%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-7381",
+        "bytes": 126077
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-11733-hotel-paraiso-din-daeng",
+    "name": "โฮเต็ล พาราอิโซ",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอย ประชาราษฎร์บำเพ็ญ 1 ถนนประชาราษฎร์บำเพ็ญ, ดินแดง, ดินแดง",
+    "price_seen": "5,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ประชาราษฎร์บำเพ็ญ 1 ถนนประชาราษฎร์บำเพ็ญ, ดินแดง, ดินแดง ราคา 5,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11733/hotel-paraiso-din-daeng_ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%82%E0%B8%AE%E0%B9%80%E0%B8%95%E0%B9%87%E0%B8%A5-%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B8%B2%E0%B8%AD%E0%B8%B4%E0%B9%82%E0%B8%8B-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-11733",
+        "bytes": 132583
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11733/hotel-paraiso-din-daeng_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%82%E0%B8%AE%E0%B9%80%E0%B8%95%E0%B9%87%E0%B8%A5-%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B8%B2%E0%B8%AD%E0%B8%B4%E0%B9%82%E0%B8%8B-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-11733",
+        "bytes": 41621
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11733/hotel-paraiso-din-daeng_ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%82%E0%B8%AE%E0%B9%80%E0%B8%95%E0%B9%87%E0%B8%A5-%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B8%B2%E0%B8%AD%E0%B8%B4%E0%B9%82%E0%B8%8B-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-11733",
+        "bytes": 51011
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-12245-romjai-apartment",
+    "name": "บ้านร่มใจ (MRT ห้วยขวาง)",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอย ประชาราษฎร์บำเพ็ญ 9 ถนนประชาราษฎร์บำเพ็ญ, ห้วยขวาง, ห้วยขวาง",
+    "price_seen": "4,500 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ประชาราษฎร์บำเพ็ญ 9 ถนนประชาราษฎร์บำเพ็ญ, ห้วยขวาง, ห้วยขวาง ราคา 4,500 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/12245/romjai-apartment_ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9A%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%A3%E0%B9%88%E0%B8%A1%E0%B9%83%E0%B8%88-mrt%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-12245",
+        "bytes": 68837
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/12245/romjai-apartment_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9A%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%A3%E0%B9%88%E0%B8%A1%E0%B9%83%E0%B8%88-mrt%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-12245",
+        "bytes": 66493
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/12245/romjai-apartment_ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9A%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%A3%E0%B9%88%E0%B8%A1%E0%B9%83%E0%B8%88-mrt%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-12245",
+        "bytes": 40553
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-11594-map",
+    "name": "เดอะ ไดอารี่ เพลส รัชดา ตึก A",
+    "type": "dorm",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 14,
+    "travel_mode": "bus",
+    "transit": "ซอย รัชดาภิเษก 13 ถนนรัชดาภิเษก, ดินแดง",
+    "price_seen": "4,900–7,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~14 นาที (รถเมล์)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย รัชดาภิเษก 13 ถนนรัชดาภิเษก, ดินแดง ราคา 4,900–7,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11594/map_11594.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%94%E0%B8%AD%E0%B8%B0-%E0%B9%84%E0%B8%94%E0%B8%AD%E0%B8%B2%E0%B8%A3%E0%B8%B5%E0%B9%88-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%A3%E0%B8%B1%E0%B8%8A%E0%B8%94%E0%B8%B2-%E0%B8%95%E0%B8%B6%E0%B8%81-a-mrt-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87--%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-11594",
+        "bytes": 70033
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11594/the-diary-place-ratchada_ext01.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%94%E0%B8%AD%E0%B8%B0-%E0%B9%84%E0%B8%94%E0%B8%AD%E0%B8%B2%E0%B8%A3%E0%B8%B5%E0%B9%88-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%A3%E0%B8%B1%E0%B8%8A%E0%B8%94%E0%B8%B2-%E0%B8%95%E0%B8%B6%E0%B8%81-a-mrt-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87--%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-11594",
+        "bytes": 116600
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11594/the-diary-place-ratchada_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%94%E0%B8%AD%E0%B8%B0-%E0%B9%84%E0%B8%94%E0%B8%AD%E0%B8%B2%E0%B8%A3%E0%B8%B5%E0%B9%88-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%A3%E0%B8%B1%E0%B8%8A%E0%B8%94%E0%B8%B2-%E0%B8%95%E0%B8%B6%E0%B8%81-a-mrt-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87--%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-11594",
+        "bytes": 103113
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-12108-perma-residence",
+    "name": "เพอร์มา เรสซิเดนซ์ ห้องพักสตรี",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอย ประชาราษฎร์บำเพ็ญ 24 ถนนประชาราษฎร์บำเพ็ญ, สามเสนนอก, ห้วยขวาง",
+    "price_seen": "7,500–8,500 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ประชาราษฎร์บำเพ็ญ 24 ถนนประชาราษฎร์บำเพ็ญ, สามเสนนอก, ห้วยขวาง ราคา 7,500–8,500 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/12108/perma-residence_ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%9E%E0%B8%AD%E0%B8%A3%E0%B9%8C%E0%B8%A1%E0%B8%B2-%E0%B9%80%E0%B8%A3%E0%B8%AA%E0%B8%8B%E0%B8%B4%E0%B9%80%E0%B8%94%E0%B8%99%E0%B8%8B%E0%B9%8C-%E0%B8%AB%E0%B9%89%E0%B8%AD%E0%B8%87%E0%B8%9E%E0%B8%B1%E0%B8%81%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B8%B5--%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-12108",
+        "bytes": 104788
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/12108/perma-residence_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%9E%E0%B8%AD%E0%B8%A3%E0%B9%8C%E0%B8%A1%E0%B8%B2-%E0%B9%80%E0%B8%A3%E0%B8%AA%E0%B8%8B%E0%B8%B4%E0%B9%80%E0%B8%94%E0%B8%99%E0%B8%8B%E0%B9%8C-%E0%B8%AB%E0%B9%89%E0%B8%AD%E0%B8%87%E0%B8%9E%E0%B8%B1%E0%B8%81%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B8%B5--%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-12108",
+        "bytes": 84545
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/12108/perma-residence_ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%9E%E0%B8%AD%E0%B8%A3%E0%B9%8C%E0%B8%A1%E0%B8%B2-%E0%B9%80%E0%B8%A3%E0%B8%AA%E0%B8%8B%E0%B8%B4%E0%B9%80%E0%B8%94%E0%B8%99%E0%B8%8B%E0%B9%8C-%E0%B8%AB%E0%B9%89%E0%B8%AD%E0%B8%87%E0%B8%9E%E0%B8%B1%E0%B8%81%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B8%B5--%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-12108",
+        "bytes": 111020
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-7812-n-place",
+    "name": "เอ็น เพลส",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอย ประชาราษฎร์บำเพ็ญ 5 ถนนประชาราษฎร์บำเพ็ญ, ห้วยขวาง, ห้วยขวาง",
+    "price_seen": "5,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ประชาราษฎร์บำเพ็ญ 5 ถนนประชาราษฎร์บำเพ็ญ, ห้วยขวาง, ห้วยขวาง ราคา 5,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7812/n-place_ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%AD%E0%B9%87%E0%B8%99-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-7812",
+        "bytes": 66320
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7812/n-place_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%AD%E0%B9%87%E0%B8%99-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-7812",
+        "bytes": 74381
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7812/n-place_ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%AD%E0%B9%87%E0%B8%99-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-7812",
+        "bytes": 68534
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-11329-me-style-mixx-apartment-huai-khwang",
+    "name": "มีสไตล์ มิกซ์",
+    "type": "apartment",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอย ส.ธรณิณทร์ 1 ถนนประชาอุทิศ 11-13, สามเสนนอก, ห้วยขวาง",
+    "price_seen": "11,000–13,500 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ส.ธรณิณทร์ 1 ถนนประชาอุทิศ 11-13, สามเสนนอก, ห้วยขวาง ราคา 11,000–13,500 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11329/me-style-mixx-apartment-Huai-Khwang_EXT01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%A1%E0%B8%B5%E0%B8%AA%E0%B9%84%E0%B8%95%E0%B8%A5%E0%B9%8C-%E0%B8%A1%E0%B8%B4%E0%B8%81%E0%B8%8B%E0%B9%8C--%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-11329",
+        "bytes": 134133
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11329/me-style-mixx-apartment-Huai-Khwang_EXT02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%A1%E0%B8%B5%E0%B8%AA%E0%B9%84%E0%B8%95%E0%B8%A5%E0%B9%8C-%E0%B8%A1%E0%B8%B4%E0%B8%81%E0%B8%8B%E0%B9%8C--%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-11329",
+        "bytes": 210553
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11329/me-style-mixx-apartment-Huai-Khwang_EXT03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%A1%E0%B8%B5%E0%B8%AA%E0%B9%84%E0%B8%95%E0%B8%A5%E0%B9%8C-%E0%B8%A1%E0%B8%B4%E0%B8%81%E0%B8%8B%E0%B9%8C--%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-11329",
+        "bytes": 96632
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-2750-l-a-tower-apartment-intamara-47-huai-khw",
+    "name": "แอลเอ ทาวน์เวอร์",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอย อินทามระ 47 ถนนอินทามระ, ดินแดง, ดินแดง",
+    "price_seen": "5,800 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย อินทามระ 47 ถนนอินทามระ, ดินแดง, ดินแดง ราคา 5,800 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/2750/L-A-Tower-Apartment-Intamara-47-Huai-khwang-2750_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%81%E0%B8%AD%E0%B8%A5%E0%B9%80%E0%B8%AD-%E0%B8%97%E0%B8%B2%E0%B8%A7%E0%B8%99%E0%B9%8C%E0%B9%80%E0%B8%A7%E0%B8%AD%E0%B8%A3%E0%B9%8C-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-2750",
+        "bytes": 74121
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/2750/L-A-Tower-Apartment-Intamara-47-Huai-khwang-2750_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%81%E0%B8%AD%E0%B8%A5%E0%B9%80%E0%B8%AD-%E0%B8%97%E0%B8%B2%E0%B8%A7%E0%B8%99%E0%B9%8C%E0%B9%80%E0%B8%A7%E0%B8%AD%E0%B8%A3%E0%B9%8C-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-2750",
+        "bytes": 92453
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/2750/L-A-Tower-Apartment-Intamara-47-Huai-khwang-2750_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%81%E0%B8%AD%E0%B8%A5%E0%B9%80%E0%B8%AD-%E0%B8%97%E0%B8%B2%E0%B8%A7%E0%B8%99%E0%B9%8C%E0%B9%80%E0%B8%A7%E0%B8%AD%E0%B8%A3%E0%B9%8C-%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B9%81%E0%B8%94%E0%B8%87-2750",
+        "bytes": 41063
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-9769-nature-place-apartment-huai-khwang",
+    "name": "เนเจอร์ เพลส",
+    "type": "dorm",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "ซอย สบายใจ ถนนสุทธิสารวินิจฉัย , สามเสนนอก, ห้วยขวาง",
+    "price_seen": "3,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~16 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย สบายใจ ถนนสุทธิสารวินิจฉัย , สามเสนนอก, ห้วยขวาง ราคา 3,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/9769/Nature-Place-Apartment-Huai-Khwang-9769_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%AD%E0%B8%A3%E0%B9%8C-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-9769",
+        "bytes": 52876
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/9769/Nature-Place-Apartment-Huai-Khwang-9769_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%AD%E0%B8%A3%E0%B9%8C-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-9769",
+        "bytes": 49869
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/9769/Nature-Place-Apartment-Huai-Khwang-9769_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%AD%E0%B8%A3%E0%B9%8C-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-9769",
+        "bytes": 61352
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-6201-usabay-apartment-latphrao-wang-thonglang",
+    "name": "ยูสบาย",
+    "type": "dorm",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "ซอย ลาดพร้าว 83 ถนนลาดพร้าว, วังทองหลาง, วังทองหลาง",
+    "price_seen": "3,100 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ลาดพร้าว 83 ถนนลาดพร้าว, วังทองหลาง, วังทองหลาง ราคา 3,100 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/6201/Usabay-Apartment-Latphrao-Wang-Thonglang_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%A2%E0%B8%B9%E0%B8%AA%E0%B8%9A%E0%B8%B2%E0%B8%A2-%E0%B8%A7%E0%B8%B1%E0%B8%87%E0%B8%97%E0%B8%AD%E0%B8%87%E0%B8%AB%E0%B8%A5%E0%B8%B2%E0%B8%87-6201",
+        "bytes": 47332
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/6201/Usabay-Apartment-Latphrao-Wang-Thonglang_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%A2%E0%B8%B9%E0%B8%AA%E0%B8%9A%E0%B8%B2%E0%B8%A2-%E0%B8%A7%E0%B8%B1%E0%B8%87%E0%B8%97%E0%B8%AD%E0%B8%87%E0%B8%AB%E0%B8%A5%E0%B8%B2%E0%B8%87-6201",
+        "bytes": 50303
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/6201/Usabay-Apartment-Latphrao-Wang-Thonglang_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%A2%E0%B8%B9%E0%B8%AA%E0%B8%9A%E0%B8%B2%E0%B8%A2-%E0%B8%A7%E0%B8%B1%E0%B8%87%E0%B8%97%E0%B8%AD%E0%B8%87%E0%B8%AB%E0%B8%A5%E0%B8%B2%E0%B8%87-6201",
+        "bytes": 51850
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-9844-md-court",
+    "name": "เอ็ม ดี คอร์ด",
+    "type": "dorm",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "ซอย ลาดพร้าว 46 ถนนลาดพร้าว, สามเสนนอก, ห้วยขวาง",
+    "price_seen": "3,300 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ลาดพร้าว 46 ถนนลาดพร้าว, สามเสนนอก, ห้วยขวาง ราคา 3,300 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/9844/md-court_ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%AD%E0%B9%87%E0%B8%A1-%E0%B8%94%E0%B8%B5-%E0%B8%84%E0%B8%AD%E0%B8%A3%E0%B9%8C%E0%B8%94-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-9844",
+        "bytes": 73147
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/9844/md-court_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%AD%E0%B9%87%E0%B8%A1-%E0%B8%94%E0%B8%B5-%E0%B8%84%E0%B8%AD%E0%B8%A3%E0%B9%8C%E0%B8%94-%E0%B8%AB%E0%B9%89%E0%B8%A7%E0%B8%A2%E0%B8%82%E0%B8%A7%E0%B8%B2%E0%B8%87-9844",
+        "bytes": 80993
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-7569",
+    "name": "เดอะลักซ์ ลาดพร้าว 10",
+    "type": "apartment",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "ซอย ลาดพร้าว 10 ถนนลาดพร้าว, จอมพล, จตุจักร",
+    "price_seen": "9,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ลาดพร้าว 10 ถนนลาดพร้าว, จอมพล, จตุจักร ราคา 9,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7569/7569_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%94%E0%B8%AD%E0%B8%B0%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%8B%E0%B9%8C-%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%A7-10-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-7569",
+        "bytes": 76038
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7569/7569_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%94%E0%B8%AD%E0%B8%B0%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%8B%E0%B9%8C-%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%A7-10-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-7569",
+        "bytes": 81618
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7569/7569_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B9%80%E0%B8%94%E0%B8%AD%E0%B8%B0%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%8B%E0%B9%8C-%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%A7-10-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-7569",
+        "bytes": 76151
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-2877-porn-uthai-suite-apartment-ratchayothin",
+    "name": "พรอุทัย สวีท รัชโยธิน",
+    "type": "apartment",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "ซอย พหลโยธิน 29 ถนนพหลโยธิน, จตุจักร, จตุจักร",
+    "price_seen": "8,000–12,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย พหลโยธิน 29 ถนนพหลโยธิน, จตุจักร, จตุจักร ราคา 8,000–12,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/2877/Porn-Uthai-Suite-Apartment-Ratchayothin-2877_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9E%E0%B8%A3%E0%B8%AD%E0%B8%B8%E0%B8%97%E0%B8%B1%E0%B8%A2-%E0%B8%AA%E0%B8%A7%E0%B8%B5%E0%B8%97-%E0%B8%A3%E0%B8%B1%E0%B8%8A%E0%B9%82%E0%B8%A2%E0%B8%98%E0%B8%B4%E0%B8%99--%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-2877",
+        "bytes": 226814
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/2877/Porn-Uthai-Suite-Apartment-Ratchayothin-2877_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9E%E0%B8%A3%E0%B8%AD%E0%B8%B8%E0%B8%97%E0%B8%B1%E0%B8%A2-%E0%B8%AA%E0%B8%A7%E0%B8%B5%E0%B8%97-%E0%B8%A3%E0%B8%B1%E0%B8%8A%E0%B9%82%E0%B8%A2%E0%B8%98%E0%B8%B4%E0%B8%99--%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-2877",
+        "bytes": 99321
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/2877/Porn-Uthai-Suite-Apartment-Ratchayothin-2877_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%9E%E0%B8%A3%E0%B8%AD%E0%B8%B8%E0%B8%97%E0%B8%B1%E0%B8%A2-%E0%B8%AA%E0%B8%A7%E0%B8%B5%E0%B8%97-%E0%B8%A3%E0%B8%B1%E0%B8%8A%E0%B9%82%E0%B8%A2%E0%B8%98%E0%B8%B4%E0%B8%99--%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-2877",
+        "bytes": 140762
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-5665",
+    "name": "Rest22 Residence",
+    "type": "apartment",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "ซอย ลาดพร้าว 22 ถนนลาดพร้าว, จตุจักร, จตุจักร",
+    "price_seen": "6,500–7,500 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "ราคากลาง ๆ หารเพื่อนได้",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ลาดพร้าว 22 ถนนลาดพร้าว, จตุจักร, จตุจักร ราคา 6,500–7,500 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/5665/5665_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/rest22-residence-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-5665",
+        "bytes": 192085
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/5665/5665_Int01.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/rest22-residence-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-5665",
+        "bytes": 79202
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/5665/5665_Int02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/rest22-residence-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-5665",
+        "bytes": 137199
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-7202-crystal-place-apartment-ratchada-chatuch",
+    "name": "คริสตัล เพลส",
+    "type": "dorm",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "ซอย รัชดา 32 ถนนรัขดาภิเษก, จันทรเกษม, จตุจักร",
+    "price_seen": "3,300 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย รัชดา 32 ถนนรัขดาภิเษก, จันทรเกษม, จตุจักร ราคา 3,300 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7202/Crystal-Place-Apartment-Ratchada-Chatuchak-7202_Ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%84%E0%B8%A3%E0%B8%B4%E0%B8%AA%E0%B8%95%E0%B8%B1%E0%B8%A5-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-7202",
+        "bytes": 88092
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7202/Crystal-Place-Apartment-Ratchada-Chatuchak-7202_Ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%84%E0%B8%A3%E0%B8%B4%E0%B8%AA%E0%B8%95%E0%B8%B1%E0%B8%A5-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-7202",
+        "bytes": 139473
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/7202/Crystal-Place-Apartment-Ratchada-Chatuchak-7202_Ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%84%E0%B8%A3%E0%B8%B4%E0%B8%AA%E0%B8%95%E0%B8%B1%E0%B8%A5-%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%AA-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-7202",
+        "bytes": 134223
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "ta-11625-sarm-tuang-mansion-ladprao",
+    "name": "สามตวง แมนชั่น",
+    "type": "dorm",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 23,
+    "travel_mode": "mrt",
+    "transit": "ซอย ลาดพร้าว 23 แยก 2 ถนนลาดพร้าว, จันทรเกษม, จตุจักร",
+    "price_seen": "6,000 บ./ด. (ThaiApartment)",
+    "pros": [
+      "ถึง มศว ~23 นาที (รถไฟฟ้า)",
+      "งบนิสิตต่ำกว่า 6,000 บ./ด.",
+      "มีตารางราคาห้องแต่ละแบบชัดเจน"
+    ],
+    "cons": [
+      "ราคา/ห้องว่างเปลี่ยนได้ ควรโทรยืนยันกับอาคารก่อนไปดู"
+    ],
+    "web_review_summary": "อพาร์ตเมนต์ ซอย ลาดพร้าว 23 แยก 2 ถนนลาดพร้าว, จันทรเกษม, จตุจักร ราคา 6,000 บ./ด. (ข้อมูลประกาศ ThaiApartment 2026-11-28)",
+    "web_review_sources": [
+      "ThaiApartment"
+    ],
+    "aliases": [],
+    "photos": [
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11625/sarm-tuang-mansion-Ladprao_ext01.jpg",
+        "kind": "exterior",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%AA%E0%B8%B2%E0%B8%A1%E0%B8%95%E0%B8%A7%E0%B8%87-%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-11625",
+        "bytes": 77638
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11625/sarm-tuang-mansion-Ladprao_ext02.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%AA%E0%B8%B2%E0%B8%A1%E0%B8%95%E0%B8%A7%E0%B8%87-%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-11625",
+        "bytes": 102368
+      },
+      {
+        "url": "https://images.thaiapartment.com/Apartment/11625/sarm-tuang-mansion-Ladprao_ext03.jpg",
+        "kind": "room",
+        "credit": "ThaiApartment",
+        "source_url": "https://www.thaiapartment.com/%E0%B8%AD%E0%B8%9E%E0%B8%B2%E0%B8%A3%E0%B9%8C%E0%B8%97%E0%B9%80%E0%B8%A1%E0%B9%89%E0%B8%99%E0%B8%97%E0%B9%8C/%E0%B8%AA%E0%B8%B2%E0%B8%A1%E0%B8%95%E0%B8%A7%E0%B8%87-%E0%B9%81%E0%B8%A1%E0%B8%99%E0%B8%8A%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%88%E0%B8%95%E0%B8%B8%E0%B8%88%E0%B8%B1%E0%B8%81%E0%B8%A3-11625",
+        "bytes": 118814
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "whizdom-avenue-ratchada-ladprao",
+    "name": "วิสดอม อเวนิว รัชดา - ลาดพร้าว (Whizdom Avenue Ratchada – Ladprao)",
+    "type": "condo",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 22,
+    "travel_mode": "mrt",
+    "transit": "MRT ลาดพร้าว → MRT เพชรบุรี 5 สถานี",
+    "price_seen": "15,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~22 นาที (MRT ลาดพร้าว)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดladprao สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~22 นาที ห้องเช่าเริ่ม 15,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Whizdom Avenue Ratchada – Ladprao",
+      "วิสดอม อเวนิว รัชดา - ลาดพร้าว"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/DsAHLpHh-DG5Nch5dojCUY4wXLvAEuYi4rY41EB7454/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM0NTg2NzYvMWE1YjMwNTJiNDEwNmZmNGE3MjVmYmVhNmNiYzBlZTcuanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-whizdom-avenue-ratchada-%E2%80%93-ladprao-near-mrt-ratchadaphisek-2550540/",
+        "bytes": 30324
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/OY43zKCkjfSEXLd7flEquLG4bETB4rMwBPN-0doV9bY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM0NTg2NzYvMDlhZmIzZjc1OGZhNDNiYjkyY2I1NmZlNjQ4MWIwMTUuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-whizdom-avenue-ratchada-%E2%80%93-ladprao-near-mrt-ratchadaphisek-2550540/",
+        "bytes": 21578
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/M3zCrH1WzF9S0hfFZ1cBUOBHuPp0zhomJm0RUk2J3wU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNTUwNTQwLzJiMmFjZmQ0ODcyYmNkNTY5Y2ZkZTNlMzg1MDFhMWJiLnBuZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-whizdom-avenue-ratchada-%E2%80%93-ladprao-near-mrt-ratchadaphisek-2550540/",
+        "bytes": 21164
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "life-ladprao",
+    "name": "ไลฟ์ ลาดพร้าว (Life Ladprao)",
+    "type": "condo",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 25,
+    "travel_mode": "mrt",
+    "transit": "BTS ห้าแยกลาดพร้าว / MRT พหลโยธิน → MRT เพชรบุรี",
+    "price_seen": "15,500–16,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~25 นาที (BTS ห้าแยกลาดพร้าว / MRT พหลโยธิน)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดladprao สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~25 นาที ห้องเช่าเริ่ม 15,500 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Life Ladprao",
+      "ไลฟ์ ลาดพร้าว"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/1zEQXs5_haWqml0FM-IY_REJB_5STJEVAUvy5XmpS9o/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTU5MzcyL2ZmOTNiNDNlMzhmNjdmYzk2M2ZmZDdkODU1MjU0NDMzLmpwZw.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-life-ladprao-near-bts-ha-yaek-lat-phrao-1959372/",
+        "bytes": 12146
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/qYn_F9gzLHKpPFeJfGx4FNjg34BzUqbVgU2rX4DAt7s/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTU5MzcyLzU3N2NmNWMzZjQxNjE2MjhhODdhNzJkYTVhMDU3Njg1LmpwZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-life-ladprao-near-bts-ha-yaek-lat-phrao-1959372/",
+        "bytes": 12604
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/wT-cqSGAqM-_5c8adBbB58ml-Y1P1irQsQhdLTcdTHg/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTU5MzcyL2VhZTRlNDI1YjcxYWMzNzY2YjQ5ZDIwNDFlNjhmZjBhLmpwZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-life-ladprao-near-bts-ha-yaek-lat-phrao-1959372/",
+        "bytes": 11080
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "life-ladprao-valley",
+    "name": "ไลฟ์ ลาดพร้าว แวลลีย์ (Life Ladprao Valley)",
+    "type": "condo",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 25,
+    "travel_mode": "mrt",
+    "transit": "MRT พหลโยธิน / BTS ห้าแยกลาดพร้าว → MRT เพชรบุรี",
+    "price_seen": "16,000–17,500 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~25 นาที (MRT พหลโยธิน / BTS ห้าแยกลาดพร้าว)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดladprao สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~25 นาที ห้องเช่าเริ่ม 16,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Life Ladprao Valley",
+      "ไลฟ์ ลาดพร้าว แวลลีย์"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/34yyVNkx15CQBzPBfpWfydWfKSaU1SMbr_B3MMLNOIY/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU0MzU5OTMvNDk2YmU1YjdjZGUyNjM2NjU0ZTUyNzgzMjMyMDY5ZjAuanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-life-ladprao-valley-near-bts-ha-yaek-lat-phrao-3191542/",
+        "bytes": 15638
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/2L6UoWePe7WVw2q9SZBJF6tVlaZw08AId94kB3hyaYI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU0MzU5OTMvZDg4ZjhhNjE3ZWY0NWFlMWU2MDA1NTI1NzgzMGI3NmEuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-life-ladprao-valley-near-bts-ha-yaek-lat-phrao-3191542/",
+        "bytes": 16270
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/XBVTrwSWWDM4fXyiSA31USl3Vqv6sdReY-fLan2nPL4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU0MzU5OTMvMzdkN2RhMmM4NTg5ZjVhMDI2ODZkNDJhMGY5MzFjNGEuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-life-ladprao-valley-near-bts-ha-yaek-lat-phrao-3191542/",
+        "bytes": 19118
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "the-saint-residences",
+    "name": "เดอะ เซนต์ ลาดพร้าว (The Saint Residences)",
+    "type": "condo",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 25,
+    "travel_mode": "mrt",
+    "transit": "MRT พหลโยธิน → MRT เพชรบุรี",
+    "price_seen": "15,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~25 นาที (MRT พหลโยธิน)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดladprao สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~25 นาที ห้องเช่าเริ่ม 15,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "The Saint Residences",
+      "เดอะ เซนต์ ลาดพร้าว"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/Jb7_0ve1IdPFehzw2gX5EYzP99M9exP9erXAzc_VSAM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM5MDY3MDEvOGU0ZjkzYzgzY2E4NGUyNGI3ZTJiOGEyMzEyZWUyNmUuanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-the-saint-residences-near-mrt-phahon-yothin-2695582/",
+        "bytes": 10222
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/zwIxZILTiBigUalDKbEX_RU3rOEXR-kvXXj0o092ZK4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM5MDY3MDEvN2UyMTdiOGI5MDgxOGVjYWVlYjEzNjk0NTQ3NDBlYjIuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-the-saint-residences-near-mrt-phahon-yothin-2695582/",
+        "bytes": 11426
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/e2izmTqqK2kwloOvar5THG4nfY-5-WoMHcyWLrwAXj0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTM5MDY3MDEvMDAyOTQzMmNmZTBjZmRkMzhhZWM3YThlMTJiNDNhM2YuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-the-saint-residences-near-mrt-phahon-yothin-2695582/",
+        "bytes": 12910
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "chapter-one-the-campus-ladprao-1",
+    "name": "คอนโด แชปเตอร์วัน เดอะ แคมปัส ลาดพร้าว 1 (Chapter One The Campus Ladprao 1)",
+    "type": "condo",
+    "zone": "ladprao",
+    "walk_to_swu": false,
+    "minutes_to_swu": 25,
+    "travel_mode": "mrt",
+    "transit": "MRT ลาดพร้าว/พหลโยธิน → MRT เพชรบุรี",
+    "price_seen": "10,000–12,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~25 นาที (MRT ลาดพร้าว/พหลโยธิน)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดladprao สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~25 นาที ห้องเช่าเริ่ม 10,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Chapter One The Campus Ladprao 1",
+      "คอนโด แชปเตอร์วัน เดอะ แคมปัส ลาดพร้าว 1"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/r9oH-hHfcLOlu6zfr1AKQYry6meyRCTpveAsvu_OcWE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcC81Mjk5NzcvMC5qcGc.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-the-campus-ladprao-1-near-mrt-lat-phrao-529977/",
+        "bytes": 25060
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/Yy7-13JT_aHlJGK3s-IwvJXf60S_zkiQBeKE1PKAO3E/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcC81Mjk5NzcvMS5qcGc.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-the-campus-ladprao-1-near-mrt-lat-phrao-529977/",
+        "bytes": 19064
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/ylb3S5jQWaeQ1CXCXTocZQ5lbi5mNpzsbqofBp-ibgo/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcC81Mjk5NzcvMTAuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-chapter-one-the-campus-ladprao-1-near-mrt-lat-phrao-529977/",
+        "bytes": 16494
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "the-base-garden-rama-9",
+    "name": "เดอะ เบส การ์เด้น - พระราม 9 (The Base Garden Rama 9)",
+    "type": "condo",
+    "zone": "ramkhamhaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 18,
+    "travel_mode": "mrt",
+    "transit": "ใกล้ ARL รามคำแหง → ARL มักกะสัน",
+    "price_seen": "13,000–15,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~18 นาที (ใกล้ ARL รามคำแหง)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดramkhamhaeng สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~18 นาที ห้องเช่าเริ่ม 13,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "The Base Garden Rama 9",
+      "เดอะ เบส การ์เด้น - พระราม 9"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/RxmHd56Gymg8TdMfSm5uG0SmWzWNZhr8_FsM2UEDy-s/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTIyODUxLzA2MjViOTNmMTM0MzU3YWQyMzFjNDIxNDBhNzQxNzFmLmpwZw.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-the-base-garden-rama-9-near-arl-ramkhamhaeng-1922851/",
+        "bytes": 19590
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/6jG7XOKmSp1yn2kG2foBIlOEgT_3OhDn6tfGm7EFkIA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTIyODUxLzNhYjk1NmUxZmU5ZTBkODJjZjZiOGU5NmIxOTE3YWVmLmpwZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-the-base-garden-rama-9-near-arl-ramkhamhaeng-1922851/",
+        "bytes": 13978
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/BSM2dagJB3Xq_4R7xkHguFLkBQeseqYpRFTZ3RsBNKw/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTIyODUxLzY3OTg1OTgwY2RkMjZlMjBlZDc1NWQ3OGExNmVlYmFlLmpwZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-the-base-garden-rama-9-near-arl-ramkhamhaeng-1922851/",
+        "bytes": 16390
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "supalai-veranda-ramkhamhaeng",
+    "name": "ศุภาลัย เวอเรนด้า รามคำแหง (Supalai Veranda Ramkhamhaeng)",
+    "type": "condo",
+    "zone": "ramkhamhaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 22,
+    "travel_mode": "mrt",
+    "transit": "ถ.รามคำแหง → ARL รามคำแหง/รถเมล์",
+    "price_seen": "11,000–12,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~22 นาที (ถ.รามคำแหง)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดramkhamhaeng สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~22 นาที ห้องเช่าเริ่ม 11,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Supalai Veranda Ramkhamhaeng",
+      "ศุภาลัย เวอเรนด้า รามคำแหง"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/KVVnPM1ebKQnHm18LINujaQ8vv1g8UfLN56kwoV0ESs/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2MTAzMDUvMTAxMTBhOTQxZDVmYzExMzJiNDNhYzMwYTZjYzRiZDYuanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-supalai-veranda-ramkhamhaeng-close-ramkhamhaeng-3245999/",
+        "bytes": 15480
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/qcLrBftyb1_0WB46DPXwOXr3dkaNYD3SKWYf_t6XoM4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2MTAzMDUvZjc1NjZlMjNiNGQ5ZDg0YTRhMGU4MjM5MzVmMzZhMTIuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-supalai-veranda-ramkhamhaeng-close-ramkhamhaeng-3245999/",
+        "bytes": 14040
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/9URDKdT_blUXbF1xlPqx1ODAUppY0zM7WZnUlh7CAkk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2MTAzMDUvMDNjNDdkOTdmMDIxZmY4NjlmZjM5MzMxNGI4ZTQzNjguanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/studio-condo-supalai-veranda-ramkhamhaeng-close-ramkhamhaeng-3245999/",
+        "bytes": 16902
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "xt-huaikhwang",
+    "name": "เอ็กซ์ที ห้วยขวาง (XT Huaikhwang)",
+    "type": "condo",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 15,
+    "travel_mode": "mrt",
+    "transit": "MRT ห้วยขวาง → MRT เพชรบุรี 3 สถานี",
+    "price_seen": "15,000–17,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~15 นาที (MRT ห้วยขวาง)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดhuaikwang สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~15 นาที ห้องเช่าเริ่ม 15,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "XT Huaikhwang",
+      "เอ็กซ์ที ห้วยขวาง"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/pn8awLH11oCzUJOlpq3_0fv2JXi6iYkBrx_wDBgdeq8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwMDUzOTEvMTJjY2E2NjllNDZkYmZhODBjNTQyZGQ1Y2Y3OTk4N2QuanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-xt-huaikhwang-near-mrt-huai-khwang-3387012/",
+        "bytes": 14914
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/RgEciToYLABAksFT-9tqXTEifrmtfnewdN8n5jvv6V8/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwMDUzOTEvZTNjY2Y1ZWE4OWZhZGRkMGIwZDNhZDhhOTAxOTc2YjAuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-xt-huaikhwang-near-mrt-huai-khwang-3387012/",
+        "bytes": 9268
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/3yj3dINKInhO7qmYxutINzKtenyP1zRBnXAozon9d5g/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTYwMDUzOTEvOGZkMzE5MzdkNzA2ZmQ0ZDdlYzAyZTcxNmNhODQ5ODAuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-xt-huaikhwang-near-mrt-huai-khwang-3387012/",
+        "bytes": 14158
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "life-ratchadapisek",
+    "name": "ไลฟ์ รัชดาภิเษก (Life Ratchadapisek)",
+    "type": "condo",
+    "zone": "huaikwang",
+    "walk_to_swu": false,
+    "minutes_to_swu": 16,
+    "travel_mode": "mrt",
+    "transit": "MRT ห้วยขวาง → MRT เพชรบุรี 3 สถานี",
+    "price_seen": "13,500–20,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~16 นาที (MRT ห้วยขวาง)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดhuaikwang สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~16 นาที ห้องเช่าเริ่ม 13,500 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Life Ratchadapisek",
+      "ไลฟ์ รัชดาภิเษก"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/L8CLw5VsfWTj-tT9plmpgYOh6-tv66Z4m-uLJEcVmrk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2NjI3OTkvMTJlYTUzMjIyOTljNTcyOTcyNDE3OWI3MjJiMzNjNGIuanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-life-ratchadapisek-near-mrt-huai-khwang-3264087/",
+        "bytes": 11752
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/-1ixQWohZbgo8I3BzoLSVh-08LUBbfItvx3f3aCOxio/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2NjI3OTkvYjIyNzNjNWU1ODU4YTJkZWU1MDYwNGI5ZTU3NTFmYzMuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-life-ratchadapisek-near-mrt-huai-khwang-3264087/",
+        "bytes": 8124
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/xxxeaOFmoNv2w4hkI71v-ORR2LVwLveFt94wPDikCxA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTU2NjI3OTkvMTk4OTM5YTg5M2FjNWZlNmViZjY3MDVmMmFmOGRkOTIuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-life-ratchadapisek-near-mrt-huai-khwang-3264087/",
+        "bytes": 9288
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "noble-revolve-ratchada",
+    "name": "โนเบิล รีวอลฟ์ รัชดา (Noble Revolve Ratchada)",
+    "type": "condo",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "MRT ศูนย์วัฒนธรรม → MRT เพชรบุรี 2 สถานี",
+    "price_seen": "15,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~13 นาที (MRT ศูนย์วัฒนธรรม)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดratchada สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~13 นาที ห้องเช่าเริ่ม 15,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Noble Revolve Ratchada",
+      "โนเบิล รีวอลฟ์ รัชดา"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/kKRrvqZMlu2E25ze0fZEMO4kSnnymm4jkUpZpvBUel4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUzMjM3OTUvNThjZjNkNDViODIxNzAxMjhkNTUyNmVmNWFlZTY1MTguanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-noble-revolve-ratchada-near-mrt-thailand-cultural-centre-3155978/",
+        "bytes": 31190
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/WUjmze1R6GmxsAIxLBJFmIUoRP9f7v56TYV8-RhK0KE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUzMjM3OTUvMDc2MjgzZTMxOWM3NTEwMmRhZTVlOGJiZDYxMzI2MTIuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-noble-revolve-ratchada-near-mrt-thailand-cultural-centre-3155978/",
+        "bytes": 23898
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/fGrBJShKZla2Z6JklBzzigSjZPc6z5mJ0jMdedj4esI/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTUzMjM3OTUvZDFjYmQ3ZTcwNDMyNGQyMjUwZmNkMTY0M2QxMTVjNTAuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-noble-revolve-ratchada-near-mrt-thailand-cultural-centre-3155978/",
+        "bytes": 19942
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "maestro-03-ratchada-rama-9",
+    "name": "มาเอสโตร 03 รัชดา – พระราม 9 (Maestro 03 Ratchada – Rama 9)",
+    "type": "condo",
+    "zone": "ratchada",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "mrt",
+    "transit": "MRT พระราม 9 → MRT เพชรบุรี 1 สถานี",
+    "price_seen": "14,500–17,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~13 นาที (MRT พระราม 9)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดratchada สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~13 นาที ห้องเช่าเริ่ม 14,500 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Maestro 03 Ratchada – Rama 9",
+      "มาเอสโตร 03 รัชดา – พระราม 9"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/91ROqO46sZIuycRZyGZBk6Odt7Alj7c1DXdxRVU_btk/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTQ3MTE4L2NlYTM2OTFhZjg0M2Y1OWZkYWFmZDUzZTNhNDRmODMyLmpwZw.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-maestro-03-ratchada-%E2%80%93-rama-9-near-mrt-phra-ram-9-1947118/",
+        "bytes": 18548
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/bZ7vH-KZSfdJBb0ni_enCao0mEHxPaOAqC4uGnfYwds/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTQ3MTE4LzEzM2EyM2IwNGVkYmM4OTkyNzI3MzNmZGUzN2RmYTA1LmpwZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-maestro-03-ratchada-%E2%80%93-rama-9-near-mrt-phra-ram-9-1947118/",
+        "bytes": 13390
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/sx0wG-2n5Yvy4PS122brDxLp8jV5EUrOMB2WRXJ131g/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8xOTQ3MTE4LzhhODI2NmZjMWFiMjlhZWI2ODM5MWE4OGIzNGJlNjUwLmpwZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-maestro-03-ratchada-%E2%80%93-rama-9-near-mrt-phra-ram-9-1947118/",
+        "bytes": 18414
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "supalai-park-asoke-ratchada",
+    "name": "ศุภาลัย ปาร์ค อโศก รัชดา (Supalai Park Asoke Ratchada)",
+    "type": "condo",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 13,
+    "travel_mode": "bus",
+    "transit": "ถ.อโศก-ดินแดง ใกล้ MRT พระราม 9",
+    "price_seen": "10,000–14,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~13 นาที (ถ.อโศก-ดินแดง ใกล้ MRT พระราม 9)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดdindaeng สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~13 นาที ห้องเช่าเริ่ม 10,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Supalai Park Asoke Ratchada",
+      "ศุภาลัย ปาร์ค อโศก รัชดา"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/tOURGjImNwp-nL-z7A--3RbvruNIY3-bQCb-UK67mgU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNzI4MjY5LzViMzdmNTA5MzBmNDNiNjc4YTYyZTRmODBkN2MzZGYzLnBuZw.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-park-asoke-ratchada-near-mrt-phra-ram-9-2728269/",
+        "bytes": 7890
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/W2X_ti1tEMpnp9qO8rNeubw9rE3ehuogXbX-nRGxvVc/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNzI4MjY5LzRiYzdlZjI5YjJmZTliNzM2N2JlYzYwZGU1NDIzOGM0LnBuZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-park-asoke-ratchada-near-mrt-phra-ram-9-2728269/",
+        "bytes": 7174
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/RLIAq1ORNUhBlCBmDUxJVnlbodpZAn_A_DJEQhJoGyE/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC8yNzI4MjY5L2I5ZDkyZjZlNDc5YTM2ODQwYTI5ZGJhZDkyNWFhMzcxLnBuZw.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-supalai-park-asoke-ratchada-near-mrt-phra-ram-9-2728269/",
+        "bytes": 7972
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "lumpini-place-rama-9-ratchada",
+    "name": "คอนโด ลุมพินี เพลส พระราม 9 – รัชดา (Lumpini Place Rama 9–Ratchada)",
+    "type": "condo",
+    "zone": "rama9",
+    "walk_to_swu": false,
+    "minutes_to_swu": 12,
+    "travel_mode": "mrt",
+    "transit": "MRT พระราม 9 → MRT เพชรบุรี 1 สถานี",
+    "price_seen": "13,000–13,500 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~12 นาที (MRT พระราม 9)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดrama9 สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~12 นาที ห้องเช่าเริ่ม 13,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Lumpini Place Rama 9–Ratchada",
+      "คอนโด ลุมพินี เพลส พระราม 9 – รัชดา"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/sDsYWK3GYdx2_p84khjiOZSXYhqMvYapkT0DzHTHhT0/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MTU2MDYvMDIzNTkyNGNjMWYzOGRkNzBjODE2NjNjZjMwMzMxM2QuanBn.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-place-rama-9%E2%80%93ratchada-near-mrt-phra-ram-9-3566399/",
+        "bytes": 12644
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/ebpB8tta6Ch99hvy7ANmNdjol-FfXs9r0PzvMuiQ5p4/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MTU2MDYvOWM4ZjRhYTZhMzc3ZjFkYmRlNzQzNGVkNGYyZGRiMmQuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-place-rama-9%E2%80%93ratchada-near-mrt-phra-ram-9-3566399/",
+        "bytes": 10540
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/AmC2wod4zUTHBWpqEUpA7M9xAsZcXaVCnOvv62kpdwA/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC9saW5rLTY0MTU2MDYvMTY1YmU2MWU0M2M3MmM5YzBlNDFlNWU1NGNiNDJkY2EuanBn.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-place-rama-9%E2%80%93ratchada-near-mrt-phra-ram-9-3566399/",
+        "bytes": 8340
+      }
+    ],
+    "official_url": null
+  },
+  {
+    "slug": "lumpini-suite-dindaeng-ratchaprarop",
+    "name": "ลุมพินี สวีท ดินแดง - ราชปรารภ (Lumpini Suite Dindaeng - Ratchaprarop)",
+    "type": "condo",
+    "zone": "dindaeng",
+    "walk_to_swu": false,
+    "minutes_to_swu": 18,
+    "travel_mode": "bus",
+    "transit": "ถ.ดินแดง → รถเมล์/ARL มักกะสัน",
+    "price_seen": "10,000–12,000 บ./ด. (PropertyScout)",
+    "pros": [
+      "ถึง มศว ~18 นาที (ถ.ดินแดง)",
+      "คอนโดมีสระว่ายน้ำ/ฟิตเนส/คีย์การ์ด",
+      "1–2 ห้องนอน หารเพื่อนได้"
+    ],
+    "cons": [
+      "สัญญาคอนโดส่วนใหญ่ 12 เดือน มัดจำ 2 + ล่วงหน้า 1 เดือน"
+    ],
+    "web_review_summary": "คอนโดdindaeng สำหรับนิสิต มศว ที่เดินทางด้วยรถไฟฟ้า ~18 นาที ห้องเช่าเริ่ม 10,000 บ./ด. (PropertyScout 2026-11-28)",
+    "web_review_sources": [
+      "PropertyScout"
+    ],
+    "aliases": [
+      "Lumpini Suite Dindaeng - Ratchaprarop",
+      "ลุมพินี สวีท ดินแดง - ราชปรารภ"
+    ],
+    "photos": [
+      {
+        "url": "https://img2.propertyscout.co.th/OhZoDvybYiEQDtSFQOy26kQo28_qsAS6F6YWiC1OJ5w/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC81OTI3ODQvMC5qcGc.webp",
+        "kind": "exterior",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-suite-dindaeng-ratchaprarop-near-arl-ratchaprarop-592784/",
+        "bytes": 27676
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/_Z8OSvjqBtra_L_5LVyv5NiTDaICzW2EMRuWan9HhjM/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC81OTI3ODQvMS5qcGc.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-suite-dindaeng-ratchaprarop-near-arl-ratchaprarop-592784/",
+        "bytes": 11340
+      },
+      {
+        "url": "https://img2.propertyscout.co.th/kC73SsCIeq9WxVtgu7ukz9K8R0U6UmpMTQ6r5oKsgIU/wm:0.6:so:0:50:0.3/rs:fit:400/q:80/sh:0.5/aHR0cHM6Ly9mbGV4c3RheS1pbWFnZXMuc2dwMS5jZG4uZGlnaXRhbG9jZWFuc3BhY2VzLmNvbS9pbWFnZXMvcHJvZC81OTI3ODQvMi5qcGc.webp",
+        "kind": "room",
+        "credit": "PropertyScout",
+        "source_url": "https://propertyscout.co.th/en/1-br-condo-lumpini-suite-dindaeng-ratchaprarop-near-arl-ratchaprarop-592784/",
+        "bytes": 14288
+      }
+    ],
+    "official_url": null
   }
 ]

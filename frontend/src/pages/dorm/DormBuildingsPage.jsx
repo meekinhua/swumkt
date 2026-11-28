@@ -53,8 +53,8 @@ export default function DormBuildingsPage() {
   }, [zone, q, retry]);
   // lowest active price per building (per person when shared), from the same public listings feed
   useEffect(() => {
-    // the whole feed (max 300, like the rooms page), so no building's cheapest room is cut off
-    axios.get(`${API}/listings`, { params: { limit: 300, sort: 'price' } }).then((r) => {
+    // the whole feed (max 500, like the rooms page), so no building's cheapest room is cut off
+    axios.get(`${API}/listings`, { params: { limit: 500, sort: 'price' } }).then((r) => {
       const by = {};
       r.data.items.forEach((x) => { if (x.building_slug) (by[x.building_slug] = by[x.building_slug] || []).push(x); });
       setLowest(Object.fromEntries(Object.entries(by).map(([k, v]) => [k, lowestPrice(v)])));

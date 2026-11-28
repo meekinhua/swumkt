@@ -641,7 +641,7 @@ def test_every_sort_pages_through_all_rooms_exactly_once():
 
 
 def test_list_bounds_and_zero_prices():
-    for p in ({"limit": 0}, {"limit": -1}, {"skip": -1}, {"limit": 301}):
+    for p in ({"limit": 0}, {"limit": -1}, {"skip": -1}, {"limit": 1001}):
         assert requests.get(f"{BASE}/dorm/listings", params=p).status_code == 422, p
     for p in ({"limit": 0}, {"skip": -5}):
         assert requests.get(f"{BASE}/dorm/mates", params=p).status_code == 422, p
@@ -910,10 +910,21 @@ def test_external_crowd_gone_two_reports_soft_410_and_include_closed(ix):
         r2 = requests.post(f"{BASE}/dorm/listings/{lid}/gone", json={"anon_id": anon2})
         assert r2.status_code == 200 and r2.json()["auto_closed"] is True and r2.json()["status"] == "closed"
         # Default list hides it; include_closed=1 surfaces it with gone_label; soft 410 gives alternatives
-        assert lid not in [x["id"] for x in requests.get(f"{BASE}/dorm/listings", params={"limit": 300}).json()["items"]]
-        arch = requests.get(f"{BASE}/dorm/listings", params={"include_closed": 1, "limit": 300}).json()
+        # page through the whole list so the check holds however many rooms the seed data has
+        def _all_items(**params):
+            items, skip, first = [], 0, None
+            while True:
+                page = requests.get(f"{BASE}/dorm/listings", params={**params, "limit": 300, "skip": skip}).json()
+                first = first or page
+                items += page["items"]
+                if len(page["items"]) < 300:
+                    return first, items
+                skip += 300
+        _, open_items = _all_items()
+        assert lid not in [x["id"] for x in open_items]
+        arch, arch_items = _all_items(include_closed=1)
         assert arch["archived_total"] >= 1 and arch["closed_total"] >= 1
-        closed_card = next(x for x in arch["items"] if x["id"] == lid)
+        closed_card = next(x for x in arch_items if x["id"] == lid)
         assert closed_card["is_gone"] is True and "อ้างอิงราคา" in closed_card["gone_label"]
         soft = requests.get(f"{BASE}/dorm/listings/{lid}")
         assert soft.status_code == 410 and soft.json()["gone"] is True

@@ -62,7 +62,7 @@ export default function DormHomePage() {
   }, []);
   // one fetch feeds the rail, waiting/peeked sections, per-zone counts, and live search count (refetches on token change for my_interest)
   useEffect(() => {
-    axios.get(`${API}/listings`, { params: { limit: 300, sort: 'recommended' }, ...authHeaders(token) })
+    axios.get(`${API}/listings`, { params: { limit: 500, sort: 'recommended' }, ...authHeaders(token) })
       .then((r) => setListings(r.data.items)).catch(() => setListings([]));
   }, [token]);
 

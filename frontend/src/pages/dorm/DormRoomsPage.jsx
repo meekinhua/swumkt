@@ -122,7 +122,7 @@ export default function DormRoomsPage() {
     // signed in: the cards also say which rooms you pressed interest on
     // the whole result set (a few hundred at most), so look-alike rooms group honestly and none is cut off
     const q = Object.fromEntries(new URLSearchParams(apiQs));
-    axios.get(`${API}/listings`, { params: { ...q, sort: q.sort || 'recommended', limit: 300 }, ...authHeaders(token), signal: ctl.signal })
+    axios.get(`${API}/listings`, { params: { ...q, sort: q.sort || 'recommended', limit: 500 }, ...authHeaders(token), signal: ctl.signal })
       .then((r) => { lastList = { qs: apiQs, data: r.data }; setData(r.data); setLoading(false); })
       .catch((e) => { if (!axios.isCancel(e)) { setErr(true); setLoading(false); } });
     return () => ctl.abort();

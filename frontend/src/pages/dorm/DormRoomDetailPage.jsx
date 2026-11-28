@@ -94,7 +94,7 @@ export default function DormRoomDetailPage() {
   useEffect(() => {
     if (!zone) return undefined;
     const ctl = new AbortController();
-    axios.get(`${API}/listings`, { params: { zone, limit: 300 }, signal: ctl.signal })
+    axios.get(`${API}/listings`, { params: { zone, limit: 500 }, signal: ctl.signal })
       .then((r) => setNear(r.data.items.filter((x) => x.id !== id)
         .map((x) => ({ x, gap: Math.abs((perPersonOf(x) || 0) - myPer) })).sort((a, c) => a.gap - c.gap || (a.x.id < c.x.id ? -1 : 1))
         .slice(0, 11).map((e) => e.x)))

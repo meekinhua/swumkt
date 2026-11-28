@@ -276,14 +276,14 @@
 .dm-bar i { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
 .dm-bar em { display: block; height: 100%; background: var(--sun); border-radius: 999px; }
 .dm-bar b { text-align: right; font-variant-numeric: tabular-nums; }
-.dm-chatbox { display: grid; gap: 10px; align-content: start; }
+.dm-chatbox { display: grid; gap: 10px; align-content: start; min-width: 0; overflow-wrap: anywhere; }
 .dm-chatbox-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .dm-chatbox-head b { font-family: var(--display); font-weight: 500; font-size: 17px; }
 .dm-chatline { display: flex; gap: 8px; font-size: 14px; color: var(--ink-2); line-height: 1.55; }
 .dm-chatline svg { color: var(--khlong); flex-shrink: 0; margin-top: 3px; }
 .dm-chatline-k { font-weight: 600; color: var(--ink); flex-shrink: 0; }
 .dm-procon { display: flex; flex-wrap: wrap; gap: 6px; }
-.dm-procon span { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 10px; border-radius: 999px; line-height: 1.4; }
+.dm-procon span { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 10px; border-radius: 999px; line-height: 1.4; max-width: 100%; }
 .dm-procon.ok span { background: var(--ok-tint); color: #17683F; }
 .dm-procon.warn span { background: var(--sun-tint); color: #7A4F00; }
 .dm-webrev-sum { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.6; }

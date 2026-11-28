@@ -1977,7 +1977,7 @@ def get_dorm_routes(db, get_current_user, get_current_user_optional):
         request: Request,
         kind: Optional[str] = None, zone: Optional[str] = None, max_price: Optional[int] = None,
         min_price: Optional[int] = None, gender: Optional[str] = None, building: Optional[str] = None, q: Optional[str] = None,
-        amenity: Optional[str] = None, sort: str = "new", limit: int = Query(30, ge=1, le=300), skip: int = Query(0, ge=0),
+        amenity: Optional[str] = None, sort: str = "new", limit: int = Query(30, ge=1, le=1000), skip: int = Query(0, ge=0),
         # sort: new (default) | recommended | price | interest | move_in (unknown values fall back to new)
         ids: Optional[str] = None, interested: Optional[int] = None, engaged: Optional[int] = None, external: Optional[int] = None,
         include_closed: Optional[int] = None, campus: Optional[str] = None,
